@@ -1,3 +1,7 @@
+#ifndef H_train
+	#include "./train.h"
+#endif
+
 int add_train(int DCC,int speed,char name[],char type){
 	struct train *Z = (struct train*)malloc(sizeof(struct train));
 
@@ -10,24 +14,17 @@ int add_train(int DCC,int speed,char name[],char type){
 	Z->accelerate_speed = 60;
 	Z->break_speed = 50;
 	Z->cur_speed = 100;
-	Z->control = 0; //0 = User, 1 = Computer
+	Z->control = 0; //0 = User (Manual), 1 = Semi-Automatic, 2 = Computer (Automatic)
 	Z->use = 0;
+	Z->dir = 0;
 	Z->halt = FALSE;
-
-	for(int i = 0;i<MAX_ROUTE;i++){
-		Z->Route[i] = C_AdrT(0,0,0,'e');
-	}
 	//return Z;
-	//printf("Add train %i\n",iTrain);
+	//printf("Add train %i (#%i)\n",iTrain,Z->DCC_ID);
 	trains[iTrain++] = Z;
+	if(DCC < 9999){
+		DCC_train[DCC] = Z;
+	}
 	return (iTrain - 1);
-}
-
-void req_train(char ID, struct adr Adr){
-	char data[40] = "";
-	sprintf(data, "[%i,\"%i:%i:%i\"]", ID,Adr.M,Adr.B,Adr.S);
-	new_message(11,data);
-	printf("\n\new train Requested %i\n\n\n",ID);
 }
 
 int create_train(int DCC,int speed,char name[],char type){
@@ -46,6 +43,8 @@ int create_train(int DCC,int speed,char name[],char type){
 	fprintf(f,"%s\t%i\t%c\t%i\r\n",name,DCC,type,speed);
 	fclose(f);
 	printf("Add train\n");
+
+	//Return train ID
 	return add_train(DCC,speed,name,type);
 }
 
@@ -54,6 +53,7 @@ void init_trains(){
 	f = fopen("./trains/trainlist_raw.txt","r");
 	char line[256] = "";
 	int line_nr = 0;
+	int nr_trains = 0;
 
 	while (fgets(line, sizeof(line), f)) {
 		/* note that fgets don't strip the terminating \n, checking its
@@ -61,45 +61,57 @@ void init_trains(){
 		char *D1 = strchr(line, '\t');
 		char *D2 = strchr(&line[(D1-line)+1], '\t');
 		char *D3 = strchr(&line[(D2-line)+1], '\t');
-		char *D4 = strchr(&line[(D2-line)+1], '\r');
-		if (D1 != NULL && D2 != NULL && D3 != NULL && D4 != NULL){ /* deal with error: / not present" */;
+		char *D4 = strchr(&line[(D3-line)+1], '\t');
+		char *D5 = strchr(&line[(D4-line)+1], '\t');
+		char *D6 = strchr(&line[(D5-line)+1], '\r');
+		if (D1 && D2 && D3 && D4 && D5 && D6){ /* deal with error: / not present" */;
 			int start = 0;
 			int tab1 = D1-line;
 			int tab2 = D2-line;
 			int tab3 = D3-line;
-			int end = D4-line;
+			int tab4 = D4-line;
+			int tab5 = D5-line;
+			int end = D6-line;
 
-			char L1[21],L2[5],L3[5],L4[5];
+			char L1[21],L2[7],L3[5],L4[5],L5[30];
 
 			memset(L1,0,21);
-			memset(L2,0,5);
+			memset(L2,0,7);
 			memset(L3,0,5);
 			memset(L4,0,5);
+			memset(L5,0,30);
 
-			for(int i = (start);i<=end;i++){
-				if(i < tab1){
-				 L1[(i-start)] = line[i];
-				}else if(i > tab1 && i < tab2){
-				 L2[(i-tab1-1)] = line[i];
-				}else if(i > tab2 && i < tab3){
-				 L3[(i-tab2-1)] = line[i];
-				}else if(i > tab3 && i < end){
-				 L4[(i-tab3-1)] = line[i];
+			for(int i = tab1;i<=end;i++){
+				if(i < tab2){
+				 L1[(i-tab1)] = line[i];
+			 }else if(i > tab2 && i < tab3){
+				 L2[(i-tab2-1)] = line[i];
+			 }else if(i > tab3 && i < tab4){
+				 L3[(i-tab3-1)] = line[i];
+			 }else if(i > tab4 && i < tab5){
+				 L4[(i-tab4-1)] = line[i];
+			 }else if(i > tab5 && i < end){
+				 L5[(i-tab5-1)] = line[i];
 				}
-				if(i == tab1){
-				 L1[(i-start)] = 0;
-				}else if(i == tab2){
-				 L2[(i-tab1-1)] = 0;
-				}else if(i == tab3){
-				 L3[(i-tab2-1)] = 0;
+				if(i == tab2){
+				 L1[(i-tab1)] = 0;
+			 }else if(i == tab3){
+				 L2[(i-tab2-1)] = 0;
+			 }else if(i == tab4){
+				 L3[(i-tab3-1)] = 0;
+			 }else if(i == tab5){
+				 L4[(i-tab4-1)] = 0;
 				}else if(i == end){
-				 L4[(i-tab3-1)] = 0;
+				 L5[(i-tab5-1)] = 0;
 				}
 			}
 
-			//printf("line %i:\t%s\t\t%s\t\t%s\t\t%s\n",line_nr,L1,L2,L3,L4);
+			//printf("line %02i:\t%s\t\t%s(#%i)\t\t%s\t\t%s\n",line_nr,L1,L2,atoi(L2),L3,L4);
 			if(line_nr != 0){
-				add_train(atoi(L2),atoi(L4),L1,L3[0]);
+				if(atoi(L2) < 10000){
+					add_train(atoi(L2),atoi(L4),L1,L3[0]);
+					nr_trains++;
+				}
 			}
 		}else{
 			printf("Corrupt trainlist file!!!!!!!\n");
@@ -108,30 +120,30 @@ void init_trains(){
 	}
 	fclose(f);
 
-	int nr_trains = 0;
-	//printf("Name\t\t\tDCC\tMax Speed\n");
-	for(int q = 0;q<MAX_TRAINS;q++){
-		if(trains[q] != NULL){
-			nr_trains++;
-			//printf("%s\t",trains[q]->name);
-			if(strlen(trains[q]->name) < 12){
-				//printf("\t");
-			}
-			if(strlen(trains[q]->name) < 8){
-				//printf("\t");
-			}
-			//printf("#%i\t%i\n",trains[q]->DCC_ID,trains[q]->max_speed);
-		}
+	printf("|                           %i\ttrains found                               |\n",nr_trains);
+	printf("|                                                                          |\n");
+
+	for(int i = 0;i<nr_trains;i++){
+		char buf[40] = "|                    ";
+		sprintf(buf,"%s(%02i) #%04i  %s",buf,i,trains[i]->DCC_ID,trains[i]->name);
+		printf("%s",buf);
+		for(int j = strlen(buf);j<69;j++)
+			printf(" ");
+		printf("|\n");
 	}
 
-	printf("|                           %i\ttrains found                               |\n",nr_trains);
+	printf("|                                                                          |\n");
 }
 
 int link_train(char link,int train){
 	if(train_link[link] == NULL && trains[train]->use == 0){
 		printf("link is empty %i\n",train_link[link]);
 		train_link[link] = trains[train];
-		train_link[link]->use = 1;
+		if(train != 0 || train != 1){
+			train_link[link]->use = 1;
+		}else{
+			printf("Duplicates allowed");
+		}
 		printf("Set to %i\n",train_link[link]);
 		return 1;
 	}else{
@@ -143,46 +155,6 @@ void unlink_train(char link){
 	train_link[link]->use = 0;
 	train_link[link] = NULL;
 }
-
-void setup_JSON(int arr[], int arr2[], int size, int size2){
-	char buf[100];
-	FILE *fr;
-
-	sprintf(buf, "[[");
-
-	for(int i = 0;i<size-1;i++){
-		sprintf(buf,"%s%i,",buf,arr[i]);
-	}
-
-	sprintf(buf,"%s%i],[",buf,arr[size-1]);
-
-	int s = 0;
-	for(int i = 0;i<size2;i++){
-		if(s == 0){
-			s = 1;
-		}else{
-			sprintf(buf,"%s,",buf);
-		}
-		sprintf(buf,"%s%i",buf,arr2[i]);
-	}
-	strcat(buf,"]]");
-
-	fr = fopen("setup.json","w");
-	fprintf(fr,"%s",buf);
-	fclose(fr);
-
-	strcat(setup_data,"{\"Setup\" : ");
-	strcat(setup_data,buf);
-	strcat(setup_data,"}");
-}
-
-struct train_timer_th_data{
-   int  thread_id;
-	 int  Flag;
-	 int speed;
-	 struct train * T;
-	 struct Seg * B;
-};
 
 void *train_timer(void *threadArg){
 	struct train_timer_th_data *my_data;
@@ -298,6 +270,31 @@ void train_speed(struct Seg * B,struct train * T,char speed){
 				COM_set_train_speed(T,des_s);
 			}
 		}
+	}
+}
+
+void train_set_speed(struct train *T,char speed){
+	if(!T){ return;printf("Empty T\n");}
+	T->cur_speed = speed;
+	Z21_GET_LOCO_INFO(T->DCC_ID);
+}
+
+void train_set_dir(struct train *T,char dir){
+	if(!T){ return;printf("Empty T\n");}
+	if(dir == 0){
+		printf("Set dir to forward\n");
+		T->dir = dir;
+	}else{
+		printf("Set dir to reverse\n");
+		T->dir = dir;
+	}
+	Z21_GET_LOCO_INFO(T->DCC_ID);
+}
+
+void train_set_route(struct train *T,struct Station * S){
+	if(pathFinding(T->Cur_Block,S->Blocks[0],T->Route,&T->Sw_len)){
+		T->halt = 0;
+		T->Destination = S->Blocks[0];
 	}
 }
 

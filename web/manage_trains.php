@@ -1,7 +1,13 @@
 <?php
 error_reporting(E_ERROR | E_WARNING | E_PARSE);
 ini_set('display_errors', 1);
+$var = json_decode(file_get_contents("./../trains/trainlist.txt"),true);
 
+$var2 = file_get_contents("./../trains/trainlist_raw.txt");
+$var3 = explode("\r\n",$var2);
+for($i = 0;$i<(count($var3)-1);$i++){
+  $var4[$i] = explode("\t",$var3[$i]);
+}
 ?>
 
 <html>
@@ -74,98 +80,141 @@ ini_set('display_errors', 1);
     <script src="./jquery-3.1.1.min.js"></script>
     <script>
       var view = 0;
+      var addingTrain = 0;
+      function getExtension(filename) {
+          var parts = filename.split('.');
+          return parts[parts.length - 1];
+      }
 
       function create(){
-        //if(view == 0){
+        if(view == 0){
           view = 1;
-          var text = "<div id='test'><form action=\"manage_trains.php\" method=\"post\" enctype=\"multipart/form-data\"><h3 style=\"text-align:center;\">New train</h3>";
-          text += "<table><tr><td style=\"border-top:1px solid black;\" colspan=\"2\">Select image (jpg only) to upload:<input type=\"file\" name=\"fileToUpload\" id=\"fileToUpload\"></td></tr>";
-          text += "<tr><td>Name</td><td><input type=\"text\" value=\"Name\" name=\"Name\"/></td></tr>";
-          text += "<tr><td>DCC Address</td><td><input type=\"number\" value=\"0\" name=\"DCC\"/></td></tr>";
-          text += "<tr><td>Type</td><td><select name=\"type\"><option value=\"P\">Passenger</option><option value=\"C\">Cargo</option></select></td></tr>";
-          text += "<tr><td>Max speed (km/h)</td><td><input type=\"number\" value=\"160\" name=\"speed\"/></td></tr>";
-          text += "<tr><td colspan=\"2\"><input type=\"submit\" value=\"Add\" name=\"submit\"></td></tr></table></form></div>";
-          $('body').append(text);
-        //}
+
+          $('#test').css("display",'block');
+        }
+        if(window.opener.ws.readyState == 3){
+          $('#upload').attr('src','./img/checked_n.png');
+          $('#upload').css('cursor','not-allowed');
+          $('#upload').attr('onClick','');
+        }
+      }
+
+      function add_train(){
+        if ($('#train_name').val().indexOf(':') > -1) {
+          alert("Name cannot contain a ':'");
+          return;
+        }
+
+        $("#upload").attr('src','./img/loading.svg');
+        $("#upload").attr('onClick','');
+        if(window.opener.ws.readyState==1){
+          window.opener.ws.send('RNt'+$('#train_type').val()+$('#train_name').val()+':'+$('#train_dcc').val()+':'+$('#train_speed').val());
+          addingTrain = 1;
+        }
+      }
+
+      function succ_add_train(data){
+        if(addingTrain == 1){
+          var file = $("#file1").get(0).files[0];
+          // alert(file.name+" | "+file.size+" | "+file.type);
+          var name = data[0] + "." + getExtension(file.name);
+          var formdata = new FormData();
+          formdata.append("file1", file);
+          formdata.append("name", name);
+          var ajax = new XMLHttpRequest();
+          ajax.addEventListener("load", completeHandler, false);
+          ajax.addEventListener("error", errorHandler, false);
+          ajax.addEventListener("abort", abortHandler, false);
+          ajax.open("POST", "./train_img_upload.php");
+          ajax.send(formdata);
+        }
+        setTimeout(function () {
+          $("#list").append("<tr><td><img src=\"./../trains/"+data[0]+".jpg\" style=\"max-height:50px;max-width:100px;float:right;\"/></td><td>"+data[1]+"</td><td>"+data[2]+"</td><td>"+data[3]+"</td><td>"+data[4]+"</td></tr>");
+        }, 1000);
+      }
+
+      function completeHandler(event){
+        setTimeout(function () {
+      	  $("#test").css('display','none');
+      	  $("#upload").attr('onClick','add_train()');
+        }, 500);
+      }
+
+      function errorHandler(event){
+      	alert("Upload Failed");
+      }
+
+      function abortHandler(event){
+      	alert("Upload Aborted");
+      }
+
+      function fail_add_train(){
+        $("#upload").attr('src','./img/checked.png');
       }
     </script>
   </head>
   <body>
-    <table border="0">
+    <table id="list">
     <?php
       $i = 1;
-      $var = json_decode(file_get_contents("./../trains/trainlist.txt"),true);
-      echo("<tr><th></th><th>".$var[0][0]."</th><th>".$var[0][1]."</th><th>".$var[0][2]."</th><th>".$var[0][3]."</th></tr>");
-      for($i;$i<count($var);$i++){
-        echo("<tr><td><img src=\"./../trains/".$i.".jpg\" style=\"max-height:50px;max-width:100px;float:right;\"/></td><td>".$var[$i][0]."</td><td>".$var[$i][1]."</td><td>".$var[$i][2]."</td><td>".$var[$i][3]."</td></tr>");
+      echo("<tr><th></th><th>".$var4[0][0]."</th><th>".$var4[0][1]."</th><th>".$var4[0][2]."</th><th>".$var4[0][3]."</th></tr>");
+      for($i;$i<count($var4);$i++){
+        echo("<tr><td><img src=\"./../trains/".($i-1).".jpg\" style=\"max-height:50px;max-width:100px;float:right;\"/></td><td>".$var4[$i][0]."</td><td>".$var4[$i][1]."</td><td>".$var4[$i][2]."</td><td>".$var4[$i][3]."</td></tr>");
       }
-
-      if(file_exists($_FILES['fileToUpload']['tmp_name']) || is_uploaded_file($_FILES['fileToUpload']['tmp_name'])) {
-        $target_dir = "./../trains/";
-        $target_file = $target_dir . $i . ".jpg";
-        $uploadOk = 1;
-        $imageFileType = pathinfo(basename($_FILES["fileToUpload"]["name"]),PATHINFO_EXTENSION);
-        // Check if image file is a actual image or fake image
-        if(isset($_POST["submit"])) {
-            $check = getimagesize($_FILES["fileToUpload"]["tmp_name"]);
-            if($check !== false) {
-                echo "File is an image - " . $check["mime"] . "\"".basename($_FILES["fileToUpload"]["name"])."\"=".$imageFileType.".";
-                $uploadOk = 1;
-            } else {
-                echo "File is not an image.";
-                $uploadOk = 0;
-            }
-        }
-        // Check if file already exists
-        if (file_exists($target_file)) {
-            echo "Sorry, file already exists.";
-            $uploadOk = 0;
-        }
-        // Check file size
-        if ($_FILES["fileToUpload"]["size"] > 2000000) {
-            echo "Sorry, your file is too large. ".(($_FILES["fileToUpload"]["size"]-2000000)/1000)."KB too large";
-            $uploadOk = 0;
-        }
-        // Allow certain file formats
-        if($imageFileType != "jpg" && $imageFileType != "jpeg") {
-            echo "Sorry, only JPG files are allowed.";
-            $uploadOk = 0;
-        }
-        // Check if $uploadOk is set to 0 by an error
-        if ($uploadOk == 0) {
-            echo "Sorry, your file was not uploaded.";
-        // if everything is ok, try to upload file
-        } else {
-            if (move_uploaded_file($_FILES["fileToUpload"]["tmp_name"], $target_file)) {
-                echo "The file ". basename( $_FILES["fileToUpload"]["name"]). " has been uploaded.";
-
-                $data[0] = $_POST['Name'];
-                $data[1] = $_POST['DCC'];
-                $data[2] = $_POST['type'];
-                $data[3] = $_POST['speed'];
-
-                $inp = file_get_contents('./../trains/trainlist.txt');
-                $tempArray = json_decode($inp);
-                array_push($tempArray, $data);
-                $jsonData = json_encode($tempArray);
-                file_put_contents('./../trains/trainlist.txt', $jsonData);
-                header("Refresh:0");
-            } else {
-                echo "Sorry, there was an error uploading your file.";
-            }
-        }
-      }
-
-
     ?>
     </table>
     <div style="width:150px;margin:auto;height:40px">
       <div id="Add_button" style="float:left" onClick="create();">
         <b>Add</b>
       </div>
-      <div id="Quit_button" style="float:right" onClick="<?php if(!isset($_GET['tablet'])){echo "self.close();";}else{echo "window.history.back();";} ?>">
+      <div id="Quit_button" style="float:right" onClick="<?php if(!isset($_GET['tablet'])){echo "window.opener.train_list_window = 0;self.close();";}else{echo "window.history.back();";} ?>">
         <b>Close</b>
       </div>
+    </div>
+    <div id='test' style="display:none">
+      <h3 style="text-align:center;">New train</h3>
+      <form id="upload_form" enctype="multipart/form-data" method="post">
+        <table>
+          <tr>
+            <td style="border-top:1px solid black;" colspan="2">
+              Select image (jpg only) to upload:
+              <input type="file" name="file1" id="file1">
+            </td>
+          </tr>
+          <tr>
+            <td>Name</td>
+            <td>
+              <input type="text" id="train_name" value="Name" name="Name" maxlength="20"/>
+            </td>
+          </tr>
+          <tr>
+            <td>DCC Address</td>
+            <td>
+              <input type="number" id="train_dcc" value="<?php echo count($var); ?>" name="DCC" min="1" max="9999"/>
+            </td>
+          </tr>
+          <tr>
+            <td>Type</td>
+            <td>
+              <select name="type" id="train_type">
+                <option value="P">Passenger</option>
+                <option value="C">Cargo</option>
+              </select>
+            </td>
+          </tr>
+          <tr>
+            <td>Max speed (km/h)</td>
+            <td>
+              <input type="number" id="train_speed" value="160" name="speed"/>
+            </td>
+          </tr>
+          <tr>
+            <td colspan="2" style="border-bottom:none;">
+              <img src="./img/checked.png" id="upload" style="margin-top:20px" width="32px" onClick="/*uploadFile();*/add_train();"/>
+            </td>
+          </tr>
+        </table>
+      </form>
     </div>
   </body>
 </html>

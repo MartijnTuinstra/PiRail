@@ -1,52 +1,53 @@
 <svg xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:svg="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 140" id="svg6" height="140px" width="140px" version="1.1">
   <metadata id="metadata12">
-	<rdf:RDF>
-	  <cc:Work rdf:about="">
+	<rdf:rdf>
+	  <cc:work rdf:about="">
 		<dc:format>image/svg+xml</dc:format>
-	  </cc:Work>
-	</rdf:RDF>
+	  </cc:work>
+	</rdf:rdf>
   </metadata>
-  <defs id="defs10"/>
+  <defs id="defs10"></defs>
   <g>
-	<path class="B" d="M 101,40 h 39"/>
-	<path class="B" d="M 104.5,41.5 l -33,-33"/>
-	<path class="B" d="M 48,10  h 27"/>
-	<path class="B" d="M 51.5,8.5  l -33,33"/>
+	<path class="B" d="M 101,40 h 39"></path>
+	<path class="B" d="M 103,40.5 l -31,-31"></path>
+	<path class="B" d="M 74,10  h -26"></path>
+	<path class="B" d="M 50,9.5  l -31,31"></path>
 
-	<path class="B" d="M 20,38  l 0,102"/>
-	<path class="B" d="M 40,140 l 0,-42"/>
-	<path class="B" d="M 38.5,101.5 l 11.5,-11.5"/>
+	<path class="B" d="M 20,38  l 0,102"></path>
+	<path class="B" d="M 40,140 l 0,-41"></path>
+	<path class="B" d="M 39,101.5 l 11,-11"></path>
 
-	<path class="B" d="M 51,91 l -32,-32"/>
-	<path class="B" d="M 48,90  h 27"/>
-	<path class="B" d="M 104.5,58.5 l -33,33"/>
-	<path class="B" d="M 101,60 h 39"/>
+	<path class="B" d="M 51,90.5 l -32,-32"></path>
+	<path class="B" d="M 48,90  h 26"></path>
+	<path class="B" d="M 103,59.5 l -31,31"></path>
+	<path class="B" d="M 101,60 h 39"></path>
   </g>
-  <g id="B1" class="S1">
-	<path class="L" style="stroke:#0f0" d="M 102,40 h 38"/>
-	<path class="L" style="stroke:#0f0" d="M 104,41 l -32,-32"/>
-	<path class="L" style="stroke:#0f0" d="M 49,10  h 25"/>
-	<path class="L" style="stroke:#0f0" d="M 51,9  l -32,32"/>
+  <g id="B0">
+  	<path class="L" style="stroke: rgb(0, 255, 0);" d="M 102,40 h 38"></path>
+  	<path class="L" style="stroke: rgb(0, 255, 0);" d="M 102.5,40 l -30,-30"></path>
+  	<path class="L" style="stroke: rgb(0, 255, 0);" d="M 73,10  h -24"></path>
+  	<path class="L" style="stroke: rgb(0, 255, 0);" d="M 49.5,10  l -30,30"></path>
+    <path class="L" style="stroke: rgb(0, 255, 0);" d="M 20,39  l 0,3"></path>
   </g>
-  <g id="B4" class="S1">
-	<path class="L" style="stroke:#0f0" d="M 74,90  h -10"/>
-	<path class="L" style="stroke:#0f0" d="M 104,59 l -32,32"/>
-	<path class="L" style="stroke:#0f0" d="M 102,60 h 38"/>
-  </g>
-  <g id="B2" class="S0">
-	<path class="L" style="stroke:#0ff" d="M 20,39  l 0,22"/>
-	<path class="L" style="stroke:#0f0" d="M 20,81  l 0,54"/>
+  <g id="B1">
+  	<path class="L" style="stroke: rgb(255, 119, 0);" d="M 20,42  l 0,18"></path>
+  	<path class="L" style="stroke: rgb(255, 119, 0);" d="M 20,80  l 0,60"></path>
 
-	<path id="S1S" class="L" style="stroke:#ff0" d="M 20,61  l 0,20"/>
-  <path id="S1D" class="L" style="stroke:#f0f" d="M 35,75 l -16,-16"/>
-  <rect x="20" y="61" height="16" width="16" class="Switch" onClick="remote_Switch('S',1,2,1);" />
+  	<path class="Sw1S L" style="stroke: rgb(255, 119, 0); opacity: 0;" d="M 20,60  l 0,20"></path>
+    <path class="Sw1D L" style="stroke: rgb(255, 119, 0); opacity: 1;" d="M 20,59.5 l 15,15"></path>
+    <rect x="19" y="60" height="16" width="16" class="Switch" onclick="throw_Switch('S',1,1);" style="cursor: pointer;"></rect>
   </g>
-  <g id="B3" class="S0">
-	<path class="L" style="stroke:#0f0" d="M 64,90  h -15"/>
-	<path class="L" style="stroke:#0f0" d="M 40,135 l 0,-36"/>
+  <g id="B2">
+  	<path class="L" style="stroke: rgb(255, 0, 0);" d="M 64,90  h -14"></path>
+  	<path class="L" style="stroke: rgb(255, 0, 0);" d="M 40,140 l 0,-40"></path>
 
-  <path id="S1D" class="L" style="stroke:#fa3" d="M 51,91 l -16,-16"/>
-	<path id="S1S" class="L" style="stroke:#0f0" d="M 39,101 l 12,-12"/>
-  <rect x="35" y="75" height="28" width="16" class="Switch" onClick="remote_Switch('S',1,3,1);" />
+    <path class="Sw0D L" style="stroke: rgb(255, 0, 0); opacity: 0;" d="M 50.5,90 l -15.5,-15.5"></path>
+  	<path class="Sw0S L" style="stroke: rgb(255, 0, 0); opacity: 1;" d="M 40,100.5 l 10.5,-10.5"></path>
+    <rect x="35" y="75" height="28" width="16" class="Switch" onclick="throw_Switch('S',1,0);" style="cursor: pointer;"></rect>
+  </g>
+  <g id="B3">
+  	<path class="L" style="stroke: rgb(153, 0, 0);" d="M 73,90  h -9"></path>
+  	<path class="L" style="stroke: rgb(153, 0, 0);" d="M 102.5,60 l -30,30"></path>
+  	<path class="L" style="stroke: rgb(153, 0, 0);" d="M 102,60 h 38"></path>
   </g>
 </svg>

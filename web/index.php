@@ -115,6 +115,7 @@
         text-align:center;
         float:left;
         cursor: pointer;
+        position: relative;
       }
 
       .button:hover {
@@ -260,12 +261,16 @@
     <div id="Window">
       <center>
         <div class="button" onClick="window.location.href = './manage_trains.php';">
-          <h1>Manage trains</h1><br/><br/><br/>
-          <img src="./img/train.png" height="64px"/>
+          <h1>Manage trains</h1><br/>
+          <img src="./img/train.png" height="64px" style="position:absolute;left:calc(50% - 32px);bottom:20px;"/>
         </div>
         <div class="button" onClick="window.location.href = './baan.php';">
-          <h1>Track</h1><br/><br/><br/>
-          <img src="./img/rail.png" height="64px"/>
+          <h1>Track</h1>
+          <img src="./img/rail.png" height="64px" style="position:absolute;left:calc(50% - 150px);bottom:20px;"/>
+        </div>
+        <div class="button" onClick="window.location.href = '#';">
+          <h1>Switches</h1>
+          <img src="./img/switch.png" height="106px" style="position:absolute;left:calc(50% - 150px);bottom:20px;"/>
         </div>
       </center>
     </div>

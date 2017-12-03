@@ -1,1 +1,1 @@
-Migrating to HTML5 websockets
+binary HTML5 websockets

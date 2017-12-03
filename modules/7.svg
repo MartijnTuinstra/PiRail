@@ -1,174 +1,174 @@
 <svg preserveAspectRatio="xMidYMid meet" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:svg="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 -30 676 130" id="svg6" height="160px" width="676px" version="1.1" style="top:-30px">
   <metadata id="metadata12">
-    <rdf:RDF>
-      <cc:Work rdf:about="">
+    <rdf:rdf>
+      <cc:work rdf:about="">
         <dc:format>image/svg+xml</dc:format>
-      </cc:Work>
-    </rdf:RDF>
+      </cc:work>
+    </rdf:rdf>
   </metadata>
-  <defs id="defs10"/>
+  <defs id="defs10"></defs>
 
-  <path class="B" d="M 63,-10 h 612"/>
-  <path class="B" d="M 43,10 h 632"/>
-  <path class="B" d="M 23,30 h 652"/>
-  <path class="B" d="M 0,50 h 675"/>
-  <path class="B" d="M 23,70 h 652"/>
-  <path class="B" d="M 43,90 h 632"/>
-  <path class="B" d="M 63,110 h 612"/>
+  <path class="B" d="M 65,-10 h 610"></path>
+  <path class="B" d="M 45,10 h 630"></path>
+  <path class="B" d="M 25,30 h 650"></path>
+  <path class="B" d="M 0,50 h 675"></path>
+  <path class="B" d="M 25,70 h 650"></path>
+  <path class="B" d="M 45,90 h 630"></path>
+  <path class="B" d="M 65,110 h 610"></path>
 
-  <path class="B" d="M 3.5,48.5 l 66,66"/>
-  <path class="B" d="M 3.5,51.5 l 63,-63"/>
+  <path class="B" d="M 6,50 l 61,61"></path>
+  <path class="B" d="M 6,50 l 61,-61"></path>
 
   <g>
     <g id="B1" class="S0">
 
-      <path class="L" style="stroke:#ffff00" d="M 0,50 h 5"/>
+      <path class="L" style="stroke:#ffff00" d="M 0,50 h 6"></path>
 
-      <path class="L" style="stroke:#ffff00" d="M 64,-10 l 3,0"/>
-  	  <path id="S1S" class="L" style="stroke:#ffff00" d="M 44,11 l 21.5,-21.5"/>
-      <path id="S1D" class="L" style="stroke:#ffff00" d="M 46,10 l 21,0"/>
-  	  <path id="S2S" class="L" style="stroke:#ffff00" d="M 24,31 l 22,-22"/>
-      <path id="S2D" class="L" style="stroke:#ffff00" d="M 26,30 l 21,0"/>
-      <path id="M3S1" class="L" style="stroke:#ffff00" d="M 4,51 l 22,-22"/>
-  	  <path id="M3S2" class="L" style="stroke:#ffff00" d="M 4,50 l 23,0"/>
-  	  <path id="M3S3" class="L" style="stroke:#ffff00" d="M 4,49 l 22,22"/>
-  	  <path id="S4S" class="L" style="stroke:#ffff00" d="M 24,69 l 22,22"/>
-      <path id="S4D" class="L" style="stroke:#ffff00" d="M 26,70 l 21,0"/>
-  	  <path id="S5S" class="L" style="stroke:#ffff00" d="M 44,89 l 21.5,21.5"/>
-      <path id="S5D" class="L" style="stroke:#ffff00" d="M 46,90 l 21,0"/>
-      <path class="L" style="stroke:#ffff00" d="M 64,110 l 3,0"/>
+      <path class="L" style="stroke:#ffff00" d="M 66,-10 l 1,0"></path>
+  	  <path id="S1S" class="L" style="stroke: rgb(255, 255, 0); opacity: 1;" d="M 45.5,10.5 l 21,-21"></path>
+      <path id="S1D" class="L" style="stroke: rgb(255, 255, 0); opacity: 1;" d="M 46,10 l 21,0"></path>
+  	  <path id="S2S" class="L" style="stroke: rgb(255, 255, 0); opacity: 1;" d="M 25.5,30.5 l 21,-21"></path>
+      <path id="S2D" class="L" style="stroke: rgb(255, 255, 0); opacity: 1;" d="M 26,30 l 21,0"></path>
+      <path id="M3S1" class="L" style="stroke:#ffff00" d="M 5.5,50.5 l 21,-21"></path>
+  	  <path id="M3S2" class="L" style="stroke:#ffff00" d="M 4,50 l 23,0"></path>
+  	  <path id="M3S3" class="L" style="stroke:#ffff00" d="M 5.5,49.5 l 21,21"></path>
+  	  <path id="S4S" class="L" style="stroke: rgb(255, 255, 0); opacity: 1;" d="M 25.5,69.5 l 21,21"></path>
+      <path id="S4D" class="L" style="stroke: rgb(255, 255, 0); opacity: 1;" d="M 26,70 l 21,0"></path>
+  	  <path id="S5S" class="L" style="stroke: rgb(255, 255, 0); opacity: 0;" d="M 45.5,89.5 l 21,21"></path>
+      <path id="S5D" class="L" style="stroke: rgb(255, 255, 0); opacity: 1;" d="M 46,90 l 21,0"></path>
+      <path class="L" style="stroke:#ffff00" d="M 66,110 l 1,0"></path>
 
-      <rect x="44" y="-10" height="22" width="22" class="Switch" onClick="remote_Switch('S',7,1,1);" />
-      <rect x="24" y="10" height="22" width="22" class="Switch" onClick="remote_Switch('S',7,1,2);" />
-      <rect  x="4" y="30" height="44" width="22" class="Switch" onClick="remote_Switch('M',7,1,3);" />
-      <rect x="24" y="70" height="22" width="22" class="Switch" onClick="remote_Switch('S',7,1,4);" />
-      <rect x="44" y="90" height="22" width="22" class="Switch" onClick="remote_Switch('S',7,1,5);" />
+      <rect x="44" y="-10" height="22" width="22" class="Switch" onclick="remote_Switch('S',7,1,1);"></rect>
+      <rect x="24" y="10" height="22" width="22" class="Switch" onclick="remote_Switch('S',7,1,2);"></rect>
+      <rect x="4" y="30" height="44" width="22" class="Switch" onclick="remote_Switch('M',7,1,3);"></rect>
+      <rect x="24" y="70" height="22" width="22" class="Switch" onclick="remote_Switch('S',7,1,4);"></rect>
+      <rect x="44" y="90" height="22" width="22" class="Switch" onclick="remote_Switch('S',7,1,5);"></rect>
 
     </g>
     <g id="B2" class="S1">
-      <path class="L" style="stroke:#ffff00" d="M 67,-10 h 100"/>
+      <path class="L" style="stroke: rgb(255, 119, 0);" d="M 67,-10 h 100"></path>
     </g>
     <g id="B2" class="S2">
-      <path class="L" style="stroke:#ffff00" d="M 167,-10 h 100"/>
+      <path class="L" style="stroke: rgb(0, 255, 0);" d="M 167,-10 h 100"></path>
     </g>
     <g id="B2" class="S3">
-      <path class="L" style="stroke:#ffff00" d="M 267,-10 h 100"/>
+      <path class="L" style="stroke: rgb(0, 255, 0);" d="M 267,-10 h 100"></path>
     </g>
     <g id="B2" class="S4">
-      <path class="L" style="stroke:#ffff00" d="M 367,-10 h 100"/>
+      <path class="L" style="stroke: rgb(0, 255, 0);" d="M 367,-10 h 100"></path>
     </g>
     <g id="B2" class="S5">
-      <path class="L" style="stroke:#ffff00" d="M 467,-10 h 100"/>
+      <path class="L" style="stroke: rgb(0, 255, 0);" d="M 467,-10 h 100"></path>
     </g>
     <g id="B2" class="S6">
-      <path class="L" style="stroke:#ffff00" d="M 567,-10 h 103"/>
+      <path class="L" style="stroke: rgb(0, 255, 0);" d="M 567,-10 h 103"></path>
     </g>
     <g id="B3" class="S1">
-      <path class="L" style="stroke:#ffff00" d="M 67,10 h 100"/>
+      <path class="L" style="stroke: rgb(255, 119, 0);" d="M 67,10 h 100"></path>
     </g>
     <g id="B3" class="S2">
-      <path class="L" style="stroke:#ffff00" d="M 167,10 h 100"/>
+      <path class="L" style="stroke: rgb(0, 255, 0);" d="M 167,10 h 100"></path>
     </g>
     <g id="B3" class="S3">
-      <path class="L" style="stroke:#ffff00" d="M 267,10 h 100"/>
+      <path class="L" style="stroke: rgb(0, 255, 0);" d="M 267,10 h 100"></path>
     </g>
     <g id="B3" class="S4">
-      <path class="L" style="stroke:#ffff00" d="M 367,10 h 100"/>
+      <path class="L" style="stroke: rgb(0, 255, 0);" d="M 367,10 h 100"></path>
     </g>
     <g id="B3" class="S5">
-      <path class="L" style="stroke:#ffff00" d="M 467,10 h 100"/>
+      <path class="L" style="stroke: rgb(0, 255, 0);" d="M 467,10 h 100"></path>
     </g>
     <g id="B3" class="S6">
-      <path class="L" style="stroke:#ffff00" d="M 567,10 h 103"/>
+      <path class="L" style="stroke: rgb(0, 255, 0);" d="M 567,10 h 103"></path>
     </g>
     <g id="B4" class="S1">
-      <path class="L" style="stroke:#ffff00" d="M 47,30 h 120"/>
+      <path class="L" style="stroke: rgb(0, 255, 0);" d="M 47,30 h 120"></path>
     </g>
     <g id="B4" class="S2">
-      <path class="L" style="stroke:#ffff00" d="M 167,30 h 100"/>
+      <path class="L" style="stroke: rgb(0, 255, 0);" d="M 167,30 h 100"></path>
     </g>
     <g id="B4" class="S3">
-      <path class="L" style="stroke:#ffff00" d="M 267,30 h 100"/>
+      <path class="L" style="stroke: rgb(0, 255, 0);" d="M 267,30 h 100"></path>
     </g>
     <g id="B4" class="S4">
-      <path class="L" style="stroke:#ffff00" d="M 367,30 h 100"/>
+      <path class="L" style="stroke: rgb(0, 255, 0);" d="M 367,30 h 100"></path>
     </g>
     <g id="B4" class="S5">
-      <path class="L" style="stroke:#ffff00" d="M 467,30 h 100"/>
+      <path class="L" style="stroke: rgb(0, 255, 0);" d="M 467,30 h 100"></path>
     </g>
     <g id="B4" class="S6">
-      <path class="L" style="stroke:#ffff00" d="M 567,30 h 103"/>
+      <path class="L" style="stroke: rgb(0, 255, 0);" d="M 567,30 h 103"></path>
     </g>
     <g id="B5" class="S1">
-      <path class="L" style="stroke:#ffff00" d="M 27,50 h 140"/>
+      <path class="L" style="stroke: rgb(255, 119, 0);" d="M 27,50 h 140"></path>
     </g>
     <g id="B5" class="S2">
-      <path class="L" style="stroke:#ffff00" d="M 167,50 h 100"/>
+      <path class="L" style="stroke: rgb(0, 255, 0);" d="M 167,50 h 100"></path>
     </g>
     <g id="B5" class="S3">
-      <path class="L" style="stroke:#ffff00" d="M 267,50 h 100"/>
+      <path class="L" style="stroke: rgb(0, 255, 0);" d="M 267,50 h 100"></path>
     </g>
     <g id="B5" class="S4">
-      <path class="L" style="stroke:#ffff00" d="M 367,50 h 100"/>
+      <path class="L" style="stroke: rgb(0, 255, 0);" d="M 367,50 h 100"></path>
     </g>
     <g id="B5" class="S5">
-      <path class="L" style="stroke:#ffff00" d="M 467,50 h 100"/>
+      <path class="L" style="stroke: rgb(0, 255, 0);" d="M 467,50 h 100"></path>
     </g>
     <g id="B5" class="S6">
-      <path class="L" style="stroke:#ffff00" d="M 567,50 h 103"/>
+      <path class="L" style="stroke: rgb(0, 255, 0);" d="M 567,50 h 103"></path>
     </g>
     <g id="B6" class="S1">
-      <path class="L" style="stroke:#ffff00" d="M 47,70 h 120"/>
+      <path class="L" style="stroke: rgb(255, 119, 0);" d="M 47,70 h 120"></path>
     </g>
     <g id="B6" class="S2">
-      <path class="L" style="stroke:#ffff00" d="M 167,70 h 100"/>
+      <path class="L" style="stroke: rgb(0, 255, 0);" d="M 167,70 h 100"></path>
     </g>
     <g id="B6" class="S3">
-      <path class="L" style="stroke:#ffff00" d="M 267,70 h 100"/>
+      <path class="L" style="stroke: rgb(0, 255, 0);" d="M 267,70 h 100"></path>
     </g>
     <g id="B6" class="S4">
-      <path class="L" style="stroke:#ffff00" d="M 367,70 h 100"/>
+      <path class="L" style="stroke: rgb(0, 255, 0);" d="M 367,70 h 100"></path>
     </g>
     <g id="B6" class="S5">
-      <path class="L" style="stroke:#ffff00" d="M 467,70 h 100"/>
+      <path class="L" style="stroke: rgb(0, 255, 0);" d="M 467,70 h 100"></path>
     </g>
     <g id="B6" class="S6">
-      <path class="L" style="stroke:#ffff00" d="M 567,70 h 103"/>
+      <path class="L" style="stroke: rgb(0, 255, 0);" d="M 567,70 h 103"></path>
     </g>
     <g id="B7" class="S1">
-      <path class="L" style="stroke:#ffff00" d="M 67,90 h 100"/>
+      <path class="L" style="stroke: rgb(255, 119, 0);" d="M 67,90 h 100"></path>
     </g>
     <g id="B7" class="S2">
-      <path class="L" style="stroke:#ffff00" d="M 167,90 h 100"/>
+      <path class="L" style="stroke: rgb(0, 255, 0);" d="M 167,90 h 100"></path>
     </g>
     <g id="B7" class="S3">
-      <path class="L" style="stroke:#ffff00" d="M 267,90 h 100"/>
+      <path class="L" style="stroke: rgb(0, 255, 0);" d="M 267,90 h 100"></path>
     </g>
     <g id="B7" class="S4">
-      <path class="L" style="stroke:#ffff00" d="M 367,90 h 100"/>
+      <path class="L" style="stroke: rgb(0, 255, 0);" d="M 367,90 h 100"></path>
     </g>
     <g id="B7" class="S5">
-      <path class="L" style="stroke:#ffff00" d="M 467,90 h 100"/>
+      <path class="L" style="stroke: rgb(0, 255, 0);" d="M 467,90 h 100"></path>
     </g>
     <g id="B7" class="S6">
-      <path class="L" style="stroke:#ffff00" d="M 567,90 h 103"/>
+      <path class="L" style="stroke: rgb(0, 255, 0);" d="M 567,90 h 103"></path>
     </g>
     <g id="B8" class="S1">
-      <path class="L" style="stroke:#ffff00" d="M 67,110 h 100"/>
+      <path class="L" style="stroke: rgb(255, 119, 0);" d="M 67,110 h 100"></path>
     </g>
     <g id="B8" class="S2">
-      <path class="L" style="stroke:#ffff00" d="M 167,110 h 100"/>
+      <path class="L" style="stroke: rgb(0, 255, 0);" d="M 167,110 h 100"></path>
     </g>
     <g id="B8" class="S3">
-      <path class="L" style="stroke:#ffff00" d="M 267,110 h 100"/>
+      <path class="L" style="stroke: rgb(0, 255, 0);" d="M 267,110 h 100"></path>
     </g>
     <g id="B8" class="S4">
-      <path class="L" style="stroke:#ffff00" d="M 367,110 h 100"/>
+      <path class="L" style="stroke: rgb(0, 255, 0);" d="M 367,110 h 100"></path>
     </g>
     <g id="B8" class="S5">
-      <path class="L" style="stroke:#ffff00" d="M 467,110 h 100"/>
+      <path class="L" style="stroke: rgb(0, 255, 0);" d="M 467,110 h 100"></path>
     </g>
     <g id="B8" class="S6">
-      <path class="L" style="stroke:#ffff00" d="M 567,110 h 103"/>
+      <path class="L" style="stroke: rgb(0, 255, 0);" d="M 567,110 h 103"></path>
     </g>
-</svg>
+</g></svg>

@@ -72,8 +72,8 @@ div.cs-active {
 }
 
 .cs-options {
-	max-height: 200px;
-	overflow-y: overlay;
+	max-height: 290px;
+	overflow-y: scroll;
 }
 
 /* Options */

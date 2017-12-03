@@ -1,81 +1,47 @@
 <svg xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:svg="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 140" id="svg6" height="140px" width="180px" version="1.1">
   <metadata id="metadata12">
-    <rdf:RDF>
-      <cc:Work rdf:about="">
+    <rdf:rdf>
+      <cc:work rdf:about="">
         <dc:format>image/svg+xml</dc:format>
-      </cc:Work>
-    </rdf:RDF>
+      </cc:work>
+    </rdf:rdf>
   </metadata>
-  <defs id="defs10"/>
-  <path class="B" d="M 0,40 h 180"/>
-  <path class="B" d="M 0,60 h 180"/>
-  <path class="B" d="M 81.5,131.5 l -73,-73"/>
-  <path class="B" d="M 98.5,131.5 l 73,-73"/>
-  <path class="B" d="M 80,140 l 0,-12"/>
-  <path class="B" d="M 100,140 l 0,-12"/>
+  <defs id="defs10"></defs>
+  <path class="B" d="M 0,40 h 180"></path>
+  <path class="B" d="M 0,60 h 180"></path>
+  <path class="B" d="M 81,130 l -70,-70"></path>
+  <path class="B" d="M 99,130 l 70,-70"></path>
+  <path class="B" d="M 80,140 l 0,-12"></path>
+  <path class="B" d="M 100,140 l 0,-12"></path>
 <g>
   <g id="B1" class="S1">
-    <path class="L" style="stroke:#ffff00" d="M 5,40 h 170"/>
+    <path class="L" style="stroke: rgb(0, 255, 0);" d="M 5,40 h 170"></path>
   </g>
   <g id="B2" class="S0">
-    <path class="L" style="stroke:#ffff00" d="M 5,60 h 6"/>
-    <path class="L" style="stroke:#ffff00" d="M 30,60 h 60"/>
+    <path class="L" style="stroke: rgb(0, 255, 0);" d="M 5,60 h 6"></path>
+    <path class="L" style="stroke: rgb(0, 255, 0);" d="M 30,60 h 60"></path>
 
-    <path id="S1S" class="L" style="stroke:#ff0" d="M 10,60 h 20"/>
-    <path id="S1D" class="L" style="stroke:#ff0" d="M 9.5,59.5 l 20.5,20.5"/>
+    <path id="S1S" class="L" style="stroke: rgb(0, 255, 0); opacity: 1;" d="M 10,60 h 20"></path>
+    <path id="S1D" class="L" style="stroke: rgb(0, 255, 0); opacity: 1;" d="M 10.5,59.5 l 19.5,19.5"></path>
 
-    <rect x="10" y="59" height="22" width="22" class="Switch" onClick="remote_Switch('S',5,2,1);" />
+    <rect x="10" y="59" height="22" width="22" class="Switch" onclick="remote_Switch('S',5,2,1);" style="cursor: pointer;"></rect>
   </g>
   <g id="B3" class="S1">
-    <path class="L" style="stroke:#ffff00" d="M 80.5,130.5 l -51,-51"/>
-    <path class="L" style="stroke:#ffff00" d="M 80,129 l 0,6"/>
+    <path class="L" style="stroke: rgb(0, 255, 0);" d="M 80.5,129.5 l -51,-51"></path>
+    <path class="L" style="stroke: rgb(0, 255, 0);" d="M 80,129 l 0,6"></path>
   </g>
   <g id="B4" class="S1">
-    <path class="L" style="stroke:#ffff00" d="M 99.5,130.5 l 51,-51"/>
-    <path class="L" style="stroke:#ffff00" d="M 100,129 l 0,6"/>
+    <path class="L" style="stroke: rgb(0, 255, 0);" d="M 99.5,129.5 l 51,-51"></path>
+    <path class="L" style="stroke: rgb(0, 255, 0);" d="M 100,129 l 0,6"></path>
   </g>
   <g id="B5" class="S0">
-    <path class="L" style="stroke:#ffff00" d="M 90,60 h 60"/>
-    <path class="L" style="stroke:#ffff00" d="M 169,60 h 6"/>
+    <path class="L" style="stroke: rgb(0, 255, 0);" d="M 90,60 h 60"></path>
+    <path class="L" style="stroke: rgb(0, 255, 0);" d="M 169,60 h 6"></path>
 
-    <path id="S1S" class="L" style="stroke:#ff0" d="M 170,60 h -20"/>
-    <path id="S1D" class="L" style="stroke:#ff0" d="M 170.5,59.5 l -20.5,20.5"/>
+    <path id="S1S" class="L" style="stroke: rgb(0, 255, 0); opacity: 0;" d="M 170,60 h -20"></path>
+    <path id="S1D" class="L" style="stroke: rgb(0, 255, 0); opacity: 1;" d="M 169.5,59.5 l -19.5,19.5"></path>
 
-    <rect x="150" y="59" height="22" width="22" class="Switch" onClick="remote_Switch('S',5,5,1);" />
+    <rect x="150" y="59" height="22" width="22" class="Switch" onclick="remote_Switch('S',5,5,1);" style="cursor: pointer;"></rect>
   </g>
 </g>
-  <!--<g> Text blocks
-    <g id="M5B1S1" style="display:none">
-      <rect x="90" y="35" width="20" height="10" fill="black" ></rect>
-      <text class="T" x="90" y="43.5" font-family="Verdana" font-size="10" fill="white" >&lt;FF</text>
-    </g>
-    <g id="M5B2S1" style="display:none">
-      <rect x="290" y="35" width="20" height="10" fill="black" ></rect>
-      <text class="T" x="290" y="43.5" font-family="Verdana" font-size="10" fill="white" >&lt;FF</text>
-    </g>
-    <g id="M5B3S1" style="display:none">
-      <rect x="490" y="35" width="20" height="10" fill="black" ></rect>
-      <text class="T" x="490" y="43.5" font-family="Verdana" font-size="10" fill="white" >&lt;FF</text>
-    </g>
-    <g id="M5B4S1" style="display:none">
-      <rect x="690" y="35" width="20" height="10" fill="black" ></rect>
-      <text class="T" x="690" y="43.5" font-family="Verdana" font-size="10" fill="white" >&lt;FF</text>
-    </g>
-    <g id="M5B5S1" style="display:none">
-      <rect x="90" y="55" width="20" height="10" fill="black" ></rect>
-      <text class="T" x="90" y="63.5" font-family="Verdana" font-size="10" fill="white" >&lt;FF</text>
-    </g>
-    <g id="M5B6S1" style="display:none">
-      <rect x="290" y="55" width="20" height="10" fill="black" ></rect>
-      <text class="T" x="290" y="63.5" font-family="Verdana" font-size="10" fill="white" >&lt;FF</text>
-    </g>
-    <g id="M5B7S1" style="display:none">
-      <rect x="490" y="55" width="20" height="10" fill="black" ></rect>
-      <text class="T" x="490" y="63.5" font-family="Verdana" font-size="10" fill="white" >&lt;FF</text>
-    </g>
-    <g id="M5B8S1" style="display:none">
-      <rect x="690" y="55" width="20" height="10" fill="black" ></rect>
-      <text class="T" x="690" y="63.5" font-family="Verdana" font-size="10" fill="white" >&lt;FF</text>
-    </g>
-  </g>-->
 </svg>

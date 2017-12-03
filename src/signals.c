@@ -1,24 +1,138 @@
-void set_signal(struct Seg * B,int leftshift,int state){
-  state = state & 0x7;
+#include "./signals.h"
 
-  if(!(leftshift == 0 || leftshift == 4)){
-    printf("Wrong leftshift: %i\n",leftshift);
-    return;
+#ifndef H_COM
+  #include "./COM.h"
+#endif
+
+/*
+void create_signal(int Unit_Adr,struct Seg * B,int type, int side){ //Side = 0 => NSi, 1 => PSi
+  struct signal *Z = (struct signal*)malloc(sizeof(struct signal));
+
+  Z->state = 0;
+  Z->id = Unit_Adr;
+  Z->MAdr = B->Adr.M;
+  Z->type = type;
+
+  printf("Signal #%i\n",Si_list_i);
+
+  signals[Si_list_i] = Z;
+
+  if(side == 0){
+    B->NSi = Z;
+  }else if(side == 1){
+    B->PSi = Z;
   }
-  if(((B->signals >> leftshift) & 0b1000) == 0){
-    printf("No Signal");
-    return;
-  }
-  if(((B->signals >> leftshift) & 0b0111) == state){
-    return;
+
+  if(Units[B->Adr.M]->Signals[Unit_Adr] == NULL){
+    Units[B->Adr.M]->Signals[Unit_Adr] = Z;
+    Z->UAdr = Unit_Adr;
+    if(Unit_Adr > Units[B->Adr.M]->Si_L){
+      Units[B->Adr.M]->Si_L = Unit_Adr;
+    };
   }else{
-    if(leftshift == 4){
-      printf("%i:%i:%i\tLeft Signal\t%i\n",B->Adr.M,B->Adr.B,B->Adr.S,state);
-      B->signals = (B->signals & 0x8F) + (state << 4);
-    }else{
-      printf("%i:%i:%i\tRight Signal\t%i\n",B->Adr.M,B->Adr.B,B->Adr.S,state);
-      B->signals = (B->signals & 0xF8) + state;
+    printf("Double signal adress %i in Module %i\n",Unit_Adr,B->Adr.M);
+  }
+
+
+  Si_list_i++;
+}
+*/
+
+void create_signal2(struct Seg * B,char adr_nr, short addresses[adr_nr], char state[BLOCK_STATES], char flash[BLOCK_STATES], char side){
+  /*Block*/
+  /*Number of output pins/addresses*/
+  /*State output relation*/
+  /*Side*/
+
+  struct signal *Z = (struct signal*)malloc(sizeof(struct signal));
+
+  Z->state = 10;
+
+  Z->id = Units[B->Module]->Signal_nr;
+  long Unit_Adr = Units[B->Module]->Signal_nr++;
+
+  Z->MAdr = B->Module;
+  Z->type = 1;
+
+  for(char i = 0;i<adr_nr;i++){
+    if(Units[Z->MAdr]->Out_length < addresses[i]){
+      printf("Expansion needed\t");
+      printf("Address %i doesn't fit\n",addresses[i]);
+
+      char expand = ((addresses[i]-Units[Z->MAdr]->Out_length) + 8) / 8;
+
+    	Units[Z->MAdr]->Out_length += (expand*8);
+
+      printf("Expanded to: %i bytes\n\n",(Units[Z->MAdr]->Out_length/8));
     }
-    COM_change_signal(B);
+    Z->adr[i] = addresses[i];
+  }
+  for(char i = 0;i<BLOCK_STATES;i++){ Z->states[i] = state[i];    }
+  for(char i = 0;i<BLOCK_STATES;i++){  Z->flash[i] = flash[i];    }
+
+  printf("Signal2 #%i\n",Si_list_i);
+
+  signals[Si_list_i] = Z;
+
+  if(side == 0){
+    B->NSi = Z;
+  }else if(side == 1){
+    B->PSi = Z;
+  }
+
+  if(Units[B->Module]->Signals[Unit_Adr] == NULL){
+    Units[B->Module]->Signals[Unit_Adr] = Z;
+    Z->UAdr = Unit_Adr;
+    if(Unit_Adr > Units[B->Module]->Si_L){
+      Units[B->Module]->Si_L = Unit_Adr;
+    };
+  }else{
+    printf("Double signal adress %i in Module %i\n",Unit_Adr,B->Module);
+  }
+
+
+  Si_list_i++;
+}
+
+void set_signal(struct signal *Si,int state){  //0 = NSi, 1 = PSi
+  /*
+  if(state == GREEN){
+    state = 1;
+  }else if(state == AMBER){
+    state = 2;
+  }else if(state == RED){
+    state = 4;
+  }else{
+    state = 0b111;
+  }*/
+  if(Si->state != 10){
+    if(Si->type == 0){
+      if(state == GREEN_S){
+        state = 1;
+      }else{
+        state = 0;
+      }
+    }else if(Si->type == 1){
+      if(state == GREEN_S){
+        state = 1;
+      }else if(state == AMBER_S){
+        state = 2;
+      }else{
+        state = 0;
+      }
+    }
+
+    if(Si->state != state){
+      printf("Module %i Signal #%i change to %i\n",Si->MAdr,Si->id,state);
+      Si->state = state;
+
+      Units[Si->MAdr]->Sig_change = TRUE;
+      //if(startup == 1){
+        //COM_change_signal(Si);
+      //}
+    }
+  }else{
+    Si->state = state;
+    Units[Si->MAdr]->Sig_change = TRUE;
   }
 }

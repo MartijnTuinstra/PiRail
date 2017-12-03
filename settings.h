@@ -8,9 +8,9 @@
 //Maximum Modules
 #define MAX_Modules 16
 //Maximum Trains
-#define MAX_TRAINS 25
+#define MAX_TRAINS 30
 //Maximum Switches in a Route
-#define MAX_ROUTE 20
+#define MAX_ROUTE 200
 //Maximum Timers
 #define MAX_TIMERS 5
 //Maximum Web Clients

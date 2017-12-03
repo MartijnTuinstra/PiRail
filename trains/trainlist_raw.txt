@@ -1,0 +1,20 @@
+Name	DCC Address	Type	Max speed
+Koploper	1200	P	160
+Hondekop	2003	P	140
+Eurostar	15	P	270
+Kitty	621	P	140
+New_Train	492	P	193
+SuperNew	7890	P	391
+Cargo_Train	1246781	C	120
+TestTrain	1841	P	160
+Stoomtrein	1482	P	100
+ZeroTrain	381	P	160
+ZeroTrain	382	P	160
+FavoTrain	1230	P	200
+TGV	921	P	320
+Heavy train	858	P	70
+LightTrain	14	P	60
+Time	16	P	160
+OLED	17	P	160
+112345	274	P	14721
+TVtrein	19	P	160

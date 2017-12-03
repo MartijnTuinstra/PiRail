@@ -1,0 +1,140 @@
+<svg preserveAspectRatio="xMidYMid meet" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:svg="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2000 70" id="svg6" height="70px" width="70px" version="1.1">
+  <metadata id="metadata12">
+    <rdf:RDF>
+      <cc:Work rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <defs id="defs10"/>
+
+
+  <path class="B" d="M 0,40 h 70"/>
+  <path class="B" d="M 0,60 h 70"/>
+  <path class="B" d="M 42.5,20 h 27.5"/>
+  <!-- Switch rails -->
+  <path class="B" d="M 24,41 l 22,-22"/>
+  <path class="B" d="M 24,59 l 12,12"/>
+
+  <g>
+    <g id="B1" class="S1" onmouseenter="Show($(this),$(this))" onmouseleave="Hide($(this),$(this))">
+
+      <path class="L" style="stroke:#ffff00" d="M -115,40 h 141"/>
+      <path id="S1D" class="L" style="stroke:#ffff00" d="M 24,41 l 22,-22"/>
+      <path id="S1S" class="L" style="stroke:#ffff00" d="M 26,40 h 54"/>
+      <path class="L" style="stroke:#ffff00" d="M 44,20 h 36"/>
+    </g>
+
+    <g id="B5" class="S1" onmouseenter="Show($(this),$(this))" onmouseleave="Hide($(this),$(this))">
+      <path class="L" style="stroke:#ffff00" nswitch="" d="M -115,60 h 141"/>
+    </g>
+
+    <g id="B6" class="S0">
+      <path id="S1D" class="L" style="stroke:#ffff00" nswitch="" d="M 24,59 l 22,22"/>
+      <path id="S1S" class="L" style="stroke:#ffff00" nswitch="" d="M 26,60 h 54"/>
+    </g>
+
+  </g>
+
+  <!-- 4,1 -->
+
+  <path class="B" d="M 240,40 h 70"/>
+  <path class="B" d="M 240,60 h 70"/>
+  <path class="B" d="M 240,20 h 27"/>
+
+  <path class="B" d="M 264,19 l 22,22"/>
+  <path class="B" d="M 286,59 l -15,15"/>
+
+  <g>
+    <g id="B4" class="S1" onmouseenter="Show($(this),$(this))" onmouseleave="Hide($(this),$(this))">
+      <path class="L" style="stroke:#ffff00" d="M 284,40 h 26"/>
+
+      <path id="S1D" class="L" style="stroke:#ffff00" d="M 286,41 l -22,-22"/>
+      <path id="S1S" class="L" style="stroke:#ffff00" d="M 230,40 h 54"/>
+
+      <path class="L" style="stroke:#ffff00" d="M 230,20 h 36"/>
+    </g>
+    <g id="B10" class="S0">
+      <path id="S1D" class="L" style="stroke:#f0f" nswitch="" d="M 264,81 l 22,-22"/>
+      <path id="S1S" class="L" style="stroke:#0f0" nswitch="" d="M 230,60 h 54"/>
+    </g>
+    <g id="B11" class="S1" onmouseenter="Show($(this),$(this))" onmouseleave="Hide($(this),$(this))">
+      <path class="L" style="stroke:#ff00ff" nswitch="" d="M 284,60 h 26"/>
+    </g>
+
+  </g>
+
+  <!-- 6 -->
+
+  <path class="B" d="M 400,0 h 70"/>
+  <path class="B" d="M 400,20 h 70"/>
+  <path class="B" d="M 433,40 h 37"/>
+  <path class="B" d="M 452.5,60 h 17.5"/>
+
+  <path class="B" d="M 444,1 l 22,-22"/>
+  <path class="B" d="M 414,19 l 42,42"/>
+
+  <g>
+    <g id="B1" class="S1" onmouseenter="Show($(this),$(this))" onmouseleave="Hide($(this),$(this))">
+
+      <path class="L" style="stroke:#ffff00" nswitch="" d="M 400,0 h 15.5"/>
+      <path id="S1D" class="L" style="stroke:#ffff00" nswitch="" d="M 414,1 l 22,-22"/>
+      <path id="S1S" class="L" style="stroke:#ffff00" nswitch="" d="M 416,0 h 54"/>
+      <path class="L" style="stroke:#ffff00" nswitch="" d="M 434,-20 h 36"/>
+    </g>
+
+    <g id="B5" class="S1" onmouseenter="Show($(this),$(this))" onmouseleave="Hide($(this),$(this))">
+      <path class="L" style="stroke:#ffff00" nswitch="" d="M 370,20 h 141"/>
+    </g>
+
+    <g id="B6" class="S0">
+      <path id="S1D" class="L" style="stroke:#ffff00" d="M 414,19 l 22,22"/>
+      <path id="S1S" class="L" style="stroke:#ffff00" d="M 416,20 h 54"/>
+      <path id="S2S" class="L" style="stroke:#ffff00" d="M 434,39 l 22,22"/>
+      <path id="S2D" class="L" style="stroke:#ffff00" d="M 434,40 h 36"/>
+      <path class="L" style="stroke:#ff0" d="M 454,60 h 16"/>
+    </g>
+
+    <g id="B7" class="S1" onmouseenter="Show($(this),$(this))" onmouseleave="Hide($(this),$(this))">
+      <path class="L" style="stroke:#ffff00" d="M 570,20 h 100"/>
+    </g>
+
+    <g id="B8" class="S1" onmouseenter="Show($(this),$(this))" onmouseleave="Hide($(this),$(this))">
+      <path class="L" style="stroke:#ffff00" d="M 570,40 h 100"/>
+    </g>
+
+    <g id="B9" class="S1" onmouseenter="Show($(this),$(this))" onmouseleave="Hide($(this),$(this))">
+      <path class="L" style="stroke:#ffff00" d="M 570,60 h 100"/>
+    </g>
+  </g>
+  <!-- 10 -->
+
+  <path class="B" d="M 720, 0 h 70"/>
+  <path class="B" d="M 720,20 h 70"/>
+  <path class="B" d="M 720,40 h 70"/>
+  <path class="B" d="M 720,60 h 70"/>
+  <!-- Switch rails -->
+
+  <path class="B" d="M 734,61 l 42,-42"/>
+
+  <g>
+    <g id="B4" class="S1" onmouseenter="Show($(this),$(this))" onmouseleave="Hide($(this),$(this))">
+      <path class="L" style="stroke:#ffff00" nswitch="" d="M 774,0 h 26"/>
+
+      <path id="S1D" class="L" style="stroke:#ffff00" nswitch="" d="M 775.5,0.5 l -14,-14"/>
+      <path id="S1S" class="L" style="stroke:#ffff00" nswitch="" d="M 720,0 h 54"/>
+    </g>
+
+    <g id="B10" class="S0">
+      <path id="S1D" class="L" style="stroke:#f0f" d="M 754,41 l 22,-22"/>
+      <path id="S1S" class="L" style="stroke:#0f0" d="M 720,20 h 54"/>
+      <path id="S2S" class="L" style="stroke:#f0f" d="M 734,61 l 22,-22"/>
+      <path id="S2D" class="L" style="stroke:#ffff00" d="M 720,40 h 36"/>
+      <path class="L" style="stroke:#ff0" d="M 720,60 h 16"/>
+    </g>
+    <g id="B11" class="S1" onmouseenter="Show($(this),$(this))" onmouseleave="Hide($(this),$(this))">
+      <path class="L" style="stroke:#ff00ff" d="M 774,20 h 26"/>
+    </g>
+
+  </g>
+</svg>

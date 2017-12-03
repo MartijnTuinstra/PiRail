@@ -7,16 +7,6 @@
     </rdf:RDF>
   </metadata>
   <defs id="defs10"/>
-  <g>
-    <rect x="200" y="25" width="400" height="15" style="fill:#444;"/>
-    <rect x="200" y="60" width="400" height="20" style="fill:#444;"/>
-    <rect x="200" y="105" width="400" height="15" style="fill:#444;"/>
-
-    <rect x="600" y="50" width="40" height="60" style="stroke:rgb(255,0,0);stroke-width:2;fill:none"/>
-    <rect x="160" y="50" width="40" height="60" style="stroke:rgb(255,0,0);stroke-width:2;fill:none"/>
-    <rect x="600" y="10" width="40" height="40" style="stroke:rgb(255,0,0);stroke-width:2;fill:none"/>
-    <rect x="160" y="10" width="40" height="40" style="stroke:rgb(255,0,0);stroke-width:2;fill:none"/>
-  </g>
   <path class="B" d="M 0,40 h 800"/>
   <path class="B" d="M 0,60 h 800"/>
   <path class="B" d="M 162.5,20 h 475"/>
@@ -28,10 +18,10 @@
 
   <path class="B" d="M 634,19 l 22,22"/>
   <path class="B" d="M 614,101 l 42,-42"/>
-  
+
   <g>
     <g id="B1" class="S1" onmouseenter="Show(this,$(this))" onmouseleave="Hide(this,$(this))">
-      
+
       <path class="L" style="stroke:#ffff00" d="M 5,40 h 141"/>
       <path id="S1D" class="L" style="stroke:#ffff00" d="M 144,41 l 22,-22"/>
       <path id="S1S" class="L" style="stroke:#ffff00" d="M 146,40 h 54"/>
@@ -62,7 +52,7 @@
       <path class="L" style="stroke:#ffff00" d="M 500,40 h 100"/>
     </g>
     <g id="B4" class="S1" onmouseenter="Show(this,$(this))" onmouseleave="Hide(this,$(this))">
-      <path class="L" style="stroke:#ffff00" d="M 654,40 h 141"/>
+      <path class="L" style="stroke:#ffff00" d="M 654,40 h 146"/>
 
       <path id="S1D" class="L" style="stroke:#ffff00" d="M 656,41 l -22,-22"/>
       <path id="S1S" class="L" style="stroke:#ffff00" d="M 600,40 h 54"/>
@@ -71,17 +61,16 @@
     </g>
 
      <g id="B5" class="S1" onmouseenter="Show(this,$(this))" onmouseleave="Hide(this,$(this))">
-      <path class="L" style="stroke:#ffff00" d="M 5,60 h 141"/>
+      <path class="L" style="stroke:#ffff00" d="M 5,60 h 136"/>
     </g>
 
     <g id="B6" class="S0">
+      <path class="L" style="stroke:#ffff00" d="M 141,60 h 5"/>
       <path id="S1D" class="L" style="stroke:#ffff00" d="M 144,59 l 22,22"/>
       <path id="S1S" class="L" style="stroke:#ffff00" d="M 146,60 h 54"/>
       <path id="S2S" class="L" style="stroke:#ffff00" d="M 164,79 l 22,22"/>
       <path id="S2D" class="L" style="stroke:#ffff00" d="M 164,80 h 36"/>
       <path class="L" style="stroke:#ffff00" d="M 184,100 h 16"/>
-
-      <rect x="160" y="50" width="40" height="60" style="fill:rgba(0,0,0,0);" onmouseenter="console.log('Enter');" onmouseleave="console.log('Exit');"/>
     </g>
     <g id="B7" class="S1" onmouseenter="Show(this,$(this))" onmouseleave="Hide(this,$(this))">
       <path class="L" style="stroke:#ffff00" d="M 200,60 h 100"/>
@@ -125,11 +114,10 @@
       <path id="S2S" class="L" style="stroke:#f0f" d="M 614,101 l 22,-22"/>
       <path id="S2D" class="L" style="stroke:#ffff00" d="M 600,80 h 36"/>
       <path class="L" style="stroke:#ffff00" d="M 600,100 h 16"/>
-      
-      <rect x="600" y="50" width="40" height="60" style="fill:rgba(0,0,0,0);" onmouseenter="console.log('Enter');" onmouseleave="console.log('Exit');"/>
+      <path class="L" style="stroke:#ffff00" d="M 654,60 h 5"/>
     </g>
     <g id="B11" class="S1" onmouseenter="Show(this,$(this))" onmouseleave="Hide(this,$(this))">
-      <path class="L" style="stroke:#ff00ff" d="M 654,60 h 141"/>
+      <path class="L" style="stroke:#ff00ff" d="M 659,60 h 141"/>
     </g>
   </g>
   <g><!-- Text blocks -->

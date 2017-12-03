@@ -23,3 +23,21 @@ void add_train(char ID){
 	//return Z;
 	trains[iTrain++] = Z;
 }
+
+void setup_JSON(int arr[], int size){
+	FILE *fr;
+	printf("JSON1\n");
+	fr = fopen("setup.json","w");
+
+	fprintf(fr, "[");
+
+	for(int i = 0;i<size-1;i++){
+		fprintf(fr,"%i,",arr[i]);
+	}
+
+	fprintf(fr,"%i]",arr[size-1]);
+
+	fclose(fr);
+
+	printf("JSON1\n");
+}

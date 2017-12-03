@@ -1,25 +1,30 @@
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="300px" height="300px" viewBox="0 0  300 300" preserveAspectRatio="xMidYMid meet" style="shape-rendering:auto;">
-	 <style type="text/css"><![CDATA[
-      .R {
-        -ms-transform: rotate(45deg); /* IE 9 */
-        -webkit-transform: rotate(45deg); /* Chrome, Safari, Opera */
-        transform: rotate(45deg);
-      }
-
-    ]]></style>
-  <path d="M5,60 a 235,235 0 0,1 235,235" class="B" style="stroke-linecap:square"/>
-  <path d="M5,40 a 255,255 0 0,1 255,255" class="B" style="stroke-linecap:square"/>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="420px" height="420px" viewBox="0 0  420 420" preserveAspectRatio="xMidYMid meet" style="shape-rendering:auto;">
+  <path d="M5,60 a 355,355 0 0,1 355,355" class="B" style="stroke-linecap:square"/>
+  <path d="M5,40 a 375,375 0 0,1 375,375" class="B" style="stroke-linecap:square"/>
+	<path d="M 370,420 l 0,-20" class="B" style="stroke-width:1px;"/>
   <g id="B5" class="S1">
-    <path d="M5,60 a 235,235 0 0,1 166.17,68.83" class="L" style="stroke:#ff0"/>
+    <path d="M5,60 a 355,355 0 0,1 135.85,27.02" class="L" style="stroke:#ff0"/>
+  </g>
+  <g id="B6" class="S1">
+    <path d="M140.85,87.02 a 355,355 0 0,1 115.17,76.96" class="L" style="stroke:#ff0"/>
+  </g>
+  <g id="B7" class="S1">
+    <path d="M256.02,163.98 a 355,355 0 0,1 76.96,115.17" class="L" style="stroke:#ff0"/>
   </g>
   <g id="B8" class="S1">
-    <path d="M240,295 a -235,-235 0 0,0 -68.83,-166.17" class="L" style="stroke:#ff0"/>
+    <path d="M332.98,279.15 a 355,355 0 0,1 27.02,135.85" class="L" style="stroke:#ff0"/>
   </g>
   <g id="B1" class="S1">
-    <path d="M5,40 a 255,255 1 0,1 180.31,74.69" class="L" style="stroke:#ff0"/>
+    <path d="M5,40 a 375,375 1 0,1 143.51,28.55" class="L" style="stroke:#ff0"/>
+  </g>
+  <g id="B2" class="S1">
+    <path d="M148.51,68.55 a 375,375 1 0,1 121.66,81.28" class="L" style="stroke:#ff0"/>
+  </g>
+  <g id="B3" class="S1">
+    <path d="M270.17,149.83 a 375,375 1 0,1 81.28,121.66" class="L" style="stroke:#ff0"/>
   </g>
   <g id="B4" class="S1">
-    <path d="M260,295 a -255,-255 0 0,0 -74.69,-180.31" class="L" style="stroke:#ff0"/>
+    <path d="M351.45,271.49 a 375,375 1 0,1 28.55,143.51" class="L" style="stroke:#ff0"/>
   </g><!--
   <g id="S0">
     <path d="M5,40q127,0e-15,190,63" class="B"/>
@@ -27,14 +32,4 @@
   </g>-->
 
   <path d="M5,295 l 300,-300" class="L"/>
-  <g><!-- Text blocks -->
-    <g id="S0B" style="display:none">
-      <rect class="R" x="130" y="-35" width="20" height="10" fill="black" ></rect>
-      <text class="T R" x="130" y="-26.5" font-family="Verdana" font-size="10" fill="white" >&lt;FF</text>
-    </g>
-    <g id="S1B" style="display:none">
-      <rect class="R" x="130" y="-15" width="20" height="10" fill="black" ></rect>
-      <text class="T R" x="130" y="-6.5" font-family="Verdana" font-size="10" fill="white" >&lt;FF</text>
-    </g>
-  </g>
 </svg>

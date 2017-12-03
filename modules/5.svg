@@ -14,33 +14,37 @@
   <path class="B" d="M 80,140 l 0,-12"/>
   <path class="B" d="M 100,140 l 0,-12"/>
 <g>
-  <g id="B1" class="S1" onmouseenter="Show($(this),$(this))" onmouseleave="Hide($(this),$(this))">
+  <g id="B1" class="S1">
     <path class="L" style="stroke:#ffff00" d="M 5,40 h 170"/>
   </g>
-  <g id="B2" class="S0" onmouseenter="Show($(this),$(this))" onmouseleave="Hide($(this),$(this))">
+  <g id="B2" class="S0">
     <path class="L" style="stroke:#ffff00" d="M 5,60 h 6"/>
     <path class="L" style="stroke:#ffff00" d="M 30,60 h 60"/>
 
     <path id="S1S" class="L" style="stroke:#ff0" d="M 10,60 h 20"/>
     <path id="S1D" class="L" style="stroke:#ff0" d="M 9.5,59.5 l 20.5,20.5"/>
+
+    <rect x="10" y="59" height="22" width="22" class="Switch" onClick="remote_Switch('S',5,2,1);" />
   </g>
-  <g id="B3" class="S1" onmouseenter="Show($(this),$(this))" onmouseleave="Hide($(this),$(this))">
+  <g id="B3" class="S1">
     <path class="L" style="stroke:#ffff00" d="M 80.5,130.5 l -51,-51"/>
     <path class="L" style="stroke:#ffff00" d="M 80,129 l 0,6"/>
   </g>
-  <g id="B4" class="S1" onmouseenter="Show($(this),$(this))" onmouseleave="Hide($(this),$(this))">
+  <g id="B4" class="S1">
     <path class="L" style="stroke:#ffff00" d="M 99.5,130.5 l 51,-51"/>
     <path class="L" style="stroke:#ffff00" d="M 100,129 l 0,6"/>
   </g>
-  <g id="B5" class="S0" onmouseenter="Show($(this),$(this))" onmouseleave="Hide($(this),$(this))">
+  <g id="B5" class="S0">
     <path class="L" style="stroke:#ffff00" d="M 90,60 h 60"/>
     <path class="L" style="stroke:#ffff00" d="M 169,60 h 6"/>
 
     <path id="S1S" class="L" style="stroke:#ff0" d="M 170,60 h -20"/>
     <path id="S1D" class="L" style="stroke:#ff0" d="M 170.5,59.5 l -20.5,20.5"/>
+
+    <rect x="150" y="59" height="22" width="22" class="Switch" onClick="remote_Switch('S',5,5,1);" />
   </g>
 </g>
-  <!--<g> Text blocks 
+  <!--<g> Text blocks
     <g id="M5B1S1" style="display:none">
       <rect x="90" y="35" width="20" height="10" fill="black" ></rect>
       <text class="T" x="90" y="43.5" font-family="Verdana" font-size="10" fill="white" >&lt;FF</text>

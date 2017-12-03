@@ -1,11 +1,13 @@
-[["Loop links",0,140,90],
-  ["Loop rechts",0,140,90],
-  ["Station (5 sporen/3 bakken)",0,600,0],
-  ["Station (5 sporen/4 bakken)",0,800,0],
-  ["T splitsing",140,800,0],
-  ["Rangeerbrug",0,135,0],
-  ["Rangeer",0,667,0],
-  ["Brug",0,800,0],
-  ["Stad",0,800,0],
-  ["Bocht",300,300,90]
+[["Name","Width","Height","Rotation","Anchor1_x","Anchor1_y","Anchor2_x","Anchor2_y","Anchor3_rot","Anchor3_x","Anchor3_y"],
+  ["Loop links",140,140,90,30,140,140,50],
+  ["Loop rechts",140,140,90,0,50,110,140],
+  ["Station (5 sporen/3 bakken)",600,80,0,0,50,600,50],
+  ["Station (5 sporen/4 bakken)",800,80,0,0,50,800,50],
+  ["T splitsing",140,800,0,0,50,180,50,90,90,140],
+  ["Rangeerbrug",135,80,0,0,50,135,50],
+  ["Rangeer",676,80,0,0,95,668,95],
+  ["Brug",800,80,0,0,50,800,50],
+  ["Stad",800,80,0,0,50,800,50],
+  ["Bocht",420,420,90,0,50,370,420],
+  ["Bocht_s",200,200,90,0,50,170,220]
 ]

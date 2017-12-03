@@ -1,5 +1,1 @@
-[
-  ["Name","Type","Max speed","DCC Address"],
-  ["Koploper","P","160","1200"],
-  ["Hondekop","P","140","2003"]
-]
+[["Name","DCC Address","Type","Max speed"],["Koploper","1200","P","160"],["Hondekop","2003","P","140"],["Eurostar","15","P","270"],["Kitty","621","P","140"],["New_Train","492","P","193"],["SuperNew","7890","P","391"],["Cargo_Train","1246781","C","120"],["SWITCHTRAIN","649","C","10"],["Name","0","P","160"],["Name","0","P","160"]]

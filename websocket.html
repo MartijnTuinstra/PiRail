@@ -1,0 +1,69 @@
+<!DOCTYPE HTML>
+<html>
+   <head>
+
+      <script type="text/javascript">
+      var ws;
+         function WebSocketTest()
+         {
+            if ("WebSocket" in window)
+            {
+               alert("WebSocket is supported by your Browser!");
+
+               // Let us open a web socket
+               ws = new WebSocket("ws://192.168.0.102:9000/");
+
+               ws.onopen = function()
+               {
+                  // Web Socket is connected, send data using send()
+                //  var value = "Dit is een extreem laaaaaaang beriiicththe....Dit is een supeeer laaaaaaang beriiicththe....Dit is een supeeer laaaaaaang beriiicththe....Dit is een extreem laaaaaaang beriiicththe....Dit is een supeeer laaaaaaang beriiicththe....Dit is een supeeer laaaaaaang beriiicththe....Dit is een extreem laaaaaaang beriiicththe....Dit is een supeeer laaaaaaang beriiicththe....Dit is een supeeer laaaaaaang beriiicththe....Dit is een extreem laaaaaaang beriiicththe....Dit is een supeeer laaaaaaang beriiicththe....Dit is een supeeer laaaaaaang beriiicththe....Dit is een extreem laaaaaaang beriiicththe....Dit is een supeeer laaaaaaang beriiicththe....Dit is een supeeer laaaaaaang beriiicththe....Dit is een extreem laaaaaaang beriiicththe....Dit is een supeeer laaaaaaang beriiicththe....Dit is een supeeer laaaaaaang beriiicththe....Dit is een extreem laaaaaaang beriiicththe....Dit is een supeeer laaaaaaang beriiicththe....Dit is een supeeer laaaaaaang beriiicththe....";
+                //var value = "Simple";
+                var value = "abcdabcdabcdabcdabcdabcdsdifjkasdflasdljvasdbjawebiovhaseiljcklavnasdjklbvjkasdfjlasdjfklnasdbvasjkgegj;lseajfklasevnjkasvnasjvab";
+                //  value += value;
+                //  value += value;
+                //  value += value;
+                  ws.send(value);
+                  alert("Message is sent...");
+               };
+
+               ws.onmessage = function (evt)
+               {
+                  var received_msg = evt.data;
+                  writeToScreen(received_msg);
+                  //alert("Message is received...\n"+received_msg);
+               };
+
+               ws.onclose = function()
+               {
+                  // websocket is closed.
+                  alert("Connection is closed...");
+               };
+
+               ws.onerror = function(evt) {
+                 writeToScreen('<span style = "color: red;">ERROR:</span> ' + evt.data);
+               };
+            }
+
+            else
+            {
+               // The browser doesn't support WebSocket
+               alert("WebSocket NOT supported by your Browser!");
+            }
+         }
+
+        function writeToScreen(message) {
+           var pre = document.createElement("p");
+           pre.style.wordWrap = "break-word";
+           pre.innerHTML = message; output.appendChild(pre);
+        }
+      </script>
+
+   </head>
+   <body>
+
+      <div id="sse">
+         <a href="javascript:WebSocketTest()">Run WebSocket</a>
+      </div>
+
+   </body>
+</html>

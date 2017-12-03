@@ -23,37 +23,40 @@
 
   <path class="B" d="M 434,19 l 22,22"/>
   <path class="B" d="M 414,101 l 42,-42"/>
-  
+
   <g>
-    <g id="B1" class="S1" onmouseenter="Show($(this),$(this))" onmouseleave="Hide($(this),$(this))">
-      
+    <g id="B1" class="S1">
+
       <path class="L" style="stroke:#ffff00" d="M 5,40 h 141"/>
       <path id="S1D" class="L" style="stroke:#ffff00" d="M 144,41 l 22,-22"/>
       <path id="S1S" class="L" style="stroke:#ffff00" d="M 146,40 h 54"/>
       <path class="L" style="stroke:#ffff00" d="M 164,20 h 36"/>
+
+      <rect x="144" y="19" height="22" width="22" class="Switch" onClick="remote_Switch('S',3,1,1);" />
     </g>
-    <g id="B2" class="S1" onmouseenter="Show($(this),$(this))" onmouseleave="Hide($(this),$(this))">
+    <g id="B2" class="S1">
       <path class="L" style="stroke:#ffff00" d="M 200,20 h 100"/>
     </g>
-    <g id="B2" class="S2" onmouseenter="Show($(this),$(this))" onmouseleave="Hide($(this),$(this))">
+    <g id="B2" class="S2">
       <path class="S2 L" style="stroke:#ffff00" d="M 300,20 h 100"/>
     </g>
-    <g id="B3" class="S1" onmouseenter="Show($(this),$(this))" onmouseleave="Hide($(this),$(this))">
+    <g id="B3" class="S1">
       <path class="L" style="stroke:#ffff00" d="M 200,40 h 100"/>
     </g>
-    <g id="B3" class="S2" onmouseenter="Show($(this),$(this))" onmouseleave="Hide($(this),$(this))">
+    <g id="B3" class="S2">
       <path class="L" style="stroke:#ffff00" d="M 300,40 h 100"/>
     </g>
-    <g id="B4" class="S1" onmouseenter="Show($(this),$(this))" onmouseleave="Hide($(this),$(this))">
+    <g id="B4" class="S1">
       <path class="L" style="stroke:#ffff00" d="M 454,40 h 141"/>
 
       <path id="S1D" class="L" style="stroke:#ffff00" d="M 456,41 l -22,-22"/>
       <path id="S1S" class="L" style="stroke:#ffff00" d="M 400,40 h 54"/>
-
       <path class="L" style="stroke:#ffff00" d="M 400,20 h 36"/>
+
+      <rect x="434" y="19" height="22" width="22" class="Switch" onClick="remote_Switch('S',3,4,1);" />
     </g>
 
-    <g id="B5" class="S1" onmouseenter="Show($(this),$(this))" onmouseleave="Hide($(this),$(this))">
+    <g id="B5" class="S1">
       <path class="L" style="stroke:#ffff00" d="M 5,60 h 141"/>
     </g>
 
@@ -63,26 +66,29 @@
       <path id="S2S" class="L" style="stroke:#ffff00" d="M 164,79 l 22,22"/>
       <path id="S2D" class="L" style="stroke:#ffff00" d="M 164,80 h 36"/>
       <path class="L" style="stroke:#ff0" d="M 184,100 h 16"/>
+
+      <rect x="144" y="59" height="22" width="22" class="Switch" onClick="remote_Switch('S',3,6,1);" />
+      <rect x="164" y="79" height="22" width="22" class="Switch" onClick="remote_Switch('S',3,6,2);" />
     </g>
 
-    <g id="B7" class="S1" onmouseenter="Show($(this),$(this))" onmouseleave="Hide($(this),$(this))">
+    <g id="B7" class="S1">
       <path class="L" style="stroke:#ffff00" d="M 200,60 h 100"/>
     </g>
-    <g id="B7" class="S2" onmouseenter="Show($(this),$(this))" onmouseleave="Hide($(this),$(this))">
+    <g id="B7" class="S2">
       <path class="L" style="stroke:#ffff00" d="M 300,60 h 100"/>
     </g>
 
-    <g id="B8" class="S1" onmouseenter="Show($(this),$(this))" onmouseleave="Hide($(this),$(this))">
+    <g id="B8" class="S1">
       <path class="L" style="stroke:#ffff00" d="M 200,80 h 100"/>
     </g>
-    <g id="B8" class="S2" onmouseenter="Show($(this),$(this))" onmouseleave="Hide($(this),$(this))">
+    <g id="B8" class="S2">
       <path class="L" style="stroke:#ffff00" d="M 300,80 h 100"/>
     </g>
 
-    <g id="B9" class="S1" onmouseenter="Show($(this),$(this))" onmouseleave="Hide($(this),$(this))">
+    <g id="B9" class="S1">
       <path class="L" style="stroke:#ffff00" d="M 200,100 h 100"/>
     </g>
-    <g id="B9" class="S2" onmouseenter="Show($(this),$(this))" onmouseleave="Hide($(this),$(this))">
+    <g id="B9" class="S2">
       <path class="L" style="stroke:#ffff00" d="M 300,100 h 100"/>
     </g>
 
@@ -91,55 +97,15 @@
       <path id="S1S" class="L" style="stroke:#0f0" d="M 400,60 h 54"/>
       <path id="S2S" class="L" style="stroke:#f0f" d="M 414,101 l 22,-22"/>
       <path id="S2D" class="L" style="stroke:#ffff00" d="M 400,80 h 36"/>
+
+      <rect x="434" y="59" height="22" width="22" class="Switch" onClick="remote_Switch('S',3,10,1);" />
+      <rect x="414" y="79" height="22" width="22" class="Switch" onClick="remote_Switch('S',3,10,2);" />
+
       <path class="L" style="stroke:#ff0" d="M 400,100 h 16"/>
     </g>
-    <g id="B11" class="S1" onmouseenter="Show($(this),$(this))" onmouseleave="Hide($(this),$(this))">
+    <g id="B11" class="S1">
       <path class="L" style="stroke:#ff00ff" d="M 454,60 h 141"/>
     </g>
-    
-  </g>
-  <g><!-- Text blocks -->
-    <g id="M3B1S1" style="display:none">
-      <rect x="90" y="35" width="20" height="10" fill="black" ></rect>
-      <text class="T" x="90" y="43.5" font-family="Verdana" font-size="10" fill="white" >&lt;FF</text>
-    </g>
-    <g id="M3B2S1" style="display:none">
-      <rect x="290" y="15" width="20" height="10" fill="black" ></rect>
-      <text class="T" x="290" y="23.5" font-family="Verdana" font-size="10" fill="white" >&lt;FF</text>
-    </g>
-    <g id="M3B3S1" style="display:none">
-      <rect x="290" y="35" width="20" height="10" fill="black" ></rect>
-      <text class="T" x="290" y="43.5" font-family="Verdana" font-size="10" fill="white" >&lt;FF</text>
-    </g>
-    <g id="M3B4S1" style="display:none">
-      <rect x="490" y="35" width="20" height="10" fill="black" ></rect>
-      <text class="T" x="490" y="43.5" font-family="Verdana" font-size="10" fill="white" >&lt;FF</text>
-    </g>
 
-    <g id="M3B5S1" style="display:none">
-      <rect x="90" y="55" width="20" height="10" fill="black" ></rect>
-      <text class="T" x="90" y="63.5" font-family="Verdana" font-size="10" fill="white" >&lt;FF</text>
-    </g>
-    <g id="M3B7S1" style="display:none">
-      <rect x="290" y="55" width="20" height="10" fill="black" ></rect>
-      <text class="T" x="290" y="63.5" font-family="Verdana" font-size="10" fill="white" >&lt;FF</text>
-    </g>
-    <g id="M3B8S1" style="display:none">
-      <rect x="290" y="75" width="20" height="10" fill="black" ></rect>
-      <text class="T" x="290" y="83.5" font-family="Verdana" font-size="10" fill="white" >&lt;FF</text>
-    </g>
-    <g id="M3B9S1" style="display:none">
-      <rect x="290" y="95" width="20" height="10" fill="black" ></rect>
-      <text class="T" x="290" y="103.5" font-family="Verdana" font-size="10" fill="white" >&lt;FF</text>
-    </g>
-
-    <g id="M3B11S1" style="display:none">
-      <rect x="490" y="55" width="20" height="10" fill="black" ></rect>
-      <text class="T" x="490" y="63.5" font-family="Verdana" font-size="10" fill="white" >&lt;FF</text>
-    </g>
-    <g id="S9B" style="display:none">
-      <rect x="490" y="75" width="20" height="10" fill="black" ></rect>
-      <text class="T" x="490" y="83.5" font-family="Verdana" font-size="10" fill="white" >&lt;FF</text>
-    </g>
   </g>
 </svg>

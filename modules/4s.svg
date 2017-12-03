@@ -80,11 +80,10 @@
       <path class="L" style="stroke:#ffff00" nswitch="" d="M 400,0 h 15.5"/>
       <path id="S1D" class="L" style="stroke:#ffff00" nswitch="" d="M 414,1 l 22,-22"/>
       <path id="S1S" class="L" style="stroke:#ffff00" nswitch="" d="M 416,0 h 54"/>
-      <path class="L" style="stroke:#ffff00" nswitch="" d="M 434,-20 h 36"/>
     </g>
 
     <g id="B5" class="S1" onmouseenter="Show($(this),$(this))" onmouseleave="Hide($(this),$(this))">
-      <path class="L" style="stroke:#ffff00" nswitch="" d="M 370,20 h 141"/>
+      <path class="L" style="stroke:#ffff00" nswitch="" d="M 400,20 h 11"/>
     </g>
 
     <g id="B6" class="S0">
@@ -93,18 +92,7 @@
       <path id="S2S" class="L" style="stroke:#ffff00" d="M 434,39 l 22,22"/>
       <path id="S2D" class="L" style="stroke:#ffff00" d="M 434,40 h 36"/>
       <path class="L" style="stroke:#ff0" d="M 454,60 h 16"/>
-    </g>
-
-    <g id="B7" class="S1" onmouseenter="Show($(this),$(this))" onmouseleave="Hide($(this),$(this))">
-      <path class="L" style="stroke:#ffff00" d="M 570,20 h 100"/>
-    </g>
-
-    <g id="B8" class="S1" onmouseenter="Show($(this),$(this))" onmouseleave="Hide($(this),$(this))">
-      <path class="L" style="stroke:#ffff00" d="M 570,40 h 100"/>
-    </g>
-
-    <g id="B9" class="S1" onmouseenter="Show($(this),$(this))" onmouseleave="Hide($(this),$(this))">
-      <path class="L" style="stroke:#ffff00" d="M 570,60 h 100"/>
+      <path class="L" style="stroke:#ffff00" d="M 411,20 h 5"/>
     </g>
   </g>
   <!-- 10 -->
@@ -131,9 +119,10 @@
       <path id="S2S" class="L" style="stroke:#f0f" d="M 734,61 l 22,-22"/>
       <path id="S2D" class="L" style="stroke:#ffff00" d="M 720,40 h 36"/>
       <path class="L" style="stroke:#ff0" d="M 720,60 h 16"/>
+      <path class="L" style="stroke:#ffff00" d="M 774,20 h 5"/>
     </g>
     <g id="B11" class="S1" onmouseenter="Show($(this),$(this))" onmouseleave="Hide($(this),$(this))">
-      <path class="L" style="stroke:#ff00ff" d="M 774,20 h 26"/>
+      <path class="L" style="stroke:#ff00ff" d="M 779,20 h 21"/>
     </g>
 
   </g>

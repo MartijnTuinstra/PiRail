@@ -13,31 +13,41 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <string.h>
+#include <openssl/sha.h>
+#include "./src/b64.c"
 
-
-#define MAX_SW 16
+#define MAX_SW 8
 #define MAX_Segments 8
-#define MAX_Blocks 32
+#define MAX_Blocks 16
 #define MAX_Modules 16
 #define MAX_A MAX_Modules*MAX_Blocks*MAX_Segments
-#define MAX_TRAINS 20
+#define MAX_TRAINS 25
 #define MAX_ROUTE 20
-#define MAX_TIMERS 50
-#define MAX_WEB_CLIENTS 20
+#define MAX_TIMERS 5
+#define MAX_WEB_CLIENTS 5
+
+#define MAX_SWITCH_LINK 5
+#define MAX_SWITCH_PREFFERENCE 5
 
 #define GREEN 0
 #define AMBER 1
 #define RED 2
 #define BLOCKED 3
-#define GHOST 4
+#define PARKED 4
 #define RESERVED 5
 #define UNKNOWN 6
 
 #define Arr_Count(array) (sizeof(array)/sizeof((array)[0]))
+#define ROUND(nr)  (int)(nr+0.5)
+
+#define TRACK_SCALE 160
 
 int stop = 0;
-int delayA = 1000000;
-int delayB = 1000000;
+int delayA = 6000000;
+int delayB = 6000000;
+int initialise = 1;
+char setup_data[100];
+int status_st[20] = {0};
 
 pthread_mutex_t mutex_lockA;
 pthread_mutex_t mutex_lockB;
@@ -55,23 +65,25 @@ struct Seg{
 	struct adr Adr;
 	struct adr NAdr;
 	struct adr PAdr;
-	char max_speed;		//0x00 <-> 0xFF
+	char max_speed;		// 5 times the speed (25 => 125km/h )
 	char state;
 	char dir;		//0xAABB, A = Current travel direction, B = Travel direction
 	char length;
 	char train;		 //0x00 <-> 0xFF
-	char blocked;
-	char change; //If block changed state;
-};
+	_Bool blocked;
+	_Bool change; //If block changed state;
+	/*
+	//Running timers
+	char t_Flag;  /*	1 = Speed timer
+										2 = Signal timer
+										4-128 = Empty timers
+								*/
+	//Rules
+	//Speed Rules
+	//Train Type preference
 
-struct Swi{
-	struct adr Adr;
-
-	struct adr Div;
-	struct adr Str;
-	struct adr App;
-	char state;
-	char len;
+	//Signals
+	char signals; // AAAA BBBB, A = Prev Signal, B = Next Signal
 };
 
 struct Mod{
@@ -91,12 +103,35 @@ struct link{
 	struct adr Adr4;
 };
 
+struct train{
+	char DCC_ID;
+	char type;
+	char name[21];
+	char cur_speed;
+	long max_speed;
+	char accelerate_speed; //divide by 50
+	char break_speed; //divide by 50
+	char control;
+	char use;
+	struct adr Route[MAX_ROUTE];
+	int timer;
+	int timer_id;
+};
+
+//Include Custom Headers
+#include "./src/Web.h"
+#include "./src/COM.h"
+
+
+struct train *trains[MAX_TRAINS] = {};
+struct train *train_link[MAX_TRAINS];
+int iTrain = 0;
+int bTrain = 0;
+
 struct adr Adresses[MAX_A] = {};
 struct adr StartAdr;
 int Adress = 0;
 struct Seg *blocks[MAX_Modules][MAX_Blocks][MAX_Segments] = {};
-struct Swi *Switch[MAX_Modules][MAX_Blocks][MAX_SW] = {};
-struct Mod *Moduls[MAX_Modules][MAX_Blocks][MAX_SW/4] = {};
 
 struct adr C_Adr(char M,char B,char S){
 	struct adr Z;
@@ -178,6 +213,7 @@ void Create_Segment(struct adr Adr,struct adr NAdr,struct adr PAdr,char max_spee
 	Z->state = state;
 	Z->dir = dir;
 	Z->length = len;
+	Z->change = 0;
 	Z->train = 0x00;
 
 	printf("A Segment is created at %i:%i:%i\tAdr:%i\n",Adr.M,Adr.B,Adr.S,Adress);
@@ -188,75 +224,7 @@ void Create_Segment(struct adr Adr,struct adr NAdr,struct adr PAdr,char max_spee
 	Adress++;
 }
 
-void Create_Switch(struct adr Adr,struct adr  App,struct adr Div,struct adr Str,char state){
-	struct Swi *Z = (struct Swi*)malloc(sizeof(struct Swi));
-
-	Adr.type = 'S';
-
-	Z->Adr = Adr;
-	Z->Str = Str;
-	Z->Div = Div;
-	Z->App = App;
-	Z->state = state;
-	Z->len = 1;
-
-	if(Adr.S > 1){
-		Z->len = Adr.S;
-		for(int i = 1;i<Adr.S;i++){
-			if(Switch[Adr.M][Adr.B][i] != NULL){
-				Switch[Adr.M][Adr.B][i]->len = Adr.S;
-			}else if(Moduls[Adr.M][Adr.B][i] != NULL){
-				Moduls[Adr.M][Adr.B][i]->s_length = Adr.S;
-			}
-		}
-	}
-	//return Z;
-	if(blocks[Adr.M][Adr.B][1] == NULL && blocks[Adr.M][Adr.B][0] == NULL){
-		C_Seg(C_Adr(Adr.M,Adr.B,0),0);
-	}
-	printf("A Switch  is created at %i:%i:%i\tAdr:%i\n",Adr.M,Adr.B,Adr.S,Adress);
-	Switch[Adr.M][Adr.B][Adr.S] = Z;
-
-	Adresses[Adress] = Adr;
-	Adress++;
-}
-
-void Create_Moduls(struct adr Adr,struct adr mAdr[10],struct adr MAdr[10],char length){
-	struct Mod *Z = (struct Mod*)malloc(sizeof(struct Mod));
-
-	Adr.type = 'M';
-
-	Z->Adr = Adr;
-	for(int i = 0;i<length;i++){
-		printf("i:%i\n",i);
-		Z->mAdr[i] = mAdr[i];
-		Z->MAdr[i] = MAdr[i];
-	}
-	Z->length = length;
-	Z->state = 0;
-	Z->s_length = 1;
-
-	if(Adr.S > 1){
-		Z->s_length = Adr.S;
-		for(int i = 1;i<Adr.S;i++){
-			if(Switch[Adr.M][Adr.B][i] != NULL){
-				Switch[Adr.M][Adr.B][i]->len = Adr.S;
-			}else if(Moduls[Adr.M][Adr.B][i] != NULL){
-				Moduls[Adr.M][Adr.B][i]->s_length = Adr.S;
-			}
-		}
-	}
-
-	//return Z;
-	if(blocks[Adr.M][Adr.B][1] == NULL && blocks[Adr.M][Adr.B][0] == NULL){
-		C_Seg(C_Adr(Adr.M,Adr.B,0),0);
-	}
-	printf("A Moduls is created at %i:%i:%i\tAdr:%i\n",Adr.M,Adr.B,Adr.S,Adress);
-	Moduls[Adr.M][Adr.B][Adr.S] = Z;
-
-	Adresses[Adress] = Adr;
-	Adress++;
-}
+#include "./src/switch.c"
 
 int Adr_Comp(struct adr A,struct adr B){
 	if(A.M == B.M && A.B == B.B && A.S == B.S){
@@ -267,20 +235,28 @@ int Adr_Comp(struct adr A,struct adr B){
 }
 
 int dir_Comp(struct Seg *A,struct Seg *B){
-	if((A->dir == 0 && (B->dir == 1 || B->dir == 0b100)) || ((A->dir == 1 || A->dir == 0b100) && B->dir == 0)){
-		if(B->Adr.S == 0){
+	if((A->dir == 2 && (B->dir == 1 || B->dir == 0)) || ((A->dir == 1 || A->dir == 0) && B->dir == 2)){
+		return 1;
+	}else if(A->dir == B->dir){
+		return 1;
+	}else if(((A->dir == 0 || A->dir == 2) && B->dir == 0b101) || (A->dir == 1 && B->dir == 0b100)){
+		return 1;
+	}else if(((B->dir == 0 || B->dir == 2) && A->dir == 0b101) || (B->dir == 1 && A->dir == 0b100)){
+		return 1;
+	}else if(B->Adr.S == 0){
+		return 1;
+	}else{
+		return 0;
+	}
+		/*if(B->Adr.S == 0){
 			return 1;
 		}else{
 			return 0;
 		}
 	}else{
 		return 1;
-	}
+	}*/
 }
-
-#include "./src/modules.c"
-#include "./src/status.c"
-#include "./src/trainlist.c"
 
 struct adr NADR(struct adr Adr){
 	struct adr NAdr;
@@ -308,26 +284,36 @@ struct adr PADR(struct adr Adr){
 
 struct Seg * Next(struct adr Adr,int i){
 	struct adr NAdr,SNAdr;
+	int Search_len = i;
 	int a = 0;
 	//printf("\n%i\n",i);
-	int dir = blocks[Adr.M][Adr.B][Adr.S]->dir;
+	int direct = blocks[Adr.M][Adr.B][Adr.S]->dir;
 	I:{};
+	int dir = blocks[Adr.M][Adr.B][Adr.S]->dir;
 
-	if(dir == 0 || dir == 2 || dir == 5){
-		NAdr = blocks[Adr.M][Adr.B][Adr.S]->NAdr;
+	if(direct == 0 || direct == 2 || direct == 5){
+		if(dir == 0 || dir == 2 || dir == 5){
+			NAdr = blocks[Adr.M][Adr.B][Adr.S]->NAdr;
+		}else{
+			NAdr = blocks[Adr.M][Adr.B][Adr.S]->NAdr;
+		}
 	}else{
-		NAdr = blocks[Adr.M][Adr.B][Adr.S]->PAdr;
+		if(dir == 0 || dir == 2 || dir == 5){
+			NAdr = blocks[Adr.M][Adr.B][Adr.S]->PAdr;
+		}else{
+			NAdr = blocks[Adr.M][Adr.B][Adr.S]->PAdr;
+		}
 	}
 
 	J:{};
 
-	if(i == 0){
+	if(i <= 0){
 		//printf("\n");
 		//printf("\nA:%i:%i:%i type:%c\n",Adr.M,Adr.B,Adr.S,Adr.type);
 		return blocks[Adr.M][Adr.B][Adr.S];
 	}
-	//usleep(20000);
-	//printf("i:%i",i);
+
+	//printf("\ni:%i",i);
 	//printf("\t%i:%i:%i\ttype:%c\n",NAdr.M,NAdr.B,NAdr.S,NAdr.type);
 	if(NAdr.type == 'R'){
 		i--;
@@ -353,35 +339,29 @@ struct Seg * Next(struct adr Adr,int i){
 			}else{
 				SNAdr = Switch[NAdr.M][NAdr.B][NAdr.S]->Div;
 			}
-		}else if(NAdr.type == 's'){
+		}
+		else if(NAdr.type == 's'){
 			SNAdr = Switch[NAdr.M][NAdr.B][NAdr.S]->App;
-		}else if(NAdr.type == 'M'){
+		}
+		else if(NAdr.type == 'M'){
 			//printf("m\n");
 			int s = Moduls[NAdr.M][NAdr.B][NAdr.S]->state;
 			SNAdr = Moduls[NAdr.M][NAdr.B][NAdr.S]->mAdr[s];
 			//printf("\tm:%i:%i:%i\ttype:%c\n",SNAdr.M,SNAdr.B,SNAdr.S,SNAdr.type);
-		}else if(NAdr.type == 'm'){
+		}
+		else if(NAdr.type == 'm'){
 			//printf("M\n");
 			int s = Moduls[NAdr.M][NAdr.B][NAdr.S]->state;
 			SNAdr = Moduls[NAdr.M][NAdr.B][NAdr.S]->MAdr[s];
 			//printf("\t%i:%i:%i\ttype:%c\n",Adr.M,Adr.B,Adr.S,Adr.type);
 		}
 		//printf("SN %i:%i:%i%c\tN %i:%i:%i\ti:%i\n",SNAdr.M,SNAdr.B,SNAdr.S,SNAdr.type,NAdr.M,NAdr.B,NAdr.S,i);
-		if(SNAdr.type == 'S' || SNAdr.type == 's'){
+		if(SNAdr.type == 'S' || SNAdr.type == 's' || SNAdr.type == 'M' || SNAdr.type == 'm'){
 			if(SNAdr.B != NAdr.B){
 				i--;
 			}
 			NAdr = SNAdr;
 			goto R;
-		}else if(SNAdr.type == 'M' || SNAdr.type == 'm'){
-			if(SNAdr.B != NAdr.B){
-				i--;
-			}
-			NAdr = SNAdr;
-			//usleep(20000);
-			//printf("\n%i:%i:%i type:%c\n",NAdr.M,NAdr.B,NAdr.S,NAdr.type);
-			goto R;
-
 		}else{
 			Adr = SNAdr;
 			NAdr = Adr;
@@ -401,18 +381,34 @@ struct Seg * Prev(struct adr Adr,int i){
 	struct adr PAdr,SPAdr;
 	int a = 0;
 	//printf("\n%i\n",i);
+	int direct = blocks[Adr.M][Adr.B][Adr.S]->dir;
 	I:{};
+	int dir = blocks[Adr.M][Adr.B][Adr.S]->dir;
 
-	PAdr = PADR(Adr);
+	if(direct == 0 || direct == 2 || direct == 5){
+		if(dir == 0 || dir == 2 || dir == 5){
+			PAdr = blocks[Adr.M][Adr.B][Adr.S]->PAdr;
+		}else{
+			PAdr = blocks[Adr.M][Adr.B][Adr.S]->PAdr;
+		}
+	}else{
+		if(dir == 0 || dir == 2 || dir == 5){
+			PAdr = blocks[Adr.M][Adr.B][Adr.S]->NAdr;
+		}else{
+			PAdr = blocks[Adr.M][Adr.B][Adr.S]->NAdr;
+		}
+	}
 
-	if(i == 0){
+	J:{};
+
+	if(i <= 0){
 		//printf("\n");
+		//printf("\nA:%i:%i:%i type:%c\n",Adr.M,Adr.B,Adr.S,Adr.type);
 		return blocks[Adr.M][Adr.B][Adr.S];
 	}
-	//usleep(20000);
+
 	//printf("i:%i",i);
-	//printf("\t%i:%i:%i\ttype:%c\n",Adr.M,Adr.B,Adr.S,Adr.type);
-	//printf("\t%i:%i:%i\ttype:%c\n",PAdr.M,PAdr.B,PAdr.S,PAdr.type);
+	//printf("\t%i:%i:%i\ttype:%c\n",NAdr.M,NAdr.B,NAdr.S,NAdr.type);
 	if(PAdr.type == 'R'){
 		i--;
 		Adr = PAdr;
@@ -420,12 +416,13 @@ struct Seg * Prev(struct adr Adr,int i){
 	}else if(PAdr.type == 'e'){
 		return blocks[0][0][0];
 
-	}else if(PAdr.type == 'S' || PAdr.type == 's'){
+	}else if(PAdr.type == 'S' || PAdr.type == 's' || PAdr.type == 'm' || PAdr.type == 'M'){
 		R:{};
+		//printf("\ni:%i\tC:%i:%i:%i type:%c\n",i,PAdr.M,PAdr.B,PAdr.S,PAdr.type);
 		if(i == 1 && blocks[PAdr.M][PAdr.B][0] != NULL){
 			i--;
 			Adr = C_Adr(PAdr.M,PAdr.B,0);
-			goto I;
+			goto J;
 		}
 		if(blocks[PAdr.M][PAdr.B][0] != NULL){
 			a++;
@@ -436,12 +433,25 @@ struct Seg * Prev(struct adr Adr,int i){
 			}else{
 				SPAdr = Switch[PAdr.M][PAdr.B][PAdr.S]->Div;
 			}
-		}else{
+		}
+		else if(PAdr.type == 's'){
 			SPAdr = Switch[PAdr.M][PAdr.B][PAdr.S]->App;
 		}
-		//printf("SN %i:%i:%i%c\tN %i:%i:%i\ti:%i\n",SPAdr.M,SPAdr.B,SPAdr.S,SPAdr.type,PAdr.M,PAdr.B,PAdr.S,i);
-		if(SPAdr.type == 'S' || SPAdr.type == 's'){
-			if(SPAdr.B != PAdr.B){
+		else if(PAdr.type == 'M'){
+			//printf("m\n");
+			int s = Moduls[PAdr.M][PAdr.B][PAdr.S]->state;
+			SPAdr = Moduls[PAdr.M][PAdr.B][PAdr.S]->mAdr[s];
+			//printf("\tm:%i:%i:%i\ttype:%c\n",SNAdr.M,SNAdr.B,SNAdr.S,SNAdr.type);
+		}
+		else if(PAdr.type == 'm'){
+			//printf("M\n");
+			int s = Moduls[PAdr.M][PAdr.B][PAdr.S]->state;
+			SPAdr = Moduls[PAdr.M][PAdr.B][PAdr.S]->MAdr[s];
+			//printf("\t%i:%i:%i\ttype:%c\n",Adr.M,Adr.B,Adr.S,Adr.type);
+		}
+		//printf("SN %i:%i:%i%c\tN %i:%i:%i\ti:%i\n",SNAdr.M,SNAdr.B,SNAdr.S,SNAdr.type,NAdr.M,NAdr.B,NAdr.S,i);
+		if(SPAdr.type == 'S' || SPAdr.type == 's' || SPAdr.type == 'M' || SPAdr.type == 'm'){
+			if(SPAdr.B != PAdr.B && blocks[Adr.M][Adr.B][0] != NULL){
 				i--;
 			}
 			PAdr = SPAdr;
@@ -449,7 +459,8 @@ struct Seg * Prev(struct adr Adr,int i){
 		}else{
 			Adr = SPAdr;
 			PAdr = Adr;
-			//printf("\n%i:%i:%i\n",PAdr.M,PAdr.B,PAdr.S);
+			//usleep(20000);
+			//printf("\n%i:%i:%i type:%c\n",NAdr.M,NAdr.B,NAdr.S,NAdr.type);
 			i--;
 			if(a>0){
 				i--;
@@ -459,6 +470,44 @@ struct Seg * Prev(struct adr Adr,int i){
 	}
 	return blocks[Adr.M][Adr.B][Adr.S];
 }
+
+void change_block_state(struct Seg * Block,int State){
+	if(Block->state != State){
+		Block->change = 1;
+		Block->state = State;
+	}
+}
+
+void change_signal(struct Seg * Block, char State, char side){
+	if(side == 'N'){
+		if((Block->signals & 0xF) != (State & 0xF)){
+			Block->signals = Block->signals & 0xF0 + State & 0xF;
+			//COM_change_signal(Block);
+		}
+	}else if(side == 'P'){
+		if((Block->signals >> 4) != (State & 0xF)){
+			Block->signals = Block->signals & 0xF + State << 4;
+			//COM_change_signal(Block);
+		}
+	}
+}
+
+void JSON_new_client();
+
+struct timer_thread_data{
+   int  thread_id;
+	 int  t;
+};
+
+struct timer_thread_data a[MAX_TIMERS];
+
+#include "./src/modules.c"
+#include "./src/status.c"
+#include "./src/signals.c"
+#include "./src/trainlist.c"
+#include "./src/train_sim.c"
+#include "./src/Web.c"
+#include "./src/COM.c"
 
 int check_Switch(struct adr adr, int direct){
 	struct adr NAdr;
@@ -477,10 +526,12 @@ int check_Switch(struct adr adr, int direct){
 			NAdr = blocks[adr.M][adr.B][adr.S]->NAdr;
 		}
 	}
-	//printf("NAdr %i:%i:%i\n",NAdr.M,NAdr.B,NAdr.S);
+
 	int n;
 	R:{};
+	//printf("NAdr %i:%i:%i:%c\n",NAdr.M,NAdr.B,NAdr.S,NAdr.type);
 	if(NAdr.type == 'R'){
+		//printf("Return 1\n");
 		return 1; //Passable
 	}else if(NAdr.type == 'e'){
 		return 0; //Passable
@@ -495,21 +546,32 @@ int check_Switch(struct adr adr, int direct){
 		goto R;
 	}else if(NAdr.type == 'M'){
 		int s = Moduls[NAdr.M][NAdr.B][NAdr.S]->state;
-		NAdr = Moduls[NAdr.M][NAdr.B][NAdr.S]->mAdr[s];
+		if(Adr_Comp(Moduls[NAdr.M][NAdr.B][NAdr.S]->MAdr[s],adr)){
+			NAdr = Moduls[NAdr.M][NAdr.B][NAdr.S]->mAdr[s];
+			goto R;
+		}else{
+			return 0;
+		}
 	}else if(NAdr.type == 'm'){
-		NAdr = Moduls[NAdr.M][NAdr.B][NAdr.S]->MAdr[Moduls[NAdr.M][NAdr.B][NAdr.S]->state];
+		int s = Moduls[NAdr.M][NAdr.B][NAdr.S]->state;
+		if(Adr_Comp(Moduls[NAdr.M][NAdr.B][NAdr.S]->mAdr[s],adr)){
+			NAdr = Moduls[NAdr.M][NAdr.B][NAdr.S]->MAdr[s];
+			goto R;
+		}else{
+			return 0;
+		}
 	}else{
 		struct adr Div = Switch[NAdr.M][NAdr.B][NAdr.S]->Div;
 		struct adr Str = Switch[NAdr.M][NAdr.B][NAdr.S]->Str;
 		//printf("Div %i:%i:%i==%i:%i:%i\n",Div.M,Div.B,Div.S,adr.M,adr.B,adr.S);
 		//printf("Str %i:%i:%i==%i:%i:%i\n",Str.M,Str.B,Str.S,adr.M,adr.B,adr.S);
-		if(Div.M == adr.M && Div.B == adr.B && Div.S == adr.S){
+		if(Adr_Comp(Div,adr)){
 			if(Switch[NAdr.M][NAdr.B][NAdr.S]->state == 1){
 				n = 1;
 			}else{
 				return 0;
 			}
-		}else if(Str.M == adr.M && Str.B == adr.B && Str.S == adr.S){
+		}else if(Adr_Comp(Str,adr)){
 			if(Switch[NAdr.M][NAdr.B][NAdr.S]->state == 0){
 				n = 1;
 			}else{
@@ -525,11 +587,13 @@ int check_Switch(struct adr adr, int direct){
 		goto R;
 
 	}
+	printf("Retrun %i\n",n);
 	return n;
 }
 
-void free_Switch(struct adr adr, int direct){
+int free_Switch(struct adr adr, int direct){
 	struct adr NAdr;
+	int return_Value = 1;
 	int dir = blocks[adr.M][adr.B][adr.S]->dir;
 
 	if(direct == 0){
@@ -547,7 +611,12 @@ void free_Switch(struct adr adr, int direct){
 	}
 	//printf("NAdr %i:%i:%i\n",NAdr.M,NAdr.B,NAdr.S);
 	R:{};
-	//printf("NAdr: %i:%i:%i\n",NAdr.M,NAdr.B,NAdr.S);
+	printf("NAdr: %i:%i:%i\t",NAdr.M,NAdr.B,NAdr.S);
+	printf("%i\n",return_Value);
+	if(return_Value == 0){
+		return 0;
+	}
+
 	if(NAdr.type == 'S'){
 		if(Switch[NAdr.M][NAdr.B][NAdr.S]->state == 0){ //Straight?
 			adr = NAdr;
@@ -560,17 +629,13 @@ void free_Switch(struct adr adr, int direct){
 	}else if(NAdr.type == 's'){
 		struct adr Div = Switch[NAdr.M][NAdr.B][NAdr.S]->Div;
 		struct adr Str = Switch[NAdr.M][NAdr.B][NAdr.S]->Str;
-		if(Div.M == adr.M && Div.B == adr.B && Div.S == adr.S){
+		if(Adr_Comp(Div,adr)){
 			if(Switch[NAdr.M][NAdr.B][NAdr.S]->state == 0){
-				pthread_mutex_lock(&mutex_lockB);
-				Switch[NAdr.M][NAdr.B][NAdr.S]->state = 1;
-				pthread_mutex_unlock(&mutex_lockB);
+				return_Value = throw_switch(Switch[NAdr.M][NAdr.B][NAdr.S]);
 			}
-		}else if(Str.M == adr.M && Str.B == adr.B && Str.S == adr.S){
+		}else if(Adr_Comp(Str,adr)){
 			if(Switch[NAdr.M][NAdr.B][NAdr.S]->state == 1){
-				pthread_mutex_lock(&mutex_lockB);
-				Switch[NAdr.M][NAdr.B][NAdr.S]->state = 0;
-				pthread_mutex_unlock(&mutex_lockB);
+				return_Value = throw_switch(Switch[NAdr.M][NAdr.B][NAdr.S]);
 			}
 		}
 
@@ -579,95 +644,43 @@ void free_Switch(struct adr adr, int direct){
 		NAdr = Switch[NAdr.M][NAdr.B][NAdr.S]->App;
 		goto R;
 
+	}else if(NAdr.type == 'M'){
+		struct Mod * M = Moduls[NAdr.M][NAdr.B][NAdr.S];
+		int s = M->state;
+		if(Adr_Comp(M->MAdr[s],adr)){
+			NAdr = M->mAdr[s];
+		}else{
+			for(int i = 0;i<M->length;i++){
+				if(Adr_Comp(M->MAdr[i],adr)){
+					return_Value = throw_ms_switch(M,i);
+					break;
+				}
+			}
+		}
+		adr = M->Adr;
+		NAdr = M->mAdr[M->state];
+		goto R;
+	}else if(NAdr.type == 'm'){
+		struct Mod * M = Moduls[NAdr.M][NAdr.B][NAdr.S];
+		int s = M->state;
+		if(Adr_Comp(M->mAdr[s],adr)){
+			NAdr = M->MAdr[s];
+		}else{
+			for(int i = 0;i<M->length;i++){
+				if(Adr_Comp(M->mAdr[i],adr)){
+					return_Value = throw_ms_switch(M,i);
+					break;
+				}
+			}
+		}
+		adr = M->Adr;
+		NAdr = M->MAdr[M->state];
+		goto R;
 	}
-	return;
+	return 1;
 }
 
 void JSON(){
-	pthread_mutex_lock(&mutex_lockB);
-	FILE *fp;
-
-	fp = fopen("baan.json","w");
-
-	if(fp == NULL){
-		printf("Opening failed!!!!\n");
-		//exit(1);
-		return;
-	}
-	fprintf(fp,"{\"M\" : [");
-	int p = 0;
-
-
-	for(int i = 0;i<Adress;i++){
-
-		struct adr A = Adresses[i];
-		if(A.type == 'R'){
-			if(p != 0){
-				fprintf(fp,",");
-			}else{
-				p = 1;
-			}
-
-			fprintf(fp,"[%i,%i,%i,%i,%i,%i,%i]",A.M,A.B,A.S,blocks[A.M][A.B][A.S]->dir,blocks[A.M][A.B][A.S]->blocked,blocks[A.M][A.B][A.S]->state,blocks[A.M][A.B][A.S]->train);
-		}
-	}
-
-	fprintf(fp,"],\"SW\" : [");
-
-	p = 0;
-
-	for(int i = 0;i<Adress;i++){
-
-		struct adr A = Adresses[i];
-		if(A.type == 'S'){
-			if(p != 0){
-				fprintf(fp,",");
-			}else{
-				p = 1;
-			}
-
-			fprintf(fp,"[%i,%i,%i,%i,%i,%i]",A.M,A.B,A.S,Switch[A.M][A.B][A.S]->state,2,Switch[A.M][A.B][A.S]->len);
-		}
-	}
-
-	for(int i = 0;i<Adress;i++){
-
-		struct adr A = Adresses[i];
-		if(A.type == 'M'){
-			if(p != 0){
-				fprintf(fp,",");
-			}else{
-				p = 1;
-			}
-
-			fprintf(fp,"[%i,%i,%i,%i,%i,%i]",A.M,A.B,A.S,Moduls[A.M][A.B][A.S]->state,Moduls[A.M][A.B][A.S]->length,Moduls[A.M][A.B][A.S]->s_length);
-		}
-	}
-	fprintf(fp,"], \"Message\" : [");
-
-	p = 0;
-
-	for(int i = 0;i<20;i++){
-		if(status_st[i] != NULL){
-			if(p == 1){
-				fprintf(fp,",");
-			}else{
-				p = 1;
-			}
-			//printf("Write available at i:%i\n",i);
-
-			//printf("Write [%i,[%s]]",status_st[i]->type,status_st[i]->data);
-			fprintf(fp,"[%i,%i,%s]",status_st[i]->type,status_st[i]->id,status_st[i]->data);
-
-		}
-	}
-
-	fprintf(fp,"]}");
-	fclose(fp);
-	pthread_mutex_unlock(&mutex_lockB);
-}
-
-char * JSON2(){
 	pthread_mutex_lock(&mutex_lockB);
 	char buf[4096];
 	memset(buf,0,4096);
@@ -679,7 +692,8 @@ char * JSON2(){
 	for(int i = 0;i<Adress;i++){
 
 		struct adr A = Adresses[i];
-		if(A.type == 'R' && blocks[A.M][A.B][A.S]->change == 1){
+		if(A.type == 'R' && blocks[A.M][A.B][A.S]->change != 0){
+			blocks[A.M][A.B][A.S]->change = 0;
 			if(p != 0){
 				sprintf(buf,"%s,",buf);
 			}else{
@@ -690,7 +704,46 @@ char * JSON2(){
 		}
 	}
 
-	sprintf(buf,"%s],\"SW\" : [",buf);
+	sprintf(buf,"%s]}",buf);
+
+	if(strlen(buf) > 10){
+		send_all(buf);
+	}
+
+	pthread_mutex_unlock(&mutex_lockB);
+}
+
+void JSON_new_client(){
+	pthread_mutex_lock(&mutex_lockB);
+	char buf[4096];
+	memset(buf,0,4096);
+
+	sprintf(buf,"%s{\"M\" : [",buf);
+	int p = 0;
+
+
+	for(int i = 0;i<Adress;i++){
+
+		struct adr A = Adresses[i];
+		if(A.type == 'R'){
+			if(p != 0){
+				sprintf(buf,"%s,",buf);
+			}else{
+				p = 1;
+			}
+
+			sprintf(buf,"%s[%i,%i,%i,%i,%i,%i,%i]",buf,A.M,A.B,A.S,blocks[A.M][A.B][A.S]->dir,blocks[A.M][A.B][A.S]->blocked,blocks[A.M][A.B][A.S]->state,blocks[A.M][A.B][A.S]->train);
+		}
+	}
+
+	sprintf(buf,"%s]}",buf);
+
+	if(strlen(buf) > 10){
+		send_all(buf);
+	}
+	memset(buf,0,4096);
+
+	sprintf(buf,"{\"SW\" : [");
 
 	p = 0;
 
@@ -704,10 +757,18 @@ char * JSON2(){
 				p = 1;
 			}
 
-			sprintf(buf,"%s[%i,%i,%i,%i,%i,%i]",buf,A.M,A.B,A.S,Switch[A.M][A.B][A.S]->state,2,Switch[A.M][A.B][A.S]->len);
+			sprintf(buf,"%s[%i,%i,%i,%i,%i,%i]",buf,A.M,A.B,A.S,Switch[A.M][A.B][A.S]->state);
 		}
 	}
+	sprintf(buf,"%s]}",buf);
 
+	if(strlen(buf) > 11){
+		send_all(buf);
+	}
+	memset(buf,0,4096);
+
+	sprintf(buf,"{\"Mod\" : [");
+	p = 0;
 	for(int i = 0;i<Adress;i++){
 
 		struct adr A = Adresses[i];
@@ -718,39 +779,17 @@ char * JSON2(){
 				p = 1;
 			}
 
-			sprintf(buf,"%s[%i,%i,%i,%i,%i,%i]",buf,A.M,A.B,A.S,Moduls[A.M][A.B][A.S]->state,Moduls[A.M][A.B][A.S]->length,Moduls[A.M][A.B][A.S]->s_length);
+			sprintf(buf,"%s[%i,%i,%i,%i,%i]",buf,A.M,A.B,A.S,Moduls[A.M][A.B][A.S]->state,Moduls[A.M][A.B][A.S]->length);
 		}
 	}
-	sprintf(buf,"%s], \"Message\" : [",buf);
-
-	p = 0;
-
-	for(int i = 0;i<20;i++){
-		if(status_st[i] != NULL){
-			if(p == 1){
-				sprintf(buf,"%s,",buf);
-			}else{
-				p = 1;
-			}
-			//printf("Write available at i:%i\n",i);
-
-			//printf("Write [%i,[%s]]",status_st[i]->type,status_st[i]->data);
-			sprintf(buf,"%s[%i,%i,%s]",buf,status_st[i]->type,status_st[i]->id,status_st[i]->data);
-
-		}
-	}
-
 	sprintf(buf,"%s]}",buf);
+
+	if(strlen(buf) > 11){
+		send_all(buf);
+	}
+
 	pthread_mutex_unlock(&mutex_lockB);
-	return buf;
 }
-
-struct timer_thread_data{
-   int  thread_id;
-   int  t;
-};
-
-struct timer_thread_data a[MAX_TIMERS];
 
 void *Test(void *threadArg){
 	struct timer_thread_data *my_data;
@@ -796,14 +835,17 @@ void procces(struct adr adr,int debug){
 			if(blocks[adr.M][adr.B][adr.S]->blocked == 0){
 				blocks[adr.M][adr.B][adr.S]->train = 0;
 			}
-			if(debug){
+			//if(debug){
 				struct Seg *BA = blocks[adr.M][adr.B][adr.S];
-				printf("\t\t          \tA  %i:%i:%i;T%iR%i",BA->Adr.M,BA->Adr.B,BA->Adr.S,BA->train,BA->dir);
-				if(BA->blocked){
-					printf("B");
+				if(BA->train != 0){
+					//printf("ID: %i\t%i:%i:%i\n",BA->train,BA->Adr.M,BA->Adr.B,BA->Adr.S);
 				}
-				printf("\n");
-			}
+				//printf("\t\t          \tA  %i:%i:%i;T%iR%i",BA->Adr.M,BA->Adr.B,BA->Adr.S,BA->train,BA->dir);
+				//if(BA->blocked){
+				//	printf("B");
+				//}
+				//printf("\n");
+			//}
 		}else{
 			//printf("B\n");
 
@@ -820,23 +862,23 @@ void procces(struct adr adr,int debug){
 				//printf("i%i\t%i:%i:%i:%c\t%i:%i:%i:%c\n",i,B.Adr.M,B.Adr.B,B.Adr.S,B.Adr.type,NADR(B.Adr).M,NADR(B.Adr).B,NADR(B.Adr).S,NADR(B.Adr).type);
 				if(NADR(B.Adr).type == 'e' && B.Adr.S != 0){
 					break;
-				}else if(NADR(B.Adr).type == 's'){
+				}else if(NADR(B.Adr).type == 's' || NADR(B.Adr).type == 'S' || NADR(B.Adr).type == 'm' || NADR(B.Adr).type == 'M'){
 					//printf("Check_switch\n");
 					if(!check_Switch(B.Adr,0)){
+						//printf("Switch checked\n");
 						break;
 					}
 				}
 				bl[i] = Next(adr,i)->Adr;
 			}
 			i--;
-			//printf("I: %i\n",i);
 
 			//Setup previous address
 			if(check_Switch(adr,1)){
 				bp = Prev(adr,1)->Adr;
 				p  = 1;
 			}
-			if(bp.S != 0 && p == 1 && check_Switch(bp,1)){
+			if(bp.S != 0 && p == 1 && check_Switch(bp,1) == 1){
 				bp2 = Prev(adr,2)->Adr;
 				p = 2;
 			}
@@ -851,21 +893,23 @@ void procces(struct adr adr,int debug){
 			if(i > 0){
 				BN = blocks[bl[1].M][bl[1].B][bl[1].S];
 			}
+			//printf("|");
 			if(i > 1){
 				BNN = blocks[bl[2].M][bl[2].B][bl[2].S];
 			}
+			//printf("|");
 			if(i > 2){
 				BNNN = blocks[bl[3].M][bl[3].B][bl[3].S];
 			}
+			//printf("|");
 			if(p > 0){
 				BP = blocks[bp.M][bp.B][bp.S];
 			}
+			//printf("|");
 			if(p > 1){
 				BPP = blocks[bp2.M][bp2.B][bp2.S];
 			}
-			if(!BA->blocked){
-				//debug = 0;
-			}
+			//printf("|\n");
 
 			//SPEEDUP/ if all blocks are not blocked skip!!
 			/*
@@ -877,7 +921,7 @@ void procces(struct adr adr,int debug){
 				}
 			}*/
 
-			//Train ID following
+			/*Train ID following*/
 				if(!BA->blocked && BA->train != 0){
 					//Reset
 					//printf("Reset");
@@ -901,172 +945,336 @@ void procces(struct adr adr,int debug){
 				if(i > 1 && BNN->train == 0 && BNN->blocked && BN->blocked){
 					BNN->train = BN->train;
 				}
-			//Check switch
-				if(i > 0 && (NADR(BN->Adr).type == 's' || NADR(BN->Adr).type == 'S') && BA->blocked && BN->state != RESERVED){
+			/**/
+			/**/
+			/*Check switch*/
+				//
+				if(i > 0 && (NADR(BN->Adr).type == 's' || NADR(BN->Adr).type == 'S' || NADR(BN->Adr).type == 'm' || NADR(BN->Adr).type == 'M') && BA->blocked){
 					if(!check_Switch(BN->Adr,0)){
-						free_Switch(BN->Adr,0);
-						if(i < 2){
-							BNN = Next(BN->Adr,1);
-							BNNN = Next(BN->Adr,2);
-							i++;i++;
-						}
-					}
-					if(Adr_Comp(NADR(BN->Adr),BN->Adr)){
-						printf("asdfjkkkkkkkk\n");
-						BN->state = RESERVED;
-						if(i > 1 && BNN->Adr.S == 0){
-							BNN->state = RESERVED;
+						if(free_Switch(BN->Adr,0)){
+							if(i < 2){
+								BNN = Next(BN->Adr,1);
+								BNNN = Next(BN->Adr,2);
+								i = 3;
+							}
+							if(BNN->state != RESERVED){
+								if(Adr_Comp(NADR(BN->Adr),BN->Adr)){
+									change_block_state(BN,RESERVED);
+									if(i > 1 && BNN->Adr.S == 0){
+										change_block_state(BNN,RESERVED);
+									}
+								}else{
+									change_block_state(BNN,RESERVED);
+									if(i > 2 && BNNN->Adr.S == 0){
+										change_block_state(BNNN,RESERVED);
+									}
+								}
+							}
 						}
 					}else{
-						BNN->state = RESERVED;
-						if(i > 2 && BNNN->Adr.S == 0){
-							BNNN->state = RESERVED;
+						if(BNN->state != RESERVED){
+							if(Adr_Comp(NADR(BN->Adr),BN->Adr)){
+								//printf("asdfjkkkkkkkk\n");
+								change_block_state(BN,RESERVED);
+								if(i > 1 && BNN->Adr.S == 0){
+									change_block_state(BNN,RESERVED);
+								}
+							}else{
+								change_block_state(BNN,RESERVED);
+								if(i > 2 && BNNN->Adr.S == 0){
+									change_block_state(BNNN,RESERVED);
+								}
+							}
 						}
 					}
-				}else	if(i > 0 && p > 0 && (NADR(BA->Adr).type == 's' || NADR(BA->Adr).type == 'S') && BP->blocked && BN->state != RESERVED){
+				}
+				else if(i > 0 && p > 0 && (NADR(BA->Adr).type == 's' || NADR(BA->Adr).type == 'S' || NADR(BA->Adr).type == 'm' || NADR(BA->Adr).type == 'M') && BP->blocked){
 					if(!check_Switch(BA->Adr,0)){
-						free_Switch(BA->Adr,0);
-						if(i < 1){
-							BN = Next(BA->Adr,1);
-							BNN = Next(BA->Adr,2);
-							i++;
-						}
-					}
-					if(Adr_Comp(NADR(BA->Adr),BA->Adr)){
-						BA->state = RESERVED;
-						if(i > 0 && BN->Adr.S == 0){
-							BN->state = RESERVED;
+						if(free_Switch(BA->Adr,0)){
+							if(i < 2){
+								BN = Next(BA->Adr,1);
+								BNN = Next(BA->Adr,2);
+								i = 2;
+							}
+							if(BN->state != RESERVED){
+								if(Adr_Comp(NADR(BA->Adr),BA->Adr)){
+									change_block_state(BA,RESERVED);
+									if(i > 1 && BN->Adr.S == 0){
+										change_block_state(BN,RESERVED);
+									}
+								}else{
+									change_block_state(BN,RESERVED);
+									if(i > 2 && BNN->Adr.S == 0){
+										change_block_state(BNN,RESERVED);
+									}
+								}
+							}
 						}
 					}else{
-						BN->state = RESERVED;
-						if(BNN->Adr.S == 0){
-							BNN->state = RESERVED;
+						if(BN->state != RESERVED){
+							if(Adr_Comp(NADR(BA->Adr),BA->Adr)){
+								//printf("asdfjkkkkkkkk\n");
+								change_block_state(BA,RESERVED);
+								if(i > 1 && BN->Adr.S == 0){
+									change_block_state(BN,RESERVED);
+								}
+							}else{
+								change_block_state(BN,RESERVED);
+								if(i > 2 && BNN->Adr.S == 0){
+									change_block_state(BNN,RESERVED);
+								}
+							}
 						}
 					}
 				}
-
-			//Reverse block after one or two zero-blocks
-				if(i > 2 && BA->blocked && !dir_Comp(BA,BNN) && BN->Adr.S == 0 && BNN->Adr.S != 0){
-					//printf("%i:%i:%i:%i <-> %i:%i:%i:%i\t",BA->Adr.M,BA->Adr.B,BA->Adr.S,BA->dir,BNN->Adr.M,BNN->Adr.B,BNN->Adr.S,BNN->dir);
-					//printf("Reverse in advance 1");
-					BNN->dir ^= 0b100;
+			/**/
+			/**/
+			/**/
+			/*Reverse block after one or two zero-blocks*/
+				//If Next block is a Switch-block and the block after that is a normal block and that block is in reversed direction
+				if(i > 1 && BA->blocked && !dir_Comp(BA,BNN) && BN->Adr.S == 0 && BNN->Adr.S != 0){
+					printf("%i:%i:%i:%i <-> %i:%i:%i:%i\t",BA->Adr.M,BA->Adr.B,BA->Adr.S,BA->dir,BNN->Adr.M,BNN->Adr.B,BNN->Adr.S,BNN->dir);
+					printf("Reverse in advance 1\n");
+					if(BNN->Adr.S == 1){
+						for(int a = 1;a<MAX_Segments;a++){
+							if(blocks[BNN->Adr.M][BNN->Adr.B][a] != NULL){
+								if(blocks[BNN->Adr.M][BNN->Adr.B][a]->blocked){
+									break;
+								}
+								blocks[BNN->Adr.M][BNN->Adr.B][a]->dir ^= 0b100;
+							}
+						}
+					}else{
+						//Reverse whole block
+						for(int a = MAX_Segments;0<a;a--){
+							if(blocks[BNN->Adr.M][BNN->Adr.B][a] != NULL){
+								//Break if there is a Train in the Block
+								if(blocks[BNN->Adr.M][BNN->Adr.B][a]->blocked){
+									break;
+								}
+								blocks[BNN->Adr.M][BNN->Adr.B][a]->dir ^= 0b100;
+							}
+						}
+					}
 				}
+				//If the next block and the block after it are both a Switch-block and the block after that is a normal block and that block is in reversed direction
 				if(i > 2 && BA->blocked && !dir_Comp(BA,BNNN) && BN->Adr.S == 0 && BNN->Adr.S == 0 && BNNN->Adr.S != 0){
-					//printf("%i:%i:%i:%i <-> %i:%i:%i:%i\t",BA->Adr.M,BA->Adr.B,BA->Adr.S,BA->dir,BNNN->Adr.M,BNNN->Adr.B,BNNN->Adr.S,BNNN->dir);
-					//printf("Reverse in advance 2");
-					BNNN->dir ^= 0b100;
+					printf("%i:%i:%i:%i <-> %i:%i:%i:%i\t",BA->Adr.M,BA->Adr.B,BA->Adr.S,BA->dir,BNNN->Adr.M,BNNN->Adr.B,BNNN->Adr.S,BNNN->dir);
+					printf("Reverse in advance 2\n");
+					if(BNNN->Adr.S == 1){
+						for(int a = 1;a<MAX_Segments;a++){
+							if(blocks[BNNN->Adr.M][BNNN->Adr.B][a] != NULL){
+								if(blocks[BNNN->Adr.M][BNNN->Adr.B][a]->blocked){
+									break;
+								}
+								blocks[BNNN->Adr.M][BNNN->Adr.B][a]->dir ^= 0b100;
+							}
+						}
+					}else{
+						//Reverse whole block
+						for(int a = MAX_Segments;0<a;a--){
+							if(blocks[BNNN->Adr.M][BNNN->Adr.B][a] != NULL){
+								//Break if there is a Train in the Block
+								if(blocks[BNNN->Adr.M][BNNN->Adr.B][a]->blocked){
+									break;
+								}
+								blocks[BNNN->Adr.M][BNNN->Adr.B][a]->dir ^= 0b100;
+							}
+						}
+					}
 				}
-			//Reverse block
-				if(i > 0 && BA->blocked && !dir_Comp(BA,BN) && BN->Adr.S != 0){
-					//printf("%i:%i:%i:%i <-> %i:%i:%i:%i\t",BA->Adr.M,BA->Adr.B,BA->Adr.S,BA->dir,BN->Adr.M,BN->Adr.B,BN->Adr.S,BN->dir);
-					//printf("Reverse next");
+				//If the next block is reversed, and not blocked
+				if(i > 0 && BA->blocked && !dir_Comp(BA,BN) && BN->Adr.S != 0 && !BN->blocked){
+					printf("%i:%i:%i:%i <-> %i:%i:%i:%i\t",BA->Adr.M,BA->Adr.B,BA->Adr.S,BA->dir,BN->Adr.M,BN->Adr.B,BN->Adr.S,BN->dir);
+					printf("Reverse next\n");
 					BN->dir ^= 0b100;
 				}
-
-			//State coloring
+			/**/
+			/**/
+			/*State coloring*/
 				//Self
 				if(i > 0 && p > 1 && !dir_Comp(BA,BN) && BNN->blocked && BPP->blocked){
-					BA->state = RED;
-					BN->state = AMBER;
-					BP->state = AMBER;
-				}else if(i > 0 && p > 1 && !dir_Comp(BA,BN) && !BNN->blocked && !BPP->blocked){
-					BA->state = GREEN;
-				}else if(i> 0 && BN->blocked){
-					BA->state = RED;
-				}else if(i > 1 && dir_Comp(BA,BNN) && BNN->blocked && !BN->blocked){
-					BA->state = AMBER;
-				}else if(i > 2 && dir_Comp(BA,BNN) && !BNN->blocked && !BN->blocked){
+					change_block_state(BA,RED);
+					change_block_state(BN,AMBER);
+					change_block_state(BP,AMBER);
+				}
+				else if(i > 0 && p > 1 && !dir_Comp(BA,BN) && !BNN->blocked && !BPP->blocked){
+					change_block_state(BA,GREEN);
+				}
+				else if(i > 1 && !dir_Comp(BA,BNN) && BN->Adr.S == 0 && !BNN->blocked && BNN->state == GREEN){
+					change_block_state(BA,GREEN);
+				}
+				else if(i > 0 && BN->blocked){
+					change_block_state(BA,RED);
+				}
+				else if(i > 1 && dir_Comp(BA,BNN) && BNN->blocked && !BN->blocked){
+					change_block_state(BA,AMBER);
+				}
+				else if(i > 2 && dir_Comp(BA,BNN) && !BNN->blocked && !BN->blocked){
 					if(BA->state != RESERVED){
-						BA->state = GREEN;
+						change_block_state(BA,GREEN);
 					}
+				}
+				else if(i == 0){
+					change_block_state(BA,AMBER);
+				}
+				else if(i == 1){
+					change_block_state(BA,GREEN);
 				}
 
 				//Next
-				if(i > 1 && dir_Comp(BA,BNNN) && BNN->blocked && !BN->blocked){
-					BN->state = RED;
-				}else if(i > 2 && dir_Comp(BA,BNNN) && BNNN->blocked && !BNN->blocked){
-					BN->state = AMBER;
-				}else if(i > 2 && dir_Comp(BA,BNNN) && !BN->blocked && !BNN->blocked && !BNNN->blocked){
+				if(i > 2 && dir_Comp(BA,BNNN) && BNN->blocked && !BN->blocked){
+					change_block_state(BN,RED);
+				}
+				else if(i > 2 && dir_Comp(BA,BNNN) && BNNN->blocked && !BNN->blocked){
+					change_block_state(BN,AMBER);
+				}
+				else if(i > 2 && dir_Comp(BA,BNNN) && !BN->blocked && !BNN->blocked && !BNNN->blocked){
 					if(BN->state != RESERVED){
-						BN->state = GREEN;
+						change_block_state(BN,GREEN);
 					}
 				}
 
 				//Next Next
 				if(i > 2 && dir_Comp(BA,BNNN) && BNNN->blocked && !BNN->blocked){
-					BNN->state = RED;
+					change_block_state(BNN,RED);
 				}
 
 				//Prev
 				if(i > 2 && p > 0 && BP->blocked && BNNN->blocked && !dir_Comp(BP,BNN)){
-					BNN->state = AMBER;
-					BN->state  = RED;
-					BA->state  = AMBER;
+					change_block_state(BNN,AMBER);
+					change_block_state(BN,RED);
+					change_block_state(BA,AMBER);
 					debug = 1;
 					//printf("SPECIAL\n");
-				}else if(p > 0 && i > 0 && dir_Comp(BN,BP) && !BA->blocked && BN->blocked){
-					BP->state = AMBER;
-				}else if(p > 0 && i > 0 && dir_Comp(BN,BP) && !BA->blocked && !BN->blocked){
+				}
+				else if(p > 0 && i > 0 && dir_Comp(BN,BP) && !BA->blocked && BN->blocked){
+					change_block_state(BP,AMBER);
+				}
+				else if(p > 0 && i > 0 && dir_Comp(BN,BP) && !BA->blocked && !BN->blocked){
 					if(BP->state != RESERVED){
-						BP->state = GREEN;
+						change_block_state(BP,GREEN);
+					}
+				}
+			/**/
+			/**/
+			/**/
+			/**/
+			/*Signals*/
+			struct adr Z = {4,10,4,'R'};
+
+			if((BA->signals & 128) == 128){
+				//Wrong Switch
+				//printf("Signal at %i:%i:%i\n",BA->Adr.M,BA->Adr.B,BA->Adr.S);
+				if((BA->dir == 0 || BA->dir == 2 || BA->dir == 5) && !check_Switch(BA->Adr,0) || BA->dir == 1){
+					set_signal(BA,4,RED);
+					//printf("%i:%i:%i\tRed signal L1\n",BA->Adr.M,BA->Adr.B,BA->Adr.S);
+				}
+
+				if(BA->dir != 1 && check_Switch(BA->Adr,0) && i > 0){
+					//Next block is RED/Blocked
+					if(BN->blocked || BN->state == RED || BN->state == PARKED){
+						set_signal(BA,4,RED);
+					}else if(BN->state == AMBER){	//Next block AMBER
+						set_signal(BA,4,AMBER);
+					}else{ // //Next block AMBER	if(BN->state == GREEN)
+						set_signal(BA,4,GREEN);
+					}
+				}
+			}
+
+			if((BA->signals & 0x8) == 8){
+				//printf("Signal at %i:%i:%i\t0x%x\n",BA->Adr.M,BA->Adr.B,BA->Adr.S,BA->signals);
+				if((BA->dir == 1 || BA->dir == 4 || BA->dir == 6) && !check_Switch(BA->Adr,0) || BA->dir == 5){
+					set_signal(BA,0,RED);
+					//printf("%i:%i:%i\tRed signal R2\n",BA->Adr.M,BA->Adr.B,BA->Adr.S);
+				}
+
+				if(BA->dir != 5 && check_Switch(BA->Adr,0) && i > 0){
+					//Next block is RED/Blocked
+					if(BN->blocked || BN->state == RED || BN->state == PARKED){
+						set_signal(BA,0,RED);
+					}else if(BN->state == AMBER){	//Next block AMBER
+						set_signal(BA,0,AMBER);
+					}else{ // //Next block AMBER	if(BN->state == GREEN)
+						set_signal(BA,0,GREEN);
+					}
+				}
+			}
+			/**/
+			/**/
+			/*TRAIN control*/
+				//Check if current and next block are blocked, and have different trainIDs
+				if(BA->blocked && BN->blocked && BA->train != BN->train){
+					//Kill train
+					printf("COLLISION PREVENTION\n\t");
+					train_stop(train_link[BA->train]);
+				}
+				//Check if next block is a RED block
+				if(((BA->blocked && !BN->blocked && BN->state == RED) || (i == 0 && BA->blocked)) && train_link[BA->train]->timer != 1){
+					//Fire stop timer
+					printf("NEXT SIGNAL: RED\n\tSTOP TRAIN:");
+					train_signal(BA,train_link[BA->train],RED);
+				}
+				//Check if next block is a AMBER block
+				if(((BA->blocked && !BN->blocked && BN->state == AMBER) || (i == 1 && BA->blocked && !BN->blocked)) && train_link[BA->train]->timer != 1){
+					//Fire slowdown timer
+					printf("NEXT SIGNAL: AMBER\n\tSLOWDOWN TRAIN:\t");
+					train_signal(BA,train_link[BA->train],AMBER);
+				}
+
+				//If the next 2 blocks are free, accelerate
+				/*
+				//If the next block has a higher speed limit than the current
+				if(i > 0 && !BN->blocked && BA->train != 0 && train_link[BA->train] != NULL && train_link[BA->train]->timer != 2 && train_link[BA->train]->timer != 1){
+					if((BN->state == GREEN || BN->state == RESERVED) && train_link[BA->train]->cur_speed < BA->max_speed && BN->max_speed >= BA->max_speed){
+						printf("Next block has a higher speed limit (%i > %i)",BN->max_speed,BA->max_speed);
+						train_speed(BA,train_link[BA->train],BA->max_speed);
 					}
 				}
 
-				//Debug info
+				//If the next block has a lower speed limit than the current
+				if(BA->train != 0 && train_link[BA->train] != NULL && train_link[BA->train]->timer != 2){
+					if((BN->state == GREEN || BN->state == RESERVED) && train_link[BA->train]->cur_speed > BN->max_speed && BN->Adr.S != 0){
+						printf("Next block has a lower speed limit");
+						train_speed(BN,train_link[BA->train],BN->max_speed);
+					}else if(i > 1 && BN->Adr.S == 0 && BNN->Adr.S != 0 && (BNN->state == GREEN || BNN->state == RESERVED) && train_link[BA->train]->cur_speed > BNN->max_speed){
+						printf("Block after Switches has a lower speed limit");
+						train_speed(BNN,train_link[BA->train],BNN->max_speed);
+					}else if(train_link[BA->train]->cur_speed != BN->max_speed && BN->Adr.S != 0){
+						printf("%i <= %i\n",train_link[BA->train]->cur_speed,BN->max_speed && BN->Adr.S != 0);
+					}
+				}
+			/**/
+			/**/
+			/*Debug info*/
+				if(BA->train != 0){
+					//printf("ID: %i\t%i:%i:%i\n",BA->train,BA->Adr.M,BA->Adr.B,BA->Adr.S);
+				}
 				if(debug){
 					if(p > 0){
 						printf("\t\tP %i:%i:%i;B:%i\t",BP->Adr.M,BP->Adr.B,BP->Adr.S,BP->blocked);
 					}else{
 						printf("\t\t          \t");
 					}
-					printf("A%i %i:%i:%i;T:%i",i,adr.M,adr.B,adr.S,BA->train);
+					printf("A%i %i:%i:%i;T%iD%i",i,adr.M,adr.B,adr.S,BA->train,BA->dir);
 					if(BA->blocked){
 						printf("B");
 					}
-					printf("%i",BA->dir);
 					printf("\t");
-					if(i == 3){
-						printf("N %i:%i:%i;B:%i\tNN %i:%i:%i;B:%i\tNNN %i:%i:%i;B:%i\t",BN->Adr.M,BN->Adr.B,BN->Adr.S,BN->blocked,BNN->Adr.M,BNN->Adr.B,BNN->Adr.S,BNN->blocked,BNNN->Adr.M,BNNN->Adr.B,BNNN->Adr.S,BNNN->blocked);
+					if(i > 0){
+						printf("N %i:%i:%i;B%iDC%i\t",BN->Adr.M,BN->Adr.B,BN->Adr.S,BN->blocked,dir_Comp(BA,BN));
 					}
-					if(i == 2){
-						printf("N %i:%i:%i;B:%i\tNN %i:%i:%i;B:%i\t",BN->Adr.M,BN->Adr.B,BN->Adr.S,BN->blocked,BNN->Adr.M,BNN->Adr.B,BNN->Adr.S,BNN->blocked);
+					if(i > 1){
+						printf("NN %i:%i:%i;B%iDC%i\t",BNN->Adr.M,BNN->Adr.B,BNN->Adr.S,BNN->blocked,dir_Comp(BA,BNN));
 					}
-					if(i == 1){
-						printf("N %i:%i:%i;B:%i\t",BN->Adr.M,BN->Adr.B,BN->Adr.S,BN->blocked);
+					if(i > 2){
+						printf("NNN %i:%i:%i;B%iDC%i\t",BNNN->Adr.M,BNNN->Adr.B,BNNN->Adr.S,BNNN->blocked,dir_Comp(BA,BNNN));
 					}
-					if(i == 0){
+					//if(i == 0){
 						printf("\n");
-					}
+					//}
 				}
-
-
-			//TRAIN control
-			if(debug){
-				if(BA->blocked && BN->blocked && BA->train != BN->train){
-					//Kill train
-					printf("KILL TRAIN:%i",BA->train);
-				}
-				if((BA->blocked && !BN->blocked && BN->state == RED) || (i == 0 && BA->blocked)){
-					//Fire stop timer
-					printf("STOP TRAIN:%i",BA->train);
-				}
-				if((BA->blocked && !BN->blocked && BN->state == AMBER) || (i == 1 && BA->blocked)){
-					//Fire slowdown timer
-					printf("SLOWDOWN TRAIN:%i",BA->train);
-				}
-				if((BA->blocked && !BN->blocked && BA->train != 0 && BN->state == GREEN) || (BN->max_speed > BA->max_speed && BA->blocked && !BN->blocked && BN->state ==GREEN)){
-					printf("Speedup to track speed %i km/h, train:%i",BA->max_speed,BA->train);
-				}
-				if(BN->max_speed < BA->max_speed && BA->blocked && !BN->blocked && BN->state == GREEN){
-					printf("Slowdown to track speed %i km/h, train:%i",BA->max_speed,BA->train);
-				}
-				printf("\n");
-			}
-
-			if(BA->train >= 5){
-				printf("STPOPPED\n");
-				stop = 1;
-			}
 		}
 	}
 }
@@ -1207,7 +1415,7 @@ int pathFinding(struct adr Begin, struct adr End){
 */
 void *do_Magic(){
 	while(!stop){
-		//printf("Procces loop \t");
+		//printf("\n\n\n");
 		clock_t t;
 		t = clock();
 		pthread_mutex_lock(&mutex_lockA);
@@ -1218,14 +1426,15 @@ void *do_Magic(){
 		JSON();
 		pthread_mutex_unlock(&mutex_lockA);
 		t = clock() - t;
-		printf ("It took me %d clicks (%f seconds).\n",t,((float)t)/CLOCKS_PER_SEC);
+		//printf ("It took me %d clicks (%f seconds).\n",t,((float)t)/CLOCKS_PER_SEC);
+		//printf("\n\n\n\n\n\n");
 
 		//FILE *data;
 		//data = fopen("data.txt", "a");
 		//fprintf(data,"%d\n",t);
 		//fclose(data);
 
-		usleep(500000);
+		usleep(1000000);
 	}
 }
 
@@ -1252,18 +1461,23 @@ void *clear_timers(){
 				printf("Reset time %i\n",i);
 			}
 		}
+		usleep(10000);
 	}
 }
 
-#include "./src/train_sim.c"
-#include "./src/Web2.c"
-
 void main(){
+	setbuf(stdout,NULL);
+	setbuf(stderr,NULL);
 
+	pthread_t thread_web_server;
+	pthread_create(&thread_web_server, NULL, web_server, NULL);
+
+	//Define empty block
 	blocks[0][0][0] = C_Seg(C_AdrT(0,0,0,'e'),3);
 	blocks[0][0][0]->NAdr.type = 'e';
 	blocks[0][0][0]->PAdr.type = 'e';
 
+	//Initialising two link object with empty blocks
 	struct link LINK;
 	struct link LINK2;
 	LINK.Adr1 = END_BL;
@@ -1271,59 +1485,49 @@ void main(){
 	LINK.Adr3 = END_BL;
 	LINK.Adr4 = END_BL;
 
-	int setup[MAX_Modules] = {1,4,8,5,10,9,2,0};
-	int setup2[5] = {11,6,7,0};
+	int setup[MAX_Modules] = {1,8,4,12,2,0};
+	int setup2[5] = {6,7,0};
 
-	for(int i = 0;i<7;i++){
+	for(int i = 0;i<5;i++){
 		LINK = Modules(setup[i],LINK);
-		if(!Adr_Comp(LINK.Adr3,END_BL)){
-			LINK2.Adr1 = LINK.Adr3;
-			LINK2.Adr2 = LINK.Adr4;
-		}
+		//if(!Adr_Comp(LINK.Adr3,END_BL)){
+		//	LINK2.Adr1 = LINK.Adr3;
+		//	LINK2.Adr2 = LINK.Adr4;
+		//}
 	}
-
-	for(int i = 0;i<3;i++){
+	/*
+	for(int i = 0;i<2;i++){
 		LINK2 = Modules(setup2[i],LINK2);
+	}*/
+	setup_JSON(setup,setup2,5,0);
+
+	init_trains();
+
+	//blocks[11][1][1]->blocked = 1;
+	//throw_switch(Switch[5][5][1]);
+	//blocks[5][5][0]->state = RESERVED;
+	//procces(Adresses[75],1);
+
+	//Done with setup when there is at least one client
+
+	if(connected_clients == 0){
+		printf("\n\nWaiting until a client connects\n");
 	}
-	setup_JSON(setup,setup2,7,3);
+	while(connected_clients == 0){
+		usleep(1000000);
+	}
+	initialise = 0;
 
-	//Module_5(C_Adr(3,1,1),0,C_Adr(2,1,1),0);
-	printf("Adress: %i\n",Adress);
+	usleep(400000);
 
-//	Switch[5][2][1]->state = 0;
-//	Switch[5][5][1]->state = 0;
-//	Switch[6][3][1]->state = 0;
-
-	char ID = 0xFA;
-/*
-	struct adr A = {3,5,1,'R'};
-	struct adr B = {3,7,1,'R'};
-
-	pathFinding(A,B);
-
-	//printf("Next: %i:%i:%i:%c\n",blocks[4][11][1]->PAdr.M,blocks[4][11][1]->PAdr.B,blocks[4][11][1]->PAdr.S,blocks[4][11][1]->PAdr.type);
-	//do_Magic();
-
-	printf("TEST\n");
-	//do_Magic();
-
-	//blocks[6][2][1]->blocked = 1;
-	blocks[7][4][5]->blocked = 1;
-	blocks[7][3][5]->blocked = 1;
-	blocks[7][2][5]->blocked = 1;
-	//blocks[3][7][1]->blocked = 1;
-	//do_Magic();
-*/
 	pthread_t tid[10];
-
-	printf("Creating Threads");
-	Switch[5][2][1]->state = !Switch[5][2][1]->state;
-	Switch[6][3][1]->state = !Switch[6][3][1]->state;
+	//throw_switch(Switch[5][2][1]);
+	//throw_switch(Switch[6][3][1]);
 
 
-//	printf("Create clear thread\n");
-//	pthread_create(&tid[0], NULL, clear_timers, NULL);
-/*
+	//printf("Create clear thread\n");
+	//pthread_create(&tid[0], NULL, clear_timers, NULL);
+	/*
 	printf("Create timer threads\n");
 	for(int j = 0;j<100;j++){
 		if(j == 3){
@@ -1353,49 +1557,56 @@ void main(){
 	stop = 1;
 	pthread_join(tid[0],NULL);
 	pthread_join(tid[1],NULL);
-*/
+	*/
 
-	//pthread_create(&tid[0], NULL, do_Magic, NULL);
-	//pthread_create(&tid[1], NULL, status_write, NULL);
-	pthread_create(&tid[2], NULL, web_server, NULL);/*
+
+
+	//usleep(5000000);
+
+	printf("Creating Threads\n");
+	pthread_create(&tid[0], NULL, do_Magic, NULL);
+	pthread_create(&tid[1], NULL, clear_timers, NULL);
+	blocks[8][3][1]->blocked = 1;
+	blocks[8][3][1]->change  = 1;
+	JSON();
+	usleep(5000000);
+	//procces(Adresses[63],1);
+	//JSON();
+	//throw_switch(Switch[4][4][1]);
 	//pthread_create(&tid[1], NULL, STOP_FUNC, NULL);
 	//StartAdr = C_Adr(1,4,1);
 	//blocks[1][4][1]->blocked = 1;
 	pthread_create(&tid[3], NULL, TRAIN_SIMA, NULL);
 	//StartAdr = C_Adr(8,5,1);
 	//blocks[8][6][1]->blocked = 1;
-	blocks[7][4][5]->blocked = 1;
-	usleep(20000000);
+	//blocks[7][4][5]->blocked = 1;
 
-  pthread_create(&tid[4], NULL, TRAIN_SIMB, NULL);
-	blocks[7][3][5]->blocked = 1;
-	usleep(20000000);
+  //pthread_create(&tid[4], NULL, TRAIN_SIMB, NULL);
+	//blocks[7][3][5]->blocked = 1;
+	/*usleep(22000000);
 
-  pthread_create(&tid[5], NULL, TRAIN_SIMC, NULL);
-	blocks[7][2][5]->blocked = 1;
-	usleep(20000000);
+  //pthread_create(&tid[5], NULL, TRAIN_SIMC, NULL);
+	//blocks[7][2][5]->blocked = 1;
+	usleep(22000000);
 
-  pthread_create(&tid[6], NULL, TRAIN_SIMD, NULL);
+  //pthread_create(&tid[6], NULL, TRAIN_SIMD, NULL);
 
-	usleep(20000000);
+	usleep(22000000);
 
-	status_add(1,"[]");
+	new_message(1,"[]");
 
-	usleep(20000000);
+	usleep(22000000);
 
-	status_add(2,"[]");
+	new_message(3,"[]");
 
 	pthread_mutex_lock(&mutex_lockB);
-	Switch[4][6][1]->state = !Switch[4][6][1]->state;
-	Switch[4][6][2]->state = !Switch[4][6][1]->state;
+	//throw_switch(Switch[4][6][1]);
+	//throw_switch(Switch[4][6][2]);
 	pthread_mutex_unlock(&mutex_lockB);
-
+	*/
 	pthread_join(tid[0],NULL);
-	//pthread_join(tid[1],NULL);
-	pthread_join(tid[2],NULL);
-	//pthread_join(tid[3],NULL);
-	pthread_join(tid[4],NULL);
 
+	pthread_join(thread_web_server,NULL);
 	//procces(C_Adr(6,2,1),1);
 
 	printf("STOPPED");

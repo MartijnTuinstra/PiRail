@@ -93,9 +93,11 @@ function update(){
 			state = Module[3];
 
 			if(state == 0){
+				console.log(M+":"+B+":"+S+" Straight:"+"#M"+M+" #B"+B+" #S"+S+"D");
 				$("#M"+M+" #B"+B+" #S"+S+"D").css("opacity",0); //Straight
 				$("#M"+M+" #B"+B+" #S"+S+"S").css("opacity",1);
 			}else if(state == 1){
+				console.log(M+":"+B+":"+S+" Diverging:"+"#M"+M+" #B"+B+" #S"+S+"D");
 				$("#M"+M+" #B"+B+" #S"+S+"S").css("opacity",0); //Diverging
 				$("#M"+M+" #B"+B+" #S"+S+"D").css("opacity",1);
 			}

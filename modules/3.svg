@@ -62,7 +62,7 @@
       <path id="S1S" class="L" style="stroke:#ffff00" d="M 146,60 h 54"/>
       <path id="S2S" class="L" style="stroke:#ffff00" d="M 164,79 l 22,22"/>
       <path id="S2D" class="L" style="stroke:#ffff00" d="M 164,80 h 36"/>
-      <path class="L"style="stroke:#ff0" d="M 184,100 h 16"/>
+      <path class="L" style="stroke:#ff0" d="M 184,100 h 16"/>
     </g>
 
     <g id="B7" class="S1" onmouseenter="Show($(this),$(this))" onmouseleave="Hide($(this),$(this))">

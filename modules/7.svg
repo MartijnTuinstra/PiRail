@@ -1,4 +1,4 @@
-<svg preserveAspectRatio="xMidYMid meet" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:svg="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 140" id="svg6" height="140px" width="800px" version="1.1">
+<svg preserveAspectRatio="xMidYMid meet" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:svg="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 -30 676 130" id="svg6" height="160px" width="676px" version="1.1" style="top:-30px">
   <metadata id="metadata12">
     <rdf:RDF>
       <cc:Work rdf:about="">
@@ -17,38 +17,165 @@
     <rect x="600" y="10" width="40" height="40" style="stroke:rgb(255,0,0);stroke-width:2;fill:none"/>
     <rect x="160" y="10" width="40" height="40" style="stroke:rgb(255,0,0);stroke-width:2;fill:none"/>
   </g>
-  <path class="B" d="M 0,40 h 800"/>
-  <path class="B" d="M 0,60 h 800"/>
-  <path class="B" d="M 162.5,20 h 475"/>
-  <path class="B" d="M 162.5,80 h 607.5"/>
-  <path class="B" d="M 182.5,100 h 587.5"/>
-  <!-- Switch rails -->
-  <path class="B" d="M 144,41 l 22,-22"/>
-  <path class="B" d="M 144,59 l 42,42"/>
-
-  <path class="B" d="M 634,19 l 22,22"/>
-  <path class="B" d="M 614,101 l 42,-42"/>
+  <path class="B" d="M 63,-10 h 612"/>
+  <path class="B" d="M 43,10 h 632"/>
+  <path class="B" d="M 23,30 h 652"/>
+  <path class="B" d="M 0,50 h 675"/>
+  <path class="B" d="M 23,70 h 652"/>
+  <path class="B" d="M 43,90 h 632"/>
+  <path class="B" d="M 63,110 h 612"/>
+  
+  <path class="B" d="M 3.5,48.5 l 66,66"/>
+  <path class="B" d="M 3.5,51.5 l 63,-63"/>
   
   <g>
-    <g id="B1" class="S1" onmouseenter="Show(this,$(this))" onmouseleave="Hide(this,$(this))">
+    <g id="B1" class="S0" onmouseenter="Show(this,$(this))" onmouseleave="Hide(this,$(this))">
       
-      <path class="L" style="stroke:#ffff00" d="M 5,40 h 141"/>
-      <path id="S1D" class="L" style="stroke:#ffff00" d="M 144,41 l 22,-22"/>
-      <path id="S1S" class="L" style="stroke:#ffff00" d="M 146,40 h 54"/>
-      <path class="L" style="stroke:#ffff00" d="M 164,20 h 36"/>
+      <path class="L" style="stroke:#ffff00" d="M 0,50 h 5"/>
+
+      <path class="L" style="stroke:#ffff00" d="M 64,-10 l 3,0"/>
+  	  <path id="S1D" class="L" style="stroke:#ffff00" d="M 44,11 l 21.5,-21.5"/>
+      <path id="S1S" class="L" style="stroke:#ffff00" d="M 46,10 l 21,0"/>
+  	  <path id="S2D" class="L" style="stroke:#ffff00" d="M 24,31 l 22,-22"/>
+      <path id="S2S" class="L" style="stroke:#ffff00" d="M 26,30 l 21,0"/>
+      <path id="S3D" class="L" style="stroke:#ffff00" d="M 4,51 l 22,-22"/>
+  	  <path id="S3S" class="L" style="stroke:#ffff00" d="M 4,50 l 23,0"/>
+  	  <path id="S4D" class="L" style="stroke:#ffff00" d="M 4,49 l 22,22"/>
+      <path id="S4S" class="L"/>
+  	  <path id="S5D" class="L" style="stroke:#ffff00" d="M 24,69 l 22,22"/>
+      <path id="S5S" class="L" style="stroke:#ffff00" d="M 26,70 l 21,0"/>
+  	  <path id="S6D" class="L" style="stroke:#ffff00" d="M 44,89 l 21.5,21.5"/>
+      <path id="S6S" class="L" style="stroke:#ffff00" d="M 46,90 l 21,0"/>
+      <path class="L" style="stroke:#ffff00" d="M 64,110 l 3,0"/>
+	  
     </g>
     <g id="B2" class="S1" onmouseenter="Show(this,$(this))" onmouseleave="Hide(this,$(this))">
-      <path class="L" style="stroke:#ffff00" d="M 200,20 h 100"/>
+      <path class="L" style="stroke:#ffff00" d="M 67,-10 h 100"/>
     </g>
     <g id="B2" class="S2" onmouseenter="Show(this,$(this))" onmouseleave="Hide(this,$(this))">
-      <path class="L" style="stroke:#ffff00" d="M 300,20 h 100"/>
+      <path class="L" style="stroke:#ffff00" d="M 167,-10 h 100"/>
     </g>
     <g id="B2" class="S3" onmouseenter="Show(this,$(this))" onmouseleave="Hide(this,$(this))">
-      <path class="L" style="stroke:#ffff00" d="M 400,20 h 100"/>
+      <path class="L" style="stroke:#ffff00" d="M 267,-10 h 100"/>
     </g>
     <g id="B2" class="S4" onmouseenter="Show(this,$(this))" onmouseleave="Hide(this,$(this))">
-      <path class="L" style="stroke:#ffff00" d="M 500,20 h 100"/>
+      <path class="L" style="stroke:#ffff00" d="M 367,-10 h 100"/>
     </g>
+    <g id="B2" class="S5" onmouseenter="Show(this,$(this))" onmouseleave="Hide(this,$(this))">
+      <path class="L" style="stroke:#ffff00" d="M 467,-10 h 100"/>
+    </g>
+    <g id="B2" class="S6" onmouseenter="Show(this,$(this))" onmouseleave="Hide(this,$(this))">
+      <path class="L" style="stroke:#ffff00" d="M 567,-10 h 103"/>
+    </g>
+    <g id="B3" class="S1" onmouseenter="Show(this,$(this))" onmouseleave="Hide(this,$(this))">
+      <path class="L" style="stroke:#ffff00" d="M 67,10 h 100"/>
+    </g>
+    <g id="B3" class="S2" onmouseenter="Show(this,$(this))" onmouseleave="Hide(this,$(this))">
+      <path class="L" style="stroke:#ffff00" d="M 167,10 h 100"/>
+    </g>
+    <g id="B3" class="S3" onmouseenter="Show(this,$(this))" onmouseleave="Hide(this,$(this))">
+      <path class="L" style="stroke:#ffff00" d="M 267,10 h 100"/>
+    </g>
+    <g id="B3" class="S4" onmouseenter="Show(this,$(this))" onmouseleave="Hide(this,$(this))">
+      <path class="L" style="stroke:#ffff00" d="M 367,10 h 100"/>
+    </g>
+    <g id="B3" class="S5" onmouseenter="Show(this,$(this))" onmouseleave="Hide(this,$(this))">
+      <path class="L" style="stroke:#ffff00" d="M 467,10 h 100"/>
+    </g>
+    <g id="B3" class="S6" onmouseenter="Show(this,$(this))" onmouseleave="Hide(this,$(this))">
+      <path class="L" style="stroke:#ffff00" d="M 567,10 h 103"/>
+    </g>
+    <g id="B4" class="S1" onmouseenter="Show(this,$(this))" onmouseleave="Hide(this,$(this))">
+      <path class="L" style="stroke:#ffff00" d="M 47,30 h 120"/>
+    </g>
+    <g id="B4" class="S2" onmouseenter="Show(this,$(this))" onmouseleave="Hide(this,$(this))">
+      <path class="L" style="stroke:#ffff00" d="M 167,30 h 100"/>
+    </g>
+    <g id="B4" class="S3" onmouseenter="Show(this,$(this))" onmouseleave="Hide(this,$(this))">
+      <path class="L" style="stroke:#ffff00" d="M 267,30 h 100"/>
+    </g>
+    <g id="B4" class="S4" onmouseenter="Show(this,$(this))" onmouseleave="Hide(this,$(this))">
+      <path class="L" style="stroke:#ffff00" d="M 367,30 h 100"/>
+    </g>
+    <g id="B4" class="S5" onmouseenter="Show(this,$(this))" onmouseleave="Hide(this,$(this))">
+      <path class="L" style="stroke:#ffff00" d="M 467,30 h 100"/>
+    </g>
+    <g id="B4" class="S6" onmouseenter="Show(this,$(this))" onmouseleave="Hide(this,$(this))">
+      <path class="L" style="stroke:#ffff00" d="M 567,30 h 103"/>
+    </g>
+    <g id="B5" class="S1" onmouseenter="Show(this,$(this))" onmouseleave="Hide(this,$(this))">
+      <path class="L" style="stroke:#ffff00" d="M 27,50 h 140"/>
+    </g>
+    <g id="B5" class="S2" onmouseenter="Show(this,$(this))" onmouseleave="Hide(this,$(this))">
+      <path class="L" style="stroke:#ffff00" d="M 167,50 h 100"/>
+    </g>
+    <g id="B5" class="S3" onmouseenter="Show(this,$(this))" onmouseleave="Hide(this,$(this))">
+      <path class="L" style="stroke:#ffff00" d="M 267,50 h 100"/>
+    </g>
+    <g id="B5" class="S4" onmouseenter="Show(this,$(this))" onmouseleave="Hide(this,$(this))">
+      <path class="L" style="stroke:#ffff00" d="M 367,50 h 100"/>
+    </g>
+    <g id="B5" class="S5" onmouseenter="Show(this,$(this))" onmouseleave="Hide(this,$(this))">
+      <path class="L" style="stroke:#ffff00" d="M 467,50 h 100"/>
+    </g>
+    <g id="B5" class="S6" onmouseenter="Show(this,$(this))" onmouseleave="Hide(this,$(this))">
+      <path class="L" style="stroke:#ffff00" d="M 567,50 h 103"/>
+    </g>
+    <g id="B6" class="S1" onmouseenter="Show(this,$(this))" onmouseleave="Hide(this,$(this))">
+      <path class="L" style="stroke:#ffff00" d="M 47,70 h 120"/>
+    </g>
+    <g id="B6" class="S2" onmouseenter="Show(this,$(this))" onmouseleave="Hide(this,$(this))">
+      <path class="L" style="stroke:#ffff00" d="M 167,70 h 100"/>
+    </g>
+    <g id="B6" class="S3" onmouseenter="Show(this,$(this))" onmouseleave="Hide(this,$(this))">
+      <path class="L" style="stroke:#ffff00" d="M 267,70 h 100"/>
+    </g>
+    <g id="B6" class="S4" onmouseenter="Show(this,$(this))" onmouseleave="Hide(this,$(this))">
+      <path class="L" style="stroke:#ffff00" d="M 367,70 h 100"/>
+    </g>
+    <g id="B6" class="S5" onmouseenter="Show(this,$(this))" onmouseleave="Hide(this,$(this))">
+      <path class="L" style="stroke:#ffff00" d="M 467,70 h 100"/>
+    </g>
+    <g id="B6" class="S6" onmouseenter="Show(this,$(this))" onmouseleave="Hide(this,$(this))">
+      <path class="L" style="stroke:#ffff00" d="M 567,70 h 103"/>
+    </g>
+    <g id="B7" class="S1" onmouseenter="Show(this,$(this))" onmouseleave="Hide(this,$(this))">
+      <path class="L" style="stroke:#ffff00" d="M 67,90 h 100"/>
+    </g>
+    <g id="B7" class="S2" onmouseenter="Show(this,$(this))" onmouseleave="Hide(this,$(this))">
+      <path class="L" style="stroke:#ffff00" d="M 167,90 h 100"/>
+    </g>
+    <g id="B7" class="S3" onmouseenter="Show(this,$(this))" onmouseleave="Hide(this,$(this))">
+      <path class="L" style="stroke:#ffff00" d="M 267,90 h 100"/>
+    </g>
+    <g id="B7" class="S4" onmouseenter="Show(this,$(this))" onmouseleave="Hide(this,$(this))">
+      <path class="L" style="stroke:#ffff00" d="M 367,90 h 100"/>
+    </g>
+    <g id="B7" class="S5" onmouseenter="Show(this,$(this))" onmouseleave="Hide(this,$(this))">
+      <path class="L" style="stroke:#ffff00" d="M 467,90 h 100"/>
+    </g>
+    <g id="B7" class="S6" onmouseenter="Show(this,$(this))" onmouseleave="Hide(this,$(this))">
+      <path class="L" style="stroke:#ffff00" d="M 567,90 h 103"/>
+    </g>
+    <g id="B8" class="S1" onmouseenter="Show(this,$(this))" onmouseleave="Hide(this,$(this))">
+      <path class="L" style="stroke:#ffff00" d="M 67,110 h 100"/>
+    </g>
+    <g id="B8" class="S2" onmouseenter="Show(this,$(this))" onmouseleave="Hide(this,$(this))">
+      <path class="L" style="stroke:#ffff00" d="M 167,110 h 100"/>
+    </g>
+    <g id="B8" class="S3" onmouseenter="Show(this,$(this))" onmouseleave="Hide(this,$(this))">
+      <path class="L" style="stroke:#ffff00" d="M 267,110 h 100"/>
+    </g>
+    <g id="B8" class="S4" onmouseenter="Show(this,$(this))" onmouseleave="Hide(this,$(this))">
+      <path class="L" style="stroke:#ffff00" d="M 367,110 h 100"/>
+    </g>
+    <g id="B8" class="S5" onmouseenter="Show(this,$(this))" onmouseleave="Hide(this,$(this))">
+      <path class="L" style="stroke:#ffff00" d="M 467,110 h 100"/>
+    </g>
+    <g id="B8" class="S6" onmouseenter="Show(this,$(this))" onmouseleave="Hide(this,$(this))">
+      <path class="L" style="stroke:#ffff00" d="M 567,110 h 103"/>
+    </g>
+	<!--
     <g id="B3" class="S1" onmouseenter="Show(this,$(this))" onmouseleave="Hide(this,$(this))">
       <path class="L" style="stroke:#ffff00" d="M 200,40 h 100"/>
     </g>
@@ -130,7 +257,7 @@
     </g>
     <g id="B11" class="S1" onmouseenter="Show(this,$(this))" onmouseleave="Hide(this,$(this))">
       <path class="L" style="stroke:#ff00ff" d="M 634,60 h 161"/>
-    </g>
+    </g>-->
   </g>
   <g><!-- Text blocks -->
     <g id="S0B" style="display:none">

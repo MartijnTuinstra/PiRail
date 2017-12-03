@@ -1,31 +1,13 @@
-[[
-  "Loop links",
-  140,
-  600],
-[
-  "Loop rechts",
-  140,
-  600],
-[
-  "Station (5 sporen/3 bakken)",
-  140,
-  600],
-[
-  "Brug",
-  100,
-  400],
-[
-  "Stad",
-  100,
-  800],
-[
-  "",
-  0,
-  0],
-[
-  "Station (5 sporen/4 bakken)",
-  140,
-  800]
+[["Loop links",140,600],
+  ["Loop rechts",140,600],
+  ["Station (5 sporen/3 bakken)",140,600],
+  ["Station (5 sporen/4 bakken)",140,800],
+  ["T splitsing",140,800],
+  ["Rangeerbrug",140,135],
+  ["Rangeer",140,667],
+  ["Brug",100,400],
+  ["Stad",100,800],
+  ["Bocht",400,400]
 ]
 
 04539052342

@@ -46,7 +46,7 @@
       </style>
   </head>
   <body>
-    <div style="height:300px">
+    <div style="height:20px">
       <?php $tablet = $_GET['T'];
 
       if($tablet == 0){
@@ -60,14 +60,26 @@
       <div id="M1" class="Module">
         <?php include("./modules/1.svg"); ?>
       </div>
-      <div id="M7" class="Module">
-        <?php include("./modules/7.svg"); ?>
-      </div>
       <div id="M5" class="Module">
         <?php include("./modules/5.svg"); ?>
       </div>
-      <div id="M2" class="Module">
+      <div id="M4" class="Module">
+        <?php include("./modules/4.svg"); ?>
+      </div>
+      <div id="M10" class="Module">
+        <?php include("./modules/10.svg"); ?>
+      </div>
+      <div id="M8" class="Module" style="position:relative;left:970px;top:350px;-ms-transform: rotate(90deg);-webkit-transform: rotate(90deg);transform: rotate(90deg);">
+        <?php include("./modules/8.svg"); ?>
+      </div>
+      <div id="M2" class="Module" style="position:relative;left:480px;top:800px;-ms-transform: rotate(90deg);-webkit-transform: rotate(90deg);transform: rotate(90deg);">
         <?php include("./modules/2.svg"); ?>
+      </div>
+      <div id="M6" class="Module" style="position:relative;left:-798px;top:-162px;-ms-transform: rotate(90deg);-webkit-transform: rotate(90deg);transform: rotate(90deg);">
+        <?php include("./modules/6.svg"); ?>
+      </div>
+      <div id="M7" class="Module" style="position:relative;left:-1169px;top:232px;-ms-transform: rotate(90deg);-webkit-transform: rotate(90deg);transform: rotate(90deg);">
+        <?php include("./modules/7.svg"); ?>
       </div>
     </div>
     <script src="./script_0.8.js">

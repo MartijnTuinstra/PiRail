@@ -2,12 +2,13 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <termios.h>
 
 #define MAX_SW 20
-#define MAX_Segments 16
+#define MAX_Segments 8
 #define MAX_Blocks 32
 #define MAX_Modules 16
 #define MAX_A MAX_Modules*MAX_Blocks*MAX_Segments
@@ -25,152 +26,314 @@
 
 #define Arr_Count(array) (sizeof(array)/sizeof((array)[0])) 
 
+struct adr{
+	int M;		// Module
+	int B;		// Block
+	int S;		// Section
+	int type;	// Type
+};
+
 struct Seg{
-	unsigned short adr;  //0bTTTM MMMB BBBB SSSS,T = RailType, M = Module, B = Block, S = Segment (No Zeros for Block and Segment!!)
-	unsigned short Nadr; //0bTTTM MMMB BBBB SSSS,T = RailType, M = Module, B = Block, S = Segment
-	unsigned short Padr; //0bTTTM MMMB BBBB SSSS,T = RailType, M = Module, B = Block, S = Segment
-	char max_speed;      //0x00 <-> 0xFF
-	unsigned short state;//0bxxxd DDSS LLLL bbbB, d = train direction, D = Direction, S = Station/StopSpot, L = Lenght, b = state, B = Blocked?
-	char train;			 //0x00 <-> 0xFF
+	struct adr Adr;
+	struct adr NAdr;
+	struct adr PAdr;
+	char max_speed;		//0x00 <-> 0xFF
+	char state;
+	char dir;		//0xAABB, A = Travel direction, B = Current travel direction
+	char lenght;
+	char train;		 //0x00 <-> 0xFF
+	char blocked;
 };
 
 struct Swi{
-	unsigned short adr;
+	struct adr Adr;
 
-	unsigned short Div;
-	unsigned short Str;
-	unsigned short App;
+	struct adr Div;
+	struct adr Str;
+	struct adr App;
 	char state;
 };
 
-int gM(unsigned short adr){
-	int a = (adr & 0x1E00) >> 9;
-	return a;
-}
-int gB(unsigned short adr){
-	int a = (adr & 0x1F0) >> 4;
-	return a;
-}
-int gS(unsigned short adr){
-	int a = adr & 0xF;
-	return a;
-}
-int tS(unsigned short adr){
-	return ((adr & 0x6000) >> 13); //4/8/C <-> S_App / s_Div\Str / Special
-}
-
-short Adresses[MAX_A] = {0};
+struct adr Adresses[MAX_A] = {};
+int Adress = 0;
 struct Seg *blocks[MAX_Modules][MAX_Blocks][MAX_Segments] = {};
 struct Swi *Switch[MAX_Modules][MAX_Blocks][MAX_Segments] = {};
 
-unsigned short C_Adr(int Module,int Block,int Segment){
-	return (((Module & 0xF) << 9) + ((Block & 0x1F) << 4) + (Segment & 0xF));
+struct adr C_Adr(char M,char B,char S){
+	struct adr Z;
+
+	Z.M = M;
+	Z.B = B;
+	Z.S = S;
+	Z.type = 'R';
+	
+	return Z;
 }
 
-struct Seg * C_Seg(unsigned short adr, char state){
+struct adr C_AdrT(char M,char B,char S,char T){
+	struct adr Z;
+
+	Z.M = M;
+	Z.B = B;
+	Z.S = S;
+	Z.type = T;
+	
+	return Z;
+}
+
+#define END_BL C_AdrT(0,0,0,'e')
+
+struct Seg * C_Seg(struct adr Adr, char state){
 	struct Seg *Z = (struct Seg*)malloc(sizeof(struct Seg));
 
-	Z->adr = adr;
-	Z->Nadr = 0;
-	Z->Padr = 0;
+	Z->Adr = Adr;
+	Z->NAdr = C_Adr(0,0,0);
+	Z->PAdr = C_Adr(0,0,0);
 	Z->max_speed = 0;
 	Z->state = state;
 	Z->train = 0x00;
+
+	printf("A Segment is created at %i:%i:%i\t",Adr.M,Adr.B,Adr.S);
+	blocks[Adr.M][Adr.B][Adr.S] = Z;
+
+	if(!(Adr.M == 0 && Adr.B == 0 && Adr.S == 0)){
+		printf("Adr:%i\n",Adress);
+		Adresses[Adress] = Adr;
+		Adress++;
+	}else{
+		printf("\n");
+	}
 
 	return Z;
 
 }
 
-void Create_Segment(unsigned short adr,unsigned short Nadr,unsigned short Padr,char max_speed,unsigned short state){
+void Create_Segment(struct adr Adr,struct adr NAdr,struct adr PAdr,char max_speed,char state,char dir,char len){
 	struct Seg *Z = (struct Seg*)malloc(sizeof(struct Seg));
 
-	Z->adr = adr;
-	Z->Nadr = Nadr;
-	Z->Padr = Padr;
+	Z->Adr = Adr;
+	Z->NAdr = NAdr;
+	Z->PAdr = PAdr;
 	Z->max_speed = max_speed;
 	Z->state = state;
+	Z->dir = dir;
+	Z->lenght = len;
 	Z->train = 0x00;
 
+	printf("A Segment is created at %i:%i:%i\tAdr:%i\n",Adr.M,Adr.B,Adr.S,Adress);
+	blocks[Adr.M][Adr.B][Adr.S] = Z;
+
 	//return Z;
-	printf("A Segment is created at %i:%i:%i\n",gM(adr),gB(adr),gS(adr));
-	blocks[gM(adr)][gB(adr)][gS(adr)] = Z;
-	for(int i = 0;i<MAX_A;i++){
-		if(Adresses[i] == 0){
-			Adresses[i] = adr;
-			break;
-		}
-	}
+	Adresses[Adress] = Adr;
+	Adress++;
 }
 
-void Create_Switch(unsigned short adr,unsigned short App,unsigned short Div,unsigned short Str,char state){
+void Create_Switch(struct adr Adr,struct adr  App,struct adr Div,struct adr Str,char state){
 	struct Swi *Z = (struct Swi*)malloc(sizeof(struct Swi));
 
-	Z->adr = adr + 0x4000;
+	Adr.type = 'S';
+
+	Z->Adr = Adr;
 	Z->Str = Str;
 	Z->Div = Div;
 	Z->App = App;
 	Z->state = state;
 
 	//return Z;
-	printf("A Switch  is created at %i:%i:%i\n",gM(adr),gB(adr),gS(adr));
-	if(blocks[gM(adr)][gB(adr)][1] == NULL){
-		blocks[gM(adr)][gB(adr)][0] = C_Seg(C_Adr(gM(adr),gB(adr),0),0);
-		for(int i = 0;i<MAX_A;i++){
-			if(Adresses[i] == 0){
-				Adresses[i] = C_Adr(gM(adr),gB(adr),0);
-				break;
+	if(blocks[Adr.M][Adr.B][1] == NULL && blocks[Adr.M][Adr.B][0] == NULL){
+		C_Seg(C_Adr(Adr.M,Adr.B,0),0);
+	}
+	printf("A Switch  is created at %i:%i:%i\tAdr:%i\n",Adr.M,Adr.B,Adr.S,Adress);
+	Switch[Adr.M][Adr.B][Adr.S] = Z;
+
+	Adresses[Adress] = Adr;
+	Adress++;
+}
+
+#include "modules.c"
+
+struct Seg * Next(struct adr Adr,int i){
+	int a = 0;
+	struct adr NAdr = Adr;
+	printf("<%i:%i:%i\n",Adr.M,Adr.B,Adr.S);
+
+	I:{};
+
+	int dir = blocks[Adr.M][Adr.B][Adr.S]->dir;
+
+	if(dir == 0 || dir == 2){
+		NAdr = blocks[Adr.M][Adr.B][Adr.S]->NAdr;
+	}else{
+		NAdr = blocks[Adr.M][Adr.B][Adr.S]->PAdr;
+	}
+
+	//Adr = NAdr;
+	R:{};
+
+	if((NAdr.type) == 'R'){
+		i--;
+		//	printf("Just a normal rail\n");
+	}else if((NAdr.type) == 'e'){
+		return blocks[NAdr.M][NAdr.B][NAdr.S];
+		//	printf("Just a normal rail\n");
+	}else if(NAdr.type == 'S'){
+		a++;
+		if(blocks[NAdr.M][NAdr.B][0] != NULL && i == 1){
+			NAdr = blocks[NAdr.M][NAdr.B][0]->Adr;
+		}else{
+			if(Switch[NAdr.M][NAdr.B][NAdr.S]->state == 0){ //Straight?
+				NAdr = Switch[NAdr.M][NAdr.B][NAdr.S]->Str;
+			}else{
+				NAdr = Switch[NAdr.M][NAdr.B][NAdr.S]->Div;
 			}
 		}
+	}else if(NAdr.type == 's'){
+		if(blocks[NAdr.M][NAdr.B][0] != NULL && i == 1){
+			a++;
+			NAdr = blocks[NAdr.M][NAdr.B][0]->Adr;
+		}else{
+			NAdr = Switch[NAdr.M][NAdr.B][NAdr.S]->App;
+		}
+	}else{
+		//	printf("Something unexpected happened");
 	}
-	Switch[gM(adr)][gB(adr)][gS(adr)] = Z;
+	printf(">i:%i\ta:%i\n",i,a);
+	printf(" %i:%i:%i %c\n",NAdr.M,NAdr.B,NAdr.S,NAdr.type);
+
+	if(a > 0 && NAdr.B != Adr.B && (NAdr.type != 'R')){
+		i--;
+		goto R;
+	}
+	if(NAdr.type != 'R'){
+		Adr = NAdr;
+		i--;
+		goto R;
+	}
+	if(a > 0){
+		i--;
+		a = 0;
+		Adr = NAdr;
+		goto I;
+	}
+
+	if(i > 0){
+		Adr = NAdr;
+		i--;
+		goto I;
+	}
+	printf("\n");
+	return blocks[NAdr.M][NAdr.B][NAdr.S];
 }
 
-#include "modules2.c"
-
-void block_state(struct Seg *S,int val){
-	val &= 0b1110;
-
-	S->state &= 0xFFF1;
-	S->state |= val;
-}
-
-struct Seg * Next(short adr,int i){
+struct Seg * Next2(struct adr Adr,int i){
+	struct adr NAdr,SNAdr;
 	int a = 0;
-	int dir = ((blocks[gM(adr)][gB(adr)][gS(adr)]->state >> 10) & 0x3);
-	short NAdr = adr;
+	//printf("\n%i\n",i);
+	I:{};
+
+	int dir = blocks[Adr.M][Adr.B][Adr.S]->dir;
+
+	if(dir == 0 || dir == 2){
+		NAdr = blocks[Adr.M][Adr.B][Adr.S]->NAdr;
+	}else{
+		NAdr = blocks[Adr.M][Adr.B][Adr.S]->PAdr;
+	}
+
+	J:{};
+
+	if(i == 0){
+		//printf("\n");
+		return blocks[Adr.M][Adr.B][Adr.S];
+	}
+	//usleep(20000);
+	//printf("i:%i",i);
+	//printf("\t%i:%i:%i\ttype:%c\n",NAdr.M,NAdr.B,NAdr.S,NAdr.type);
+	if(NAdr.type == 'R'){
+		i--;
+		Adr = NAdr;
+		goto I;
+	}else if(NAdr.type == 'e'){
+		return blocks[0][0][0];
+
+	}else if(NAdr.type == 'S' || NAdr.type == 's'){
+		R:{};
+		if(i == 1 && blocks[NAdr.M][NAdr.B][0] != NULL){
+			i--;
+			Adr = C_Adr(NAdr.M,NAdr.B,0);
+			goto I;
+		}
+		if(blocks[NAdr.M][NAdr.B][0] != NULL){
+			a++;
+		}
+		if(NAdr.type == 'S'){
+			if(Switch[NAdr.M][NAdr.B][NAdr.S]->state == 0){ //Straight?
+				SNAdr = Switch[NAdr.M][NAdr.B][NAdr.S]->Str;
+			}else{
+				SNAdr = Switch[NAdr.M][NAdr.B][NAdr.S]->Div;
+			}
+		}else{
+			SNAdr = Switch[NAdr.M][NAdr.B][NAdr.S]->App;
+		}
+		//printf("SN %i:%i:%i%c\tN %i:%i:%i\ti:%i\n",SNAdr.M,SNAdr.B,SNAdr.S,SNAdr.type,NAdr.M,NAdr.B,NAdr.S,i);
+		if(SNAdr.type == 'S' || SNAdr.type == 's'){
+			if(SNAdr.B != NAdr.B){
+				i--;
+			}
+			NAdr = SNAdr;
+			goto R;
+		}else{
+			Adr = SNAdr;
+			NAdr = Adr;
+			//printf("\n%i:%i:%i\n",NAdr.M,NAdr.B,NAdr.S);
+			i--;
+			if(a>0){
+				i--;
+			}
+			goto I;
+		}
+	}
+}
+
+struct Seg * Prev(struct adr adr,int i){
+	int a = 0;
+	int dir = blocks[adr.M][adr.B][adr.S]->dir;
+	struct adr NAdr = adr;
 	I:{};
 	if(dir == 0 || dir == 2){
-		NAdr = blocks[gM(NAdr)][gB(NAdr)][gS(NAdr)]->Nadr;
+		NAdr = blocks[NAdr.M][NAdr.B][NAdr.S]->PAdr;
 	}else{
-		NAdr = blocks[gM(NAdr)][gB(NAdr)][gS(NAdr)]->Padr;
+		NAdr = blocks[NAdr.M][NAdr.B][NAdr.S]->NAdr;
 	}
 	R:{};
 
-	if((NAdr & 0x6000) == 0){
+	if(NAdr.type == 'R'){
 	//	printf("Just a normal rail\n");
-	}else if((NAdr & 0x6000) == Switch_Front){
+	}else if(NAdr.type == 'e'){
+		return blocks[0][0][0];
+		
+	}else if(NAdr.type == 'S'){
 		a++;
-		if(blocks[gM(NAdr)][gB(NAdr)][0] != NULL && i == 1){
-			NAdr = blocks[gM(NAdr)][gB(NAdr)][0]->adr;
+		if(blocks[NAdr.M][NAdr.B][0] != NULL && i == 1){
+			NAdr = blocks[NAdr.M][NAdr.B][0]->Adr;
 		}else{
-			if(Switch[gM(NAdr)][gB(NAdr)][gS(NAdr)]->state == 0){ //Straight?
-				NAdr = Switch[gM(NAdr)][gB(NAdr)][gS(NAdr)]->Str;
+			if(Switch[NAdr.M][NAdr.B][NAdr.S]->state == 0){ //Straight?
+				NAdr = Switch[NAdr.M][NAdr.B][NAdr.S]->Str;
 			}else{
-				NAdr = Switch[gM(NAdr)][gB(NAdr)][gS(NAdr)]->Div;
+				NAdr = Switch[NAdr.M][NAdr.B][NAdr.S]->Div;
 			}
 		}
-	}else if((NAdr & 0x6000) == Switch_Back){
+	}else if(NAdr.type == 's'){
 		a++;
-		if(blocks[gM(NAdr)][gB(NAdr)][0] != NULL && i == 1){
-			NAdr = blocks[gM(NAdr)][gB(NAdr)][0]->adr;
+		if(blocks[NAdr.M][NAdr.B][0] != NULL && i == 1){
+			NAdr = blocks[NAdr.M][NAdr.B][0]->Adr;
 		}else{
-			NAdr = Switch[gM(NAdr)][gB(NAdr)][gS(NAdr)]->App;
+			NAdr = Switch[NAdr.M][NAdr.B][NAdr.S]->App;
 		}
 	}else{
 	//	printf("Something unexpected happened");
 	}
 
-	if((NAdr & 0x6000) != 0){
+	if(NAdr.type != 'R'){
 		goto R;
 	}
 	if(a > 0){
@@ -183,96 +346,61 @@ struct Seg * Next(short adr,int i){
 		i--;
 		goto I;
 	}
-	return blocks[gM(NAdr)][gB(NAdr)][gS(NAdr)];
+	return blocks[NAdr.M][NAdr.B][NAdr.S];
 }
 
-struct Seg * Prev(short adr,int i){
-	int a = 0;
-	int dir = ((blocks[gM(adr)][gB(adr)][gS(adr)]->state >> 10) & 0x3);
-	short NAdr = adr;
-	I:{};
+int check_Switch(struct adr adr){
+	struct adr NAdr;
+	int dir = blocks[adr.M][adr.B][adr.S]->dir;
+
 	if(dir == 0 || dir == 2){
-		NAdr = blocks[gM(NAdr)][gB(NAdr)][gS(NAdr)]->Padr;
+		NAdr = blocks[adr.M][adr.B][adr.S]->NAdr;
 	}else{
-		NAdr = blocks[gM(NAdr)][gB(NAdr)][gS(NAdr)]->Nadr;
+		NAdr = blocks[adr.M][adr.B][adr.S]->PAdr;
 	}
-	R:{};
-
-	if((NAdr & 0x6000) == 0){
-	//	printf("Just a normal rail\n");
-	}else if((NAdr & 0x6000) == Switch_Front){
-		a++;
-		if(blocks[gM(NAdr)][gB(NAdr)][0] != NULL && i == 1){
-			NAdr = blocks[gM(NAdr)][gB(NAdr)][0]->adr;
-		}else{
-			if(Switch[gM(NAdr)][gB(NAdr)][gS(NAdr)]->state == 0){ //Straight?
-				NAdr = Switch[gM(NAdr)][gB(NAdr)][gS(NAdr)]->Str;
-			}else{
-				NAdr = Switch[gM(NAdr)][gB(NAdr)][gS(NAdr)]->Div;
-			}
-		}
-	}else if((NAdr & 0x6000) == Switch_Back){
-		a++;
-		if(blocks[gM(NAdr)][gB(NAdr)][0] != NULL && i == 1){
-			NAdr = blocks[gM(NAdr)][gB(NAdr)][0]->adr;
-		}else{
-			NAdr = Switch[gM(NAdr)][gB(NAdr)][gS(NAdr)]->App;
-		}
-	}else{
-	//	printf("Something unexpected happened");
-	}
-
-	if((NAdr & 0x6000) != 0){
-		goto R;
-	}
-	if(a > 0){
-		i--;
-		a = 0;
-		goto R;
-	}
-
-	if(i > 1){
-		i--;
-		goto I;
-	}
-	return blocks[gM(NAdr)][gB(NAdr)][gS(NAdr)];
-}
-
-int check_Switch(short adr){
-	int dir = ((blocks[gM(adr)][gB(adr)][gS(adr)]->state >> 10) & 0x3);
-	short NAdr = 0;
-	if(dir == 0 || dir == 2){
-		NAdr = blocks[gM(adr)][gB(adr)][gS(adr)]->Nadr;
-	}else{
-		NAdr = blocks[gM(adr)][gB(adr)][gS(adr)]->Padr;
-	}
+	//printf("NAdr %i:%i:%i\n",NAdr.M,NAdr.B,NAdr.S);
 	int n;
 	R:{};
-	//printf("NAdr: 0x%x\n",NAdr);
-	if((NAdr & 0x6000) == 0 || (NAdr & 0x6000) == 0x2000){
+	//printf("NAdr: %i:%i:%i\n",NAdr.M,NAdr.B,NAdr.S);
+	if(NAdr.type == 'R'){
 		return 1; //Passable
+	}else if(NAdr.type == 'e'){
+		return 0; //Passable
+	}else if(NAdr.type == 'S'){
+		if(Switch[NAdr.M][NAdr.B][NAdr.S]->state == 0){ //Straight?
+			adr = NAdr;
+			NAdr = Switch[NAdr.M][NAdr.B][NAdr.S]->Str;
+		}else{
+			adr = NAdr;
+			NAdr = Switch[NAdr.M][NAdr.B][NAdr.S]->Div;
+		}
+		goto R;
 	}else{
-		if((Switch[gM(NAdr)][gB(NAdr)][gS(NAdr)]->Div & 0x1FFF) == (adr & 0x1FFF)){
-			if(Switch[gM(NAdr)][gB(NAdr)][gS(NAdr)]->state == 1){
+		struct adr Div = Switch[NAdr.M][NAdr.B][NAdr.S]->Div;
+		struct adr Str = Switch[NAdr.M][NAdr.B][NAdr.S]->Str;
+		//printf("Div %i:%i:%i==%i:%i:%i\n",Div.M,Div.B,Div.S,adr.M,adr.B,adr.S);
+		//printf("Str %i:%i:%i==%i:%i:%i\n",Str.M,Str.B,Str.S,adr.M,adr.B,adr.S);
+		if(Div.M == adr.M && Div.B == adr.B && Div.S == adr.S){
+			if(Switch[NAdr.M][NAdr.B][NAdr.S]->state == 1){
+				n = 1;
+			}else{
+				return 0;
+			}
+		}else if(Str.M == adr.M && Str.B == adr.B && Str.S == adr.S){
+			if(Switch[NAdr.M][NAdr.B][NAdr.S]->state == 0){
 				n = 1;
 			}else{
 				return 0;
 			}
 		}else{
-			if(Switch[gM(NAdr)][gB(NAdr)][gS(NAdr)]->state == 0){
-				printf("T");
-				n = 1;
-			}else{
-				return 0;
-			}
+			return 0;
 		}
 
-		if((Switch[gM(NAdr)][gB(NAdr)][gS(NAdr)]->App & 0x6000) != 0){
 		//	printf("New switch\n");
-			adr = Switch[gM(NAdr)][gB(NAdr)][gS(NAdr)]->adr;
-			NAdr = Switch[gM(NAdr)][gB(NAdr)][gS(NAdr)]->App;
-			goto R;
-		}
+		adr = Switch[NAdr.M][NAdr.B][NAdr.S]->Adr;
+		NAdr = Switch[NAdr.M][NAdr.B][NAdr.S]->App;
+		goto R;
+
 	}
 	return n;
 }
@@ -286,69 +414,43 @@ void JSON(){
 	fprintf(fp,"{\"M\" : [");
 	int p = 0;
 
-	int f_m = 0;
-	int f_b = 0;
-	int f_s = 0;
 
-	for(int i_m = 1;i_m<MAX_Modules;i_m++){
-		if(blocks[i_m][1][1] != NULL || blocks[i_m][1][0] != NULL){
+	for(int i = 0;i<Adress;i++){
+		printf("+++",i);
 
-			for(int i_b = 1;i_b<MAX_Blocks;i_b++){
-				if(blocks[i_m][i_b][1] == NULL && blocks[i_m][i_b][0] != NULL){
-					if(f_s != 0){
-						fprintf(fp,",");
-					}
-					short state = blocks[i_m][i_b][0]->state;
-					fprintf(fp,"[%i,%i,%i,%i,%i,%i,%i]",i_m,i_b,0,(state & 0xC0)>>6,(state & 0x30)>>4,(state & 0x7),blocks[i_m][i_b][0]->train);
-				}else if(blocks[i_m][i_b][0] == NULL && blocks[i_m][i_b][1] != NULL){
-					for(int i_s = 1;i_s<MAX_Segments;i_s++){
-						if(blocks[i_m][i_b][i_s] != NULL){
-							if(f_s == 0){
-								f_s = 1;
-							}else{
-								fprintf(fp,",");
-							}
-
-							short state = blocks[i_m][i_b][i_s]->state;
-							fprintf(fp,"[%i,%i,%i,%i,%i,%i,%i]",i_m,i_b,i_s,(state & 0xC00)>>10,(state & 0x30)>>4,(state & 0x7),blocks[i_m][i_b][i_s]->train);
-						}
-					}
-				}
+		struct adr A = Adresses[i];
+		if(A.type != 'S'){
+			if(p != 0){
+				fprintf(fp,",");
+			}else{
+				p = 1;
 			}
-			f_b = 0;
+
+			fprintf(fp,"[%i,%i,%i,%i,%i,%i,%i]",A.M,A.B,A.S,blocks[A.M][A.B][A.S]->dir,blocks[A.M][A.B][A.S]->blocked,blocks[A.M][A.B][A.S]->state,blocks[A.M][A.B][A.S]->train);
 		}
 	}
 
 	fprintf(fp,"],\"SW\" : [");
+	printf("\n");
 
-	int f = 0;
+	p = 0;
 
-	for(int i_m = 1;i_m<MAX_Modules;i_m++){
-		if(blocks[i_m][1][1] != NULL || blocks[i_m][1][0] != NULL){
+	for(int i = 0;i<Adress;i++){
+		printf("---");
 
-			for(int i_b = 1;i_b<MAX_Blocks;i_b++){
-				if(Switch[i_m][i_b][1] != NULL){
-
-					for(int i_s = 1;i_s<MAX_Segments;i_s++){
-						if(Switch[i_m][i_b][i_s] != NULL){
-							if(f == 0){
-								f = 1;
-							}else{
-								fprintf(fp,",");
-							}
-
-							//short state = Switch[i_m][i_b][i_s]->state;
-							fprintf(fp,"[%i,%i,%i,%i]",i_m,i_b,i_s,Switch[i_m][i_b][i_s]->state);
-						}
-					}
-				}
+		struct adr A = Adresses[i];
+		if(A.type == 'S'){
+			if(p != 0){
+				fprintf(fp,",");
+			}else{
+				p = 1;
 			}
+
+			fprintf(fp,"[%i,%i,%i,%i]",A.M,A.B,A.S,Switch[A.M][A.B][A.S]->state);
 		}
 	}
-
-
 	fprintf(fp,"]}");
-
+	printf("\n");
 	fclose(fp);
 }
 
@@ -361,197 +463,278 @@ void Slowdown_train(int ID){
 }
 
 
-void procces(short adr){
-	if(gS(adr) == 0){
+void procces(struct adr adr,int i){
+	//printf("adr.S:%i\ttype:%c\n",adr.S,adr.type);
+	if(adr.type != 'R'){
 		//printf("Switch_Block\n");
+	}else if(adr.S == 0){
+		if(blocks[adr.M][adr.B][adr.S]->blocked == 0){
+			blocks[adr.M][adr.B][adr.S]->train = 0;
+		}
+		struct Seg *BA = blocks[adr.M][adr.B][adr.S];
+		if(i){
+			printf("\t\t\tA_%i:%i:%i \tB%iid%x\n",BA->Adr.M,BA->Adr.B,BA->Adr.S,BA->blocked,BA->train);
+		}
 	}else{
 		
-		struct Seg *BA = blocks[gM(adr)][gB(adr)][gS(adr)];
-		struct Seg *BN = Next(adr,1);
-		struct Seg *BNN = Next(adr,2);
-		struct Seg *BNNN = Next(adr,3);
+		struct Seg *BA = blocks[adr.M][adr.B][adr.S];
+		struct Seg *BN = Next2(adr,1);
+		struct Seg *BNN = Next2(adr,2);
+		struct Seg *BNNN = Next2(adr,3);
+		//struct Seg *BN4 = Next2(adr,4);
 		struct Seg *BP = Prev(adr,1);
 
-		printf("P_%i:%i:%i S_%i\t",gM(BP->adr),gB(BP->adr),gS(BP->adr),(BP->state & 0b1111));
-		printf("A_%i:%i:%i S_%i\t",gM(BA->adr),gB(BA->adr),gS(BA->adr),(BA->state & 0b1111));
-		printf("N_%i:%i:%i S_%i\t",gM(BN->adr),gB(BN->adr),gS(BN->adr),(BN->state & 0b1111));
-		printf("NN_%i:%i:%i S_%i\t",gM(BNN->adr),gB(BNN->adr),gS(BNN->adr),(BNN->state & 0b1111));
-		printf("NNN_%i:%i:%i S_%i\t",gM(BNNN->adr),gB(BNNN->adr),gS(BNNN->adr),(BNNN->state & 0b1111));
+		if(i){
+			printf("P_%i:%i:%i \tB%iid%x\t",BP->Adr.M,BP->Adr.B,BP->Adr.S,BP->blocked,BP->train);
+			printf("A_%i:%i:%i \tB%iid%x\t",BA->Adr.M,BA->Adr.B,BA->Adr.S,BA->blocked,BA->train);
+			printf("N1_%i:%i:%i \tB%iid%x\t",BN->Adr.M,BN->Adr.B,BN->Adr.S,BN->blocked,BN->train);
+			printf("N2_%i:%i:%i \tB%iid%x\t",BNN->Adr.M,BNN->Adr.B,BNN->Adr.S,BNN->blocked,BNN->train);
+			printf("N3_%i:%i:%i \tB%iid%x\t",BNNN->Adr.M,BNNN->Adr.B,BNNN->Adr.S,BNNN->blocked,BNNN->train);
+			//printf("N4_%i:%i:%i \tB%iid%x\t",BN4->Adr.M,BN4->Adr.B,BN4->Adr.S,BN4->blocked,BN4->train);
+		}
 
-		if((BP->state & 0b1) == 1){
+		if(BP->Adr.type != 'e' && BP->blocked == 1 && BA->blocked == 1){
 			BA->train = BP->train;
 		}
 
-		if((BN->state & 0b1) == 1){
-			block_state(BA,0b100);
-			if((BA->state & 0b1) == 1){
-				printf("STOP TRAIN");
-			}else{
-				BA->train = 0;
+		if(BN->Adr.type != 'e' && BNN->Adr.type != 'e' && BN->Adr.S == 0 && BNN->Adr.S == 0){
+			if(BN->blocked == 1 && BNN->blocked == 1 && BNN->train == 0){
+				BNN->train = BN->train;
 			}
-		}else if((BNN->state & 0b1) == 1){
-			block_state(BA,0b010);
-			if((BA->state & 0b1) == 1){
-				printf("SLOW DOWN TRAIN");
-			}else{
-				BA->train = 0;
-			}
+		}
+
+		if(BA->blocked == 0){
+			BA->train = 0;
+		}
+
+		if(BN->Adr.type != 'e' && BN->blocked){
+			BA->state = RED;
 		}else{
-			block_state(BA,0);
-		}
-
-		if(gS(BN->adr) == 0){
-			if((BNN->state & 0b1) == 1){
-				block_state(BN,0b100);
-			}else if((BNNN->state & 0b1) == 1){
-				block_state(BN,0b010);
+			if(BNN->blocked){
+				BA->state = AMBER;
 			}else{
-				block_state(BN,0b000);
+				BA->state = GREEN;
 			}
 		}
 
+		if(BN->Adr.type != 'e' && BNN->Adr.type != 'e' && BNN->Adr.S == 0 && BN->Adr.S == 0){
+			if(BNN->train == 0 && BNN->blocked == 1 && BN->blocked == 1){
+				BNN->train = BN->train;
+			}
+			if(BNNN->blocked){
+				BNN->state = RED;
+				BN->state = AMBER;
+			}
+		}
+
+		if(BN->Adr.type != 'e' && BN->Adr.S == 0){
+			if(BN->train == 0 && BN->blocked == 1 && BA->blocked == 1){
+				BN->train = BA->train;
+			}
+
+			if(BNN->blocked == 1){
+				BN->state = RED;
+			}else{
+				if(BNNN->blocked == 1){
+					BN->state = AMBER;
+				}else{
+					BN->state = GREEN;
+				}
+			}
+		}
+
+
+		if(BP->Adr.type != 'e' && BP->Adr.S == 0){
+			if(BN->blocked && BA->blocked == 0){
+				BP->state = AMBER;
+			}
+			if(BNN->blocked && BN->blocked == 0){
+				BP->state = GREEN;
+			}
+		}
+
+/*
+		int dir = blocks[BA->Adr.M][BA->Adr.B][BA->Adr.S]->dir;
+		struct adr NAdr;
+		if(dir == 0 || dir == 2){
+			NAdr = blocks[BA->Adr.M][BA->Adr.B][BA->Adr.S]->NAdr;
+		}else{
+			NAdr = blocks[BA->Adr.M][BA->Adr.B][BA->Adr.S]->PAdr;
+		}
+
+		if(NAdr.type == 's' || NAdr.type == 'S'){
+			//printf("Test: %i\n",check_Switch(BA->Adr));
+			if(!check_Switch(BA->Adr)){
+				BA->state = RESERVED;
+			}
+		}
+*/
 		printf("\n");
 	}
 }
 
 void do_Magic(){
-	for(int i = 0;i<MAX_Modules*MAX_Blocks*MAX_Segments;i++){
-		if(Adresses[i] != 0){
-			//printf("0x%x\n",Adresses[i]);
-			procces(Adresses[i]);
-		}
+	for(int i = 0;i<Adress;i++){
+		//printf("%i: %i:%i:%i\n",i,Adresses[i].M,Adresses[i].B,Adresses[i].S);
+		procces(Adresses[i],1);
 	}
 	JSON();
 	printf("\n\n\n");
 }
 
 void main(){
-	Module_1(C_Adr(2,1,1),C_Adr(2,1,1),C_Adr(3,1,1),C_Adr(3,5,1));
-	Module_3(C_Adr(1,4,1),C_Adr(1,11,1),C_Adr(4,1,1),C_Adr(4,1,1));
-	//Module_5(C_Adr(3,1,1),0,C_Adr(2,1,1),0);
-	Create_Segment(C_Adr(2,1,1),C_Adr(1,1,1),C_Adr(1,5,1),0xFA,0x40);
-	Create_Segment(C_Adr(4,1,1),C_Adr(3,4,1),C_Adr(3,7,1),0xFA,0x40);
-	short b = 0b0010011100101101;
-	//printf("Module :%i\n",gM(blocks[1][1][1]->adr));
-	//printf("Block  :%i\n",gB(blocks[1][1][1]->adr));
-	//printf("Segment:%i\n",gS(blocks[1][1][1]->adr));
-	//printf("Next type:%i\n",tS(blocks[1][1][1]->Nadr));
-	JSON();
-	procces(0x211);
-	blocks[1][2][1]->state += 0b1;
-	blocks[3][6][1]->state += 0b1;
-	blocks[3][5][1]->state += 0b1;
-	blocks[3][6][1]->train = 0xCA;
-	printf("Test adr: %i",blocks[3][5][1]->train);
-	JSON();
-	usleep(2000000);
-	procces(0x211);
-	procces(0x211);
-	int a = 0x221;
-	printf("Seg %i:%i:%i\n",gM(a),gB(a),gS(a));
-	int delay = 1000000;
-	JSON();
-	do_Magic();
-	usleep(1000000);
-	blocks[1][11][1]->state += 0b1;
-	blocks[3][6][1]->state -= 0b1;
-	do_Magic();
-	usleep(1000000);
-	blocks[1][10][0]->state += 0b1;
-	blocks[3][5][1]->state -= 0b1;
-	do_Magic();
-	usleep(1000000);
-	blocks[1][8][1]->state += 0b1;
-	blocks[1][11][1]->state -= 0b1;
-	do_Magic();
-	usleep(1000000);
-	blocks[1][6][0]->state += 0b1;
-	blocks[1][10][0]->state -= 0b1;
-	do_Magic();
-	usleep(1000000);
-	Switch[1][1][1]->state = 0;
+	blocks[0][0][0] = C_Seg(C_AdrT(0,0,0,'e'),3);
 
-	blocks[1][5][1]->state += 0b1;
-	blocks[1][8][1]->state -= 0b1;
-	do_Magic();
-	usleep(1000000);
-	blocks[2][1][1]->state += 0b1;
-	blocks[1][6][0]->state -= 0b1;
-	do_Magic();
-	usleep(1000000);
-	blocks[1][1][1]->state += 0b1;
-	blocks[1][5][1]->state -= 0b1;
-	do_Magic();
-	usleep(1000000);
-	blocks[1][3][1]->state += 0b1;
-	blocks[2][1][1]->state -= 0b1;
-	do_Magic();
-	usleep(1000000);
-	blocks[1][4][1]->state += 0b1;
-	blocks[1][1][1]->state -= 0b1;
-	do_Magic();
-	usleep(1000000);
-	blocks[3][1][1]->state += 0b1;
-	blocks[1][3][1]->state -= 0b1;
-	blocks[1][4][1]->state -= 0b1;
+
+	 Module_1(END_BL,END_BL,C_Adr(5,1,1),C_AdrT(5,2,1,'S'));
+	 Module_2(C_Adr(8,4,1),C_Adr(8,8,1),END_BL,END_BL);
+	 Module_4(C_Adr(5,1,1),C_AdrT(5,5,1,'S'),C_Adr(10,1,1),C_Adr(10,5,1));
+	 Module_5(C_Adr(1,1,1),C_Adr(1,4,1),C_Adr(4,1,1),C_Adr(4,5,1),C_Adr(6,1,1),C_Adr(6,2,1));
+	 Module_6(C_Adr(5,4,1),C_Adr(5,3,1),C_AdrT(7,1,3,'S'));
+	 Module_7(C_AdrT(6,3,1,'S'));
+	 Module_8(C_Adr(10,4,1),C_Adr(10,8,1),C_Adr(2,1,1),C_Adr(2,4,1));
+	Module_10(C_Adr(4,4,1),C_Adr(4,11,1),C_Adr(8,1,1),C_Adr(8,5,1));
+	printf("Adress: %i\n",Adress);
+
+	Switch[5][2][1]->state = 0;
+	Switch[5][5][1]->state = 0;
+	Switch[6][3][1]->state = 0;
+
+	JSON();
+
 	do_Magic();
 	/*
-	printf("Next adr: 0x%x\n",get_NAdr(blocks[1][5][1]->adr));
-	printf("Next Seg: 0x%x\n",get_NSeg(blocks[1][5][1]->adr));
-	printf("\n");
-	printf("Next adr: 0x%x\n",get_PAdr(blocks[1][5][1]->adr));
-	printf("Next Seg: 0x%x\n",get_PSeg(blocks[1][5][1]->adr));
-	printf("\n");
-	printf("Next adr: 0x%x\n",get_NAdr(blocks[1][1][1]->adr));
-	printf("Next adr: 0x%x\n",get_NSeg(blocks[1][1][1]->adr));
-	Switch[1][10][1]->state = 0;
-	printf("Pass switch:%i\n",check_Switch(blocks[1][1][1]->adr));
-	printf("Pass switch:%i\n",check_Switch(blocks[1][2][1]->adr));
-	printf("Pass switch:%i\n",check_Switch(blocks[1][3][1]->adr));
-	printf("\n\n");
-	printf("Pass switch:%i\n",check_Switch(blocks[1][7][1]->adr));
-	printf("Pass switch:%i\n",check_Switch(blocks[1][8][1]->adr));
-	printf("Pass switch:%i\n",check_Switch(blocks[1][9][1]->adr));
-	JSON();
+	Module_1(C_Adr(3,5,1),C_Adr(3,5,1),C_Adr(3,1,1),C_Adr(3,5,1));
+	Module_2(C_Adr(5,4,1),C_Adr(5,8,1),C_AdrT(2,3,1,'s'),C_AdrT(2,2,1,'s'));
+	Module_3(C_Adr(1,1,1),C_Adr(1,4,1),C_Adr(5,1,1),C_Adr(5,5,1));
+	Module_5(C_Adr(3,4,1),C_Adr(3,11,1),C_Adr(2,1,1),C_Adr(2,4,1));
 	/*
-	int d = 1000000;
-	usleep(d);
-	block_state(1,1,1,RED);
-	Switch[1][10][1]->state = 0;
+	Module_1(C_Adr(7,5,1),C_Adr(7,5,1),C_Adr(7,1,1),C_Adr(7,5,1));
+	Module_2(C_Adr(5,4,1),C_Adr(5,8,1),C_AdrT(2,3,1,'s'),C_AdrT(2,2,1,'s'));
+	Module_7(C_Adr(1,1,1),C_Adr(1,4,1),C_Adr(5,1,1),C_Adr(5,5,1));
+	Module_5(C_Adr(7,4,1),C_Adr(7,11,1),C_Adr(2,1,1),C_Adr(2,4,1));
+	/*
+	//Module_5(C_Adr(3,1,1),0,C_Adr(2,1,1),0);
+	short b = 0b0010011100101101;
+
+
+	//printf("Module :%i\n",gM(blocks[1][1][1]->Adr));
+	//printf("Block  :%i\n",gB(blocks[1][1][1]->Adr));
+	//printf("Segment:%i\n",gS(blocks[1][1][1]->Adr));
+	//printf("Next type:%i\n",tS(blocks[1][1][1]->NAdr));
+	printf("T");
+	usleep(200000);
 	JSON();
-	usleep(d);
-	blocks[1][2][1]->state |= 0b010;
+	printf("T");
+	//procces(0x211);
+	//blocks[1][2][1]->state += 0b1;
+
+	blocks[7][3][1]->blocked = 1;
+	*/
+//	blocks[3][1][1]->blocked = 1;
+//	blocks[3][2][1]->train = 0xCA;
+//	blocks[3][1][1]->train = 0xCA;
+//	blocks[3][3][1]->blocked = 1;
+//	blocks[3][3][1]->train = 168;
+
+	struct Seg *B = blocks[7][3][3];
+	struct Seg *N = blocks[7][3][3];
+	struct Seg *A[3] = {};
+	struct Seg *B2 = blocks[4][3][1];
+	struct Seg *N2 = blocks[4][3][1];
+	struct Seg *A2[3] = {};
+	int i = 0,i2 = 0,a = 0,trains = 1;
+
+	B->blocked = 1;
+	B->train = 0xCA;
+	B2->blocked = 1;
+	B2->train = 168;
+
+	int delay = 500000;
 	JSON();
-	usleep(d);
-	blocks[1][3][1]->state |= 0b010;
-	JSON();
-	usleep(d);
-	blocks[1][4][1]->state |= 0b010;
-	JSON();
-	usleep(d);
-	blocks[1][5][1]->state |= 0b010;
-	JSON();
-	usleep(d);
-	blocks[1][6][0]->state |= 0b010;
-	JSON();
-	usleep(d);
-	block_state(1,5,1,UNKNOWN);
-	blocks[1][7][1]->state |= 0b010;
-	JSON();
-	usleep(d);
-	block_state(1,4,1,GHOST);
-	blocks[1][8][1]->state |= 0b010;
-	JSON();
-	usleep(d);
-	block_state(1,3,1,BLOCKED);
-	blocks[1][9][1]->state |= 0b010;
-	JSON();
-	usleep(d);
-	block_state(1,2,1,AMBER);
-	blocks[1][10][0]->state |= 0b010;
-	JSON();
-	usleep(d);
-	block_state(1,1,1,GREEN);
-	blocks[1][11][1]->state |= 0b010;
-	JSON();*/
+
+	while(1){
+		a++;
+		printf("%i\n",a);
+			int m = 7;
+
+		/*
+		if(a == 38){
+			B = blocks[m][3][1];
+			Switch[m][1][1]->state = !Switch[m][1][1]->state;
+			Switch[m][4][1]->state = !Switch[m][4][1]->state;
+			JSON();
+			usleep(delay);
+
+		}else if(a == 79){
+			B2 = blocks[m][2][1];
+			trains = 2;
+			Switch[m][1][1]->state = !Switch[m][1][1]->state;
+			Switch[m][4][1]->state = !Switch[m][4][1]->state;
+			JSON();
+			usleep(delay);
+		}
+		/**/
+/*
+		if(a == 30){
+			Switch[3][1][1]->state = !Switch[3][1][1]->state;
+			Switch[3][4][1]->state = !Switch[3][4][1]->state;
+		}else if(a == 40){
+			Switch[3][6][1]->state = !Switch[3][6][1]->state;
+			Switch[3][10][1]->state = !Switch[3][10][1]->state;
+		}else if(a == 70){
+			Switch[3][6][1]->state = !Switch[3][6][1]->state;
+			Switch[3][10][1]->state = !Switch[3][10][1]->state;
+			Switch[3][6][2]->state = !Switch[3][6][2]->state;
+			Switch[3][10][2]->state = !Switch[3][10][2]->state;
+		}
+		/**/
+		N = Next2(B->Adr,1+i);
+		if(i > 0){
+			A[i] = Next2(B->Adr,i);
+		}
+
+		if(trains == 2){
+			N2 = Next2(B2->Adr,1+i2);
+			if(i2 > 0){
+				A2[i2] = Next2(B2->Adr,i2);
+			}
+			N2->blocked = 1;
+		}
+
+		N->blocked = 1;
+		do_Magic();
+		usleep(delay);
+		printf("%i\n",a);
+		if(i>0){
+			A[i]->blocked = 0;
+		}else{
+			B->blocked = 0;
+		}
+		if(trains != 1){
+			if(i2>0){
+				A2[i2]->blocked = 0;
+			}else{
+				B2->blocked = 0;
+			}
+		}
+		do_Magic();
+		usleep(delay);
+		if(N->Adr.S == 0){
+			i++;
+		}else{
+			B = N;
+			i = 0;
+		}
+		if(trains == 2){
+			if(N2->Adr.S == 0){
+				i2++;
+			}else{
+				B2 = N2;
+				i2 = 0;
+			}
+		}
+	}
+
+	/**/
 }

@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 26">
+  <defs>
+    <style>
+      .cls-2 {
+        fill:none;
+        stroke:#afafaf;
+        stroke-linecap:round;
+        stroke-miterlimit:10;
+        stroke-dasharray:0.99 2.97 0 0 0 0;
+      }
+
+      .cls-3 {
+        font-size:11px;
+        fill:#afafaf;
+        font-family:sans-serif;
+      }
+    </style>
+  </defs>
+  <title>disabled</title>
+  <rect class="cls-2" x="0.5" y="0.5" width="25" height="25" rx="7.42" ry="7.42"/>
+  <text class="cls-3" text-anchor="middle" x="13" y="16.52">F20</text>
+</svg>

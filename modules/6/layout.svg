@@ -1,0 +1,41 @@
+<svg preserveAspectRatio="xMidYMid meet" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:svg="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 136 140" id="svg6" height="140px" width="136px" version="1.1">
+  <metadata id="metadata12">
+    <rdf:rdf>
+      <cc:work rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+      </cc:work>
+    </rdf:rdf>
+  </metadata>
+  <path class="B" d="M 0,40 h 121"></path>
+  <path class="B" d="M 0,60 h 121"></path>
+  <path class="B" d="M 119,39 l 12,12"></path>
+  <path class="B" d="M 119,61 l 12,-12"></path>
+  <path class="B" d="M 135,50 h -5"></path>
+
+  <g>
+    <g id="B1" class="S1">
+      <path class="L" style="stroke: rgb(0, 255, 0);" d="M 0,40 h 120"></path>
+    </g>
+    <g id="B2" class="S1">
+      <path class="L" style="stroke: rgb(0, 255, 0);" d="M 0,60 h 120"></path>
+    </g>
+    <g id="B3" class="S0">
+
+      <path id="S1S" class="L" style="stroke: rgb(255, 255, 0); opacity: 0;" d="M 119.5,39.5 l 11,11"></path>
+      <path id="S1D" class="L" style="stroke: rgb(255, 255, 0); opacity: 1;" d="M 119.5,60.5 l 11,-11"></path>
+      <path class="L" style="stroke:#ffff00" d="M 130,50 h 5"></path>
+
+      <rect x="119" y="39" height="22" width="11" class="Switch" onclick="remote_Switch('S',6,3,1);"></rect>
+    </g>
+  </g>
+  <g><!-- Text blocks -->
+    <g id="S0B" style="display:none">
+      <rect x="90" y="35" width="20" height="10" fill="black"></rect>
+      <text class="T" x="90" y="43.5" font-family="Verdana" font-size="10" fill="white">&lt;FF</text>
+    </g>
+    <g id="S1B" style="display:none">
+      <rect x="290" y="35" width="20" height="10" fill="black"></rect>
+      <text class="T" x="290" y="43.5" font-family="Verdana" font-size="10" fill="white">&lt;FF</text>
+    </g>
+  </g>
+</svg>

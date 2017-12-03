@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 21 21" tool="tot" type="mouse">
+  <path d="M8.61,8l2.26-1.46L3.49,3.93l2.64,7.39L7.59,9l1.59,1.59a.72.72,0,0,0,1-1Z"/>
+  <circle cx="14.77" cy="14.33" r="3.02" style="stroke:#231f20;stroke-linecap:round;stroke-miterlimit:10"/>
+  <line x1="12.82" y1="14.33" x2="16.59" y2="14.33" style="fill:#fff;stroke:#fff;stroke-linecap:round;stroke-miterlimit:10"/>
+  <line x1="14.71" y1="16.22" x2="14.71" y2="12.44" style="fill:#fff;stroke:#fff;stroke-linecap:round;stroke-miterlimit:10"/>
+</svg>

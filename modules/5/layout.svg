@@ -1,0 +1,47 @@
+<svg xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:svg="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 140" id="svg6" height="140px" width="180px" version="1.1">
+  <metadata id="metadata12">
+    <rdf:rdf>
+      <cc:work rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+      </cc:work>
+    </rdf:rdf>
+  </metadata>
+  <defs id="defs10"></defs>
+  <path class="B" d="M 0,40 h 180"></path>
+  <path class="B" d="M 0,60 h 180"></path>
+  <path class="B" d="M 81,130 l -70,-70"></path>
+  <path class="B" d="M 99,130 l 70,-70"></path>
+  <path class="B" d="M 80,140 l 0,-12"></path>
+  <path class="B" d="M 100,140 l 0,-12"></path>
+<g>
+  <g id="B1" class="S1">
+    <path class="L" style="stroke: rgb(0, 255, 0);" d="M 5,40 h 170"></path>
+  </g>
+  <g id="B2" class="S0">
+    <path class="L" style="stroke: rgb(0, 255, 0);" d="M 5,60 h 6"></path>
+    <path class="L" style="stroke: rgb(0, 255, 0);" d="M 30,60 h 60"></path>
+
+    <path id="S1S" class="L" style="stroke: rgb(0, 255, 0); opacity: 1;" d="M 10,60 h 20"></path>
+    <path id="S1D" class="L" style="stroke: rgb(0, 255, 0); opacity: 1;" d="M 10.5,59.5 l 19.5,19.5"></path>
+
+    <rect x="10" y="59" height="22" width="22" class="Switch" onclick="remote_Switch('S',5,2,1);" style="cursor: pointer;"></rect>
+  </g>
+  <g id="B3" class="S1">
+    <path class="L" style="stroke: rgb(0, 255, 0);" d="M 80.5,129.5 l -51,-51"></path>
+    <path class="L" style="stroke: rgb(0, 255, 0);" d="M 80,129 l 0,6"></path>
+  </g>
+  <g id="B4" class="S1">
+    <path class="L" style="stroke: rgb(0, 255, 0);" d="M 99.5,129.5 l 51,-51"></path>
+    <path class="L" style="stroke: rgb(0, 255, 0);" d="M 100,129 l 0,6"></path>
+  </g>
+  <g id="B5" class="S0">
+    <path class="L" style="stroke: rgb(0, 255, 0);" d="M 90,60 h 60"></path>
+    <path class="L" style="stroke: rgb(0, 255, 0);" d="M 169,60 h 6"></path>
+
+    <path id="S1S" class="L" style="stroke: rgb(0, 255, 0); opacity: 0;" d="M 170,60 h -20"></path>
+    <path id="S1D" class="L" style="stroke: rgb(0, 255, 0); opacity: 1;" d="M 169.5,59.5 l -19.5,19.5"></path>
+
+    <rect x="150" y="59" height="22" width="22" class="Switch" onclick="remote_Switch('S',5,5,1);" style="cursor: pointer;"></rect>
+  </g>
+</g>
+</svg>

@@ -1,0 +1,26 @@
+'Loop links
+'Create Module
+CU	2	8	8
+'
+'Create block
+'Wat	IOadr	id	type	NxM	NxID	NxType	PxM	PxID	PxType	Max_sp	dir	len
+CB	0	0	R	I1	I	I	X	1	R	180	0	100
+CB	1	1	R	X	0	R	X	1	S	180	2	100
+CB	2	2	R	X	3	R	X	0	S	180	1	100
+CB	3	3	R	I2	I	I	X	2	R	180	1	100
+'
+'Create Switch
+'Wat	id	AxM	AxID	AxType	DxM	DxID	DxType	SxM	SxID	SxType	IOnr	IOadr
+CSw	0	X	2	R	X	1	s	I2	I	I	2	0 1
+CSw	1	X	1	R	X	0	s	I1	I	I	2	2 3
+'
+'Set detection blocks
+'	SwID	B_ID
+Sdet	0	2
+Sdet	1	1
+'
+'Join Previous
+'	Which	M	ID	Type
+J	1	X	0	R
+J	2	X	3	R
+'

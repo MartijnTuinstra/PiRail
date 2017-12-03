@@ -1,16 +1,323 @@
-[["Name","Width","Switch_list","Height","Rotation","Anchor1_x","Anchor1_y","Anchor2_x","Anchor2_y","Anchor3_rot","Anchor3_x","Anchor3_y"],
-  ["Loop links",[[2,1],[3,1]],140,140,90,30,140,140,50],
-  ["Loop rechts",[[2,1],[3,1]],140,140,90,0,50,110,140],
-  ["Station (5 sporen/3 bakken)",[[1,1],[4,1],[6,1],[6,2],[10,1],[10,2]],600,80,0,0,50,600,50],
-  ["Station (5 sporen/4 bakken)",[[1,1],[4,1],[6,1],[6,2],[10,1],[10,2]],800,80,0,0,50,800,50],
-  ["T splitsing",[[2,1],[5,1]],140,800,0,0,50,180,50,90,90,140],
-  ["Rangeerbrug",[[3,1]],135,80,0,0,50,135,50],
-  ["Rangeer",[[1,1],[1,2],[1,3,3],[1,4],[1,5]],676,80,0,0,95,668,95],
-  ["Brug",[],800,80,0,0,50,800,50],
-  ["Stad",[],800,80,0,0,50,800,50],
-  ["Bocht",[],420,420,90,0,50,370,420],
-  ["Bocht_s",[],200,200,90,0,50,170,220],
-  ["Stad",[],800,80,0,0,50,800,50],
-  ["Stad",[],800,80,0,0,50,800,50],
-  ["Stad",[],800,80,0,0,50,800,50]
-]
+{
+    "0": [],
+    "1": {
+        "name": "Loop links",
+        "blocks": 0,
+        "switch": 0,
+        "signals": 0,
+        "stations": 0,
+        "width": 140,
+        "height": 140,
+        "angle": 90,
+        "anchors": [
+            [
+                30,
+                140,
+                0
+            ],
+            [
+                140,
+                50,
+                0
+            ]
+        ]
+    },
+    "2": {
+        "name": "Loop rechts",
+        "blocks": 0,
+        "switch": 0,
+        "signals": 0,
+        "stations": 0,
+        "width": 140,
+        "height": 140,
+        "angle": 90,
+        "anchors": [
+            [
+                0,
+                50,
+                0
+            ],
+            [
+                110,
+                140,
+                0
+            ]
+        ]
+    },
+    "3": {
+        "name": "Station (5 sporen\/3 bakken)",
+        "blocks": 0,
+        "switch": 0,
+        "signals": 0,
+        "stations": 0,
+        "width": 600,
+        "height": 80,
+        "angle": 0,
+        "anchors": [
+            [
+                0,
+                50,
+                0
+            ],
+            [
+                600,
+                50,
+                0
+            ]
+        ]
+    },
+    "4": {
+        "name": "Station 4 blocks",
+        "blocks": 28,
+        "switch": 10,
+        "signals": 8,
+        "stations": 5,
+        "width": 800,
+        "height": 80,
+        "angle": 0,
+        "anchors": [
+            [
+                0,
+                50,
+                0
+            ],
+            [
+                800,
+                50,
+                0
+            ]
+        ]
+    },
+    "5": {
+        "name": "T splitsing",
+        "blocks": 0,
+        "switch": 0,
+        "signals": 0,
+        "stations": 0,
+        "width": 140,
+        "height": 800,
+        "angle": 0,
+        "anchors": [
+            [
+                0,
+                50,
+                0
+            ],
+            [
+                180,
+                50,
+                0
+            ],
+            [
+                90,
+                140,
+                90
+            ]
+        ]
+    },
+    "6": {
+        "name": "Rangeerbrug",
+        "blocks": 0,
+        "switch": 0,
+        "signals": 0,
+        "stations": 0,
+        "width": 135,
+        "height": 80,
+        "angle": 0,
+        "anchors": [
+            [
+                0,
+                50,
+                0
+            ],
+            [
+                135,
+                50,
+                0
+            ]
+        ]
+    },
+    "7": {
+        "name": "Rangeer",
+        "blocks": 0,
+        "switch": 0,
+        "signals": 0,
+        "stations": 0,
+        "width": 676,
+        "height": 80,
+        "angle": 0,
+        "anchors": [
+            [
+                0,
+                95,
+                0
+            ],
+            [
+                668,
+                95,
+                0
+            ]
+        ]
+    },
+    "8": {
+        "name": "Brug",
+        "blocks": 0,
+        "switch": 0,
+        "signals": 0,
+        "stations": 0,
+        "width": 800,
+        "height": 80,
+        "angle": 0,
+        "anchors": [
+            [
+                0,
+                50,
+                0
+            ],
+            [
+                800,
+                50,
+                0
+            ]
+        ]
+    },
+    "9": {
+        "name": "Stad",
+        "blocks": 0,
+        "switch": 0,
+        "signals": 0,
+        "stations": 0,
+        "width": 800,
+        "height": 80,
+        "angle": 0,
+        "anchors": [
+            [
+                0,
+                50,
+                0
+            ],
+            [
+                800,
+                50,
+                0
+            ]
+        ]
+    },
+    "10": {
+        "name": "Bocht",
+        "blocks": 0,
+        "switch": 0,
+        "signals": 0,
+        "stations": 0,
+        "width": 420,
+        "height": 420,
+        "angle": 90,
+        "anchors": [
+            [
+                0,
+                50,
+                0
+            ],
+            [
+                370,
+                420,
+                0
+            ]
+        ]
+    },
+    "11": {
+        "name": "Bocht_s",
+        "blocks": 0,
+        "switch": 0,
+        "signals": 0,
+        "stations": 0,
+        "width": 200,
+        "height": 200,
+        "angle": 90,
+        "anchors": [
+            [
+                0,
+                50,
+                0
+            ],
+            [
+                170,
+                220,
+                0
+            ]
+        ]
+    },
+    "12": {
+        "name": "Stad",
+        "blocks": 0,
+        "switch": 0,
+        "signals": 0,
+        "stations": 0,
+        "width": 800,
+        "height": 80,
+        "angle": 0,
+        "anchors": [
+            [
+                0,
+                50,
+                0
+            ],
+            [
+                800,
+                50,
+                0
+            ]
+        ]
+    },
+    "13": {
+        "name": "Stad",
+        "blocks": 0,
+        "switch": 0,
+        "signals": 0,
+        "stations": 0,
+        "width": 800,
+        "height": 80,
+        "angle": 0,
+        "anchors": [
+            [
+                0,
+                50,
+                0
+            ],
+            [
+                800,
+                50,
+                0
+            ]
+        ]
+    },
+    "14": {
+        "name": "Stad",
+        "blocks": 0,
+        "switch": 0,
+        "signals": 0,
+        "stations": 0,
+        "width": 800,
+        "height": 80,
+        "angle": 0,
+        "anchors": [
+            [
+                0,
+                50,
+                0
+            ],
+            [
+                800,
+                50,
+                0
+            ]
+        ]
+    },
+    "": {
+        "name": null,
+        "blocks": 0,
+        "switch": 0,
+        "signals": 0,
+        "stations": 0
+    }
+}

@@ -1,4 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" class="route_plus">
-	<circle cx="8" cy="8" r="6.11"/>
+	<style>
+		path {
+			fill:black;
+		}
+
+		svg:hover path {
+			fill: grey;
+		}
+
+		path, circle {
+			cursor: pointer;
+		}
+	</style>
+	<circle cx="8" cy="8" r="6.11" style="fill:white"/>
 	<path d="M8,0a8,8,0,1,0,8,8A8,8,0,0,0,8,0Zm4,8.8H8.8V12H7.2V8.8H4V7.2H7.2V4H8.8V7.2H12Zm0,0"/>
 </svg>

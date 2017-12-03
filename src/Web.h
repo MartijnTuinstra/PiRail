@@ -1,5 +1,3 @@
-#define _BSD_SOURCE
-
 #ifndef H_web
   #define H_web
   //int stop = 0;

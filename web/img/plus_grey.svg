@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generator: Adobe Illustrator 16.0.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	 width="20.333px" height="20.167px" viewBox="0 0 20.333 20.167" enable-background="new 0 0 20.333 20.167" xml:space="preserve">
+<g id="Laag_1">
+	<g>
+		<defs>
+			<rect id="SVGID_1_" x="-1030.5" y="-529.667" width="1920" height="1080"/>
+		</defs>
+		<clipPath id="SVGID_2_">
+			<use xlink:href="#SVGID_1_"  overflow="visible"/>
+		</clipPath>
+		<path clip-path="url(#SVGID_2_)" fill="#DB0749" d="M-76.613,10.333c0-3.376,2.737-6.113,6.113-6.113
+			c3.376,0,6.114,2.737,6.114,6.113s-2.737,6.113-6.114,6.113C-73.876,16.446-76.613,13.709-76.613,10.333"/>
+		<path clip-path="url(#SVGID_2_)" fill="#080808" d="M-70.5,2.333c-4.398,0-8,3.602-8,8s3.602,8,8,8c4.398,0,8-3.602,8-8
+			S-66.102,2.333-70.5,2.333 M-66.5,11.134h-3.199v3.199h-1.602v-3.199H-74.5V9.532h3.199V6.333h1.602v3.199h3.199V11.134z"/>
+	</g>
+	
+		<line fill="none" stroke="#777777" stroke-width="1.5" stroke-linecap="round" stroke-miterlimit="10" x1="-34.166" y1="10.333" x2="-26.166" y2="10.333"/>
+	
+		<line fill="none" stroke="#777777" stroke-width="1.5" stroke-linecap="round" stroke-miterlimit="10" x1="-30.166" y1="6.333" x2="-30.166" y2="14.333"/>
+	<circle fill="none" stroke="#777777" stroke-miterlimit="10" cx="-30.166" cy="10.333" r="8"/>
+	
+		<line fill="none" stroke="#777777" stroke-width="1.5" stroke-linecap="round" stroke-miterlimit="10" x1="6.167" y1="10.333" x2="14.167" y2="10.333"/>
+	<circle fill="none" stroke="#777777" stroke-miterlimit="10" cx="10.167" cy="10.333" r="8"/>
+</g>
+<g id="Laag_2">
+</g>
+</svg>

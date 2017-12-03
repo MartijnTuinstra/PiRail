@@ -1,0 +1,103 @@
+
+
+#Modules{
+	position: relative;
+}
+
+#Modules .B, .MBox svg .B {
+	fill:none;
+	stroke:#000000;
+	stroke-width:6px;
+	stroke-linecap:butt;
+	stroke-linejoin:round;
+	stroke-dasharray:none
+}
+
+#Modules .L, .MBox svg .L {
+	fill:none;
+	stroke-width:2px;
+	stroke-linecap:butt;
+	stroke-linejoin:round;
+	stroke-dasharray:none
+}
+
+#Modules .W, .MBox svg .W {
+	fill:none;
+	stroke:#FFFFFF;
+	stroke-width:4px;
+	stroke-linecap:butt;
+	stroke-linejoin:round;
+	stroke-dasharray:none
+}
+
+#Modules .Sig, .MBox svg .Sig {
+	fill:none;
+	stroke:#000;
+	stroke-width:6px;
+	stroke-linecap: round;
+}
+
+.MBox svg .L {
+  stroke: green;
+}
+
+
+#MModules .MBox {
+	width: calc(50% - 80px);
+	margin: 20px;
+	padding: 20px;
+	height: 240px;
+	position: relative;
+	float:left;
+	background-color: #bbb;
+	border-radius: 10px;
+}
+
+@media screen and (max-width: 1450px) {
+	#MModules .MBox {
+		display: block;
+		width: calc(100% - 80px);
+	}
+}
+
+#MModules .MBox:after {
+   content: " ";
+   display: block;
+   height: 0;
+   clear: both;
+}
+
+#MModules .svgContainer {
+	width: calc(100% - 250px);
+	height: 200px;
+	overflow: hidden;
+	position: absolute;
+	bottom: 20px;
+	left:20px;
+}
+
+#MModules .svgContainer svg {
+	width: 100%;
+  position: absolute;
+  top: -9999px;
+  bottom: -9999px;
+  left: -9999px;
+  right: -9999px;
+  margin: auto;
+	max-height: 100%
+}
+
+#MModules .MBox .title {
+	width:100%;
+	text-align:center;
+	border-bottom:1px solid #999;
+	height:2.5em;
+}
+
+#MModules .MBox .info_table {
+	width:200px;
+	position:absolute;
+	right:25px;
+	bottom:25px;
+	text-align:center;
+}

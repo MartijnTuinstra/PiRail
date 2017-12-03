@@ -42,28 +42,30 @@ int websocket_connect(struct web_client_t * C){
 
   printf("Got data in buffer:\n\n%s\n\n",buf);
 
-  char a[20] = "Connection: Upgrade";
-  char b[20] = "Upgrade: websocket";
-  char c[20] = "Sec-WebSocket-Key: ";
-  char d[20] = "Protocol: ";
+  char Connection[20] = "Connection: Upgrade";
+  char Connection2[35] = "Connection: keep-alive, Upgrade";
+  char UpgradeType[20] = "Upgrade: websocket";
+  char Key[20] = "Sec-WebSocket-Key: ";
+  char Protocol[20] = "Protocol: ";
 
   char *start, *end, *S_prot, *E_prot, target[60], protocol[5];
   memset(target,0,60);
   memset(protocol,0,5);
   int prot;
 
-  if(strstr(buf, a) && strstr(buf, b) && strstr(buf, c)) {
+  if((strstr(buf, Connection) || strstr(buf,Connection2)) &&
+        strstr(buf, UpgradeType) && strstr(buf, Key)) {
     printf("\nIt is a HTML5 WebSocket!!\n");
     //Search for the Security Key
-    start = strstr(buf, c);
-    start += strlen(c);
+    start = strstr(buf, Key);
+    start += strlen(Key);
     printf("+");
     end = strstr(start,"\r\n");
     printf("+");
 
-    S_prot = strstr(buf, d);
+    S_prot = strstr(buf, Protocol);
     if(S_prot){
-      S_prot += strlen(d);
+      S_prot += strlen(Protocol);
       printf("+");
       E_prot = strstr(S_prot,"\r\n");
       printf("+");
@@ -116,7 +118,17 @@ int websocket_connect(struct web_client_t * C){
 
     //Successfull
     return 1;
-  }else{
+  }
+  else{
+    printf("It's not a HTML5-websocket\n");
+    printf(strstr(buf,Connection));
+    printf("\n");
+    printf(strstr(buf,Connection2));
+    printf("\n");
+    printf(strstr(buf,UpgradeType));
+    printf("\n");
+    printf(strstr(buf,Key));
+    printf("\n");
     //Unsuccessfull
     return 0;
   }

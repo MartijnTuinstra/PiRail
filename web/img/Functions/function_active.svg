@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 26">
+  <defs>
+    <style>
+      .cls-1 {
+        fill:#ebba16;
+        stroke:#d6a416;
+        stroke-miterlimit:10;
+      }
+
+      .cls-2 {
+        font-size:11px;
+        fill:#fff;
+        font-family:sans-serif;
+      }
+    </style>
+  </defs>
+  <title>active</title>
+  <rect class="cls-1" x="0.5" y="0.5" width="25" height="25" rx="7.42" ry="7.42"/>
+  <text class="cls-2" text-anchor="middle" x="13" y="16.52">F14</text>
+</svg>

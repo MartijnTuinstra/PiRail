@@ -20,11 +20,11 @@
     <meta id="vp" name="viewport" content="width=device-width, initial-scale=0.7">
     <meta name="mobile-web-app-capable" content="yes">
     <link rel="manifest" href="./manifest.json">
-    <script src="./jquery-3.1.1.min.js"></script>
-    <script src="./jquery-ui.min.js"></script>
-    <script src="./jquery.ui.touch-punch.min.js"></script>
-    <link rel="stylesheet" type="text/css" href="./jquery-ui.min.css">
-    <link rel="stylesheet" type="text/css" href="./main.css">
+    <script src="./scripts/framework/jquery-3.1.1.min.js"></script>
+    <script src="./scripts/framework/jquery-ui.min.js"></script>
+    <script src="./scripts/framework/jquery.ui.touch-punch.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="./styles/jquery-ui.min.css">
+    <link rel="stylesheet" type="text/css" href="./styles/main.css">
 		<!--<link rel="stylesheet" type="text/css" href="./SelectInspiration/css/normalize.css" />
 		<link rel="stylesheet" type="text/css" href="./SelectInspiration/css/demo.css" />-->
     <script>
@@ -47,10 +47,6 @@
       }else if($_GET['sort'] == 'List'){
         array_multisort($a, $var4);
       }
-
-      echo("/*");
-      var_dump($var4);
-      echo("*/");
       $js_array = json_encode($var4);
       echo "var train_list = ". $js_array . ";";
       ?>
@@ -63,20 +59,15 @@
       });
     </script>
 
-		<link rel="stylesheet" type="text/css" href="./cs-select.css" />
-		<link rel="stylesheet" type="text/css" href="./cs-skin-border.css" />
+		<link rel="stylesheet" type="text/css" href="./styles/cs-select.css" />
+		<link rel="stylesheet" type="text/css" href="./styles/cs-skin-border.css" />
+    <script src="./scripts/windows.js"></script>
     <script>
       $.support.cors = true;
       var pause = 1;
-      var menu = 0;
       var time_addr;
       var tablet = 0;
       var myWindow;
-      var index_w = 1;
-      var switch_w = 0;
-      var mTrain_w = 0;
-      var cTrain_w = 0;
-      var track_w = 0;
 
       for(var i = 0;i<train_list.length;i++){
         var chars = train_list[i][5].split('');
@@ -119,87 +110,6 @@
           obj.src='./img/play_w.png';
           time_addr = setInterval(update,500);
           pause = 0;
-        }
-      }
-
-      function menu_but(){
-        if(menu == 1){
-          $('#menu').css('display','none');
-          menu = 0;
-        }else{
-          $('#menu').css('display','block');
-          menu = 1;
-        }
-      }
-
-      function switch_win(){
-        $('#index').css('display','none');
-        $('#MModules').css('display','none');
-        $('#switches').css('display','block');
-        $('#track').css('display','none');
-        $('#MTrain').css('display','none');
-        $('#CTrain').css('display','none');
-      }
-
-      function track_win(){
-        $('#index').css('display','none');
-        $('#MModules').css('display','none');
-        $('#track').css('display','block');
-        $('#switches').css('display','none');
-        $('#MTrain').css('display','none');
-        $('#CTrain').css('display','none');
-      }
-
-      function mTrain_win(){
-          $('#index').css('display','none');
-          $('#MTrain').css('display','block');
-          $('#MModules').css('display','none');
-          $('#switches').css('display','none');
-          $('#track').css('display','none');
-          $('#CTrain').css('display','none');
-      }
-
-      function cTrain_win(){
-        $('#index').css('display','none');
-        $('#CTrain').css('display','block');
-        $('#MModules').css('display','none');
-        $('#switches').css('display','none');
-        $('#track').css('display','none');
-        $('#MTrain').css('display','none');
-      }
-
-      function index_win(){
-        $('#index').css('display','block');
-        $('#MModules').css('display','none');
-        $('#CTrain').css('display','none');
-        $('#switches').css('display','none');
-        $('#track').css('display','none');
-        $('#MTrain').css('display','none');
-      }
-
-      function mModules_win(){
-        $('#MModules').css('display','block');
-        $('#index').css('display','block');
-        $('#CTrain').css('display','none');
-        $('#switches').css('display','none');
-        $('#track').css('display','none');
-        $('#MTrain').css('display','none');
-      }
-
-
-      function settings(){
-        if($('#Settings_box').css('display') == 'none'){
-          $('#Settings_box').css('display','block');
-        }else{
-          $('#Settings_box').css('display','none');
-        }
-      }
-
-      function warning_toggle(){
-        if($('#warning_list').css('display') == 'none' && $("#warning_list").html() != ""){
-          $('#warning_list').css('display','block');
-        }else{
-          $('#warning_list').css('display','none');
         }
       }
 
@@ -430,26 +340,26 @@
         $('#train_set_box_img','#Train_Settings_box').attr('src','./../trains/'+train_list[n][0]+'.jpg');
       }
 
-	  function train_set_route(obj){
-		var TrainNr = $($(obj).parent().children()[1]).children()[0].value;
-		var choice  = $(obj).parent().children()[2].value;
+  	  function train_set_route(obj){
+  		var TrainNr = $($(obj).parent().children()[1]).children()[0].value;
+  		var choice  = $(obj).parent().children()[2].value;
 
-		var str = [34,(TrainNr >> 8),(TrainNr & 0xFF),choice];
+  		var str = [34,(TrainNr >> 8),(TrainNr & 0xFF),choice];
 
-		var data2 = new Int8Array(str);
+  		var data2 = new Int8Array(str);
 
-		ws.send(data2);
+  		ws.send(data2);
 
-		$(obj).parent().css('display','none');
-	  }
+  		$(obj).parent().css('display','none');
+  	  }
 
-	  function open_Route(obj){
-		  var ID = parseInt($(obj).parent().parent().parent().attr("id").slice(1));
+  	  function open_Route(obj){
+  		  var ID = parseInt($(obj).parent().parent().parent().attr("id").slice(1));
 
-		  $('#Station_List').css('display','block');
-		  $('#Station_List input').val(ID);
-	  }
-	</script>
+  		  $('#Station_List').css('display','block');
+  		  $('#Station_List input').val(ID);
+  	  }
+	  </script>
   </head>
   <body>
     <div id="header" style="height:40px;width:100%;background-color:#B00">
@@ -480,7 +390,7 @@
     	  <li onClick="switch_win();menu_but()">Switches</li>
     	  <li onClick="track_win(); menu_but()">Track</li>
     	  <li onClick="mTrain_win();menu_but()">Manage trains</li>
-        <li onClick="cTrain_win();menu_but()">Control trains</li>
+        <li onClick="mModules_win();menu_but()">Manage modules</li>
     	  <li style="border-bottom:none;border-bottom-left-radius:5px;border-bottom-right-radius:5px;"
             onClick="settings();  menu_but()">Settings</li>
     	</ul>
@@ -522,19 +432,524 @@
       <!--Dinamical generated-->
     </div>
     <div id="MModules" class="Window" style="display:none;">
-      <div class="MBox">
-        <?php include("./../modules/3.svg"); ?>
-        <div style="width:500px;float:left;">
-          <h1>Module 1</h1><br/>
-          15 Blocks <br/>
-          4 Signals<br/>
-          20 Switches<br/>
-          5  Stations<br/>
+      <?php
+
+      $list = [];
+
+      $listFile = fopen("./../modules/list.txt","r");
+      $OptionList = json_decode(fread($listFile,filesize("./../modules/list.txt")),true);
+      fclose($listFile);
+
+      $directories = glob('./../modules/*' , GLOB_ONLYDIR);
+      foreach($directories as $value){
+        $nr = explode("modules/",$value)[1];
+
+        echo('<div class="MBox"><div class="svgContainer">');
+        $file = "./../modules/".$nr."/layout.svg";
+        echo($file);
+        include($file);
+        echo('</div><div class="title"><h1>'.$OptionList[$nr]['name'].'</h1></div>');
+        echo('<div class="info_table"><table style="width:100px"');
+        echo('<tr><td>'.$OptionList[$nr]['blocks'].'</td><td>Blocks</td></tr>');
+        echo('<tr><td>'.$OptionList[$nr]['signals'].'</td><td>Signals</td></tr>');
+        echo('<tr><td>'.$OptionList[$nr]['switch'].'</td><td>Switches</td></tr>');
+        echo('<tr><td>'.$OptionList[$nr]['stations'].'</td><td>Stations</td></table><img src="./img/setting_cog.svg" style="width: 40px;margin: 15px auto;cursor:pointer;" onClick="LoadModule(event,'.$nr.');"/></div></div>');
+      }
+      ?>
+      <script>
+        $('.MBox .L').css("stroke","#0f0");
+        $('.MBox .Sw').css("stroke","#999");
+        $('.MBox .L').css("opacity","1");
+      </script>
+    </div>
+    <div id="EModules" class="Window" style="display:block">
+      <div class="tHeader">
+        <div id="EMtitle">
+          <span>Header</span>
+          <img id="EMEditTitle_img" src="./img/pencil.png" onClick="$('#EMEditTitle').css('display','block');$('#EMEditTitle input').val($('#EMtitle span').html());"/>
+          <div id="EMEditTitle" style="display:none">
+            <input type="text" value="Header"/>
+            <img style="right:35px" src="./img/checked.png" onClick="$('#EMtitle span').html($('#EMEditTitle input').val());;$(event.target.parentNode).css('display','none')"/>
+            <img style="right:5px" src="./img/deny.png" onClick="$(event.target.parentNode).css('display','none')"/>
+          </div>
+        </div>
+        <div style="position:absolute;left:50px;bottom:0px;height:40px;">
+          <div class="tabbutton" onClick="$('#IO_Edit').css('display','block');$('#BoxConnector').css('display','none');$('#Layout').css('display','none')">
+            Input & Output
+          </div>
+          <div class="tabbutton" onClick="$('#IO_Edit').css('display','none');$('#BoxConnector').css('display','block');$('#Layout').css('display','none')">
+            Connector
+          </div>
+          <div class="tabbutton" onClick="$('#IO_Edit').css('display','none');$('#BoxConnector').css('display','none');$('#Layout').css('display','block')">
+            Layout
+          </div>
+        </div>
+        <img style="right:20px;" class="buttons" src="./img/checked.png" onClick="SaveModule();$('#EModules').css('display','none');$('#MModules').css('display','block');">
+        <img style="right:90px;" class="buttons" src="./img/deny.png" onClick="$('#EModules').css('display','none');$('#MModules').css('display','block');">
+      </div>
+      <div id="IO_Edit" class="editBox" style="display:none">
+        <script src="./scripts/EditModule_IO.js"></script>
+
+        <div class="IO_table_wrapper blocks"><!--Blocks-->
+          <div class="tableHeader red" style="position:relative">
+            Blocks
+            <img src="./img/plus.svg" style="width:20px;position:absolute;right:0px;margin:10px;cursor:pointer"
+                    onClick="$('#EModulesBox .Block .Addr')[0].disabled = false;$('#EModulesBox .Block').css('display','block');$('#EModulesBox').css('display','block');" />
+          </div>
+          <div id="TableBlock" class="table">
+            <div class="row header red">
+              <div class="cell">IO Address</div>
+              <div class="cell">ID nr</div>
+              <div class="cell">Type</div>
+              <div class="cell">Max speed</div>
+              <div class="cell">Direction</div>
+              <div class="cell">Length</div>
+              <div class="cell last"></div>
+            </div>
+            <div class="row">
+              <div class="cell">0</div>
+              <div class="cell">0</div>
+              <div class="cell">Rail</div>
+              <div class="cell">180</div>
+              <div class="cell">0</div>
+              <div class="cell">100</div>
+              <div class="cell last"><img src="./img/setting_cog.svg" style="cursor:pointer;" onClick="editBlock(event)"/></div>
+            </div>
+
+            <div class="row">
+              <div class="cell">1</div>
+              <div class="cell">1</div>
+              <div class="cell">Turnout block</div>
+              <div class="cell">180</div>
+              <div class="cell">0</div>
+              <div class="cell">100</div>
+              <div class="cell last"><img src="./img/setting_cog.svg" style="cursor:pointer;" onClick="editBlock(event)"/></div>
+            </div>
+
+            <div class="row">
+              <div class="cell">8</div>
+              <div class="cell">2</div>
+              <div class="cell">Station</div>
+              <div class="cell">90</div>
+              <div class="cell">0</div>
+              <div class="cell">100</div>
+              <div class="cell last"><img src="./img/setting_cog.svg" style="cursor:pointer;" onClick="editBlock(event)"/></div>
+            </div>
+            <div class="row">
+              <div class="cell">9</div>
+              <div class="cell">3</div>
+              <div class="cell">Station</div>
+              <div class="cell">90</div>
+              <div class="cell">0</div>
+              <div class="cell">100</div>
+              <div class="cell last"><img src="./img/setting_cog.svg" style="cursor:pointer;" onClick="editBlock(event)"/></div>
+            </div>
+
+          </div>
+        </div>
+        <div class="IO_table_wrapper switches"><!--Switches-->
+          <div class="tableHeader green" style="position:relative">
+            Switches
+            <object type="image/svg+xml" data="./img/plus.svg" style="width:20px;position:absolute;right:0px;margin:10px"></object>
+          </div>
+          <div id="TableSwitch" class="table">
+
+            <div class="row header green">
+              <div class="cell first"></div>
+              <div class="cell">ID nr</div>
+              <div class="cell">States</div>
+              <div class="cell">IO Addresses</div>
+              <div class="cell">Max speed</div>
+              <div class="cell last"></div>
+            </div>
+
+            <div class="row">
+              <div class="cell first">S</div>
+              <div class="cell">0</div>
+              <div class="cell">2</div>
+              <div class="cell">[0, 1]</div>
+              <div class="cell">[180, 90]</div>
+              <div class="cell last"><img src="./img/setting_cog.svg" style="cursor:pointer;" onClick="editSwitch(event)"/></div>
+            </div>
+
+            <div class="row">
+              <div class="cell first">S</div>
+              <div class="cell">1</div>
+              <div class="cell">2</div>
+              <div class="cell">[2, 3]</div>
+              <div class="cell">[180, 90]</div>
+              <div class="cell last"><img src="./img/setting_cog.svg" style="cursor:pointer;" onClick="editSwitch(event)"/></div>
+            </div>
+
+            <div class="row">
+              <div class="cell first"></div>
+              <div class="cell">ID nr</div>
+              <div class="cell">States</div>
+              <div class="cell">IO Addresses</div>
+              <div class="cell">Max speed</div>
+              <div class="cell last"><img src="./img/setting_cog.svg" style="cursor:pointer;" onClick="editSwitch(event)"/></div>
+            </div>
+
+            <div class="row">
+              <div class="cell first"></div>
+              <div class="cell">ID nr</div>
+              <div class="cell">States</div>
+              <div class="cell">IO Addresses</div>
+              <div class="cell">Max speed</div>
+              <div class="cell last"><img src="./img/setting_cog.svg" style="cursor:pointer;" onClick="editSwitch(event)"/></div>
+            </div>
+
+          </div>
+        </div>
+        <div class="IO_table_wrapper signals"><!--Signals-->
+          <div class="tableHeader Blue" style="position:relative">
+            Signals
+            <img src="./img/plus.svg" style="width:20px;position:absolute;right:0px;margin:10px;cursor:pointer"
+                    onClick="$('#EModulesBox .Signal .Addr')[0].disabled = false;$('#EModulesBox .Signal .Addr').val(EditObj.Signals.length);$('#EModulesBox .Signal').css('display','block');$('#EModulesBox').css('display','block');" />
+          </div>
+          <div id="TableSignal" class="table">
+
+            <div class="row header blue">
+              <div class="cell" style="width:20px"></div>
+              <div class="cell">Nr - Name</div>
+              <div class="cell">Block</div>
+              <div class="cell">States</div>
+              <div class="cell">IO Addresses</div>
+              <div class="cell last"></div>
+            </div>
+
+            <div class="row">
+              <div class="cell" style="position:relative;"><img src="./../signals/1.svg" width="20px"/></div>
+              <div class="cell">0 - Spoor 1</div>
+              <div class="cell">5N</div>
+              <div class="cell">3</div>
+              <div class="cell">0 1 2</div>
+              <div class="cell last"><img src="./img/setting_cog.svg" style="cursor:pointer;" onClick="editSwitch(event)"/></div>
+            </div>
+
+          </div>
+        </div>
+        <div class="IO_table_wrapper stations"><!--Stations-->
+          <div class="tableHeader yellow" style="position:relative">
+            Stations
+            <object type="image/svg+xml" data="./img/plus.svg" style="width:20px;position:absolute;right:0px;margin:10px"></object>
+          </div>
+          <div id="TableStation" class="table">
+
+            <div class="row header yellow">
+              <div class="cell">Name</div>
+              <div class="cell">Type</div>
+              <div class="cell">Nr of Blocks</div>
+              <div class="cell">Block IDs</div>
+              <div class="cell last"></div>
+            </div>
+
+            <div class="row">
+              <div class="cell">Spoor 1</div>
+              <div class="cell">Passenger</div>
+              <div class="cell">4</div>
+              <div class="cell">[2, 3, 4, 5]</div>
+              <div class="cell last"><img src="./img/setting_cog.svg" style="cursor:pointer;" onClick="editStation(event)"/></div>
+            </div>
+
+            <div class="row">
+              <div class="cell">Spoor 2</div>
+              <div class="cell">Cargo</div>
+              <div class="cell">4</div>
+              <div class="cell">[6, 7, 8, 9]</div>
+              <div class="cell last"><img src="./img/setting_cog.svg" style="cursor:pointer;" onClick="editStation(event)"/></div>
+            </div>
+
+            <div class="row">
+              <div class="cell">Spoor 3</div>
+              <div class="cell">Storage</div>
+              <div class="cell">4</div>
+              <div class="cell">[10, 11, 12, 13]</div>
+              <div class="cell last"><img src="./img/setting_cog.svg" style="cursor:pointer;" onClick="editStation(event)"/></div>
+            </div>
+
+            <div class="row">
+              <div class="cell">Spoor 4</div>
+              <div class="cell">Passenger</div>
+              <div class="cell">4</div>
+              <div class="cell">[14, 15, 16, 17]</div>
+              <div class="cell last"><img src="./img/setting_cog.svg" style="cursor:pointer;" onClick="editStation(event)"/></div>
+            </div>
+
+            <div class="row">
+              <div class="cell">Spoor 5</div>
+              <div class="cell">Passenger</div>
+              <div class="cell">4</div>
+              <div class="cell">[18, 19, 20, 21]</div>
+              <div class="cell last"><img src="./img/setting_cog.svg" style="cursor:pointer;" onClick="editStation(event)"/></div>
+            </div>
+
+          </div>
         </div>
       </div>
-      Test Manage Modules
+      <div id="BoxConnector" class="editBox" style="display:none">
+        <script src="./scripts/EditModule_Connect.js"></script>
+
+        <div class="svgContainer" style="max-width:100%;max-height:100%">
+          <svg id="ConnectBox" viewBox="0 0 1200 600" style="float:left;border:1px solid lightgrey;">
+            <defs>
+              <marker id="arrow" markerWidth="10" markerHeight="10" refX="0" refY="3" orient="auto" markerUnits="strokeWidth">
+                <path d="M0,0 L0,6 L9,3 z" />
+              </marker>
+            </defs>
+            <g id="BAnchorL" transform="translate(100,100)" contact="25,22.5 25,47.5">
+              <path class="Container" d="M0,0 h25 a10,10 0 0 1 10,10 v50 a10,10 0 0 1 -10,10 h-25 a10,10 0 0 1 -10,-10 v-50 a10,10 0 0 1 10,-10 z" style="fill:#aaa;"/>
+              <path class="A APoint" d="M25,15 h10 v15 h-10 a 5,5 0 0 1 -5,-5 v-5 a 5,5 0 0 1 5,-5 z" style="cursor:crosshair" connected="L0_1" onMouseDown="startDraw(event)"/>
+              <path class="B APoint" d="M25,40 h10 v15 h-10 a 5,5 0 0 1 -5,-5 v-5 a 5,5 0 0 1 5,-5 z" style="cursor:crosshair" connected="" onMouseDown="startDraw(event)"/>
+              <circle cx="5" cy="35" r="5" style="cursor:move" onmousedown="StartMove(event);"/>
+            </g>
+            <g id="BAnchorR" transform="translate(300,100)" contact="-10,22.5 -10,47.5">
+              <path class="Container" d="M0,0 h25 a10,10 0 0 1 10,10 v50 a10,10 0 0 1 -10,10 h-25 a10,10 0 0 1 -10,-10 v-50 a10,10 0 0 1 10,-10 z" style="fill:#aaa;"/>
+              <path class="A APoint" d="M-10,15 h10 a5,5 0 0 1 5,5 v5 a5,5 0 0 1 -5,5 h-10 v-15 z" style="cursor:crosshair" connected="" onMouseDown="startDraw(event)"/>
+              <path class="B APoint" d="M-10,40 h10 a5,5 0 0 1 5,5 v5 a5,5 0 0 1 -5,5 h-10 v-15 z" style="cursor:crosshair" connected="" onMouseDown="startDraw(event)"/>
+              <circle cx="20" cy="35" r="5" style="cursor:move" onmousedown="StartMove(event);"/>
+            </g>
+            <g id="BBlock1" transform="translate(200,100)" contact="0,17.5 35,17.5">
+              <path class="BAnchor" d="M0,0 h35 a10,10 0 0 1 10,10 v15 a10,10 0 0 1 -10,10 h-35 a10,10 0 0 1 -10,-10 v-15 a10,10 0 0 1 10,-10 z" style="fill:#aaa;"/>
+              <path class="P APoint" d="M0,0 h5 v35 h-5 a10,10 0 0 1 -10,-10 v-15 a10,10 0 0 1 10,-10 z" style="fill:#000;cursor:crosshair;" onMouseDown="startDraw(event)" connected="L0_2"/>
+              <path class="N APoint" d="M30,0 h5 a10,10 0 0 1 10,10 v15 a10,10 0 0 1 -10,10 h-5 z" style="fill:#000;cursor:crosshair;" onMouseDown="startDraw(event)" connected=""/>
+              <text text-anchor="middle" x="17.5" y=22.5 style="line-height:5px;font-weight:bold">1</text>
+              <path d="M5,0 h25 v35 h-25 v-35 z" style="fill:rgba(0,0,0,0);cursor:move" onmousedown="StartMove(event);"/>
+              <line x1="10" y1="30" x2="20" y2="30" stroke="#000" stroke-width="1" marker-end="url(#arrow)" />
+            </g>
+            <g id="Switch1" transform="translate(200,300)" contact="0,17.5 35,17.5">
+              <path class="BAnchor" d="M0,0 h35 a10,10 0 0 1 10,10 v15 a10,10 0 0 1 -10,10 h-35 a10,10 0 0 1 -10,-10 v-15 a10,10 0 0 1 10,-10 z" style="fill:#aaa;"/>
+              <path class="P APoint" d="M0,0 h5 v35 h-5 a10,10 0 0 1 -10,-10 v-15 a10,10 0 0 1 10,-10 z" style="fill:#000;cursor:crosshair;" onMouseDown="startDraw(event)" connected="L0_2"/>
+              <path class="N APoint" d="M30,0 h5 a10,10 0 0 1 10,10 v15 a10,10 0 0 1 -10,10 h-5 z" style="fill:#000;cursor:crosshair;" onMouseDown="startDraw(event)" connected=""/>
+              <text text-anchor="middle" x="17.5" y=22.5 style="line-height:5px;font-weight:bold">1</text>
+              <path d="M5,0 h25 v35 h-25 v-35 z" style="fill:rgba(0,0,0,0);cursor:move" onmousedown="StartMove(event);"/>
+              <line x1="10" y1="30" x2="20" y2="30" stroke="#000" stroke-width="1" marker-end="url(#arrow)" />
+            </g>
+            <line id="L0" x1="125" y1="122.5" x2="202.5" y2="117.5" style="stroke:black;stroke-width:2px"/>
+          </svg>
+        </div>
+        Connector
+      </div>
+      <div id="Layout" class="editBox" style="display:block;">
+        <script src="./scripts/EditModule_Layout.js"></script>
+        <div id="Toolbox">
+          <div id="Toolitems" onmousewheel="return scroll_Toolbox(event);">
+            <div class="typeoftool">
+              <div class="tooltip">
+                <?php include "./img/tools/special/mouse.svg"; ?>
+                <span class="tooltipbox">Place Object</span>
+              </div>
+              <div class="tooltip">
+                <?php include "./img/tools/special/edit.svg"; ?>
+                <span class="tooltipbox">Edit Object</span>
+              </div>
+            </div>
+            <div class="tooltip_spacer"></div>
+            <div class="tools">
+              <?php
+                foreach (glob("./img/tools/*.svg") as $filename){
+                  echo "<div class='tooltip'>";
+                  include $filename;
+                  echo "<span class='tooltipbox'>".$filename."</span></div>";
+                }
+              ?>
+            </div>
+          </div>
+        </div>
+        <div id="LayoutContainer">
+         <svg width="2101" height="841" viewBox="0 0 2101 841" xmlns="http://www.w3.org/2000/svg">
+           <defs>
+              <pattern id="smallGrid" width="21" height="21" patternUnits="userSpaceOnUse">
+                <path class="grid_line" d="M 50 0 L 0 0 0 50" fill="none" stroke="gray" stroke-width="0.25"/>
+              </pattern>
+              <pattern id="mediumGrid" width="42" height="42" patternUnits="userSpaceOnUse">
+                <rect id="small_grid" width="42" height="42" fill="url(#smallGrid)" style="display:none"/>
+                <path class="grid_line" d="M 50 0 L 0 0 0 50" fill="none" stroke="gray" stroke-width="0.5"/>
+              </pattern>
+              <pattern id="grid" width="1050" height="420" patternUnits="userSpaceOnUse">
+                <rect width="1050" height="420" fill="url(#mediumGrid)"/>
+                <path class="grid_line" d="M 1050 0 L 0 0 0 420" fill="none" stroke="gray" stroke-width="1"/>
+              </pattern>
+            </defs>
+            <rect class="grid" width="100%" height="100%" fill="url(#grid)" onClick=""/>
+          </svg>
+          <div id="LayoutContextMenu" style="display:none;left:0px;top:0px">
+            <div class="ContextBlock" style="display:none;">
+              <div class="header">Block</div>
+              <div class="id" style="width:100%;height:20px;float:left;">ID:<input type="text" style="float:right;width:100px;"/></div>
+              <div class="size" style="width:100%;height:20px;float:left;">Size:<span style="float:right;margin-right:45px;font-weight:bold;">1</span></div>
+              <div class="test" style="width:100%;height:20px;float:left;">Test:<span style="float:right;margin-right:45px;font-weight:bold;">2</span></div>
+            </div>
+            <div class="ContextSwitch">
+              <div class="header">Switch</div>
+              <div class="id" style="width:100%;height:20px;float:left;">ID:<input type="text" style="float:right;width:100px;"/></div>
+            </div>
+          </div>
+        </div>
+        <script>
+          $('#Layout .grid').on("mousedown",Layout_Click);
+          $('#Layout .grid').on("contextmenu",Layout_ContextMenu);
+          $('#Layout #Toolbox svg').on("click",Layout_selectTool);
+        </script>
+        Layout
+      </div>
     </div>
-    <div id="index"    class="Window" style="display:block">
+    <div id="EModulesBox" style="display:none;z-index:5;">
+      <div class="Block" style="width:100%;height:100%;display:none">
+        <div id="TableEditBlock" class="table">
+          <div class="row">
+            <div class="cell" style="width:50%">Address</div>
+            <div class="cell" style="width:50%"><input class="Addr" type="number" style="width:100%" /></div>
+          </div>
+          <div class="row">
+            <div class="cell">Input pin Address</div>
+            <div class="cell"><input class="IOAddr" type="number" style="width:100%" /></div>
+          </div>
+          <div class="row">
+            <div class="cell">Type</div>
+            <div class="cell"><select class="Type" style="width:100%"><option>Free Track</option><option>Station</option><option>Shunt</option><option>Siding</option><option>Special Detection</option></select></div>
+          </div>
+          <div class="row">
+            <div class="cell">Speed options</div>
+            <div class="cell">
+              <span>Maximum <input class="MaxSPD" type="number" style="width:100%" /></span>
+              <span>Expected Stop <input class="MaxSPD" type="number" style="width:100%" /></span>
+              <span>Restricted <input class="MaxSPD" type="number" style="width:100%" /></span>
+              <span>Shunting <input class="MaxSPD" type="number" style="width:100%" /></span>
+            </div>
+          </div>
+          <div class="row">
+            <div class="cell">Direction</div>
+            <div class="cell"><select class="Dir" style="width:100%"><option>Clockwise (-&gt;)</option><option>CounterClockwise (&lt;-)</option><option>Switching</option></select></div>
+          </div>
+          <div class="row">
+            <div class="cell">Length</div>
+            <div class="cell"><input class="Len" type="number" style="width:100%" /></div>
+          </div>
+          <div class="row">
+            <div class="cell">OneWay</div>
+            <div class="cell"><input class="OneWay" type="checkbox" /></div>
+          </div>
+        </div>
+        <img class="button" style="left:calc(50% - 75px);cursor:pointer;" src="./img/checked.png" onClick="if(SaveEditBlock(event)){$('#EModulesBox > div').css('display','none');$('#EModulesBox').css('display','none')};"/>
+        <img class="button" style="right:calc(50% - 75px);cursor:pointer;" src="./img/deny.png" onClick="$('#EModulesBox > div').css('display','none');$('#EModulesBox').css('display','none');"/>
+        <img class="button" style="right:calc(50% - 25px);cursor:pointer;" src="./img/bin_g.png" onClick="if(DeleteBlock(event)){$('#EModulesBox > div').css('display','none');$('#EModulesBox').css('display','none')};"/>
+      </div>
+      <div class="Switch" style="width:100%;height:100%;display:none">
+        Switch
+        <img class="button" style="left:calc(50% - 50px)" src="./img/checked.png" />
+        <img class="button" style="right:calc(50% - 50px)" src="./img/deny.png" onClick="$('#EModulesBox > div').css('display','none');$('#EModulesBox').css('display','none');"/>
+      </div>
+      <div class="Signal" style="width:100%;height:100%;display:none">
+        <center><h3>Add/Edit Signal</h3></center>
+        <div id="TableEditSignal" class="table">
+          <div class="row">
+            <div class="cell" style="width:50%">Name</div>
+            <div class="cell" style="width:50%"><input class="Addr" style="display:none" type="text"/><input class="Name" type="text" style="width:100%" /></div>
+          </div>
+          <div class="row">
+            <div class="cell" style="vertical-align:middle">Type</div>
+            <div class="cell type">
+              <div style="float:left;width:20px;height:40px;margin:5px;text_align:center;position:relative;">
+                <input style="margin: 0px 3.5px" type="radio" name="type" value="1"/><br />
+                <img src="./img/Signals/1.svg" style="width:20px;height:20px;position:absolute;top:20px;left:0px"/>
+              </div>
+              <div style="float:left;width:20px;height:40px;margin:5px;text_align:center;position:relative;">
+                <input style="margin: 0px 3.5px" type="radio" name="type" value="2"/><br />
+                <img src="./img/Signals/2.svg" style="width:20px;height:20px;position:absolute;top:20px;left:0px"/>
+              </div>
+              <div style="float:left;width:20px;height:40px;margin:5px;text_align:center;position:relative;">
+                <input style="margin: 0px 3.5px" type="radio" name="type" value="3"/><br />
+                <img src="./img/Signals/3.svg" style="width:20px;height:20px;position:absolute;top:20px;left:0px"/>
+              </div>
+              <div style="float:left;width:20px;height:40px;margin:5px;text_align:center;position:relative;">
+                <input style="margin: 0px 3.5px" type="radio" name="type" value="4"/><br />
+                <img src="./img/Signals/4.svg" style="width:20px;height:20px;position:absolute;top:20px;left:0px"/>
+              </div>
+              <div style="float:left;width:20px;height:40px;margin:5px;text_align:center;position:relative;">
+                <input style="margin: 0px 3.5px" type="radio" name="type" value="x"/><br />
+                <span style="width: 30px;height: 20px;margin-left: -5px;margin-right: -5px;position: absolute;text-align: center;top: 20px;left: 0px;font-size: 10px;">Other</span>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="cell" style="vertical-align:middle">Block ID + Side</div>
+            <div class="cell">
+              <div style="width:55px;float:left;"><input style="margin:5px" type="radio" name="side" value="P"/>Prev</div>
+              <div style="width:55px;float:right;">Next<input style="margin:5px" type="radio" name="side" value="N"/></div>
+              <div style="margin:auto;margin-top:20px;width:50%"><input type="number" class="S_block" style="width:100%;text-align:center"/></div>
+            </div>
+          </div>
+        </div>
+        <div class="IO_Wrapper">
+          <div class="states">
+            <div class="header">States</div>
+            <ul>
+              <li class="green">Free</li>
+              <li class="orange">Ready to stop</li>
+              <li class="red">Stop</li>
+              <li class="yellow">Slow-free</li>
+              <li class="dred">Yard</li>
+              <!--<li class="red">C</li>-->
+            </ul>
+          </div>
+          <div class="IOEn">
+            <div class="header">Enable</div>
+            <span><input type="checkbox"/></span>
+            <span><input type="checkbox"/></span>
+            <span><input type="checkbox"/></span>
+            <span><input type="checkbox"/></span>
+            <span><input type="checkbox"/></span>
+          </div>
+          <div class="IOACon" style="width:120px;">
+            <div class="header">IO</div>
+            <div class="IOAddr first">
+              <div><input type="text"/></div>
+              <span><input type="checkbox"/></span>
+              <span><input type="checkbox"/></span>
+              <span><input type="checkbox"/></span>
+              <span><input type="checkbox"/></span>
+              <span><input type="checkbox"/></span>
+            </div>
+            <div class="IOAddr">
+              <div><input type="text"/></div>
+              <span><input type="checkbox"/></span>
+              <span><input type="checkbox"/></span>
+              <span><input type="checkbox"/></span>
+              <span><input type="checkbox"/></span>
+              <span><input type="checkbox"/></span>
+            </div>
+            <div class="IOAddr Add">
+              <div><img src="./img/plus.png" style="margin-top:2px;height:16px;cursor:pointer"/></div>
+            </div>
+          </div>
+        </div>
+        <img class="button" style="left:calc(50% - 75px);cursor:pointer;" src="./img/checked.png" onClick="if(SaveEditSignal(event)){$('#EModulesBox > div').css('display','none');$('#EModulesBox').css('display','none')};"/>
+        <img class="button" style="right:calc(50% - 75px);cursor:pointer;" src="./img/deny.png" onClick="$('#EModulesBox > div').css('display','none');$('#EModulesBox').css('display','none');"/>
+        <img class="button" style="right:calc(50% - 25px);cursor:pointer;" src="./img/bin_g.png" onClick="if(DeleteSignal(event)){$('#EModulesBox > div').css('display','none');$('#EModulesBox').css('display','none')};"/>
+      </div>
+      <div class="Station" style="width:100%;height:100%;display:block">
+        <center><h3>Add/Edit Station</h3></center>
+        <div id="TableEditStation" class="table">
+          <div class="row">
+            <div class="cell" style="width:50%">Name</div>
+            <div class="cell" style="width:50%"><input class="Addr" style="display:none" type="text"/><input class="Name" type="text" style="width:100%" /></div>
+          </div>
+          <div class="row">
+            <div class="cell" style="width:50%">Type</div>
+            <div class="cell" style="width:50%"><select class="Type"><option>None</option><option>Passengers</option><option>Cargo</option><option>Both</option></select></div>
+          </div>
+          <div class="row">
+            <div class="cell" style="width:50%;vertical-align: middle;">Blocks</div>
+            <div class="cell StationBlocks" style="width:50%"></div>
+          </div>
+        </div>
+        <img class="button" style="left:calc(50% - 75px);cursor:pointer;" src="./img/checked.png" onClick="if(SaveEditStation(event)){$('#EModulesBox > div').css('display','none');$('#EModulesBox').css('display','none')};"/>
+        <img class="button" style="right:calc(50% - 75px);cursor:pointer;" src="./img/deny.png" onClick="$('#EModulesBox > div').css('display','none');$('#EModulesBox').css('display','none');"/>
+        <img class="button" style="right:calc(50% - 25px);cursor:pointer;" src="./img/bin_g.png" onClick="if(DeleteStation(event)){$('#EModulesBox > div').css('display','none');$('#EModulesBox').css('display','none')};"/>
+      </div>
+    </div>
+    <div id="index"    class="Window" style="display:none">
       <div class="button" onClick="mTrain_win()">
         <h1>Manage trains</h1><br/>
         <img src="./img/list.png" width="200px" style="position:absolute;left:calc(50% - 100px);bottom:20px;"/>
@@ -558,12 +973,14 @@
       <br style="clear:both; display:block; height:1px; margin:-1px 0 0 0;"/>
     </div>
 
-	<div id="Station_List" style="display:none">
-		<h1 style="display:block;margin-bottom:10px;">Route</h1>
-		<span style="margin-bottom: 5px;display: block;">Route train <input type="text" style="width:40px"/> to</span>
-		<select></select></br></br>
-		<div id="Route_Button" style="margin:auto;position:relative;top:6px" onClick="train_set_route(this);"><b>Start</b></div>
-	</div>
+	  <div id="Station_List" style="display:none">
+  		<h1 style="display:block;margin-bottom:10px;">Route</h1>
+  		<span style="margin-bottom: 5px;display: block;">Route train <input type="text" style="width:40px"/> to</span>
+  		<select></select><br/><br/>
+  		<div id="Route_Button" style="margin:auto;position:relative;top:6px" onClick="train_set_route(this);">
+        <b>Start</b>
+      </div>
+  	</div>
     <div id='Train_Add' style="display:none">
       <h3 style="text-align:center;">New train</h3>
       <form id="upload_form" enctype="multipart/form-data" method="post">
@@ -729,8 +1146,8 @@
       <img src="./img/checked.png" id="Tedit" style="margin-top:20px" width="32px" onClick="/*uploadFile();add_train();*/"/>
       <img src="./img/deny.png" style="margin-top:20px;margin-left:20px;cursor:pointer" width="32px" onClick="$('#Train_Settings_box').css('display','none')"/>
     </div>
-    <script src="./classie.js"></script>
-		<script src="./selectFx.js"></script>
+    <script src="./scripts/framework/classie.js"></script>
+		<script src="./scripts/framework/selectFx.js"></script>
 		<script>
 			function redraw_selects(data) {
         var el = document.querySelector(data + ' select.cs-selectn');
@@ -738,7 +1155,7 @@
 				new SelectFx(el);
 			};
 		</script>
-    <script src="./script.js">
+    <script src="./scripts/script.js">
     </script>
   </body>
 </html>

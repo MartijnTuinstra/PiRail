@@ -1,0 +1,5 @@
+[
+  ["Name","Type","Max speed","DCC Address"],
+  ["Koploper","P","160","1200"],
+  ["Hondekop","P","140","2003"]
+]

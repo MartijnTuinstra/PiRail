@@ -852,8 +852,13 @@ function socket(adress){
         console.log("Request for new train");
         if(data[1] == 2){
           //Start upload file and reload list
-          succ_add_train(data[2]);
-          train_list_t += "<option value=\""+data[2]+"\">#"+$('#train_dcc').val();+"&nbsp;&nbsp;&nbsp;"+$('#train_name').val();+"</option>"
+          if(data.length == 3){
+            succ_add_train(data[2]);
+            train_list_t += "<option value=\""+data[2]+"\">#"+$('#train_dcc').val();+"&nbsp;&nbsp;&nbsp;"+$('#train_name').val();+"</option>";
+          }else{
+            succ_add_train(data[2],data[3]);
+            train_list_t += "<option value=\""+(data[2]+(data[3] << 8))+"\">#"+$('#train_dcc').val();+"&nbsp;&nbsp;&nbsp;"+$('#train_name').val();+"</option>";
+          }
         }
         else if(data[1] == 1){
           alert("DCC address allready in use");
@@ -1083,7 +1088,7 @@ $(document).ready(function(){
     success: function (result) {
         segments = JSON.parse(result);
     },
-    async: true
+    async: false
   });
 
   if ("WebSocket" in window){

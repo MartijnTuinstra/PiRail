@@ -239,20 +239,19 @@
 
       function create(){
         $('#Train_Add').css("display",'block');
-        if(ws.readyState == 3){
-          $('#Train_Add #upload').attr('src','./img/checked_n.png');
-          $('#Train_Add #upload').css('cursor','not-allowed');
-          $('#Train_Add #upload').attr('onClick','');
-        }else{
-          $('#Train_Add #upload').attr('src','./img/checked.png');
-          $('#Train_Add #upload').css('cursor','pointer');
-          $('#Train_Add #upload').attr('onClick','add_train()');
-        }
+        $('#Train_Add #upload').attr('src','./img/checked.png');
+        $('#Train_Add #upload').css('cursor','pointer');
+        $('#Train_Add #upload').attr('onClick','add_train()');
       }
 
       function add_train(){
         if ($('#Train_Add #train_name').val().indexOf(':') > -1) {
           alert("Name cannot contain a ':'");
+          return;
+        }
+
+        if(parseInt($('#train_dcc').val()) > 9999){
+          alert("Invalid DCC address\nMust be smaller than 9999");
           return;
         }
 
@@ -266,13 +265,31 @@
         $("#Train_Add #upload").attr('onClick','');
 
         if(ws.readyState==1){
-          ws.send('RNt'+$('#train_type').val()+$('#train_name').val()+':'+$('#train_dcc').val()+':'+$('#train_speed').val());
           addingTrain = 1;
+          var dcc = parseInt($('#train_dcc').val());
+          var speed = parseInt($('#train_speed').val());
+          var name = $('#train_name').val().split("");
+          $.each(name,function(index){
+            name[index] = name[index].charCodeAt();
+          })
+          var data = [];
+          data[0] = 3;
+          data = data.concat(name);
+          data.push(0);
+          data.push($('#train_type').val().charCodeAt(0));
+          data.push(dcc >> 8,dcc & 0xFF);
+          data.push(speed >> 8,speed & 0xFF);
+          ws.send(new Uint8Array(data));
+          //ws.send('RNt'+$('#train_type').val()+$('#train_name').val()+':'+$('#train_dcc').val()+':'+$('#train_speed').val());
           console.log("Requesting");
+        }else{
+        addingTrain = 1;
+          succ_add_train($("#train_dcc").val(),1);
+          console.log("Uploading Picture without server");
         }
       }
 
-      function succ_add_train(number){
+      function succ_add_train(number, file_edit = 0){
         console.log("Request succes");
 
         var data = [];
@@ -289,6 +306,15 @@
           var formdata = new FormData();
           formdata.append("file1", file);
           formdata.append("name", name);
+          formdata.append("number", number);
+          formdata.append("file_edit", file_edit);
+          if(file_edit == 1){
+            console.log("Service not on.")
+            formdata.append("dcc",$('#train_dcc').val());
+            formdata.append("type",$('#train_type').val());
+            formdata.append("train_name",$('#train_name').val());
+            formdata.append("max",$('#train_speed').val());
+          }
           var ajax = new XMLHttpRequest();
           ajax.addEventListener("load", function(event){completeHandler(event,data)}, false);
           ajax.addEventListener("error", errorHandler, false);
@@ -305,21 +331,27 @@
       }
 
       function completeHandler(event,data){
+        console.log("Complete");
+        console.log(event);
         setTimeout(function () {
+          console.log(data);
       	  $("#Train_Add").css('display','none');
       	  $("#Train_Add  #upload").attr('onClick','add_train()');
           var text = "<tr><td><img src=\"./../trains/"+data[0]+".jpg\" style=\"max-height:50px;max-width:100px;float:right;\"/></td><td>";
           text    += data[1]+"</td><td>"+data[2]+"</td><td>"+data[3]+"</td><td>"+data[4]+"</td><td><img src=\"./img/bin_w.png\" style=\"width:20px;\"/></td></tr>"
           $("#list").append(text);
-        }, 500);
+        }, 5000);
       }
 
-      function errorHandler(event){
+      function errorHandler(event,data){
       	alert("Upload Failed");
+        console.log(event);
+        console.log(data);
       }
 
-      function abortHandler(event){
+      function abortHandler(event,data){
       	alert("Upload Aborted");
+        console.log(data);
       }
 
       function fail_add_train(){
@@ -477,10 +509,10 @@
           <div class="tabbutton" onClick="$('#IO_Edit').css('display','block');$('#BoxConnector').css('display','none');$('#Layout').css('display','none')">
             Input & Output
           </div>
-          <div class="tabbutton" onClick="$('#IO_Edit').css('display','none');$('#BoxConnector').css('display','block');$('#Layout').css('display','none')">
+          <div class="tabbutton" onClick="if(!(tablet && !window.confirm('Not supported on touch devices!\nDo you want to continue?'))){$('#IO_Edit').css('display','none');$('#BoxConnector').css('display','block');$('#Layout').css('display','none')}">
             Connector
           </div>
-          <div class="tabbutton" onClick="$('#IO_Edit').css('display','none');$('#BoxConnector').css('display','none');$('#Layout').css('display','block')">
+          <div class="tabbutton" onClick="if(!(tablet && !window.confirm('Not supported on touch devices!\nDo you want to continue?'))){$('#IO_Edit').css('display','none');$('#BoxConnector').css('display','none');$('#Layout').css('display','block')}">
             Layout
           </div>
         </div>
@@ -732,30 +764,6 @@
       </div>
       <div id="Layout" class="editBox" style="display:block;">
         <script src="./scripts/EditModule_Layout.js"></script>
-        <div id="Toolbox">
-          <div id="Toolitems" onmousewheel="return scroll_Toolbox(event);">
-            <div class="typeoftool">
-              <div class="tooltip">
-                <?php include "./img/tools/special/mouse.svg"; ?>
-                <span class="tooltipbox">Place Object</span>
-              </div>
-              <div class="tooltip">
-                <?php include "./img/tools/special/edit.svg"; ?>
-                <span class="tooltipbox">Edit Object</span>
-              </div>
-            </div>
-            <div class="tooltip_spacer"></div>
-            <div class="tools">
-              <?php
-                foreach (glob("./img/tools/*.svg") as $filename){
-                  echo "<div class='tooltip'>";
-                  include $filename;
-                  echo "<span class='tooltipbox'>".$filename."</span></div>";
-                }
-              ?>
-            </div>
-          </div>
-        </div>
         <div id="LayoutContainer">
          <svg width="2101" height="841" viewBox="0 0 2101 841" xmlns="http://www.w3.org/2000/svg">
            <defs>
@@ -771,27 +779,123 @@
                 <path class="grid_line" d="M 1050 0 L 0 0 0 420" fill="none" stroke="gray" stroke-width="1"/>
               </pattern>
             </defs>
-            <rect class="grid" width="100%" height="100%" fill="url(#grid)" onClick=""/>
+            <rect class="grid" width="100%" style="height:100%;" fill="url(#grid)" onClick=""/>
+            <g id="Rail"></g>
+            <g id="Signals"></g>
+            <g id="Nodes"></g>
+            <g transform="translate(100,100)" id="toolbar">
+              <path d="M 0,15 a 15,15 1,0,1 15,-15 h 700 a 15,15 1,0,1 15,15 v 30 a 15,15 1,0,1 -15,15 h -700 a 15,15 1,0,1 -15,-15 Z" style="stroke:lightgrey;fill:lightgrey;"/>
+              <path class="drag_handle" d="M 10,15 a 5,5 1,0,1 5,-5 h 15 a 5,5 1,0,1 5,5 v 30 a 5,5 1,0,1 -5,5 h -15 a 5,5 1,0,1 -5,-5 Z" style="stroke-width:0;fill:grey;cursor:move;"/>
+
+              <g class="tool layout_warning_list" transform="translate(40,5)">
+                <path d="M0,5A5,5,0,0,1,5,0H45a5,5,0,0,1,5,5h0V45a5,5,0,0,1-5,5H5a5,5,0,0,1-5-5H0Z" style="fill:#ddd;stroke-width:0"/>
+                <path d="M45,38.53,27.14,8.89a2.5,2.5,0,0,0-4.27,0L5,38.53a2.5,2.5,0,0,0,2.14,3.78H42.87A2.5,2.5,0,0,0,45,38.53ZM25,17.94
+                          a1.69,1.69,0,0,1,1.89,1.61c0,3.13-.37,7.63-.37,10.76,0,.82-.89,1.16-1.53,1.16-.84,0-1.55-.34-1.55-1.16,0-3.13-.37-7.63-.37-10.76
+                          C23.09,18.52,23.93,17.94,25,17.94Zm0,19.39a2,2,0,1,1,2-2A2.06,2.06,0,0,1,25,37.33Z" style="fill:#d80027;stroke-width:0"/>
+                <g class="tooltip" style="cursor:default;">
+                  <path d="M -80,56 a 5,5 1,0,1 5,-5 h 96 l 4,-4 l 4,4 h 96 a 5,5 1,0,1 5,5 v 45 a 5,5 1,0,1 -5,5 h -200 a 5,5 1,0,1 -5,-5 Z" style="stroke-width:0;fill:#afafaf;"/>
+                  <text x="25" y="75" text-anchor="middle" style="font-family:sans-serif;font-weight:bold;fill:white;">Warning List</text>
+                  <text x="25" y="95" text-anchor="middle" style="font-family:sans-serif;fill:white;">Missing <tspan style="font-weight:bold;fill:red">3</tspan> Switches</text>
+                </g>
+              </g>
+
+              <g class="tool" part="BEC" transform="translate(100,5)" style="cursor:move;"><!-- Block End Connector -->
+                <path d="M 0,5 a 5,5 1,0,1 5,-5 h 40 a 5,5 1,0,1 5,5 v 40 a 5,5 1,0,1 -5,5 h -40 a 5,5 1,0,1 -5,-5 Z" style="stroke-width:0;fill:#ddd;"/>
+                <circle cx="15" cy="25" r="5" style="fill:black;stroke-width:0"/>
+                <circle cx="30" cy="15" r="3" style="fill:blue;stroke-width:0"/>
+                <circle cx="30" cy="35" r="3" style="fill:blue;stroke-width:0"/>
+
+                <g class="tooltip" style="cursor:default;">
+                  <path d="M -80,56 a 5,5 1,0,1 5,-5 h 96 l 4,-4 l 4,4 h 96 a 5,5 1,0,1 5,5 v 30 a 5,5 1,0,1 -5,5 h -200 a 5,5 1,0,1 -5,-5 Z" style="stroke-width:0;fill:grey;"/>
+                  <text x="25" y="75" text-anchor="middle" style="font-family:sans-serif;font-weight:bold;fill:white;">Block End Connector</text>
+                </g>
+              </g>
+              <g class="tool" part="BI" transform="translate(160,5)" style="cursor:move;"><!-- Block Isolation -->
+                <path d="M 0,5 a 5,5 1,0,1 5,-5 h 40 a 5,5 1,0,1 5,5 v 40 a 5,5 1,0,1 -5,5 h -40 a 5,5 1,0,1 -5,-5 Z" style="stroke-width:0;fill:#ddd;"/>
+                <circle cx="25" cy="25" r="5" style="fill:orange;stroke-width:0"/>
+
+                <g class="tooltip" style="cursor:default;">
+                  <path d="M -80,56 a 5,5 1,0,1 5,-5 h 96 l 4,-4 l 4,4 h 96 a 5,5 1,0,1 5,5 v 30 a 5,5 1,0,1 -5,5 h -200 a 5,5 1,0,1 -5,-5 Z" style="stroke-width:0;fill:grey;"/>
+                  <text x="25" y="75" text-anchor="middle" style="font-family:sans-serif;font-weight:bold;fill:white;">Block Isolation</text>
+                </g>
+              </g>
+              <g class="tool" part="SwN" transform="translate(220,5)" style="cursor:move;"><!-- Switch Node -->
+                <path d="M 0,5 a 5,5 1,0,1 5,-5 h 40 a 5,5 1,0,1 5,5 v 40 a 5,5 1,0,1 -5,5 h -40 a 5,5 1,0,1 -5,-5 Z" style="stroke-width:0;fill:#ddd;"/>
+                <path d="M 25,17.5 v 15 l -7.5,-7.5 Z" style="fill:#41b7dd;stroke-width:0"/>
+
+                <g class="tooltip" style="cursor:default;">
+                  <path d="M -80,56 a 5,5 1,0,1 5,-5 h 96 l 4,-4 l 4,4 h 96 a 5,5 1,0,1 5,5 v 30 a 5,5 1,0,1 -5,5 h -200 a 5,5 1,0,1 -5,-5 Z" style="stroke-width:0;fill:grey;"/>
+                  <text x="25" y="75" text-anchor="middle" style="font-family:sans-serif;font-weight:bold;fill:white;">Switch Node</text>
+                </g>
+              </g>
+              <g class="tool" part="MAN" transform="translate(280,5)" style="cursor:move;"><!-- Module Attach Node -->
+                <path d="M 0,5 a 5,5 1,0,1 5,-5 h 40 a 5,5 1,0,1 5,5 v 40 a 5,5 1,0,1 -5,5 h -40 a 5,5 1,0,1 -5,-5 Z" style="stroke-width:0;fill:#ddd;"/>
+                <path d="M 20,20 h 5 a 5,5 0,0,1 0,10 h -5 Z" style="fill:#ec00ff;stroke-width:0"/>
+                <path d="M 25,5 v 40" style="fill:black;stroke-width:2px;"/>
+
+                <g class="tooltip" style="cursor:default;">
+                  <path d="M -80,56 a 5,5 1,0,1 5,-5 h 96 l 4,-4 l 4,4 h 96 a 5,5 1,0,1 5,5 v 30 a 5,5 1,0,1 -5,5 h -200 a 5,5 1,0,1 -5,-5 Z" style="stroke-width:0;fill:grey;"/>
+                  <text x="25" y="75" text-anchor="middle" style="font-family:sans-serif;font-weight:bold;fill:white;">Module Attach Node</text>
+                </g>
+              </g>
+              <g class="tool" part="RS" transform="translate(340,5)" style="cursor:move;"><!-- Straight Rail -->
+                <path d="M 0,5 a 5,5 1,0,1 5,-5 h 40 a 5,5 1,0,1 5,5 v 40 a 5,5 1,0,1 -5,5 h -40 a 5,5 1,0,1 -5,-5 Z" style="stroke-width:0;fill:#ddd;"/>
+                <path d="M 5,25 h 40" style="stroke-width:6px;stroke:black;"/>
+
+                <g class="tooltip" style="cursor:default;">
+                  <path d="M -80,56 a 5,5 1,0,1 5,-5 h 96 l 4,-4 l 4,4 h 96 a 5,5 1,0,1 5,5 v 30 a 5,5 1,0,1 -5,5 h -200 a 5,5 1,0,1 -5,-5 Z" style="stroke-width:0;fill:grey;"/>
+                  <text x="25" y="75" text-anchor="middle" style="font-family:sans-serif;font-weight:bold;fill:white;">Straight Rail</text>
+                </g>
+              </g>
+              <g class="tool" part="RC" transform="translate(400,5)" style="cursor:move;"><!-- Curve Rail -->
+                <path d="M 0,5 a 5,5 1,0,1 5,-5 h 40 a 5,5 1,0,1 5,5 v 40 a 5,5 1,0,1 -5,5 h -40 a 5,5 1,0,1 -5,-5 Z" style="stroke-width:0;fill:#ddd;"/>
+                <path d="M 5,25 a 56.33,56.33 0,0,0 40,-15.5" style="stroke-width:6px;stroke:black;"/>
+
+                <g class="tooltip" style="cursor:default;">
+                  <path d="M -80,56 a 5,5 1,0,1 5,-5 h 96 l 4,-4 l 4,4 h 96 a 5,5 1,0,1 5,5 v 30 a 5,5 1,0,1 -5,5 h -200 a 5,5 1,0,1 -5,-5 Z" style="stroke-width:0;fill:grey;"/>
+                  <text x="25" y="75" text-anchor="middle" style="font-family:sans-serif;font-weight:bold;fill:white;">Curve Rail</text>
+                </g>
+              </g>
+              <g class="tool" part="S3"transform="translate(460,5)" style="cursor:move;"><!-- 3 Light Signal -->
+                <path d="M 0,5 a 5,5 1,0,1 5,-5 h 40 a 5,5 1,0,1 5,5 v 40 a 5,5 1,0,1 -5,5 h -40 a 5,5 1,0,1 -5,-5 Z" style="stroke-width:0;fill:#ddd;"/>
+                <path d="M 40,20 v 10 a 5,5 0,0,1 -10,0 v -10 a 5,5 0,0,1 10,0" style="stroke-width:0px;stroke:black;fill:black;"/>
+                <circle cx="35" cy="20" r="2" style="stroke-width:0px;fill:red;"/>
+                <circle cx="35" cy="25" r="2" style="stroke-width:0px;fill:orange;"/>
+                <circle cx="35" cy="30" r="2" style="stroke-width:0px;fill:lime;"/>
+
+                <circle cx="25" cy="10" r="2" style="stroke-width:0px;fill:purple;"/>
+
+                <g class="tooltip" style="cursor:default;">
+                  <path d="M -80,56 a 5,5 1,0,1 5,-5 h 96 l 4,-4 l 4,4 h 96 a 5,5 1,0,1 5,5 v 30 a 5,5 1,0,1 -5,5 h -200 a 5,5 1,0,1 -5,-5 Z" style="stroke-width:0;fill:grey;"/>
+                  <text x="25" y="75" text-anchor="middle" style="font-family:sans-serif;font-weight:bold;fill:white;">Generic 3 Light Signal</text>
+                </g>
+              </g>
+              <g class="tool" part="S2" transform="translate(520,5)" style="cursor:move;"><!-- 2 Light Signal -->
+                <path d="M 0,5 a 5,5 1,0,1 5,-5 h 40 a 5,5 1,0,1 5,5 v 40 a 5,5 1,0,1 -5,5 h -40 a 5,5 1,0,1 -5,-5 Z" style="stroke-width:0;fill:#ddd;"/>
+                <path d="M 40,25 v 5 a 5,5 0,0,1 -10,0 v -5 a 5,5 0,0,1 10,0" style="stroke-width:0px;stroke:black;fill:black;"/>
+                <circle cx="35" cy="25" r="2" style="stroke-width:0px;fill:red;"/>
+                <circle cx="35" cy="30" r="2" style="stroke-width:0px;fill:lime;"/>
+
+                <circle cx="25" cy="10" r="2" style="stroke-width:0px;fill:purple;"/>
+
+                <g class="tooltip" style="cursor:default;">
+                  <path d="M -80,56 a 5,5 1,0,1 5,-5 h 96 l 4,-4 l 4,4 h 96 a 5,5 1,0,1 5,5 v 30 a 5,5 1,0,1 -5,5 h -200 a 5,5 1,0,1 -5,-5 Z" style="stroke-width:0;fill:grey;"/>
+                  <text x="25" y="75" text-anchor="middle" style="font-family:sans-serif;font-weight:bold;fill:white;">Generic 2 Light Signal</text>
+                </g>
+              </g>
+            </g>
+            <g id="Drawing"></g>
           </svg>
+          <script>
+            $("#LayoutContainer #toolbar path.drag_handle").on("mousedown",Layout_dragToolbar);
+            $("#LayoutContainer #toolbar g.tool:not(:first)").on("mousedown",Layout_createPart);
+            $('#LayoutContainer svg').on("contextmenu",Layout_ContextMenu);
+          </script>
           <div id="LayoutContextMenu" style="display:none;left:0px;top:0px">
-            <div class="ContextBlock" style="display:none;">
-              <div class="header">Block</div>
-              <div class="id" style="width:100%;height:20px;float:left;">ID:<input type="text" style="float:right;width:100px;"/></div>
-              <div class="size" style="width:100%;height:20px;float:left;">Size:<span style="float:right;margin-right:45px;font-weight:bold;">1</span></div>
-              <div class="test" style="width:100%;height:20px;float:left;">Test:<span style="float:right;margin-right:45px;font-weight:bold;">2</span></div>
-            </div>
-            <div class="ContextSwitch">
-              <div class="header">Switch</div>
-              <div class="id" style="width:100%;height:20px;float:left;">ID:<input type="text" style="float:right;width:100px;"/></div>
-            </div>
+            <div class="header">Block</div>
+            <div class="content"></div>
           </div>
         </div>
-        <script>
-          $('#Layout .grid').on("mousedown",Layout_Click);
-          $('#Layout .grid').on("contextmenu",Layout_ContextMenu);
-          $('#Layout #Toolbox svg').on("click",Layout_selectTool);
-        </script>
-        Layout
       </div>
     </div>
     <div id="EModulesBox" style="display:none;z-index:5;">

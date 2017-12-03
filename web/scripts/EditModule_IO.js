@@ -9,6 +9,8 @@ EditObj.NrStation = 0;
 EditObj.HOA = 0; //Highest Output Address
 EditObj.HIA = 0; //Highest Input Address
 EditObj.ModuleNr;
+EditObj.Layout = {"grid":[],"FreeAnchors":[],"Anchors":[],"Nodes":[]};
+EditObj.Layout.Setup = {"Rail":[],"Nodes":[],"Signals":[]};
 
 function LoadModule(evt,nr){
   clearTables();
@@ -185,7 +187,8 @@ function clearTables(){
   EditObj.NrStation = 0;
   EditObj.HOA = 0; //Highest Output Address
   EditObj.HIA = 0; //Highest Input Address
-  EditObj.Layout.grid = [];
+  EditObj.Layout = {"grid":[],"FreeAnchors":[],"Anchors":[],"Nodes":[]};
+  EditObj.Layout.Setup = {"Rail":[],"Nodes":[],"Signals":[]};
 
   $('#ConnectBox').empty();
 

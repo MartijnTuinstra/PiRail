@@ -196,7 +196,11 @@ int recv_packet(int fd_client, char outbuf[], int * L){
   *L = mes_length;
 
   copy_Array(outbuf,output,mes_length);
-  printf("%s\n",output);
+  printf("Binary data: ");
+  for(int q = 0;q<mes_length;q++){
+    printf("%02x",output[q]);
+  }
+  printf("\n%s\n",output);
 
   pthread_mutex_unlock(&mutex_lock_web);
   if(opcode == 8){
@@ -275,8 +279,71 @@ int send_all(char data[],int length,int flag){
   pthread_mutex_unlock(&mutex_lock_web);
 }
 
-int recv_packet_procces(char data[]){
-  if(data[0] == 30){ //Stop train
+int recv_packet_procces(char data[1024]){
+  if(data[0] == 1){ //Re-calculate module
+
+  }
+  else if(data[0] == 2){ //New settings
+
+  }
+  else if(data[0] == 3){ //New train
+    printf("Add a new train to the library\n");
+    printf("%s\n",&data[1]);
+    char data_out[40];
+    char name[40];
+
+    data_out[0] = 8; //Set opcode
+
+    copy_Array(name,&data[1],strlen(&data[1]));
+
+    int i = 2 + strlen(name);
+
+    char type;
+
+    printf("index %i = %i\n",i,data[i]);
+
+    if(data[i] == 'P'){
+      printf("Type\tPassenger train\n");
+      type = 'P';
+    }else if(data[i] == 'C'){
+      printf("Type\tCargo train\n");
+      type = 'C';
+    }else{
+      data_out[1] = 0; //Set status_code (0 == Failed)
+      send_all(data_out,2,32);
+      return;
+    }
+    i++;
+    long DCC = (data[i++] << 8) + data[i++];
+    long max_speed = (data[i++] << 8) + data[i++];
+
+    printf("Name\t%s\nDCC\t%li\nSpeed\t%ld\n",name,DCC,max_speed);
+
+    int value;
+    if((value = create_train(DCC,max_speed,name,type)) >= 0){
+      data_out[1] = 2; //Confirmed
+      char l = 0;
+      if(value < 255){//Train ID
+        data_out[2] = value;
+        l = 3;
+      }else{
+        data_out[2] = value & 0xFF;
+        data_out[3] = value >> 8;
+        l = 4;
+      }
+      /*
+      data_out[3];//DCC HIGH byte
+      data_out[4];//DCC LOW  byte
+
+      sprintf(buf,"{\"RNTrain\" : [\"Confirmed\",[%i,\"%s\",%i,\"%c\",%i]]}",value,s_Name,atoi(s_DCC),data[3],atoi(s_Speed));
+      printf("Send '%s'\n",buf);*/
+      send_all(data_out,l,32);
+    }else{
+      data_out[1] = 1; //Fail: DCC address already in use
+      send_all(data_out,2,32);
+    }
+  }
+  else if(data[0] == 30){ //Stop train
     printf("Stop Train %i\n",(data[1] << 8) + data[2]);
     train_stop(DCC_train[(data[1] << 8) + data[2]]);
   }

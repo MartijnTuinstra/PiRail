@@ -36,16 +36,19 @@ int create_train(int DCC,int speed,char name[],char type){
 			return -1;
 		}
 	}
+	printf("Add train\n");
+
+	int value = add_train(DCC,speed,name,type);
+
 	printf("Open file\n");
 	FILE * f;
 	f = fopen("./trains/trainlist_raw.txt","a");
 	printf("write to file\n");
-	fprintf(f,"%s\t%i\t%c\t%i\r\n",name,DCC,type,speed);
+	fprintf(f,"%d\t%s\t%i\t%c\t%i\t000000000000000000000000000\r\n",value,name,DCC,type,speed);
 	fclose(f);
-	printf("Add train\n");
 
 	//Return train ID
-	return add_train(DCC,speed,name,type);
+	return value;
 }
 
 void init_trains(){

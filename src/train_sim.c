@@ -15,7 +15,7 @@ void *TRAIN_SIMA(){
 			if(train_link[1] && train_link[1]->halt == 0){
 				break;
 			}
-			usleep(100);
+			usleep(1000);
 		}
 
 		pthread_mutex_lock(&mutex_lockA);
@@ -78,7 +78,7 @@ void *TRAIN_SIMB(){
 			if(train_link[2] && train_link[2]->halt == 0){
 				break;
 			}
-			usleep(100);
+			usleep(1000);
 		}
 
 		pthread_mutex_lock(&mutex_lockA);

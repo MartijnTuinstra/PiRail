@@ -328,11 +328,11 @@ struct link Modules(int m, struct link IN){
 			Switch2[m][2]->pref[0] = P;
 		//
 		/*Stations*/
-			Create_Station(4,"Spoor 1",1,4,(int [4]){2,3,4,5});
-			Create_Station(4,"Spoor 2",1,4,(int [4]){6,7,8,9});
-			Create_Station(4,"Spoor 3",1,4,(int [4]){14,15,16,17});
-			Create_Station(4,"Spoor 4",1,4,(int [4]){18,19,20,21});
-			Create_Station(4,"Spoor 5",1,4,(int [4]){22,23,24,25});
+			Create_Station(m,"Spoor 1",1,4,(int [4]){2,3,4,5});
+			Create_Station(m,"Spoor 2",1,4,(int [4]){6,7,8,9});
+			Create_Station(m,"Spoor 3",1,4,(int [4]){14,15,16,17});
+			Create_Station(m,"Spoor 4",1,4,(int [4]){18,19,20,21});
+			Create_Station(m,"Spoor 5",1,4,(int [4]){22,23,24,25});
 		//
 		/*Signals*/
 			//All type 2 signals

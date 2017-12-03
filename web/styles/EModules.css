@@ -285,6 +285,13 @@
 		float:left;
 }
 
+#Layout #toolbar .tool .tooltip {
+	display:none;
+}
+#Layout #toolbar:not(.dragging) .tool:hover .tooltip {
+	display:block;
+}
+
 /* Tooltip text */
 #Layout .tooltip .tooltipbox {
 	visibility: hidden;

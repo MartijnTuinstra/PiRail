@@ -1,0 +1,45 @@
+<svg xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:svg="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 140" id="svg6" height="140px" width="140px" version="1.1">
+  <metadata id="metadata12">
+    <rdf:RDF>
+      <cc:Work rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <defs id="defs10"/>
+  <g>
+    <path class="B" d="M 0,40 h 39"/>
+    <path class="B" d="M 35.5,41.5 l 33,-33"/>
+    <path class="B" d="M 65,10  h 27"/>
+    <path class="B" d="M 88.5,8.5  l 33,33"/>
+
+    <path class="B" d="M 120,38  l 0,102"/>
+    <path class="B" d="M 100,140 l 0,-42"/>
+    <path class="B" d="M 101.5,101.5 l -11.5,-11.5"/>
+
+    <path class="B" d="M 89,91 l 32,-32"/>
+    <path class="B" d="M 65,90  h 27"/>
+    <path class="B" d="M 35.5,58.5 l 33,33"/>
+    <path class="B" d="M 0,60 h 39"/>
+  </g>
+  <g id="B1">
+    <path class="L" style="stroke:#0f0" d="M 5,40 h 33"/>
+    <path class="L" style="stroke:#0f0" d="M 36,41 l 32,-32"/>
+    <path class="L" style="stroke:#0f0" d="M 66,10  h 25"/>
+    <path class="L" style="stroke:#0f0" d="M 89,9  l 32,32"/>
+
+    <path class="L" style="stroke:#0f0" d="M 89,91 l 32,-32"/>
+    <path class="L" style="stroke:#0f0" d="M 66,90  h 25"/>
+    <path class="L" style="stroke:#0f0" d="M 36,59 l 32,32"/>
+    <path class="L" style="stroke:#0f0" d="M 5,60 h 33"/>
+   </g>
+  <g>
+
+    <path class="L" style="stroke:#0ff" d="M 120,39  l 0,22"/>
+    <path class="L" style="stroke:#ff0" d="M 120,61  l 0,20"/>
+    <path class="L" style="stroke:#0f0" d="M 120,81  l 0,54"/>
+    <path class="L" style="stroke:#0f0" d="M 100,135 l 0,-36"/>
+    <path class="L" style="stroke:#0f0" d="M 101,101 l -12,-12"/>
+
+     </g>
+</svg>

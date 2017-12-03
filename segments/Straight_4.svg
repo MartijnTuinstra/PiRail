@@ -1,0 +1,82 @@
+<svg xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:svg="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 100" id="svg6" height="100px" width="800px" version="1.1">
+  <metadata id="metadata12">
+    <rdf:RDF>
+      <cc:Work rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <defs id="defs10"/>
+  <g>
+    <path style="stroke-width:2;stroke:#000000" d="M 200,0 l 0,100"/>
+    <path style="stroke-width:2;stroke:#000000" d="M 400,0 l 0,100"/>
+    <path style="stroke-width:2;stroke:#000000" d="M 600,0 l 0,100"/>
+  </g>
+
+  <g id="S0" onmouseenter="Show(this,$(this).parent().parent().attr('id'))" onmouseleave="Hide(this,$(this).parent().parent().attr('id'))">
+    <path class="B" d="M 5,40 h 190"/>
+    <path class="L" style="stroke:#ffff00" d="M 5,40 h 190"/>
+  </g>
+  <g id="S1" onmouseenter="Show(this,$(this).parent().parent().attr('id'))" onmouseleave="Hide(this,$(this).parent().parent().attr('id'))">
+    <path class="B" d="M 205,40 h 190"/>
+    <path class="L" style="stroke:#ffff00" d="M 205,40 h 190"/>
+  </g>
+  <g id="S2" onmouseenter="Show(this,$(this).parent().parent().attr('id'))" onmouseleave="Hide(this,$(this).parent().parent().attr('id'))">
+    <path class="B" d="M 405,40 h 190"/>
+    <path class="L" style="stroke:#ffff00" d="M 405,40 h 190"/>
+  </g>
+  <g id="S3" onmouseenter="Show(this,$(this).parent().parent().attr('id'))" onmouseleave="Hide(this,$(this).parent().parent().attr('id'))">
+    <path class="B" d="M 605,40 h 190"/>
+    <path class="L" style="stroke:#ffff00" d="M 605,40 h 190"/>
+  </g>
+  <g id="S4" onmouseenter="Show(this,$(this).parent().parent().attr('id'))" onmouseleave="Hide(this,$(this).parent().parent().attr('id'))">
+    <path class="B" d="M 5,60 h 190"/>
+    <path class="L" style="stroke:#ffff00" d="M 5,60 h 190"/>
+  </g>
+  <g id="S5" onmouseenter="Show(this,$(this).parent().parent().attr('id'))" onmouseleave="Hide(this,$(this).parent().parent().attr('id'))">
+    <path class="B" d="M 205,60 h 190"/>
+    <path class="L" style="stroke:#ffff00" d="M 205,60 h 190"/>
+  </g>
+  <g id="S6" onmouseenter="Show(this,$(this).parent().parent().attr('id'))" onmouseleave="Hide(this,$(this).parent().parent().attr('id'))">
+    <path class="B" d="M 405,60 h 190"/>
+    <path class="L" style="stroke:#ffff00" d="M 405,60 h 190"/>
+  </g>
+  <g id="S7" onmouseenter="Show(this,$(this).parent().parent().attr('id'))" onmouseleave="Hide(this,$(this).parent().parent().attr('id'))">
+    <path class="B" d="M 605,60 h 190"/>
+    <path class="L" style="stroke:#ffff00" d="M 605,60 h 190"/>
+  </g>
+  <g><!-- Text blocks -->
+    <g id="S0B" style="display:none">
+      <rect x="90" y="35" width="20" height="10" fill="black" ></rect>
+      <text class="T" x="90" y="43.5" font-family="Verdana" font-size="10" fill="white" >&lt;FF</text>
+    </g>
+    <g id="S1B" style="display:none">
+      <rect x="290" y="35" width="20" height="10" fill="black" ></rect>
+      <text class="T" x="290" y="43.5" font-family="Verdana" font-size="10" fill="white" >&lt;FF</text>
+    </g>
+    <g id="S2B" style="display:none">
+      <rect x="490" y="35" width="20" height="10" fill="black" ></rect>
+      <text class="T" x="490" y="43.5" font-family="Verdana" font-size="10" fill="white" >&lt;FF</text>
+    </g>
+    <g id="S3B" style="display:none">
+      <rect x="690" y="35" width="20" height="10" fill="black" ></rect>
+      <text class="T" x="690" y="43.5" font-family="Verdana" font-size="10" fill="white" >&lt;FF</text>
+    </g>
+    <g id="S4B" style="display:none">
+      <rect x="90" y="55" width="20" height="10" fill="black" ></rect>
+      <text class="T" x="90" y="63.5" font-family="Verdana" font-size="10" fill="white" >&lt;FF</text>
+    </g>
+    <g id="S5B" style="display:none">
+      <rect x="290" y="55" width="20" height="10" fill="black" ></rect>
+      <text class="T" x="290" y="63.5" font-family="Verdana" font-size="10" fill="white" >&lt;FF</text>
+    </g>
+    <g id="S6B" style="display:none">
+      <rect x="490" y="55" width="20" height="10" fill="black" ></rect>
+      <text class="T" x="490" y="63.5" font-family="Verdana" font-size="10" fill="white" >&lt;FF</text>
+    </g>
+    <g id="S7B" style="display:none">
+      <rect x="690" y="55" width="20" height="10" fill="black" ></rect>
+      <text class="T" x="690" y="63.5" font-family="Verdana" font-size="10" fill="white" >&lt;FF</text>
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="300px" height="300px" viewBox="0 0  300 300" preserveAspectRatio="xMidYMid meet" >
+   <style type="text/css"><![CDATA[
+      .R {
+        -ms-transform: rotate(45deg); /* IE 9 */
+        -webkit-transform: rotate(45deg); /* Chrome, Safari, Opera */
+        transform: rotate(45deg);
+      }
+
+    ]]></style>
+  <path d="M295,60 a -235,235 0 0,0 -235,235" class="B" style="stroke-linecap:square"/>
+  <path d="M295,40 a -255,255 0 0,0 -255,255" class="B" style="stroke-linecap:square"/>
+  <g id="S0">
+    <path d="M295,60 a -235,235 1 0,0 -166.17,68.83" class="L" style="stroke:#ff0"/>
+  </g>
+  <g id="S1">
+    <path d="M60,295 a 235,-235 0 0,1 68.83,-166.17" class="L" style="stroke:#ff0"/>
+  </g>
+  <g id="S2">
+    <path d="M295,40 a -255,255 1 0,0 -180.31,74.69" class="L" style="stroke:#ff0"/>
+  </g>
+  <g id="S3">
+    <path d="M40,295 a 255,-255 0 0,1 74.69,-180.31" class="L" style="stroke:#ff0"/>
+  </g><!--
+  <g id="S0">
+    <path d="M5,40q127,0e-15,190,63" class="B"/>
+    <path d="M5,40q127,0e-15,190,63" class="L" style="stroke:#ff0"/>
+  </g>-->
+
+  <path d="M5,295 l 300,-300" class="L"/>
+  <g><!-- Text blocks -->
+    <g id="S0B" style="display:none">
+      <rect class="R" x="130" y="-35" width="20" height="10" fill="black" ></rect>
+      <text class="T R" x="130" y="-26.5" font-family="Verdana" font-size="10" fill="white" >&lt;FF</text>
+    </g>
+    <g id="S1B" style="display:none">
+      <rect class="R" x="130" y="-15" width="20" height="10" fill="black" ></rect>
+      <text class="T R" x="130" y="-6.5" font-family="Verdana" font-size="10" fill="white" >&lt;FF</text>
+    </g>
+  </g>
+</svg>

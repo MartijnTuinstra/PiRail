@@ -1,0 +1,175 @@
+<svg xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:svg="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 140" id="svg6" height="140px" width="600px" version="1.1">
+  <metadata id="metadata12">
+    <rdf:RDF>
+      <cc:Work rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <defs id="defs10"/>
+ 
+  <g>
+    <rect x="200" y="25" width="400" height="15" style="fill:#444;"/>
+    <rect x="200" y="60" width="400" height="20" style="fill:#444;"/>
+  </g>
+  <path class="B" d="M 0,60 h 600"/>
+  <path class="B" d="M 0,80 h 600"/>
+
+  <path class="B" d="M 143.5,61.5 l 43,-43"/>
+  <path class="B" d="M 183,20 h 417"/>
+  <path class="B" d="M 165,40 h 435"/>
+
+  <path class="B" d="M 143.5,78.5 l 43,43"/>
+  <path class="B" d="M 165,100 h 435"/>
+  <path class="B" d="M 183,120 h 417"/>
+  <g>
+    <g id="S0" onmouseenter="Show(this,$(this).parent().parent().parent().attr('id'))" onmouseleave="Hide(this,$(this).parent().parent().parent().attr('id'))">
+      <path class="L" style="stroke:#ffff00" d="M 200,20 h 200"/>
+    </g>
+    <g id="S1" onmouseenter="Show(this,$(this).parent().parent().parent().attr('id'))" onmouseleave="Hide(this,$(this).parent().parent().parent().attr('id'))">
+      <path class="L" style="stroke:#ffff00" d="M 400,20 h 195"/>
+    </g>
+
+    <g id="S3" onmouseenter="Show(this,$(this).parent().parent().parent().attr('id'))" onmouseleave="Hide(this,$(this).parent().parent().parent().attr('id'))">
+      <path class="L" style="stroke:#ffff00" d="M 200,40 h 200"/>
+    </g>
+    <g id="S4" onmouseenter="Show(this,$(this).parent().parent().parent().attr('id'))" onmouseleave="Hide(this,$(this).parent().parent().parent().attr('id'))">
+      <path class="L" style="stroke:#ffff00" d="M 400,40 h 195"/>
+    </g>
+
+    <g id="S6" onmouseenter="Show(this,$(this).parent().parent().parent().attr('id'))" onmouseleave="Hide(this,$(this).parent().parent().parent().attr('id'))">
+      <path class="L" style="stroke:#ffff00" d="M 5,60 h 141.1"/>
+      <path class="L" style="stroke:#ffff00" d="M 175,60 h 25"/>
+      <path class="L" style="stroke:#ffff00" d="M 184,20 h 16"/>
+
+      <path id="S0A" class="L" style="stroke:#ffff00" d="M 144.3,60.7 l 21.4,-21.4"/>
+      <path id="S0R" class="L" style="stroke:#ffff00" d="M 146,60 h 29"/>
+      <path id="S1A" class="L" style="stroke:#ffff00" d="M 164,40 h 36"/>
+      <path id="S1R" class="L" style="stroke:#ffff00" d="M 164.3,40.7 l 21.4,-21.4"/>
+    </g>
+    <g id="S7" onmouseenter="Show(this,$(this).parent().parent().parent().attr('id'))" onmouseleave="Hide(this,$(this).parent().parent().parent().attr('id'))">
+      <path class="L" style="stroke:#ffff00" d="M 200,60 h 200"/>
+    </g>
+    <g id="S8" onmouseenter="Show(this,$(this).parent().parent().parent().attr('id'))" onmouseleave="Hide(this,$(this).parent().parent().parent().attr('id'))">
+      <path class="L" style="stroke:#ffff00" d="M 400,60 h 195"/>
+    </g>
+
+    <g id="S10" onmouseenter="Show(this,$(this).parent().parent().parent().attr('id'))" onmouseleave="Hide(this,$(this).parent().parent().parent().attr('id'))">
+      <path class="L" style="stroke:#ffff00" d="M 5,80 h 141.1"/>
+      <path class="L" style="stroke:#ffff00" d="M 175,80 h 25"/>
+      <path class="L" style="stroke:#ffff00" d="M 184,120 h 16"/>
+
+      <path id="S2A" class="L" style="stroke:#ffff00" d="M 144.3,79.3 l 21.4,21.4"/>
+      <path id="S2R" class="L" style="stroke:#ffff00" d="M 146,80 h 29"/>
+      <path id="S3A" class="L" style="stroke:#ffff00" d="M 164,100 h 36"/>
+      <path id="S3R" class="L" style="stroke:#ffff00" d="M 164.3,99.3 l 21.4,21.4"/>
+    </g>
+    <g id="S11" onmouseenter="Show(this,$(this).parent().parent().parent().attr('id'))" onmouseleave="Hide(this,$(this).parent().parent().parent().attr('id'))">
+      <path class="L" style="stroke:#ffff00" d="M 200,80 h 200"/>
+    </g>
+    <g id="S12" onmouseenter="Show(this,$(this).parent().parent().parent().attr('id'))" onmouseleave="Hide(this,$(this).parent().parent().parent().attr('id'))">
+      <path class="L" style="stroke:#ffff00" d="M 400,80 h 195"/>
+    </g>
+
+    <g id="S14" onmouseenter="Show(this,$(this).parent().parent().parent().attr('id'))" onmouseleave="Hide(this,$(this).parent().parent().parent().attr('id'))">
+      <path class="L" style="stroke:#ffff00" d="M 200,100 h 200"/>
+    </g>
+    <g id="S15" onmouseenter="Show(this,$(this).parent().parent().parent().attr('id'))" onmouseleave="Hide(this,$(this).parent().parent().parent().attr('id'))">
+      <path class="L" style="stroke:#ffff00" d="M 400,100 h 195"/>
+    </g>
+
+    <g id="S17" onmouseenter="Show(this,$(this).parent().parent().parent().attr('id'))" onmouseleave="Hide(this,$(this).parent().parent().parent().attr('id'))">
+      <path class="L" style="stroke:#ffff00" d="M 200,120 h 200"/>
+    </g>
+    <g id="S18" onmouseenter="Show(this,$(this).parent().parent().parent().attr('id'))" onmouseleave="Hide(this,$(this).parent().parent().parent().attr('id'))">
+      <path class="L" style="stroke:#ffff00" d="M 400,120 h 195"/>
+    </g>
+  </g>
+  <g><!-- Text blocks -->
+    <g id="S0B" style="display:none">
+      <rect x="290" y="15" width="20" height="10" fill="black" ></rect>
+      <text class="T" x="290" y="23.5" font-family="Verdana" font-size="10" fill="white" >&lt;FF</text>
+    </g>
+    <g id="S1B" style="display:none">
+      <rect x="490" y="15" width="20" height="10" fill="black" ></rect>
+      <text class="T" x="490" y="23.5" font-family="Verdana" font-size="10" fill="white" >&lt;FF</text>
+    </g>
+    <g id="S2B" style="display:none">
+      <rect x="690" y="15" width="20" height="10" fill="black" ></rect>
+      <text class="T" x="690" y="23.5" font-family="Verdana" font-size="10" fill="white" >&lt;FF</text>
+    </g>
+
+    <g id="S3B" style="display:none">
+      <rect x="290" y="35" width="20" height="10" fill="black" ></rect>
+      <text class="T" x="290" y="43.5" font-family="Verdana" font-size="10" fill="white" >&lt;FF</text>
+    </g>
+    <g id="S4B" style="display:none">
+      <rect x="490" y="35" width="20" height="10" fill="black" ></rect>
+      <text class="T" x="490" y="43.5" font-family="Verdana" font-size="10" fill="white" >&lt;FF</text>
+    </g>
+    <g id="S5B" style="display:none">
+      <rect x="690" y="35" width="20" height="10" fill="black" ></rect>
+      <text class="T" x="690" y="43.5" font-family="Verdana" font-size="10" fill="white" >&lt;FF</text>
+    </g>
+
+    <g id="S6B" style="display:none">
+      <rect x="90" y="55" width="20" height="10" fill="black" ></rect>
+      <text class="T" x="90" y="63.5" font-family="Verdana" font-size="10" fill="white" >&lt;FF</text>
+    </g>
+    <g id="S7B" style="display:none">
+      <rect x="290" y="55" width="20" height="10" fill="black" ></rect>
+      <text class="T" x="290" y="63.5" font-family="Verdana" font-size="10" fill="white" >&lt;FF</text>
+    </g>
+    <g id="S8B" style="display:none">
+      <rect x="490" y="55" width="20" height="10" fill="black" ></rect>
+      <text class="T" x="490" y="63.5" font-family="Verdana" font-size="10" fill="white" >&lt;FF</text>
+    </g>
+    <g id="S9B" style="display:none">
+      <rect x="690" y="55" width="20" height="10" fill="black" ></rect>
+      <text class="T" x="690" y="63.5" font-family="Verdana" font-size="10" fill="white" >&lt;FF</text>
+    </g>
+
+    <g id="S10B" style="display:none">
+      <rect x="90" y="75" width="20" height="10" fill="black" ></rect>
+      <text class="T" x="90" y="83.5" font-family="Verdana" font-size="10" fill="white" >&lt;FF</text>
+    </g>
+    <g id="S11B" style="display:none">
+      <rect x="290" y="75" width="20" height="10" fill="black" ></rect>
+      <text class="T" x="290" y="83.5" font-family="Verdana" font-size="10" fill="white" >&lt;FF</text>
+    </g>
+    <g id="S12B" style="display:none">
+      <rect x="490" y="75" width="20" height="10" fill="black" ></rect>
+      <text class="T" x="490" y="83.5" font-family="Verdana" font-size="10" fill="white" >&lt;FF</text>
+    </g>
+    <g id="S13B" style="display:none">
+      <rect x="690" y="75" width="20" height="10" fill="black" ></rect>
+      <text class="T" x="690" y="83.5" font-family="Verdana" font-size="10" fill="white" >&lt;FF</text>
+    </g>
+
+    <g id="S14B" style="display:none">
+      <rect x="290" y="95" width="20" height="10" fill="black" ></rect>
+      <text class="T" x="290" y="103.5" font-family="Verdana" font-size="10" fill="white" >&lt;FF</text>
+    </g>
+    <g id="S15B" style="display:none">
+      <rect x="490" y="95" width="20" height="10" fill="black" ></rect>
+      <text class="T" x="490" y="103.5" font-family="Verdana" font-size="10" fill="white" >&lt;FF</text>
+    </g>
+    <g id="S16B" style="display:none">
+      <rect x="690" y="95" width="20" height="10" fill="black" ></rect>
+      <text class="T" x="690" y="103.5" font-family="Verdana" font-size="10" fill="white" >&lt;FF</text>
+    </g>
+
+    <g id="S17B" style="display:none">
+      <rect x="290" y="115" width="20" height="10" fill="black" ></rect>
+      <text class="T" x="290" y="123.5" font-family="Verdana" font-size="10" fill="white" >&lt;FF</text>
+    </g>
+    <g id="S18B" style="display:none">
+      <rect x="490" y="115" width="20" height="10" fill="black" ></rect>
+      <text class="T" x="490" y="123.5" font-family="Verdana" font-size="10" fill="white" >&lt;FF</text>
+    </g>
+    <g id="S19B" style="display:none">
+      <rect x="690" y="115" width="20" height="10" fill="black" ></rect>
+      <text class="T" x="690" y="123.5" font-family="Verdana" font-size="10" fill="white" >&lt;FF</text>
+    </g>
+  </g>
+</svg>

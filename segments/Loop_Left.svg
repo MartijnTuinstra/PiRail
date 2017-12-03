@@ -1,0 +1,29 @@
+<svg xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:svg="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 120" id="svg6" height="120px" width="180px" version="1.1">
+  <metadata id="metadata12">
+    <rdf:RDF>
+      <cc:Work rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <defs id="defs10"/>
+    <g id="S0" transform="translate(180,0) scale(-1,1) ">
+  <path class="B" d="M 0,40 h 25"/>
+  <path class="B" d="M 0,60 h 30"/>
+  
+  <path d="M100,10 c-15,0,-25,  5,-40, 15s-25, 15,-35, 15" class="B"/>
+  <path d="M100,110c-20,0,-30,-15,-35,-25s-15,-25,-35,-25" class="B"/>
+  <path class="B" d="M 100,10 a 50,50,0,1,1,0,100"/>
+  <g id="B1" class="S1">
+
+    <path class="L" style="stroke:#ffff00" d="M 5,60 h 25"/>
+    <path class="L" style="stroke:#ffff00" d="M 5,40 h 20"/>
+
+    <path class="L" style="stroke:#ffff00" d="M 100,10 a 50,50,0,1,1,0,100"/>
+
+
+    <path d="M100,10 c-15,0,-25,  5,-40, 15s-25, 15,-35, 15" class="L" style="stroke:#ff0;"/>
+    <path d="M100,110c-20,0,-30,-15,-35,-25s-15,-25,-35,-25" class="L" style="stroke:#ff0;"/>
+  </g>
+  </g>
+</svg>

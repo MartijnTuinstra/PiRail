@@ -30,6 +30,8 @@
 #define Arr_Count(array) (sizeof(array)/sizeof((array)[0])) 
 
 int stop = 0;
+int delayA = 1500000;
+int delayB = 1000000;
 
 struct adr{
 	int M;		// Module
@@ -69,6 +71,7 @@ struct Mod{
 };
 
 struct adr Adresses[MAX_A] = {};
+struct adr StartAdr;
 int Adress = 0;
 struct Seg *blocks[MAX_Modules][MAX_Blocks][MAX_Segments] = {};
 struct Swi *Switch[MAX_Modules][MAX_Blocks][MAX_Segments] = {};
@@ -443,7 +446,6 @@ void JSON(){
 
 
 	for(int i = 0;i<Adress;i++){
-		printf("+++",i);
 
 		struct adr A = Adresses[i];
 		if(A.type == 'R'){
@@ -458,12 +460,10 @@ void JSON(){
 	}
 
 	fprintf(fp,"],\"SW\" : [");
-	printf("\n");
 
 	p = 0;
 
 	for(int i = 0;i<Adress;i++){
-		printf("---");
 
 		struct adr A = Adresses[i];
 		if(A.type == 'S'){
@@ -481,7 +481,6 @@ void JSON(){
 	p = 0;
 
 	for(int i = 0;i<Adress;i++){
-		printf("---");
 
 		struct adr A = Adresses[i];
 		if(A.type == 'M'){
@@ -495,7 +494,6 @@ void JSON(){
 		}
 	}
 	fprintf(fp,"]}");
-	printf("\n");
 	fclose(fp);
 }
 
@@ -503,8 +501,10 @@ int add_train(){
 	return 0xAC;
 }
 
-void Slowdown_train(int ID){
-
+void Slowdown_train(){
+	if(delayA == 1500000){
+		delayA -= 1000000;
+	}
 }
 
 void procces(struct adr adr,int i){
@@ -536,6 +536,10 @@ void procces(struct adr adr,int i){
 				printf("N2_%i:%i:%i \tB%iid%x\t",BNN->Adr.M,BNN->Adr.B,BNN->Adr.S,BNN->blocked,BNN->train);
 				printf("N3_%i:%i:%i \tB%iid%x\t",BNNN->Adr.M,BNNN->Adr.B,BNNN->Adr.S,BNNN->blocked,BNNN->train);
 				//printf("N4_%i:%i:%i \tB%iid%x\t",BN4->Adr.M,BN4->Adr.B,BN4->Adr.S,BN4->blocked,BN4->train);
+			}
+
+			if(BA->blocked == 1 && BN->state == AMBER){
+				Slowdown_train();
 			}
 
 			if(BP->Adr.type != 'e' && BP->blocked == 1 && BA->blocked == 1){
@@ -609,24 +613,29 @@ void procces(struct adr adr,int i){
 			//printf("%i:%i:%i == 0:0:0?\n",NAdr.M,NAdr.B,NAdr.S);
 			if(!(NAdr.M == 0 && NAdr.B == 0 && NAdr.S == 0)){
 				if(NAdr.type == 's' || NAdr.type == 'S'){
-					printf("Check Switch\n");
+					if(i){
+						printf("Check Switch");
+					}
 
 					//printf("Test: %i\n",check_Switch(BA->Adr));
-					//if(!check_Switch(BA->Adr)){
-					//	BA->state = RESERVED;
-					//}
+					if(!check_Switch(BA->Adr)){
+						BA->state = AMBER;
+					}
 				}
 			}
 		
-
-			printf("\n");
+			if(i){
+				printf("\n");
+			}
 		}
 	}
 }
 
 void *do_Magic(){
 	while(!stop){
-	t = clock();
+		printf("Procces loop \t");
+		clock_t t;
+		t = clock();
 		for(int i = 0;i<Adress;i++){
 			//printf("%i: %i:%i:%i\n",i,Adresses[i].M,Adresses[i].B,Adresses[i].S);
 			procces(Adresses[i],1);
@@ -634,15 +643,88 @@ void *do_Magic(){
 		JSON();
 		t = clock() - t;
 		printf ("It took me %d clicks (%f seconds).\n",t,((float)t)/CLOCKS_PER_SEC);
-		printf("\n\n\n");
-		usleep(200);
+		usleep(1000000);
+	}
+}
+
+void *STOP_FUNC(){
+	//char str[10];
+	while(!stop){
+		printf("Type q{Enter} to stop\n");
+		if (feof(stdin)){
+			char c = getc(stdin);
+			if(c == 'q'){
+				stop = 1;
+			}
+		}
+		usleep(1000000);
+	}
+}
+
+void *TRAIN_SIMA(){
+	struct Seg *B = blocks[8][5][1];
+	struct Seg *N = blocks[8][5][1];
+	struct Seg *A[3] = {};
+	int i = 0;
+
+	while(!stop){
+		printf("Train Sim Step (id:%i)\t",pthread_self());
+		N = Next(B->Adr,1+i);
+		if(i > 0){
+			A[i] = Next(B->Adr,i);
+		}
+		printf(" %i:%i:%i\n",N->Adr.M,N->Adr.B,N->Adr.S);
+		N->blocked = 1;
+		usleep(delayA);
+		if(i>0){
+			A[i]->blocked = 0;
+		}else{
+			B->blocked = 0;
+		}
+		usleep(delayA);
+		if(N->Adr.S == 0){
+			i++;
+		}else{
+			B = N;
+			i = 0;
+		}
+	}
+}
+
+void *TRAIN_SIMB(){
+	struct Seg *B2 = blocks[8][2][1];
+	struct Seg *N2 = blocks[8][2][1];
+	struct Seg *A2[3] = {};
+	int i2 = 0;
+
+	while(!stop){
+		printf("Train Sim Step (id:%i)\t",pthread_self());
+		N2 = Next(B2->Adr,1+i2);
+		if(i2 > 0){
+			A2[i2] = Next(B2->Adr,i2);
+		}
+		printf(" %i:%i:%i\n",N2->Adr.M,N2->Adr.B,N2->Adr.S);
+		N2->blocked = 1;
+		usleep(delayB);
+		if(i2>0){
+			A2[i2]->blocked = 0;
+		}else{
+			B2->blocked = 0;
+		}
+		usleep(delayB);
+		if(N2->Adr.S == 0){
+			i2++;
+		}else{
+			B2 = N2;
+			i2 = 0;
+		}
 	}
 }
 
 void main(){
 	blocks[0][0][0] = C_Seg(C_AdrT(0,0,0,'e'),3);
 
-
+/*
 	 Module_1(END_BL,END_BL,C_Adr(5,1,1),C_AdrT(5,2,1,'S'));
 	 Module_2(C_Adr(8,4,1),C_Adr(8,8,1),END_BL,END_BL);
 	 Module_4(C_Adr(5,1,1),C_AdrT(5,5,1,'S'),C_Adr(10,1,1),C_Adr(10,5,1));
@@ -651,25 +733,36 @@ void main(){
 	 Module_7(C_AdrT(6,3,1,'S'));
 	 Module_8(C_Adr(10,4,1),C_Adr(10,8,1),C_Adr(2,1,1),C_Adr(2,4,1));
 	Module_10(C_Adr(4,4,1),C_Adr(4,11,1),C_Adr(8,1,1),C_Adr(8,5,1));
+*/
+
+	Module_1(END_BL,END_BL,C_Adr(3,1,1),C_Adr(3,5,1));
+	Module_2(C_Adr(8,4,1),C_Adr(8,8,1),END_BL,END_BL);
+	Module_3(C_Adr(1,1,1),C_Adr(1,4,1),C_Adr(8,1,1),C_Adr(8,5,1));
+	Module_8(C_Adr(3,4,1),C_Adr(3,11,1),C_Adr(2,1,1),C_Adr(2,4,1));
+	//Module_5(C_Adr(3,1,1),0,C_Adr(2,1,1),0);
 	printf("Adress: %i\n",Adress);
 
-	Switch[5][2][1]->state = 0;
-	Switch[5][5][1]->state = 0;
-	Switch[6][3][1]->state = 0;
+//	Switch[5][2][1]->state = 0;
+//	Switch[5][5][1]->state = 0;
+//	Switch[6][3][1]->state = 0;
 
 	JSON();
 
-	pthread_t tid;
+	pthread_t tid[4];
 
 	printf("Creating Threads");
 
-	pthread_create(&tid, NULL, myThreadFun, NULL);
+	pthread_create(&tid[0], NULL, do_Magic, NULL);
+	pthread_create(&tid[1], NULL, STOP_FUNC, NULL);
+	StartAdr = C_Adr(8,2,1);
+	pthread_create(&tid[2], NULL, TRAIN_SIMA, NULL);
+	StartAdr = C_Adr(8,5,1);
+	pthread_create(&tid[3], NULL, TRAIN_SIMB, NULL);
 
-	printf("Stopping Threads");
-
-	stop = 1;
-
-	pthread_join(tid,NULL);
+	pthread_join(tid[0],NULL);
+	pthread_join(tid[1],NULL);
+	pthread_join(tid[2],NULL);
+	pthread_join(tid[3],NULL);
 
 	//procces(C_Adr(6,2,1),1);
 

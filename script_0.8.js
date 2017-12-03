@@ -93,14 +93,33 @@ function update(){
 			state = Module[3];
 
 			if(state == 0){
-				console.log(M+":"+B+":"+S+" Straight:"+"#M"+M+" #B"+B+" #S"+S+"D");
+				//console.log(M+":"+B+":"+S+" Straight:"+"#M"+M+" #B"+B+" #S"+S+"D");
 				$("#M"+M+" #B"+B+" #S"+S+"D").css("opacity",0); //Straight
 				$("#M"+M+" #B"+B+" #S"+S+"S").css("opacity",1);
 			}else if(state == 1){
-				console.log(M+":"+B+":"+S+" Diverging:"+"#M"+M+" #B"+B+" #S"+S+"D");
+				//console.log(M+":"+B+":"+S+" Diverging:"+"#M"+M+" #B"+B+" #S"+S+"D");
 				$("#M"+M+" #B"+B+" #S"+S+"S").css("opacity",0); //Diverging
 				$("#M"+M+" #B"+B+" #S"+S+"D").css("opacity",1);
 			}
+
+
+			//$("#M"+M+" #B"+B+" #S"+S).css('stroke',color);
+
+			//console.log("SW: "+M+":"+B+":"+S+"  state:"+state);
+		});
+		$.each(test.responseJSON['MO'], function(idxa){
+			var Module = test.responseJSON['MO'][idxa];
+			M = Module[0];
+			B = Module[1];
+			S = Module[2];
+			length = Module[3];
+			state = Module[4];
+
+			for(var i = 0;i<length;i++){
+				$("#M"+M+" #B"+B+" #M"+S+"S"+i).css("opacity",0); //Straight			
+			}
+			console.log(M+":"+B+":"+S+" State "+state+":"+"#M"+M+" #B"+B+" #M"+S+"S"+state);
+			$("#M"+M+" #B"+B+" #M"+S+"S"+state).css("opacity",1);
 
 
 			//$("#M"+M+" #B"+B+" #S"+S).css('stroke',color);

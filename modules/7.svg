@@ -34,18 +34,17 @@
       <path class="L" style="stroke:#ffff00" d="M 0,50 h 5"/>
 
       <path class="L" style="stroke:#ffff00" d="M 64,-10 l 3,0"/>
-  	  <path id="S1D" class="L" style="stroke:#ffff00" d="M 44,11 l 21.5,-21.5"/>
-      <path id="S1S" class="L" style="stroke:#ffff00" d="M 46,10 l 21,0"/>
-  	  <path id="S2D" class="L" style="stroke:#ffff00" d="M 24,31 l 22,-22"/>
-      <path id="S2S" class="L" style="stroke:#ffff00" d="M 26,30 l 21,0"/>
-      <path id="S3D" class="L" style="stroke:#ffff00" d="M 4,51 l 22,-22"/>
-  	  <path id="S3S" class="L" style="stroke:#ffff00" d="M 4,50 l 23,0"/>
-  	  <path id="S4D" class="L" style="stroke:#ffff00" d="M 4,49 l 22,22"/>
-      <path id="S4S" class="L"/>
-  	  <path id="S5D" class="L" style="stroke:#ffff00" d="M 24,69 l 22,22"/>
-      <path id="S5S" class="L" style="stroke:#ffff00" d="M 26,70 l 21,0"/>
-  	  <path id="S6D" class="L" style="stroke:#ffff00" d="M 44,89 l 21.5,21.5"/>
-      <path id="S6S" class="L" style="stroke:#ffff00" d="M 46,90 l 21,0"/>
+  	  <path id="S1S" class="L" style="stroke:#ffff00" d="M 44,11 l 21.5,-21.5"/>
+      <path id="S1D" class="L" style="stroke:#ffff00" d="M 46,10 l 21,0"/>
+  	  <path id="S2S" class="L" style="stroke:#ffff00" d="M 24,31 l 22,-22"/>
+      <path id="S2D" class="L" style="stroke:#ffff00" d="M 26,30 l 21,0"/>
+      <path id="M3S1" class="L" style="stroke:#ffff00" d="M 4,51 l 22,-22"/>
+  	  <path id="M3S2" class="L" style="stroke:#ffff00" d="M 4,50 l 23,0"/>
+  	  <path id="M3S3" class="L" style="stroke:#ffff00" d="M 4,49 l 22,22"/>
+  	  <path id="S5S" class="L" style="stroke:#ffff00" d="M 24,69 l 22,22"/>
+      <path id="S5D" class="L" style="stroke:#ffff00" d="M 26,70 l 21,0"/>
+  	  <path id="S6S" class="L" style="stroke:#ffff00" d="M 44,89 l 21.5,21.5"/>
+      <path id="S6D" class="L" style="stroke:#ffff00" d="M 46,90 l 21,0"/>
       <path class="L" style="stroke:#ffff00" d="M 64,110 l 3,0"/>
 	  
     </g>

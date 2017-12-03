@@ -129,7 +129,7 @@
       <rect x="600" y="50" width="40" height="60" style="fill:rgba(0,0,0,0);" onmouseenter="console.log('Enter');" onmouseleave="console.log('Exit');"/>
     </g>
     <g id="B11" class="S1" onmouseenter="Show(this,$(this))" onmouseleave="Hide(this,$(this))">
-      <path class="L" style="stroke:#ff00ff" d="M 634,60 h 161"/>
+      <path class="L" style="stroke:#ff00ff" d="M 654,60 h 141"/>
     </g>
   </g>
   <g><!-- Text blocks -->

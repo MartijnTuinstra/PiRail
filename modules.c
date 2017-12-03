@@ -121,13 +121,15 @@ void Module_7(struct adr L){
 	//Rangeer
 	int m = 7;
 	Create_Switch(C_Adr(m,1,1),C_AdrT(m,1,2,'s'),C_Adr(m,3,1),C_Adr(m,2,1),1);
-	Create_Switch(C_Adr(m,1,2),C_AdrT(m,1,3,'s'),C_Adr(m,4,1),C_AdrT(m,1,1,'S'),1);
+	Create_Switch(C_Adr(m,1,2),C_AdrT(m,1,3,'m'),C_Adr(m,4,1),C_AdrT(m,1,1,'S'),1);
 
-	Create_Switch(C_Adr(m,1,3),L,C_AdrT(m,1,2,'S'),C_AdrT(m,1,4,'S'),1);
-	Create_Switch(C_Adr(m,1,4),C_AdrT(m,1,3,'s'),C_AdrT(m,1,5,'S'),C_Adr(m,5,1),1);
+	struct adr * A[10] = {&L,&L,&L,NULL,NULL,NULL,NULL,NULL,NULL,NULL};
+	struct adr * B[10] = {c_AdrT(m,1,2,'S'),c_Adr(m,5,1),c_AdrT(m,1,5,'S'),NULL,NULL,NULL,NULL,NULL,NULL,NULL};
 
-	Create_Switch(C_Adr(m,1,5),C_AdrT(m,1,4,'s'),C_Adr(m,6,1),C_AdrT(m,1,6,'S'),1);
-	Create_Switch(C_Adr(m,1,6),C_AdrT(m,1,5,'s'),C_Adr(m,7,1),C_Adr(m,8,1),1);
+	Create_Moduls(C_Adr(m,1,3),B,A,3);
+
+	Create_Switch(C_Adr(m,1,4),C_AdrT(m,1,3,'m'),C_Adr(m,6,1),C_AdrT(m,1,5,'S'),1);
+	Create_Switch(C_Adr(m,1,5),C_AdrT(m,1,4,'s'),C_Adr(m,7,1),C_Adr(m,8,1),1);
 
 	Create_Segment(C_Adr(m,2,1),C_AdrT(m,1,1,'s'),C_Adr(m,2,2),0xFA,0,0,1);
 	Create_Segment(C_Adr(m,2,2),C_Adr(m,2,1),C_Adr(m,2,3),0xFA,0,0,1);
@@ -150,28 +152,28 @@ void Module_7(struct adr L){
 	Create_Segment(C_Adr(m,4,5),C_Adr(m,4,4),C_Adr(m,4,6),0xFA,0,0,1);
 	Create_Segment(C_Adr(m,4,6),C_Adr(m,4,5),END_BL,0xFA,0,0,1);
 
-	Create_Segment(C_Adr(m,5,1),C_AdrT(m,1,4,'s'),C_Adr(m,5,2),0xFA,0,0,1);
+	Create_Segment(C_Adr(m,5,1),C_AdrT(m,1,3,'m'),C_Adr(m,5,2),0xFA,0,0,1);
 	Create_Segment(C_Adr(m,5,2),C_Adr(m,5,1),C_Adr(m,5,3),0xFA,0,0,1);
 	Create_Segment(C_Adr(m,5,3),C_Adr(m,5,2),C_Adr(m,5,4),0xFA,0,0,1);
 	Create_Segment(C_Adr(m,5,4),C_Adr(m,5,3),C_Adr(m,5,5),0xFA,0,0,1);
 	Create_Segment(C_Adr(m,5,5),C_Adr(m,5,4),C_Adr(m,5,6),0xFA,0,0,1);
 	Create_Segment(C_Adr(m,5,6),C_Adr(m,5,5),END_BL,0xFA,0,0,1);
 
-	Create_Segment(C_Adr(m,6,1),C_AdrT(m,1,5,'s'),C_Adr(m,6,2),0xFA,0,0,1);
+	Create_Segment(C_Adr(m,6,1),C_AdrT(m,1,4,'s'),C_Adr(m,6,2),0xFA,0,0,1);
 	Create_Segment(C_Adr(m,6,2),C_Adr(m,6,1),C_Adr(m,6,3),0xFA,0,0,1);
 	Create_Segment(C_Adr(m,6,3),C_Adr(m,6,2),C_Adr(m,6,4),0xFA,0,0,1);
 	Create_Segment(C_Adr(m,6,4),C_Adr(m,6,3),C_Adr(m,6,5),0xFA,0,0,1);
 	Create_Segment(C_Adr(m,6,5),C_Adr(m,6,4),C_Adr(m,6,6),0xFA,0,0,1);
 	Create_Segment(C_Adr(m,6,6),C_Adr(m,6,5),END_BL,0xFA,0,0,1);
 
-	Create_Segment(C_Adr(m,7,1),C_AdrT(m,1,6,'s'),C_Adr(m,7,2),0xFA,0,0,1);
+	Create_Segment(C_Adr(m,7,1),C_AdrT(m,1,5,'s'),C_Adr(m,7,2),0xFA,0,0,1);
 	Create_Segment(C_Adr(m,7,2),C_Adr(m,7,1),C_Adr(m,7,3),0xFA,0,0,1);
 	Create_Segment(C_Adr(m,7,3),C_Adr(m,7,2),C_Adr(m,7,4),0xFA,0,0,1);
 	Create_Segment(C_Adr(m,7,4),C_Adr(m,7,3),C_Adr(m,7,5),0xFA,0,0,1);
 	Create_Segment(C_Adr(m,7,5),C_Adr(m,7,4),C_Adr(m,7,6),0xFA,0,0,1);
 	Create_Segment(C_Adr(m,7,6),C_Adr(m,7,5),END_BL,0xFA,0,0,1);
 
-	Create_Segment(C_Adr(m,8,1),C_AdrT(m,1,6,'s'),C_Adr(m,8,2),0xFA,0,0,1);
+	Create_Segment(C_Adr(m,8,1),C_AdrT(m,1,5,'s'),C_Adr(m,8,2),0xFA,0,0,1);
 	Create_Segment(C_Adr(m,8,2),C_Adr(m,8,1),C_Adr(m,8,3),0xFA,0,0,1);
 	Create_Segment(C_Adr(m,8,3),C_Adr(m,8,2),C_Adr(m,8,4),0xFA,0,0,1);
 	Create_Segment(C_Adr(m,8,4),C_Adr(m,8,3),C_Adr(m,8,5),0xFA,0,0,1);
@@ -192,7 +194,6 @@ void Module_8(struct adr L1,struct adr L2,struct adr R1,struct adr R2){
 	Create_Segment(C_Adr(m,7,1),C_Adr(m,6,1),C_Adr(m,8,1),0xFA,0,1,1);
 	Create_Segment(C_Adr(m,8,1),C_Adr(m,7,1),R2,0xFA,0,1,1);
 }
-
 
 void Module_10(struct adr L1,struct adr L2,struct adr R1,struct adr R2){
 	//Stad

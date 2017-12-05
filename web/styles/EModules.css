@@ -353,7 +353,7 @@
 }
 
 #LayoutContextMenu .header {
-	width: calc(100% + 20px);
+	width: calc(100% + 10px);
 	height: 20px;
 	line-height: 20px;
 
@@ -545,4 +545,17 @@
 	height:16px;
 	cursor:pointer;
 	margin: 3px;
+}
+
+
+/**********************************/
+/*           Edit Layout          */
+/**********************************/
+
+#LayoutContainer #toolbar .tool .tool_button.active {
+	fill: green;
+}
+
+#LayoutContainer #toolbar .tool .tool_button {
+	fill: #ddd;
 }

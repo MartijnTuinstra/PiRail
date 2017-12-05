@@ -856,7 +856,16 @@
                   <text x="25" y="75" text-anchor="middle" style="font-family:sans-serif;font-weight:bold;fill:white;">Curve Rail</text>
                 </g>
               </g>
-              <g class="tool" part="S3"transform="translate(460,5)" style="cursor:move;"><!-- 3 Light Signal -->
+              <g class="tool" part="CRail" transform="translate(460,5)" style="cursor:pointer;"><!-- Auto Connect -->
+                <path class="tool_button" d="M 0,5 a 5,5 1,0,1 5,-5 h 40 a 5,5 1,0,1 5,5 v 40 a 5,5 1,0,1 -5,5 h -40 a 5,5 1,0,1 -5,-5 Z" style="stroke-width:0"/>
+                <path xmlns="http://www.w3.org/2000/svg" d="M40.08,6.42a5.52,5.52,0,0,0-5.4,6.71l-7.09,3.55a5.53,5.53,0,1,0-2.92,9l3.39,5.09a5.51,5.51,0,0,0-1.77,5L16.22,37.48a5.53,5.53,0,1,0,.1,2.74l11.15-1.86a5.53,5.53,0,1,0,3-8.86L27.1,24.41a5.52,5.52,0,0,0,1.72-5.3l7.09-3.55a5.52,5.52,0,1,0,4.18-9.14ZM10.92,41.86A2.81,2.81,0,1,1,13.73,39a2.81,2.81,0,0,1-2.81,2.81Zm23.64-7a2.81,2.81,0,1,1-2.81-2.81,2.81,2.81,0,0,1,2.81,2.81ZM20.61,20.29a2.81,2.81,0,1,1,2.81,2.81,2.81,2.81,0,0,1-2.81-2.81Zm19.47-5.53A2.81,2.81,0,1,1,42.89,12a2.81,2.81,0,0,1-2.81,2.81Zm0,0" style="fill:black;stroke-width:0.5px;"/>
+
+                <g class="tooltip" style="cursor:default;">
+                  <path d="M -80,56 a 5,5 1,0,1 5,-5 h 96 l 4,-4 l 4,4 h 96 a 5,5 1,0,1 5,5 v 30 a 5,5 1,0,1 -5,5 h -200 a 5,5 1,0,1 -5,-5 Z" style="stroke-width:0;fill:grey;"/>
+                  <text x="25" y="75" text-anchor="middle" style="font-family:sans-serif;font-weight:bold;fill:white;">Curve Rail</text>
+                </g>
+              </g>
+              <g class="tool" part="S3" transform="translate(520,5)" style="cursor:move;"><!-- 3 Light Signal -->
                 <path d="M 0,5 a 5,5 1,0,1 5,-5 h 40 a 5,5 1,0,1 5,5 v 40 a 5,5 1,0,1 -5,5 h -40 a 5,5 1,0,1 -5,-5 Z" style="stroke-width:0;fill:#ddd;"/>
                 <path d="M 40,20 v 10 a 5,5 0,0,1 -10,0 v -10 a 5,5 0,0,1 10,0" style="stroke-width:0px;stroke:black;fill:black;"/>
                 <circle cx="35" cy="20" r="2" style="stroke-width:0px;fill:red;"/>
@@ -870,7 +879,7 @@
                   <text x="25" y="75" text-anchor="middle" style="font-family:sans-serif;font-weight:bold;fill:white;">Generic 3 Light Signal</text>
                 </g>
               </g>
-              <g class="tool" part="S2" transform="translate(520,5)" style="cursor:move;"><!-- 2 Light Signal -->
+              <g class="tool" part="S2" transform="translate(580,5)" style="cursor:move;"><!-- 2 Light Signal -->
                 <path d="M 0,5 a 5,5 1,0,1 5,-5 h 40 a 5,5 1,0,1 5,5 v 40 a 5,5 1,0,1 -5,5 h -40 a 5,5 1,0,1 -5,-5 Z" style="stroke-width:0;fill:#ddd;"/>
                 <path d="M 40,25 v 5 a 5,5 0,0,1 -10,0 v -5 a 5,5 0,0,1 10,0" style="stroke-width:0px;stroke:black;fill:black;"/>
                 <circle cx="35" cy="25" r="2" style="stroke-width:0px;fill:red;"/>

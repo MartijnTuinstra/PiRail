@@ -1,5 +1,6 @@
 
-LayoutDragging = {"x1":0,"y1":0,"target":undefined,"parent":undefined,"Box":undefined,"Dropable":0,"Keys":[]};
+LayoutDragging = {"x1":0,"y1":0,"target":undefined,"parent":undefined,"Box":undefined,
+                  "Dropable":0,"Keys":[],"AC_En":false,"AC_Stage":0,"AC_Elements":[],"AC_Click":false};
 
 // Converts from degrees to radians.
 Math.radians = function(degrees) {
@@ -132,6 +133,10 @@ function Layout_createPart(evt){
   part = $(target).attr("part");
   console.log(xy);
 
+  if(LayoutDragging.AC_En && part != "CRail"){
+    Layout_AC_Abort();
+  }
+
   var box;
   var box_childs = [];
   var part_nr = 0;
@@ -183,6 +188,14 @@ function Layout_createPart(evt){
 
       EditObj.Layout.Setup.Nodes[part_nr] = {"type":"SwN","Connectors":2,"heading":180};
       break;
+    case "CRail":
+      if($('.tool_button',target).hasClass('active')){
+        Layout_AC_Abort();
+      }else{
+        Layout_AC_Init();
+      }
+      return;
+      break;
   }
 
   $.each(box_childs,function(index,element){
@@ -211,8 +224,8 @@ function Layout_createPart(evt){
 
 function Layout_dragPart(evt){
 
-  //If right mouse button????
-  if(evt.which == 3){
+  //If right mouse button???? or if Auto_Complete is enabled
+  if(evt.which == 3 || LayoutDragging.AC_En){
     return false;
   }
 
@@ -368,6 +381,7 @@ function Layout_dragEnd(){
 }
 
 function Layout_deleteFAnchor(){
+  Drop = 0;
   transfrom_str = LayoutDragging.parent.attr("transform").split(' ');
 
   translation = transfrom_str[0].slice(10,-1).split(',');
@@ -668,6 +682,214 @@ function InBounds(x,min,max){
   }
 }
 
+function Layout_AC_MouseMoveCheck(evt){
+  Offset = $('#LayoutContainer svg').offset();
+  evt.clientX;
+  pos = {"x":(evt.pageX - Offset.left),"y":(evt.pageY - Offset.top)};
+  enable_Click = false;
+  $.each(EditObj.Layout.FreeAnchors,function(index,element){
+    allreadyDone = false;
+    $.each(LayoutDragging.AC_Elements,function(index2,element2){
+      if(element == element2){
+        allreadyDone = true;
+      }
+    })
+    if((Math.pow(pos.x - element.x,2) + Math.pow(pos.y - element.y,2)) < 100 && !allreadyDone){
+      enable_Click = true;
+      element.element.css("fill","orange");
+    }else if(!allreadyDone){
+      element.element.css("fill","red");
+    }
+  });
+  if(enable_Click && !LayoutDragging.AC_Click){
+    $('#LayoutContainer svg').on("click",Layout_AC_MouseClick);
+    LayoutDragging.AC_Click = true;
+  }else if(!enable_Click && LayoutDragging.AC_Click){
+    $('#LayoutContainer svg').off("click",Layout_AC_MouseClick);
+    LayoutDragging.AC_Click = false;
+  }
+}
+
+function Layout_AC_MouseClick(evt){
+  set = false;
+  $.each(EditObj.Layout.FreeAnchors,function(index,element){
+    if((Math.pow(pos.x - element.x,2) + Math.pow(pos.y - element.y,2)) < 100 && !set){
+      element.element.css("fill","green");
+      LayoutDragging.AC_Elements.push(element);
+      LayoutDragging.AC_Stage++;
+      set = true;
+    }
+  });
+  $('#LayoutContainer svg').off("click",Layout_AC_MouseClick);
+  LayoutDragging.AC_Click = false;
+
+  if(LayoutDragging.AC_Stage == 2){
+    console.log("Start Auto Complete");
+    Layout_AC_Run();
+  }
+}
+
+function Layout_AC_Init(){
+  LayoutDragging.AC_En = true;
+  $.each(LayoutDragging.AC_Elements,function(index,element){
+    $(element).css("fill","red");
+  });
+  $('#LayoutContainer svg').on("mousemove",Layout_AC_MouseMoveCheck);
+  $('.tool_button','#LayoutContainer #toolbar').toggleClass('active');
+  LayoutDragging.AC_En = true;
+}
+
+function Layout_AC_Abort(){
+  $('#LayoutContainer svg').off("mousemove",Layout_AC_MouseMoveCheck);
+  if(LayoutDragging.AC_Click){
+    $('#LayoutContainer svg #Drawing').off("click",Layout_AC_MouseClick);
+  }
+  if(LayoutDragging.AC_Stage != 0){
+    $.each(LayoutDragging.AC_Elements,function(index,element){
+      element.element.css("fill","red");
+    });
+    LayoutDragging.AC_Elements = [];
+    LayoutDragging.AC_Stage = 0;
+  }
+  $('.tool_button','#LayoutContainer #toolbar').toggleClass('active');
+  LayoutDragging.AC_En = false;
+}
+
+function Layout_AC_Finish(){
+  $('#LayoutContainer svg').off("mousemove",Layout_AC_MouseMoveCheck);
+  if(LayoutDragging.AC_Click){
+    $('#LayoutContainer svg #Drawing').off("click",Layout_AC_MouseClick);
+  }
+  if(LayoutDragging.AC_Stage != 0){
+    $.each(LayoutDragging.AC_Elements,function(index,element){
+      element.element.css("fill","red");
+    });
+    LayoutDragging.AC_Elements = [];
+    LayoutDragging.AC_Stage = 0;
+  }
+}
+
+function Layout_AC_Run(){
+  points = LayoutDragging.AC_Elements;
+  points[0].r = parseFloat(points[0].element.attr("_r")) + parseFloat(points[0].element.parent().attr("transform").split(' ')[1].slice(7,-1));
+  points[1].r = parseFloat(points[1].element.attr("_r")) + parseFloat(points[1].element.parent().attr("transform").split(' ')[1].slice(7,-1));
+  console.log("Point 1: {X:"+points[0].x+",Y:"+points[0].y+",R:"+points[0].r+"}");
+  console.log("Point 2: {X:"+points[1].x+",Y:"+points[1].y+",R:"+points[1].r+"}");
+
+  angle_diff = Math.abs(points[0].r - points[1].r) % 360;
+  if(angle_diff >= 45 && angle_diff <= 315 && angle_diff != 180){
+    console.log("Angle difference: "+((points[0].r - points[1].r) % 360));
+    a = {"first":{},"second":{}};
+    b = {"first":{},"second":{}};
+    a.first.x = points[0].x;a.first.y = points[0].y;
+    a.second.x = points[0].x + 5 * Math.cos(Math.radians(points[0].r));
+    a.second.y = points[0].y + 5 * Math.sin(Math.radians(points[0].r));
+    b.first.x = points[1].x;b.first.y = points[1].y;
+    b.second.x = points[1].x + 5 * Math.cos(Math.radians(points[1].r));
+    b.second.y = points[1].y + 5 * Math.sin(Math.radians(points[1].r));
+
+    inter_pos = intersection2(a,b);
+
+    console.log(b.second);
+
+    line1 = Math.sqrt(Math.pow(a.first.x - inter_pos.x,2)+Math.pow(a.first.y - inter_pos.y,2));
+    line2 = Math.sqrt(Math.pow(b.first.x - inter_pos.x,2)+Math.pow(b.first.y - inter_pos.y,2));
+
+    if(line1 < line2){
+      length = line2 - line1;
+      node = {"first":{},"second":{}};
+      node.first = {"x":points[1].x + length * Math.cos(Math.radians(points[1].r)),"y":points[1].y + length * Math.sin(Math.radians(points[1].r))};
+
+      if(angle_diff < 180){
+        node.second = {"x":node.first.x + 5 * Math.cos(Math.radians(points[1].r-90)),"y":node.first.y + 5 * Math.sin(Math.radians(points[1].r-90))};
+        a.second.x = points[0].x + 5 * Math.cos(Math.radians(points[0].r-90));
+        a.second.y = points[0].y + 5 * Math.sin(Math.radians(points[0].r-90));
+      }else{
+        node.second = {"x":node.first.x + 5 * Math.cos(Math.radians(points[1].r+90)),"y":node.first.y + 5 * Math.sin(Math.radians(points[1].r+90))};
+        a.second.x = points[0].x + 5 * Math.cos(Math.radians(points[0].r+90));
+        a.second.y = points[0].y + 5 * Math.sin(Math.radians(points[0].r+90));
+      }
+
+      console.log(b.second);
+      circle_center = intersection2(node,a);
+
+      radius = Math.sqrt(Math.pow(node.first.x - circle_center.x,2)+Math.pow(node.first.y - circle_center.y,2));
+
+      //Create Custom Part
+      part_nr = $("#LayoutContainer g#Rail").children().length;
+      box = CreateSvgElement("g",{"nr":part_nr,"part":part,"transform":"translate("+a.first.x+","+a.first.y+") rotate(0)"});
+      box_childs = [];
+
+      factor = 0;
+      if(((points[0].r - points[1].r) % 360) < -180 || ((points[0].r - points[1].r) % 360) > 0){
+        factor = 1;
+      }
+
+
+      box_childs[0] = CreateSvgElement("path",{"d":"M 0,0 a "+radius+","+radius+" 0,0,"+factor+" "+(node.first.x-a.first.x)+","+(node.first.y-a.first.y)+" l "+(b.first.x-node.first.x)+","+(b.first.y-node.first.y),"style":"stroke-width:6px;"});
+      box_childs[1] = CreateSvgElement("path",{"d":"M 0,0 a "+radius+","+radius+" 0,0,"+factor+" "+(node.first.x-a.first.x)+","+(node.first.y-a.first.y)+" l "+(b.first.x-node.first.x)+","+(b.first.y-node.first.y),"style":"stroke-width:10px;stroke-opacity:0.2;stroke:black;cursor:move;"});
+      box_childs[2] = CreateSvgElement("circle",{"class":"Attach1","_r":points[0].r-180,"cx":0,"cy":0,"r":3,"style":"fill:green;"});
+      box_childs[3] = CreateSvgElement("circle",{"class":"Attach2","_r":points[1].r-180,"cx":(b.first.x-node.first.x)+(node.first.x-a.first.x),"cy":(node.first.y-a.first.y)+(b.first.y-node.first.y),"r":3,"style":"fill:green;"});
+
+      $.each(box_childs,function(index,element){
+        box.appendChild(element);
+      });
+
+      $('#LayoutContainer #Drawing').append(box);
+
+      $('#LayoutContainer g#Drawing g[nr='+part_nr+']').bind("mousedown",Layout_dragPart);
+    }else{
+      length = line1 - line2;
+      node = {"first":{},"second":{}};
+      node.first = {"x":points[0].x + length * Math.cos(Math.radians(points[0].r)),"y":points[0].y + length * Math.sin(Math.radians(points[0].r))};
+
+      if(angle_diff < 180){
+        node.second = {"x":node.first.x + 5 * Math.cos(Math.radians(points[0].r-90)),"y":node.first.y + 5 * Math.sin(Math.radians(points[0].r-90))};
+        b.second.x = points[1].x + 5 * Math.cos(Math.radians(points[1].r+90));
+        b.second.y = points[1].y + 5 * Math.sin(Math.radians(points[1].r+90));
+      }else{
+        node.second = {"x":node.first.x + 5 * Math.cos(Math.radians(points[0].r+90)),"y":node.first.y + 5 * Math.sin(Math.radians(points[0].r+90))};
+        b.second.x = points[1].x + 5 * Math.cos(Math.radians(points[1].r-90));
+        b.second.y = points[1].y + 5 * Math.sin(Math.radians(points[1].r-90));
+      }
+
+      console.log(b.second);
+      circle_center = intersection2(node,b);
+
+      radius = Math.sqrt(Math.pow(node.first.x - circle_center.x,2)+Math.pow(node.first.y - circle_center.y,2))
+
+      //Create Custom Part
+      part_nr = $("#LayoutContainer g#Rail").children().length;
+      box = CreateSvgElement("g",{"nr":part_nr,"part":part,"transform":"translate("+a.first.x+","+a.first.y+") rotate(0)"});
+      box_childs = [];
+
+      factor = 0;
+      if(((points[0].r - points[1].r) % 360) > 180 || ((points[0].r - points[1].r) % 360) < 0){
+        factor = 1;
+      }
+
+      box_childs[0] = CreateSvgElement("path",{"d":"M 0,0 l "+(node.first.x-a.first.x)+","+(node.first.y-a.first.y)+" a "+radius+","+radius+" 0,0,"+factor+" "+(b.first.x-node.first.x)+","+(b.first.y-node.first.y),"style":"stroke-width:6px;"});
+      box_childs[1] = CreateSvgElement("path",{"d":"M 0,0 l "+(node.first.x-a.first.x)+","+(node.first.y-a.first.y)+" a "+radius+","+radius+" 0,0,"+factor+" "+(b.first.x-node.first.x)+","+(b.first.y-node.first.y),"style":"stroke-width:10px;stroke-opacity:0.2;stroke:black;cursor:move;"});
+      box_childs[2] = CreateSvgElement("circle",{"class":"Attach1","_r":points[0].r-180,"cx":0,"cy":0,"r":3,"style":"fill:green;"});
+      box_childs[3] = CreateSvgElement("circle",{"class":"Attach2","_r":points[1].r-180,"cx":(b.first.x-node.first.x)+(node.first.x-a.first.x),"cy":(node.first.y-a.first.y)+(b.first.y-node.first.y),"r":3,"style":"fill:green;"});
+
+      $.each(box_childs,function(index,element){
+        box.appendChild(element);
+      });
+
+      $('#LayoutContainer #Drawing').append(box);
+
+      $('#LayoutContainer g#Drawing g[nr='+part_nr+']').bind("mousedown",Layout_dragPart);
+    }
+    return Layout_AC_Finish();
+  }else if(angle_diff == 180){
+    console.log("Straight Line!! EASY");
+  }else{
+    alert("Failed\nTo Large Angle");
+  }
+  Layout_AC_Abort();
+}
+
 var LayoutEdit = {"tooltype":"mouse","tool":undefined,"toolsize":"1x1","rot":0,"contextmenu":false};
 
 EditObj.Layout.gridsize = {"x":42,"y":42};
@@ -683,7 +905,7 @@ parts_list.RS.part = [
           {"element":"line","attr":{"x1":0,"y1":0,"x2":"steps[length]","y2":0,"style":"'stroke-width:6px;'"}},
           {"element":"line","attr":{"x1":0,"y1":0,"x2":"steps[length]","y2":0,"style":"'stroke-width:10px;stroke-opacity:0.2;stroke:black;cursor:move;'"}},
           {"element":"circle","attr":{"class":"'Attach1'","_r":180,"cx":0,"cy":0,"r":3,"style":"'fill:red;'"}},
-          {"element":"circle","attr":{"class":"'Attach2'","_r":  0,"cx":"steps[length]","cy":0,"r":3,"style":"'fill:red;'"}},
+          {"element":"circle","attr":{"class":"'Attach2'","_r":  0,"cx":"steps[length]","cy":0,"r":3,"style":"'fill:red;'"}}
         ];
 
 parts_list.RC = {"angle_steps":[],"radius_steps":[],"limits":{},"part":[]};
@@ -701,36 +923,93 @@ parts_list.RC.part = [
           {"element":"circle","attr":{"class":"'Attach1'","_r":   180,"cx":    0,"cy":    0,"r":3,"style":"'fill:red;'"}},
           {"element":"circle","attr":{"class":"'Attach2'","_r":"-Math.degrees(a_steps[angle])","cx":"Math.sin(a_steps[angle])*r_steps[radius]","cy":"r_steps[radius]*(Math.cos(a_steps[angle])-1)","r":3,"style":"'fill:red;'"}}
         ];
-/*
-function Layout_selectTool(evt){
-  var tool;
-  if($(evt.target).is('svg')){
-    tool = $(evt.target);
-  }else{
-    tool = $(evt.target.parentNode);
-  }
-  console.log(tool);
-  console.log(tool.attr("tool"));
-  $.each($('svg',tool.parent().parent()),function(index,element){
-    $(element).removeClass("active");
-  });
-  tool.toggleClass("active");
-  if(tool.attr("tool") != "tot"){
-    LayoutEdit.tool = tool.attr("tool");
-    if(typeof tool.attr("size") === undefined || tool.attr("size") == undefined){
-      LayoutEdit.toolsize = "1x1";
-    }else{
-      LayoutEdit.toolsize = tool.attr("size");
-    }
-  }else{
-    LayoutEdit.tooltype = tool.attr("type");
-    if(LayoutEdit.tooltype == "edit"){
-      $('#Layout #small_grid').css("display","block");
-    }else{
-      $('#Layout #small_grid').css("display","none");
-    }
-  }
+
+
+vector = {};
+vector.dot = function (u, v){
+  return u.x * v.x + u.y * v.y;   
 }
+
+vector.norm2 = function (v){
+  return v.x * v.x + v.y * v.y;
+}
+
+vector.norm = function (v){
+  return sqrt(vector.norm2(v));
+}
+
+vector.cross = function (b, c) // cross product
+{
+  return {"x":(b.y * c.x - c.y * b.x),"y":(b.x * c.y - c.x * b.y)};
+}
+
+function line(p1, p2){
+  A = (p.first.y - p.second.y);
+  B = (p.second.x - p.first.x);
+  C = -(p.first.x*p.second.y - p.second.x*p1.y);
+  return [A, B, C];
+}
+
+function intersection3(L1, L2){
+    D  = L1[0] * L2[1] - L1[1] * L2[0];
+    Dx = L1[2] * L2[1] - L1[1] * L2[2];
+    Dy = L1[0] * L2[2] - L1[2] * L2[0];
+    if(D != 0){
+      x = Dx / D;
+      y = Dy / D;
+      return [x,y];
+    }else{
+      return False;
+    }
+}
+
+function intersection2(L1,L2){
+  A1 = (L1.first.y - L1.second.y);
+  B1 = (L1.second.x - L1.first.x);
+  C1 = -(L1.first.x*L1.second.y - L1.second.x*L1.first.y);
+
+  A2 = (L2.first.y - L2.second.y);
+  B2 = (L2.second.x - L2.first.x);
+  C2 = -(L2.first.x*L2.second.y - L2.second.x*L2.first.y);
+
+  D  = A1 * B2 - B1 * A2;
+  Dx = C1 * B2 - B1 * C2;
+  Dy = A1 * C2 - C1 * A2;
+  if(D != 0){
+    x = Dx / D;
+    y = Dy / D;
+  }else{
+    return False;
+  }
+
+  return {"x":x,"y":y};
+}
+
+function intersection(a, b)
+// http://mathworld.wolfram.com/Line-LineIntersection.html
+// in 3d; will also work in 2d if z components are 0
+{
+  da = {"x":(a.second.x - a.first.x),"y":(a.second.y - a.first.y)}; 
+  db = {"x":(b.second.x - b.first.x),"y":(b.second.y - b.first.y)}; 
+  ac = (da.y*a.first.x) + (da.x*a.first.y); 
+  bc = (db.y*b.first.x) + (db.x*b.first.y);
+
+  det = da.y*db.x - da.x*db.y;
+  if(det != 0){
+    x = (db.x*ac - da.x*bc)/det;
+    y = (da.y*bc - db.y*ac)/det;
+  }else{
+    return {};
+  }
+
+  if(x < 0 || y < 0){
+    console.log("No intersection of ray");
+    return {};
+  }
+
+  return {"x":x,"y":y};
+}
+/*
 
 function Layout_Click(evt){
   if(LayoutEdit.contextmenu == true){
@@ -741,293 +1020,6 @@ function Layout_Click(evt){
 
   if(LayoutEdit.tooltype == "mouse"){
     Layout_placeRail(evt);
-  }
-}
-
-function scroll_Toolbox(evt){
-  console.log(evt);
-  console.log($(evt.target));
-  element = $(evt.target);
-  while(true){
-    if(element.is("div") && element[0].id == "Toolitems"){
-      break;
-    }else if(element.is("body")){
-      return false;
-    }else{
-      element = element.parent();
-    }
-  }
-  console.log(element);
-  var margin = parseInt(element.css("margin-left").slice(0,-2));
-  margin -= evt.deltaY * 0.25;
-  margin -= evt.deltaX * 0.25;
-  if(margin > 0){
-    margin = 0;
-  }else if(margin < -(element.width() - element.parent().width())){
-    margin = -(element.width() - element.parent().width());
-  }
-  element.css("margin-left",margin+"px")
-  return false;
-}
-
-function Layout_placeRail(evt){
-  //User must have selected a tool
-  if(LayoutEdit.tool == undefined){
-    return;
-  }
-
-  console.log("It Works!!!");
-  console.log("X:"+evt.clientX+"\tY:"+evt.clientY);
-  var pos = $(evt.target.parentNode).offset();
-  console.log("dX:"+(evt.clientX-pos.left)+"\tdY"+(evt.clientY-pos.top));
-
-  var gX = parseInt((evt.clientX-pos.left)/EditObj.Layout.gridsize.x);
-  var gY = parseInt((evt.clientY-pos.top) /EditObj.Layout.gridsize.y);
-
-  var lX = gX * EditObj.Layout.gridsize.x;
-  var lY = gY * EditObj.Layout.gridsize.y;
-  var rot = LayoutEdit.rot;
-
-  if(evt.shiftKey && !evt.ctrlKey){
-    Layout_Empty(gX,gY,lX,lY);
-    return;
-  }
-  if(!evt.shiftKey && evt.ctrlKey){
-    Layout_Rotate(gX,gY,1);
-    return;
-  }
-  if(evt.shiftKey && evt.ctrlKey){
-    Layout_Rotate(gX,gY,-1);
-    return;
-  }
-
-  if(LayoutEdit.toolsize == "1x1"){
-    $('#LayoutContainer .grid').on("mousemove",Layout_DrawRail);
-    $('#LayoutContainer .grid').on("mouseup",Layout_drawRailUnbind);
-
-    if(typeof EditObj.Layout.grid[gX] === 'undefined'){
-      EditObj.Layout.grid[gX] = [];
-    }
-    if(typeof EditObj.Layout.grid[gX][gY] === 'undefined'){
-      EditObj.Layout.grid[gX][gY] = {"type":LayoutEdit.tool,"rotation":0,"size":LayoutEdit.toolsize,"id":{"block":0,"switch":0,"signal":0}};
-    }else{
-      if(EditObj.Layout.grid[gX][gY].type != undefined){
-        if(EditObj.Layout.grid[gX][gY].type != LayoutEdit.tool){
-          //Remove current Item
-          Layout_Empty(gX,gY,lX,lY);
-        }else{
-          return;
-        }
-      }
-      EditObj.Layout.grid[gX][gY] = {"type":LayoutEdit.tool,"rotation":0,"size":LayoutEdit.toolsize,"id":{"block":0,"switch":0,"signal":0}};
-    }
-
-  }else{
-    if(typeof EditObj.Layout.grid[gX] === 'undefined'){
-      EditObj.Layout.grid[gX] = [];
-    }
-    if(typeof EditObj.Layout.grid[gX][gY] === 'undefined'){
-      EditObj.Layout.grid[gX][gY] = {"type":LayoutEdit.tool,"rotation":0,"size":LayoutEdit.toolsize,"id":{"block":0,"switch":0,"signal":0},"parent":{"x":gX,"y":gY}};
-    }else{
-      if(EditObj.Layout.grid[gX][gY].type != undefined){
-        if(EditObj.Layout.grid[gX][gY].type != LayoutEdit.tool){
-          //Remove current Item
-          Layout_Empty(gX,gY,gX * EditObj.Layout.gridsize.x,gY * EditObj.Layout.gridsize.y);
-        }else{
-          return;
-        }
-      }
-      EditObj.Layout.grid[gX][gY] = {"type":LayoutEdit.tool,"rotation":0,"size":LayoutEdit.toolsize,"id":{"block":0,"switch":0,"signal":0},"parent":{"x":gX,"y":gY}};
-    }
-
-    var Size = LayoutEdit.toolsize.split("x");
-    Size[0] = parseInt(Size[0]);
-    Size[1] = parseInt(Size[1]);
-    var iX = gX + Size[0] - 1;
-    var iY = gY + Size[1] - 1;
-
-    if(typeof EditObj.Layout.grid[iX] === 'undefined'){
-      EditObj.Layout.grid[iX] = [];
-    }
-    if(typeof EditObj.Layout.grid[iX][iY] === 'undefined'){
-      EditObj.Layout.grid[iX][iY] = {"type":LayoutEdit.tool,"rotation":0,"size":LayoutEdit.toolsize,"id":{"block":0,"switch":0,"signal":0},"parent":{"x":gX,"y":gY}};
-    }else{
-      if(EditObj.Layout.grid[iX][iY].type != undefined){
-        if(EditObj.Layout.grid[iX][iY].type != LayoutEdit.tool){
-          //Remove current Item
-          Layout_Empty(iX,iY,iX * EditObj.Layout.gridsize.x,iY * EditObj.Layout.gridsize.y);
-        }else{
-          return;
-        }
-      }
-      EditObj.Layout.grid[iX][iY] = {"type":LayoutEdit.tool,"rotation":0,"size":LayoutEdit.toolsize,"id":{"block":0,"switch":0,"signal":0},"parent":{"x":gX,"y":gY}};
-    }
-  }
-
-  Layout_placeElement(gX,gY,lX,lY);
-}
-
-function Layout_DrawRail(evt){
-  var pos = $(evt.target.parentNode).offset();
-
-  var gX = parseInt((evt.clientX-pos.left)/EditObj.Layout.gridsize.x);
-  var gY = parseInt((evt.clientY-pos.top) /EditObj.Layout.gridsize.y);
-
-  var lX = gX * EditObj.Layout.gridsize.x;
-  var lY = gY * EditObj.Layout.gridsize.y;
-  var rot = LayoutEdit.rot;
-
-  if(typeof EditObj.Layout.grid[gX] === 'undefined'){
-    EditObj.Layout.grid[gX] = [];
-  }
-  if(typeof EditObj.Layout.grid[gX][gY] === 'undefined'){
-    EditObj.Layout.grid[gX][gY] = {"type":LayoutEdit.tool,"rotation":0,"size":LayoutEdit.toolsize,"id":{"block":0,"switch":0,"signal":0}};
-  }else{
-    if(EditObj.Layout.grid[gX][gY].type != undefined){
-      if(EditObj.Layout.grid[gX][gY].type != LayoutEdit.tool){
-        //Remove current Item
-        Layout_Empty(gX,gY,lX,lY);
-      }else{
-        return;
-      }
-    }
-    EditObj.Layout.grid[gX][gY] = {"type":LayoutEdit.tool,"rotation":0,"size":LayoutEdit.toolsize,"id":{"block":0,"switch":0,"signal":0}};
-  }
-
-  Layout_placeElement(gX,gY,lX,lY);
-}
-
-function Layout_drawRailUnbind(evt){
-  $('#LayoutContainer .grid').off("mousemove");
-  $('#LayoutContainer .grid').off("mouseup");
-}
-
-function Layout_placeElement(gX,gY,lX,lY){
-  switch(LayoutEdit.tool){
-    case "straight":
-      Layout_placeStraight(lX,lY,rot);
-      break;
-    case "End_of_Line":
-      Layout_placeEnd_of_Line(lX,lY,rot);
-      break;
-    case "turn_small":
-      Layout_placeCurveSmall(lX,lY,rot);
-      break;
-    case "turn_medium":
-      Layout_placeCurveMedium(lX,lY,rot);
-      break;
-    case "turn_large":
-      Layout_placeCurveLarge(lX,lY,rot);
-      break;
-    case "cross45":
-      Layout_placeCross45(lX,lY,rot);
-      break;
-    case "cross90":
-      Layout_placeCross90(lX,lY,rot);
-      break;
-    case "switch2R":
-      Layout_placeSwitch2R(lX,lY,rot);
-      break;
-    case "switch2L":
-      Layout_placeSwitch2L(lX,lY,rot);
-      break;
-    case "switch3":
-      Layout_placeSwitch3(lX,lY,rot);
-      break;
-    case "switchW":
-      Layout_placeSwitchWye(lX,lY,rot);
-      break;
-    case "switchSS":
-      Layout_placeSwitchSingleSlip(lX,lY,rot);
-      break;
-    case "switchDS":
-      Layout_placeSwitchDoubleSlip(lX,lY,rot);
-      break;
-    case "decoupler":
-      Layout_placeDecoupler(lX,lY,rot);
-      break;
-    case "Clear":
-      Layout_Clear(lX,lY);
-      EditObj.Layout.grid[gX][gY] = {};
-      break;
-    default:
-      var box = CreateSvgElement("g",{"transform":"translate("+lX+","+lY+")"});
-      box_childs = CreateSvgElement("rect",{"x":0,"y":0,"width":42,"height":42,"style":"fill:grey"});
-
-      box.appendChild(box_childs);
-
-      $('#LayoutContainer svg .grid').before(box);
-      break;
-  }
-}
-
-function Layout_Rotate(gX,gY,dir){
-  var lX = gX * EditObj.Layout.gridsize.x;
-  var lY = gY * EditObj.Layout.gridsize.y;
-  var rot = 0;
-
-  if(typeof EditObj.Layout.grid[gX] === 'undefined' || typeof EditObj.Layout.grid[gX][gY] === 'undefined'){
-    return;
-  }
-  rot  = (EditObj.Layout.grid[gX][gY].rotation + dir*45)%360;
-  if(rot < 0){
-    rot += 360;
-  }
-  EditObj.Layout.grid[gX][gY].rotation = rot;
-
-  switch(EditObj.Layout.grid[gX][gY].type){
-    case "straight":
-      Layout_Clear(lX,lY);
-      Layout_placeStraight(lX,lY,rot);
-      break;
-    case "cross45":
-      Layout_Clear(lX,lY);
-      Layout_placeCross45(lX,lY,rot);
-      break;
-    case "cross90":
-      Layout_Clear(lX,lY);
-      Layout_placeCross90(lX,lY,rot);
-      break;
-    case "End_of_Line":
-      Layout_Clear(lX,lY);
-      Layout_placeEnd_of_Line(lX,lY,rot);
-      break;
-    case "turn_small":
-      Layout_Clear(lX,lY);
-      Layout_placeCurveSmall(lX,lY,rot);
-      break;
-    case "turn_medium":
-      Layout_Clear(lX,lY);
-      Layout_placeCurveMedium(lX,lY,rot);
-      break;
-    case "switch2R":
-      Layout_Clear(lX,lY);
-      Layout_placeSwitch2R(lX,lY,rot);
-      break;
-    case "switch2L":
-      Layout_Clear(lX,lY);
-      Layout_placeSwitch2L(lX,lY,rot);
-      break;
-    case "switch3":
-      Layout_Clear(lX,lY);
-      Layout_placeSwitch3(lX,lY,rot);
-      break;
-    case "switchW":
-      Layout_Clear(lX,lY);
-      Layout_placeSwitchWye(lX,lY,rot);
-      break;
-    case "switchSS":
-      Layout_Clear(lX,lY);
-      Layout_placeSwitchSingleSlip(lX,lY,rot);
-      break;
-    case "switchDS":
-      Layout_Clear(lX,lY);
-      Layout_placeSwitchDoubleSlip(lX,lY,rot);
-      break;
-    case "decoupler":
-      Layout_Clear(lX,lY);
-      Layout_placeDecoupler(lX,lY,rot);
-      break;
   }
 }
 
@@ -1055,401 +1047,6 @@ function Layout_Empty(gX,gY,x,y){
     EditObj.Layout.grid[gX][gY] = {};
     Layout_Clear(x,y);
   }
-}
-
-function Layout_placeStraight(x,y,r){
-  var box = CreateSvgElement("g",{"transform":"translate("+x+","+y+")"});
-  var box_childs
-  if(r == 0 || r == 180){
-    box_childs = CreateSvgElement("line",{"x1":0,"y1":21,"x2":42,"y2":21});
-  }else if(r == 45 || r == 225){
-    box_childs = CreateSvgElement("line",{"x1":0,"y1":0,"x2":42,"y2":42});
-  }else if(r == 90 || r == 270){
-    box_childs = CreateSvgElement("line",{"x1":21,"y1":0,"x2":21,"y2":42});
-  }else if(r == 135 || r == 315){
-    box_childs = CreateSvgElement("line",{"x1":0,"y1":42,"x2":42,"y2":0});
-  }
-
-  box.appendChild(box_childs);
-
-  $('#LayoutContainer svg .grid').before(box);
-}
-
-function Layout_placeEnd_of_Line(x,y,r){
-  var box = CreateSvgElement("g",{"transform":"translate("+x+","+y+")"});
-  var box_childs = [];
-  if(r == 0){
-    box_childs[0] = CreateSvgElement("line",{"x1":0,"y1":21,"x2":30,"y2":21});
-    box_childs[1] = CreateSvgElement("line",{"x1":30,"y1":14,"x2":30,"y2":28,"style":"stroke-width:4px;"});
-  }else if(r == 45){
-    box_childs[0] = CreateSvgElement("line",{"x1":0,"y1":0,"x2":30,"y2":30});
-    box_childs[1] = CreateSvgElement("line",{"x1":25.05,"y1":34.95,"x2":34.95,"y2":25.05,"style":"stroke-width:4px;"});
-  }else if(r == 90){
-    box_childs[0] = CreateSvgElement("line",{"x1":21,"y1":0,"x2":21,"y2":30});
-    box_childs[1] = CreateSvgElement("line",{"x1":14,"y1":30,"x2":28,"y2":30,"style":"stroke-width:4px;"});
-  }else if(r == 135){
-    box_childs[0] = CreateSvgElement("line",{"x1":42,"y1":0,"x2":12,"y2":30});
-    box_childs[1] = CreateSvgElement("line",{"x1":16.95,"y1":34.95,"x2":7.05,"y2":25.05,"style":"stroke-width:4px;"});
-  }else if(r == 180){
-    box_childs[0] = CreateSvgElement("line",{"x1":42,"y1":21,"x2":12,"y2":21});
-    box_childs[1] = CreateSvgElement("line",{"x1":12,"y1":14,"x2":12,"y2":28,"style":"stroke-width:4px;"});
-  }else if(r == 225){
-    box_childs[0] = CreateSvgElement("line",{"x1":42,"y1":42,"x2":12,"y2":12});
-    box_childs[1] = CreateSvgElement("line",{"x1":16.95,"y1":7.05,"x2":7.05,"y2":16.95,"style":"stroke-width:4px;"});
-  }else if(r == 270){
-    box_childs[0] = CreateSvgElement("line",{"x1":21,"y1":42,"x2":21,"y2":12});
-    box_childs[1] = CreateSvgElement("line",{"x1":14,"y1":12,"x2":28,"y2":12,"style":"stroke-width:4px;"});
-  }else if(r == 315){
-    box_childs[0] = CreateSvgElement("line",{"x1":0,"y1":42,"x2":30,"y2":12});
-    box_childs[1] = CreateSvgElement("line",{"x1":25.05,"y1":7.05,"x2":34.95,"y2":16.95,"style":"stroke-width:4px;"});
-  }
-
-  $.each(box_childs,function(index,element){
-    box.appendChild(element);
-  });
-
-  $('#LayoutContainer svg .grid').before(box);
-}
-
-function Layout_placeCurveSmall(x,y,r){
-  var box = CreateSvgElement("g",{"transform":"translate("+x+","+y+")"});
-  var box_childs = [];
-  if(r == 0){
-    box_childs[0] = CreateSvgElement("path",{"d":"M0,21 a50.82,50.82 0 0,1 35.7,14.7 l 6.3,6.3"});
-  }else if(r == 45){
-    box_childs[0] = CreateSvgElement("path",{"d":"M21,42 a50.82,50.82 0 0,0 -14.7,-35.7 l -6.3,-6.3"});
-  }else if(r == 90){
-    box_childs[0] = CreateSvgElement("path",{"d":"M21,0 a50.82,50.82 0 0,1 -14.7,35.7 l -6.3,6.3"});
-  }else if(r == 135){
-    box_childs[0] = CreateSvgElement("path",{"d":"M0,21 a50.82,50.82 0 0,0 35.7,-14.7 l 6.3,-6.3"});
-  }else if(r == 180){
-    box_childs[0] = CreateSvgElement("path",{"d":"M42,21 a50.82,50.82 0 0,1 -35.7,-14.7 l -6.3,-6.3"});
-  }else if(r == 225){
-    box_childs[0] = CreateSvgElement("path",{"d":"M21,0 a50.82,50.82 0 0,0 14.7,35.7 l 6.3,6.3"});
-  }else if(r == 270){
-    box_childs[0] = CreateSvgElement("path",{"d":"M21,42 a50.82,50.82 0 0,1 14.7,-35.7 l 6.3,-6.3"});
-  }else if(r == 315){
-    box_childs[0] = CreateSvgElement("path",{"d":"M42,21 a50.82,50.82 0 0,0 -35.7,14.7 l -6.3,6.3"});
-  }
-
-  $.each(box_childs,function(index,element){
-    box.appendChild(element);
-  });
-
-  $('#LayoutContainer svg .grid').before(box);
-}
-
-function Layout_placeCurveMedium(x,y,r){
-  var box = CreateSvgElement("g",{"transform":"translate("+x+","+y+")"});
-  var box_childs = [];
-
-  box_childs[0] = CreateSvgElement("rect",{"width":"42px","height":"42px","style":"fill:#ccc"});
-  if(r == 0){
-    box_childs[1] = CreateSvgElement("rect",{"x":"126px","y":"42px","width":"42px","height":"42px","style":"fill:#eee"});
-    box_childs[2] = CreateSvgElement("path",{"d":"M0,21 h 15.96,0 a215.04,215.04 0 0,1 152.04,63"});
-  }else if(r == 45){
-    box_childs[1] = CreateSvgElement("rect",{"x":"42px","y":"126px","width":"42px","height":"42px","style":"fill:#eee"});
-    box_childs[2] = CreateSvgElement("path",{"d":"M63,168 v -15.96,0 a215.04,215.04 0 0,0 -63,-152.04"});
-  }else if(r == 90){
-    box_childs[1] = CreateSvgElement("rect",{"x":"-42px","y":"126px","width":"42px","height":"42px","style":"fill:#eee"});
-    box_childs[2] = CreateSvgElement("path",{"d":"M21,0 v 15.96,0 a215.04,215.04 0 0,1 -63,152.04"});
-  }else if(r == 135){
-    box_childs[1] = CreateSvgElement("rect",{"x":"-126px","y":"42px","width":"42px","height":"42px","style":"fill:#eee"});
-    box_childs[2] = CreateSvgElement("path",{"d":"M-126,63 h 15.96,0 a215.04,215.04 0 0,0 152.04,-63"});
-  }else if(r == 180){
-    box_childs[1] = CreateSvgElement("rect",{"x":"-126px","y":"-42px","width":"42px","height":"42px","style":"fill:#eee"});
-    box_childs[2] = CreateSvgElement("path",{"d":"M42,21 h -15.96,0 a215.04,215.04 0 0,1 -152.04,-63"});
-  }else if(r == 225){
-    box_childs[1] = CreateSvgElement("rect",{"x":"-42px","y":"-126px","width":"42px","height":"42px","style":"fill:#eee"});
-    box_childs[2] = CreateSvgElement("path",{"d":"M-21,-126 v 15.96,0 a215.04,215.04 0 0,0 63,152.04"});
-  }else if(r == 270){
-    box_childs[1] = CreateSvgElement("rect",{"x":"42px","y":"-126px","width":"42px","height":"42px","style":"fill:#eee"});
-    box_childs[2] = CreateSvgElement("path",{"d":"M21,42 v -15.96,0 a215.04,215.04 0 0,1 63,-152.04"});
-  }else if(r == 315){
-    box_childs[1] = CreateSvgElement("rect",{"x":"126px","y":"-42px","width":"42px","height":"42px","style":"fill:#eee"});
-    box_childs[2] = CreateSvgElement("path",{"d":"M168,-21 h -15.96,0 a215.04,215.04 0 0,0 -152.04,63"});
-  }
-
-  $.each(box_childs,function(index,element){
-    box.appendChild(element);
-  });
-
-  $('#LayoutContainer svg .grid').before(box);
-}
-
-function Layout_placeCross45(x,y,r){
-  var box = CreateSvgElement("g",{"transform":"translate("+x+","+y+")"});
-  var box_childs = [];
-  var box_childs
-  if(r == 0 || r == 180){
-    box_childs[0] = CreateSvgElement("line",{"x1":0,"y1":21,"x2":42,"y2":21,"style":"stroke:black;stroke-width:6px;"});
-    box_childs[1] = CreateSvgElement("line",{"x1":0,"y1":0,"x2":42,"y2":42,"style":"stroke:black;stroke-width:6px;"});
-  }else if(r == 45 || r == 225){
-    box_childs[0] = CreateSvgElement("line",{"x1":0,"y1":0,"x2":42,"y2":42,"style":"stroke:black;stroke-width:6px;"});
-    box_childs[1] = CreateSvgElement("line",{"x1":21,"y1":0,"x2":21,"y2":42,"style":"stroke:black;stroke-width:6px;"});
-  }else if(r == 90 || r == 270){
-    box_childs[0] = CreateSvgElement("line",{"x1":21,"y1":0,"x2":21,"y2":42,"style":"stroke:black;stroke-width:6px;"});
-    box_childs[1] = CreateSvgElement("line",{"x1":42,"y1":0,"x2":0,"y2":42,"style":"stroke:black;stroke-width:6px;"});
-  }else if(r == 135 || r == 315){
-    box_childs[0] = CreateSvgElement("line",{"x1":42,"y1":0,"x2":0,"y2":42,"style":"stroke:black;stroke-width:6px;"});
-    box_childs[1] = CreateSvgElement("line",{"x1":0,"y1":21,"x2":42,"y2":21,"style":"stroke:black;stroke-width:6px;"});
-  }
-
-  $.each(box_childs,function(index,element){
-    box.appendChild(element);
-  });
-
-  $('#LayoutContainer svg .grid').before(box);
-}
-
-function Layout_placeCross90(x,y,r){
-  var box = CreateSvgElement("g",{"transform":"translate("+x+","+y+")"});
-  var box_childs = [];
-  if((r % 90) == 0){
-    box_childs[0] = CreateSvgElement("line",{"x1":0,"y1":21,"x2":42,"y2":21,"style":"stroke:black;stroke-width:6px;"});
-    box_childs[1] = CreateSvgElement("line",{"x1":21,"x2":21,"y2":42,"style":"stroke:black;stroke-width:6px;"});
-  }else if((r % 90) == 45){
-    box_childs[0] = CreateSvgElement("line",{"x1":0,"y1":0,"x2":42,"y2":42,"style":"stroke:black;stroke-width:6px;"});
-    box_childs[1] = CreateSvgElement("line",{"x1":42,"x2":0,"y2":42,"style":"stroke:black;stroke-width:6px;"});
-  }
-
-  $.each(box_childs,function(index,element){
-    box.appendChild(element);
-  });
-
-  $('#LayoutContainer svg .grid').before(box);
-}
-
-function Layout_placeSwitch2L(x,y,r){
-  var box = CreateSvgElement("g",{"transform":"translate("+x+","+y+")"});
-  var box_childs = [];
-  if(r == 0){
-    box_childs[0] = CreateSvgElement("line",{"x1":0,"y1":21,"x2":42,"y2":21});
-    box_childs[1] = CreateSvgElement("path",{"d":"M0,21 a50.82,50.82 0 0,0 35.7,-14.7 l 6.3,-6.3"});
-  }else if(r == 45){
-    box_childs[0] = CreateSvgElement("line",{"x1":0,"y1":0,"x2":42,"y2":42});
-    box_childs[1] = CreateSvgElement("path",{"d":"M42,21 a50.82,50.82 0 0,1 -35.7,-14.7 l -6.3,-6.3"});
-  }else if(r == 90){
-    box_childs[0] = CreateSvgElement("line",{"x1":21,"y1":0,"x2":21,"y2":42});
-    box_childs[1] = CreateSvgElement("path",{"d":"M21,0 a50.82,50.82 0 0,0 14.7,35.7 l 6.3,6.3"});
-  }else if(r == 135){
-    box_childs[0] = CreateSvgElement("line",{"x1":42,"y1":0,"x2":0,"y2":42});
-    box_childs[1] = CreateSvgElement("path",{"d":"M21,42 a50.82,50.82 0 0,1 14.7,-35.7 l 6.3,-6.3"});
-  }else if(r == 180){
-    box_childs[0] = CreateSvgElement("line",{"x1":0,"y1":21,"x2":42,"y2":21});
-    box_childs[1] = CreateSvgElement("path",{"d":"M42,21 a50.82,50.82 0 0,0 -35.7,14.7 l -6.3,6.3"});
-  }else if(r == 225){
-    box_childs[0] = CreateSvgElement("line",{"x1":0,"y1":0,"x2":42,"y2":42});
-    box_childs[1] = CreateSvgElement("path",{"d":"M0,21 a50.82,50.82 0 0,1 35.7,14.7 l 6.3,6.3"});
-  }else if(r == 270){
-    box_childs[0] = CreateSvgElement("line",{"x1":21,"y1":0,"x2":21,"y2":42});
-    box_childs[1] = CreateSvgElement("path",{"d":"M21,42 a50.82,50.82 0 0,0 -14.7,-35.7 l -6.3,-6.3"});
-  }else if(r == 315){
-    box_childs[0] = CreateSvgElement("line",{"x1":42,"y1":0,"x2":0,"y2":42});
-    box_childs[1] = CreateSvgElement("path",{"d":"M21,0 a50.82,50.82 0 0,1 -14.7,35.7 l -6.3,6.3"});
-  }
-
-
-
-  $.each(box_childs,function(index,element){
-    box.appendChild(element);
-  });
-
-  $('#LayoutContainer svg .grid').before(box);
-}
-
-function Layout_placeSwitch2R(x,y,r){
-  var box = CreateSvgElement("g",{"transform":"translate("+x+","+y+")"});
-  var box_childs = [];
-  if(r == 0){
-    box_childs[0] = CreateSvgElement("line",{"x1":0,"y1":21,"x2":42,"y2":21});
-    box_childs[1] = CreateSvgElement("path",{"d":"M0,21 a50.82,50.82 0 0,1 35.7,14.7 l 6.3,6.3"});
-  }else if(r == 45){
-    box_childs[0] = CreateSvgElement("line",{"x1":0,"y1":0,"x2":42,"y2":42});
-    box_childs[1] = CreateSvgElement("path",{"d":"M21,42 a50.82,50.82 0 0,0 -14.7,-35.7 l -6.3,-6.3"});
-  }else if(r == 90){
-    box_childs[0] = CreateSvgElement("line",{"x1":21,"y1":0,"x2":21,"y2":42});
-    box_childs[1] = CreateSvgElement("path",{"d":"M21,0 a50.82,50.82 0 0,1 -14.7,35.7 l -6.3,6.3"});
-  }else if(r == 135){
-    box_childs[0] = CreateSvgElement("line",{"x1":42,"y1":0,"x2":0,"y2":42});
-    box_childs[1] = CreateSvgElement("path",{"d":"M0,21 a50.82,50.82 0 0,0 35.7,-14.7 l 6.3,-6.3"});
-  }else if(r == 180){
-    box_childs[0] = CreateSvgElement("line",{"x1":0,"y1":21,"x2":42,"y2":21});
-    box_childs[1] = CreateSvgElement("path",{"d":"M42,21 a50.82,50.82 0 0,1 -35.7,-14.7 l -6.3,-6.3"});
-  }else if(r == 225){
-    box_childs[0] = CreateSvgElement("line",{"x1":0,"y1":0,"x2":42,"y2":42});
-    box_childs[1] = CreateSvgElement("path",{"d":"M21,0 a50.82,50.82 0 0,0 14.7,35.7 l 6.3,6.3"});
-  }else if(r == 270){
-    box_childs[0] = CreateSvgElement("line",{"x1":21,"y1":0,"x2":21,"y2":42});
-    box_childs[1] = CreateSvgElement("path",{"d":"M21,42 a50.82,50.82 0 0,1 14.7,-35.7 l 6.3,-6.3"});
-  }else if(r == 315){
-    box_childs[0] = CreateSvgElement("line",{"x1":42,"y1":0,"x2":0,"y2":42});
-    box_childs[1] = CreateSvgElement("path",{"d":"M42,21 a50.82,50.82 0 0,0 -35.7,14.7 l -6.3,6.3"});
-  }
-
-
-
-  $.each(box_childs,function(index,element){
-    box.appendChild(element);
-  });
-
-  $('#LayoutContainer svg .grid').before(box);
-}
-
-function Layout_placeSwitch3(x,y,r){
-  var box = CreateSvgElement("g",{"transform":"translate("+x+","+y+")"});
-  var box_childs = [];
-  if(r == 0){
-    box_childs[0] = CreateSvgElement("line",{"x1":0,"y1":21,"x2":42,"y2":21});
-    box_childs[1] = CreateSvgElement("path",{"d":"M0,21 a50.82,50.82 0 0,1 35.7,14.7 l 6.3,6.3"});
-    box_childs[2] = CreateSvgElement("path",{"d":"M0,21 a50.82,50.82 0 0,0 35.7,-14.7 l 6.3,-6.3"});
-  }else if(r == 45){
-    box_childs[0] = CreateSvgElement("line",{"x1":0,"y1":0,"x2":42,"y2":42});
-    box_childs[1] = CreateSvgElement("path",{"d":"M42,21 a50.82,50.82 0 0,1 -35.7,-14.7 l -6.3,-6.3"});
-    box_childs[2] = CreateSvgElement("path",{"d":"M21,42 a50.82,50.82 0 0,0 -14.7,-35.7 l -6.3,-6.3"});
-  }else if(r == 90){
-    box_childs[0] = CreateSvgElement("line",{"x1":21,"y1":0,"x2":21,"y2":42});
-    box_childs[1] = CreateSvgElement("path",{"d":"M21,0 a50.82,50.82 0 0,1 -14.7,35.7 l -6.3,6.3"});
-    box_childs[2] = CreateSvgElement("path",{"d":"M21,0 a50.82,50.82 0 0,0 14.7,35.7 l 6.3,6.3"});
-  }else if(r == 135){
-    box_childs[0] = CreateSvgElement("line",{"x1":42,"y1":0,"x2":0,"y2":42});
-    box_childs[1] = CreateSvgElement("path",{"d":"M21,42 a50.82,50.82 0 0,1 14.7,-35.7 l 6.3,-6.3"});
-    box_childs[2] = CreateSvgElement("path",{"d":"M0,21 a50.82,50.82 0 0,0 35.7,-14.7 l 6.3,-6.3"});
-  }else if(r == 180){
-    box_childs[0] = CreateSvgElement("line",{"x1":0,"y1":21,"x2":42,"y2":21});
-    box_childs[1] = CreateSvgElement("path",{"d":"M42,21 a50.82,50.82 0 0,1 -35.7,-14.7 l -6.3,-6.3"});
-    box_childs[2] = CreateSvgElement("path",{"d":"M42,21 a50.82,50.82 0 0,0 -35.7,14.7 l -6.3,6.3"});
-  }else if(r == 225){
-    box_childs[0] = CreateSvgElement("line",{"x1":0,"y1":0,"x2":42,"y2":42});
-    box_childs[1] = CreateSvgElement("path",{"d":"M0,21 a50.82,50.82 0 0,1 35.7,14.7 l 6.3,6.3"});
-    box_childs[2] = CreateSvgElement("path",{"d":"M21,0 a50.82,50.82 0 0,0 14.7,35.7 l 6.3,6.3"});
-  }else if(r == 270){
-    box_childs[0] = CreateSvgElement("line",{"x1":21,"y1":0,"x2":21,"y2":42});
-    box_childs[1] = CreateSvgElement("path",{"d":"M21,42 a50.82,50.82 0 0,0 -14.7,-35.7 l -6.3,-6.3"});
-    box_childs[2] = CreateSvgElement("path",{"d":"M21,42 a50.82,50.82 0 0,1 14.7,-35.7 l 6.3,-6.3"});
-  }else if(r == 315){
-    box_childs[0] = CreateSvgElement("line",{"x1":42,"y1":0,"x2":0,"y2":42});
-    box_childs[1] = CreateSvgElement("path",{"d":"M21,0 a50.82,50.82 0 0,1 -14.7,35.7 l -6.3,6.3"});
-    box_childs[2] = CreateSvgElement("path",{"d":"M42,21 a50.82,50.82 0 0,0 -35.7,14.7 l -6.3,6.3"});
-  }
-
-  $.each(box_childs,function(index,element){
-    box.appendChild(element);
-  });
-
-  $('#LayoutContainer svg .grid').before(box);
-}
-
-function Layout_placeSwitchWye(x,y,r){
-  var box = CreateSvgElement("g",{"transform":"translate("+x+","+y+")"});
-  var box_childs = [];
-  if(r == 0){
-    box_childs[0] = CreateSvgElement("path",{"d":"M0,21 a50.82,50.82 0 0,1 35.7,14.7 l 6.3,6.3"});
-    box_childs[1] = CreateSvgElement("path",{"d":"M0,21 a50.82,50.82 0 0,0 35.7,-14.7 l 6.3,-6.3"});
-  }else if(r == 45){
-    box_childs[0] = CreateSvgElement("path",{"d":"M42,21 a50.82,50.82 0 0,1 -35.7,-14.7 l -6.3,-6.3"});
-    box_childs[1] = CreateSvgElement("path",{"d":"M21,42 a50.82,50.82 0 0,0 -14.7,-35.7 l -6.3,-6.3"});
-  }else if(r == 90){
-    box_childs[0] = CreateSvgElement("path",{"d":"M21,0 a50.82,50.82 0 0,1 -14.7,35.7 l -6.3,6.3"});
-    box_childs[1] = CreateSvgElement("path",{"d":"M21,0 a50.82,50.82 0 0,0 14.7,35.7 l 6.3,6.3"});
-  }else if(r == 135){
-    box_childs[0] = CreateSvgElement("path",{"d":"M21,42 a50.82,50.82 0 0,1 14.7,-35.7 l 6.3,-6.3"});
-    box_childs[1] = CreateSvgElement("path",{"d":"M0,21 a50.82,50.82 0 0,0 35.7,-14.7 l 6.3,-6.3"});
-  }else if(r == 180){
-    box_childs[0] = CreateSvgElement("path",{"d":"M42,21 a50.82,50.82 0 0,1 -35.7,-14.7 l -6.3,-6.3"});
-    box_childs[1] = CreateSvgElement("path",{"d":"M42,21 a50.82,50.82 0 0,0 -35.7,14.7 l -6.3,6.3"});
-  }else if(r == 225){
-    box_childs[0] = CreateSvgElement("path",{"d":"M0,21 a50.82,50.82 0 0,1 35.7,14.7 l 6.3,6.3"});
-    box_childs[1] = CreateSvgElement("path",{"d":"M21,0 a50.82,50.82 0 0,0 14.7,35.7 l 6.3,6.3"});
-  }else if(r == 270){
-    box_childs[0] = CreateSvgElement("path",{"d":"M21,42 a50.82,50.82 0 0,0 -14.7,-35.7 l -6.3,-6.3"});
-    box_childs[1] = CreateSvgElement("path",{"d":"M21,42 a50.82,50.82 0 0,1 14.7,-35.7 l 6.3,-6.3"});
-  }else if(r == 315){
-    box_childs[0] = CreateSvgElement("path",{"d":"M21,0 a50.82,50.82 0 0,1 -14.7,35.7 l -6.3,6.3"});
-    box_childs[1] = CreateSvgElement("path",{"d":"M42,21 a50.82,50.82 0 0,0 -35.7,14.7 l -6.3,6.3"});
-  }
-
-  $.each(box_childs,function(index,element){
-    box.appendChild(element);
-  });
-
-  $('#LayoutContainer svg .grid').before(box);
-}
-
-function Layout_placeSwitchSingleSlip(x,y,r){
-  var box = CreateSvgElement("g",{"transform":"translate("+x+","+y+")"});
-  var box_childs = [];
-  if(r == 0){
-    box_childs[0] = CreateSvgElement("line",{"x1":0,"y1":21,"x2":42,"y2":21,"style":"stroke:black;stroke-width:6px;"});
-    box_childs[1] = CreateSvgElement("line",{"x1":0,"y1":0,"x2":42,"y2":42,"style":"stroke:black;stroke-width:6px;"});
-    box_childs[2] = CreateSvgElement("path",{"d":"M0,21 a50.82,50.82 0 0,1 35.7,14.7 l 6.3,6.3"});
-  }else if(r == 45){
-    box_childs[0] = CreateSvgElement("line",{"x1":0,"y1":0,"x2":42,"y2":42,"style":"stroke:black;stroke-width:6px;"});
-    box_childs[1] = CreateSvgElement("line",{"x1":21,"y1":0,"x2":21,"y2":42,"style":"stroke:black;stroke-width:6px;"});
-    box_childs[2] = CreateSvgElement("path",{"d":"M21,42 a50.82,50.82 0 0,0 -14.7,-35.7 l -6.3,-6.3"});
-  }else if(r == 90){
-    box_childs[0] = CreateSvgElement("line",{"x1":21,"y1":0,"x2":21,"y2":42,"style":"stroke:black;stroke-width:6px;"});
-    box_childs[1] = CreateSvgElement("line",{"x1":42,"y1":0,"x2":0,"y2":42,"style":"stroke:black;stroke-width:6px;"});
-    box_childs[2] = CreateSvgElement("path",{"d":"M21,0 a50.82,50.82 0 0,1 -14.7,35.7 l -6.3,6.3"});
-  }else if(r == 135){
-    box_childs[0] = CreateSvgElement("line",{"x1":42,"y1":0,"x2":0,"y2":42,"style":"stroke:black;stroke-width:6px;"});
-    box_childs[1] = CreateSvgElement("line",{"x1":0,"y1":21,"x2":42,"y2":21,"style":"stroke:black;stroke-width:6px;"});
-    box_childs[2] = CreateSvgElement("path",{"d":"M0,21 a50.82,50.82 0 0,0 35.7,-14.7 l 6.3,-6.3"});
-  }else if(r == 180){
-    box_childs[0] = CreateSvgElement("line",{"x1":0,"y1":21,"x2":42,"y2":21,"style":"stroke:black;stroke-width:6px;"});
-    box_childs[1] = CreateSvgElement("line",{"x1":0,"y1":0,"x2":42,"y2":42,"style":"stroke:black;stroke-width:6px;"});
-    box_childs[2] = CreateSvgElement("path",{"d":"M42,21 a50.82,50.82 0 0,1 -35.7,-14.7 l -6.3,-6.3"});
-  }else if(r == 225){
-    box_childs[0] = CreateSvgElement("line",{"x1":0,"y1":0,"x2":42,"y2":42,"style":"stroke:black;stroke-width:6px;"});
-    box_childs[1] = CreateSvgElement("line",{"x1":21,"y1":0,"x2":21,"y2":42,"style":"stroke:black;stroke-width:6px;"});
-    box_childs[2] = CreateSvgElement("path",{"d":"M21,0 a50.82,50.82 0 0,0 14.7,35.7 l 6.3,6.3"});
-  }else if(r == 270){
-    box_childs[0] = CreateSvgElement("line",{"x1":21,"y1":0,"x2":21,"y2":42,"style":"stroke:black;stroke-width:6px;"});
-    box_childs[1] = CreateSvgElement("line",{"x1":42,"y1":0,"x2":0,"y2":42,"style":"stroke:black;stroke-width:6px;"});
-    box_childs[2] = CreateSvgElement("path",{"d":"M21,42 a50.82,50.82 0 0,1 14.7,-35.7 l 6.3,-6.3"});
-  }else if(r == 315){
-    box_childs[0] = CreateSvgElement("line",{"x1":42,"y1":0,"x2":0,"y2":42,"style":"stroke:black;stroke-width:6px;"});
-    box_childs[1] = CreateSvgElement("line",{"x1":0,"y1":21,"x2":42,"y2":21,"style":"stroke:black;stroke-width:6px;"});
-    box_childs[2] = CreateSvgElement("path",{"d":"M42,21 a50.82,50.82 0 0,0 -35.7,14.7 l -6.3,6.3"});
-  }
-
-  $.each(box_childs,function(index,element){
-    box.appendChild(element);
-  });
-
-  $('#LayoutContainer svg .grid').before(box);
-}
-
-function Layout_placeSwitchDoubleSlip(x,y,r){
-  var box = CreateSvgElement("g",{"transform":"translate("+x+","+y+")"});
-  var box_childs = [];
-  if(r == 0 || r == 180){
-    box_childs[0] = CreateSvgElement("line",{"x1":0,"y1":21,"x2":42,"y2":21,"style":"stroke:black;stroke-width:6px;"});
-    box_childs[1] = CreateSvgElement("line",{"x1":0,"y1":0,"x2":42,"y2":42,"style":"stroke:black;stroke-width:6px;"});
-    box_childs[2] = CreateSvgElement("path",{"d":"M0,21 a50.82,50.82 0 0,1 35.7,14.7 l 6.3,6.3"});
-    box_childs[3] = CreateSvgElement("path",{"d":"M42,21 a50.82,50.82 0 0,1 -35.7,-14.7 l -6.3,-6.3"});
-  }else if(r == 45 || r == 225){
-    box_childs[0] = CreateSvgElement("line",{"x1":0,"y1":0,"x2":42,"y2":42,"style":"stroke:black;stroke-width:6px;"});
-    box_childs[1] = CreateSvgElement("line",{"x1":21,"y1":0,"x2":21,"y2":42,"style":"stroke:black;stroke-width:6px;"});
-    box_childs[2] = CreateSvgElement("path",{"d":"M21,42 a50.82,50.82 0 0,0 -14.7,-35.7 l -6.3,-6.3"});
-    box_childs[3] = CreateSvgElement("path",{"d":"M21,0 a50.82,50.82 0 0,0 14.7,35.7 l 6.3,6.3"});
-  }else if(r == 90 || r == 270){
-    box_childs[0] = CreateSvgElement("line",{"x1":21,"y1":0,"x2":21,"y2":42,"style":"stroke:black;stroke-width:6px;"});
-    box_childs[1] = CreateSvgElement("line",{"x1":42,"y1":0,"x2":0,"y2":42,"style":"stroke:black;stroke-width:6px;"});
-    box_childs[2] = CreateSvgElement("path",{"d":"M21,0 a50.82,50.82 0 0,1 -14.7,35.7 l -6.3,6.3"});
-    box_childs[3] = CreateSvgElement("path",{"d":"M21,42 a50.82,50.82 0 0,1 14.7,-35.7 l 6.3,-6.3"});
-  }else if(r == 135 || r == 315){
-    box_childs[0] = CreateSvgElement("line",{"x1":42,"y1":0,"x2":0,"y2":42,"style":"stroke:black;stroke-width:6px;"});
-    box_childs[1] = CreateSvgElement("line",{"x1":0,"y1":21,"x2":42,"y2":21,"style":"stroke:black;stroke-width:6px;"});
-    box_childs[2] = CreateSvgElement("path",{"d":"M0,21 a50.82,50.82 0 0,0 35.7,-14.7 l 6.3,-6.3"});
-    box_childs[3] = CreateSvgElement("path",{"d":"M42,21 a50.82,50.82 0 0,0 -35.7,14.7 l -6.3,6.3"});
-  }
-
-  $.each(box_childs,function(index,element){
-    box.appendChild(element);
-  });
-
-  $('#LayoutContainer svg .grid').before(box);
 }
 
 function Layout_placeDecoupler(x,y,r){

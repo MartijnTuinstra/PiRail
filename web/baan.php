@@ -865,7 +865,7 @@
                   <text x="25" y="75" text-anchor="middle" style="font-family:sans-serif;font-weight:bold;fill:white;">Curve Rail</text>
                 </g>
               </g>
-              <g class="tool" part="S3" transform="translate(520,5)" style="cursor:move;"><!-- 3 Light Signal -->
+              <g class="tool" part="Sig" transform="translate(520,5)" style="cursor:move;"><!-- 3 Light Signal -->
                 <path d="M 0,5 a 5,5 1,0,1 5,-5 h 40 a 5,5 1,0,1 5,5 v 40 a 5,5 1,0,1 -5,5 h -40 a 5,5 1,0,1 -5,-5 Z" style="stroke-width:0;fill:#ddd;"/>
                 <path d="M 40,20 v 10 a 5,5 0,0,1 -10,0 v -10 a 5,5 0,0,1 10,0" style="stroke-width:0px;stroke:black;fill:black;"/>
                 <circle cx="35" cy="20" r="2" style="stroke-width:0px;fill:red;"/>
@@ -877,19 +877,6 @@
                 <g class="tooltip" style="cursor:default;">
                   <path d="M -80,56 a 5,5 1,0,1 5,-5 h 96 l 4,-4 l 4,4 h 96 a 5,5 1,0,1 5,5 v 30 a 5,5 1,0,1 -5,5 h -200 a 5,5 1,0,1 -5,-5 Z" style="stroke-width:0;fill:grey;"/>
                   <text x="25" y="75" text-anchor="middle" style="font-family:sans-serif;font-weight:bold;fill:white;">Generic 3 Light Signal</text>
-                </g>
-              </g>
-              <g class="tool" part="S2" transform="translate(580,5)" style="cursor:move;"><!-- 2 Light Signal -->
-                <path d="M 0,5 a 5,5 1,0,1 5,-5 h 40 a 5,5 1,0,1 5,5 v 40 a 5,5 1,0,1 -5,5 h -40 a 5,5 1,0,1 -5,-5 Z" style="stroke-width:0;fill:#ddd;"/>
-                <path d="M 40,25 v 5 a 5,5 0,0,1 -10,0 v -5 a 5,5 0,0,1 10,0" style="stroke-width:0px;stroke:black;fill:black;"/>
-                <circle cx="35" cy="25" r="2" style="stroke-width:0px;fill:red;"/>
-                <circle cx="35" cy="30" r="2" style="stroke-width:0px;fill:lime;"/>
-
-                <circle cx="25" cy="10" r="2" style="stroke-width:0px;fill:purple;"/>
-
-                <g class="tooltip" style="cursor:default;">
-                  <path d="M -80,56 a 5,5 1,0,1 5,-5 h 96 l 4,-4 l 4,4 h 96 a 5,5 1,0,1 5,5 v 30 a 5,5 1,0,1 -5,5 h -200 a 5,5 1,0,1 -5,-5 Z" style="stroke-width:0;fill:grey;"/>
-                  <text x="25" y="75" text-anchor="middle" style="font-family:sans-serif;font-weight:bold;fill:white;">Generic 2 Light Signal</text>
                 </g>
               </g>
             </g>

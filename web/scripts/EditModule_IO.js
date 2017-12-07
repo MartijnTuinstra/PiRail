@@ -280,10 +280,14 @@ function clearTables(){
   $('#ConnectBox .xmin' ).click(['x','-'],ResizeSVG);
 }
 
-function CreateSvgElement(type,list,content = ""){
+function CreateSvgElement(type,list,content = "",childs = []){
   var box = document.createElementNS("http://www.w3.org/2000/svg",type);
   $.each(list,function(index,element){
     box.setAttribute(index,element);
+  });
+
+  $.each(childs,function(index,element){
+    box.appendChild(element);
   });
 
   box.appendChild(document.createTextNode(content));

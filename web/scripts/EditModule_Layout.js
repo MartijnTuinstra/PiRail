@@ -1,5 +1,5 @@
 
-LayoutDragging = {"x1":0,"y1":0,"target":undefined,"parent":undefined,"Box":undefined,
+LayoutDragging = {"x1":0,"y1":0,"target":undefined,"parent":undefined,"Box":undefined,"part_settings":{"RC":{"radius":2,"angle":3},"RS":{"length":1},"Sig":{"type":1}},
                   "Dropable":0,"Keys":[],"AC_En":false,"AC_Stage":0,"AC_Elements":[],"AC_Click":false};
 
 // Converts from degrees to radians.
@@ -147,7 +147,7 @@ function Layout_createPart(evt){
       box = CreateSvgElement("g",{"nr":part_nr,"part":part,"size":"1","transform":"translate("+(xy.x-21)+","+(xy.y-21)+") rotate(0)"});
       i_counter = 0;
 
-      length = 1;
+      length = LayoutDragging.part_settings.RS.length;
       steps = parts_list.RS.length_steps;
 
       $.each(parts_list.RS.part,function(index,element){
@@ -163,10 +163,10 @@ function Layout_createPart(evt){
     case "RC":
       part_nr = $("#LayoutContainer g#Rail").children().length;
       box = CreateSvgElement("g",{"nr":part_nr,"part":part,"transform":"translate("+(xy.x-21)+","+(xy.y-21)+") rotate(0)"});
-      i_counter = 0
+      i_counter = 0;
 
-      angle = 4;
-      radius = 2;
+      angle = LayoutDragging.part_settings.RC.angle;
+      radius = LayoutDragging.part_settings.RC.radius;
       a_steps = parts_list.RC.angle_steps;
       r_steps = parts_list.RC.radius_steps;
 
@@ -183,10 +183,17 @@ function Layout_createPart(evt){
     case "SwN":
       part_nr = $("#LayoutContainer g#Nodes").children().length;
       box = CreateSvgElement("g",{"nr":part_nr,"part":part,"transform":"translate("+(xy.x-21)+","+(xy.y-21)+") rotate(0)"});
-      box_childs[0] = CreateSvgElement("path",{"d":"M 3.75,-7.5 v 15 l -7.5,-7.5 Z","style":"stroke-width:0;fill:#41b7dd;"});
-      box_childs[1] = CreateSvgElement("circle",{"cx":"0","cy":"0","r":10,"style":"fill:rgba(100,100,100,0.1);cursor:move;"});
+      i_counter = 0;
 
-      EditObj.Layout.Setup.Nodes[part_nr] = {"type":"SwN","Connectors":2,"heading":180};
+      $.each(parts_list.SwN.part,function(index,element){
+        part_attributes = {};
+        $.each(element.attr,function(index2,element2){
+          part_attributes[index2] = eval(element2);
+        });
+        box_childs[i_counter++] = CreateSvgElement(element.element,part_attributes);
+      });
+
+      EditObj.Layout.Setup.Nodes[part_nr] = {"type":"SwN","states":2,"heading":180};
       break;
     case "CRail":
       if($('.tool_button',target).hasClass('active')){
@@ -196,6 +203,52 @@ function Layout_createPart(evt){
       }
       return;
       break;
+    case "BI":
+      part_nr = $("#LayoutContainer g#Nodes").children().length;
+      box = CreateSvgElement("g",{"nr":part_nr,"part":part,"transform":"translate("+(xy.x-21)+","+(xy.y-21)+") rotate(0)"});
+      i_counter = 0;
+
+      $.each(parts_list.BI.part,function(index,element){
+        part_attributes = {};
+        $.each(element.attr,function(index2,element2){
+          part_attributes[index2] = eval(element2);
+        });
+        box_childs[i_counter++] = CreateSvgElement(element.element,part_attributes);
+      });
+
+      EditObj.Layout.Setup.Nodes[part_nr] = {"type":"BI"};
+      break;
+    case "CRail":
+      if($('.tool_button',target).hasClass('active')){
+        Layout_AC_Abort();
+      }else{
+        Layout_AC_Init();
+      }
+      return;
+      break;
+    case "Sig":
+      part_nr = $("#LayoutContainer g#Signals").children().length;
+      box = CreateSvgElement("g",{"nr":part_nr,"part":part,"transform":"translate("+(xy.x-21)+","+(xy.y-21)+") rotate(0)"});
+      i_counter = 0;
+
+      type = LayoutDragging.part_settings.Sig.type;
+
+      $.each(parts_list.Sig.part,function(index,element){
+        part_attributes = {};
+        $.each(element.attr,function(index2,element2){
+          part_attributes[index2] = eval(element2);
+        });
+        box_childs[i_counter++] = CreateSvgElement(element.element,part_attributes);
+      });
+      $.each(parts_list.Sig.types[type],function(index,element){
+        part_attributes = {};
+        $.each(element.attr,function(index2,element2){
+          part_attributes[index2] = eval(element2);
+        });
+        box_childs[i_counter++] = CreateSvgElement(element.element,part_attributes);
+      });
+
+      EditObj.Layout.Setup.Signals[part_nr] = {"type":"Sig","type":0,"heading":180};
   }
 
   $.each(box_childs,function(index,element){
@@ -203,8 +256,12 @@ function Layout_createPart(evt){
   });
 
   $('#LayoutContainer #Drawing').append(box);
-
   $('#LayoutContainer g#Drawing g').bind("mousedown",Layout_dragPart);
+  /*$.each(parts_list.Sig.types[type],function(index,element){
+    $('#LayoutContainer #Drawing g.SignalBox').get(0).appendChild(CreateSvgElement(element.element,element.attr))
+  });*/
+
+  
 
   //Add to list
 
@@ -217,6 +274,9 @@ function Layout_createPart(evt){
 
   if(N_evt.target == undefined){
     N_evt.target = $('#LayoutContainer g#Drawing path').get(0);
+  }
+  if(N_evt.target == undefined){
+    N_evt.target = $('#LayoutContainer g#Drawing circle').get(0);
   }
 
   Layout_dragPart(N_evt);
@@ -245,6 +305,9 @@ function Layout_dragPart(evt){
     if(evt.target == undefined){
       evt.target = $('#LayoutContainer g#Drawing path').get(0);
     }
+    if(evt.target == undefined){
+      evt.target = $('#LayoutContainer g#Drawing circle').get(0);
+    }
 
     LayoutDragging.parent = $(evt.target.parentNode);
   }
@@ -254,7 +317,7 @@ function Layout_dragPart(evt){
   LayoutDragging.Box = $(evt.target.parentNode.parentNode);
 
   if(evt.new != true){
-    Layout_deleteFAnchor();
+    Layout_deleteAnchor();
   }
 
   LayoutDragging.Box.bind({
@@ -307,6 +370,10 @@ function Layout_dragEnd(){
     var element = LayoutDragging.parent.detach();
     $("#LayoutContainer #Nodes").append(element);
   }
+  else if(part_type == "Sig"){
+    var element = LayoutDragging.parent.detach();
+    $("#LayoutContainer #Signals").append(element);
+  }
 
   LayoutDragging.Box.unbind('mousemove',Layout_dragMove);
   LayoutDragging.Box.unbind('mouseup',Layout_dragEnd);
@@ -317,6 +384,7 @@ function Layout_dragEnd(){
 
   attached = false;
 
+  //Attach Rail
   $.each($('[class^=Attach]',LayoutDragging.parent),function(index,element){
     Anchor = {"element":undefined,"loc":{}};
     Anchor.element = $('.'+element.className.baseVal,LayoutDragging.parent);
@@ -333,38 +401,47 @@ function Layout_dragEnd(){
 
     set = -1;
 
-    $.each(EditObj.Layout.FreeAnchors,function(index,element1){
-      if(set == -1 && ((Math.pow(Anchor.loc.left - element1.x,2) + Math.pow(Anchor.loc.top - element1.y,2)) < 100 && attached == false) ||
-                      ((Math.pow(Anchor.loc.left - element1.x,2) + Math.pow(Anchor.loc.top - element1.y,2)) < 5 && attached == true)){
-        if(element1.angle-180 != parseFloat(Anchor.element.attr("_r")) && attached == false){
-          JoinSide = parseInt(element1.element.get(0).className.baseVal.slice(6));
-          JoinSideSign = 1;
-          if(JoinSide == 2){
-            JoinSideSign = 1;
+    if(set < 0){
+      for_each_counter = 0;
+      array_length = EditObj.Layout.Anchors.length;
+      for(for_each_counter;for_each_counter<array_length;for_each_counter++){
+        element1 = EditObj.Layout.Anchors[for_each_counter];
+        if((element1.prev.length < element1.prev_states || element1.next.length < element1.next_states) && 
+            (Math.pow(Anchor.loc.left - element1.x,2) + Math.pow(Anchor.loc.top - element1.y,2)) < 100 && set < 0){
+          a = "";
+          if(element1.angle != parseFloat(Anchor.element.attr("_r")) && attached == false && element1.prev.length < element1.prev_states){
+            a = "prev";
+            rotation = (element1.angle - parseFloat(Anchor.element.attr("_r"))) % 360;
+            LayoutDragging.parent.attr("transform", "translate("+sx+","+sy+") rotate("+rotation+")");
+            Anchor.loc = getRotatedPoint(sx,sy,parseFloat(Anchor.element.attr("cx")),parseFloat(Anchor.element.attr("cy")),rotation);
+          }else if(element1.angle-180 != parseFloat(Anchor.element.attr("_r")) && attached == false && element1.next.length < element1.next_states){
+            a = "next";
+            rotation = (element1.angle - parseFloat(Anchor.element.attr("_r"))+180) % 360;
+            LayoutDragging.parent.attr("transform", "translate("+sx+","+sy+") rotate("+rotation+")");
+            Anchor.loc = getRotatedPoint(sx,sy,parseFloat(Anchor.element.attr("cx")),parseFloat(Anchor.element.attr("cy")),rotation);
           }
-          rotation = (element1.angle - parseFloat(Anchor.element.attr("_r")) + 180) % 360;
+          sx -= Anchor.loc.left - element1.x;
+          sy -= Anchor.loc.top - element1.y;
           LayoutDragging.parent.attr("transform", "translate("+sx+","+sy+") rotate("+rotation+")");
-          Anchor.loc = getRotatedPoint(sx,sy,parseFloat(Anchor.element.attr("cx")),parseFloat(Anchor.element.attr("cy")),rotation);
+          Anchor.element.get(0).style.fill = "green";
+          set = for_each_counter;
+
+          if(a == "prev"){
+            if(element1.prev.length == 1){
+              element1.prev[0].get(0).style.fill = "green";
+            }
+            EditObj.Layout.Anchors[for_each_counter].prev.push(Anchor.element);
+          }else{
+            if(element1.next.length == 1){
+              element1.next[0].get(0).style.fill = "green";
+            }
+            EditObj.Layout.Anchors[for_each_counter].next.push(Anchor.element);
+          }
         }
-        sx -= Anchor.loc.left - element1.x;
-        sy -= Anchor.loc.top - element1.y;
-        LayoutDragging.parent.attr("transform", "translate("+sx+","+sy+") rotate("+rotation+")");
-        Anchor.element.get(0).style.fill = "green";
-        element1.element.get(0).style.fill = "green";
-
-        Anchor.loc = getRotatedPoint(sx,sy,parseFloat(Anchor.element.attr("cx")),parseFloat(Anchor.element.attr("cy")),rotation);
-        set = index;
-
-        attached = true;
-
-        Anchor.element.attr("attached",element1.element.parent().attr("nr")+"_"+element1.element.attr("class").slice(6));
-        element1.element.attr("attached",Anchor.element.parent().attr("nr")+"_"+MySide);
+        if(!set){Anchor.element.get(0).style.fill = "red"};
       }
-    });
-    if(set >= 0){
-      EditObj.Layout.Anchors.push({"x":Anchor.loc.left,"y":Anchor.loc.top,"angle":rotation,"element":Anchor.element,"Join":element.Join});
-      EditObj.Layout.FreeAnchors.splice(set,1);
-    }else{
+    }
+    if(set < 0){
       Anchor.element.get(0).style.fill = "red";
     }
   });
@@ -373,14 +450,61 @@ function Layout_dragEnd(){
     Anchor.element = $('.'+element1.className.baseVal,LayoutDragging.parent);
     Anchor.loc = getRotatedPoint(sx,sy,parseFloat(Anchor.element.attr("cx")),parseFloat(Anchor.element.attr("cy")),rotation);
 
-    if(Anchor.element.attr("attached") == undefined || Anchor.element.attr("attached") == ""){ //Test
-      Layout_createFAnchor(Anchor,rotation);
-      //EditObj.Layout.FreeAnchors.push({"x":Anchor.loc.left,"y":Anchor.loc.top,"angle":(rotation+parseInt(Anchor.element.attr("_r")))%360,"element":Anchor.element,"Join":-1});
+    MySide = parseInt(element1.className.baseVal.slice(6));
+
+    if(Anchor.element.get(0).style.fill == "red"){ //Add when not connected
+      Layout_createAnchor(Anchor,rotation,MySide);
     }
+  });
+
+  //Attach Signals
+  $.each($('[class^=SigAttach]',LayoutDragging.parent),function(index,element){
+    Anchor = {"element":undefined,"loc":{}};
+    Anchor.element = $('.'+element.className.baseVal,LayoutDragging.parent);
+    Anchor.loc = Anchor.element.offset();
+
+    MySide = parseInt(element.className.baseVal.slice(6));
+    MyID = parseInt(LayoutDragging.parent.attr("nr"));
+    MyJoin = MyID + "_" + MySide;
+
+    Anchor.loc.left -= svgContainerOffset.left;
+    Anchor.loc.top -= svgContainerOffset.top;
+
+    set = false;
+
+    $.each(EditObj.Layout.Anchors,function(index1,element1){
+      if((Math.pow(Anchor.loc.left - element1.x,2) + Math.pow(Anchor.loc.top - element1.y,2)) < 100 && !set){
+        if(((rotation-90)-element1.angle <= 90 && (rotation-90)-element1.angle > -90) || ((rotation-90)-element1.angle >= 270 && (rotation-90)-element1.angle < -360) || ((rotation-90)-element1.angle >= -360 && (rotation-90)-element1.angle < -270)){
+          rotation = (element1.angle - 270) % 360;
+          LayoutDragging.parent.attr("transform", "translate("+sx+","+sy+") rotate("+rotation+")");
+          Anchor.loc = getRotatedPoint(sx,sy,parseFloat(Anchor.element.attr("cx")),parseFloat(Anchor.element.attr("cy")),rotation);
+        }else{
+          rotation = (element1.angle - 90) % 360;
+          LayoutDragging.parent.attr("transform", "translate("+sx+","+sy+") rotate("+rotation+")");
+          Anchor.loc = getRotatedPoint(sx,sy,parseFloat(Anchor.element.attr("cx")),parseFloat(Anchor.element.attr("cy")),rotation);
+        }
+        sx -= Anchor.loc.left - element1.x;
+        sy -= Anchor.loc.top - element1.y;
+        LayoutDragging.parent.attr("transform", "translate("+sx+","+sy+") rotate("+rotation+")");
+        Anchor.element.get(0).style.fill = "purple";
+
+        Anchor.loc = getRotatedPoint(sx,sy,parseFloat(Anchor.element.attr("cx")),parseFloat(Anchor.element.attr("cy")),rotation);
+        set = index1;
+
+        attached = true;
+
+        if(element1.angle-90 == rotation || element1.angle+90 == rotation-180){
+          EditObj.Layout.Anchors[index1].Signal.L = Anchor.element;
+        }else if(element1.angle+90 == rotation || element1.angle-90 == rotation+180){
+          EditObj.Layout.Anchors[index1].Signal.R = Anchor.element;
+        }
+        Anchor.element.attr("attached",index1);
+      }
+    });
   });
 }
 
-function Layout_deleteFAnchor(){
+function Layout_deleteAnchor(){
   Drop = 0;
   transfrom_str = LayoutDragging.parent.attr("transform").split(' ');
 
@@ -401,16 +525,36 @@ function Layout_deleteFAnchor(){
     set = false;
 
     x = -1;
+    yN = -1;
+    yP = -1;
 
-    $.each(EditObj.Layout.FreeAnchors,function(index,element1){
+    $.each(EditObj.Layout.Anchors,function(index1,element1){
       if(x == -1 && element1.x == Anchor.loc.left && element1.y == Anchor.loc.top){
-        x = index;
+        x = index1;
+        $.each(element1.next,function(indexN,elementN){
+          console.log($(elementN.parentNode).attr("nr"));
+          if(parseInt(elementN.parent().attr("nr")) == parseInt(Anchor.element.parent().attr("nr"))){
+            yN = indexN;
+          }
+        });
+        $.each(element1.prev,function(indexP,elementP){
+          if(parseInt(elementP.parent().attr("nr")) == parseInt(Anchor.element.parent().attr("nr"))){
+            yP = indexP;
+          }
+        });
       }
     });
     if(x != -1){
-      EditObj.Layout.FreeAnchors.splice(x,1);
+      if(yN != -1){
+        EditObj.Layout.Anchors[x].next.splice(yN,1);
+      }else{
+        EditObj.Layout.Anchors[x].prev.splice(yP,1);
+      }
+      if(EditObj.Layout.Anchors[x].next.length == 0 && EditObj.Layout.Anchors[x].prev.length == 0){
+        EditObj.Layout.Anchors.splice(x,1);
+      }
     }
-    if(Anchor.element.attr("attached") != "" && Anchor.element.attr("attached") != undefined){
+    /*if(Anchor.element.attr("attached") != "" && Anchor.element.attr("attached") != undefined){
       IDs = Anchor.element.attr("attached").split("_");
       element = $('g[nr='+IDs[0]+'] .Attach'+IDs[1]);
       x_y = getRotatedPoint(sx,sy,parseFloat(Anchor.element.attr("cx")),parseFloat(Anchor.element.attr("cy")),rotation);
@@ -420,14 +564,19 @@ function Layout_deleteFAnchor(){
       p_rotation = parseFloat(element.parent().attr("transform").split(" ")[1].slice(7,-1));
       EditObj.Layout.FreeAnchors.push({"x":x_y.left,"y":x_y.top,"angle":(p_rotation+parseFloat(element.attr("_r")))%360,"element":element,"Join":-1});
       Anchor.element.attr("attached","");
-    }
+    }*/
   });
   LayoutDragging.Dropable = Drop
-
 }
 
-function Layout_createFAnchor(Anchor,rotation){
-  EditObj.Layout.FreeAnchors.push({"x":Anchor.loc.left,"y":Anchor.loc.top,"angle":(rotation+parseFloat(Anchor.element.attr("_r")))%360,"element":Anchor.element,"Join":-1});
+function Layout_createAnchor(Anchor,rotation,side){
+  if(side == 1){
+    EditObj.Layout.Anchors.push({"x":Anchor.loc.left,"y":Anchor.loc.top,"angle":(rotation+parseFloat(Anchor.element.attr("_r")))%360,
+        "next":[Anchor.element],"prev":[],"prev_states":1,"next_states":1,"Signal":{"R":undefined,"L":undefined},"type":"RailNode","Node":undefined});
+  }else{
+    EditObj.Layout.Anchors.push({"x":Anchor.loc.left,"y":Anchor.loc.top,"angle":(rotation+parseFloat(Anchor.element.attr("_r")))%360,
+        "prev":[Anchor.element],"next":[],"prev_states":1,"next_states":1,"Signal":{"R":undefined,"L":undefined},"type":"RailNode","Node":undefined});
+  }
 }
 
 function Layout_dragCheckDrop(){
@@ -470,6 +619,44 @@ function Layout_dragCheckDrop(){
         Drop += 1;
       }
     });
+    if(set == false){
+      $.each(EditObj.Layout.Anchors,function(index1,element1){
+        if((element1.prev.length < element1.prev_states || element1.next.length < element1.next_states) && 
+            (Math.pow(Anchor.loc.left - element1.x,2) + Math.pow(Anchor.loc.top - element1.y,2)) < 100 && !set){
+          Anchor.element.get(0).style.fill = "green";
+          set = true;
+        }
+        if(!set){Anchor.element.get(0).style.fill = "red"};
+      });
+    }
+  });
+  $.each($('[class^=SigAttach]',LayoutDragging.parent),function(index,element){
+    Anchor = {"element":undefined,"loc":{}};
+    Anchor.element = $('.'+element.className.baseVal,LayoutDragging.parent);
+    Anchor.loc = Anchor.element.offset();
+
+    MySide = parseInt(element.className.baseVal.slice(6));
+    MyID = parseInt(LayoutDragging.parent.attr("nr"));
+    MyJoin = MyID + "_" + MySide;
+
+    Anchor.loc.left -= svgContainerOffset.left;
+    Anchor.loc.top -= svgContainerOffset.top;
+
+    set = false;
+
+    $.each(EditObj.Layout.Anchors,function(index,element){
+      if((Math.pow(Anchor.loc.left - element.x,2) + Math.pow(Anchor.loc.top - element.y,2)) < 100 && !set){
+        if(Drop == 0){
+          Anchor.element.get(0).style.fill = "pink";
+        }
+        set = true;
+      }else{
+        if(!set){Anchor.element.get(0).style.fill = "purple"};
+      }
+      if(set){
+        Drop += 1;
+      }
+    });
   });
   LayoutDragging.Dropable = Drop
 }
@@ -489,17 +676,29 @@ function Layout_ContextMenu(evt){
   item_ID = parseInt(context.parent.attr("nr"));
   switch(context.parent.attr("part")){
     case "RS":
-      context.name = "Straight Rail";
+      context.name = "'Straight Rail'";
       context.options[0] = {"type":"in_nr","name":"ID","value":""};
       context.options[1] = {"type":"show","name":"Own_ID","value":item_ID};
 	    context.options[2] = {"type":"in_step","name":"Length","b_type":"length","value":"EditObj.Layout.Setup.Rail[item_ID].length"};
       break;
     case "RC":
-      context.name = "Curved Rail";
+      context.name = "'Curved Rail'";
       context.options[0] = {"type":"in_nr","name":"ID"};
       context.options[1] = {"type":"show","name":"Own_ID","value":item_ID};
       context.options[2] = {"type":"in_step","name":"Radius","b_type":"radius","value":"EditObj.Layout.Setup.Rail[item_ID].radius"};
       context.options[3] = {"type":"in_step","name":"Angle","b_type":"angle","value":"EditObj.Layout.Setup.Rail[item_ID].angle"};
+      break;
+    case "SwN":
+      context.name = "'Switch Node'";
+      context.options[0] = {"type":"in_nr","name":"ID"};
+      context.options[1] = {"type":"show","name":"Own_ID","value":item_ID};
+      context.options[2] = {"type":"in_step","name":"States","b_type":"states","value":"EditObj.Layout.Setup.Nodes[item_ID].states"};
+      break;
+    case "Sig":
+      context.name = "parts_list.Sig.types_name[EditObj.Layout.Setup.Signals[item_ID].type]";
+      context.options[0] = {"type":"in_nr","name":"ID"};
+      context.options[1] = {"type":"show","name":"Own_ID","value":item_ID};
+      context.options[2] = {"type":"in_step","name":"Type","b_type":"type","value":"EditObj.Layout.Setup.Signals[item_ID].type"};
       break;
   }
 
@@ -508,9 +707,6 @@ function Layout_ContextMenu(evt){
     loc = $(evt.currentTarget).offset();
   box.css("left",(evt.pageX - loc.left + 10)+'px');
   box.css("top",(evt.pageY - loc.top + 10)+'px');
-
-  //Header Name
-  $('.header',box).html(context.name);
 
   Layout_ContextMenuRedrawOptions(box,context);
   
@@ -526,6 +722,9 @@ function Layout_ContextMenu(evt){
 }
 
 function Layout_ContextMenuRedrawOptions(box,context){
+  //Header Name
+  $('.header',box).html(eval(context.name));
+
   //Erase previous Options
   $('.content',box).empty();
 
@@ -587,8 +786,47 @@ function Layout_Setup_Change(event){
       break;
   }
 
-  if(type == "Node"){
+  if(o_type == "SwN"){
+    states = EditObj.Layout.Setup.Nodes[ID].states;
+    limits = parts_list.SwN.limits;
+    if(target.attr("class") == "min_button"){
+      states = InBounds(--states,limits.states_max,limits.states_min);
+    }else if(target.attr("class") == "plus_button"){
+      states = InBounds(++states,limits.states_max,limits.states_min);
+    }
+
+    EditObj.Layout.Setup.Nodes[ID].states = states;
     console.log(EditObj.Layout.Setup.Nodes[ID]);
+  }else if(o_type == "Sig"){
+    type = EditObj.Layout.Setup.Signals[ID].type;
+    limits = parts_list.SwN.limits;
+    if(target.attr("class") == "min_button"){
+      type = InBounds(--type,limits.type_max,limits.type_min);
+    }else if(target.attr("class") == "plus_button"){
+      type = InBounds(++type,limits.type_max,limits.type_min);
+    }
+
+    EditObj.Layout.Setup.Signals[ID].type = type;
+    LayoutDragging.part_settings.Sig.type = type;
+    console.log(EditObj.Layout.Setup.Signals[ID]);
+
+    part = $("#LayoutContainer g#Signals g[nr="+ID+"]");
+    part.empty();
+    $.each(parts_list.Sig.part,function(index,element){
+      part_attributes = {};
+      $.each(element.attr,function(index2,element2){
+        part_attributes[index2] = eval(element2);
+      });
+      part.get(0).appendChild(CreateSvgElement(element.element,part_attributes));
+    });
+    $.each(parts_list.Sig.types[type],function(index,element){
+      part_attributes = {};
+      $.each(element.attr,function(index2,element2){
+        part_attributes[index2] = eval(element2);
+      });
+      part.get(0).appendChild(CreateSvgElement(element.element,part_attributes));
+    });
+
   }else if(o_type == "RS" && target.attr("type") == 'length'){
     length = EditObj.Layout.Setup.Rail[ID].length;
     steps  = parts_list.RS.length_steps
@@ -599,7 +837,7 @@ function Layout_Setup_Change(event){
       length = InBounds(++length,limits.length_min,limits.length_max);
     }
     console.log(EditObj.Layout.Setup.Rail[ID]);
-    Layout_deleteFAnchor();
+    Layout_deleteAnchor();
     part = $("#LayoutContainer g#Rail g[nr="+ID+"]");
     part.empty();
     $.each(parts_list.RS.part,function(index,element){
@@ -609,6 +847,7 @@ function Layout_Setup_Change(event){
       });
       part.get(0).appendChild(CreateSvgElement(element.element,part_attributes));
     });
+    LayoutDragging.part_settings.RS.length = length;
     EditObj.Layout.Setup.Rail[ID].length = length;
 
     $.each($('[class^=Attach]',LayoutDragging.parent),function(index,element1){
@@ -617,7 +856,7 @@ function Layout_Setup_Change(event){
       Anchor.loc = getRotatedPoint(sx,sy,parseFloat(Anchor.element.attr("cx")),parseFloat(Anchor.element.attr("cy")),rotation);
 
       if(Anchor.element.attr("attached") == undefined || Anchor.element.attr("attached") == ""){ //Test
-        Layout_createFAnchor(Anchor,rotation);
+        Layout_createAnchor(Anchor,rotation);
         //EditObj.Layout.FreeAnchors.push({"x":Anchor.loc.left,"y":Anchor.loc.top,"angle":(rotation+parseInt(Anchor.element.attr("_r")))%360,"element":Anchor.element,"Join":-1});
       }
     });
@@ -638,11 +877,14 @@ function Layout_Setup_Change(event){
     }
     angle = InBounds(angle,limits.angle_min[radius],limits.angle_max[radius]);
 
+    LayoutDragging.part_settings.RC.angle = angle;
+    LayoutDragging.part_settings.RC.radius = radius;
+
     EditObj.Layout.Setup.Rail[ID].angle = angle;
     EditObj.Layout.Setup.Rail[ID].radius = radius;
 
     console.log(EditObj.Layout.Setup.Rail[ID]);
-    Layout_deleteFAnchor();
+    Layout_deleteAnchor();
     part = $("#LayoutContainer g#Rail g[nr="+ID+"]");
     part.empty();
     $.each(parts_list.RC.part,function(index,element){
@@ -659,7 +901,7 @@ function Layout_Setup_Change(event){
       Anchor.loc = getRotatedPoint(sx,sy,parseFloat(Anchor.element.attr("cx")),parseFloat(Anchor.element.attr("cy")),rotation);
 
       if(Anchor.element.attr("attached") == undefined || Anchor.element.attr("attached") == ""){ //Test
-        Layout_createFAnchor(Anchor,rotation);
+        Layout_createAnchor(Anchor,rotation);
         //EditObj.Layout.FreeAnchors.push({"x":Anchor.loc.left,"y":Anchor.loc.top,"angle":(rotation+parseInt(Anchor.element.attr("_r")))%360,"element":Anchor.element,"Join":-1});
       }
     });
@@ -687,18 +929,28 @@ function Layout_AC_MouseMoveCheck(evt){
   evt.clientX;
   pos = {"x":(evt.pageX - Offset.left),"y":(evt.pageY - Offset.top)};
   enable_Click = false;
-  $.each(EditObj.Layout.FreeAnchors,function(index,element){
+  $.each(EditObj.Layout.Anchors,function(index,element){
     allreadyDone = false;
     $.each(LayoutDragging.AC_Elements,function(index2,element2){
       if(element == element2){
         allreadyDone = true;
       }
     })
-    if((Math.pow(pos.x - element.x,2) + Math.pow(pos.y - element.y,2)) < 100 && !allreadyDone){
+    if(element.prev.length + element.next.length <= 1){
+      if((Math.pow(pos.x - element.x,2) + Math.pow(pos.y - element.y,2)) < 100 && !allreadyDone){
       enable_Click = true;
-      element.element.css("fill","orange");
-    }else if(!allreadyDone){
-      element.element.css("fill","red");
+        if(element.prev.length == 1){
+          element.prev[0].css("fill","orange");
+        }else{
+          element.next[0].css("fill","orange");
+        }
+      }else if(!allreadyDone){
+        if(element.prev.length == 1){
+          element.prev[0].css("fill","red");
+        }else{
+          element.next[0].css("fill","red");
+        }
+      }
     }
   });
   if(enable_Click && !LayoutDragging.AC_Click){
@@ -712,10 +964,15 @@ function Layout_AC_MouseMoveCheck(evt){
 
 function Layout_AC_MouseClick(evt){
   set = false;
-  $.each(EditObj.Layout.FreeAnchors,function(index,element){
+  $.each(EditObj.Layout.Anchors,function(index,element){
     if((Math.pow(pos.x - element.x,2) + Math.pow(pos.y - element.y,2)) < 100 && !set){
-      element.element.css("fill","green");
-      LayoutDragging.AC_Elements.push(element);
+      if(element.prev.length == 1){
+        element.prev[0].css("fill","green");
+        LayoutDragging.AC_Elements.push({"element":element.prev[0],"x":element.x,"y":element.y});
+      }else{
+        element.next[0].css("fill","green");
+        LayoutDragging.AC_Elements.push({"element":element.next[0],"x":element.x,"y":element.y});
+      }
       LayoutDragging.AC_Stage++;
       set = true;
     }
@@ -778,7 +1035,7 @@ function Layout_AC_Run(){
 
   angle_diff = Math.abs(points[0].r - points[1].r) % 360;
   if(angle_diff >= 45 && angle_diff <= 315 && angle_diff != 180){
-    console.log("Angle difference: "+((points[0].r - points[1].r) % 360));
+    console.log("Angle difference: "+((points[0].r - points[1].r - 180) % 360));
     a = {"first":{},"second":{}};
     b = {"first":{},"second":{}};
     a.first.x = points[0].x;a.first.y = points[0].y;
@@ -788,7 +1045,7 @@ function Layout_AC_Run(){
     b.second.x = points[1].x + 5 * Math.cos(Math.radians(points[1].r));
     b.second.y = points[1].y + 5 * Math.sin(Math.radians(points[1].r));
 
-    inter_pos = intersection2(a,b);
+    inter_pos = intersection(a,b);
 
     console.log(b.second);
 
@@ -811,7 +1068,7 @@ function Layout_AC_Run(){
       }
 
       console.log(b.second);
-      circle_center = intersection2(node,a);
+      circle_center = intersection(node,a);
 
       radius = Math.sqrt(Math.pow(node.first.x - circle_center.x,2)+Math.pow(node.first.y - circle_center.y,2));
 
@@ -821,7 +1078,7 @@ function Layout_AC_Run(){
       box_childs = [];
 
       factor = 0;
-      if(((points[0].r - points[1].r) % 360) < -180 || ((points[0].r - points[1].r) % 360) > 0){
+      if(((points[0].r - points[1].r - 180) % 360) > 0 && ((points[0].r - points[1].r - 180) % 360) < 180){
         factor = 1;
       }
 
@@ -854,7 +1111,7 @@ function Layout_AC_Run(){
       }
 
       console.log(b.second);
-      circle_center = intersection2(node,b);
+      circle_center = intersection(node,b);
 
       radius = Math.sqrt(Math.pow(node.first.x - circle_center.x,2)+Math.pow(node.first.y - circle_center.y,2))
 
@@ -864,7 +1121,7 @@ function Layout_AC_Run(){
       box_childs = [];
 
       factor = 0;
-      if(((points[0].r - points[1].r) % 360) > 180 || ((points[0].r - points[1].r) % 360) < 0){
+      if(((points[0].r - points[1].r - 180) % 360) < 0 && ((points[0].r - points[1].r - 180) % 360) > -180){
         factor = 1;
       }
 
@@ -881,6 +1138,66 @@ function Layout_AC_Run(){
 
       $('#LayoutContainer g#Drawing g[nr='+part_nr+']').bind("mousedown",Layout_dragPart);
     }
+    LayoutDragging.parent = $('#LayoutContainer g#Drawing g[nr='+part_nr+']');
+
+    transfrom_str = LayoutDragging.parent.attr("transform").split(' ');
+
+    translation = transfrom_str[0].slice(10,-1).split(',');
+    sx = parseFloat(translation[0]);
+    sy = parseFloat(translation[1]);
+    rotation = parseFloat(transfrom_str[1].slice(7,-1));
+
+    $.each($('[class^=Attach]',LayoutDragging.parent),function(index,element){
+      Anchor = {"element":undefined,"loc":{}};
+      Anchor.element = $('.'+element.className.baseVal,LayoutDragging.parent);
+      Anchor.loc = getRotatedPoint(sx,sy,parseFloat(Anchor.element.attr("cx")),parseFloat(Anchor.element.attr("cy")),rotation);
+
+      MySide = parseInt(element.className.baseVal.slice(6));
+      OwnSideSign = 1;
+      if(MySide == 2){
+        OwnSideSign = -1;
+      }
+
+      MyID = parseInt(LayoutDragging.parent.attr("nr"));
+      MyJoin = MyID + "_" + MySide;
+
+      set = -1;
+
+      for_each_counter = 0;
+      array_length = EditObj.Layout.Anchors.length;
+      for(for_each_counter;for_each_counter<array_length;for_each_counter++){
+        element1 = EditObj.Layout.Anchors[for_each_counter];
+        if((element1.prev.length < element1.prev_states || element1.next.length < element1.next_states) && 
+            (Math.pow(Anchor.loc.left - element1.x,2) + Math.pow(Anchor.loc.top - element1.y,2)) < 100 && set < 0){
+          a = "";
+          if(element1.angle != parseFloat(Anchor.element.attr("_r")) && attached == false && element1.prev.length < element1.prev_states){
+            a = "prev";
+          }else if(element1.angle-180 != parseFloat(Anchor.element.attr("_r")) && attached == false && element1.next.length < element1.next_states){
+            a = "next";
+          }
+
+          Anchor.element.get(0).style.fill = "green";
+          set = for_each_counter;
+
+          if(a == "prev"){
+            if(element1.prev.length == 1){
+              element1.prev[0].get(0).style.fill = "green";
+            }
+            EditObj.Layout.Anchors[for_each_counter].prev.push(Anchor.element);
+          }else{
+            if(element1.next.length == 1){
+              element1.next[0].get(0).style.fill = "green";
+            }
+            EditObj.Layout.Anchors[for_each_counter].next.push(Anchor.element);
+          }
+        }
+      }
+      if(set < 0){
+        Anchor.element.get(0).style.fill = "red";
+      }
+    });
+    var element = LayoutDragging.parent.detach();
+    $('#LayoutContainer #Rail').append(element);
     return Layout_AC_Finish();
   }else if(angle_diff == 180){
     console.log("Straight Line!! EASY");
@@ -909,10 +1226,10 @@ parts_list.RS.part = [
         ];
 
 parts_list.RC = {"angle_steps":[],"radius_steps":[],"limits":{},"part":[]};
-parts_list.RC.angle_steps  = [undefined,Math.radians(11.25),Math.radians(22.5),Math.radians(45),Math.radians(67.5)];
+parts_list.RC.angle_steps  = [undefined,Math.radians(11.25),Math.radians(22.5),Math.radians(45),Math.radians(67.5),Math.radians(90)];
 parts_list.RC.radius_steps = [undefined,25,50,75,100,150];
-parts_list.RC.limits.angle_max = [undefined,4,4,4,4,4];
-parts_list.RC.limits.angle_min = [3,2,1,1];
+parts_list.RC.limits.angle_max = [undefined,5,5,5,5,5];
+parts_list.RC.limits.angle_min = [undefined,3,2,1,1];
 parts_list.RC.limits.radius_max = 5;
 parts_list.RC.limits.radius_min = 1;
 
@@ -924,46 +1241,48 @@ parts_list.RC.part = [
           {"element":"circle","attr":{"class":"'Attach2'","_r":"-Math.degrees(a_steps[angle])","cx":"Math.sin(a_steps[angle])*r_steps[radius]","cy":"r_steps[radius]*(Math.cos(a_steps[angle])-1)","r":3,"style":"'fill:red;'"}}
         ];
 
+parts_list.SwN = {"limits":{},"part":[]};
+parts_list.SwN.limits.states_max = 4;
+parts_list.SwN.limits.states_min = 1;
+parts_list.SwN.part = [
+          {"element":"path","attr":{"d":"'M 3.75,-7.5 v 15 l -7.5,-7.5 Z'","style":"'stroke-width:0;fill:#41b7dd;'"}},
+          {"element":"circle","attr":{"cx":0,"cy":0,"r":10,"style":"'fill:rgb(100,100,100);opacity:0.1;cursor:move;'"}}
+        ];
 
-vector = {};
-vector.dot = function (u, v){
-  return u.x * v.x + u.y * v.y;   
-}
+parts_list.BI = {"limits":{},"part":[]};
+parts_list.BI.limits.states_max = 4;
+parts_list.BI.limits.states_min = 1;
+parts_list.BI.part = [
+          {"element":"circle","attr":{"cx":0,"cy":0,"r": 3,"style":"'fill:orange;'"}},
+          {"element":"circle","attr":{"cx":0,"cy":0,"r":10,"style":"'fill:rgb(100,100,100);opacity:0.1;cursor:move;'"}}
+        ];
 
-vector.norm2 = function (v){
-  return v.x * v.x + v.y * v.y;
-}
+parts_list.Sig = {"limits":{},"part":[],"types":[],"types_name":[]};
+parts_list.Sig.limits.type_max = 1;
+parts_list.Sig.limits.type_min = 0;
 
-vector.norm = function (v){
-  return sqrt(vector.norm2(v));
-}
+parts_list.Sig.part = [
+          {"element":"circle","attr":{"class":"'SigAttach'","cx":0,"cy":0,"r":1.5,"style":"'fill:purple'"}}
+        ];
 
-vector.cross = function (b, c) // cross product
-{
-  return {"x":(b.y * c.x - c.y * b.x),"y":(b.x * c.y - c.x * b.y)};
-}
+parts_list.Sig.types_name[0] = "3 Light Signal";
+parts_list.Sig.types[0] = [
+          {"element":"path","attr":{"d":"'M 15,5 v 10 a 5,5 0,0,1 -10,0 v -10 a 5,5 0,0,1 10,0'","style":"'stroke-width:0px;stroke:black;fill:black;'"}},
+          {"element":"circle","attr":{"cx":10,"cy": 5,"r":2,"style":"'stroke-width:0px;fill:red'"}},
+          {"element":"circle","attr":{"cx":10,"cy":10,"r":2,"style":"'stroke-width:0px;fill:orange'"}},
+          {"element":"circle","attr":{"cx":10,"cy":15,"r":2,"style":"'stroke-width:0px;fill:lime'"}},
+          {"element":"path","attr":{"d":"'M 17.5,2.5 v 15 a 7.5,7.5 0,0,1 -15,0 v -15 a 7.5,7.5 0,0,1 15,0'","style":"'fill:rgb(100,100,100);opacity:0.1;cursor:move;stroke-width:0px;'"}}
+        ];
 
-function line(p1, p2){
-  A = (p.first.y - p.second.y);
-  B = (p.second.x - p.first.x);
-  C = -(p.first.x*p.second.y - p.second.x*p1.y);
-  return [A, B, C];
-}
+parts_list.Sig.types_name[1] = "2 Light Signal";
+parts_list.Sig.types[1] = [
+          {"element":"path","attr":{"d":"'M 15,5 v 5 a 5,5 0,0,1 -10,0 v -5 a 5,5 0,0,1 10,0'","style":"'stroke-width:0px;stroke:black;fill:black;'"}},
+          {"element":"circle","attr":{"cx":10,"cy": 5,"r":2,"style":"'stroke-width:0px;fill:red'"}},
+          {"element":"circle","attr":{"cx":10,"cy":10,"r":2,"style":"'stroke-width:0px;fill:green'"}},
+          {"element":"path","attr":{"d":"'M 17.5,2.5 v 10 a 7.5,7.5 0,0,1 -15,0 v -10 a 7.5,7.5 0,0,1 15,0'","style":"'fill:rgb(100,100,100);opacity:0.1;cursor:move;stroke-width:0px;'"}}
+        ];
 
-function intersection3(L1, L2){
-    D  = L1[0] * L2[1] - L1[1] * L2[0];
-    Dx = L1[2] * L2[1] - L1[1] * L2[2];
-    Dy = L1[0] * L2[2] - L1[2] * L2[0];
-    if(D != 0){
-      x = Dx / D;
-      y = Dy / D;
-      return [x,y];
-    }else{
-      return False;
-    }
-}
-
-function intersection2(L1,L2){
+function intersection(L1,L2){
   A1 = (L1.first.y - L1.second.y);
   B1 = (L1.second.x - L1.first.x);
   C1 = -(L1.first.x*L1.second.y - L1.second.x*L1.first.y);
@@ -985,30 +1304,6 @@ function intersection2(L1,L2){
   return {"x":x,"y":y};
 }
 
-function intersection(a, b)
-// http://mathworld.wolfram.com/Line-LineIntersection.html
-// in 3d; will also work in 2d if z components are 0
-{
-  da = {"x":(a.second.x - a.first.x),"y":(a.second.y - a.first.y)}; 
-  db = {"x":(b.second.x - b.first.x),"y":(b.second.y - b.first.y)}; 
-  ac = (da.y*a.first.x) + (da.x*a.first.y); 
-  bc = (db.y*b.first.x) + (db.x*b.first.y);
-
-  det = da.y*db.x - da.x*db.y;
-  if(det != 0){
-    x = (db.x*ac - da.x*bc)/det;
-    y = (da.y*bc - db.y*ac)/det;
-  }else{
-    return {};
-  }
-
-  if(x < 0 || y < 0){
-    console.log("No intersection of ray");
-    return {};
-  }
-
-  return {"x":x,"y":y};
-}
 /*
 
 function Layout_Click(evt){

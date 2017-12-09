@@ -9,8 +9,7 @@ EditObj.NrStation = 0;
 EditObj.HOA = 0; //Highest Output Address
 EditObj.HIA = 0; //Highest Input Address
 EditObj.ModuleNr;
-EditObj.Layout = {"grid":[],"FreeAnchors":[],"Anchors":[],"Nodes":[]};
-EditObj.Layout.Setup = {"Rail":[],"Nodes":[],"Signals":[]};
+EditObj.Layout = {"grid":[],"Anchors":[],"Setup":{"Rail":[],"Nodes":[],"Signals":[]}};
 
 function LoadModule(evt,nr){
   clearTables();
@@ -187,12 +186,11 @@ function clearTables(){
   EditObj.NrStation = 0;
   EditObj.HOA = 0; //Highest Output Address
   EditObj.HIA = 0; //Highest Input Address
-  EditObj.Layout = {"grid":[],"FreeAnchors":[],"Anchors":[],"Nodes":[]};
-  EditObj.Layout.Setup = {"Rail":[],"Nodes":[],"Signals":[]};
+  EditObj.Layout = {"grid":[],"Anchors":[],"Setup":{"Rail":[],"Nodes":[],"Signals":[]}};
 
   $('#ConnectBox').empty();
 
-  Layout_ClearAll();
+  Layout_Clear();
 
   var path = CreateSvgElement('path',{"d":"M0,0 L0,6 L9,3 z"});
   var marker = CreateSvgElement('marker',{"id":"arrow","markerWidth":"10","markerHeight":"10","refX":"0","refY":"3","orient":"auto","markerUnits":"strokeWidth"});

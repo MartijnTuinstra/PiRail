@@ -889,6 +889,24 @@
           </script>
           <div id="LayoutContextMenu" style="display:none;left:0px;top:0px">
             <div class="header">Block</div>
+            <div class="header2" style="
+              width: calc(100% + 10px);
+              height: 20px;
+              line-height: 20px;
+              float: left;
+              margin: 0px -10px;
+              margin-bottom: 10px;
+              margin-top: -10px;
+              padding: 5px;
+              background-color: #bbb;
+              border-top: 2px solid #ddd;
+              text-align: center;
+              font-weight: bold;
+              font-family: sans-serif;
+          ">
+              <img src="./img/Copy.svg" style="height:100%;cursor:pointer;"/>
+              <img src="./img/bin_b.png" style="height:100%;margin-left:10px;cursor:pointer;" onClick="Layout_DeletePart(LayoutDragging.parent);Layout_HideContextMenu();"/>
+            </div>
             <div class="content"></div>
           </div>
         </div>

@@ -9,12 +9,16 @@ EditObj.NrStation = 0;
 EditObj.HOA = 0; //Highest Output Address
 EditObj.HIA = 0; //Highest Input Address
 EditObj.ModuleNr;
-EditObj.Layout = {"grid":[],"Anchors":[],"Setup":{"Rail":[],"Nodes":[],"Signals":[]}};
+EditObj.Layout = {"Anchors":[],"Setup":{"Rail":[],"Nodes":[],"Signals":[]}};
 
 function LoadModule(evt,nr){
   clearTables();
+
   $(evt.target).attr("src","./img/loading.svg");
   var PropLines;
+
+  //Load Layout
+  Layout_LoadNew(nr);
 
   //Load properties
   $.ajax({
@@ -167,7 +171,18 @@ function LoadModule(evt,nr){
 }
 
 function SaveModule(){
-  $.post("./modules_edit_upload.php",EditObj);
+  Export = {};
+  $.each(EditObj,function(index,element){
+    if(index != "Layout"){
+      Export[index] = element;
+    }
+  });
+
+  Export.LayoutSave = Layout_Save();
+
+  console.log("Saving....");
+  console.log(Export);
+  $.post("./modules_edit_upload.php",JSON.stringify(Export));
 }
 
 function clearTables(){

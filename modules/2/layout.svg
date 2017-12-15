@@ -1,52 +1,32 @@
-<svg xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:svg="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 140" id="svg6" height="140px" width="140px" version="1.1">
-  <metadata id="metadata12">
-	<rdf:rdf>
-	  <cc:work rdf:about="">
-		<dc:format>image/svg+xml</dc:format>
-	  </cc:work>
-	</rdf:rdf>
-  </metadata>
-  <defs id="defs10"></defs>
-  <g>
-  	<path class="B" d="M 0,40 h 39"></path>
-  	<path class="B" d="M 36.5,41 l 32,-32"></path>
-  	<path class="B" d="M 66,10  h 25"></path>
-  	<path class="B" d="M 88.5,9  l 32,32"></path>
-
-  	<path class="B" d="M 120,39  l 0,101"></path>
-  	<path class="B" d="M 100,140 l 0,-41"></path>
-  	<path class="B" d="M 101,101.5 l -11.5,-11.5"></path>
-
-  	<path class="B" d="M 88.5,91 l 32,-32"></path>
-  	<path class="B" d="M 66,90  h 25"></path>
-  	<path class="B" d="M 36.5,59 l 32,32"></path>
-  	<path class="B" d="M 0,60 h 39"></path>
-  </g>
-  <g id="B0">
-  	<path class="L" style="stroke: rgb(0, 255, 0);" d="M 0,40 h 38"></path>
-  	<path class="L" style="stroke: rgb(0, 255, 0);" d="M 37,40.5 l 31,-31"></path>
-  	<path class="L" style="stroke: rgb(0, 255, 0);" d="M 67,10  h 23"></path>
-  	<path class="L" style="stroke: rgb(0, 255, 0);" d="M 89,9.5  l 31,31"></path>
-  </g>
-  <g id="B1">
-  	<path class="L" style="stroke: rgb(0, 255, 0);" d="M 120,40  l 0,20"></path>
-  	<path class="L" style="stroke: rgb(0, 255, 0);" d="M 120,80  l 0,60"></path>
-
-  	<path class="Sw1S L" style="stroke: rgb(0, 255, 0); opacity: 0;" d="M 120,60  l 0,20"></path>
-    <path class="Sw1D L" style="stroke: rgb(0, 255, 0); opacity: 1;" d="M 120,59.5 l -15,15"></path>
-    <rect x="105" y="58" height="20" width="16" class="Switch" onclick="throw_Switch('S',2,1);" style="cursor: pointer;"></rect>
-  </g>
-  <g id="B2">
-  	<path class="L" style="stroke: rgb(0, 255, 0);" d="M 76,90  h 14"></path>
-  	<path class="L" style="stroke: rgb(0, 255, 0);" d="M 100,140 l 0,-40"></path>
-
-    <path class="Sw0D L" style="stroke: rgb(0, 255, 0); opacity: 0;" d="M 89.5,90 l 15.5,-15.5"></path>
-  	<path class="Sw0S L" style="stroke: rgb(0, 255, 0); opacity: 1;" d="M 100.5,101 l -11,-11"></path>
-    <rect x="89" y="75" height="28" width="16" class="Switch" onclick="throw_Switch('S',2,0);" style="cursor: pointer;"></rect>
-  </g>
-  <g id="B3">
-  	<path class="L" style="stroke: rgb(0, 255, 0);" d="M 67,90  h 9"></path>
-  	<path class="L" style="stroke: rgb(0, 255, 0);" d="M 37,59.5 l 31,31"></path>
-  	<path class="L" style="stroke: rgb(0, 255, 0);" d="M 0,60 h 38"></path>
-  </g>
+<svg width='233' height='232' viewBox='-144 -29 233 232'>
+<g class="BSw0"><line class="L LSwO SwS0o" nr="5" part="RS" transform="translate(68.5786,30.710678118655) rotate(90)" x1="-0.2" x2="162.2" y2="0" style="fill:none;stroke:lightgrey;stroke-width:6px;"/>
+<path class="L LSwO SwS1o" nr="4" part="CRail" transform="translate(53.933939059327,66.066017177982) rotate(315)" d="M -0.2,0 h 0.2 a 50,50 0,0,0 35.35533905932737,-14.64466094067262 l 0.14142135623730953,-0.1414213562373095" style="fill:none;stroke:lightgrey;stroke-width:6px;opacity:0;"/>
+</g><g class="BSw1"><path class="L LSwO SwS0o" nr="11" part="CRail" transform="translate(39.2893,157.35067811866) rotate(0)" d="M 0,0 l 0,-10.656296487630982 a 45.67342486752818,45.67342486752818 0,0,0 -45.67342486752591,-45.67342486753273" style="fill:none;stroke:lightgrey;stroke-width:6px;"/>
+<path class="L LSwO SwS1o" nr="10" part="CRail" transform="translate(-6.3841248675257,101.02095676349) rotate(0)" d="M 0,0 a 61.2319987690352,61.2319987690352 0,0,0 43.297561555190896,-17.934437213846593 l 17.02050237166236,-17.020502371662303" style="fill:none;stroke:lightgrey;stroke-width:6px;opacity:0;"/>
+</g><g class="B0">
+<line class="L" nr="0" part="RS" transform="translate(-134.13207811865,10) rotate(0)" x1="-0.2" x2="82.2" y2="0" style="fill:none;stroke:#555;stroke-width:6px;"/>
+<path class="L" nr="1" part="CRail" transform="translate(-52.132078118655,10) rotate(0)" d="M -0.2,0 h 0.2 a 50,50 0,0,0 35.35533905932737,-14.64466094067262 l 0.14142135623730953,-0.1414213562373095" style="fill:none;stroke:#555;stroke-width:6px;"/>
+<path class="L" nr="2" part="CRail" transform="translate(18.5786,-19.289321881345) rotate(180)" d="M -0.2,0 h 0.2 a 50,50 0,0,0 35.35533905932737,-14.64466094067262 l 0.14142135623730953,-0.1414213562373095" style="fill:none;stroke:#555;stroke-width:6px;"/>
+</g>
+<g class="B1">
+<g class="Sw0 SwGroup">
+<path class="L LSw SwS0" nr="4" part="CRail" transform="translate(53.933939059327,66.066017177982) rotate(315)" d="M -0.2,0 h 0.2 a 50,50 0,0,0 35.35533905932737,-14.64466094067262 l 0.14142135623730953,-0.1414213562373095" style="fill:none;stroke:#555;stroke-width:6px;"/>
+<line class="L LSw SwS1" nr="5" part="RS" transform="translate(68.5786,30.710678118655) rotate(90)" x1="-0.2" x2="162.2" y2="0" style="fill:none;stroke:#555;stroke-width:6px;opacity:0;"/>
+</g>
+<path class="L" nr="3" part="CRail" transform="translate(68.5786,30.710678118655) rotate(270)" d="M -0.2,0 h 0.2 a 50,50 0,0,0 50,-49.99999999999999 l 1.2246467991473533e-17,-0.2" style="fill:none;stroke:#555;stroke-width:6px;"/>
+</g>
+<g class="B3">
+<line class="L" nr="6" part="RS" transform="translate(-134.13207811865,39.2893) rotate(0)" x1="-0.2" x2="35.56" y2="0" style="fill:none;stroke:#555;stroke-width:6px;"/>
+<path class="L" nr="8" part="CRail" transform="translate(-52.57810149309,70.155128381746) rotate(247)" d="M -0.2,0 h 0.2 a 50,50 0,0,0 46.19397662556434,-30.86582838174551 l 0.07653668647301798,-0.18477590650225736" style="fill:none;stroke:#555;stroke-width:6px;"/>
+</g>
+<g class="B2">
+<g class="Sw1 SwGroup">
+<path class="L LSw SwS0" nr="10" part="CRail" transform="translate(-6.3841248675257,101.02095676349) rotate(0)" d="M 0,0 a 61.2319987690352,61.2319987690352 0,0,0 43.297561555190896,-17.934437213846593 l 17.02050237166236,-17.020502371662303" style="fill:none;stroke:#555;stroke-width:6px;"/>
+<path class="L LSw SwS1" nr="11" part="CRail" transform="translate(39.2893,157.35067811866) rotate(0)" d="M 0,0 l 0,-10.656296487630982 a 45.67342486752818,45.67342486752818 0,0,0 -45.67342486752591,-45.67342486753273" style="fill:none;stroke:#555;stroke-width:6px;opacity:0;"/>
+</g>
+<line class="L" nr="7" part="RS" transform="translate(39.2893,157.35067811865) rotate(90)" x1="-0.2" x2="35.56" y2="0" style="fill:none;stroke:#555;stroke-width:6px;"/>
+<path class="L" nr="9" part="CRail" transform="translate(-52.57810149309,70.155128381746) rotate(67)" d="M -0.2,0 h 0.2 a 50,50 0,0,0 46.19397662556434,-30.86582838174551 l 0.07653668647301798,-0.18477590650225736" style="fill:none;stroke:#555;stroke-width:6px;"/>
+</g>
+<g class='Signals'>
+</g>
 </svg>

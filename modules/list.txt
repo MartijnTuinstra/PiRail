@@ -1,46 +1,42 @@
 {
     "0": [],
     "1": {
-        "name": "Loop links",
+        "name": "Loop Links",
         "blocks": 0,
         "switch": 0,
         "signals": 0,
         "stations": 0,
-        "width": 140,
-        "height": 140,
+        "width": 243,
+        "height": 263,
         "angle": 90,
         "anchors": [
             [
-                30,
-                140,
-                0
+                49.5786,
+                242.70135623731
             ],
             [
-                140,
-                50,
-                0
+                222.99995623731,
+                60
             ]
         ]
     },
     "2": {
-        "name": "Loop rechts",
+        "name": "Loop Rechts",
         "blocks": 0,
         "switch": 0,
         "signals": 0,
         "stations": 0,
-        "width": 140,
-        "height": 140,
-        "angle": 90,
+        "width": 233,
+        "height": 232,
+        "angle": -90,
         "anchors": [
             [
-                0,
-                50,
-                0
+                9.8679218813454,
+                39
             ],
             [
-                110,
-                140,
-                0
+                212.5786,
+                221.71067811865
             ]
         ]
     },
@@ -72,19 +68,17 @@
         "switch": 10,
         "signals": 8,
         "stations": 5,
-        "width": 800,
-        "height": 80,
+        "width": 1206,
+        "height": 168,
         "angle": 0,
         "anchors": [
             [
-                0,
-                50,
-                0
+                20,
+                60
             ],
             [
-                800,
-                50,
-                0
+                1185.6,
+                60
             ]
         ]
     },
@@ -160,24 +154,22 @@
         ]
     },
     "8": {
-        "name": "Brug",
-        "blocks": 0,
+        "name": "Station 4 blocks",
+        "blocks": 8,
         "switch": 0,
         "signals": 0,
         "stations": 0,
-        "width": 800,
-        "height": 80,
+        "width": 668,
+        "height": 49,
         "angle": 0,
         "anchors": [
             [
-                0,
-                50,
-                0
+                10,
+                10
             ],
             [
-                800,
-                50,
-                0
+                658,
+                10
             ]
         ]
     },
@@ -319,5 +311,25 @@
         "switch": 0,
         "signals": 0,
         "stations": 0
+    },
+    "Test": {
+        "name": "Station 4 blocks",
+        "blocks": 28,
+        "switch": 10,
+        "signals": 8,
+        "stations": 5,
+        "width": 1186,
+        "height": 148,
+        "angle": 0,
+        "anchors": [
+            [
+                10,
+                50
+            ],
+            [
+                1175.6,
+                50
+            ]
+        ]
     }
 }

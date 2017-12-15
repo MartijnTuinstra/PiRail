@@ -13,7 +13,7 @@
 	stroke-dasharray:none
 }
 
-#Modules .L, .MBox svg .L {
+#Modules .L {
 	fill:none;
 	stroke-width:2px;
 	stroke-linecap:butt;
@@ -35,10 +35,6 @@
 	stroke:#000;
 	stroke-width:6px;
 	stroke-linecap: round;
-}
-
-.MBox svg .L {
-  stroke: green;
 }
 
 

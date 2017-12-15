@@ -1,0 +1,244 @@
+{
+    "Rail": [
+        {
+            "nr": 0,
+            "part": "RS",
+            "transform": "translate(499,274) rotate(0)",
+            "BlockID": 0,
+            "length": 3,
+            "x": "82",
+            "y": "0"
+        },
+        {
+            "nr": 1,
+            "part": "RC",
+            "transform": "translate(581,274) rotate(0)",
+            "BlockID": 0,
+            "angle": 3,
+            "radius": 3,
+            "d": "M 0,0 a 50,50 0,0,0 35.35533905932737,-14.64466094067262",
+            "x": "35.35533905932737",
+            "y": "-14.64466094067262"
+        },
+        {
+            "nr": 2,
+            "part": "RC",
+            "transform": "translate(651.7106781186546,244.71067811865476) rotate(180)",
+            "BlockID": 0,
+            "angle": 3,
+            "radius": 3,
+            "d": "M 0,0 a 50,50 0,0,0 35.35533905932737,-14.64466094067262",
+            "x": "35.35533905932737",
+            "y": "-14.64466094067262"
+        },
+        {
+            "nr": 3,
+            "part": "RC",
+            "transform": "translate(701.7106781186546,294.71067811865476) rotate(270)",
+            "BlockID": 1,
+            "angle": 5,
+            "radius": 3,
+            "d": "M 0,0 a 50,50 0,0,0 50,-49.99999999999999",
+            "x": "50",
+            "y": "-49.99999999999999"
+        },
+        {
+            "nr": 4,
+            "part": "RC",
+            "transform": "translate(687.066017177982,330.06601717798213) rotate(315)",
+            "BlockID": 1,
+            "angle": 3,
+            "radius": 3,
+            "d": "M 0,0 a 50,50 0,0,0 35.35533905932737,-14.64466094067262",
+            "x": "35.35533905932737",
+            "y": "-14.64466094067262"
+        },
+        {
+            "nr": 5,
+            "part": "RS",
+            "transform": "translate(701.7106781186546,294.71067811865476) rotate(90)",
+            "BlockID": 1,
+            "length": 4,
+            "x": "162",
+            "y": "0"
+        },
+        {
+            "nr": 6,
+            "part": "RS",
+            "transform": "translate(499,303.2893) rotate(0)",
+            "BlockID": 3,
+            "length": 1,
+            "x": "35.36",
+            "y": "0"
+        },
+        {
+            "nr": 7,
+            "part": "RS",
+            "transform": "translate(672.4213781186546,421.35067811865474) rotate(90)",
+            "BlockID": 2,
+            "length": 1,
+            "x": "35.36",
+            "y": "0"
+        },
+        {
+            "nr": 8,
+            "part": "RC",
+            "transform": "translate(580.5539766255644,334.15512838174556) rotate(247.5)",
+            "BlockID": 3,
+            "angle": 4,
+            "radius": 3,
+            "d": "M 0,0 a 50,50 0,0,0 46.19397662556434,-30.86582838174551",
+            "x": "46.19397662556434",
+            "y": "-30.86582838174551"
+        },
+        {
+            "nr": 9,
+            "part": "RC",
+            "transform": "translate(580.5539766255644,334.15512838174556) rotate(67.5)",
+            "BlockID": 2,
+            "angle": 4,
+            "radius": 3,
+            "d": "M 0,0 a 50,50 0,0,0 46.19397662556434,-30.86582838174551",
+            "x": "46.19397662556434",
+            "y": "-30.86582838174551"
+        },
+        {
+            "nr": 10,
+            "part": "CRail",
+            "transform": "translate(626.7479532511287,365.02095676349103) rotate(0)",
+            "BlockID": 2,
+            "d": "M 0,0 a 61.2319987690352,61.2319987690352 0,0,0 43.297561555190896,-17.934437213846593 l 17.02050237166236,-17.020502371662303",
+            "r1": -180,
+            "r2": 315,
+            "x": 60.318063926853,
+            "y": -34.954939585509
+        },
+        {
+            "nr": 11,
+            "part": "CRail",
+            "transform": "translate(672.4213781186546,421.35067811865474) rotate(0)",
+            "BlockID": 2,
+            "d": "M 0,0 l 0,-10.656296487630982 a 45.67342486752818,45.67342486752818 0,0,0 -45.67342486752591,-45.67342486753273",
+            "r1": 90,
+            "r2": -180,
+            "x": -45.673424867526,
+            "y": -56.329721355164
+        }
+    ],
+    "Nodes": [
+        {
+            "nr": 0,
+            "part": "MAN",
+            "transform": "translate(499,274) rotate(0)",
+            "length": 2
+        },
+        {
+            "nr": 1,
+            "part": "SwN",
+            "transform": "translate(701.7106781186546,294.71067811865476) rotate(-90)",
+            "SwitchPID": -1,
+            "SwitchNID": 0,
+            "Pstates": [
+                {
+                    "nr": "3",
+                    "BID": 1
+                }
+            ],
+            "Nstates": [
+                {
+                    "nr": "4",
+                    "BID": 1
+                },
+                {
+                    "nr": "5",
+                    "BID": 1
+                }
+            ],
+            "ConRailPart": "3",
+            "Pstate": 1,
+            "Nstate": 2
+        },
+        {
+            "nr": 2,
+            "part": "MAN",
+            "transform": "translate(672.4213781186546,456.71067811865476) rotate(270)",
+            "length": 2
+        },
+        {
+            "nr": 3,
+            "part": "SwN",
+            "transform": "translate(626.7479532511287,365.02095676349103) rotate(-180)",
+            "SwitchPID": -1,
+            "SwitchNID": 1,
+            "Pstates": [
+                {
+                    "nr": "9",
+                    "BID": 2
+                }
+            ],
+            "Nstates": [
+                {
+                    "nr": "11",
+                    "BID": 2
+                },
+                {
+                    "nr": "10",
+                    "BID": 2
+                }
+            ],
+            "ConRailPart": "9",
+            "Pstate": 1,
+            "Nstate": 2
+        },
+        {
+            "nr": 4,
+            "part": "BI",
+            "transform": "translate(499,274) rotate(0)",
+            "AnchorID": 0,
+            "ConRailPart": "0"
+        },
+        {
+            "nr": 5,
+            "part": "BI",
+            "transform": "translate(499,303.2893) rotate(0)",
+            "AnchorID": 1,
+            "ConRailPart": "0"
+        },
+        {
+            "nr": 6,
+            "part": "BI",
+            "transform": "translate(651.7106781186546,244.71067811865476) rotate(0)",
+            "AnchorID": 4,
+            "ConRailPart": "2"
+        },
+        {
+            "nr": 7,
+            "part": "BI",
+            "transform": "translate(687.066017177982,330.06601717798213) rotate(-45)",
+            "AnchorID": 6,
+            "ConRailPart": "4"
+        },
+        {
+            "nr": 8,
+            "part": "BI",
+            "transform": "translate(672.4213781186546,456.71067811865476) rotate(90)",
+            "AnchorID": 8,
+            "ConRailPart": "2"
+        },
+        {
+            "nr": 9,
+            "part": "BI",
+            "transform": "translate(701.7106781186546,456.71067811865476) rotate(-90)",
+            "AnchorID": 7,
+            "ConRailPart": "5"
+        },
+        {
+            "nr": 10,
+            "part": "BI",
+            "transform": "translate(580.5539766255644,334.15512838174556) rotate(67.5)",
+            "AnchorID": 11,
+            "ConRailPart": "8"
+        }
+    ],
+    "Signals": []
+}

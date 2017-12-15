@@ -20,7 +20,8 @@
     <meta id="vp" name="viewport" content="width=device-width, initial-scale=0.7">
     <meta name="mobile-web-app-capable" content="yes">
     <link rel="manifest" href="./manifest.json">
-    <script src="./scripts/framework/jquery-3.1.1.min.js"></script>
+    <!--<script src="./scripts/framework/jquery-3.1.1.min.js"></script>-->
+    <script src="https://code.jquery.com/jquery-3.1.1.js"></script>
     <script src="./scripts/framework/jquery-ui.min.js"></script>
     <script src="./scripts/framework/jquery.ui.touch-punch.min.js"></script>
     <link rel="stylesheet" type="text/css" href="./styles/jquery-ui.min.css">
@@ -130,11 +131,17 @@
 
       function zoom(scale){
         console.log("Zoom: "+parseInt($('#track').css('zoom'))+scale)
-        if(scale == '+' && parseInt($('#track').css('zoom')) != 5){
+        if(scale == '+' && parseInt($('#track').css('zoom')) != 5 && parseInt($('#track').css('zoom')) >= 1){
           $('#track').css('zoom',parseInt($('#track').css('zoom'))+1);
           $('#track').css('height','calc(100% - '+(40/(parseInt($('#track').css('zoom'))))+'px)');
-        }else if(scale == '-' && parseInt($('#track').css('zoom')) != 1){
+        }else if(scale == '-' && parseInt($('#track').css('zoom')) > 1){
           $('#track').css('zoom',parseInt($('#track').css('zoom'))-1);
+          $('#track').css('height','calc(100% - '+(40/(parseInt($('#track').css('zoom'))))+'px)');
+        }else if(scale == '+' && parseInt($('#track').css('zoom')) < 1 && parseInt($('#track').css('zoom')) >= 0.25){
+          $('#track').css('zoom',parseInt($('#track').css('zoom'))+0.25);
+          $('#track').css('height','calc(100% - '+(40/(parseInt($('#track').css('zoom'))))+'px)');
+        }else if(scale == '-' && parseInt($('#track').css('zoom')) <= 1 && parseInt($('#track').css('zoom')) > 0.25){
+          $('#track').css('zoom',parseInt($('#track').css('zoom'))-0.25);
           $('#track').css('height','calc(100% - '+(40/(parseInt($('#track').css('zoom'))))+'px)');
         }
       }
@@ -488,11 +495,6 @@
         echo('<tr><td>'.$OptionList[$nr]['stations'].'</td><td>Stations</td></table><img src="./img/setting_cog.svg" style="width: 40px;margin: 15px auto;cursor:pointer;" onClick="LoadModule(event,'.$nr.');"/></div></div>');
       }
       ?>
-      <script>
-        $('.MBox .L').css("stroke","#0f0");
-        $('.MBox .Sw').css("stroke","#999");
-        $('.MBox .L').css("opacity","1");
-      </script>
     </div>
     <div id="EModules" class="Window" style="display:block">
       <div class="tHeader">

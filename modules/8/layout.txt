@@ -1,0 +1,161 @@
+{
+    "Rail": [
+        {
+            "nr": 0,
+            "part": "RS",
+            "transform": "translate(318,318) rotate(0)",
+            "BlockID": 0,
+            "length": 4,
+            "x": "162",
+            "y": "0"
+        },
+        {
+            "nr": 1,
+            "part": "RS",
+            "transform": "translate(318,347.2893) rotate(0)",
+            "BlockID": 4,
+            "length": 4,
+            "x": "162",
+            "y": "0"
+        },
+        {
+            "nr": 2,
+            "part": "RS",
+            "transform": "translate(480,318) rotate(0)",
+            "BlockID": 1,
+            "length": 4,
+            "x": "162",
+            "y": "0"
+        },
+        {
+            "nr": 3,
+            "part": "RS",
+            "transform": "translate(480,347.2893) rotate(0)",
+            "BlockID": 5,
+            "length": 4,
+            "x": "162",
+            "y": "0"
+        },
+        {
+            "nr": 4,
+            "part": "RS",
+            "transform": "translate(642,318) rotate(0)",
+            "BlockID": 2,
+            "length": 4,
+            "x": "162",
+            "y": "0"
+        },
+        {
+            "nr": 5,
+            "part": "RS",
+            "transform": "translate(642,347.2893) rotate(0)",
+            "BlockID": 6,
+            "length": 4,
+            "x": "162",
+            "y": "0"
+        },
+        {
+            "nr": 6,
+            "part": "RS",
+            "transform": "translate(804,318) rotate(0)",
+            "BlockID": 3,
+            "length": 4,
+            "x": "162",
+            "y": "0"
+        },
+        {
+            "nr": 7,
+            "part": "RS",
+            "transform": "translate(804,347.2893) rotate(0)",
+            "BlockID": 7,
+            "length": 4,
+            "x": "162",
+            "y": "0"
+        }
+    ],
+    "Nodes": [
+        {
+            "nr": 0,
+            "part": "MAN",
+            "transform": "translate(318,318) rotate(0)",
+            "length": 2
+        },
+        {
+            "nr": 1,
+            "part": "MAN",
+            "transform": "translate(966,347.2893) rotate(180)",
+            "length": 2
+        },
+        {
+            "nr": 2,
+            "part": "BI",
+            "transform": "translate(480,318) rotate(0)",
+            "AnchorID": 4,
+            "ConRailPart": "0"
+        },
+        {
+            "nr": 3,
+            "part": "BI",
+            "transform": "translate(480,347.2893) rotate(0)",
+            "AnchorID": 5,
+            "ConRailPart": "1"
+        },
+        {
+            "nr": 4,
+            "part": "BI",
+            "transform": "translate(642,318) rotate(0)",
+            "AnchorID": 6,
+            "ConRailPart": "2"
+        },
+        {
+            "nr": 5,
+            "part": "BI",
+            "transform": "translate(642,347.2893) rotate(0)",
+            "AnchorID": 7,
+            "ConRailPart": "3"
+        },
+        {
+            "nr": 6,
+            "part": "BI",
+            "transform": "translate(804,318) rotate(0)",
+            "AnchorID": 8,
+            "ConRailPart": "4"
+        },
+        {
+            "nr": 7,
+            "part": "BI",
+            "transform": "translate(804,347.2893) rotate(0)",
+            "AnchorID": 9,
+            "ConRailPart": "5"
+        },
+        {
+            "nr": 8,
+            "part": "BI",
+            "transform": "translate(318,318) rotate(0)",
+            "AnchorID": 0,
+            "ConRailPart": "0"
+        },
+        {
+            "nr": 9,
+            "part": "BI",
+            "transform": "translate(318,347.2893) rotate(0)",
+            "AnchorID": 1,
+            "ConRailPart": "0"
+        },
+        {
+            "nr": 10,
+            "part": "BI",
+            "transform": "translate(966,318) rotate(0)",
+            "AnchorID": 3,
+            "ConRailPart": "1"
+        },
+        {
+            "nr": 11,
+            "part": "BI",
+            "transform": "translate(966,347.2893) rotate(0)",
+            "AnchorID": 2,
+            "ConRailPart": "1"
+        }
+    ],
+    "Signals": []
+}

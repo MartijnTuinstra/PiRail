@@ -35,6 +35,22 @@ var remote_Switch = function(T,M,B,S){
   ws.send(T+M+":"+B+":"+S);
 }
 
+var remote_Switch2 = function(evt){
+  console.log("remote_Switch2");
+  console.log(evt);
+  var target = $(evt.currentTarget);
+
+  SwNr = parseInt(target.attr("class").split(' ')[0].slice(2));
+  Module = parseInt(target.parent().parent().parent().attr("class").split(' ')[0].slice(1))
+  console.log(Module+":"+SwNr);
+
+  ws.send(String.fromCharCode(40)+String.fromCharCode(Module)+String.fromCharCode(SwNr));
+}
+
+
+
+    //  $('g[class^=Sw]','.M'+setup[i]+"b").on("click",remote_Switch2);
+
 function throw_Switch(T,M,B){
   var Op;
   if(T == 'S'){
@@ -228,56 +244,31 @@ function create_track(setup){
       //   0       1       2          3          4           5           6           7             8          9            10
     }else{
       var M = setup[i];
-      //Add Switches to switch list
-      /*
-      if(segments[setup[i]]['width'] != 0){
-        $.each(segments[M]['width'], function(j){
-          //console.log(segments[setup[i]][1][j]);
-          var B = segments[setup[i]][1][j][0];
-          var S = segments[setup[i]][1][j][1];
-          $("#switches .content").html($("#switches .content").html() + '<div class="switchbox M'+M+' M'+M+'s" id="M'+M+'B'+B+'S'+S+'s">'+M+":"+B+":"+S+"</div>");
-          $.ajax({
-            async: false,
-            type: 'GET',
-            cache: true,
-            url: "./../modules/"+M+"s.svg",
-            success: function(data) {
-              $("#M"+M+"B"+B+'S'+S+"s").html(data.documentElement);
-              var text = "<center><b>"+M+":"+B+':'+S+"</b><br/><img src='./img/switch_button.png' width='30px'";
-              text += "onClick=\"remote_Switch('S',"+M+","+B+","+S+")\"";
-              text += "onmouseenter=\"this.src = './img/switch_button_h.png'\" onmouseleave=\"this.src = './img/switch_button.png'\"";
-              text += "/></center>";
-              $("#M"+M+"B"+B+'S'+S+"s svg").attr("viewBox",(80*(B-1))+" "+(80*(S-1))+" 70 70");
-            }
-          });
-        });
-      }*/
-
 
       //Create track
       //console.log("MAX_X: "+max_x+"MAX_Y: "+max_y+":MIN_X "+min_x+"MIN_Y "+min_y);
       $('#Modules').append("<div class=\"M"+M+" Module M"+M+"b\"></div>");
       blocks_load++;
-      $('.M'+M+'b').load('./../modules/'+M+'/layout.svg',function (){
+      $('.M'+M+'b').load('./../modules/'+M+'/layout.svg',function (evt){
         blocks_load--;
-        if(blocks_load == 0){$('#Modules').css('display','block');ws.send("Ready");}
+        if(blocks_load == 0){$('#Modules').css('display','block');ws.send("Ready");$('g.SwGroup','.Module').on("click",remote_Switch2);}
       });
       if(r == 0){
-        x += segments[M]['anchors'][0][0];
+        x -= segments[M]['anchors'][0][0];
         y -= segments[M]['anchors'][0][1];
         max_x = Math.max(max_x,x+segments[M]['width']);
         max_y = Math.max(max_y,y+segments[M]['height']);
         min_x = Math.min(min_x,x);
         min_y = Math.min(min_y,y);
       }else if(r == 90){
-        x += segments[M]['anchors'][0][1];
+        x -= segments[M]['anchors'][0][1];
         y += segments[M]['anchors'][0][0];
         max_x = Math.max(max_x,x);
         max_y = Math.max(max_y,y+segments[M]['width']);
         min_x = Math.min(min_x,x-segments[M]['height']);
         min_y = Math.min(min_y,y);
       }else if(r == 180){
-        x -= segments[M]['anchors'][0][0];
+        x += segments[M]['anchors'][0][0];
         y += segments[M]['anchors'][0][1];
         max_x = Math.max(max_x,x);
         max_y = Math.max(max_y,y);
@@ -297,6 +288,7 @@ function create_track(setup){
       $(".M"+setup[i]+"b").css("-webkit-transform","rotate("+r+"deg)");
       $(".M"+setup[i]+"b").css("transform","rotate("+r+"deg)");
       $(".M"+setup[i]+"b").css("transform-origin","0px 0px");
+
       if(r == 0){
         x += segments[M]['anchors'][1][0];
         y += segments[M]['anchors'][1][1];
@@ -323,9 +315,9 @@ function create_track(setup){
     for(var i = end1;i<setup.length;i++){
       $('#Modules').append("<div class=\"M"+setup[i]+" Module M"+setup[i]+"b\"></div>");
       blocks_load++;
-      $('.M'+setup[i]+'b').load('./../modules/'+setup[i]+'.svg',function (){
+      $('.M'+setup[i]+'b').load('./../modules/'+setup[i]+'.svg',function (evt){
         blocks_load--;
-        if(blocks_load == 0){$('#Modules').css('display','block');ws.send("Ready");}
+        if(blocks_load == 0){$('#Modules').css('display','block');ws.send("Ready");$('g.SwGroup','.Module').on("click",remote_Switch2);}
       });
       if(r == 0){
         x += segments[M]['anchors'][0][0];
@@ -357,6 +349,7 @@ function create_track(setup){
       $(".M"+setup[i]+"b").css("-webkit-transform","rotate("+r+"deg)");
       $(".M"+setup[i]+"b").css("transform","rotate("+r+"deg)");
       $(".M"+setup[i]+"b").css("transform-origin","0px 0px");
+
       if(r == 0){
         x += segments[M]['anchors'][1][0];
         y += segments[M]['anchors'][1][1];
@@ -444,19 +437,18 @@ function Link_train(list,tID){
 
 function switch_update(data){
   for(var i = 1;i<data.length;i+=3){
-    M = data[i];
-    B = data[i+1];
-    state = data[i+2];
+    var M = data[i];
+    var SwNr = data[i+1];
+    var state = data[i+2];
 
-    if(state == 0){
-      console.log(M+":"+B+" Straight:"+".M"+M+" .Sw"+B+"D");
-      $(".M"+M+" .Sw"+B+"D").css("opacity",0); //Straight
-      $(".M"+M+" .Sw"+B+"S").css("opacity",1);
-    }else if(state == 1){
-      console.log(M+":"+B+" Diverging:"+".M"+M+" .Sw"+B+"D");
-      $(".M"+M+" .Sw"+B+"S").css("opacity",0); //Diverging
-      $(".M"+M+" .Sw"+B+"D").css("opacity",1);
-    }
+    var SwitchGroup  = $('.M'+M+' g.Sw'+SwNr);
+    var SwitchGroupB = $('.M'+M+' g.BSw'+SwNr); //Background
+
+    $('.LSw,.LSwO',SwitchGroup).css("opacity",0);
+    $('.LSw,.LSwO',SwitchGroupB).css("opacity",0);
+
+    $('.SwS'+state    ,SwitchGroup).css("opacity",1);
+    $('.SwS'+state+'o',SwitchGroupB).css("opacity",1);
 
     //switches[M][B][S] = {"type":"S","s_len":1,"len":2,"state":state}
 
@@ -536,71 +528,64 @@ function ms_switch_update(data){
 
 function track_update(data){
   for(var i = 1;i<data.length;i+=4){
-    M = data[i];
-    B = data[i+1];
-    D = data[i+2] >> 7;
-    blocked = (data[i+2] & 0b00010000) >> 4;
-    state = (data[i+2] & 0xF);
-    tID = data[i+3];
+    var M = data[i];
+    var B = data[i+1];
+
+    var block_element = $(".M"+M+" .B"+B);
+
+    var D = data[i+2] >> 7;
+    var blocked = (data[i+2] & 0b00010000) >> 4;
+    var state = (data[i+2] & 0xF);
+    var tID = data[i+3];
 
     console.log("Block "+M+":"+B+"\tdir: "+D+"\tBlocked: "+blocked+"\tstate: "+state+"\tTrain: "+tID);
 
     var color;
+    var color2;
 
     if(blocked == 1){
       color = "#900";
+      color2= "#b66";
     }else{
-      if(state == 0){
-        color = "#0D0";
+      if(state == 0){ //No train / Grey
+        color = "#555";
+        color2 = "#bbb";
       }else if(state == 1){ //SLOW
         color = "#f70";
+        color2 = "#fd6";
       }else if(state == 2){	//Red
         color = "#f00";
+        color2 = "#f66";
       }else if(state == 3){	//UNKOWN
         color = "#ff0";
+        color2 = "#ff6";
       }else if(state == 4){	//GHOST
-        color = "#888";
+        color = "#f5f";
+        color2 = "#fbf";
       }else if(state == 5){ //RESERVED
         color = "#00f";
+        color2 = "#66f";
       }
     }
 
-    if(tID != 0){
-      //console.log(M+":"+B+":"+S+"\tD:"+D+"\tBlocked:"+blocked+"\tState:"+state+"\ttID:"+tID);
-    }
+    //Paint A Lines in the color
+    $(".L:not(.LSw,.LSwO)",block_element).css('stroke',color);
+    $(".L.LSw",block_element).css('stroke',color);
+    $(".L.LSwO",block_element).css('stroke',color2);
 
-    $(".L",".M"+M+" #B"+B).css('stroke',color);
+
     if(state == 5 || blocked){
-      $(".Switch",".M"+M+" #B"+B).css('cursor','not-allowed');
+      $("g[class^=Sw]",".M"+M+" .B"+B).css('cursor','not-allowed');
     }else{
-      $(".Switch",".M"+M+" #B"+B).css('cursor','pointer');
+      $("g[class^=Sw]",".M"+M+" .B"+B).css('cursor','pointer');
     }
 
-    if(M == 4 && B == 3){
-      console.log(".L\t.M"+M+" #B"+B);
-      console.log($(".L",".M"+M+" #B"+B));
-    }
-
-    $(".L",".M"+M+" #B"+B).each(function(index){
-      var attr = $(this).attr('nswitch');
-      if (typeof attr !== typeof undefined && attr !== false) {
-          var nColor = "#";
-          a = Math.floor(parseInt(color[1],16)/2);
-          nColor += a.toString(16);
-          b = Math.floor(parseInt(color[2],16)/2);
-          nColor += b.toString(16);
-          c = Math.floor(parseInt(color[3],16)/2);
-          nColor += c.toString(16);
-          $(this).css('stroke',nColor);
-      }else{
-        $(this).css('stroke',color);
-      }
-    });
     //console.log(".L",".M"+M+" #B"+B+".S"+S);
-    $(".M"+M+" #B"+B).attr("train",tID);
+    //Write Train id to block
+    $(block_element).attr("train",tID);
 
-
-    text = "";
+    //Display train ID in textbox (Not existing yet/anymore)
+    var text = "";
     if(D == 0){
       text = "&lt;"+tID;
     }else if(D == 1){
@@ -969,7 +954,7 @@ function train_data_update(data){
 	  console.log("New train");
       console.log(active_trains[DCC_ID]);
       var text = "";
-
+      try{
       text += '<div id="T'+DCC_ID+'" class="trainbox">';
       text += '<div style="width:calc(100% - 60px);height:250px;float:left;">';
       text += '<div class="image_box">';
@@ -994,7 +979,7 @@ function train_data_update(data){
       }else{
         text += '<svg viewBox="0 0 830.48 233.25" class="dir_arrow"><path onClick="dir_train(self,'+DCC_ID+',1)" class="dir_left" d="M385.87,60.27h-238V5.07a2.14,2.14,0,0,0-3.44-1.62L3.79,115a2.07,2.07,0,0,0,0,3.24L144.44,229.8a2.09,2.09,0,0,0,1.29.45,2.33,2.33,0,0,0,1-.2,2.13,2.13,0,0,0,1.23-1.87V173H385.8a2.05,2.05,0,0,0,2.14-2V62.52a2.35,2.35,0,0,0-2.2-2.26"/><path onClick="dir_train(self,'+DCC_ID+',0)" class="dir_right selected" d="M444.62,173h238v55.2A2.14,2.14,0,0,0,686,229.8L826.7,118.25a2.07,2.07,0,0,0,0-3.24L686,3.45A2.09,2.09,0,0,0,684.75,3a2.33,2.33,0,0,0-1,.2,2.13,2.13,0,0,0-1.23,1.87v55.2H444.69a2.05,2.05,0,0,0-2.14,2V170.73a2.35,2.35,0,0,0,2.2,2.26"/></svg>';
       }
-	  text += '</div>';
+	    text += '</div>';
 
       if((data[3] & 0b1000) != 0){
         text += 'Andere X-BUS Handregler<br/>';
@@ -1066,6 +1051,9 @@ function train_data_update(data){
       var speed_step = (data[4] & 0x7F);
       var max_speed = parseInt(train_list[train_list_c[active_trains[DCC_ID]['t']]][4]);
 
+    }catch(e){
+      
+    }
 
 
       create_train_slider(DCC_ID,max_speed,speed_step);

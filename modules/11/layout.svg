@@ -1,14 +1,16 @@
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="220px" height="220px" viewBox="0 0  220 220" preserveAspectRatio="xMidYMid meet" style="shape-rendering:auto;">
-  <path d="M5,60 a 155,155 0 0,1 155,155" class="B" style="stroke-linecap:square"/>
-  <path d="M5,40 a 175,175 0 0,1 175,175" class="B" style="stroke-linecap:square"/>
-  <g id="B2" class="S1">
-    <path d="M5,60 a 155,155 0 0,1 155,155" class="L" style="stroke:#ff0"/>
-  </g>
-  <g id="B1" class="S1">
-    <path d="M5,40 a 175,175 1 0,1 175,175" class="L" style="stroke:#ff0"/>
-  </g><!--
-  <g id="S0">
-    <path d="M5,40q127,0e-15,190,63" class="B"/>
- 	  <path d="M5,40q127,0e-15,190,63" class="L" style="stroke:#ff0"/>
-  </g>-->
+<svg width='189' height='256' viewBox='-90 -37 189 256'>
+<g class="B0">
+<path class="L" nr="0" part="CRail" transform="translate(26.066067692155,72.512532307845) rotate(225)" d="M -0.2,0 h 0.2 a 179.289,179.289 0,0,0 126.7764676921549,-52.51253230784507 l 0.14142135623730953,-0.1414213562373095" style="fill:none;stroke:#555;stroke-width:6px;"/>
+</g>
+<g class="B1">
+<path class="L" nr="1" part="CRail" transform="translate(78.5786,199.289) rotate(270)" d="M -0.2,0 h 0.2 a 179.289,179.289 0,0,0 126.7764676921549,-52.51253230784507 l 0.14142135623730953,-0.1414213562373095" style="fill:none;stroke:#555;stroke-width:6px;"/>
+</g>
+<g class="B2">
+<path class="L" nr="2" part="CRail" transform="translate(5.3556171779821,93.223282822018) rotate(225)" d="M -0.2,0 h 0.2 a 150,150 0,0,0 106.06601717798212,-43.93398282201787 l 0.14142135623730953,-0.1414213562373095" style="fill:none;stroke:#555;stroke-width:6px;"/>
+</g>
+<g class="B3">
+<path class="L" nr="3" part="CRail" transform="translate(49.2896,199.2893) rotate(270)" d="M -0.2,0 h 0.2 a 150,150 0,0,0 106.06601717798212,-43.93398282201787 l 0.14142135623730953,-0.1414213562373095" style="fill:none;stroke:#555;stroke-width:6px;"/>
+</g>
+<g class='Signals'>
+</g>
 </svg>

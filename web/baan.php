@@ -21,7 +21,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <link rel="manifest" href="./manifest.json">
     <!--<script src="./scripts/framework/jquery-3.1.1.min.js"></script>-->
-    <script src="https://code.jquery.com/jquery-3.1.1.js"></script>
+    <script src="./scripts/framework/jquery-3.1.1.js"></script>
     <script src="./scripts/framework/jquery-ui.min.js"></script>
     <script src="./scripts/framework/jquery.ui.touch-punch.min.js"></script>
     <link rel="stylesheet" type="text/css" href="./styles/jquery-ui.min.css">

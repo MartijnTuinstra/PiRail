@@ -1080,10 +1080,15 @@ $(document).ready(function(){
   });
 
   if ("WebSocket" in window){
-    setTimeout(socket(window.location.host+':9000'),5000);
+	try{
+      setTimeout(socket(window.location.host+':9000'),5000);
+	}
+	catch(e){
+	  console.error(e);
+	}
   }else{
     // The browser doesn't support WebSocket
-    alert("WebSocket NOT supported by your Browser!\nBIG PROBLEM!!");
+    alert("WebSocket NOT supported by your Browser!\nBIG PROBLEM!!\n\nPlease use Chrome/FireFox/Safari, or update your browser");
     $('#status').attr('src','./img/status_w.png');
   }
 

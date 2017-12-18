@@ -476,6 +476,7 @@ function Layout_dragEnd(evt,place = false){
       var array_length = EditObj.Layout.Anchors.length;
       for(for_each_counter;for_each_counter<array_length;for_each_counter++){
         var element1 = EditObj.Layout.Anchors[for_each_counter];
+		if(element1 == undefined){continue;}
         if((element1.prev.length < element1.prev_states || element1.next.length < element1.next_states) && 
             (Math.pow(Anchor.loc.left - element1.x,2) + Math.pow(Anchor.loc.top - element1.y,2)) < 100 && set < 0){
           var a = "";
@@ -574,6 +575,7 @@ function Layout_dragEnd(evt,place = false){
     var set = false;
 
     $.each(EditObj.Layout.Anchors,function(index1,element1){
+	  if(element1 == undefined){return}
       if((Math.pow(Anchor.loc.left - element1.x,2) + Math.pow(Anchor.loc.top - element1.y,2)) < 100 && !set){
         if(((rotation-90)-element1.angle <= 90 && (rotation-90)-element1.angle > -90) || ((rotation-90)-element1.angle >= 270 && (rotation-90)-element1.angle < -360) || ((rotation-90)-element1.angle >= -360 && (rotation-90)-element1.angle < -270)){
           rotation = (element1.angle - 270) % 360;
@@ -615,6 +617,7 @@ function Layout_dragEnd(evt,place = false){
     var set = false;
 
     $.each(EditObj.Layout.Anchors,function(index1,element1){
+	  if(element1 == undefined){return}
       if((Math.pow(Anchor.loc.left - element1.x,2) + Math.pow(Anchor.loc.top - element1.y,2)) < 100 && !set){
         if(((rotation)-element1.angle <= 90 && (rotation)-element1.angle > -90) || ((rotation)-element1.angle >= 270 && (rotation)-element1.angle < -360) || ((rotation)-element1.angle >= -360 && (rotation)-element1.angle < -270)){
           rotation = (element1.angle) % 360;
@@ -688,6 +691,7 @@ function Layout_deleteAnchor(){
     var yP = -1;
 
     $.each(EditObj.Layout.Anchors,function(index1,element1){
+	  if(element1 == undefined){return}
       if(x == -1 && Anchor.element.attr("connected") == index1){
         x = index1;
         $.each(element1.next,function(indexN,elementN){
@@ -710,7 +714,7 @@ function Layout_deleteAnchor(){
         EditObj.Layout.Anchors[x].prev.splice(yP,1);
       }
       if(EditObj.Layout.Anchors[x].next.length == 0 && EditObj.Layout.Anchors[x].prev.length == 0){
-        EditObj.Layout.Anchors.splice(x,1);
+        delete EditObj.Layout.Anchors[x];
       }else if(EditObj.Layout.Anchors[x].next.length == 0 && EditObj.Layout.Anchors[x].prev.length == 1){
         EditObj.Layout.Anchors[x].prev[0].get(0).style.fill = "red";
       }else if(EditObj.Layout.Anchors[x].next.length == 1 && EditObj.Layout.Anchors[x].prev.length == 0){
@@ -741,6 +745,7 @@ function Layout_DeletePart(part){
 function Layout_createAnchor(Anchor,rotation){
     EditObj.Layout.Anchors.push({"x":Anchor.loc.left,"y":Anchor.loc.top,"angle":(rotation+parseFloat(Anchor.element.attr("_r")))%360,
         "prev":[Anchor.element],"next":[],"prev_states":1,"next_states":1,"Signal":{"R":undefined,"L":undefined},"type":"RailNode","Node":{}});
+	return EditObj.Layout.Anchors.length;
 }
 
 function Layout_dragCheckDrop(){
@@ -767,6 +772,7 @@ function Layout_dragCheckDrop(){
     var set = false;
 
     $.each(EditObj.Layout.Anchors,function(index1,element1){
+	  	if(element1 == undefined){return}
       if((element1.prev.length < element1.prev_states || element1.next.length < element1.next_states) && 
           (Math.pow(Anchor.loc.left - element1.x,2) + Math.pow(Anchor.loc.top - element1.y,2)) < 100 && !set){
         Anchor.element.get(0).style.fill = "green";
@@ -798,6 +804,7 @@ function Layout_dragCheckDrop(){
     var set = false;
 
     $.each(EditObj.Layout.Anchors,function(index1,element1){
+	  if(element1 == undefined){return}
       if((Math.pow(Anchor.loc.left - element1.x,2) + Math.pow(Anchor.loc.top - element1.y,2)) < 100 && !set){
         if(Drop == 0){
           Anchor.element.get(0).style.fill = "pink";
@@ -825,6 +832,7 @@ function Layout_dragCheckDrop(){
     var set = false;
 
     $.each(EditObj.Layout.Anchors,function(index1,element1){
+	  if(element1 == undefined){return}
       if((Math.pow(Anchor.loc.left - element1.x,2) + Math.pow(Anchor.loc.top - element1.y,2)) < 100 && !set
             && ((part == "BI" && element1.Node.BI == undefined) || (part == "SwN" && element1.Node.SwN == undefined))){
         if(Drop == 0){
@@ -892,8 +900,13 @@ function Layout_ContextMenu(evt){
         }else if(Anchor.prev.length == 1 && Anchor.next.length > 1){
           context.options[1] = {"type":"in_nr","name":"ID","b_type":"SwNID","value":"EditObj.Layout.Setup.Nodes[item_ID].SwitchNID"};
         }else{
-          context.options[1] = {"type":"in_nr","name":"ID Nside","b_type":"SwNID","value":"EditObj.Layout.Setup.Nodes[item_ID].SwitchNID"};
-          context.options[2] = {"type":"in_nr","name":"ID Pside","b_type":"SwPID","value":"EditObj.Layout.Setup.Nodes[item_ID].SwitchPID"};
+		  if(heading < 180){
+		    context.options[1] = {"type":"in_nr","name":"ID Forw.","b_type":"SwNID","value":"EditObj.Layout.Setup.Nodes[item_ID].SwitchNID"};
+		    context.options[2] = {"type":"in_nr","name":"ID Backw.","b_type":"SwPID","value":"EditObj.Layout.Setup.Nodes[item_ID].SwitchPID"};
+		  }else{
+			context.options[1] = {"type":"in_nr","name":"ID Forw.","b_type":"SwPID","value":"EditObj.Layout.Setup.Nodes[item_ID].SwitchPID"};
+		    context.options[2] = {"type":"in_nr","name":"ID Backw.","b_type":"SwNID","value":"EditObj.Layout.Setup.Nodes[item_ID].SwitchNID"};
+		  }
         }
 
         context.options.push({"type":"in_step","name":"Forw. States","b_type":"Nstates","value":"EditObj.Layout.Setup.Nodes[item_ID].Nstates"});
@@ -904,14 +917,14 @@ function Layout_ContextMenu(evt){
           if(heading < 180){context.options.push({"type":"Sw_State","name":"Next States"});}
                        else{context.options.push({"type":"Sw_State","name":"Prev States"});}
           $.each(Anchor.next,function(index,element){
-            context.options.push({"type":"Sw_show","name":("N"+index),"index":item_ID,"Anchor":EditObj.Layout.Setup.Nodes[item_ID].Anchor,"NAttach":index});
+            context.options.push({"type":"Sw_show","name":("N"+index),"index":index,"part_nr":item_ID,"Anchor":EditObj.Layout.Setup.Nodes[item_ID].Anchor,"NAttach":index});
           });
         }
         if(Anchor.prev.length > 1){
           if(heading < 180){context.options.push({"type":"Sw_State","name":"Prev States"});}
                        else{context.options.push({"type":"Sw_State","name":"Next States"});}
           $.each(Anchor.prev,function(index,element){
-            context.options.push({"type":"Sw_show","name":("P"+index),"index":item_ID,"Anchor":EditObj.Layout.Setup.Nodes[item_ID].Anchor,"PAttach":index});
+            context.options.push({"type":"Sw_show","name":("P"+index),"index":index,"part_nr":item_ID,"Anchor":EditObj.Layout.Setup.Nodes[item_ID].Anchor,"PAttach":index});
           });
         }
       }else{
@@ -988,14 +1001,26 @@ function Layout_ContextMenuRedrawOptions(box,context){
     }else if(element.type == "Sw_State"){
       text = '<div class="'+element.name+'" style="width:100%;height:20px;margin-top:20px;float:left;text-align:center;"><b>'+element.name+'</b></div>';
     }else if(element.type == "Sw_show"){
-      text = '<div class="'+element.name+'" style="width:100%;height:60px;float:left;"><svg width="80px" height="50px" viewbox="-40 -25 80 50" style="margin: 5 60;"></svg></div>';
+      text = '<div class="'+element.name+'" style="width:100%;height:60px;float:left;">'+
+	  '<span style="height:50px;line-height:50px;float:left;width:10px;margin: 5 0 5 10;text-align:center"><b>'+element.index+'</b></span>'+
+	  '<svg width="80px" height="50px" viewbox="-40 -25 80 50" style="margin: 5 0 6 40;float:left;"></svg>'+
+	  '<div style="height:40px;float:right;width:20px;margin: 10 10 10 0;">';
+	  if(element.index != 0){
+		text += '<span class="up_downButton" name="'+element.name+'" type="Sw_State_up" style="cursor:pointer;">▲</span>';
+	  }
+	  text += '<br/>';
+	  if((element.name.startsWith("N") && element.index < (EditObj.Layout.Anchors[element.Anchor].next_states)-1) || (element.name.startsWith("P") && (element.index < EditObj.Layout.Anchors[element.Anchor].prev_states-1))){
+		text += '<span class="up_downButton" name="'+element.name+'" type="Sw_State_down" style="cursor:pointer;">▼</span>';
+	  }
+	  text += '</div></div>';
     }
 
     $('.content',box).append(text);
   });
-  $('.content  .min_button',box).bind('mousedown',Layout_Setup_Change);
-  $('.content .plus_button',box).bind('mousedown',Layout_Setup_Change);
-  $('.content .flip_button',box).bind('mousedown',Layout_Setup_Change);
+  $('.content  .min_button'  ,box).bind('mousedown',Layout_Setup_Change);
+  $('.content .plus_button'  ,box).bind('mousedown',Layout_Setup_Change);
+  $('.content .flip_button'  ,box).bind('mousedown',Layout_Setup_Change);
+  $('.content .up_downButton',box).bind('mousedown',Layout_Setup_Change);
   $('.content input[type=RID]',box).bind('focusout',Layout_Assign_BlockNR);
   $('.content input[type=SwNID]',box).bind('focusout',Layout_Setup_Change);
   $('.content input[type=SwPID]',box).bind('focusout',Layout_Setup_Change);
@@ -1031,12 +1056,12 @@ function Layout_ContextMenuRedrawOptions(box,context){
       });
 
 
-      heading = EditObj.Layout.Setup.Nodes[element.index].heading;
+      heading = EditObj.Layout.Setup.Nodes[element.part_nr].heading;
 
       box2 = CreateSvgElement("g",{"transform":"translate(0,0) rotate("+(Anchor.angle+heading)+")"});
 
       box2.appendChild(CreateSvgElement("path",{"d":"M 0,-7.5 v 15 l 7.5,-7.5 Z","style":"stroke-width:0;fill:#41b7dd;"}));
-      if(EditObj.Layout.Setup.Nodes[element.index].Pstates > 1 && EditObj.Layout.Setup.Nodes[element.index].Nstates > 1){
+      if(EditObj.Layout.Setup.Nodes[element.part_nr].Pstates > 1 && EditObj.Layout.Setup.Nodes[element.part_nr].Nstates > 1){
         box2.appendChild(CreateSvgElement("path",{"d":"M 0,-7.5 v 15 l -7.5,-7.5 Z","style":"stroke-width:0;fill:#ff61fa"}));
       }
 
@@ -1109,6 +1134,7 @@ function Find_Anchor_Point(g_element,attach = ""){
   var ID = -1;
 
   $.each(EditObj.Layout.Anchors,function(index,element){
+	if(element == undefined){return}
     if(sx == element.x && sy == element.y){
       ID = index;
     }
@@ -1191,13 +1217,43 @@ function Layout_Setup_Change(event){
           heading -= 180;
           transform_str = $('#LayoutContainer g#Nodes g[nr='+(_ID)+']').attr("transform").split(' ');
 
-          rotation = parseFloat(transfrom_str[1].slice(7,-1)) - 180;
+          rotation = parseFloat(transform_str[1].slice(7,-1)) - 180;
           $('#LayoutContainer g#Nodes g[nr='+(_ID)+']').attr("transform",transform_str[0]+" rotate("+rotation+")");
         }
         EditObj.Layout.Setup.Nodes[_ID].heading = heading;
-        console.log("Sw heading: "+EditObj.Layout.Setup.NOdes[_ID].heading);
+        console.log("Sw heading: "+EditObj.Layout.Setup.Nodes[_ID].heading);
       }
-    }
+    }else if(target.attr("class") == "up_downButton"){
+		if(target.attr("type") == "Sw_State_up"){
+			console.log("Move up");
+			var side = target.attr("name").slice(0,1);
+			var id = parseInt(target.attr("name").slice(1));
+			
+			if(side == "N"){
+				var temp = Anchor.next[id-1];
+				Anchor.next[id-1] = Anchor.next[id];
+				Anchor.next[id] = temp;
+			}else{
+				var temp = Anchor.prev[id-1];
+				Anchor.prev[id-1] = Anchor.prev[id];
+				Anchor.prev[id] = temp;
+			}
+		}else{
+			console.log("Move down");
+			var side = target.attr("name").slice(0,1);
+			var id = parseInt(target.attr("name").slice(1));
+			
+			if(side == "N"){
+				var temp = Anchor.next[id+1];
+				Anchor.next[id+1] = Anchor.next[id];
+				Anchor.next[id] = temp;
+			}else{
+				var temp = Anchor.prev[id+1];
+				Anchor.prev[id+1] = Anchor.prev[id];
+				Anchor.prev[id] = temp;
+			}
+		}
+	}
 
     if(heading < 180){
       EditObj.Layout.Anchors[AnchorID].next_states = Nstates;
@@ -1622,6 +1678,7 @@ function Layout_AC_MouseMoveCheck(evt){
   var pos = {"x":(evt.pageX - Offset.left),"y":(evt.pageY - Offset.top)};
   var enable_Click = false;
   $.each(EditObj.Layout.Anchors,function(index,element){
+	if(element == undefined){return}
     var allreadyDone = false;
     $.each(LayoutDragging.AC_Elements,function(index2,element2){
       if(element == element2){
@@ -1659,6 +1716,7 @@ function Layout_AC_MouseClick(evt){
   var pos = {"x":(evt.pageX - Offset.left),"y":(evt.pageY - Offset.top)};
   var set = false;
   $.each(EditObj.Layout.Anchors,function(index,element){
+	if(element == undefined){return}
     if((Math.pow(pos.x - element.x,2) + Math.pow(pos.y - element.y,2)) < 100 && !set){
       if(element.prev.length == 1){
         element.prev[0].css("fill","green");
@@ -1874,6 +1932,7 @@ function Layout_AC_Run(){
       var array_length = EditObj.Layout.Anchors.length;
       for(for_each_counter;for_each_counter<array_length;for_each_counter++){
         element1 = EditObj.Layout.Anchors[for_each_counter];
+		if(element1 == undefined){return;}
         if((element1.prev.length < element1.prev_states || element1.next.length < element1.next_states) && 
             (Math.pow(Anchor.loc.left - element1.x,2) + Math.pow(Anchor.loc.top - element1.y,2)) < 100 && set < 0){
           var a = "";
@@ -1904,7 +1963,21 @@ function Layout_AC_Run(){
         Anchor.element.get(0).style.fill = "red";
       }
     });
-    var element = LayoutDragging.parent.detach();
+	$.each($('[class^=Attach]',LayoutDragging.parent),function(index,element1){
+		var Anchor = {"element":undefined,"loc":{}};
+		Anchor.element = $('.'+element1.className.baseVal,LayoutDragging.parent);
+		Anchor.loc = getRotatedPoint(sx,sy,parseFloat(Anchor.element.attr("cx")),parseFloat(Anchor.element.attr("cy")),rotation);
+
+		var MySide = parseInt(element1.className.baseVal.slice(6));
+
+		if(Anchor.element.attr("connected") == "" || Anchor.element.attr("connected") == undefined){ //Add when not connected
+		  Layout_createAnchor(Anchor,rotation);
+		  Anchor.element.attr("connected",EditObj.Layout.Anchors.length-1);
+		  console.log("Create New Anchor for "+Anchor.element.parent().attr("nr"));
+		}
+	  });
+    
+	var element = LayoutDragging.parent.detach();
     $('#LayoutContainer #Rail').append(element);
     return Layout_AC_Finish();
   }else if(angle_diff == 180){

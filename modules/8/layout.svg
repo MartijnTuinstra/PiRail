@@ -1,27 +1,27 @@
-<svg width='668' height='49' viewBox='0 0 668 49'>
+<svg width='688' height='69' viewBox='0 0 688 69'>
 <g class="B0">
-<line class="L" nr="0" part="RS" transform="translate(10,10) rotate(0)" x2="162" y2="0" style="fill:none;stroke:#555;stroke-width:6px;"/>
+<line class="L" nr="0" part="RS" transform="translate(20,20) rotate(0)" x1="-0.2" x2="162.2" y2="0" style="fill:none;stroke:#555;stroke-width:6px;"/>
 </g>
 <g class="B4">
-<line class="L" nr="1" part="RS" transform="translate(10,39.2893) rotate(0)" x2="162" y2="0" style="fill:none;stroke:#555;stroke-width:6px;"/>
+<line class="L" nr="1" part="RS" transform="translate(20,49.2893) rotate(0)" x1="-0.2" x2="162.2" y2="0" style="fill:none;stroke:#555;stroke-width:6px;"/>
 </g>
 <g class="B1">
-<line class="L" nr="2" part="RS" transform="translate(172,10) rotate(0)" x2="162" y2="0" style="fill:none;stroke:#555;stroke-width:6px;"/>
+<line class="L" nr="2" part="RS" transform="translate(182,20) rotate(0)" x1="-0.2" x2="162.2" y2="0" style="fill:none;stroke:#555;stroke-width:6px;"/>
 </g>
 <g class="B5">
-<line class="L" nr="3" part="RS" transform="translate(172,39.2893) rotate(0)" x2="162" y2="0" style="fill:none;stroke:#555;stroke-width:6px;"/>
+<line class="L" nr="3" part="RS" transform="translate(182,49.2893) rotate(0)" x1="-0.2" x2="162.2" y2="0" style="fill:none;stroke:#555;stroke-width:6px;"/>
 </g>
 <g class="B2">
-<line class="L" nr="4" part="RS" transform="translate(334,10) rotate(0)" x2="162" y2="0" style="fill:none;stroke:#555;stroke-width:6px;"/>
+<line class="L" nr="4" part="RS" transform="translate(344,20) rotate(0)" x1="-0.2" x2="162.2" y2="0" style="fill:none;stroke:#555;stroke-width:6px;"/>
 </g>
 <g class="B6">
-<line class="L" nr="5" part="RS" transform="translate(334,39.2893) rotate(0)" x2="162" y2="0" style="fill:none;stroke:#555;stroke-width:6px;"/>
+<line class="L" nr="5" part="RS" transform="translate(344,49.2893) rotate(0)" x1="-0.2" x2="162.2" y2="0" style="fill:none;stroke:#555;stroke-width:6px;"/>
 </g>
 <g class="B3">
-<line class="L" nr="6" part="RS" transform="translate(496,10) rotate(0)" x2="162" y2="0" style="fill:none;stroke:#555;stroke-width:6px;"/>
+<line class="L" nr="6" part="RS" transform="translate(506,20) rotate(0)" x1="-0.2" x2="162.2" y2="0" style="fill:none;stroke:#555;stroke-width:6px;"/>
 </g>
 <g class="B7">
-<line class="L" nr="7" part="RS" transform="translate(496,39.2893) rotate(0)" x2="162" y2="0" style="fill:none;stroke:#555;stroke-width:6px;"/>
+<line class="L" nr="7" part="RS" transform="translate(506,49.2893) rotate(0)" x1="-0.2" x2="162.2" y2="0" style="fill:none;stroke:#555;stroke-width:6px;"/>
 </g>
 <g class='Signals'>
 </g>

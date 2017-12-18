@@ -344,7 +344,7 @@
 
 #LayoutContextMenu {
 	width: 200px;
-	max-height: 400px;
+	max-height: 800px;
 	overflow: hidden;
 	position:absolute;
 	background-color: #ddd;
@@ -558,4 +558,12 @@
 
 #LayoutContainer #toolbar .tool .tool_button {
 	fill: #ddd;
+}
+
+#LayoutContainer .up_downButton {
+	cursor: pointer;
+}
+
+#LayoutContainer .up_downButton:hover {
+	color: lightgrey;
 }

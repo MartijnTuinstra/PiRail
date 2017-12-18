@@ -1,33 +1,28 @@
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="420px" height="420px" viewBox="0 0  420 420" preserveAspectRatio="xMidYMid meet" style="shape-rendering:auto;">
-  <path d="M5,60 a 355,355 0 0,1 355,355" class="B" style="stroke-linecap:square"/>
-  <path d="M5,40 a 375,375 0 0,1 375,375" class="B" style="stroke-linecap:square"/>
-	<path d="M 370,420 l 0,-20" class="B" style="stroke-width:1px;"/>
-  <g id="B5" class="S1">
-    <path d="M5,60 a 355,355 0 0,1 135.85,27.02" class="L" style="stroke:#ff0"/>
-  </g>
-  <g id="B6" class="S1">
-    <path d="M140.85,87.02 a 355,355 0 0,1 115.17,76.96" class="L" style="stroke:#ff0"/>
-  </g>
-  <g id="B7" class="S1">
-    <path d="M256.02,163.98 a 355,355 0 0,1 76.96,115.17" class="L" style="stroke:#ff0"/>
-  </g>
-  <g id="B8" class="S1">
-    <path d="M332.98,279.15 a 355,355 0 0,1 27.02,135.85" class="L" style="stroke:#ff0"/>
-  </g>
-  <g id="B1" class="S1">
-    <path d="M5,40 a 375,375 1 0,1 143.51,28.55" class="L" style="stroke:#ff0"/>
-  </g>
-  <g id="B2" class="S1">
-    <path d="M148.51,68.55 a 375,375 1 0,1 121.66,81.28" class="L" style="stroke:#ff0"/>
-  </g>
-  <g id="B3" class="S1">
-    <path d="M270.17,149.83 a 375,375 1 0,1 81.28,121.66" class="L" style="stroke:#ff0"/>
-  </g>
-  <g id="B4" class="S1">
-    <path d="M351.45,271.49 a 375,375 1 0,1 28.55,143.51" class="L" style="stroke:#ff0"/>
-  </g><!--
-  <g id="S0">
-    <path d="M5,40q127,0e-15,190,63" class="B"/>
- 	  <path d="M5,40q127,0e-15,190,63" class="L" style="stroke:#ff0"/>
-  </g>-->
+<svg width='361' height='391' viewBox='-262 -22 361 391'>
+<g class="B4">
+<path class="L" nr="0" part="CRail" transform="translate(-135.90537029047,72.125440246614) rotate(202)" d="M -0.2,0 h 0.2 a 300,300 0,0,0 114.80502970952693,-22.83614024661398 l 0.18477590650225736,-0.07653668647301796" style="fill:none;stroke:#555;stroke-width:6px;"/>
+</g>
+<g class="B5">
+<path class="L" nr="1" part="CRail" transform="translate(-38.578365644036,137.15726564404) rotate(225)" d="M -0.2,0 h 0.2 a 300,300 0,0,0 114.80502970952693,-22.83614024661398 l 0.18477590650225736,-0.07653668647301796" style="fill:none;stroke:#555;stroke-width:6px;"/>
+</g>
+<g class="B6">
+<path class="L" nr="2" part="CRail" transform="translate(26.453459753386,234.48427029047) rotate(247)" d="M -0.2,0 h 0.2 a 300,300 0,0,0 114.80502970952693,-22.83614024661398 l 0.18477590650225736,-0.07653668647301796" style="fill:none;stroke:#555;stroke-width:6px;"/>
+</g>
+<g class="B7">
+<path class="L" nr="3" part="CRail" transform="translate(49.2896,349.2893) rotate(270)" d="M -0.2,0 h 0.2 a 300,300 0,0,0 114.80502970952693,-22.83614024661398 l 0.18477590650225736,-0.07653668647301796" style="fill:none;stroke:#555;stroke-width:6px;"/>
+</g>
+<g class="B0">
+<path class="L" nr="4" part="CRail" transform="translate(-124.69695523993,45.065632618891) rotate(202)" d="M -0.2,0 h 0.2 a 329.289,329.289 0,0,0 126.01344476006804,-25.0656326188909 l 0.18477590650225736,-0.07653668647301796" style="fill:none;stroke:#555;stroke-width:6px;"/>
+</g>
+<g class="B1">
+<path class="L" nr="5" part="CRail" transform="translate(-17.867915129863,116.44651512986) rotate(225)" d="M -0.2,0 h 0.2 a 329.289,329.289 0,0,0 126.01344476006804,-25.0656326188909 l 0.18477590650225736,-0.07653668647301796" style="fill:none;stroke:#555;stroke-width:6px;"/>
+</g>
+<g class="B2">
+<path class="L" nr="6" part="CRail" transform="translate(53.512967381109,223.27555523993) rotate(247)" d="M -0.2,0 h 0.2 a 329.289,329.289 0,0,0 126.01344476006804,-25.0656326188909 l 0.18477590650225736,-0.07653668647301796" style="fill:none;stroke:#555;stroke-width:6px;"/>
+</g>
+<g class="B3">
+<path class="L" nr="7" part="CRail" transform="translate(78.5786,349.289) rotate(270)" d="M -0.2,0 h 0.2 a 329.289,329.289 0,0,0 126.01344476006804,-25.0656326188909 l 0.18477590650225736,-0.07653668647301796" style="fill:none;stroke:#555;stroke-width:6px;"/>
+</g>
+<g class='Signals'>
+</g>
 </svg>

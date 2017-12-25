@@ -56,6 +56,7 @@
  *****************************************************************************/
 
 #include <string.h>
+#include <arduino.h>
 #include <avr/interrupt.h>
 //#include "loconet.h"
 //#include "ln_interface.h"
@@ -77,10 +78,14 @@ lnMsg *recvLnMsg( LnBuf *Buffer )
   uint8_t	tempSize ;
   lnMsg *tempMsg ;
 
+  //Serial.println("\nrecvLnMsg: ");
+
   while( Buffer->ReadIndex != Buffer->WriteIndex )
   {
 
     newByte = Buffer->Buf[ Buffer->ReadIndex ] ;
+
+    //Serial.println(newByte,HEX);
 
     // Check if this is the beginning of a new packet
     if( newByte & (uint8_t)0x80 )
@@ -182,15 +187,21 @@ lnMsg *recvLnMsg( LnBuf *Buffer )
         // Set the return packet pointer
         tempMsg = (lnMsg*) (Buffer->Buf + Buffer->ReadPacketIndex) ;
         Buffer->Stats.RxPackets++ ;
+        Serial.print(Buffer->CheckSum,HEX);
+        Serial.print("==");
+        Serial.println(newByte,HEX);
       }
-      else
+      else{
         Buffer->Stats.RxErrors++ ;
+        Serial.println("Wrong Checksum");
+      }
 
       // Whatever the case advance the ReadPacketIndex to the beginning of the
       // next packet to be received
       Buffer->ReadPacketIndex = Buffer->ReadIndex ;
 
       if( tempMsg != NULL )
+        //Serial.println("tempMsg");
         return tempMsg ;
 
     }
@@ -198,6 +209,11 @@ lnMsg *recvLnMsg( LnBuf *Buffer )
     // Packet not complete so add the current byte to the checksum
     Buffer->CheckSum ^= newByte ;
   }
+
+
+  //Serial.println("End");
+
+
 
   return NULL ;
 }

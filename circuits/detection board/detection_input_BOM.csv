@@ -1,0 +1,27 @@
+Qty;Total Qty;Value;Device;Package;Parts;Description;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+2;2;;PINHD-1X6;1X06;IN, OUT;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+3;3;3pin Screw;W237-103;W237-103;X1, X3, X4;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+1;1;100n;CPOL-EUA/3216-18W;A/3216-18W;C9;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+8;8;110R;R0204/7;0204/7;R1, R2, R3, R4, R5, R6, R7, R8;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+8;8;22u;CPOL-EUE2-4;E2-4;C1, C2, C3, C4, C5, C6, C7, C8;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+8;8;2W10;2W10;2W10;U$1, U$2, U$3, U$4, U$5, U$6, U$7, U$8;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+8;8;4k7;R0204/7;0204/7;R9, R10, R11, R12, R13, R14, R15, R16;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+1;1;74HC165N;74HC165N;DIL16;IC1;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+2;2;ILQ620;ILQ620;DIL16;OK1, OK2;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+3;3;16pin;DIP Socket;DIL16;IC1,OK1,OK2;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;1;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+Bocht;;;;;;;3-Rail 7 blocks;;;;;;;4-Rail 8 blocks;;;;;;;4-Rail 3 blocks;;;;;;;;4-Rail 3 blocks;;;;;
+Qty;Total Qty;Value;Device;Package;Parts;;Qty;Total Qty;Value;Device;Package;Parts;;Qty;Total Qty;Value;Device;Package;Parts;;Qty;Total Qty;Value;Device;Package;Parts;;;;Total Qty;Value;Device;Package;Parts
+2;4;;PINHD-1X6;1X06;IN, OUT;;2;4;;PINHD-1X6;1X06;IN, OUT;;2;4;;PINHD-1X6;1X06;IN, OUT;;2;4;;PINHD-1X6;1X06;IN, OUT;;;;16;;PINHD-1X6;1X06;IN, OUT
+3;6;3pin Screw;W237-103;W237-103;X1, X3, X4;;3;6;3pin Screw;W237-103;W237-103;X1, X3, X4;;3;6;3pin Screw;W237-103;W237-103;X1, X3, X4;;3;6;3pin Screw;W237-103;W237-103;X1, X3, X4;;;;24;3pin Screw;W237-103;W237-103;X1, X3, X4
+1;2;100n;CPOL-EUA/3216-18W;A/3216-18W;C9;;1;2;100n;CPOL-EUA/3216-18W;A/3216-18W;C9;;1;2;100n;CPOL-EUA/3216-18W;A/3216-18W;C9;;1;2;100n;CPOL-EUA/3216-18W;A/3216-18W;C9;;;;8;100n;CPOL-EUA/3216-18W;A/3216-18W;C9
+4;8;110R;R0204/7;0204/7;R1, R2, R3, R4, R5, R6, R7, R8;;7;14;110R;R0204/7;0204/7;R1, R2, R3, R4, R5, R6, R7, R8;;8;16;110R;R0204/7;0204/7;R1, R2, R3, R4, R5, R6, R7, R8;;3;6;110R;R0204/7;0204/7;R1, R2, R3, R4, R5, R6, R7, R8;;;;44;110R;R0204/7;0204/7;R1, R2, R3, R4, R5, R6, R7, R8
+4;8;22u;CPOL-EUE2-4;E2-4;C1, C2, C3, C4, C5, C6, C7, C8;;7;14;22u;CPOL-EUE2-4;E2-4;C1, C2, C3, C4, C5, C6, C7, C8;;8;16;22u;CPOL-EUE2-4;E2-4;C1, C2, C3, C4, C5, C6, C7, C8;;3;6;22u;CPOL-EUE2-4;E2-4;C1, C2, C3, C4, C5, C6, C7, C8;;;;44;22u;CPOL-EUE2-4;E2-4;C1, C2, C3, C4, C5, C6, C7, C8
+4;8;2W10;2W10;2W10;U$1, U$2, U$3, U$4, U$5, U$6, U$7, U$8;;7;14;2W10;2W10;2W10;U$1, U$2, U$3, U$4, U$5, U$6, U$7, U$8;;8;16;2W10;2W10;2W10;U$1, U$2, U$3, U$4, U$5, U$6, U$7, U$8;;3;6;2W10;2W10;2W10;U$1, U$2, U$3, U$4, U$5, U$6, U$7, U$8;;;;44;2W10;2W10;2W10;U$1, U$2, U$3, U$4, U$5, U$6, U$7, U$8
+4;8;4k7;R0204/7;0204/7;R9, R10, R11, R12, R13, R14, R15, R16;;7;14;4k7;R0204/7;0204/7;R9, R10, R11, R12, R13, R14, R15, R16;;8;16;4k7;R0204/7;0204/7;R9, R10, R11, R12, R13, R14, R15, R16;;3;6;4k7;R0204/7;0204/7;R9, R10, R11, R12, R13, R14, R15, R16;;;;44;4k7;R0204/7;0204/7;R9, R10, R11, R12, R13, R14, R15, R16
+1;2;74HC165N;74HC165N;DIL16;IC1;;1;2;74HC165N;74HC165N;DIL16;IC1;;1;2;74HC165N;74HC165N;DIL16;IC1;;1;2;74HC165N;74HC165N;DIL16;IC1;;;;8;74HC165N;74HC165N;DIL16;IC1
+1;2;ILQ620;ILQ620;DIL16;OK1, OK2;;2;4;ILQ620;ILQ620;DIL16;OK1, OK2;;2;4;ILQ620;ILQ620;DIL16;OK1, OK2;;1;2;ILQ620;ILQ620;DIL16;OK1, OK2;;;;12;ILQ620;ILQ620;DIL16;OK1, OK2
+2;4;16pin;DIP Socket;DIL16;IC1,OK1,OK2;;3;6;16pin;DIP Socket;DIL16;IC1,OK1,OK2;;3;6;16pin;DIP Socket;DIL16;IC1,OK1,OK2;;2;4;16pin;DIP Socket;DIL16;IC1,OK1,OK2;;;;20;16pin;DIP Socket;DIL16;IC1,OK1,OK2
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;2;;;;;;;2;;;;;;;2;;;;;;;2;;;;;;;;8;;;;

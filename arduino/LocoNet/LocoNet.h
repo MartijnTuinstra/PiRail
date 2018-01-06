@@ -186,6 +186,24 @@ typedef enum
   TH_SP_ST_28_ADV  = 4,  // 100=28 Step decoder ,Allow Advanced DCC consisting
   TH_SP_ST_128_ADV = 7   // 111=128 Step decoder, Allow Advanced DCC consisting
 } TH_SPEED_STEPS;
+/*
+class RailNetControllerClass
+{
+  private:
+	uint16_t MyID;
+	uint8_t   InputRegisters;
+	uint8_t  OutputRegisters;
+	uint8_t * InputRegs;
+	uint8_t * OutputRegs;
+	uint8_t * Blink_Mask;
+
+	void pushInput();
+	void updateOutput();
+
+  public:
+	uint8_t checkInput();
+	void fireBlink();
+}*/
 
 class LocoNetThrottleClass
 {

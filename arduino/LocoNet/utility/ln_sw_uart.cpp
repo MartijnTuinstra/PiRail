@@ -101,6 +101,8 @@ ISR(LN_SB_SIGNAL)
   // Set the State to indicate that we have begun to Receive
   lnState = LN_ST_RX ;
 
+  //Serial.print("RX");
+
   // Reset the bit counter so that on first increment it is on 0
   lnBitCount = 0;
 }
@@ -131,8 +133,11 @@ ISR(LN_TMR_SIGNAL)     /* signal handler for timer0 overflow */
     if( lnBitCount < 9)  {   // Are we in the Stop Bits phase
       lnCurrentByte >>= 1;
       if( bit_is_set(LN_RX_PORT, LN_RX_BIT)) {
+       // //Serial.print("R");
         lnCurrentByte |= 0x80;
-      }
+      }//else{
+       // //Serial.print("r");
+      //}
       return ;
     }
 
@@ -145,9 +150,17 @@ ISR(LN_TMR_SIGNAL)     /* signal handler for timer0 overflow */
     if( bit_is_clear(LN_RX_PORT,LN_RX_BIT) ) {
       ERROR_LED_ON();
       lnRxBuffer->Stats.RxErrors++ ;
+      ////Serial.println(" X");
     } 
     else { // Put the received byte in the buffer
-      addByteLnBuf( lnRxBuffer, lnCurrentByte ) ;
+      //Serial.print(" ");
+      //Serial.print(lnCurrentByte,HEX);
+      //Serial.print(" ");
+      //Serial.print(lnRxBuffer->ReadIndex);
+      //Serial.print("->");
+      //Serial.println(addByteLnBuf( lnRxBuffer, lnCurrentByte ));
+      //Serial.println("\t");
+      addByteLnBuf( lnRxBuffer, lnCurrentByte );
     }
     lnBitCount = 0 ;
     lnState = LN_ST_CD_BACKOFF ;
@@ -165,19 +178,24 @@ ISR(LN_TMR_SIGNAL)     /* signal handler for timer0 overflow */
     else if( lnBitCount < 9) {   			 // Send each Bit
       if( lnCurrentByte & 0x01 ) {
         LN_SW_UART_SET_TX_HIGH(LN_TX_PORT, LN_TX_BIT);
+        //Serial.print("T");
       } 
       else {
         LN_SW_UART_SET_TX_LOW(LN_TX_PORT, LN_TX_BIT);
+        //Serial.print("t");
       }
       lnCurrentByte >>= 1;
     } 
     else if( lnBitCount ==  9) {   		 // Generate stop-bit
       LN_SW_UART_SET_TX_HIGH(LN_TX_PORT, LN_TX_BIT);
+      //Serial.println(" St ");
     } 
     else if( ++lnTxIndex < lnTxLength ) {  // Any more bytes in buffer
       // Setup for the next byte
       lnBitCount = 0 ;
       lnCurrentByte = lnTxData->data[ lnTxIndex ] ;
+      //Serial.print(" ");
+      //Serial.print(lnCurrentByte,HEX);
 
       // Begin the Start Bit
       LN_SW_UART_SET_TX_LOW(LN_TX_PORT, LN_TX_BIT);
@@ -279,7 +297,14 @@ LN_STATUS sendLocoNetPacketTry(lnMsg *TxData, unsigned char ucPrioDelay)
   uint8_t  CheckSum ;
   uint8_t  CheckLength ;
 
-  lnTxLength = getLnMsgSize( TxData ) ;
+  lnTxLength = getRnMsgSize( TxData ) ;
+
+  //Serial.println();
+  //Serial.print("TX lgth: ");
+  //Serial.print(lnTxLength,HEX);
+  //Serial.println();
+  //Serial.print(" ");
+  //Serial.print(TxData->data[ 0 ],HEX);
 
   // First calculate the checksum as it may not have been done
   CheckLength = lnTxLength - 1 ;
@@ -334,7 +359,7 @@ LN_STATUS sendLocoNetPacketTry(lnMsg *TxData, unsigned char ucPrioDelay)
   }
 
   LN_SW_UART_SET_TX_LOW(LN_TX_PORT, LN_TX_BIT);        // Begin the Start Bit
-
+  //Serial.print(" st ");
   // Get the Current Timer1 Count and Add the offset for the Compare target
   // added adjustment value for bugfix (Olaf Funke)
   lnCompareTarget = LN_TMR_COUNT_REG + LN_TIMER_TX_RELOAD_PERIOD - LN_TIMER_TX_RELOAD_ADJUST;

@@ -99,12 +99,15 @@ void initLnBuf( LnBuf *Buffer ) ;
 lnMsg *recvLnMsg( LnBuf *Buffer ) ;
 LnBufStats *getLnBufStats( LnBuf *Buffer ) ;
 uint8_t getLnMsgSize( volatile lnMsg * newMsg ) ;
+uint8_t getRnMsgSize( volatile lnMsg * newMsg ) ;
+uint8_t getRnMsgSizeFromOpCode(uint8_t Opcode);
 
-static inline void addByteLnBuf( LnBuf *Buffer, uint8_t newByte )
+static inline int addByteLnBuf( LnBuf *Buffer, uint8_t newByte )
 {
   Buffer->Buf[ Buffer->WriteIndex++ ] = newByte ;
   if( Buffer->WriteIndex >= LN_BUF_SIZE )
     Buffer->WriteIndex = 0 ;
+  return Buffer->WriteIndex;
 }
 
 static inline void addMsgLnBuf( LnBuf *Buffer, volatile lnMsg * newMsg )
@@ -112,7 +115,7 @@ static inline void addMsgLnBuf( LnBuf *Buffer, volatile lnMsg * newMsg )
   uint8_t	Index ;
   uint8_t 	Length ;
 
-  Length = getLnMsgSize( newMsg ) ;
+  Length = getRnMsgSize( newMsg ) ;
   for( Index = 0; Index < Length; Index++ )
     addByteLnBuf(Buffer, newMsg->data[ Index ] ) ;
 }
@@ -126,4 +129,3 @@ static inline int lnPacketReady(LnBuf * Buffer) {
 #endif
 
 #endif
-

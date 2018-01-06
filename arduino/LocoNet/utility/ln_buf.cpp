@@ -56,6 +56,7 @@
  *****************************************************************************/
 
 #include <string.h>
+#include <arduino.h>
 #include <avr/interrupt.h>
 //#include "loconet.h"
 //#include "ln_interface.h"
@@ -74,13 +75,18 @@ lnMsg *recvLnMsg( LnBuf *Buffer )
   uint8_t	newByte ;
   uint8_t  bGotNewLength ;
   uint8_t	lastWriteIndex ;
+  uint8_t ReadIndexReset;
   uint8_t	tempSize ;
   lnMsg *tempMsg ;
+
+  ReadIndexReset = Buffer->ReadIndex;
 
   while( Buffer->ReadIndex != Buffer->WriteIndex )
   {
 
     newByte = Buffer->Buf[ Buffer->ReadIndex ] ;
+
+    //Serial.println(newByte,HEX);
 
     // Check if this is the beginning of a new packet
     if( newByte & (uint8_t)0x80 )
@@ -93,7 +99,7 @@ lnMsg *recvLnMsg( LnBuf *Buffer )
       Buffer->ReadPacketIndex = Buffer->ReadIndex ;
       Buffer->CheckSum = LN_CHECKSUM_SEED ;
       bGotNewLength = 0 ;
-      Buffer->ReadExpLen = ( ( newByte & (uint8_t)0x60 ) == (uint8_t)0x60 ) ? (uint8_t)0 : ( ( newByte & (uint8_t)0x60 ) >> (uint8_t)4 ) + (uint8_t)2 ;
+      Buffer->ReadExpLen = getRnMsgSizeFromOpCode(newByte);
       if (Buffer->ReadExpLen != 0)  // fixed length opcode found?
       {
         bGotNewLength = 1 ;
@@ -176,28 +182,41 @@ lnMsg *recvLnMsg( LnBuf *Buffer )
     // Do we have a complete packet
     if( tempSize == Buffer->ReadExpLen )
     {
+      //Serial.println("Complete Packet");
       // Check if we have a good checksum
       if( Buffer->CheckSum == newByte ) 
       {
         // Set the return packet pointer
         tempMsg = (lnMsg*) (Buffer->Buf + Buffer->ReadPacketIndex) ;
         Buffer->Stats.RxPackets++ ;
+        //Serial.print(Buffer->CheckSum,HEX);
+        //Serial.print("==");
+        //Serial.println(newByte,HEX);
       }
-      else
+      else{
         Buffer->Stats.RxErrors++ ;
+        Serial.println("Wrong Checksum");
+      }
 
       // Whatever the case advance the ReadPacketIndex to the beginning of the
       // next packet to be received
       Buffer->ReadPacketIndex = Buffer->ReadIndex ;
 
-      if( tempMsg != NULL )
+      if( tempMsg != NULL ){
+        //Serial.println("tempMsg");
         return tempMsg ;
+      }
 
     }
 
     // Packet not complete so add the current byte to the checksum
     Buffer->CheckSum ^= newByte ;
   }
+
+
+  //Serial.println("End");
+
+
 
   return NULL ;
 }
@@ -210,5 +229,55 @@ LnBufStats *getLnBufStats( LnBuf *Buffer )
 uint8_t getLnMsgSize( volatile lnMsg * Msg )
 {
   return ( ( Msg->sz.command & (uint8_t)0x60 ) == (uint8_t)0x60 ) ? Msg->sz.mesg_size : ( ( Msg->sz.command & (uint8_t)0x60 ) >> (uint8_t)4 ) + 2 ;
+}
+
+uint8_t getRnMsgSize( volatile lnMsg * Msg )
+{
+  uint8_t Opcode = Msg->data[0] ^ 0x80;
+  if(Opcode == 0x7F || // Set Acknowledge
+    Opcode == 0x0   || // Report ID
+    Opcode == 0x47  || // Request Read all Output
+    Opcode == 0x4C  || // Request Read all Inputs
+    Opcode == 0x59     // Request EEPROM
+    ){ 
+    return 3;
+  }else if(Opcode == 0x50 // Change Device ID
+    ){ 
+    return 4;
+  }else if(Opcode == 0x51 || // Change input and output
+    Opcode == 0x10 || // Toggle Single Address
+    Opcode == 0x11 || // Pulse Single Address
+    Opcode == 0x12 || // Blink Single Address
+    Opcode == 0x04    // Post Single Input Address
+    ){ 
+    return 5;
+  }else{
+    return Msg->data[1] & 0x3F;
+  }
+}
+
+uint8_t getRnMsgSizeFromOpCode( uint8_t Opcode )
+{
+  Opcode ^= 0x80;
+  if(Opcode == 0x7F || // Set Acknowledge
+    Opcode == 0x0   || // Report ID
+    Opcode == 0x47  || // Request Read all Output
+    Opcode == 0x4C  || // Request Read all Inputs
+    Opcode == 0x59     // Request EEPROM
+    ){ 
+    return 3;
+  }else if(Opcode == 0x50 // Change Device ID
+    ){ 
+    return 4;
+  }else if(Opcode == 0x51 || // Change input and output
+    Opcode == 0x10 || // Toggle Single Address
+    Opcode == 0x11 || // Pulse Single Address
+    Opcode == 0x12 || // Blink Single Address
+    Opcode == 0x04    // Post Single Input Address
+    ){ 
+    return 5;
+  }else{
+    return 0;
+  }
 }
 

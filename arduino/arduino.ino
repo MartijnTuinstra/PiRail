@@ -1,5 +1,7 @@
 #include "LocoNet/LocoNet.h"
 #include "EEPROM.h"
+#include "SPI.h" //Fast shiftOut and shiftIn
+
 
 lnMsg *RxPacket;
 lnMsg TxPacket;
@@ -39,7 +41,7 @@ void setup(){
   //}
   /********/
 
-
+  SPI.begin();
 
   DevID = EEPROM.read(1);
 
@@ -87,24 +89,26 @@ void setup(){
   pinMode(dataPinIn,INPUT ); // Data input
   pinMode(dataLoad,OUTPUT ); // Data load pin
 
-  //BlinkMask[0]  = 0b00000000;
-  //PulseMask[0]  = 0b00000000;
+  //Reset inputs and outputs
+  SPI.transfer(OutputRegs,OutputRegisters);
 
-  //OutputRegs[0] = 0b00000000;
+  for(int i = 0;i<InputRegisters;i++){
+    InputRegs[i] = SPI.transfer(0);
+  }
 
-  //Report Own ID
 
-  delay(10*DevID);
+  //wait and Report Own ID
+  delay(2*DevID);
   TxPacket.data[0] = 0x80;
   TxPacket.data[1] = DevID;
   LocoNet.send(&TxPacket);
   Serial.print("My address is: 0x");
   Serial.println(DevID,HEX);
+  delay(200-2*DevID);
 
   //Reset Outputs and inputs to zero
   //for(int i = 0;i<InputRegisters;i++){InputRegs[i] = 0;}
   //for(int i = 0;i<OutputRegisters;i++){OutputRegs[i] = 0;}
-  delay(step_interval);
 }
 
 LN_STATUS RN_status;
@@ -115,31 +119,32 @@ void loop(){
   {
     if(proccess_packet(RxPacket)){
       digitalWrite(latchPinOut, LOW);
-      for(int i = 0;i<OutputRegisters;i++){
-        //shiftOut
-        shiftOut(dataPinOut, clockPinOut, MSBFIRST, OutputRegs[i]);
-
-      }
+      delayMicroseconds(5);
+      SPI.transfer(OutputRegs,OutputRegisters); //Shift out data
+      delayMicroseconds(5);
       digitalWrite(latchPinOut, HIGH);
     }
   }
   
+  //Executes on a interval of 'blink_interval'
   if(step()){
-    digitalWrite(dataLoad,LOW);
+    digitalWrite(dataLoad,LOW);           //Pulse Read Line
     delayMicroseconds(PULSE_WIDTH_USEC);
     digitalWrite(dataLoad,HIGH);
     delayMicroseconds(PULSE_WIDTH_USEC);
     digitalWrite(clockPinIn, HIGH);
-    digitalWrite(latchPinIn, LOW);
+    digitalWrite(latchPinIn, LOW);        //Start Shift in
     delay(1);
     uint8_t diff = 0;
     uint16_t INaddresses[10];
     char addres_counter;
 
     for(int i = 0;i<InputRegisters;i++){
-      NInputRegs[i] = shiftIn(dataPinIn,clockPinIn,MSBFIRST);
+      NInputRegs[i] = SPI.transfer(0);
       if((diff = NInputRegs[i] ^ InputRegs[i])){
         debug("difference",1);
+
+        //Determine which bits are set
         if(diff & 1)  {INaddresses[addres_counter++] = i*8+0;}
         if(diff & 2)  {INaddresses[addres_counter++] = i*8+1;}
         if(diff & 4)  {INaddresses[addres_counter++] = i*8+2;}
@@ -152,6 +157,8 @@ void loop(){
     }
     digitalWrite(latchPinIn, HIGH);
     Serial.println(addres_counter);
+
+    //Create Message for master
     if(addres_counter != 0){
       if(addres_counter == 1){
         //POST SINGLE ADDRESS
@@ -186,30 +193,29 @@ void loop(){
       LocoNet.send(&TxPacket);
     }
   }
+  //Executes on a interval of 'blink_interval'
   if(blink()){
     Serial.println("Blink!");
-    digitalWrite(latchPinOut, LOW);
     for(int i = 0;i<OutputRegisters;i++){
       //XOR each output bit with Blink mask
       *(OutputRegs+i) ^= *(BlinkMask+i);
-      //shiftOut
-      shiftOut(dataPinOut, clockPinOut, MSBFIRST, OutputRegs[i]);
-
     }
+    digitalWrite(latchPinOut, LOW);
+    SPI.transfer(OutputRegs,OutputRegisters);
     digitalWrite(latchPinOut, HIGH);
   }
+  //Executes on a interval of 'pulse_interval'
   if(pulse()){
     Serial.println("Pulse!");
-    digitalWrite(latchPinOut, LOW);
     for(int i = 0;i<OutputRegisters;i++){
       //XOR each output bit with Blink mask
       *(OutputRegs+i) ^= *(PulseMask+i);
-
+      
+      //Reset Pulse mask
       *(PulseMask+i) = 0;
-      //shiftOut
-      shiftOut(dataPinOut, clockPinOut, MSBFIRST, OutputRegs[i]);
-
     }
+    digitalWrite(latchPinOut, LOW);
+    SPI.transfer(OutputRegs,OutputRegisters);
     digitalWrite(latchPinOut, HIGH);
   }
 }
@@ -253,15 +259,6 @@ void printBits(byte myByte){
        Serial.print('0');
  }
  Serial.print(" ");
-}
-
-uint8_t numberOfSetBits(uint8_t i)
-{
-  // Java: use >>> instead of >>
-  // C or C++: use uint32_t
-  i = i - ((i >> 1) & 0x55);
-  i = (i & 0x33) + ((i >> 2) & 0x33);
-  return (((i + (i >> 4)) & 0x0F) * 0x01);
 }
 
 void printRegs(){

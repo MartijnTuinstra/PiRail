@@ -49,6 +49,7 @@
 volatile uint8_t  lnState ;
 volatile uint8_t  lnBitCount ;
 volatile uint8_t  lnCurrentByte ;
+volatile uint8_t  lnContinuation = 0;
 volatile uint16_t lnCompareTarget ;
 
 LnBuf             * lnRxBuffer ;
@@ -130,7 +131,12 @@ ISR(LN_TMR_SIGNAL)     /* signal handler for timer0 overflow */
 
   if( lnState == LN_ST_RX ) {  // Are we in RX mode
 
-    if( lnBitCount < 9)  {   // Are we in the Stop Bits phase
+    if(lnBitCount == 0){    //Continuation Bit
+      lnContinuation = bit_is_set(LN_RX_PORT,LN_RX_BIT);
+      if(!lnContinuation){ //New packet
+        Serial.println("NewPacket");
+      }
+    }else if( lnBitCount < 10)  {   // Are we in the Stop Bits phase
       lnCurrentByte >>= 1;
       if( bit_is_set(LN_RX_PORT, LN_RX_BIT)) {
        // //Serial.print("R");
@@ -150,7 +156,7 @@ ISR(LN_TMR_SIGNAL)     /* signal handler for timer0 overflow */
     if( bit_is_clear(LN_RX_PORT,LN_RX_BIT) ) {
       ERROR_LED_ON();
       lnRxBuffer->Stats.RxErrors++ ;
-      ////Serial.println(" X");
+      //Serial.println(" X");
     } 
     else { // Put the received byte in the buffer
       //Serial.print(" ");
@@ -175,7 +181,15 @@ ISR(LN_TMR_SIGNAL)     /* signal handler for timer0 overflow */
       lnState = LN_ST_TX_COLLISION ;
       ERROR_LED_ON();
     } 
-    else if( lnBitCount < 9) {   			 // Send each Bit
+    else if( lnBitCount == 0){
+      //Continuation Bit??
+      if(lnContinuation){
+        LN_SW_UART_SET_TX_HIGH(LN_TX_PORT, LN_TX_BIT);
+      }else{
+        LN_SW_UART_SET_TX_LOW(LN_TX_PORT, LN_TX_BIT);
+      }
+    }
+    else if( lnBitCount < 10) {   			 // Send each Bit
       if( lnCurrentByte & 0x01 ) {
         LN_SW_UART_SET_TX_HIGH(LN_TX_PORT, LN_TX_BIT);
         //Serial.print("T");
@@ -186,7 +200,7 @@ ISR(LN_TMR_SIGNAL)     /* signal handler for timer0 overflow */
       }
       lnCurrentByte >>= 1;
     } 
-    else if( lnBitCount ==  9) {   		 // Generate stop-bit
+    else if( lnBitCount ==  10) {   		 // Generate stop-bit
       LN_SW_UART_SET_TX_HIGH(LN_TX_PORT, LN_TX_BIT);
       //Serial.println(" St ");
     } 
@@ -199,6 +213,9 @@ ISR(LN_TMR_SIGNAL)     /* signal handler for timer0 overflow */
 
       // Begin the Start Bit
       LN_SW_UART_SET_TX_LOW(LN_TX_PORT, LN_TX_BIT);
+
+      //Set continuation Bit
+      lnContinuation = 1;
 
       // Get the Current Timer1 Count and Add the offset for the Compare target
       // added adjustment value for bugfix (Olaf Funke)
@@ -216,6 +233,7 @@ ISR(LN_TMR_SIGNAL)     /* signal handler for timer0 overflow */
       // Begin CD Backoff state
       lnBitCount = 0 ;
       lnState = LN_ST_CD_BACKOFF ;     
+      lnContinuation = 0;
     }
   }
 

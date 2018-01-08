@@ -86,9 +86,12 @@ LnBufStats ;
 typedef struct
 {
   uint8_t     Buf[ LN_BUF_SIZE ] ;
+  uint8_t     PacketStartIndexices[20];
   uint8_t     WriteIndex ;
   uint8_t     ReadIndex ;
-  uint8_t     ReadPacketIndex ;
+  uint8_t     ReadPacketIndex;
+  uint8_t     PacketStartWriteIndex;
+  uint8_t     PacketStartReadIndex;
   uint8_t     CheckSum ;
   uint8_t     ReadExpLen ;
   LnBufStats  Stats ;

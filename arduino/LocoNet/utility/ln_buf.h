@@ -86,12 +86,10 @@ LnBufStats ;
 typedef struct
 {
   uint8_t     Buf[ LN_BUF_SIZE ] ;
-  uint8_t     PacketStartIndexices[20];
+  uint8_t     CBuf[LN_BUF_SIZE];
   uint8_t     WriteIndex ;
   uint8_t     ReadIndex ;
   uint8_t     ReadPacketIndex;
-  uint8_t     PacketStartWriteIndex;
-  uint8_t     PacketStartReadIndex;
   uint8_t     CheckSum ;
   uint8_t     ReadExpLen ;
   LnBufStats  Stats ;
@@ -113,14 +111,33 @@ static inline int addByteLnBuf( LnBuf *Buffer, uint8_t newByte )
   return Buffer->WriteIndex;
 }
 
+static inline int addByteRnBuf( LnBuf *Buffer, uint8_t newByte , uint8_t continuation)
+{
+  Buffer->CBuf[Buffer->WriteIndex   ] = continuation;
+  Buffer->Buf[ Buffer->WriteIndex++ ] = newByte ;
+  if( Buffer->WriteIndex >= LN_BUF_SIZE )
+    Buffer->WriteIndex = 0 ;
+  return Buffer->WriteIndex;
+}
+
 static inline void addMsgLnBuf( LnBuf *Buffer, volatile lnMsg * newMsg )
 {
-  uint8_t	Index ;
-  uint8_t 	Length ;
+  uint8_t Index ;
+  uint8_t   Length ;
 
   Length = getRnMsgSize( newMsg ) ;
   for( Index = 0; Index < Length; Index++ )
     addByteLnBuf(Buffer, newMsg->data[ Index ] ) ;
+}
+
+static inline void addMsgRnBuf( LnBuf *Buffer, volatile lnMsg * newMsg )
+{
+  uint8_t Index ;
+  uint8_t   Length ;
+
+  Length = getRnMsgSize( newMsg ) ;
+  for( Index = 0; Index < Length; Index++ )
+    addByteRnBuf(Buffer, newMsg->data[ Index ], ((Index == 0) ? (uint8_t)0 : (uint8_t)1 )) ;
 }
 
 static inline int lnPacketReady(LnBuf * Buffer) {

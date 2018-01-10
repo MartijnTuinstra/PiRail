@@ -10,10 +10,10 @@ uint8_t DevID;
 uint8_t InputRegisters,OutputRegisters;
 char * InputRegs, *NInputRegs, * OutputRegs, * BlinkMask, *PulseMask;
 char activatePulse;
-char blink_EN;
+char blink_EN=0;
 
-int latchPinOut = 9,dataPinOut = 11,clockPinOut = 13;
-int dataLoad = A1, latchPinIn = A0,dataPinIn = 12,clockPinIn = 13;
+int latchPinOut = 9;
+int dataLoad = A1, latchPinIn = A0;
 
 #define PULSE_WIDTH_USEC   5
 
@@ -30,14 +30,14 @@ void setup(){
   //if(EEPROM.read(0) == 1){
     EEPROM.write(0,0);
 
-    EEPROM.write(1,32); //Address 32
+    //EEPROM.write(1,32); //Address 32
 
-    EEPROM.write(2,4); //1 Input  Registers
+    EEPROM.write(2,1); //1 Input  Registers
     EEPROM.write(3,1); //1 Output Register
 
     EEPROM.write(4,70); //Blink interval scaler
     EEPROM.write(5,20); //Pulse_interval
-    EEPROM.write(6,500); //Step_interval
+    EEPROM.write(6,1000); //Step_interval
   //}
   /********/
 
@@ -81,13 +81,8 @@ void setup(){
   pinMode(13,OUTPUT );
 
   pinMode(latchPinOut,OUTPUT ); // Latch pin
-  pinMode(dataPinOut,OUTPUT ); // Data input
-
-  pinMode(clockPinOut,OUTPUT ); // Clock pin
-
   pinMode(latchPinIn,OUTPUT ); // Latch pin
-  pinMode(dataPinIn,INPUT ); // Data input
-  pinMode(dataLoad,OUTPUT ); // Data load pin
+  pinMode(dataLoad  ,OUTPUT ); // Data load pin
 
   //Reset inputs and outputs
   SPI.transfer(OutputRegs,OutputRegisters);
@@ -109,6 +104,11 @@ void setup(){
   //Reset Outputs and inputs to zero
   //for(int i = 0;i<InputRegisters;i++){InputRegs[i] = 0;}
   //for(int i = 0;i<OutputRegisters;i++){OutputRegs[i] = 0;}
+  unsigned long t = millis();
+  while(t < blink_interval || t < pulse_interval || t < step_interval){
+    delay(10);
+    t = millis();
+  }
 }
 
 LN_STATUS RN_status;
@@ -132,7 +132,6 @@ void loop(){
     delayMicroseconds(PULSE_WIDTH_USEC);
     digitalWrite(dataLoad,HIGH);
     delayMicroseconds(PULSE_WIDTH_USEC);
-    digitalWrite(clockPinIn, HIGH);
     digitalWrite(latchPinIn, LOW);        //Start Shift in
     delay(1);
     uint8_t diff = 0;
@@ -182,8 +181,8 @@ void loop(){
         InputRegs[i] = NInputRegs[i];
       }
     }
-
-    printRegs();
+    
+    //printRegs();
     Serial.println("Step");
     if(DevID != 32){
       TxPacket.data[0] = 0x91;
@@ -194,6 +193,7 @@ void loop(){
     }
   }
   //Executes on a interval of 'blink_interval'
+  
   if(blink()){
     Serial.println("Blink!");
     for(int i = 0;i<OutputRegisters;i++){

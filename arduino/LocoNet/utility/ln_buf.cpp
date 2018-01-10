@@ -73,6 +73,7 @@ void initLnBuf( LnBuf *Buffer )
 lnMsg *recvLnMsg( LnBuf *Buffer )
 {
   uint8_t	newByte ;
+  uint8_t newCByte;
   uint8_t  bGotNewLength ;
   uint8_t	lastWriteIndex ;
   uint8_t ReadIndexReset;
@@ -85,11 +86,12 @@ lnMsg *recvLnMsg( LnBuf *Buffer )
   {
 
     newByte = Buffer->Buf[ Buffer->ReadIndex ] ;
+    newCByte = Buffer->CBuf[ Buffer->ReadIndex ] ;
 
     //Serial.println(newByte,HEX);
 
     // Check if this is the beginning of a new packet
-    if( newByte & (uint8_t)0x80 )
+    if( !newCByte )
     {
       // if the ReadPacket index is not the same as the Read index then we have received the
       // start of the next packet without completing the previous one which is an error

@@ -101,8 +101,9 @@ ISR(LN_SB_SIGNAL)
 
   // Set the State to indicate that we have begun to Receive
   lnState = LN_ST_RX ;
-
-  //Serial.print("RX");
+ 
+  Serial.println();
+  Serial.print("RX ");
 
   // Reset the bit counter so that on first increment it is on 0
   lnBitCount = 0;
@@ -130,20 +131,22 @@ ISR(LN_TMR_SIGNAL)     /* signal handler for timer0 overflow */
   lnBitCount++;                // Increment bit_counter
 
   if( lnState == LN_ST_RX ) {  // Are we in RX mode
-
-    if(lnBitCount == 0){    //Continuation Bit
+    if(lnBitCount == 1){    //Continuation Bit
       lnContinuation = bit_is_set(LN_RX_PORT,LN_RX_BIT);
       if(!lnContinuation){ //New packet
-        Serial.println("NewPacket");
+        Serial.print("  ");
+      }else{
+        Serial.print("C ");
       }
+      return;
     }else if( lnBitCount < 10)  {   // Are we in the Stop Bits phase
       lnCurrentByte >>= 1;
       if( bit_is_set(LN_RX_PORT, LN_RX_BIT)) {
-       // //Serial.print("R");
+       Serial.print("R");
         lnCurrentByte |= 0x80;
-      }//else{
-       // //Serial.print("r");
-      //}
+      }else{
+       Serial.print("r");
+      }
       return ;
     }
 
@@ -156,17 +159,13 @@ ISR(LN_TMR_SIGNAL)     /* signal handler for timer0 overflow */
     if( bit_is_clear(LN_RX_PORT,LN_RX_BIT) ) {
       ERROR_LED_ON();
       lnRxBuffer->Stats.RxErrors++ ;
-      //Serial.println(" X");
+      Serial.println(" X");
     } 
     else { // Put the received byte in the buffer
-      //Serial.print(" ");
-      //Serial.print(lnCurrentByte,HEX);
-      //Serial.print(" ");
-      //Serial.print(lnRxBuffer->ReadIndex);
-      //Serial.print("->");
-      //Serial.println(addByteLnBuf( lnRxBuffer, lnCurrentByte ));
-      //Serial.println("\t");
-      addByteLnBuf( lnRxBuffer, lnCurrentByte );
+      Serial.print(" ");
+      Serial.println(lnCurrentByte);
+      addByteRnBuf( lnRxBuffer, lnCurrentByte ,lnContinuation);
+      //addByteRnBuf( lnRxBuffer, lnCurrentByte ,lnContinuation);
     }
     lnBitCount = 0 ;
     lnState = LN_ST_CD_BACKOFF ;
@@ -181,12 +180,14 @@ ISR(LN_TMR_SIGNAL)     /* signal handler for timer0 overflow */
       lnState = LN_ST_TX_COLLISION ;
       ERROR_LED_ON();
     } 
-    else if( lnBitCount == 0){
+    else if( lnBitCount == 1){
       //Continuation Bit??
       if(lnContinuation){
         LN_SW_UART_SET_TX_HIGH(LN_TX_PORT, LN_TX_BIT);
+        //Serial.print("C ");
       }else{
         LN_SW_UART_SET_TX_LOW(LN_TX_PORT, LN_TX_BIT);
+        //Serial.print("c ");
       }
     }
     else if( lnBitCount < 10) {   			 // Send each Bit
@@ -208,8 +209,10 @@ ISR(LN_TMR_SIGNAL)     /* signal handler for timer0 overflow */
       // Setup for the next byte
       lnBitCount = 0 ;
       lnCurrentByte = lnTxData->data[ lnTxIndex ] ;
+      //Serial.println();
+      Serial.print("TX ");
+      Serial.println(lnCurrentByte,HEX);
       //Serial.print(" ");
-      //Serial.print(lnCurrentByte,HEX);
 
       // Begin the Start Bit
       LN_SW_UART_SET_TX_LOW(LN_TX_PORT, LN_TX_BIT);
@@ -229,6 +232,8 @@ ISR(LN_TMR_SIGNAL)     /* signal handler for timer0 overflow */
 
       // Now copy the TX Packet into the RX Buffer
       addMsgLnBuf( lnRxBuffer, lnTxData );
+
+      Serial.println("DONE");
 
       // Begin CD Backoff state
       lnBitCount = 0 ;
@@ -317,12 +322,12 @@ LN_STATUS sendLocoNetPacketTry(lnMsg *TxData, unsigned char ucPrioDelay)
 
   lnTxLength = getRnMsgSize( TxData ) ;
 
-  //Serial.println();
-  //Serial.print("TX lgth: ");
-  //Serial.print(lnTxLength,HEX);
-  //Serial.println();
-  //Serial.print(" ");
-  //Serial.print(TxData->data[ 0 ],HEX);
+  Serial.println();
+  Serial.print("NTX");
+  Serial.print(TxData->data[0],HEX);
+  Serial.print(" ");
+
+  lnContinuation = 0;
 
   // First calculate the checksum as it may not have been done
   CheckLength = lnTxLength - 1 ;

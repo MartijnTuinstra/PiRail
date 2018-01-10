@@ -2,6 +2,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
+#include <pthread.h>
 
 #include "Z21_Server.h"
 
@@ -27,8 +28,16 @@ struct Loc * create_Loc(uint16_t adr){
 
 #include "Z21_Server.c"
 
+char stop = 0;
+
 void main(){
-	server();
+	pthread_t thread_web_server;
+	pthread_create(&thread_web_server, NULL, server, NULL);
+
+	while(stop == 0){
+		printf(".");
+		sleep(10);
+	}
     printf("Done");
     return;
 }

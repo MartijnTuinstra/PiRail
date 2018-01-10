@@ -1,5 +1,6 @@
 #define BUFSIZE 1024
 #define PORT 21105
+#define BASE_IP 0x0002A8C0
 //#define PORT 34472
 
 /*
@@ -9,52 +10,6 @@ void die(char *msg) {
   perror(msg);
   exit(1);
 }
-
-#define SOFTWARE_V_H 0x01
-#define SOFTWARE_V_L 0x23
-#define HW_Type      0x00000201 //D_HWT_Z21_NEW
-#define FW_Version   0x00000120
-
-#define  H_Z21_LAN_X             		    0x4000
-#define HX_Z21_LAN_X_GET_VERSION  		    0x2121
-#define HX_Z21_LAN_X_GET_STATUS             0x2124
-#define HX_Z21_LAN_X_SET_TRACK_POWER_OFF    0x2180
-#define HX_Z21_LAN_X_SET_TRACK_POWER_ON     0x2181
-#define HX_Z21_LAN_X_SET_STOP               0x8080
-#define HX_Z21_LAN_X_GET_FRIMWARE_VERSION   0xF10A
-
-#define HX_Z21_LAN_X_BC_TRACK_POWER_OFF     0x6100
-#define HX_Z21_LAN_X_BC_TRACK_POWER_ON      0x6101
-#define HX_Z21_LAN_X_BC_PROGRAMMING_MODE    0x6102
-#define HX_Z21_LAN_X_BC_TRACK_SHORT_CIRCUIT 0x6108
-#define HX_Z21_LAN_X_UNKOWN_COMMAND         0x6182
-#define HX_Z21_LAN_X_STATUS_CHANGED         0x6182
-#define HX_Z21_LAN_X_BC_STOPED              0x8100
-
-#define HX_Z21_LAN_X_GET_LOCO_INFO          0xE3F0
-#define HX_Z21_LAN_X_SET_LOCO_DRIVE         0xE410
-#define HX_Z21_LAN_X_SET_LOCO_FUNCTION      0xE4F8
-
-#define HX_Z21_LAN_X_LOCO_INFO              0xEF
-
-#define HX_Z21_LAN_X_GET_TURNOUT_INFO       0x4300
-#define HX_Z21_LAN_X_SET_TURNOUT            0x5300
-
-#define HX_Z21_LAN_X_TURNOUT_INFO           0x43
-
-#define  H_Z21_LAN_SET_BROADCASTFLAGS       0x5000
-#define  H_Z21_LAN_GET_BROADCASTFLAGS       0x5100
-
-#define  H_Z21_LAN_SYSTEMSTATE_DATACHANGED  0x8400
-
-#define  H_Z21_LAN_SYSTEMSTATE_GETDATA      0X8500
-
-#define  H_Z21_LAN_GET_HWINFO               0x1A00
-
-#define  H_Z21_LAN_GET_LOCOMODE             0x6000
-#define  H_Z21_LAN_SET_LOCOMODE             0x6100
-#define  H_Z21_LAN_GET_TURNOUTMODE          0x7000
-#define  H_Z21_LAN_SET_TURNOUTMODE          0x7100
 
 struct UDP_return {
 	char    * msg;
@@ -87,6 +42,32 @@ void printFPacket(struct UDP_return * rMsg){
 	printf("\n");
 }
 
+int s;
+
+void Z21E_BroadCaster(uint32_t Flag,struct UDP_return * Msg,char delete){
+	printf("BroadCaster: ");
+	for(int i = 1;i<255;i++){
+		if(Clients[i] != 0 && Clients[i]->clientFlags == 1){
+			//Connected Client
+			printf("C%i",i);
+			if((Clients[i]->BroadcastFlags & Flag) != 0){
+				//Client has that flag
+				printf("F");
+				struct sockaddr_in si_other;
+				si_other.sin_addr.s_addr |= (Clients[i]->clientID << 24);
+				si_other.sin_port = Clients[i]->clientPort;
+				int slen = sizeof(si_other);
+				sendto(s, Msg->msg, Msg->length, 0, (struct sockaddr*) &si_other, slen);
+			}
+			printf("\t");
+		}
+	}
+	if(delete == 1){
+		memset(Msg->msg,0,Msg->length);
+		Msg->length = 0;
+	}
+}
+
 void Z21_M_LAN_X_LOCO_INFO(uint16_t adr,struct UDP_return * rMsg){
 	if(Engines[adr] == 0){
 		Engines[adr] = create_Loc(adr);
@@ -109,7 +90,7 @@ void Z21_M_LAN_X_LOCO_INFO(uint16_t adr,struct UDP_return * rMsg){
 	return;
 }
 
-void Z21E_recv(char * message, struct UDP_return * rMsg){
+void Z21E_recv(char * message, struct UDP_return * rMsg,char ClientIP){
 	int dataLen = message[0] + (message[1] << 8);
 	int Header  = (message[2] << 8) + message[3];
 	uint16_t XHeader;
@@ -157,8 +138,7 @@ void Z21E_recv(char * message, struct UDP_return * rMsg){
 			rMsg->msg[5] = 0x00;
 			rMsg->msg[6] = 0x61;
 			
-			return;
-			
+			return;	
 		}
 		else if(XHeader == HX_Z21_LAN_X_SET_TRACK_POWER_ON){
 			printf("HX_Z21_LAN_X_SET_TRACK_POWER_ON\n");
@@ -171,7 +151,6 @@ void Z21E_recv(char * message, struct UDP_return * rMsg){
 			rMsg->msg[6] = 0x60;
 			
 			return;
-			
 		}
 		else if(XHeader == HX_Z21_LAN_X_SET_STOP){
 			printf("HX_Z21_LAN_X_SET_STOP\n");
@@ -207,6 +186,9 @@ void Z21E_recv(char * message, struct UDP_return * rMsg){
 				printf("Loc Address: %i\n",message[7]);
 				Z21_M_LAN_X_LOCO_INFO(message[7],rMsg);
 			}
+
+			Z21E_BroadCaster(1,rMsg,0);
+
 			return;
 		}
 		else if((XHeader & 0xFFF0) == HX_Z21_LAN_X_SET_LOCO_DRIVE){
@@ -228,6 +210,8 @@ void Z21E_recv(char * message, struct UDP_return * rMsg){
 			printf("New speed:\t%i\n",Engines[adr]->speed & 0x7F);
 			
 			Z21_M_LAN_X_LOCO_INFO(adr,rMsg);
+
+			Z21E_BroadCaster(1,rMsg,0);
 			
 			return;
 		}
@@ -281,6 +265,8 @@ void Z21E_recv(char * message, struct UDP_return * rMsg){
 			}
 			
 			Z21_M_LAN_X_LOCO_INFO(adr,rMsg);
+
+			Z21E_BroadCaster(1,rMsg,0);
 			
 			return;
 		}
@@ -301,8 +287,7 @@ void Z21E_recv(char * message, struct UDP_return * rMsg){
 			rMsg->msg[0xB] = XOR_Byte(rMsg); //CentralState
 			
 			return;
-		}
-		
+		}	
 		else if((XHeader & 0xFFF0) == HX_Z21_LAN_X_SET_TURNOUT){
 			printf("HX_Z21_LAN_X_SET_TURNOUT\t");
 			if((message[6] & 0xC0) > 0){
@@ -326,13 +311,14 @@ void Z21E_recv(char * message, struct UDP_return * rMsg){
 			
 			return;
 		}
-		
-		else if(XHeader == 0){}
 		printf("XHeader:\t%04x\n",XHeader);
 	}
 	else if(Header == H_Z21_LAN_SET_BROADCASTFLAGS){
 		printf("H_Z21_LAN_SET_BROADCASTFLAGS\n");
 		//No return message
+		//copy 32 bit number in little endian
+		memcpy(&Clients[ClientIP]->BroadcastFlags,&message[4], sizeof 4);
+
 		return;
 	}
 	else if(Header == H_Z21_LAN_GET_BROADCASTFLAGS){
@@ -423,10 +409,13 @@ void Z21E_recv(char * message, struct UDP_return * rMsg){
 	printPacket(message);
 }
 
-int server() {
+void * server() {
+	//Client List
+	memset(Clients,0,255);
+
     struct sockaddr_in si_me, si_other;
      
-    int s, i, slen = sizeof(si_other) , recv_len;
+    int i, slen = sizeof(si_other) , recv_len;
     char * buf = (char *)malloc(BUFSIZE);
      
     //create a UDP socket
@@ -461,17 +450,30 @@ int server() {
         }
          
         //print details of the client/peer and the data received
-        //printf("Received packet from %s:%d\n", inet_ntoa(si_other.sin_addr), ntohs(si_other.sin_port));
+        //printf("Received packet from %i\n", (char)(si_other.sin_addr.s_addr >> 24), ntohs(si_other.sin_port));
+        char IP_Addr = (si_other.sin_addr.s_addr >> 24);
+        if(Clients[IP_Addr] == 0){
+        	printf("New Client %i:%i\n",IP_Addr,si_other.sin_port);
+        	Clients[IP_Addr] = (struct UDP_Client *)malloc(sizeof(struct UDP_Client));
+        	Clients[IP_Addr]->clientID = IP_Addr;
+        	Clients[IP_Addr]->clientPort = si_other.sin_port;
+        	Clients[IP_Addr]->clientFlags = 1; //Connected
+        	Clients[IP_Addr]->BroadcastFlags = 0;
+        }
+        if(Clients[IP_Addr]->clientFlags == 2){ //Lost-connection / Timeout
+        	printf("Client reconnects\n");
+        	Clients[IP_Addr]->clientFlags = 1;
+        }
         //printf("Data: %02x %02x %02x %02x\n" , buf[0], buf[1], buf[2], buf[3]);
 		struct UDP_return rMsg;
 		rMsg.msg = (char *)malloc(100);
 		while(1){
-			Z21E_recv(buf,&rMsg);
+			Z21E_recv(buf,&rMsg,IP_Addr);
 			
 			
 			//now reply the client with the same data
 			if(rMsg.length != 0){
-				printFPacket(&rMsg);
+				//printFPacket(&rMsg);
 				if (sendto(s, rMsg.msg, rMsg.length, 0, (struct sockaddr*) &si_other, slen) == -1)
 				{
 					die("sendto()");

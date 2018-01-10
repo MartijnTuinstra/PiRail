@@ -1,17 +1,17 @@
 #include "Z21_Codes.h"
 
 #include <sys/types.h>
-//#include <sys/socket.h>
-#include <sys/stat.h>
-//#include <netinet/in.h>
-#include <netinet/tcp.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
 #include <arpa/inet.h>
-
-#include "Z21_Server.c"
 
 /*
  * error - wrapper for perror
  */
-void error(char *msg);
+void die(char *msg);
 
 int server();
+
+struct UDP_return;
+
+void Z21E_recv(char * message, struct UDP_return * rMsg);

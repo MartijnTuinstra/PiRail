@@ -105,6 +105,8 @@ ISR(LN_SB_SIGNAL)
   Serial.println();
   Serial.print("RX ");
 
+  PORTB ^= (1 << 2);
+
   // Reset the bit counter so that on first increment it is on 0
   lnBitCount = 0;
 }
@@ -133,19 +135,19 @@ ISR(LN_TMR_SIGNAL)     /* signal handler for timer0 overflow */
   if( lnState == LN_ST_RX ) {  // Are we in RX mode
     if(lnBitCount == 1){    //Continuation Bit
       lnContinuation = bit_is_set(LN_RX_PORT,LN_RX_BIT);
-      if(!lnContinuation){ //New packet
-        Serial.print("  ");
-      }else{
-        Serial.print("C ");
-      }
+      //if(!lnContinuation){ //New packet
+        //Serial.print("  ");
+      //}//else{
+        //Serial.print("C ");
+      //}
       return;
     }else if( lnBitCount < 10)  {   // Are we in the Stop Bits phase
       lnCurrentByte >>= 1;
       if( bit_is_set(LN_RX_PORT, LN_RX_BIT)) {
-       Serial.print("R");
+       //Serial.print("R");
         lnCurrentByte |= 0x80;
       }else{
-       Serial.print("r");
+       //Serial.print("r");
       }
       return ;
     }
@@ -159,11 +161,11 @@ ISR(LN_TMR_SIGNAL)     /* signal handler for timer0 overflow */
     if( bit_is_clear(LN_RX_PORT,LN_RX_BIT) ) {
       ERROR_LED_ON();
       lnRxBuffer->Stats.RxErrors++ ;
-      Serial.println(" X");
+      //Serial.println(" X");
     } 
     else { // Put the received byte in the buffer
-      Serial.print(" ");
-      Serial.println(lnCurrentByte);
+      //Serial.print(" ");
+      //Serial.println(lnCurrentByte);
       addByteRnBuf( lnRxBuffer, lnCurrentByte ,lnContinuation);
       //addByteRnBuf( lnRxBuffer, lnCurrentByte ,lnContinuation);
     }

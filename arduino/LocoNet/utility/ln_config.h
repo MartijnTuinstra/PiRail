@@ -60,8 +60,8 @@
 
 #define  LN_SW_UART_TX_NON_INVERTED  // Normal is to be inverted...
 #define LN_BIT_PERIOD               (F_CPU / 16666)
-#define LN_TMR_PRESCALER              2
-#define LN_TIMER_TX_RELOAD_ADJUST   106 //  14,4 us delay borrowed from FREDI sysdef.h
+#define LN_TMR_PRESCALER              1
+#define LN_TIMER_TX_RELOAD_ADJUST    106 //  14,4 us delay borrowed from FREDI sysdef.h
 #define LN_TX_RETRIES_MAX            25
 
 

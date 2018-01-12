@@ -3,8 +3,6 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-#include "Z21_Codes.h"
-
 #define SOFTWARE_V_H 0x01
 #define SOFTWARE_V_L 0x23
 #define HW_Type      0x00000201 //D_HWT_Z21_NEW

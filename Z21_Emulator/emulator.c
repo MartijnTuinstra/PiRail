@@ -5,8 +5,7 @@
 #include <pthread.h>
 
 #include "Z21_Server.h"
-
-#include "Z21_Codes.h"
+#include "UART_arduino.h"
 
 struct Loc {
 	uint16_t adr;
@@ -27,17 +26,26 @@ struct Loc * create_Loc(uint16_t adr){
 }
 
 #include "Z21_Server.c"
+#include "UART_arduino.c"
 
 char stop = 0;
+int f_UART = -1;
+
 
 void main(){
+	f_UART = UART_Setup();
+	printf("UART started\n");
 	pthread_t thread_web_server;
 	pthread_create(&thread_web_server, NULL, server, NULL);
-
+	printf("Webserver started\n");
 	while(stop == 0){
 		printf(".");
-		sleep(10);
+		fflush(stdout);
+		sleep(1);
 	}
     printf("Done");
+
+    UART_close(f_UART);
+
     return;
 }

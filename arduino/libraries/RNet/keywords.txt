@@ -1,0 +1,40 @@
+# Datatypes (KEYWORD1)
+
+RailNetClass				KEYWORD1
+RailNet						KEYWORD1
+LN_STATUS					KEYWORD1
+LnBuf						KEYWORD1
+LnBufStats
+
+
+# Methods and Functions (KEYWORD2)
+
+init						KEYWORD2
+receive						KEYWORD2
+send						KEYWORD2
+processSwitchSensorMessage	KEYWORD2
+requestSwitch				KEYWORD2
+reportSwitch				KEYWORD2
+notifySensor				KEYWORD2
+notifySwitchRequest			KEYWORD2
+notifySwitchReport			KEYWORD2
+notifySwitchOutputsReport	KEYWORD2
+notifySwitchState			KEYWORD2
+
+initLnBuf					KEYWORD2
+recvLnMsg					KEYWORD2
+getLnBufStats				KEYWORD2
+getLnMsgSize				KEYWORD2
+addByteLnBuf				KEYWORD2
+addMsgLnBuf					KEYWORD2
+lnPacketReady				KEYWORD2
+
+# Constants (LITERAL1)
+
+RN_CD_BACKOFF				LITERAL1
+RN_PRIO_BACKOFF				LITERAL1
+RN_NETWORK_BUSY				LITERAL1
+RN_DONE						LITERAL1
+RN_COLLISION				LITERAL1
+RN_UNKNOWN_ERROR			LITERAL1
+RN_RETRY_ERROR				LITERAL1

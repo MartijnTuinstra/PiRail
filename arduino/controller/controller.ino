@@ -214,8 +214,6 @@ void loop(){
   //Executes on a interval of 'blink_interval'
   
   if(blink()){
-    Serial.println("Blink!");
-    printRegs();
     for(int i = 0;i<OutputRegisters;i++){
       //XOR each output bit with Blink mask
       *(OutputRegs+i) ^= *(BlinkMask+i);
@@ -225,12 +223,9 @@ void loop(){
       SPI.transfer(OutputRegs[i]); //Shift out data
     }
     digitalWrite(latchPinOut, HIGH);
-    printRegs();
   }
   //Executes on a interval of 'pulse_interval'
   if(pulse()){
-    Serial.println("Pulse!");
-    printRegs();
     for(int i = 0;i<OutputRegisters;i++){
       //XOR each output bit with Blink mask
       *(OutputRegs+i) ^= *(PulseMask+i);
@@ -243,7 +238,6 @@ void loop(){
       SPI.transfer(OutputRegs[i]); //Shift out data
     }
     digitalWrite(latchPinOut, HIGH);
-    printRegs();
   }
 }
 

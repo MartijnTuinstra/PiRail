@@ -41,10 +41,10 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <string.h>
-#include "ln_config.h"
-#include "../LocoNet.h"
-#include "ln_buf.h"    
-#include "ln_sw_uart.h"    
+#include "rn_config.h"
+#include "../RNet.h"
+#include "_buf.h"    
+#include "_sw_uart.h"    
 
 volatile uint8_t  lnState ;
 volatile uint8_t  lnBitCount ;
@@ -58,11 +58,18 @@ volatile uint8_t  lnTxIndex ;
 volatile uint8_t  lnTxLength ;
 volatile uint8_t  lnTxSuccess ;   // this boolean flag as a message from timer interrupt to send function
 
-volatile uint8_t  *txPort;
+volatile uint8_t *txPort;
 uint8_t           txPin;
+
+volatile uint8_t *duplexPort;
+uint8_t           duplexPin;
+uint8_t           duplexRealPin;
 
 #define LN_TX_PORT *txPort
 #define LN_TX_BIT txPin
+
+#define RN_DUPLEX_PORT *duplexPort
+#define RN_DUPLEX_BIT duplexPin
 
 void ERROR_LED_ON(){
   digitalWrite(13,HIGH);
@@ -72,6 +79,13 @@ void setTxPortAndPin(volatile uint8_t *newTxPort, uint8_t newTxPin)
 {
   txPort = newTxPort;
   txPin = newTxPin;
+}
+
+void setDuplexPortAndPin(uint8_t RealPin, volatile uint8_t *newPort, uint8_t newPin)
+{
+  duplexPort = newPort;
+  duplexPin = newPin;
+  duplexRealPin = RealPin;
 }
 
 /**************************************************************************
@@ -101,11 +115,6 @@ ISR(LN_SB_SIGNAL)
 
   // Set the State to indicate that we have begun to Receive
   lnState = LN_ST_RX ;
- 
-  Serial.println();
-  Serial.print("RX ");
-
-  PORTB ^= (1 << 2);
 
   // Reset the bit counter so that on first increment it is on 0
   lnBitCount = 0;
@@ -146,9 +155,9 @@ ISR(LN_TMR_SIGNAL)     /* signal handler for timer0 overflow */
       if( bit_is_set(LN_RX_PORT, LN_RX_BIT)) {
        //Serial.print("R");
         lnCurrentByte |= 0x80;
-      }else{
+      }//else{
        //Serial.print("r");
-      }
+      //}
       return ;
     }
 
@@ -317,7 +326,7 @@ void initLocoNetHardware( LnBuf *RxBuffer )
 }
 
 
-LN_STATUS sendLocoNetPacketTry(lnMsg *TxData, unsigned char ucPrioDelay)
+RN_STATUS sendLocoNetPacketTry(lnMsg *TxData, unsigned char ucPrioDelay)
 {
   uint8_t  CheckSum ;
   uint8_t  CheckLength ;
@@ -359,15 +368,15 @@ LN_STATUS sendLocoNetPacketTry(lnMsg *TxData, unsigned char ucPrioDelay)
   // If the Network is not Idle, don't start the packet
   if (lnState == LN_ST_CD_BACKOFF) {
     if (lnBitCount < LN_CARRIER_TICKS) {  // in carrier detect timer?
-      return LN_CD_BACKOFF;
+      return RN_CD_BACKOFF;
     } 
     else {
-      return LN_PRIO_BACKOFF;
+      return RN_PRIO_BACKOFF;
     }
   }
 
   if( lnState != LN_ST_IDLE ) {
-    return LN_NETWORK_BUSY;  // neither idle nor backoff -> busy
+    return RN_NETWORK_BUSY;  // neither idle nor backoff -> busy
   }
   // We need to do this with interrupts off.
   // The last time we check for free net until sending our start bit
@@ -380,7 +389,7 @@ LN_STATUS sendLocoNetPacketTry(lnMsg *TxData, unsigned char ucPrioDelay)
     // that somebody was faster by examining the start bit interrupt request flag
     sbi( LN_SB_INT_ENABLE_REG, LN_SB_INT_ENABLE_BIT ) ;
     sei() ;  // receive now what our rival is sending
-    return LN_NETWORK_BUSY;
+    return RN_NETWORK_BUSY;
   }
 
   LN_SW_UART_SET_TX_LOW(LN_TX_PORT, LN_TX_BIT);        // Begin the Start Bit
@@ -403,8 +412,9 @@ LN_STATUS sendLocoNetPacketTry(lnMsg *TxData, unsigned char ucPrioDelay)
   lnState = LN_ST_TX ;                      
 
   // Reset the bit counter
-  lnBitCount = 0 ;                          
+  lnBitCount = 0 ;
 
+  //RN_DUPLEX_TX_ENABLE(RN_DUPLEX_PORT,RN_DUPLEX_BIT);
   digitalWrite(5,HIGH);
 
   // Clear the current Compare interrupt status bit and enable the Compare interrupt
@@ -414,17 +424,18 @@ LN_STATUS sendLocoNetPacketTry(lnMsg *TxData, unsigned char ucPrioDelay)
   while (lnState == LN_ST_TX) {
     // now busy wait until the interrupts do the rest
   }
-  delay(1);
+  delayMicroseconds(2);
   digitalWrite(5,LOW);
+  //RN_DUPLEX_TX_DISABLE(RN_DUPLEX_PORT,RN_DUPLEX_BIT);
   
   if (lnTxSuccess) {
     lnRxBuffer->Stats.TxPackets++ ;
-    return LN_DONE;
+    return RN_DONE;
   }
   if (lnState == LN_ST_TX_COLLISION) {
-    return LN_COLLISION;
+    return RN_COLLISION;
   }
-  return LN_UNKNOWN_ERROR; // everything else is an error
+  return RN_UNKNOWN_ERROR; // everything else is an error
 }
 
 

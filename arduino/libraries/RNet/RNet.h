@@ -72,20 +72,20 @@
 #include "WProgram.h"
 #endif
 
-#include "utility/ln_buf.h"
-#include "utility/ln_opc.h"
-#include "utility/utils.h"
+#include "utility/_buf.h"
+#include "utility/_opc.h"
+//#include "utility/utils.h"
 
 typedef enum
 {
-	LN_CD_BACKOFF = 0,
-	LN_PRIO_BACKOFF,
-	LN_NETWORK_BUSY,
-	LN_DONE,
-	LN_COLLISION,
-	LN_UNKNOWN_ERROR,
-	LN_RETRY_ERROR
-} LN_STATUS ;
+	RN_CD_BACKOFF = 0,
+	RN_PRIO_BACKOFF,
+	RN_NETWORK_BUSY,
+	RN_DONE,
+	RN_COLLISION,
+	RN_UNKNOWN_ERROR,
+	RN_RETRY_ERROR
+} RN_STATUS ;
 
 // CD Backoff starts after the Stop Bit (Bit 9) and has a minimum or 20 Bit Times
 // but initially starts with an additional 20 Bit Times 
@@ -116,76 +116,35 @@ typedef enum
 #define LNCV_MIN_MODULEADDR (0)
 #define LNCV_MAX_MODULEADDR (65534)
 
-class LocoNetClass
+class RailNetClass
 {
   private:
     LnBuf   LnBuffer ;
 	void 		setTxPin(uint8_t txPin);
+	void 	setDuplexPin(uint8_t txPin);
 
   public:
-    LocoNetClass();
+    RailNetClass();
     void        init(void);
-    void        init(uint8_t txPin);
+    void        init(uint8_t txPin,uint8_t duplexPin);
     boolean 		available(void);
     uint8_t			length(void);
     lnMsg*      receive(void);
-    LN_STATUS   send(lnMsg *TxPacket);
-    LN_STATUS   send(lnMsg *TxPacket, uint8_t PrioDelay);
-    LN_STATUS   send(uint8_t OpCode, uint8_t Data1, uint8_t Data2);
-    LN_STATUS   send(uint8_t OpCode, uint8_t Data1, uint8_t Data2, uint8_t PrioDelay);
-    LN_STATUS   sendLongAck(uint8_t ucCode);
+    RN_STATUS   send(lnMsg *TxPacket);
+    RN_STATUS   send(lnMsg *TxPacket, uint8_t PrioDelay);
+    RN_STATUS   send(uint8_t OpCode, uint8_t Data1, uint8_t Data2);
+    RN_STATUS   send(uint8_t OpCode, uint8_t Data1, uint8_t Data2, uint8_t PrioDelay);
+    RN_STATUS   sendAck(uint8_t DevCode);
     
     LnBufStats* getStats(void);
     
-	const char*	getStatusStr(LN_STATUS Status);
+	const char*	getStatusStr(RN_STATUS Status);
     
-    uint8_t processSwitchSensorMessage( lnMsg *LnPacket ) ;
-    uint8_t processPowerTransponderMessage( lnMsg *LnPacket ) ;
-	
-    LN_STATUS requestSwitch( uint16_t Address, uint8_t Output, uint8_t Direction ) ;
-    LN_STATUS reportSwitch( uint16_t Address ) ;
-    LN_STATUS reportSensor( uint16_t Address, uint8_t State ) ;
-    LN_STATUS reportPower( uint8_t State ) ;
+    RN_STATUS reportPower( uint8_t State ) ;
 };
 
-extern LocoNetClass LocoNet;
+extern RailNetClass RailNet;
 
-typedef enum
-{
-  TH_ST_FREE   = 0,
-  TH_ST_IDLE,
-  TH_ST_RELEASE,
-  TH_ST_ACQUIRE,
-  TH_ST_SELECT,
-  TH_ST_DISPATCH,
-  TH_ST_SLOT_MOVE,
-  TH_ST_SLOT_FORCE_FREE,
-  TH_ST_SLOT_RESUME,
-  TH_ST_SLOT_STEAL,
-  TH_ST_IN_USE
-} TH_STATE ;
-
-typedef enum
-{
-  TH_ER_OK = 0,
-  TH_ER_SLOT_IN_USE,
-  TH_ER_BUSY,
-  TH_ER_NOT_SELECTED,
-  TH_ER_NO_LOCO,
-  TH_ER_NO_SLOTS
-} TH_ERROR ;
-
-#define TH_OP_DEFERRED_SPEED 0x01
-
-typedef enum
-{
-  TH_SP_ST_28      = 0,  // 000=28 step/ 3 BYTE PKT regular mode
-  TH_SP_ST_28_TRI  = 1,  // 001=28 step. Generate Trinary packets for this Mobile ADR
-  TH_SP_ST_14      = 2,  // 010=14 step MODE
-  TH_SP_ST_128     = 3,  // 011=send 128 speed mode packets
-  TH_SP_ST_28_ADV  = 4,  // 100=28 Step decoder ,Allow Advanced DCC consisting
-  TH_SP_ST_128_ADV = 7   // 111=128 Step decoder, Allow Advanced DCC consisting
-} TH_SPEED_STEPS;
 /*
 class RailNetControllerClass
 {
@@ -205,146 +164,10 @@ class RailNetControllerClass
 	void fireBlink();
 }*/
 
-class LocoNetThrottleClass
-{
-  private:
-	TH_STATE	   myState ;         // State of throttle
-	uint16_t	   myTicksSinceLastAction ;
-	uint16_t	   myThrottleId ;		// Id of throttle
-	uint8_t		   mySlot ;          // Master Slot index
-	uint16_t	   myAddress ;       // Decoder Address
-	uint8_t		   mySpeed ;         // Loco Speed
-	uint8_t		   myDeferredSpeed ; // Deferred Loco Speed setting
-	uint8_t		   myStatus1 ;       // Stat1
-	uint8_t		   myDirFunc0to4 ;   // Direction
-	uint8_t		   myFunc5to8 ;       // Direction
-	uint8_t		   myUserData ;
-	uint8_t		   myOptions ;
-	uint32_t 	   myLastTimerMillis;
-	TH_SPEED_STEPS mySpeedSteps;
-	
-	void updateAddress(uint16_t Address, uint8_t ForceNotify );
-	void updateSpeed(uint8_t Speed, uint8_t ForceNotify );
-	void updateState(TH_STATE State, uint8_t ForceNotify );
-	void updateStatus1(uint8_t Status, uint8_t ForceNotify );
-	void updateDirectionAndFunctions(uint8_t DirFunc0to4, uint8_t ForceNotify );
-	void updateFunctions5to8(uint8_t Func5to8, uint8_t ForceNotify );
-	void updateSpeedSteps(TH_SPEED_STEPS SpeedSteps, uint8_t ForceNotify);
-  
-  public:
-	void init(uint8_t UserData, uint8_t Options, uint16_t ThrottleId ) ;
-
-	void processMessage(lnMsg *LnPacket ) ;
-	void process100msActions(void);
-
-	uint16_t getAddress(void) ;
-	TH_ERROR setAddress(uint16_t Address) ;
-	TH_ERROR stealAddress(uint16_t Address) ;
-	TH_ERROR resumeAddress(uint16_t Address, uint8_t LastSlot) ;
-	TH_ERROR dispatchAddress(void) ;
-	TH_ERROR acquireAddress(void) ;
-	TH_ERROR releaseAddress(void) ;
-    TH_ERROR idleAddress(void) ;
-    TH_ERROR freeAddress(void) ;
-    
-	TH_ERROR dispatchAddress(uint16_t Address) ;
-	TH_ERROR freeAddressForce(uint16_t Address) ;
-
-	uint8_t getSpeed(void) ;
-	TH_ERROR setSpeed(uint8_t Speed) ;
-
-	uint8_t getDirection(void) ;
-	TH_ERROR setDirection(uint8_t Direction) ;
-
-	uint8_t getFunction(uint8_t Function) ;
-	TH_ERROR setFunction(uint8_t Function, uint8_t Value) ;
-	TH_ERROR setDirFunc0to4Direct(uint8_t Value) ;
-	TH_ERROR setFunc5to8Direct(uint8_t Value) ;
-	
-	TH_SPEED_STEPS getSpeedSteps(void);
-	TH_ERROR setSpeedSteps(TH_SPEED_STEPS newSpeedSteps);
-
-	TH_STATE getState(void) ;
-	const char *getStateStr( TH_STATE State );
-	const char *getErrorStr( TH_ERROR Error );
-	const char *getSpeedStepStr( TH_SPEED_STEPS speedStep );
-};
-
-/************************************************************************************
-	The LocoNet fast clock in the Command Station is driven from a 65.535 ms
-    time base. A normal minute takes approximately 915 x 65.535 ms ticks.
-
-	The LocoNet fast clock values are stored in a special slot in the Command
-	Station called the fast clock slot which is slot number 0x7B or 123
-	
-	Each of the fields in the slot are supposed to count up until the most significant bit
-	is 0x80 and then rollover the appropriate values and reset however this behaviour
-	does not seem to hold for all fields and so some corrction factors are needed
-
-	An important part of syncing to the Fast Clock master is to interpret the current
-	FRAC_MINS fields so that a Fast Clock Slave can sync to the part minute and then
-	rollover it's accumulators in sync with the master. The FRAC_MINS counter is a
-	14 bit counter that is stored in the two 7 bit FRAC_MINSL & FRAC_MINSH fields.
-	It counts up the FRAC_MINSL field until it rolls over to 0x80 and then increments
-	the FRAC_MINSH high field until it rolls over to 0x80 and then increments the minute,
-	hour and day fields as appropriate and then resets the FRAC_MINS fields to 0x4000 - 915
-	which is stored in each of the 7 bit fields.
- 
-	HOWEVER when the DCS100 resets FRAC_MINS fields to 0x4000 - 915, it then immediately
-	rolls over a 128 count and so the minute is short by 915 - 128 65.535 ms ticks, so it
-	runs too fast. To correct this problem the fast clock slot can be overwritten with
-	corrected FRAC_MINS field values that the DCS100 will then increment correctly.
-
-	This implementation of a LocoNet Fast Clock Slave has two features to correct these
-	short commings:
-	
-	A) It has the option to reduce the FRAC_MINS count by 128 so that it keeps in step with
-	the DCS100 Fast Clock which normally runs too fast. This is enabled by passing in the
-	FC_FLAG_DCS100_COMPATIBLE_SPEED flag bit to the init() function. 
-	
-	B) It has the option to overwrite the LocoNet Fast Clock Master slot values with corrected
-	FRAC_MINS fields imediately after it rolls-over the fast minute, to make the DCS100 not run
-	too fast as it normally does.	
-	
-	There also seems to be problems with the hours field not rolling over correctly from 23
-	back to 0 and so there is extra processing to work out the hours when it has rolled over
-	to 0x80 or 0x00 by the time the bit 7 is cleared. This seems to cause the DT400 throttle
-	problems as well and so when running in FC_FLAG_MINUTE_ROLLOVER_SYNC mode, this should
-	be corrected. 
-
-	The DT400 throttle display seems to decode the minutes incorrectly by 1 count and so we
-	have to make the same interpretation here which is why there is a 127 and not a 128
-    roll-over for the minutes. 
-***********************************************************************************************/
-
-typedef enum
-{
-  FC_ST_IDLE,
-  FC_ST_REQ_TIME,
-  FC_ST_READY,
-  FC_ST_DISABLED,
-} FC_STATE ;
-
-class LocoNetFastClockClass
-{
-  private:
-	FC_STATE 		fcState ;			// State of the Fast Clock Slave 
-	uint8_t			fcFlags ;			// Storage of the option flags passed into initFastClock()
-	fastClockMsg 	fcSlotData ;		// Primary storage for the Fast Clock slot data 
-	uint8_t 		fcLastPeriod ;		// Period of last tick so we can alternate between
-	
-	void doNotify( uint8_t Sync );
-
-  public:
-	void init(uint8_t DCS100CompatibleSpeed, uint8_t CorrectDCS100Clock, uint8_t NotifyFracMin);
-	void poll(void);
-	void processMessage(lnMsg *LnPacket );
-	void process66msActions(void);
-};
 
 /************************************************************************************
     SV (System Variable Handling
-************************************************************************************/
+************************************************************************************
 
 typedef enum
 {
@@ -402,19 +225,19 @@ class LocoNetSystemVariableClass
 	 *
 	 * Returns:
 	 *		True - if the given Offset is valid. False Otherwise.
-	 */
+	 
     uint8_t isSVStorageValid(uint16_t Offset);
 	
 	/** Read the NodeId (Address) for SV programming of this module.
 	 *
 	 * This method accesses multiple special EEPROM locations.
-	 */
+	 
     uint16_t readSVNodeId(void);
 	
 	/** Write the NodeId (Address) for SV programming of this module.
 	 *
 	 * This method accesses multiple special EEPROM locations.
-	 */
+	 
     uint16_t writeSVNodeId(uint16_t newNodeId);
 	
 	/**
@@ -428,7 +251,7 @@ class LocoNetSystemVariableClass
 	 * Returns:
 	 *		0 if at least one address of the range is not valid.
 	 *		1 if all addresses out of the range are valid.
-	 */
+	 
     bool CheckAddressRange(uint16_t startAddress, uint8_t Count);
 
   public:
@@ -453,7 +276,7 @@ class LocoNetSystemVariableClass
 	 *		SV_ERROR - the message was an SV programming message and carried
 				an unsupported OPCODE.
 	 *
-	 */
+	 
 	SV_STATUS processMessage(lnMsg *LnPacket );
 	
     /** Read a value from the given EEPROM offset.
@@ -469,7 +292,7 @@ class LocoNetSystemVariableClass
      * Returns:
      *		A Byte containing the EEPROM size, the software version or contents of the EEPROM.
      *
-     */
+     
     uint8_t readSVStorage(uint16_t Offset );
     
     /** Write the given value to the given Offset in EEPROM.
@@ -480,7 +303,7 @@ class LocoNetSystemVariableClass
      *
      * Returns:
      *		A Byte containing the new EEPROM value (even if unchanged).
-     */
+     
     uint8_t writeSVStorage(uint16_t Offset, uint8_t Value);
     
 	/**
@@ -490,27 +313,8 @@ class LocoNetSystemVariableClass
 	 * Returns:
 	 *		SV_OK - Reply was successfully sent.
 	 *		SV_DEFERRED_PROCESSING_NEEDED - Reply was not sent, a later retry is needed.
-	 */
+	 
     SV_STATUS doDeferredProcessing( void );
-};
-
-class LocoNetCVClass
-{
-  private:
-    void makeLNCVresponse( UhlenbrockMsg & ub, uint8_t originalSource, uint16_t first, uint16_t second, uint16_t third, uint8_t last );
-    
-      // Computes the PXCT byte from the data bytes in the given UhlenbrockMsg.
-    void computePXCTFromBytes( UhlenbrockMsg & ub) ;
-
-      // Computes the correct data bytes using the containes PXCT byte
-    void computeBytesFromPXCT( UhlenbrockMsg & ub) ;
-
-      // Computes an address from a low- and a high-byte
-    uint16_t getAddress(uint8_t lower, uint8_t higher) ;
-
-  public:
-	  //Call this method when you want to implement a module that can be configured via Uhlenbrock LNVC messages
-	uint8_t processLNCVMessage( lnMsg *LnPacket ) ;
 };
 
 /************************************************************************************
@@ -537,20 +341,6 @@ extern void notifyPower( uint8_t State ) __attribute__ ((weak));
 // Power management, Transponding and Multi-Sense Device info Call-back functions
 extern void notifyMultiSenseTransponder( uint16_t Address, uint8_t Zone, uint16_t LocoAddress, uint8_t Present ) __attribute__ ((weak));
 extern void notifyMultiSensePower( uint8_t BoardID, uint8_t Subdistrict, uint8_t Mode, uint8_t Direction ) __attribute__ ((weak));
-
-// Throttle notify Call-back functions
-extern void notifyThrottleAddress( uint8_t UserData, TH_STATE State, uint16_t Address, uint8_t Slot ) __attribute__ ((weak));
-extern void notifyThrottleSpeed( uint8_t UserData, TH_STATE State, uint8_t Speed ) __attribute__ ((weak));
-extern void notifyThrottleDirection( uint8_t UserData, TH_STATE State, uint8_t Direction ) __attribute__ ((weak));
-extern void notifyThrottleFunction( uint8_t UserData, uint8_t Function, uint8_t Value ) __attribute__ ((weak));
-extern void notifyThrottleSlotStatus( uint8_t UserData, uint8_t Status ) __attribute__ ((weak));
-extern void notifyThrottleSpeedSteps( uint8_t UserData, TH_SPEED_STEPS SpeedSteps ) __attribute__ ((weak));
-extern void notifyThrottleError( uint8_t UserData, TH_ERROR Error ) __attribute__ ((weak));
-extern void notifyThrottleState( uint8_t UserData, TH_STATE PrevState, TH_STATE State ) __attribute__ ((weak));
-
-// FastClock notify Call-back functions
-extern void notifyFastClock( uint8_t Rate, uint8_t Day, uint8_t Hour, uint8_t Minute, uint8_t Sync ) __attribute__ ((weak));
-extern void notifyFastClockFracMins( uint16_t FracMins ) __attribute__ ((weak));
 
 // System Variable notify Call-back functions
 extern void notifySVChanged(uint16_t Offset) __attribute__ ((weak));

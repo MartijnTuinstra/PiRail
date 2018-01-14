@@ -53,6 +53,9 @@
 #define LN_SW_UART_SET_TX_LOW(LN_TX_PORT, LN_TX_BIT) LN_TX_PORT &= ~(1 << LN_TX_BIT)   // master pull up will take care of high LN level
 #endif
 
+#define  RN_DUPLEX_TX_ENABLE(RN_DUPLEX_PORT, RN_DUPLEX_BIT)  RN_DUPLEX_PORT |=  (1 << RN_DUPLEX_BIT)   // to pull down LN line to drive low level
+#define RN_DUPLEX_TX_DISABLE(RN_DUPLEX_PORT, RN_DUPLEX_BIT)  RN_DUPLEX_PORT &= ~(1 << RN_DUPLEX_BIT)   // to pull down LN line to drive low level
+
 // For now we will simply check that TX and RX ARE NOT THE SAME as our circuit
 // requires the TX signal to be INVERTED.  If they are THE SAME then we have a 
 // Collision.  
@@ -100,6 +103,7 @@
 
 void initLocoNetHardware( LnBuf *RxBuffer );
 void setTxPortAndPin(volatile uint8_t *newTxPort, uint8_t newTxPin);
-LN_STATUS sendLocoNetPacketTry(lnMsg *TxData, unsigned char ucPrioDelay);
+void setDuplexPortAndPin(uint8_t RealPin, volatile uint8_t *newPort, uint8_t newPin);
+RN_STATUS sendLocoNetPacketTry(lnMsg *TxData, unsigned char ucPrioDelay);
 
 #endif

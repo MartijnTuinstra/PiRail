@@ -62,8 +62,8 @@
 #define _LN_BUF_INCLUDED
 
 #include <inttypes.h>
-#include "ln_config.h"
-#include "ln_opc.h"
+#include "rn_config.h"
+#include "_opc.h"
 
 #if defined (__cplusplus)
 	extern "C" {
@@ -73,6 +73,9 @@
 #define LN_BUF_SIZE 128
 #endif
 
+typedef union {
+    uint8_t     data[16] ;
+} lnMsg ;
 typedef struct
 {
   uint16_t RxPackets ;
@@ -99,7 +102,6 @@ LnBuf ;
 void initLnBuf( LnBuf *Buffer ) ;
 lnMsg *recvLnMsg( LnBuf *Buffer ) ;
 LnBufStats *getLnBufStats( LnBuf *Buffer ) ;
-uint8_t getLnMsgSize( volatile lnMsg * newMsg ) ;
 uint8_t getRnMsgSize( volatile lnMsg * newMsg ) ;
 uint8_t getRnMsgSizeFromOpCode(uint8_t Opcode);
 

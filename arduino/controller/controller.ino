@@ -1,4 +1,4 @@
-#include "LocoNet/LocoNet.h"
+#include "RNet.h"
 #include "EEPROM.h"
 #include "SPI.h" //Fast shiftOut and shiftIn
 
@@ -26,19 +26,35 @@ unsigned long blink_interval, pulse_interval, step_interval;
 void setup(){
   Serial.begin(115200);
 
-  /*First Boot*/
-  //if(EEPROM.read(0) == 1){
-    EEPROM.write(0,0);
+  pinMode(10,OUTPUT );
+  pinMode(13,OUTPUT );
 
-    //EEPROM.write(1,32); //Address 32
+  /*First Boot*/
+  if(EEPROM.read(0) == 0){
+    EEPROM.write(0,1);
+
+    //EEPROM.write(1,6); //Address 32
 
     EEPROM.write(2,1); //1 Input  Registers
     EEPROM.write(3,1); //1 Output Register
 
     EEPROM.write(4,70); //Blink interval scaler
     EEPROM.write(5,20); //Pulse_interval
-    EEPROM.write(6,1000); //Step_interval
-  //}
+    EEPROM.write(6,60); //Step_interval
+
+    for(long i = 50;i<2000;i=i<<2){
+      delay(i);
+      digitalWrite(13,HIGH);
+      delay(i);
+      digitalWrite(13,LOW);
+    }
+    for(long i = 2000;i>50;i=i>>2){
+      delay(i);
+      digitalWrite(13,HIGH);
+      delay(i);
+      digitalWrite(13,LOW);
+    }
+  }
   /********/
 
   SPI.begin();
@@ -48,9 +64,9 @@ void setup(){
   InputRegisters  = EEPROM.read(2);
   OutputRegisters = EEPROM.read(3);
 
-  blink_interval = EEPROM.read(4) * 10;
-  pulse_interval  = EEPROM.read(5) * 10;
-  step_interval  = EEPROM.read(6) * 10;
+  blink_interval = ((uint32_t)EEPROM.read(4)) * 10;
+  pulse_interval = ((uint32_t)EEPROM.read(5)) * 10;
+  step_interval  = ((uint32_t)EEPROM.read(6)) * 10;
 
   InputRegs  = (uint8_t *)malloc(InputRegisters);
   NInputRegs = (uint8_t *)malloc(InputRegisters);
@@ -58,15 +74,15 @@ void setup(){
   BlinkMask  = (uint8_t *)malloc(OutputRegisters);
   PulseMask  = (uint8_t *)malloc(OutputRegisters);
 
-  pinMode(5,OUTPUT);
-  digitalWrite(5,LOW);
 
-  LocoNet.init(7);
+  //RX is stand. 8 and TX is 7, Duplex pin 5
+  RailNet.init(7,5);
 
+  //Empty packets
   memset(RxPacket->data,16,0);
   memset(TxPacket.data,16,0);
 
-
+  //Reset input & output
   for(int i = 0;i<InputRegisters;i++){
     InputRegs[i]  = 0;
     NInputRegs[i] = 0;
@@ -77,15 +93,19 @@ void setup(){
     PulseMask[i] = 0;
   }
 
-  pinMode(10,OUTPUT );
-  pinMode(13,OUTPUT );
-
   pinMode(latchPinOut,OUTPUT ); // Latch pin
   pinMode(latchPinIn,OUTPUT ); // Latch pin
   pinMode(dataLoad  ,OUTPUT ); // Data load pin
 
+  OutputRegs[0] = 0b0101000;
+  BlinkMask[0]  = 0b0001100;
+
   //Reset inputs and outputs
-  SPI.transfer(OutputRegs,OutputRegisters);
+  digitalWrite(latchPinOut, LOW);
+  for(int i = 0;i<InputRegisters;i++){
+    SPI.transfer(OutputRegs[i]);
+  }
+  digitalWrite(latchPinOut, HIGH);
 
   for(int i = 0;i<InputRegisters;i++){
     InputRegs[i] = SPI.transfer(0);
@@ -94,16 +114,13 @@ void setup(){
 
   //wait and Report Own ID
   delay(2*DevID);
-  TxPacket.data[0] = 0x80;
+  TxPacket.data[0] = RN_OPC_REPORT_ID;
   TxPacket.data[1] = DevID;
-  LocoNet.send(&TxPacket);
+  RailNet.send(&TxPacket);
   Serial.print("My address is: 0x");
   Serial.println(DevID,HEX);
   delay(200-2*DevID);
 
-  //Reset Outputs and inputs to zero
-  //for(int i = 0;i<InputRegisters;i++){InputRegs[i] = 0;}
-  //for(int i = 0;i<OutputRegisters;i++){OutputRegs[i] = 0;}
   unsigned long t = millis();
   while(t < blink_interval || t < pulse_interval || t < step_interval){
     delay(10);
@@ -111,18 +128,20 @@ void setup(){
   }
 }
 
-LN_STATUS RN_status;
+RN_STATUS RN_status;
 
 void loop(){
   // Check for any received LocoNet packets
-  if( LocoNet.available() && (RxPacket = LocoNet.receive()) != 0)
+  if( RailNet.available() && (RxPacket = RailNet.receive()) != 0)
   {
     if(proccess_packet(RxPacket)){
       digitalWrite(latchPinOut, LOW);
-      delayMicroseconds(5);
-      SPI.transfer(OutputRegs,OutputRegisters); //Shift out data
+      for(int i = 0;i<OutputRegisters;i++){
+        SPI.transfer(OutputRegs[i]); //Shift out data
+      }
       delayMicroseconds(5);
       digitalWrite(latchPinOut, HIGH);
+      printRegs();
     }
   }
   
@@ -185,28 +204,33 @@ void loop(){
     //printRegs();
     Serial.println("Step");
     if(DevID != 32){
-      TxPacket.data[0] = 0x91;
-      TxPacket.data[1] = 0x20;
-      TxPacket.data[2] = 0x00;
-      TxPacket.data[3] = 0x00;
-      LocoNet.send(&TxPacket);
+      TxPacket.data[0] = RN_OPC_P_S_OUT;
+      TxPacket.data[1] = 0x20; //Target DevID
+      TxPacket.data[2] = 0x01; //Address Low
+      TxPacket.data[3] = 0x00; //Address High
+      RailNet.send(&TxPacket);
     }
   }
   //Executes on a interval of 'blink_interval'
   
   if(blink()){
     Serial.println("Blink!");
+    printRegs();
     for(int i = 0;i<OutputRegisters;i++){
       //XOR each output bit with Blink mask
       *(OutputRegs+i) ^= *(BlinkMask+i);
     }
     digitalWrite(latchPinOut, LOW);
-    SPI.transfer(OutputRegs,OutputRegisters);
+    for(int i = 0;i<OutputRegisters;i++){
+      SPI.transfer(OutputRegs[i]); //Shift out data
+    }
     digitalWrite(latchPinOut, HIGH);
+    printRegs();
   }
   //Executes on a interval of 'pulse_interval'
   if(pulse()){
     Serial.println("Pulse!");
+    printRegs();
     for(int i = 0;i<OutputRegisters;i++){
       //XOR each output bit with Blink mask
       *(OutputRegs+i) ^= *(PulseMask+i);
@@ -215,15 +239,16 @@ void loop(){
       *(PulseMask+i) = 0;
     }
     digitalWrite(latchPinOut, LOW);
-    SPI.transfer(OutputRegs,OutputRegisters);
+    for(int i = 0;i<OutputRegisters;i++){
+      SPI.transfer(OutputRegs[i]); //Shift out data
+    }
     digitalWrite(latchPinOut, HIGH);
+    printRegs();
   }
 }
 
 int step(){
-  if(prev_step - step_interval < 0){
-    return 0;
-  }else if(prev_step < millis()-step_interval){
+  if(prev_step + step_interval< millis()){
     prev_step = millis();
     return 1;
   }else{
@@ -232,9 +257,7 @@ int step(){
 }
 
 int blink(){
-  if(blink_EN && prev_blink - blink_interval < 0){
-    return 0;
-  }else if(prev_blink < millis()-blink_interval){
+  if(prev_blink + blink_interval< millis()){
     prev_blink = millis();
     return 1;
   }else{
@@ -243,7 +266,7 @@ int blink(){
 }
 
 int pulse(){
-  if(activatePulse == 1 && activatePulse_prev < millis()-pulse_interval){
+  if(activatePulse == 1 && activatePulse_prev + pulse_interval< millis()){
     activatePulse = 0;
     return 1;
   }else{
@@ -276,7 +299,7 @@ void printRegs(){
   for(int i = 0;i<OutputRegisters;i++){
     printBits(PulseMask[i]);
   }
-  Serial.println();Serial.println();
+  Serial.println();Serial.println();/*
   Serial.print("In:    ");
   for(int i = 0;i<InputRegisters;i++){
     printBits(InputRegs[i]);
@@ -286,11 +309,11 @@ void printRegs(){
   for(int i = 0;i<InputRegisters;i++){
     printBits(NInputRegs[i]);
   }
-  Serial.println();Serial.println();Serial.println();
+  Serial.println();Serial.println();Serial.println();*/
 }
 
 char proccess_packet(lnMsg * RxPacket){
-  char Opcode = RxPacket->data[0] ^ 0x80;
+  char Opcode = RxPacket->data[0];
 
   Serial.println("Proccess_packet");
   for(int i = 0;i<getRnMsgSize(RxPacket);i++){
@@ -318,10 +341,12 @@ char proccess_packet(lnMsg * RxPacket){
       uint16_t address = RxPacket->data[2] + (RxPacket->data[3] << 7);
       uint8_t byte = address / 8;
       uint8_t offset = address % 8;
+      Serial.println(OutputRegs[byte],HEX);
       OutputRegs[byte] ^= (1 << offset);
       PulseMask[byte] ^= (1 << offset);
       activatePulse = 1;
       activatePulse_prev = millis();
+      printRegs();
       return 1;
     }
   }else if(Opcode == 0x12){//Toggle Blink Single address
@@ -384,24 +409,24 @@ char proccess_packet(lnMsg * RxPacket){
     debug("Request Read All output");
     if(RxPacket->data[1] == DevID){
       lnMsg TxPacket;
-      TxPacket.data[0] = 0x96;
+      TxPacket.data[0] = 0x16;
       TxPacket.data[1] = OutputRegisters+4;
       for(int i = 0;i<OutputRegisters;i++){
         TxPacket.data[i+2] = OutputRegs[i];
       }
-      LocoNet.send(&TxPacket);
+      RailNet.send(&TxPacket);
     }
   }else if(Opcode == 0x4C){ //Request Read input
     debug("Request Read All output");
     if(RxPacket->data[1] == DevID){
       //shift In
       lnMsg TxPacket;
-      TxPacket.data[0] = 0x96;
+      TxPacket.data[0] = 0x16;
       TxPacket.data[1] = InputRegisters+4;
       for(int i = 0;i<InputRegisters;i++){
         TxPacket.data[i+2] = InputRegs[i];
       }
-      LocoNet.send(&TxPacket);
+      RailNet.send(&TxPacket);
     }
   }*/
   //SETUP
@@ -409,10 +434,8 @@ char proccess_packet(lnMsg * RxPacket){
     if(RxPacket->data[1] == DevID){
       DevID = RxPacket->data[2];
       EEPROM.write(1,DevID);
-      lnMsg TxPacket;
-      TxPacket.data[0] = 0x7F;
-      TxPacket.data[1] = DevID;
-      LocoNet.send(&TxPacket);
+
+      RailNet.sendAck(DevID);
     }
   }else if(Opcode == 0x51){ //input and output regs
     if(RxPacket->data[1] == DevID){
@@ -425,51 +448,39 @@ char proccess_packet(lnMsg * RxPacket){
       BlinkMask  = (uint8_t *)realloc(BlinkMask,OutputRegisters);
       PulseMask  = (uint8_t *)realloc(PulseMask,OutputRegisters);
       
-      lnMsg TxPacket;
-      TxPacket.data[0] = 0x7F;
-      TxPacket.data[1] = DevID;
-      LocoNet.send(&TxPacket);
+      RailNet.sendAck(DevID);
     }
   }else if(Opcode == 0x52){ //blink interval
     if(RxPacket->data[1] == DevID){
       blink_interval = RxPacket->data[2];
       EEPROM.write(4,blink_interval);
       
-      lnMsg TxPacket;
-      TxPacket.data[0] = 0x7F;
-      TxPacket.data[1] = DevID;
-      LocoNet.send(&TxPacket);
+      RailNet.sendAck(DevID);
     }
   }else if(Opcode == 0x53){ //pulse interval
     if(RxPacket->data[1] == DevID){
       pulse_interval = RxPacket->data[2] * 10;
       EEPROM.write(5,RxPacket->data[2]);
       
-      lnMsg TxPacket;
-      TxPacket.data[0] = 0x7F;
-      TxPacket.data[1] = DevID;
-      LocoNet.send(&TxPacket);
+      RailNet.sendAck(DevID);
     }
   }else if(Opcode == 0x54){ //pulse interval
     if(RxPacket->data[1] == DevID){
       pulse_interval = RxPacket->data[2] * 10;
       EEPROM.write(5,RxPacket->data[2]);
       
-      lnMsg TxPacket;
-      TxPacket.data[0] = 0x7F;
-      TxPacket.data[1] = DevID;
-      LocoNet.send(&TxPacket);
+      RailNet.sendAck(DevID);
     }
   }else if(Opcode == 0x59){ //Request EEPROM
     if(RxPacket->data[1] == DevID){
       lnMsg Tx;
-      Tx.data[0] = 0x54;
-      Tx.data[1] = 14;
+      Tx.data[0] = RN_OPC_POST_EEPROM;
+      Tx.data[1] = 14;    // Length
       Tx.data[2] = DevID;
       for(int i = 0;i<10;i++){
         Tx.data[i+3] = EEPROM.read(i);
       }
-      LocoNet.send(&Tx);
+      RailNet.send(&Tx);
     }
   }else{
     Serial.println("Unknown Opcode");

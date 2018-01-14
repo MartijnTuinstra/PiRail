@@ -60,7 +60,7 @@
 #include <avr/interrupt.h>
 //#include "loconet.h"
 //#include "ln_interface.h"
-#include "ln_buf.h"
+#include "_buf.h"
 
 #define		LN_BUF_OPC_WRAP_AROUND	(uint8_t)0x00		// Special character to indcate a buffer wrap
 #define		LN_CHECKSUM_SEED        (uint8_t)0xFF
@@ -228,54 +228,66 @@ LnBufStats *getLnBufStats( LnBuf *Buffer )
   return &(Buffer->Stats) ;
 }
 
-uint8_t getLnMsgSize( volatile lnMsg * Msg )
-{
-  return ( ( Msg->sz.command & (uint8_t)0x60 ) == (uint8_t)0x60 ) ? Msg->sz.mesg_size : ( ( Msg->sz.command & (uint8_t)0x60 ) >> (uint8_t)4 ) + 2 ;
-}
+#define RN_OPC_REPORT_ID     0x00
+#define RN_OPC_EMERGENCY_SET 0x01
+#define RN_OPC_EMERGENCY_REL 0x02
+#define RN_OPC_POWER_ON      0x03
+#define RN_OPC_POWER_OFF     0x04
 
 uint8_t getRnMsgSize( volatile lnMsg * Msg )
 {
-  uint8_t Opcode = Msg->data[0] ^ 0x80;
-  if(Opcode == 0x7F || // Set Acknowledge
-    Opcode == 0x0   || // Report ID
-    Opcode == 0x47  || // Request Read all Output
-    Opcode == 0x4C  || // Request Read all Inputs
-    Opcode == 0x59     // Request EEPROM
+  uint8_t Opcode = Msg->data[0];
+  if(Opcode == RN_OPC_EMERGENCY_SET ||
+     Opcode == RN_OPC_EMERGENCY_REL ||
+     Opcode == RN_OPC_POWER_ON ||
+     Opcode == RN_OPC_POWER_OFF
+    ){
+    return 2;
+  }else if(Opcode == RN_OPC_ACK || // Set Acknowledge
+     Opcode == RN_OPC_REPORT_ID      ||
+     Opcode == RN_OPC_REQUEST_OUT    ||
+     Opcode == RN_OPC_REQUEST_IN     ||
+     Opcode == RN_OPC_REQUEST_EEPROM
     ){ 
     return 3;
-  }else if(Opcode == 0x50 // Change Device ID
+  }else if(Opcode == RN_OPC_DEVID
     ){ 
     return 4;
-  }else if(Opcode == 0x51 || // Change input and output
-    Opcode == 0x10 || // Toggle Single Address
-    Opcode == 0x11 || // Pulse Single Address
-    Opcode == 0x12 || // Blink Single Address
-    Opcode == 0x04    // Post Single Input Address
+  }else if(Opcode == RN_OPC_IN_OUT_REGS || // Change input and output
+    Opcode == RN_OPC_T_S_OUT || // Toggle Single Address
+    Opcode == RN_OPC_P_S_OUT || // Pulse Single Address
+    Opcode == RN_OPC_TBS_OUT || // Blink Single Address
+    Opcode == RN_OPC_S_IN    // Post Single Input Address
     ){ 
     return 5;
   }else{
-    return Msg->data[1] & 0x3F;
+    return Msg->data[1];
   }
 }
 
 uint8_t getRnMsgSizeFromOpCode( uint8_t Opcode )
 {
-  Opcode ^= 0x80;
-  if(Opcode == 0x7F || // Set Acknowledge
-    Opcode == 0x0   || // Report ID
-    Opcode == 0x47  || // Request Read all Output
-    Opcode == 0x4C  || // Request Read all Inputs
-    Opcode == 0x59     // Request EEPROM
+  if(Opcode == RN_OPC_EMERGENCY_SET ||
+     Opcode == RN_OPC_EMERGENCY_REL ||
+     Opcode == RN_OPC_POWER_ON ||
+     Opcode == RN_OPC_POWER_OFF
+    ){
+    return 2;
+  }else if(Opcode == RN_OPC_ACK || // Set Acknowledge
+     Opcode == RN_OPC_REPORT_ID      ||
+     Opcode == RN_OPC_REQUEST_OUT    ||
+     Opcode == RN_OPC_REQUEST_IN     ||
+     Opcode == RN_OPC_REQUEST_EEPROM
     ){ 
     return 3;
-  }else if(Opcode == 0x50 // Change Device ID
+  }else if(Opcode == RN_OPC_DEVID
     ){ 
     return 4;
-  }else if(Opcode == 0x51 || // Change input and output
-    Opcode == 0x10 || // Toggle Single Address
-    Opcode == 0x11 || // Pulse Single Address
-    Opcode == 0x12 || // Blink Single Address
-    Opcode == 0x04    // Post Single Input Address
+  }else if(Opcode == RN_OPC_IN_OUT_REGS || // Change input and output
+    Opcode == RN_OPC_T_S_OUT || // Toggle Single Address
+    Opcode == RN_OPC_P_S_OUT || // Pulse Single Address
+    Opcode == RN_OPC_TBS_OUT || // Blink Single Address
+    Opcode == RN_OPC_S_IN    // Post Single Input Address
     ){ 
     return 5;
   }else{

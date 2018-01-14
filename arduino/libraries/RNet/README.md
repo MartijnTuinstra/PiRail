@@ -1,6 +1,3 @@
-The EmbededLocoNet Library provides functions that manage the
-sending and receiving of LocoNet packets.
-
 As bytes are received from the LocoNet by an interrupt driven
 handler, they are stored in a circular buffer and after a valid
 packet has been received it can be read out.
@@ -24,12 +21,3 @@ It's known to work with:
 - MEGA (ATmega2560)
 - Leonardo, LeoStick, Arduino Pro Micro (ATmega32U4)
 - Various AVRTiny Boards (ATTiny84, ATTiny84A, ATTiny841)
-
-**IMPORTANT**
-
-Some of the message formats used in this code are Copyright Digitrax,
-Inc.  and/or Elektronik GmbH and are used with permission as part
-of the MRRwA project.  That permission does not extend to uses in
-other software products.  See the LICENSE file for more information.
-
-

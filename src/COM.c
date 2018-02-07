@@ -103,7 +103,7 @@ char * COM_Send(struct COM_t DATA){
 int COM_Recv(char * OUT_Data){
 	//Check if the filestream is open
 	if(uart0_filestream == -1){
-		return;
+		return 0;
 	}
 	int index = 0;
 
@@ -293,9 +293,9 @@ void COM_change_Output(int M){
 	uint8_t * PulseMask = (uint8_t *)malloc(((Units[M]->Out_length-1)/8)+1);
 
 	memcpy(OutRegs  ,Units[M]->OutRegs  ,((Units[M]->Out_length-1)/8)+1);
-	memcpy(BlinkMaks,Units[M]->BlinkMask,((Units[M]->Out_length-1)/8)+1);
+	memcpy(BlinkMask,Units[M]->BlinkMask,((Units[M]->Out_length-1)/8)+1);
 
-	char Out = 0,Blink = 0,Pulse = 0;
+	char Out = 0,Blink = 0,Pulse = 0, Toggle = 0;
 
 	uint8_t * PulseAdr = (uint8_t *)malloc(1);
 	uint8_t * BlinkAdr = (uint8_t *)malloc(1);

@@ -79,19 +79,16 @@
 #define RN_OPC_EMERGENCY_REL 0x02
 #define RN_OPC_POWER_ON      0x03
 #define RN_OPC_POWER_OFF     0x04
-#define RN_OPC_ACK           0x7F //Acknowledge
+#define RN_OPC_ACK 0x7F
 
-#define RN_OPC_T_S_OUT     0x10 //Toggle single out
-#define RN_OPC_P_S_OUT     0x11 //Pulse single out
-#define RN_OPC_TBS_OUT     0x12 //Toggle Blink single out
-#define RN_OPC_T_M_OUT     0x13 //Toggle Multiple out
-#define RN_OPC_TMB_OUT     0x14 //Toggle Multiple blink out
-#define RN_OPC_P_M_OUT     0x15 //Pulse Multiple out
-#define RN_OPC_S_ALL_OUT   0x16 //Set All out
-#define RN_OPC_S_BL_MASK   0x17 //Set Blink mask
-#define RN_OPC_S_P_MASK    0x18 //Set Pulse mask
-#define RN_OPC_POST_OUT    0x19 //Post all output registers
-#define RN_OPC_REQUEST_OUT 0x47 //Request to post all out registers
+#define RN_OPC_T_S_OUT     0x10
+#define RN_OPC_P_S_OUT     0x11
+#define RN_OPC_TBS_OUT     0x12
+#define RN_OPC_T_M_OUT     0x13
+#define RN_OPC_S_ALL_OUT   0x14
+#define RN_OPC_S_BL_MASK   0x15
+#define RN_OPC_POST_OUT    0x16
+#define RN_OPC_REQUEST_OUT 0x47
 
 #define RN_OPC_S_IN       0x05
 #define RN_OPC_M_IN       0x06

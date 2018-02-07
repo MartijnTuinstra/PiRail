@@ -1,22 +1,18 @@
 
 void *TRAIN_SIMA(){
-	struct Seg *B = blocks2[8][5];
-	struct Seg *N = blocks2[8][5];
-	struct Seg *A = blocks2[0][0];
+	struct Seg *B = Units[8]->B[5];
+	struct Seg *N = Units[8]->B[5];
+	struct Seg *A = 0;
 	int i = 0;
 
 	B->blocked = 1;
 	B->change  = 1;
 
+	//while(!train_link[Units[4]->B[23]->train]){}
+
 
 	while(!stop){
-		//printf("Train Sim Step (id:%i)\n",pthread_self());
-		while(1){
-			if(train_link[1] && train_link[1]->halt == 0){
-				break;
-			}
-			usleep(1000);
-		}
+		printf("Train Sim Step (id:%i)\n",pthread_self());
 
 		pthread_mutex_lock(&mutex_lockA);
 
@@ -29,7 +25,7 @@ void *TRAIN_SIMA(){
 				usleep(100000);
 			}
 		}
-		//printf(" %i:%i:%i\n",N->Adr.M,N->Adr.B,N->Adr.S);
+		printf(" %i:%i\n",N->Module,N->id);
 		N->change = 1;
 		N->blocked = 1;
 		pthread_mutex_unlock(&mutex_lockA);
@@ -56,21 +52,21 @@ void *TRAIN_SIMA(){
 }
 
 void *TRAIN_SIMB(){
-	struct Seg *B = blocks2[4][23];
-	struct Seg *N = blocks2[4][23];
-	struct Seg *A = blocks2[0][0];
+	struct Seg *B = Units[4]->B[23];
+	struct Seg *N = Units[4]->B[23];
+	struct Seg *A = 0;
 	int i = 0;
 
 	B->blocked = 1;
 	B->change  = 1;
 
-	while(blocks2[4][23]->train == 0){}
+	while(B->train == 0){}
 
-	while(!train_link[blocks2[4][23]->train]){}
+	while(!train_link[B->train]){}
 
-	train_link[blocks2[4][23]->train]->halt = 1;
+	train_link[B->train]->halt = 1;
 
-	while(train_link[blocks2[4][23]->train]->halt == 1){}
+	while(train_link[B->train]->halt == 1){}
 
 	while(!stop){
 		//printf("Train Sim Step (id:%i)\n",pthread_self());

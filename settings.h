@@ -28,17 +28,6 @@
 #define speed_C 90
 //Block Speed (Cat. D)
 #define speed_D 60
-/**///Signal states
-//Green
-#define GREEN_S 4
-//Amber/Orange
-#define AMBER_S 2
-//Red
-#define RED_S 1
-//Flashing Green
-#define GREEN_F_S 3
-//Flashing Amber/Orange
-#define AMBER_F_S 6
 /**///Signal passing speed
 //Flashing Red speed
 #define RED_F_SPEED 20

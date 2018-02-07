@@ -51,7 +51,6 @@ struct adr{
 	int type;	// Type
 };
 
-struct adr C_Adr(char M,char B,char S);
 int Adr_Comp(struct adr A,struct adr B);
 
 int B_list_i = 0, St_list_i = 0, S_list_i = 0, M_list_i = 0, Si_list_i = 0;
@@ -81,84 +80,12 @@ char List_of_Modules[MAX_Modules] = {0};
 
 struct adr StartAdr;
 
-struct adr C_Adr(char M,char B,char S){
-	struct adr Z;
-
-	Z.M = M;
-	Z.B = B;
-	Z.S = S;
-	Z.type = 'R';
-
-	return Z;
-}
-
-struct adr * c_Adr(char M,char B,char S){
-	struct adr *Z = (struct adr*)malloc(sizeof(struct adr));
-
-	Z->M = M;
-	Z->B = B;
-	Z->S = S;
-	Z->type = 'R';
-
-	return Z;
-}
-
-struct adr C_AdrT(char M,char B,char S,char T){
-	struct adr Z;
-
-	Z.M = M;
-	Z.B = B;
-	Z.S = S;
-	Z.type = T;
-
-	return Z;
-}
-
-struct adr * c_AdrT(char M,char B,char S,char T){
-	struct adr *Z = (struct adr*)malloc(sizeof(struct adr));
-
-	Z->M = M;
-	Z->B = B;
-	Z->S = S;
-	Z->type = T;
-
-	return Z;
-}
-
 #define END_BL C_AdrT(0,0,0,'e')
 #define EMPTY_BL EMPTY_BL()
-
-struct Seg * C_Seg(int Unit_Adr, struct SegC Adr, char state);
 
 #include "./src/modules.c"
 
 #include "./src/Z21.h"
-
-struct Seg * C_Seg(int Unit_Adr, struct SegC Adr, char state){
-	struct Seg *Z = (struct Seg*)malloc(sizeof(struct Seg));
-
-	Z->Module = Adr.Module;
-	Z->id = Adr.Adr;
-	Z->type = Adr.type;
-	Z->NextC = EMPTY_BL;
-	Z->PrevC = EMPTY_BL;
-	Z->max_speed = 0;
-	Z->state = state;
-	Z->train = 0x00;
-
-	//printf("A Segment is created at %i:%i:%i\t",Adr.M,Adr.B,Adr.S);
-	blocks2[Adr.Module][Adr.Adr] = Z;
-
-	return Z;
-}
-
-int Adr_Comp(struct adr A,struct adr B){
-	if(A.M == B.M && A.B == B.B && A.S == B.S){
-		return 1;
-	}else{
-		return 0;
-	}
-}
 
 int Adr_Comp2(struct SegC A,struct SegC B){
 	if(A.Module == B.Module && A.Adr == B.Adr && A.type == B.type){
@@ -248,7 +175,7 @@ void JSON(){
 
 	for(int i = 0;i<MAX_Modules;i++){
 		if(Units[i]){
-			for(int j = 0;j<Units[i]->B_nr;j++){
+			for(int j = 0;j<=Units[i]->B_nr;j++){
 				struct Seg * B = Units[i]->B[j];
 				if(B && B->change){
 					data = 1;
@@ -478,10 +405,12 @@ void *do_Magic(){
 		#endif
 		_Bool debug;
 		for(int i = 0;i<MAX_Modules;i++){
-			//printf("%i: %i:%i:%i\n",i,Adresses[i].M,Adresses[i].B,Adresses[i].S);
-			for(int j = 0;j<100;j++){
-				if(blocks2[i][j]){
-					procces(blocks2[i][j],0);
+			if(Units[i]){
+				for(int j = 0;j<=Units[i]->B_nr;j++){
+					if(Units[i]->B[j]){
+						//printf("%i:%i\n",i,j);
+						procces(Units[i]->B[j],0);
+					}
 				}
 			}
 		}
@@ -505,11 +434,12 @@ void *do_Magic(){
 void do_once_Magic(){
 	pthread_mutex_lock(&mutex_lockA);
 	for(int i = 0;i<MAX_Modules;i++){
-		//printf("%i: %i:%i:%i\n",i,Adresses[i].M,Adresses[i].B,Adresses[i].S);
-		//int i = 4;
-		for(int j = 0;j<100;j++){
-			if(blocks2[i][j]){
-				procces(blocks2[i][j],1);
+		if(Units[i]){
+			for(int j = 0;j<=Units[i]->B_nr;j++){
+				if(Units[i]->B[j]){
+					//printf("%i:%i\n",i,j);
+					procces(Units[i]->B[j],0);
+				}
 			}
 		}
 	}
@@ -604,8 +534,6 @@ void main(){
 		//pthread_create(&thread_Z21_client, NULL, Z21_client, NULL);
 		//Z21_client();
 		usleep(100000);
-	/*Define empty block*/
-		C_Seg(0,CAdr(0,0,'e'),3);
 	/*Search all blocks*/
 		printf("|                              BLOCK LINKING                               |\n");
 		printf("|                                                                          |\n");
@@ -992,7 +920,7 @@ void main(){
 	if (line)
         	free(line);
 */
-	clear_Modules();
+	//clear_Modules();
 	//Done with setup when there is at least one client
 	if(connected_clients == 0){
 		printf("                   Waiting until for a client connects\n");
@@ -1070,7 +998,7 @@ void main(){
 
 	pthread_create(&tid[3], NULL, TRAIN_SIMA, NULL);
 	usleep(500000);
-	pthread_create(&tid[4], NULL, TRAIN_SIMB, NULL);
+	//pthread_create(&tid[4], NULL, TRAIN_SIMB, NULL);
   //pthread_create(&tid[5], NULL, TRAIN_SIMC, NULL);
   //pthread_create(&tid[6], NULL, TRAIN_SIMD, NULL);
 

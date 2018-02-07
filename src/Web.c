@@ -40,12 +40,12 @@ int websocket_connect(struct web_client_t * C){
   memset(buf, 0, 1024);
   read(fd_client, buf, 1023);
 
-  printf("Got data in buffer:\n\n%s\n\n",buf);
+  //printf("Got data in buffer:\n\n%s\n\n",buf);
 
   char Connection[20] = "Connection: Upgrade";
   char Connection2[35] = "Connection: keep-alive, Upgrade";
   char UpgradeType[20] = "Upgrade: websocket";
-  char Key[20] = "Sec-WebSocket-Key: ";
+  char Key[25] = "Sec-WebSocket-Key: ";
   char Protocol[20] = "Protocol: ";
 
   char *start, *end, *S_prot, *E_prot, target[60], protocol[5];
@@ -59,21 +59,18 @@ int websocket_connect(struct web_client_t * C){
     //Search for the Security Key
     start = strstr(buf, Key);
     start += strlen(Key);
-    printf("+");
     end = strstr(start,"\r\n");
-    printf("+");
 
     S_prot = strstr(buf, Protocol);
     if(S_prot){
       S_prot += strlen(Protocol);
-      printf("+");
       E_prot = strstr(S_prot,"\r\n");
-      printf("+");
     }
 
     if (end){
         strncat(target,start,end-start);
     }
+
     printf("Socket-key: '%s'\n",target);
     strcat(target,websocket_magic_string);
 
@@ -280,6 +277,99 @@ int send_all(char data[],int length,int flag){
 }
 
 int recv_packet_procces(char data[1024]){
+  // Flag Admin Settings    0x80
+  // Train stuff flag       0x40
+  // Rail stuff flag        0x20
+  // General Operation flag 0x10
+
+  if(data[0] & 0x80){ //Admin settings
+    if(data[0] == 0x80){ //Clear track
+
+    }
+    else if(data[0] == 0x81){ //Reload track
+
+    }
+    else if(data[0] == 0x82){ //Reload previous setup track
+
+    }
+    else if(data[0] == 0x83){ //Reset switches to default
+
+    }
+    else if(data[0] == 0x84){ //Toggle Light Output
+
+    }
+    else if(data[0] == 0x88){ //All trains back to depot
+
+    }
+
+    else if(data[0] == 0xA0){ //Force switch
+
+    }
+
+    else if(data[0] == 0x90){ //Emergency stop, Admin authority / Disable track voltage
+
+    }
+    else if(data[0] == 0x91){ //Emergency stop, Admin authority / Enable track voltage
+
+    }
+  }
+  else if(data[0] & 0x40){ //Train stuff
+    if(data[0] == 0x40){ //New train
+
+    }
+    else if(data[0] == 0x41){ //Train speed control
+
+    }
+    else if(data[0] == 0x42){ //Train function control
+
+    }
+    else if(data[0] == 0x43){ //Train operation change
+
+    }
+    else if(data[0] == 0x44){ //Add route to train
+
+    }
+    else if(data[0] == 0x45){ //Delete route
+
+    }
+  }
+  else if(data[0] & 0x20){ //Track stuff
+    if(data[0] == 0x20){ //Toggle switch
+      if(Switch2[data[1]][data[2]]){ //Check if switch exists
+        printf("throw switch %i:%i\t",data[1],data[2]);
+        printf("%i->%i",Switch2[data[1]][data[2]]->state, !Switch2[data[1]][data[2]]->state);
+        throw_switch(Switch2[data[1]][data[2]]);
+      }
+    }
+    else if(data[0] == 0x21){ // MSwitch toggle to higher state
+
+    }
+    else if(data[0] == 0x22){ //MSwitch toggle to lower state
+
+    }
+    else if(data[0] == 0x23){ //Set switch
+
+    }
+    else if(data[0] == 0x24){ //Set switch reserved
+
+    }
+  }
+  else if(data[0] & 0x10){ // General Operation
+    if(data[0] == 0x10){ //Enable Emergency Stop!!
+
+    }
+    else if(data[0] == 0x11){ //Disable Emergency Stop!!
+
+    }
+    else if(data[0] == 0x14){ //New message
+
+    }
+    else if(data[0] == 0x15){
+
+    }
+  }
+
+  /*
   if(data[0] == 1){ //Re-calculate module
 
   }
@@ -336,7 +426,7 @@ int recv_packet_procces(char data[1024]){
       data_out[4];//DCC LOW  byte
 
       sprintf(buf,"{\"RNTrain\" : [\"Confirmed\",[%i,\"%s\",%i,\"%c\",%i]]}",value,s_Name,atoi(s_DCC),data[3],atoi(s_Speed));
-      printf("Send '%s'\n",buf);*/
+      printf("Send '%s'\n",buf);*//*
       send_all(data_out,l,32);
     }else{
       data_out[1] = 1; //Fail: DCC address already in use
@@ -376,7 +466,7 @@ int recv_packet_procces(char data[1024]){
     //train_set_dir(trains[(data[1] << 8 + data[2])],data[3]);
   }
 
-  else if(data[0] == 40){ //Trhow Switch
+  else if(data[0] == 40){ //Throw Switch
     if(Switch2[data[1]][data[2]]){
       printf("throw switch %i:%i\t",data[1],data[2]);
       printf("%i->%i",Switch2[data[1]][data[2]]->state, !Switch2[data[1]][data[2]]->state);
@@ -394,6 +484,7 @@ int recv_packet_procces(char data[1024]){
     char *M = strchr(&data[0], ':');
     char *B = strchr(&data[(M-data)+1], ':');
     if (M != NULL && B != NULL){ /* deal with error: / not present" */;
+  /*
       int start = 1;
       int colom1 = M-data;
       int colom2 = B-data;
@@ -469,6 +560,7 @@ int recv_packet_procces(char data[1024]){
     printf("%s\n",data);
     char *M = strchr(&data[0], ':');
     if (M != NULL){ /* deal with error: / not present" */;
+  /*
       int start = 1;
       int colom1 = M-data;
       int end = strlen(data);
@@ -550,6 +642,7 @@ int recv_packet_procces(char data[1024]){
     char *NAME = strchr(&data[0], ':');
     char *DCC = strchr(&data[(NAME-data)+1], ':');
     if (NAME != NULL && DCC != NULL){ /* deal with error: / not present" */;
+  /*
       int start = 4;
       int colom1 = NAME-data;
       int colom2 = DCC-data;
@@ -588,7 +681,7 @@ int recv_packet_procces(char data[1024]){
         data_out[4];//DCC LOW  byte
 
         sprintf(buf,"{\"RNTrain\" : [\"Confirmed\",[%i,\"%s\",%i,\"%c\",%i]]}",value,s_Name,atoi(s_DCC),data[3],atoi(s_Speed));
-        printf("Send '%s'\n",buf);*/
+        printf("Send '%s'\n",buf);*//*
         send_all(data_out,3,32);
       }else{
         data_out[1] = 1; //Fail: DCC address already in use
@@ -615,7 +708,7 @@ int recv_packet_procces(char data[1024]){
   }
   else{
     printf("Wrong request for client\n");
-  }
+  }*/
 }
 
 void * websocket_client(void * thread_data){
@@ -674,7 +767,7 @@ void * websocket_client(void * thread_data){
             connected_clients--;
             fd_client_list[i] = 0;
             clients[i]->state = 2;
-            return;
+            return 0;
           }
 
         }
@@ -687,7 +780,7 @@ void * websocket_client(void * thread_data){
     printf("Wrong HTTP request!!!!\n");
     close(fd_client);
     clients[i]->state = 2;
-    return;
+    return 0;
   }
 }
 

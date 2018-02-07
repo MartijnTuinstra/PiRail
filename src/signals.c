@@ -38,7 +38,7 @@ void create_signal(int Unit_Adr,struct Seg * B,int type, int side){ //Side = 0 =
 }
 */
 
-void create_signal2(struct Seg * B,char adr_nr, short addresses[adr_nr], char state[BLOCK_STATES], char flash[BLOCK_STATES], char side){
+void create_signal2(struct Seg * B,char adr_nr, uint8_t addresses[adr_nr], char state[BLOCK_STATES], char flash[BLOCK_STATES], char side){
   /*Block*/
   /*Number of output pins/addresses*/
   /*State output relation*/
@@ -46,7 +46,7 @@ void create_signal2(struct Seg * B,char adr_nr, short addresses[adr_nr], char st
 
   struct signal *Z = (struct signal*)malloc(sizeof(struct signal));
 
-  Z->state = 10;
+  Z->state = 0;
 
   Z->id = Units[B->Module]->Signal_nr;
   long Unit_Adr = Units[B->Module]->Signal_nr++;
@@ -56,22 +56,28 @@ void create_signal2(struct Seg * B,char adr_nr, short addresses[adr_nr], char st
   Z->length = adr_nr;
 
   for(char i = 0;i<adr_nr;i++){
-    if(Units[Z->MAdr]->Out_length < addresses[i]){
+    if(Units[Z->MAdr]->OutRegisters*8 < addresses[i]){
       printf("Expansion needed\t");
       printf("Address %i doesn't fit\n",addresses[i]);
 
-      char expand = ((addresses[i]-Units[Z->MAdr]->Out_length) + 8) / 8;
+      //Expand range
+      Units[Z->MAdr]->OutRegisters++;
 
-    	Units[Z->MAdr]->Out_length += (expand*8);
+      printf("Expanded to: %i bytes\n",Units[Z->MAdr]->OutRegisters);
 
-      printf("Expanded to: %i bytes\n\n",(Units[Z->MAdr]->Out_length/8));
+      //Realloc Input array, lenght: Inregisters * sizeof()
+      Units[Z->MAdr]->Out = (struct Rail_link **)realloc(Units[Z->MAdr]->Out,8*Units[Z->MAdr]->OutRegisters*sizeof(struct Rail_link *));
+
+      //Clear new spaces
+      for(int i = 8*Units[Z->MAdr]->OutRegisters-8;i<8*Units[Z->MAdr]->OutRegisters;i++){
+        Units[Z->MAdr]->Out[i] = 0;
+      }
     }
     Z->adr[i] = addresses[i];
   }
-  for(char i = 0;i<BLOCK_STATES;i++){ Z->states[i] = state[i];    }
-  for(char i = 0;i<BLOCK_STATES;i++){  Z->flash[i] = flash[i];    }
 
-  printf("Signal2 #%i\n",Si_list_i);
+  memcpy(Z->states,state,BLOCK_STATES);
+  memcpy(Z->flash,flash,BLOCK_STATES);
 
   signals[Si_list_i] = Z;
 
@@ -81,12 +87,12 @@ void create_signal2(struct Seg * B,char adr_nr, short addresses[adr_nr], char st
     B->PSi = Z;
   }
 
-  if(Units[B->Module]->Signals[Unit_Adr] == NULL){
+  if(!Units[B->Module]->Signals[Unit_Adr]){
     Units[B->Module]->Signals[Unit_Adr] = Z;
     Z->UAdr = Unit_Adr;
-    if(Unit_Adr > Units[B->Module]->Si_L){
-      Units[B->Module]->Si_L = Unit_Adr;
-    };
+    if(Unit_Adr > (Units[B->Module]->Si_L-1)){
+      Units[B->Module]->Si_L = Unit_Adr + 1;
+    }
   }else{
     printf("Double signal adress %i in Module %i\n",Unit_Adr,B->Module);
   }
@@ -95,45 +101,19 @@ void create_signal2(struct Seg * B,char adr_nr, short addresses[adr_nr], char st
   Si_list_i++;
 }
 
-void set_signal(struct signal *Si,int state){  //0 = NSi, 1 = PSi
-  /*
-  if(state == GREEN){
-    state = 1;
-  }else if(state == AMBER){
-    state = 2;
-  }else if(state == RED){
-    state = 4;
-  }else{
-    state = 0b111;
-  }*/
-  if(Si->state != 10){
-    if(Si->type == 0){
-      if(state == GREEN_S){
-        state = 1;
-      }else{
-        state = 0;
-      }
-    }else if(Si->type == 1){
-      if(state == GREEN_S){
-        state = 1;
-      }else if(state == AMBER_S){
-        state = 2;
-      }else{
-        state = 0;
-      }
+void set_signal(struct signal *Si,int state){
+  if(!(Si->state == state || Si->state == (0x80 + state))){
+    /*printf("Module %i Signal #%i change from %x to ",Si->MAdr,Si->id,Si->state);
+
+    if(state == SIG_RED){
+      printf("SIG_RED");
+    }else if(state == SIG_AMBER){
+      printf("SIG_AMBER");
+    }else if(state == SIG_GREEN){
+      printf("SIG_GREEN");
     }
 
-    if(Si->state != state){
-      printf("Module %i Signal #%i change to %i\n",Si->MAdr,Si->id,state);
-      Si->state = state;
-
-      Units[Si->MAdr]->Sig_change = TRUE;
-      //if(startup == 1){
-        //COM_change_signal(Si);
-      //}
-    }
-  }else{
-    Si->state = state;
-    Units[Si->MAdr]->Sig_change = TRUE;
+    printf("  (%x)\n",state);*/
+    Si->state = 0x80 + state;
   }
 }

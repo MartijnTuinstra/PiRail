@@ -8,8 +8,7 @@
   #include "./switch.h"
 #endif
 
-struct Seg * blocks[MAX_Modules][MAX_Blocks][MAX_Segments] = {};
-struct Seg * blocks2[MAX_Modules][MAX_Blocks*MAX_Segments] = {};
+//struct Seg * blocks2[MAX_Modules][MAX_Blocks*MAX_Segments] = {};
 struct Station * stations[MAX_Modules*MAX_Blocks] = {};
 
 struct SegC EMPTY_BL(){
@@ -54,22 +53,44 @@ void Create_Segment(int IO_Adr,struct SegC Adr ,struct SegC Next, struct SegC Pr
   Z->Next.type = 0;Z->Next.B = 0;Z->Next.Sw = 0;Z->Next.M = 0;Z->Next.Si = 0;
   Z->Prev.type = 0;Z->Prev.B = 0;Z->Prev.Sw = 0;Z->Prev.M = 0;Z->Prev.Si = 0;
 	//printf("A Segment is created at %i:%i:%i\tAdr:%i\n",Adr.M,Adr.B,Adr.S,B_list_i);
-  //Check if input is in range
-	if(Units[Adr.Module]->In_length <= IO_Adr){
-    //Expand range
-		char expand = ((IO_Adr-Units[Adr.Module]->In_length) + 8) / 8;
 
-		Units[Adr.Module]->In_length += (expand*8);
-    printf("Expanded to %i shift register\n",Units[Adr.Module]->In_length/8);
-    Units[Adr.Module]->In = realloc(Units[Adr.Module]->In,Units[Adr.Module]->In_length*sizeof(struct Rail_link));
+  //Check if input is in range
+	if(Units[Adr.Module]->InRegisters*8 <= IO_Adr){
+    //Expand range
+		Units[Adr.Module]->InRegisters++;
+
+    printf("Expand to %i shift register, size(%i)\n",Units[Adr.Module]->InRegisters,8*Units[Adr.Module]->InRegisters);
+
+    //Realloc Input array, lenght: Inregisters * sizeof()
+    Units[Adr.Module]->In = (struct Rail_link **)realloc(Units[Adr.Module]->In,8*Units[Adr.Module]->InRegisters*sizeof(struct Rail_link *));
+
+    //Clear new spaces
+    for(int i = 8*Units[Adr.Module]->InRegisters-8;i<8*Units[Adr.Module]->InRegisters;i++){
+      Units[Adr.Module]->In[i] = 0;
+    }
 	}
 
-	blocks2[Adr.Module][Adr.Adr] = Z;
+  //Check if ID is outside Unit array
+  if(Z->id >= Units[Adr.Module]->B_L){
+    //Expand size of B list
+    printf("Expand B list of module %i to %i\n",Adr.Module,8*((Z->id + 8)/8));
 
-	//Units[Adr.M]->B[B_list_i-Units[Adr.M]->B_S] = Z;
+    Units[Adr.Module]->B = (struct Seg **)realloc(Units[Adr.Module]->B,8*((Z->id + 8)/8)*sizeof(struct Seg *));
+
+    //Clear new spaces
+    for(int i = 8*((Z->id)/8);i<8*((Z->id + 8)/8);i++){
+      Units[Adr.Module]->B[i] = 0;
+    }
+    Units[Adr.Module]->B_L = 8*((Z->id + 8)/8);
+  }
+
 	if(Units[Adr.Module]->B[Z->id] == NULL){
+    printf("Module %i segment %i\n",Adr.Module,Z->id);
 		Units[Adr.Module]->B[Z->id] = Z;
-    Units[Adr.Module]->B_nr++;
+    //Units[Adr.Module]->B_nr++;
+    if(Z->id > Units[Adr.Module]->B_nr){
+      Units[Adr.Module]->B_nr = Z->id;
+    }
 	}else{
 		printf("Double Block Number %i in Module %i\n",Z->id,Adr.Module);
 	}
@@ -78,10 +99,12 @@ void Create_Segment(int IO_Adr,struct SegC Adr ,struct SegC Next, struct SegC Pr
   Y.type = 'R';
   Y.B = Z;
 
-  if(Units[Adr.Module]->In[IO_Adr].type == 0){
+  if(Units[Adr.Module]->In[IO_Adr] == 0){
+    struct Rail_link * Y = (struct Rail_link*)calloc(1,sizeof(struct Rail_link));
+    Y->type = 'R';Y->B = Z;
     Units[Adr.Module]->In[IO_Adr] = Y;
   }else{
-		printf("Double Block Address %i in Module %i\n",IO_Adr,Adr.Module);
+		printf("Double Block IO Address %i in Module %i\n",IO_Adr,Adr.Module);
 	}
 }
 
@@ -109,10 +132,12 @@ void Connect_Segments(){
     if(Units[i]){
       //printf("Unit %i ...\n",i);
       for(int j = 0;j<MAX_Blocks*MAX_Segments;j++){
-        if(Units[i]->B[j]){
-          printf(" %iB %c%i\n",Units[i]->B[j]->Module,Units[i]->B[j]->type,Units[i]->B[j]->id);
+        if(Units[i]->B[j] && j <= Units[i]->B_nr){
+          //printf(" %iB %c%i\n",Units[i]->B[j]->Module,Units[i]->B[j]->type,Units[i]->B[j]->id);
+
           if(Units[i]->B[j]->type != 'T'){
-            printf("  N %c%i:%i\t",Units[i]->B[j]->NextC.type,Units[i]->B[j]->NextC.Module,Units[i]->B[j]->NextC.Adr);
+            //printf("  N %c%i:%i\t",Units[i]->B[j]->NextC.type,Units[i]->B[j]->NextC.Module,Units[i]->B[j]->NextC.Adr);
+
             if(!Adr_Comp2(Units[i]->B[j]->NextC,EMPTY_BL())){
               int nM = Units[i]->B[j]->NextC.Module;
               int nA = Units[i]->B[j]->NextC.Adr;
@@ -129,7 +154,8 @@ void Connect_Segments(){
               Units[i]->B[j]->Next.type = 0;
             }
 
-            printf("P %c%i:%i\n",Units[i]->B[j]->PrevC.type,Units[i]->B[j]->PrevC.Module,Units[i]->B[j]->PrevC.Adr);
+            //printf("P %c%i:%i\n",Units[i]->B[j]->PrevC.type,Units[i]->B[j]->PrevC.Module,Units[i]->B[j]->PrevC.Adr);
+
             if(!Adr_Comp2(Units[i]->B[j]->PrevC,EMPTY_BL())){
               int pM = Units[i]->B[j]->PrevC.Module;
               int pA = Units[i]->B[j]->PrevC.Adr;
@@ -152,6 +178,7 @@ void Connect_Segments(){
         if(Units[i]->S[j]){
       //    printf(" Sw %i\n",j);
       //    printf("  A %c%i:%i\t",Units[i]->S[j]->AppC.type,Units[i]->S[j]->AppC.Module,Units[i]->S[j]->AppC.Adr);
+
           int aM = Units[i]->S[j]->AppC.Module;
           int aA = Units[i]->S[j]->AppC.Adr;
           char aT = Units[i]->S[j]->AppC.type;

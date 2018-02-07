@@ -50,7 +50,7 @@ int throw_switch(struct Swi * S){
         struct SegC A = S->L_Swi[i]->Adr;
         printf("Linked switching (%c%i:%i",A.type,A.Module,A.Adr);
 
-        Switch2[A.Module][A.Adr]->state = 0x80 + (S->L_Swi[i]->states[S->state] & 0x7F);
+        Switch2[A.Module][A.Adr]->state = 0x80 + (S->L_Swi[i]->states[S->state&0x7F] & 0x7F);
         printf(" => %i)\n",Switch2[A.Module][A.Adr]->state);
 
 				buf[index++] = A.Module;
@@ -60,7 +60,7 @@ int throw_switch(struct Swi * S){
     }
     printf("Throw Switch %s\n\n",buf);
 	COM_change_switch(S->Module);
-    send_all(buf,index,2);
+    send_all(buf,index,2); //Websocket
     return 1;
   }else{
 		printf("Switch blocked\n");
@@ -120,7 +120,7 @@ int set_switch(struct Swi * S,char state){
 }
 
 int throw_ms_switch(struct Mod * M, char c){ //Multi state object
-  if((blocks[M->Adr.M][M->Adr.B][0] != NULL && blocks[M->Adr.M][M->Adr.B][0]->state != RESERVED) ||
+  /*if((blocks[M->Adr.M][M->Adr.B][0] != NULL && blocks[M->Adr.M][M->Adr.B][0]->state != RESERVED) ||
         (blocks[M->Adr.M][M->Adr.B][1] != NULL && blocks[M->Adr.M][M->Adr.B][1]->state != RESERVED)){
     M->state = c;
     char buf[30];
@@ -128,9 +128,8 @@ int throw_ms_switch(struct Mod * M, char c){ //Multi state object
     printf("Throw ms Switch %s\n\n",buf);
     send_all(buf,strlen(buf),2);
     return 1;
-  }else{
+  }else{*/
     return 0;
-  }
 }
 
 
@@ -146,8 +145,41 @@ void Create_Switch(struct SegC Adr,struct SegC App,struct SegC Div,struct SegC S
 	Z->AppC = App;
 	Z->state = state + 0x80;
 	Z->len = 1;
-	for(int i = 0;i<2;i++){
+
+	//Check and copy addresses
+	for(char i = 0;i<2;i++){
+		if(Units[Adr.Module]->OutRegisters*8 < adr[i]){
+			printf("Expansion needed\t");
+			printf("Address %i doesn't fit\n",adr[i]);
+
+			//Expand range
+			Units[Adr.Module]->OutRegisters++;
+
+			printf("Expanded to: %i bytes\n",Units[Adr.Module]->OutRegisters);
+
+			//Realloc Input array, lenght: Inregisters * sizeof()
+			Units[Adr.Module]->Out = (struct Rail_link **)realloc(Units[Adr.Module]->Out,8*Units[Adr.Module]->OutRegisters*sizeof(struct Rail_link *));
+
+			//Clear new spaces
+			for(int i = 8*Units[Adr.Module]->OutRegisters-8;i<8*Units[Adr.Module]->OutRegisters;i++){
+				Units[Adr.Module]->Out[i] = 0;
+			}
+		}
 		Z->Out[i] = adr[i];
+	}
+
+	//Check if ID is outside Unit array
+	if(Z->id >= Units[Adr.Module]->S_L){
+		//Expand size of B list
+		printf("Expand S list of module %i to %i\n",Adr.Module,8*((Z->id + 8)/8));
+
+		Units[Adr.Module]->S = (struct Swi **)realloc(Units[Adr.Module]->S,8*((Z->id + 8)/8)*sizeof(struct Swi *));
+
+		//Clear new spaces
+		for(int i = 8*((Z->id)/8);i<8*((Z->id + 8)/8);i++){
+		  Units[Adr.Module]->S[i] = 0;
+		}
+		Units[Adr.Module]->S_L = 8*((Z->id + 8)/8);
 	}
 	/*
 	if(Adr.S > 1){
@@ -206,10 +238,10 @@ void Create_Moduls(int Unit_Adr, struct adr Adr,struct adr mAdr[10],struct adr M
 	}
 
 	//return Z;
-	if(blocks[Adr.M][Adr.B][1] == NULL && blocks[Adr.M][Adr.B][0] == NULL){
-		printf("Needs 0 block\n");
+	//if(blocks[Adr.M][Adr.B][1] == NULL && blocks[Adr.M][Adr.B][0] == NULL){
+	//	printf("Needs 0 block\n");
 		//C_Seg(C_Adr(Adr.M,Adr.B,0),0);
-	}
+	//}
 	//printf("A Moduls is created at %i:%i:%i\tAdr:%i\n",Adr.M,Adr.B,Adr.S,Adress);
 	Moduls[Adr.M][Adr.B][Adr.S] = Z;
 
@@ -242,7 +274,7 @@ int check_Switch(struct Seg * B, int direct, _Bool incl_pref){
 
 	int debug = 0;
 
-	if(B->Module == 4 && B->id == 17){
+	if(B->Module == 4 && B->id == 18){
 		//debug = 1;
 	}
 
@@ -284,16 +316,17 @@ int check_Switch(struct Seg * B, int direct, _Bool incl_pref){
 	if(NAdr.type == 0){
 		return 0;
 	}else if(NAdr.type == 'R'){
-		//printf("Return 1\n");
+		//printf("Return 1, Just rail\n");
 		return 1; //Passable
 	}
 	else if(NAdr.type == 'S'){
 		S = NAdr.Sw;
-		if(incl_pref == TRUE && S->pref[0] && S->pref[0]->type == 0 && S->pref[0]->state != S->state){
+		if(incl_pref == TRUE && S->pref[0] && S->pref[0]->type == 0 && S->pref[0]->state != (S->state & 0x7F)){
+			if(debug)printf("Wrong state for the preference\n");
 			return 0; //Wrong state for the preference setting
 		}
 		//printf("Switch approach\n");
-		uint8_t SwState = S->state & 0x3F;
+		uint8_t SwState = S->state & 0x7F;
 		if(SwState == 0 && S->str.type != 0){ //Straight?
 			Adr = NAdr;
 			NAdr = S->str;
@@ -301,6 +334,7 @@ int check_Switch(struct Seg * B, int direct, _Bool incl_pref){
 			Adr = NAdr;
 			NAdr = S->div;
 		}else{
+			//printf("Unknown state (%x)\n",SwState);
 			return 0;
 		}
 
@@ -327,23 +361,26 @@ int check_Switch(struct Seg * B, int direct, _Bool incl_pref){
 	else if(NAdr.type == 's'){
 		struct Rail_link Div = NAdr.Sw->div;
 		struct Rail_link Str = NAdr.Sw->str;
-		//printf("Div %c %i==%c %i\n",Div.type,Div.Module,Div.B,Div.S,adr.M,adr.B,adr.S);
+		//printf("Div %c %i==%c %i\n",Div.type,Div.Id,Div.B,Div.S,adr.M,adr.B,adr.S);
 		//printf("Str %c %i==%c %i\n",Str.M,Str.B,Str.S,adr.M,adr.B,adr.S);
 		if(Link_cmp(Div,Adr)){
-			if(NAdr.Sw->state & 0x3F == 1){
+			if((NAdr.Sw->state & 0x7F) == 1){
 				if(debug)printf("Diverging\n");
 				n = 1;
 			}else{
+				if(debug)printf("Wrong Diverging\n");
 				return 0;
 			}
 		}else if(Link_cmp(Str,Adr)){
-			if(NAdr.Sw->state & 0x3F == 0){
+			if((NAdr.Sw->state & 0x7F) == 0){
 				if(debug)printf("Straight\n");
 				n = 1;
 			}else{
+				if(debug)printf("Wrong Diverging\n");
 				return 0;
 			}
 		}else{
+			if(debug)printf("Failed Link_cmp\n");
 			return 0;
 		}
 
@@ -353,7 +390,7 @@ int check_Switch(struct Seg * B, int direct, _Bool incl_pref){
 		goto R;
 
 	}
-	printf("Retrun %i\n",n);
+	//printf("Retrun %i\n",n);
 	return n;
 }
 

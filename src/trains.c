@@ -183,7 +183,7 @@ void *train_timer(void *threadArg){
 	}
 
 	if(ROUND((float)cur_s/speed_step) == ROUND((float)des_s/speed_step)){
-		return;
+		return 0;
 	}
 
 	float total_time = (((float)d)/(cur_s))*3.6;

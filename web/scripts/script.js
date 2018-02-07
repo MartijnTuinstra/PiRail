@@ -31,10 +31,6 @@ for(var i = 0;i<10;i++){
 
 var vara;
 
-var remote_Switch = function(T,M,B,S){
-  ws.send(T+M+":"+B+":"+S);
-}
-
 var remote_Switch2 = function(evt){
   console.log("remote_Switch2");
   console.log(evt);
@@ -47,21 +43,31 @@ var remote_Switch2 = function(evt){
   ws.send(String.fromCharCode(40)+String.fromCharCode(Module)+String.fromCharCode(SwNr));
 }
 
+function ev_throw_switch(evt){ //Click event throw switch
+  console.log("remote_Switch2");
+  console.log(evt);
+  var target = $(evt.currentTarget);
 
+  if(target.children().length == 2){ //Normale Switch
+    SwNr = parseInt(target.attr("class").split(' ')[0].slice(2));
+    Module = parseInt(target.parent().parent().parent().attr("class").split(' ')[0].slice(1))
+    console.log(Module+":"+SwNr);
 
-    //  $('g[class^=Sw]','.M'+setup[i]+"b").on("click",remote_Switch2);
+    ws.send(String.fromCharCode(0x20)+String.fromCharCode(Module)+String.fromCharCode(SwNr));
+  }else{ //MSwitch
+    SwNr = parseInt(target.attr("class").split(' ')[0].slice(2));
+    Module = parseInt(target.parent().parent().parent().attr("class").split(' ')[0].slice(1))
+    console.log(Module+":"+SwNr);
 
-function throw_Switch(T,M,B){
-  var Op;
-  if(T == 'S'){
-    Op = 40;
-  }else if(T == 'M'){
-    Op = 41;
-  }else{
-    Op = 42;
+    if(evt.shiftKey){ // -
+      ws.send(String.fromCharCode(0x20)+String.fromCharCode(Module)+String.fromCharCode(SwNr));
+    }else{
+      ws.send(String.fromCharCode(0x20)+String.fromCharCode(Module)+String.fromCharCode(SwNr));
+    }
   }
-  ws.send(String.fromCharCode(Op)+String.fromCharCode(M)+String.fromCharCode(B));
 }
+
+
 
 function dir_train(obj,TrainNr,dir){
 	if(!($(obj).hasClass('selected'))){
@@ -251,7 +257,11 @@ function create_track(setup){
       blocks_load++;
       $('.M'+M+'b').load('./../modules/'+M+'/layout.svg',function (evt){
         blocks_load--;
-        if(blocks_load == 0){$('#Modules').css('display','block');ws.send("Ready");$('g.SwGroup','.Module').on("click",remote_Switch2);}
+        if(blocks_load == 0){ //Done loading all modules?
+          $('#Modules').css('display','block');
+          ws.send("Ready");
+          $('g.SwGroup','.Module').on("click",ev_throw_switch);  //Attach click event to all switch and mswitches
+        }
       });
       if(r == 0){
         x -= segments[M]['anchors'][0][0];
@@ -317,7 +327,11 @@ function create_track(setup){
       blocks_load++;
       $('.M'+setup[i]+'b').load('./../modules/'+setup[i]+'.svg',function (evt){
         blocks_load--;
-        if(blocks_load == 0){$('#Modules').css('display','block');ws.send("Ready");$('g.SwGroup','.Module').on("click",remote_Switch2);}
+        if(blocks_load == 0){
+          $('#Modules').css('display','block');
+          ws.send("Ready");
+          $('g.SwGroup','.Module').on("click",ev_throw_switch); //Attach click event to all switch and mswitches
+        }
       });
       if(r == 0){
         x += segments[M]['anchors'][0][0];
@@ -446,7 +460,7 @@ function switch_update(data){
 
     $('.LSw,.LSwO',SwitchGroup).css("opacity",0);
     $('.LSw,.LSwO',SwitchGroupB).css("opacity",0);
- 
+
     $('.SwS'+state    ,SwitchGroup).css("opacity",1);
     $('.SwS'+state+'o',SwitchGroupB).css("opacity",1);
 

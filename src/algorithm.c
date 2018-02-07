@@ -63,7 +63,7 @@ void procces(struct Seg * B,int debug){
 		//Get blocks in avalable path
 		int q = 4;
 
-		//printf("Block %i:%i\t",B->Module,B->id);
+		//Get the 3 next blocks
 		for(i = 0;(i+1)<q;i){
 			if(bl[i]->type != 'T'){ //If block has no contact points
 				Bl = bl[i];
@@ -102,7 +102,7 @@ void procces(struct Seg * B,int debug){
 		i--;
 
 		char r = 4;
-
+		//Get the 3 previous blocks
 		for(p = 0;p<=r;){
 			if(bpl[p]->type != 'T'){ //If block has no contact points
 				Bl = bpl[p];
@@ -140,23 +140,6 @@ void procces(struct Seg * B,int debug){
 		}
 		p--;
 
-		/*
-		for(int j = 6;j>=0;j--){
-			if(j <= (p+1) && bpl[j]){
-				printf("%c%i:%i\t",bpl[j]->type,bpl[j]->Module,bpl[j]->id);
-			}else{
-				printf("\t");
-			}
-		}
-		printf("\t");
-		for(int j = 0;j<=q;j++){
-			if(bl[j]){
-				printf("%c%i:%i\t",bl[j]->type,bl[j]->Module,bl[j]->id);
-			}
-		}
-		printf("\n");/**/
-		//printf("\n\n");
-
 		i = 1;
 		p = 1;
 		int j = 0;
@@ -174,6 +157,8 @@ void procces(struct Seg * B,int debug){
 		BPPP.blocked = 0;BPP.blocked = 0;BP.blocked = 0;BN.blocked = 0;BNN.blocked = 0;BNNN.blocked = 0;
 		BPPP.length = 0;BPP.length = 0;BP.length = 0;BN.length = 0;BNN.length = 0;BNNN.length = 0;
 
+		//Assign next pointers
+		//k == number of block ahead
 		for(i;i<q;i++){
 			if(i > 1 && bl[i-1]->type == 'T' && bl[i]->type == 'T'){
 				j++;
@@ -199,6 +184,9 @@ void procces(struct Seg * B,int debug){
 		k++;
 		i = k;
 
+
+		//Assign prev pointers
+		//p == number of block backward
 		for(p;p<=r;p++){
 			if(p > 1 && bpl[p-1]->type == 'T' && bpl[p]->type == 'T'){
 				//printf("%c%i:%i==%c%i:%i\n",bpl[p-1]->type,bpl[p-1]->Module,bpl[p-1]->id,bpl[p]->type,bpl[p]->Module,bpl[p]->id);
@@ -225,6 +213,8 @@ void procces(struct Seg * B,int debug){
 		l++;
 		p = l;
 
+
+		//------------------------------------------------------------------------------------------ roadmap: more efficient scanning of the block. skip the blocks that are not blocked and there neighbours are also not blocked
 		//SPEEDUP function / if all blocks are not blocked skip!!
 		/*if(k > 0 && !BA.blocked && !BN.blocked){
 			if(p > 0 && !BP.blocked){
@@ -404,7 +394,7 @@ void procces(struct Seg * B,int debug){
 				change_block_state2(&BNN,RESERVED);
 			}
 
-/*
+			/*
 
 				if((NAdr.type == 's' || NAdr.type == 'S' || NAdr.type == 'm' || NAdr.type == 'M') && BA.blocked){
 					if(((NAdr.type == 's' || NAdr.type == 'S') && NAdr.Sw->Detection_Block && NAdr.Sw->Detection_Block->state != RESERVED) ||
@@ -489,47 +479,59 @@ void procces(struct Seg * B,int debug){
 		/**/
 		/**/
 		/*Signals*/
+			//If a signal is at Next end and BN exists
 			if(BA.B[0]->NSi && k > 0){
 				//Wrong Switch
-				//printf("Signal at %i:%i:%i\n",BA->Adr.M,BA->Adr.B,BA->Adr.S);
-				if((BA.B[0]->dir == 0 || BA.B[0]->dir == 1 || BA.B[0]->dir == 2) && !check_Switch(BA.B[0],0,TRUE) || (BA.B[0]->dir == 4 || BA.B[0]->dir == 5 || BA.B[0]->dir == 6)){
-					set_signal(BA.B[0]->NSi,RED_S);
-					//printf("%i:%i:%i\tRed signal L1\n",BA->Adr.M,BA->Adr.B,BA->Adr.S);
+				//if current block is in forward and there are blocked switches
+				// or if the block is in the wrong direction (reverse)
+				if(((BA.B[0]->dir == 0 || BA.B[0]->dir == 1 || BA.B[0]->dir == 2) && !check_Switch(BA.B[0],0,TRUE)) || (BA.B[0]->dir == 4 || BA.B[0]->dir == 5 || BA.B[0]->dir == 6)){
+					set_signal(BA.B[0]->NSi,SIG_RED);
 				}
 
 				if(!(BA.B[0]->dir == 4 || BA.B[0]->dir == 5 || BA.B[0]->dir == 6) && check_Switch(BA.B[0],0,TRUE) && i > 0){
 					//Next block is RED/Blocked
 					if(BN.blocked || BN.B[0]->state == RED){
-						set_signal(BA.B[0]->NSi,RED_S);
+						set_signal(BA.B[0]->NSi,SIG_RED);
 					}else if(BN.B[0]->state == PARKED){
-						set_signal(BA.B[0]->NSi,AMBER_F_S); //Flashing RED
+						set_signal(BA.B[0]->NSi,SIG_RESTRICTED); //Flashing RED
 					}else if(BN.B[0]->state == AMBER){	//Next block AMBER
-						set_signal(BA.B[0]->NSi,AMBER_S);
+						set_signal(BA.B[0]->NSi,SIG_AMBER);
 					}else{ // //Next block AMBER	if(BN->state == GREEN)
-						set_signal(BA.B[0]->NSi,GREEN_S);
+						set_signal(BA.B[0]->NSi,SIG_GREEN);
 					}
 				}
 			}
+			else if(BA.B[0]->NSi && k == 0){ //If the track stops due to switches, set it to RED / DANGER
+				set_signal(BA.B[0]->NSi,SIG_RED);
+			}
 
+			//If a signal is at Prev side and BP exists
 			if(BA.B[0]->PSi && p > 0){
+				//printf("Signal at %i:%i\n",BA.B[0]->Module,BA.B[0]->id);
+				//printf("check_Switch: %i\n",check_Switch(BA.B[0],0,TRUE));
 				//printf("Signal at %i:%i:%i\t0x%x\n",BA->Adr.M,BA->Adr.B,BA->Adr.S,BA->signals);
-				if((BA.B[0]->dir == 4 || BA.B[0]->dir == 5 || BA.B[0]->dir == 6) && !check_Switch(BA.B[0],0,TRUE) || (BA.B[0]->dir == 0 || BA.B[0]->dir == 1 || BA.B[0]->dir == 2)){
-					set_signal(BA.B[0]->PSi,RED_S);
+				//if current block is in reverse and there are blocked switches
+				// or if the block is in the wrong direction (forward)
+				if(((BA.B[0]->dir == 4 || BA.B[0]->dir == 5 || BA.B[0]->dir == 6) && !check_Switch(BA.B[0],0,TRUE)) || (BA.B[0]->dir == 0 || BA.B[0]->dir == 1 || BA.B[0]->dir == 2)){
+					set_signal(BA.B[0]->PSi,SIG_RED);
 					//printf("%i:%i:%i\tRed signal R2\n",BA->Adr.M,BA->Adr.B,BA->Adr.S);
 				}
 
 				if(!(BA.B[0]->dir == 0 || BA.B[0]->dir == 1 || BA.B[0]->dir == 2) && check_Switch(BA.B[0],0,TRUE) && i > 0){
 					//Next block is RED/Blocked
 					if(BN.blocked || BN.B[0]->state == RED){
-						set_signal(BA.B[0]->PSi,RED_S);
+						set_signal(BA.B[0]->PSi,SIG_RED);
 					}else if(BN.B[0]->state == PARKED){
-						set_signal(BA.B[0]->PSi,AMBER_F_S); //Flashing RED
+						set_signal(BA.B[0]->PSi,SIG_RESTRICTED); //Flashing RED
 					}else if(BN.B[0]->state == AMBER){	//Next block AMBER
-						set_signal(BA.B[0]->PSi,AMBER_S);
+						set_signal(BA.B[0]->PSi,SIG_AMBER);
 					}else{ // //Next block AMBER	if(BN->state == GREEN)
-						set_signal(BA.B[0]->PSi,GREEN_S);
+						set_signal(BA.B[0]->PSi,SIG_GREEN);
 					}
 				}
+			}
+			else if(BA.B[0]->PSi && p == 0){ //If the track stops due to switches, set it to RED / DANGER
+				set_signal(BA.B[0]->NSi,SIG_RED);
 			}
 		/**/
 		/**/
@@ -639,7 +641,7 @@ void procces(struct Seg * B,int debug){
 			if(BA.B[0]->train != 0){
 				//printf("ID: %i\t%i:%i:%i\n",BA->train,BA->Adr.M,BA->Adr.B,BA->Adr.S);
 			}
-			if(debug){
+			if(debug){// || B->Module == 4){
 				if(p > 2){
 					printf("PPP ");
 					for(int i = 1;i>=0;i--){
@@ -741,8 +743,30 @@ void procces(struct Seg * B,int debug){
 					}
 				}
 				//if(i == 0){
-					printf("\n");
+				printf("\n");
 				//}
+				if(BA.B[0]->PSi || BA.B[0]->NSi){
+					if(BA.B[0]->PSi){
+						printf("\t\t\t\t\t\t%i  ",BA.B[0]->PSi->id);
+						uint8_t state = BA.B[0]->PSi->state & 0x7F;
+						if(state == SIG_RED  )printf("RED");
+						if(state == SIG_AMBER)printf("AMBER");
+						if(state == SIG_GREEN)printf("GREEN");
+						if(state == SIG_RESTRICTED)printf("RESTR");
+						printf("\t\t");
+					}else{
+						printf("\t\t\t\t\t\t\t\t\t");
+					}
+					if(BA.B[0]->NSi){
+						printf("\t%i  ",BA.B[0]->NSi->id);
+						uint8_t state = BA.B[0]->NSi->state & 0x7F;
+						if(state == SIG_RED  )printf("RED");
+						if(state == SIG_AMBER)printf("AMBER");
+						if(state == SIG_GREEN)printf("GREEN");
+						if(state == SIG_RESTRICTED)printf("RESTR");
+					}
+					printf("\n\n");
+				}
 			}
 		/**/
 	}

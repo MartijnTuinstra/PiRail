@@ -16,4 +16,10 @@
   struct signal *signals[MAX_A] = {};
 
   struct Unit;
+
+  #define SIG_GREEN      0
+  #define SIG_AMBER      1
+  #define SIG_RED        2
+  #define SIG_RESTRICTED 3
+  #define SIG_CAUTION    4
 #endif

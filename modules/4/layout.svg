@@ -1,11 +1,13 @@
 <svg width='1206' height='168' viewBox='0 -40 1206 168'>
-<g class="BSw0"><path class="L LSwO SwS0o" nr="35" part="CRail" transform="translate(137.35533905933,34.644660940673) rotate(225)" d="M -0.2,0 h 0.2 a 50,50 0,0,0 35.35533905932737,-14.64466094067262 l 0.14142135623730953,-0.1414213562373095" style="fill:none;stroke:lightgrey;stroke-width:6px;"/>
-<line class="L LSwO SwS1o" nr="2" part="RS" transform="translate(102,20) rotate(0)" x1="-0.2" x2="35.56" y2="0" style="fill:none;stroke:lightgrey;stroke-width:6px;opacity:0;"/>
-</g><g class="BSw1"><path class="L LSwO SwS0o" nr="33" part="CRail" transform="translate(172.72,20) rotate(0)" d="M -0.2,0 h 0.2 a 50,50 0,0,0 35.35533905932737,-14.64466094067262 l 0.14142135623730953,-0.1414213562373095" style="fill:none;stroke:lightgrey;stroke-width:6px;"/>
-<line class="L LSwO SwS1o" nr="4" part="RS" transform="translate(172.72,20) rotate(0)" x1="-0.2" x2="35.56" y2="0" style="fill:none;stroke:lightgrey;stroke-width:6px;opacity:0;"/>
-</g><g class="BSw3"><path class="L LSwO SwS0o" nr="32" part="CRail" transform="translate(137.36466094067,34.644639059327) rotate(45)" d="M -0.2,0 h 0.2 a 50,50 0,0,0 35.35533905932737,-14.64466094067262 l 0.14142135623730953,-0.1414213562373095" style="fill:none;stroke:lightgrey;stroke-width:6px;"/>
+	<g class="BSw0">
+		<path class="L LSwO SwS0o" nr="35" part="CRail" transform="translate(137.35533905933,34.644660940673) rotate(225)" d="M -0.2,0 h 0.2 a 50,50 0,0,0 35.35533905932737,-14.64466094067262 l 0.14142135623730953,-0.1414213562373095" style="fill:none;stroke:lightgrey;stroke-width:6px;"/>
+		<line class="L LSwO SwS1o" nr="2" part="RS" transform="translate(102,20) rotate(0)" x1="-0.2" x2="35.56" y2="0" style="fill:none;stroke:lightgrey;stroke-width:6px;opacity:0;"/>
+	</g>
+	<g class="BSw1"><path class="L LSwO SwS0o" nr="33" part="CRail" transform="translate(172.72,20) rotate(0)" d="M -0.2,0 h 0.2 a 50,50 0,0,0 35.35533905932737,-14.64466094067262 l 0.14142135623730953,-0.1414213562373095" style="fill:none;stroke:lightgrey;stroke-width:6px;"/>
+		<line class="L LSwO SwS1o" nr="4" part="RS" transform="translate(172.72,20) rotate(0)" x1="-0.2" x2="35.56" y2="0" style="fill:none;stroke:lightgrey;stroke-width:6px;opacity:0;"/>
+</g><g class="BSw2"><path class="L LSwO SwS0o" nr="32" part="CRail" transform="translate(137.36466094067,34.644639059327) rotate(45)" d="M -0.2,0 h 0.2 a 50,50 0,0,0 35.35533905932737,-14.64466094067262 l 0.14142135623730953,-0.1414213562373095" style="fill:none;stroke:lightgrey;stroke-width:6px;"/>
 <line class="L LSwO SwS1o" nr="8" part="RS" transform="translate(137.36,49.2893) rotate(0)" x1="-0.2" x2="35.56" y2="0" style="fill:none;stroke:lightgrey;stroke-width:6px;opacity:0;"/>
-</g><g class="BSw2"><path class="L LSwO SwS0o" nr="36" part="CRail" transform="translate(208.07533905933,63.933960940673) rotate(225)" d="M -0.2,0 h 0.2 a 50,50 0,0,0 35.35533905932737,-14.64466094067262 l 0.14142135623730953,-0.1414213562373095" style="fill:none;stroke:lightgrey;stroke-width:6px;"/>
+</g><g class="BSw3"><path class="L LSwO SwS0o" nr="36" part="CRail" transform="translate(208.07533905933,63.933960940673) rotate(225)" d="M -0.2,0 h 0.2 a 50,50 0,0,0 35.35533905932737,-14.64466094067262 l 0.14142135623730953,-0.1414213562373095" style="fill:none;stroke:lightgrey;stroke-width:6px;"/>
 <line class="L LSwO SwS1o" nr="9" part="RS" transform="translate(172.72,49.2893) rotate(0)" x1="-0.2" x2="35.56" y2="0" style="fill:none;stroke:lightgrey;stroke-width:6px;opacity:0;"/>
 </g><g class="BSw4"><path class="L LSwO SwS0o" nr="37" part="CRail" transform="translate(208.07533905933,63.933960940673) rotate(45)" d="M -0.2,0 h 0.2 a 50,50 0,0,0 35.35533905932737,-14.64466094067262 l 0.14142135623730953,-0.1414213562373095" style="fill:none;stroke:lightgrey;stroke-width:6px;"/>
 <line class="L LSwO SwS1o" nr="56" part="RS" transform="translate(208.07533905933,63.933960940673) rotate(45)" x1="-0.2" x2="42.2" y2="0" style="fill:none;stroke:lightgrey;stroke-width:6px;opacity:0;"/>
@@ -43,11 +45,11 @@
 <line class="L" nr="12" part="RS" transform="translate(278.8,20) rotate(0)" x1="-0.2" x2="162.2" y2="0" style="fill:none;stroke:#555;stroke-width:6px;"/>
 </g>
 <g class="B13">
-<g class="Sw3 SwGroup">
+<g class="Sw2 SwGroup">
 <line class="L LSw SwS0" nr="8" part="RS" transform="translate(137.36,49.2893) rotate(0)" x1="-0.2" x2="35.56" y2="0" style="fill:none;stroke:#555;stroke-width:6px;"/>
 <path class="L LSw SwS1" nr="32" part="CRail" transform="translate(137.36466094067,34.644639059327) rotate(45)" d="M -0.2,0 h 0.2 a 50,50 0,0,0 35.35533905932737,-14.64466094067262 l 0.14142135623730953,-0.1414213562373095" style="fill:none;stroke:#555;stroke-width:6px;opacity:0;"/>
 </g>
-<g class="Sw2 SwGroup">
+<g class="Sw3 SwGroup">
 <line class="L LSw SwS0" nr="9" part="RS" transform="translate(172.72,49.2893) rotate(0)" x1="-0.2" x2="35.56" y2="0" style="fill:none;stroke:#555;stroke-width:6px;"/>
 <path class="L LSw SwS1" nr="36" part="CRail" transform="translate(208.07533905933,63.933960940673) rotate(225)" d="M -0.2,0 h 0.2 a 50,50 0,0,0 35.35533905932737,-14.64466094067262 l 0.14142135623730953,-0.1414213562373095" style="fill:none;stroke:#555;stroke-width:6px;opacity:0;"/>
 </g>

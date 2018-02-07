@@ -14,23 +14,34 @@ void Create_Unit2(int Module,int OUT,int IN){
 
 	Units[Module] = Z;
 
-	struct Rail_link * A = (struct Rail_link*)calloc( IN,sizeof(struct Rail_link));
-	struct Rail_link * B = (struct Rail_link*)calloc(OUT,sizeof(struct Rail_link));
+	struct Rail_link ** A = (struct Rail_link**)calloc( IN,sizeof(struct Rail_link));
+	struct Rail_link ** B = (struct Rail_link**)calloc(OUT,sizeof(struct Rail_link));
+
+	Z->B_L = 8;
+	Z->B = (struct Seg **)calloc(Z->B_L,sizeof(struct Seg *));
+
+	Z->S_L = 8;
+	Z->S = (struct Swi **)calloc(Z->S_L,sizeof(struct Swi *));
+
+	for(int i = 0;i<MAX_Blocks*MAX_Segments;i++){
+		Z->M[i] = 0;
+		Z->Signals[i] = 0;
+	}
 
 	Z->In_length = IN;
 	Z->In = A;
 	Z->Out_length = OUT;
 	Z->Out = B;
 	IN--;OUT--;//To make the division round down;
-	Z->InRegs = (uint8_t *)malloc((IN/8)+1);
-	Z->OutRegs = (uint8_t *)malloc((OUT/8)+1);
+	Z->InRegs    = (uint8_t *)malloc(( IN/8)+1);
+	Z->OutRegs   = (uint8_t *)malloc((OUT/8)+1);
 	Z->BlinkMask = (uint8_t *)malloc((OUT/8)+1);
 }
 
 void join(struct SegC Adr, struct SegC link){
 	printf("LINK %c%i:%i => %c%i:%i\t",Adr.type,Adr.Module,Adr.Adr,link.type,link.Module,link.Adr);
-	if(Adr.type == 'R' && blocks2[Adr.Module][Adr.Adr]){
-		blocks2[Adr.Module][Adr.Adr]->PrevC = link;
+	if(Adr.type == 'R' && Units[Adr.Module]->B[Adr.Adr]){
+		Units[Adr.Module]->B[Adr.Adr]->PrevC = link;
 		printf("D\n");
 	}else if(Adr.type == 'S'){
 		Switch2[Adr.Module][Adr.Adr]->AppC = link;
@@ -44,38 +55,52 @@ void join(struct SegC Adr, struct SegC link){
 }
 
 void clear_Modules(){
-	free(blocks2);
-	free(switches2);
 
 	for(int i = 0;i<MAX_Modules;i++){
 	  if(Units[i]){
-	  	printf("Clearing module %i",i);
+	  	printf("Clearing module %i\n",i);
 	    //clear Rail_link
+	    printf("- Rail link out\n");
 	    free(Units[i]->Out);
+	    Units[i]->Out = NULL;
+	    printf("- Rail link in\n");
 	    free(Units[i]->In);
+	    Units[i]->In = NULL;
 
 	    //clear Segments
-	    for(int j = 0;j<Units[i]->B_nr;j++){
+	    for(int j = 0;j<=Units[i]->B_nr;j++){
+	      printf("- Block %i\n",j);
 	      free(Units[i]->B[j]);
+	      Units[i]->B[j] = NULL;
 	    }
 	    //clear Switches
-	    for(int j = 0;j<Units[i]->B_nr;j++){
-	      free(Units[i]->Sw[j]);
+	    for(int j = 0;j<=Units[i]->Swi_nr;j++){
+	    	printf("- Switch %i\n",j);
+	      free(Units[i]->S[j]);
+	      Units[i]->S[j] = NULL;
 	    }
 	    //clear Mods
-	    for(int j = 0;j<Units[i]->B_nr;j++){
+	    for(int j = 0;j<=Units[i]->Mod_nr;j++){
+	    	printf("- Mod %i\n",j);
 	      free(Units[i]->M[j]);
+	      Units[i]->M[j] = NULL;
 	    }
 	    //clear Signals
-	    for(int j = 0;j<Units[i]->B_nr;j++){
+	    for(int j = 0;j<=Units[i]->Signal_nr;j++){
+	    	printf("- Signal %i\n",j);
 	      free(Units[i]->Signals[j]);
+	      Units[i]->Signals[j] = NULL;
 	    }
 	    //clear Stations
-	    for(int j = 0;j<Units[i]->B_nr;j++){
+	    for(int j = 0;j<=Units[i]->Station_nr;j++){
+	    	printf("- Station %i\n",j);
 	      free(Units[i]->St[j]);
+	      Units[i]->St[j] = NULL;
 	    }
 
+	    printf("- Unit %i\n",i);
 	    free(Units[i]);
+	    Units[i] = 0;
 	    printf("\t Cleared!\n");
 	  }
 	}
@@ -381,18 +406,19 @@ struct link Modules(int m, struct link IN){
 			//All type 2 signals
 			//NSignals
 
-			short adr[3] = {0,1,2};
+			uint8_t adr[3] = {0,1,2};
+			struct Seg ** block_id = Units[m]->B;
 			char b[BLOCK_STATES] = {1,2,4}; /*GREEN,AMBER,RED,BLOCKED,PARKED,RESERVED,UNKNOWN 6*/
 			char c[BLOCK_STATES] = {1,0,0};
 
-			create_signal2(blocks2[m][2],3,adr,b,c,0);
+			create_signal2(block_id[2],3,adr,b,c,0);
 
 			memset(adr,0,3);memset(b,0,BLOCK_STATES);memset(c,0,BLOCK_STATES);
 			adr[0] = 3;adr[1] = 4;adr[2] = 5;
 			b[0] = 1;b[1] = 2;b[2] = 4; /*GREEN,AMBER,RED,BLOCKED,PARKED,RESERVED,UNKNOWN 6*/
 			c[0] = 1;c[1] = 0;c[2] = 0;
 
-			create_signal2(blocks2[m][6],3,adr,b,c,0);
+			create_signal2(block_id[6],3,adr,b,c,0);
 
 
 			memset(adr,0,3);memset(b,0,BLOCK_STATES);memset(c,0,BLOCK_STATES);
@@ -400,21 +426,21 @@ struct link Modules(int m, struct link IN){
 			b[0] = 1;b[1] = 2;b[2] = 4; /*GREEN,AMBER,RED,BLOCKED,PARKED,RESERVED,UNKNOWN 6*/
 			c[0] = 1;c[1] = 0;c[2] = 0;
 
-			create_signal2(blocks2[m][17],3,adr,b,c,0);
+			create_signal2(block_id[17],3,adr,b,c,0);
 
 			memset(adr,0,3);memset(b,0,BLOCK_STATES);memset(c,0,BLOCK_STATES);
 			adr[0] = 19;adr[1] = 20;adr[2] = 21;
 			b[0] = 1;b[1] = 2;b[2] = 4; /*GREEN,AMBER,RED,BLOCKED,PARKED,RESERVED,UNKNOWN 6*/
 			c[0] = 1;c[1] = 0;c[2] = 0;
 
-			create_signal2(blocks2[m][21],3,adr,b,c,0);
+			create_signal2(block_id[21],3,adr,b,c,0);
 
 			memset(adr,0,3);memset(b,0,BLOCK_STATES);memset(c,0,BLOCK_STATES);
 			adr[0] = 22;adr[1] = 23;adr[2] = 24;
 			b[0] = 1;b[1] = 2;b[2] = 4; /*GREEN,AMBER,RED,BLOCKED,PARKED,RESERVED,UNKNOWN 6*/
 			c[0] = 1;c[1] = 0;c[2] = 0;
 
-			create_signal2(blocks2[m][25],3,adr,b,c,0);
+			create_signal2(block_id[25],3,adr,b,c,0);
 
 			//PSignals
 
@@ -423,21 +449,21 @@ struct link Modules(int m, struct link IN){
 			b[0] = 1;b[1] = 2;b[2] = 4; /*GREEN,AMBER,RED,BLOCKED,PARKED,RESERVED,UNKNOWN 6*/
 			c[0] = 0;c[1] = 0;c[2] = 0;
 
-			create_signal2(blocks2[m][14],3,adr,b,c,1);
+			create_signal2(block_id[14],3,adr,b,c,1);
 
 			memset(adr,0,3);memset(b,0,BLOCK_STATES);memset(c,0,BLOCK_STATES);
 			adr[0] = 10;adr[1] = 11;adr[2] = 12;
 			b[0] = 1;b[1] = 2;b[2] = 4; /*GREEN,AMBER,RED,BLOCKED,PARKED,RESERVED,UNKNOWN 6*/
 			c[0] = 0;c[1] = 0;c[2] = 0;
 
-			create_signal2(blocks2[m][18],3,adr,b,c,1);
+			create_signal2(block_id[18],3,adr,b,c,1);
 
 			memset(adr,0,3);memset(b,0,BLOCK_STATES);memset(c,0,BLOCK_STATES);
 			adr[0] = 13;adr[1] = 14;adr[2] = 15;
 			b[0] = 1;b[1] = 2;b[2] = 4; /*GREEN,AMBER,RED,BLOCKED,PARKED,RESERVED,UNKNOWN 6*/
 			c[0] = 0;c[1] = 0;c[2] = 0;
 
-			create_signal2(blocks2[m][22],3,adr,b,c,1);
+			create_signal2(block_id[22],3,adr,b,c,1);
 		//
 		/*One Way*/
 			Units[m]->B[0]->oneWay = TRUE;

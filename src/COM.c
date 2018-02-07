@@ -101,18 +101,21 @@ char * COM_Send(struct COM_t DATA){
 }
 
 int COM_Recv(char * OUT_Data){
-	//printf(buf);
-	//return buf;
+	//Check if the filestream is open
 	if(uart0_filestream == -1){
 		return;
 	}
-  unsigned char data_buffer[256] = {0};
 	int index = 0;
+
+	//Create buffer and clear it
+	unsigned char data_buffer[256] = {0};
 	memset(data_buffer,0,256);
-  while(1){
+	while(1){
 		// Read up to 255 characters from the port if they are there
-    unsigned char rx_buffer[255];
-		int rx_length = read(uart0_filestream, (void*)rx_buffer, 255);		//Filestream, buffer to store in, number of bytes to read (max)
+    	unsigned char rx_buffer[255];
+
+    	//Filestream, buffer to store in, number of bytes to read (max)
+		int rx_length = read(uart0_filestream, (void*)rx_buffer, 255);
 		if (rx_length < 0)
 		{
 			//An error occured (will occur if there are no bytes)
@@ -123,8 +126,8 @@ int COM_Recv(char * OUT_Data){
 		}
 		else if (rx_length == 8)
 		{
-      rx_buffer[rx_length] = '\0';
-      //printf("%i bytes read : %s\n", rx_length, rx_buffer);
+			rx_buffer[rx_length] = '\0';
+			//printf("%i bytes read : %s\n", rx_length, rx_buffer);
 			for(int i = 0;i<8;i++){
 				data_buffer[index++] = rx_buffer[i];
 			}
@@ -137,7 +140,7 @@ int COM_Recv(char * OUT_Data){
 			for(int i = 0;i<rx_length;i++){
 				data_buffer[index++] = rx_buffer[i];
 			}
-      break;
+			break;
 		}
 		return index;
   }
@@ -210,54 +213,203 @@ void COM_change_A_signal(int M){
 	}
 }
 
-void COM_change_A_switch(int M){
-	if (uart0_filestream != -1){
+void COM_set_Output(int M){
+	uint8_t * OutRegs   = (uint8_t *)malloc(((Units[M]->Out_length-1)/8)+1);
+	uint8_t * BlinkMask = (uint8_t *)malloc(((Units[M]->Out_length-1)/8)+1);
+	uint8_t * PulseMask = (uint8_t *)malloc(((Units[M]->Out_length-1)/8)+1);
+	char Out = 0,Blink = 0,Pulse = 0;
+	uint8_t byte,offset;
 
-		struct COM_t C;
-		memset(C.Data,0,32);
-		C.Adr = M;
-		C.Opcode = 0b0111;
-
-		int nr_signals = Units[M]->S_L;
-
-		int location = 0;
-		int position = 0;
-		int Switch_Adr = 0;
-		int empty = 0;
-
-		for(int i = 0;i<=nr_signals;i++){
-			if(Units[M]->S[i] != NULL){
-				printf("Switch found on 0%o\tlocation: %i\tPosition %i\n",Units[M]->S[i]->UAdr,location+2,position);
-				if(Units[M]->S[i]->state == 0){
-					C.Data[location] += 1 << position;
-				}else{
-					C.Data[location] += 2 << position;
-				}
-				position += 2;
-			}else{
-				printf("No Switch\t\tlocation: %i\tPosition %i\n",location+2,position);
-				position += 2;
-				empty++;
+	for(int i = 0;i<Units[M]->S_L;i++){
+		for(int j = 0;j<Units[M]->Signals[i]->length;j++){
+			byte   = Units[M]->Signals[i]->adr[Units[M]->Signals[i]->state&0x3F] / 8;
+			offset = Units[M]->Signals[i]->adr[Units[M]->Signals[i]->state&0x3F] % 8;
+			if(Units[M]->Signals[i]->states[Units[M]->Signals[i]->state&0x3F] == (1 << j)){
+				OutRegs[byte] |= (1 << offset);
+				Out++;
 			}
+			if(Units[M]->Signals[i]->flash[Units[M]->Signals[i]->state&0x3F] == (1 << j)){
+				BlinkMask[byte] |= (1 << offset);
+				Blink++;
+			}
+			Units[M]->Signals[i]->state &= 0x3F;
+		}
+	}
 
-			if(position >= 7){
-				position = 0;
-				if(empty != 4){
-					location++;
-					Switch_Adr++;
+	for(int i = 0;i<Units[M]->Swi_nr;i++){
+		//for(int j = 0;j<Units[M]->S[i]->length;j++){
+		if(Units[M]->S[i]->len & 0xC0 == 0){ //Pulse Address
+			Units[M]->S[i]->state &= 0x3F;
+			byte   = Units[M]->S[i]->Out[Units[M]->S[i]->state & 0x3F] / 8;
+			offset = Units[M]->S[i]->Out[Units[M]->S[i]->state & 0x3F] % 8;
+			PulseMask[byte] |= (1 << offset);
+			Pulse++;
+		}else if(Units[M]->S[i]->len & 0xC0 == 0x40){// Hold a single Address--------------------------------------------------------------------------- Roadmap: Toggle outputs, pulse multiple
+			Units[M]->S[i]->state &= 0x3F;
+			byte   = Units[M]->S[i]->Out[Units[M]->S[i]->state & 0x3F] / 8;
+			offset = Units[M]->S[i]->Out[Units[M]->S[i]->state & 0x3F] % 8;
+			OutRegs[byte] |= (1 << offset);
+			Out++;
+		}
+	}
+
+	if(Out > 0){
+		printf("Set All Out Addresses:\n");
+		struct COM_t TxPacket;
+		TxPacket.data[0] = 0x14;
+		TxPacket.data[1] = (Units[M]->Out_length/8)+4;
+		for(int i = 0;i<(Units[M]->Out_length/8)+1;i++){
+			TxPacket.data[2+i] = OutRegs[i];
+		}
+		for(int i = 0;i<(Units[M]->Out_length/8)+4;i++){
+			printf("%02X ",TxPacket.data[i]);
+		}
+		printf("\n");
+		memcpy(Units[M]->OutRegs,OutRegs,((Units[M]->Out_length-1)/8)+1);
+	}
+	if(Blink > 0){
+		printf("Set Blink Mask:\n");
+		struct COM_t TxPacket;
+		TxPacket.data[0] = 0x15;
+		TxPacket.data[1] = (Units[M]->Out_length/8)+4;
+		for(int i = 0;i<(Units[M]->Out_length/8)+1;i++){
+			TxPacket.data[2+i] = BlinkMask[i];
+		}
+		for(int i = 0;i<(Units[M]->Out_length/8)+4;i++){
+			printf("%02X ",TxPacket.data[i]);
+		}
+		printf("\n");
+		memcpy(Units[M]->BlinkMask,BlinkMask,((Units[M]->Out_length-1)/8)+1);
+	}
+	if(Pulse > 0){
+		printf("Set Pulse Mask: \n");
+
+	}
+}
+
+void COM_change_Output(int M){
+	uint8_t * OutRegs   = (uint8_t *)malloc(((Units[M]->Out_length-1)/8)+1);
+	uint8_t * BlinkMask = (uint8_t *)malloc(((Units[M]->Out_length-1)/8)+1);
+	uint8_t * PulseMask = (uint8_t *)malloc(((Units[M]->Out_length-1)/8)+1);
+
+	memcpy(OutRegs  ,Units[M]->OutRegs  ,((Units[M]->Out_length-1)/8)+1);
+	memcpy(BlinkMaks,Units[M]->BlinkMask,((Units[M]->Out_length-1)/8)+1);
+
+	char Out = 0,Blink = 0,Pulse = 0;
+
+	uint8_t * PulseAdr = (uint8_t *)malloc(1);
+	uint8_t * BlinkAdr = (uint8_t *)malloc(1);
+	uint8_t * ToggleAdr = (uint8_t *)malloc(1);
+
+	uint8_t byte,offset;
+
+	for(int i = 0;i<Units[M]->S_L;i++){
+		for(int j = 0;j<Units[M]->Signals[i]->length;j++){
+			if(Units[M]->Signals[i]->state & 0x80){ //If output needs to be updated
+				Units[M]->Signals[i]->state &= 0x3F; //Output state is updated
+
+				byte   = Units[M]->Signals[i]->adr[Units[M]->Signals[i]->state] / 8;
+				offset = Units[M]->Signals[i]->adr[Units[M]->Signals[i]->state] % 8;
+
+				if(Units[M]->Signals[i]->states[Units[M]->Signals[i]->state] == (1 << j)){
+					//Enable Output
+					if(!(OutRegs[byte] & (1<<offset))){
+						//if output is not enabled yet, add to address list
+						ToggleAdr[Toggle] = Units[M]->Signals[i]->adr[Units[M]->Signals[i]->state];
+						Toggle++;
+						ToggleAdr = realloc(ToggleAdr,Toggle+1);
+					}
+
+					OutRegs[byte] |= (1 << offset);
+				}else{
+					//Disable Output
+					if((OutRegs[byte] & (1<<offset))){
+						//if output is still enabled, add to address list
+						ToggleAdr[Toggle] = Units[M]->Signals[i]->adr[Units[M]->Signals[i]->state];
+						Toggle++;
+						ToggleAdr = realloc(ToggleAdr,Toggle+1);
+					}
+
+					OutRegs[byte] |= (1 << offset);
 				}
-				empty = 0;
+				if(Units[M]->Signals[i]->flash[Units[M]->Signals[i]->state] == (1 << j)){
+					//Enable blink
+					if(!(OutRegs[byte] & (1<<offset))){
+						//if blink is not enabled yet, add to address list to enable
+						BlinkAdr[Blink] = Units[M]->Signals[i]->adr[Units[M]->Signals[i]->state];
+						Blink++;
+						BlinkAdr = realloc(BlinkAdr,Blink+1);
+					}
+
+					OutRegs[byte] |= (1 << offset);
+				}else{
+					//Disable Output
+					if((OutRegs[byte] & (1<<offset))){
+						//if blink is still enabled, add to address list to disable
+						BlinkAdr[Blink] = Units[M]->Signals[i]->adr[Units[M]->Signals[i]->state];
+						Blink++;
+						BlinkAdr = realloc(BlinkAdr,Blink+1);
+					}
+
+					OutRegs[byte] |= (1 << offset);
+				}
+				
 			}
 		}
+	}
 
-		Switch_Adr += 1;
+	for(int i = 0;i<Units[M]->Swi_nr;i++){
+		//for(int j = 0;j<Units[M]->S[i]->length;j++){
+		if(Units[M]->S[i]->len & 0xC0 == 0){ //Pulse Address
+			if(Units[M]->S[i]->state & 0x80){
+				Units[M]->S[i]->state &= 0x3F;
+				byte   = Units[M]->S[i]->Out[Units[M]->S[i]->state & 0x3F] / 8;
+				offset = Units[M]->S[i]->Out[Units[M]->S[i]->state & 0x3F] % 8;
+				PulseMask[byte] |= (1 << offset);
+				Pulse++;
+			}
+		}else if(Units[M]->S[i]->len & 0xC0 == 0x40){// Hold a single Address--------------------------------------------------------------------------- Roadmap: Toggle outputs, pulse multiple
+			if(Units[M]->S[i]->state & 0x80){
+				Units[M]->S[i]->state &= 0x3F;
+				byte   = Units[M]->S[i]->Out[Units[M]->S[i]->state & 0x3F] / 8;
+				offset = Units[M]->S[i]->Out[Units[M]->S[i]->state & 0x3F] % 8;
+				OutRegs[byte] |= (1 << offset);
+				Out++;
+			}
+		}
+	}
 
-		//printf("out[1]=%i\t%i bytes Signals\t%i\n",out[1],Signal_Adr,Signal_Adr << 4);
-		C.Length = Switch_Adr;
+	if(Out > 0){
+		printf("Set All Out Addresses:\n");
+		struct COM_t TxPacket;
+		TxPacket.data[0] = 0x14;
+		TxPacket.data[1] = (Units[M]->Out_length/8)+4;
+		for(int i = 0;i<(Units[M]->Out_length/8)+1;i++){
+			TxPacket.data[2+i] = OutRegs[i];
+		}
+		for(int i = 0;i<(Units[M]->Out_length/8)+4;i++){
+			printf("%02X ",TxPacket.data[i]);
+		}
+		printf("\n");
+		memcpy(Units[M]->OutRegs,OutRegs,((Units[M]->Out_length-1)/8)+1);
+	}
+	if(Blink > 0){
+		printf("Set Blink Mask:\n");
+		struct COM_t TxPacket;
+		TxPacket.data[0] = 0x15;
+		TxPacket.data[1] = (Units[M]->Out_length/8)+4;
+		for(int i = 0;i<(Units[M]->Out_length/8)+1;i++){
+			TxPacket.data[2+i] = BlinkMask[i];
+		}
+		for(int i = 0;i<(Units[M]->Out_length/8)+4;i++){
+			printf("%02X ",TxPacket.data[i]);
+		}
+		printf("\n");
+		memcpy(Units[M]->BlinkMask,BlinkMask,((Units[M]->Out_length-1)/8)+1);
+	}
+	if(Pulse > 0){
+		printf("Set Pulse Mask: \n");
 
-		pthread_mutex_lock(&mutex_UART);
-		COM_Send(C);
-		pthread_mutex_unlock(&mutex_UART);
 	}
 }
 
@@ -338,68 +490,55 @@ void COM_change_signal(struct signal * Si){
 	}
 }
 
-void COM_change_switch(struct Swi * S){
+void COM_change_switch(int M){
+	printf("COM_change_swit");
 	if (uart0_filestream != -1){
-		int M = S->Module;
+		printf("ch\n");
+		uint8_t * PulseAdr = (uint8_t *)malloc(1);
+		uint8_t * ToggleAdr = (uint8_t *)malloc(1);
+		char Pulse = 0, Toggle = 0;
+		uint8_t byte,offset;	
 
-		int nr_signals = Units[M]->Swi_nr;
-
-		char out[15];
-
-		memset(out,0,15);
-
-		out[0] = M;
-		out[1] = 0b101000;
-
-		int location = 0;
-		int position = 0;
-		int Signal_Adr = 0;
-		int empty = 0;
-		int loc = -1;
-		char data;
-
-		printf("Finding Signal 0%o\n",S->UAdr);
-
-		for(int i = 0;i<=nr_signals;i++){
-			if(Units[M]->S[i] != NULL){
-				printf("Switch found on 0%o\tlocation: %i\tPosition %i\n",Units[M]->S[i]->UAdr,location+2,position);
-				if(Units[M]->S[i]->UAdr == S->UAdr){
-					loc = location;
+		for(int i = 0;i<Units[M]->Swi_nr;i++){
+			//for(int j = 0;j<Units[M]->S[i]->length;j++){
+			printf("Switch: %i\t",Units[M]->S[i]->id);
+			if((Units[M]->S[i]->len & 0xC0) == 0){ //Pulse One Addresses
+				printf("P%x\t",Units[M]->S[i]->state);
+				if((Units[M]->S[i]->state & 0x80) > 0){
+					Units[M]->S[i]->state &= 0x3F;
+					PulseAdr[Pulse] = Units[M]->S[i]->Out[Units[M]->S[i]->state];
+					Pulse++;
+					PulseAdr = realloc(PulseAdr,Pulse+1);
 				}
-				if(Units[M]->S[i]->state == 0){
-					out[2+location] += 1 << position;
-				}else{
-					out[2+location] += 2 << position;
-				}
-				position += 2;
 			}else{
-				printf("No Switch\t\tlocation: %i\tPosition %i\n",location+2,position);
-				position += 2;
-				empty++;
-			}
-
-			if(position >= 7){
-				position = 0;
-				if(empty != 4){
-					location++;
-					Signal_Adr++;
-				}
-				if(loc != -1){
-					break;
-				}
-				empty = 0;
-			}
+				printf("Weird Length bit\n")	;
+			}// --------------------------------------------------------------------------- Roadmap: Toggle outputs, pulse multiple
+			printf("\n");
 		}
 
-		out[3] = out[loc+2];
-		out[2] = loc;
+		printf("%i addresses\n",Pulse);
+		
+		struct COM_t TxPacket;
+		if(Pulse == 1){
+			TxPacket.data[0] = 0x11;
+		}else if(Pulse > 1){
+			TxPacket.data[0] = 0x14;
+		}else{
+			return;
+		}
+		TxPacket.data[1] = Pulse+3;
+		for(int i = 0;i<Pulse;i++){
+			TxPacket.data[i+2] = PulseAdr[i];
+		}
 
-		printf("Sending: [%i][%i]",out[0],out[1]);
-		for(int i = 0;i<2;i++){
-			printf("[%i]",out[i+2]);
+		printf("Sending: ");
+		for(int i = 0;i<(TxPacket.data[1]-1);i++){
+			printf("%02X ",TxPacket.data[i]);
 		}
 		printf("\n\n");
-		int count = write(uart0_filestream, &out[0], 4);		//Filestream, bytes to write, number of bytes to write*
+		//Send via UART and get send bytes back
+		int count = write(uart0_filestream, TxPacket.data, TxPacket.data[1]-1);
+		//Check if all bytes were send
 	}
 }
 

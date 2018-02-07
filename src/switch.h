@@ -25,9 +25,11 @@
 		struct SegC StrC;
 		struct SegC AppC;
 
-		char state;	//0 = Straight, 1 = Diverging
+		char state;	//0 = Straight, 1 = Diverging / 0x80 is change bit
 		char len;
-		char UAdr;
+
+		char UAdr; //Unit Address
+		char Out[5]; //Output Addresses
 
 		struct Seg * Detection_Block;
 

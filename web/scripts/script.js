@@ -446,7 +446,7 @@ function switch_update(data){
 
     $('.LSw,.LSwO',SwitchGroup).css("opacity",0);
     $('.LSw,.LSwO',SwitchGroupB).css("opacity",0);
-
+ 
     $('.SwS'+state    ,SwitchGroup).css("opacity",1);
     $('.SwS'+state+'o',SwitchGroupB).css("opacity",1);
 

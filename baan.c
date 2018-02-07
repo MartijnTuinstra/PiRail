@@ -326,7 +326,7 @@ void JSON_new_client(int Client_fd){
 					if(S){
 						buf[(q-1)*3+1] = S->Module;
 						buf[(q-1)*3+2] = S->id;
-						buf[(q-1)*3+3] = S->state;
+						buf[(q-1)*3+3] = S->state & 0x7F;
 						printf(",%i,%i,%i",S->Module,S->id,S->state);
 						q++;
 					}
@@ -514,7 +514,7 @@ void do_once_Magic(){
 		}
 	}
 	COM_change_A_signal(4);
-	COM_change_A_switch(4);
+	COM_change_switch(4);
 	JSON();
 	pthread_mutex_unlock(&mutex_lockA);
 }
@@ -687,7 +687,7 @@ void main(){
 	printf("                              STARTUP COMPLETE\n\n\n");
 
 	//Set all Switches and Signals to known positions
-	//do_once_Magic();
+	do_once_Magic();
 	//procces(blocks2[2][0],1);
 	//procces(blocks2[2][1],1);
 	//procces(blocks2[2][2],1);
@@ -992,6 +992,7 @@ void main(){
 	if (line)
         	free(line);
 */
+	clear_Modules();
 	//Done with setup when there is at least one client
 	if(connected_clients == 0){
 		printf("                   Waiting until for a client connects\n");

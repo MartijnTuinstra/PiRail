@@ -53,6 +53,7 @@ void create_signal2(struct Seg * B,char adr_nr, short addresses[adr_nr], char st
 
   Z->MAdr = B->Module;
   Z->type = 1;
+  Z->length = adr_nr;
 
   for(char i = 0;i<adr_nr;i++){
     if(Units[Z->MAdr]->Out_length < addresses[i]){

@@ -14,8 +14,8 @@
 #ifndef t_Unit
   #define t_Unit
   struct Unit{
-  	int B_L; //NR of Block list IDs;
-  	int S_L; //NR of Block list IDs;
+  	int B_L;  //NR of Block list IDs;
+  	int S_L;  //NR of Block list IDs;
   	int Si_L; //NR of Block list IDs;
 
   	_Bool Sig_change;
@@ -25,6 +25,10 @@
 
     struct Rail_link * Out;
     struct Rail_link * In;
+
+    uint8_t *BlinkMask;
+    uint8_t *OutRegs;
+    uint8_t  *InRegs;
 
   	struct Seg * B[MAX_Blocks*MAX_Segments];
   	struct Swi * S[MAX_Blocks*MAX_Segments];
@@ -36,4 +40,6 @@
   };
 
   struct Unit *Units[MAX_Modules];
+
+  void clear_Modules(){}
 #endif

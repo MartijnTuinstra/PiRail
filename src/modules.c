@@ -1,3 +1,4 @@
+
 #ifndef t_Unit
 	#include "./modules.h"
 #endif
@@ -20,6 +21,10 @@ void Create_Unit2(int Module,int OUT,int IN){
 	Z->In = A;
 	Z->Out_length = OUT;
 	Z->Out = B;
+	IN--;OUT--;//To make the division round down;
+	Z->InRegs = (uint8_t *)malloc((IN/8)+1);
+	Z->OutRegs = (uint8_t *)malloc((OUT/8)+1);
+	Z->BlinkMask = (uint8_t *)malloc((OUT/8)+1);
 }
 
 void join(struct SegC Adr, struct SegC link){
@@ -35,6 +40,44 @@ void join(struct SegC Adr, struct SegC link){
 		}else{
 			Switch2[Adr.Module][Adr.Adr]->StrC = link;
 		}
+	}
+}
+
+void clear_Modules(){
+	free(blocks2);
+	free(switches2);
+
+	for(int i = 0;i<MAX_Modules;i++){
+	  if(Units[i]){
+	  	printf("Clearing module %i",i);
+	    //clear Rail_link
+	    free(Units[i]->Out);
+	    free(Units[i]->In);
+
+	    //clear Segments
+	    for(int j = 0;j<Units[i]->B_nr;j++){
+	      free(Units[i]->B[j]);
+	    }
+	    //clear Switches
+	    for(int j = 0;j<Units[i]->B_nr;j++){
+	      free(Units[i]->Sw[j]);
+	    }
+	    //clear Mods
+	    for(int j = 0;j<Units[i]->B_nr;j++){
+	      free(Units[i]->M[j]);
+	    }
+	    //clear Signals
+	    for(int j = 0;j<Units[i]->B_nr;j++){
+	      free(Units[i]->Signals[j]);
+	    }
+	    //clear Stations
+	    for(int j = 0;j<Units[i]->B_nr;j++){
+	      free(Units[i]->St[j]);
+	    }
+
+	    free(Units[i]);
+	    printf("\t Cleared!\n");
+	  }
 	}
 }
 

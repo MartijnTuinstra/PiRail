@@ -12,8 +12,8 @@ char * InputRegs, *NInputRegs, * OutputRegs, * BlinkMask, *PulseMask;
 char activatePulse;
 char blink_EN=0;
 
-int latchPinOut = 9;
-int dataLoad = A1, latchPinIn = A0;
+int latchPinOut = 3;
+int dataLoad = A2, latchPinIn = A0;
 
 #define PULSE_WIDTH_USEC   5
 
@@ -30,12 +30,12 @@ void setup(){
   pinMode(13,OUTPUT );
 
   /*First Boot*/
-  if(EEPROM.read(0) == 0){
-    EEPROM.write(0,1);
+  if(EEPROM.read(0) == 1){
+    EEPROM.write(0,0);
 
-    //EEPROM.write(1,6); //Address 32
+    //EEPROM.write(1,32); //Address 32
 
-    EEPROM.write(2,1); //1 Input  Registers
+    EEPROM.write(2,2); //1 Input  Registers
     EEPROM.write(3,1); //1 Output Register
 
     EEPROM.write(4,70); //Blink interval scaler
@@ -76,7 +76,7 @@ void setup(){
 
 
   //RX is stand. 8 and TX is 7, Duplex pin 5
-  RailNet.init(7,5);
+  //RainNet.init(7,5);
 
   //Empty packets
   memset(RxPacket->data,16,0);
@@ -116,7 +116,7 @@ void setup(){
   delay(2*DevID);
   TxPacket.data[0] = RN_OPC_REPORT_ID;
   TxPacket.data[1] = DevID;
-  RailNet.send(&TxPacket);
+  //RainNet.send(&TxPacket);
   Serial.print("My address is: 0x");
   Serial.println(DevID,HEX);
   delay(200-2*DevID);
@@ -132,7 +132,7 @@ RN_STATUS RN_status;
 
 void loop(){
   // Check for any received LocoNet packets
-  if( RailNet.available() && (RxPacket = RailNet.receive()) != 0)
+  /*if( //RainNet.available() && (RxPacket = //RainNet.receive()) != 0)
   {
     if(proccess_packet(RxPacket)){
       digitalWrite(latchPinOut, LOW);
@@ -143,7 +143,7 @@ void loop(){
       digitalWrite(latchPinOut, HIGH);
       printRegs();
     }
-  }
+  }*/
   
   //Executes on a interval of 'blink_interval'
   if(step()){
@@ -201,14 +201,14 @@ void loop(){
       }
     }
     
-    //printRegs();
+    printRegs();
     Serial.println("Step");
     if(DevID != 32){
       TxPacket.data[0] = RN_OPC_P_S_OUT;
       TxPacket.data[1] = 0x20; //Target DevID
       TxPacket.data[2] = 0x01; //Address Low
       TxPacket.data[3] = 0x00; //Address High
-      RailNet.send(&TxPacket);
+      //RainNet.send(&TxPacket);
     }
   }
   //Executes on a interval of 'blink_interval'
@@ -293,7 +293,7 @@ void printRegs(){
   for(int i = 0;i<OutputRegisters;i++){
     printBits(PulseMask[i]);
   }
-  Serial.println();Serial.println();/*
+  Serial.println();Serial.println();
   Serial.print("In:    ");
   for(int i = 0;i<InputRegisters;i++){
     printBits(InputRegs[i]);
@@ -303,7 +303,7 @@ void printRegs(){
   for(int i = 0;i<InputRegisters;i++){
     printBits(NInputRegs[i]);
   }
-  Serial.println();Serial.println();Serial.println();*/
+  Serial.println();Serial.println();Serial.println();
 }
 
 char proccess_packet(lnMsg * RxPacket){
@@ -408,7 +408,7 @@ char proccess_packet(lnMsg * RxPacket){
       for(int i = 0;i<OutputRegisters;i++){
         TxPacket.data[i+2] = OutputRegs[i];
       }
-      RailNet.send(&TxPacket);
+      //RainNet.send(&TxPacket);
     }
   }else if(Opcode == 0x4C){ //Request Read input
     debug("Request Read All output");
@@ -420,7 +420,7 @@ char proccess_packet(lnMsg * RxPacket){
       for(int i = 0;i<InputRegisters;i++){
         TxPacket.data[i+2] = InputRegs[i];
       }
-      RailNet.send(&TxPacket);
+      //RainNet.send(&TxPacket);
     }
   }*/
   //SETUP
@@ -429,7 +429,7 @@ char proccess_packet(lnMsg * RxPacket){
       DevID = RxPacket->data[2];
       EEPROM.write(1,DevID);
 
-      RailNet.sendAck(DevID);
+      //RainNet.sendAck(DevID);
     }
   }else if(Opcode == 0x51){ //input and output regs
     if(RxPacket->data[1] == DevID){
@@ -442,28 +442,28 @@ char proccess_packet(lnMsg * RxPacket){
       BlinkMask  = (uint8_t *)realloc(BlinkMask,OutputRegisters);
       PulseMask  = (uint8_t *)realloc(PulseMask,OutputRegisters);
       
-      RailNet.sendAck(DevID);
+      //RainNet.sendAck(DevID);
     }
   }else if(Opcode == 0x52){ //blink interval
     if(RxPacket->data[1] == DevID){
       blink_interval = RxPacket->data[2];
       EEPROM.write(4,blink_interval);
       
-      RailNet.sendAck(DevID);
+      //RainNet.sendAck(DevID);
     }
   }else if(Opcode == 0x53){ //pulse interval
     if(RxPacket->data[1] == DevID){
       pulse_interval = RxPacket->data[2] * 10;
       EEPROM.write(5,RxPacket->data[2]);
       
-      RailNet.sendAck(DevID);
+      //RainNet.sendAck(DevID);
     }
   }else if(Opcode == 0x54){ //pulse interval
     if(RxPacket->data[1] == DevID){
       pulse_interval = RxPacket->data[2] * 10;
       EEPROM.write(5,RxPacket->data[2]);
       
-      RailNet.sendAck(DevID);
+      //RainNet.sendAck(DevID);
     }
   }else if(Opcode == 0x59){ //Request EEPROM
     if(RxPacket->data[1] == DevID){
@@ -474,7 +474,7 @@ char proccess_packet(lnMsg * RxPacket){
       for(int i = 0;i<10;i++){
         Tx.data[i+3] = EEPROM.read(i);
       }
-      RailNet.send(&Tx);
+      //RainNet.send(&Tx);
     }
   }else{
     Serial.println("Unknown Opcode");

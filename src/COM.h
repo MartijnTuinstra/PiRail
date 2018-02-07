@@ -7,6 +7,7 @@
 		char Length;
 		char Opcode;
 		char Data[32];
+		char data[32];
 	};
 
 	void * UART();
@@ -19,11 +20,9 @@
 
 	void COM_change_A_signal(int M);
 
-	void COM_change_A_switch(int M);
-
 	void COM_change_signal(struct signal * Si);
 
-	void COM_change_switch(struct Swi * S);
+	void COM_change_switch(int M);
 
 	void COM_set_train_speed(struct train * T,char speed);
 #endif

@@ -38,11 +38,11 @@ int throw_switch(struct Swi * S){
     S->state = 0x80 + !(S->state & 0x7F);
 
     char buf[40];
-    buf[0] = 4;
+    buf[0] = WSopc_BroadTrack;
 		int index = 1;
 
 		buf[index++] = S->Module;
-		buf[index++] = S->id;
+		buf[index++] = S->id & 0x7F;
 		buf[index++] = Switch2[S->Module][S->id]->state & 0x7F;
 
     for(int i = 0;i<MAX_SWITCH_LINK;i++){
@@ -54,7 +54,7 @@ int throw_switch(struct Swi * S){
         printf(" => %i)\n",Switch2[A.Module][A.Adr]->state);
 
 				buf[index++] = A.Module;
-				buf[index++] = A.Adr;
+				buf[index++] = A.Adr & 0x7F;
 				buf[index++] = Switch2[A.Module][A.Adr]->state & 0x7F;
       }
     }
@@ -89,7 +89,7 @@ int set_switch(struct Swi * S,char state){
     S->state = state + 0x80;
 
     char buf[40];
-    buf[0] = 4;
+    buf[0] = WSopc_BroadTrack;
 		int index = 1;
 
 		buf[index++] = S->Module;

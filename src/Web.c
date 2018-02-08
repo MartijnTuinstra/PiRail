@@ -237,7 +237,9 @@ int send_packet(int fd_client, char data[],int length,int flag){
   write(fd_client,outbuf,m_length+length);
 }
 
-int send_all(char data[],int length,int flag){
+void send_all(char data[],int length,int flag){
+  //Send the data packet with a length to everyone that has flag
+
   pthread_mutex_lock(&mutex_lock_web);
   int m_length = 0;
   char outbuf[4096];
@@ -261,7 +263,8 @@ int send_all(char data[],int length,int flag){
 
   for(int i = 0;i<MAX_WEB_CLIENTS;i++){
     if(fd_client_list[i] != 0 && (clients[i]->client_type & flag) != 0){
-      //printf("Send client %i data\n",i);
+      printf("Send client %i data\n",i);
+      for(int zi = 0;zi<(length);zi++){printf("%02X ",data[zi]);};
       if(write(fd_client_list[i],outbuf,m_length+length) == -1){
         if(errno == EPIPE){
           printf("Broken Pipe!!!!!\n\n");
@@ -334,37 +337,40 @@ int recv_packet_procces(char data[1024]){
     }
   }
   else if(data[0] & 0x20){ //Track stuff
-    if(data[0] == 0x20){ //Toggle switch
+    if(data[0] == WSopc_ToggleSwitch){ //Toggle switch
       if(Switch2[data[1]][data[2]]){ //Check if switch exists
         printf("throw switch %i:%i\t",data[1],data[2]);
         printf("%i->%i",Switch2[data[1]][data[2]]->state, !Switch2[data[1]][data[2]]->state);
         throw_switch(Switch2[data[1]][data[2]]);
       }
     }
-    else if(data[0] == 0x21){ // MSwitch toggle to higher state
+    else if(data[0] == WSopc_ToggleMSSwitchUp){ // MSwitch toggle to higher state
 
     }
-    else if(data[0] == 0x22){ //MSwitch toggle to lower state
+    else if(data[0] == WSopc_ToggleMSSwitchDown){ //MSwitch toggle to lower state
 
     }
-    else if(data[0] == 0x23){ //Set switch
+    else if(data[0] == WSopc_SetSwitch){ //Set switch
 
     }
-    else if(data[0] == 0x24){ //Set switch reserved
+    else if(data[0] == WSopc_SetSwitchReserved){ //Set switch reserved
+
+    }
+    else if(data[0] == WSopc_SetSwitchRout){ //Set a route for switches
 
     }
   }
   else if(data[0] & 0x10){ // General Operation
-    if(data[0] == 0x10){ //Enable Emergency Stop!!
+    if(data[0] == WSopc_EmergencyStop){ //Enable Emergency Stop!!
+      send_all((char []){WSopc_EmergencyStop},1,0xFF);
+    }
+    else if(data[0] == WSopc_ClearEmergency){ //Disable Emergency Stop!!
+      send_all((char []){WSopc_ClearEmergency},1,0xFF);
+    }
+    else if(data[0] == WSopc_NewMessage){ //New message
 
     }
-    else if(data[0] == 0x11){ //Disable Emergency Stop!!
-
-    }
-    else if(data[0] == 0x14){ //New message
-
-    }
-    else if(data[0] == 0x15){
+    else if(data[0] == WSopc_ClearMessage){
 
     }
   }
@@ -592,7 +598,8 @@ int recv_packet_procces(char data[1024]){
 
       printf("Linking train %i with dcc address #%i\n",fID,trains[tID]->DCC_ID);
       if(link_train(fID,tID)){
-        Web_Link_Train(1,fID,(char []){tID, trains[tID]->DCC_ID >> 8,trains[tID]->DCC_ID & 0xFF});
+        Web_Link_Train(RELEASE,fID,(char []){tID, trains[tID]->DCC_ID >> 8,trains[tID]->DCC_ID & 0xFF});
+        //WS_clear_message(msg_ID);
         Z21_GET_LOCO_INFO(trains[tID]->DCC_ID);
       }
     }

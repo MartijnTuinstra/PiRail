@@ -33,8 +33,8 @@ struct train_timer_th_data{
 struct train *trains[MAX_TRAINS] = {};
 struct train *DCC_train[9999] = {};
 struct train *train_link[MAX_TRAINS];
-int iTrain = 0;
-int bTrain = 0;
+int iTrain = 0; //Counter for trains in library
+int bTrain = 0; //Counter for trains on layout
 
 int add_train(int DCC,int speed,char name[],char type);
 

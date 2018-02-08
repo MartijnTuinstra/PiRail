@@ -167,11 +167,11 @@ void JSON(){
 	char buf[4096];
 	memset(buf,0,4096);
 
-	buf[0] = 3;
+	buf[0] = WSopc_BroadTrack; //Opcode
 	int buf_l;
 	_Bool data = FALSE;
 
-	int q = 1;
+	int q = 0;
 
 	for(int i = 0;i<MAX_Modules;i++){
 		if(Units[i]){
@@ -179,10 +179,10 @@ void JSON(){
 				struct Seg * B = Units[i]->B[j];
 				if(B && B->change){
 					data = 1;
-					buf[(q-1)*4+1] = B->Module;
-					buf[(q-1)*4+2] = B->id;
-					buf[(q-1)*4+3] = (B->dir << 7) + (B->blocked << 4) + B->state;
-					buf[(q-1)*4+4] = B->train;
+					buf[q*4+1] = B->Module;
+					buf[q*4+2] = B->id;
+					buf[q*4+3] = (B->dir << 7) + (B->blocked << 4) + B->state;
+					buf[q*4+4] = B->train;
 					B->change = 0;
 					q++;
 				}
@@ -190,7 +190,7 @@ void JSON(){
 		}
 	}
 
-	buf_l = (q-1)*4+1;
+	buf_l = q*4;
 
 	if(data == 1){
 		send_all(buf,++buf_l,8);
@@ -206,7 +206,7 @@ void JSON_new_client(int Client_fd){
 
 	/*Track*/
 
-		buf[0] = 3;
+		buf[0] = WSopc_BroadTrack; //Opcode
 		int buf_l;
 		_Bool data = 0;
 
@@ -238,9 +238,9 @@ void JSON_new_client(int Client_fd){
 
 	/*Switches*/
 
-		buf[0] = 4;
-		buf_l = 0;
-		data = 0;
+		buf[0] = WSopc_BroadSwitch;
+		buf_l  = 0;
+		data   = 0;
 
 		q = 1;
 		printf("\n\n3");
@@ -252,7 +252,7 @@ void JSON_new_client(int Client_fd){
 					struct Swi * S = Units[i]->S[j];
 					if(S){
 						buf[(q-1)*3+1] = S->Module;
-						buf[(q-1)*3+2] = S->id;
+						buf[(q-1)*3+2] = S->id & 0x7F;
 						buf[(q-1)*3+3] = S->state & 0x7F;
 						printf(",%i,%i,%i",S->Module,S->id,S->state);
 						q++;
@@ -263,19 +263,20 @@ void JSON_new_client(int Client_fd){
 
 		buf_l = (q-1)*3+1;
 
+		/*
+
 		printf("\tbuf_l:%i\n\n",buf_l);
 
 		if(data == 1){
 			send_packet(Client_fd,buf,buf_l,8);
 		}
 
-		memset(buf,0,4096);
+		memset(buf,0,4096);*/
 
-	/*Moduls*/
+	/*MSSwitches*/
 
-		buf[0] = 5;
-		buf_l = 0;
-		data = 0;
+		//buf[0] = 5;
+		//buf_l = 0;
 
 		q = 1;
 
@@ -285,17 +286,17 @@ void JSON_new_client(int Client_fd){
 				for(int j = 0;j<Units[i]->Mod_nr;j++){
 					struct Mod * M = Units[i]->M[j];
 					if(M){
-						buf[(q-1)*4+1] = M->Module;
-						buf[(q-1)*4+2] = M->id;
-						buf[(q-1)*4+3] = M->state;
-						buf[(q-1)*4+4] = M->length;
+						buf[(q-1)*4+1+buf_l] = M->Module;
+						buf[(q-1)*4+2+buf_l] = (M->id & 0x7F) + 0x80;
+						buf[(q-1)*4+3+buf_l] = M->state;
+						buf[(q-1)*4+4+buf_l] = M->length;
 						q++;
 					}
 				}
 			}
 		}
 
-		buf_l = (q-1)*4+1;
+		buf_l += (q-1)*4+1;
 
 		if(data == 1){
 			send_packet(Client_fd,buf,buf_l,8);
@@ -518,6 +519,9 @@ void main(){
 		printf("|                                                                          |\n");
 		pthread_t thread_web_server;
 		pthread_create(&thread_web_server, NULL, web_server, NULL);
+		WS_init_Message_List();
+		printf("|                           MessageBox Cleared                             |\n");
+		printf("|                                                                          |\n");
 		usleep(100000);
 	/*Start UART*/
 		printf("|                                  UART                                    |\n");
@@ -1001,6 +1005,10 @@ void main(){
 	//pthread_create(&tid[4], NULL, TRAIN_SIMB, NULL);
   //pthread_create(&tid[5], NULL, TRAIN_SIMC, NULL);
   //pthread_create(&tid[6], NULL, TRAIN_SIMD, NULL);
+
+	usleep(10000000);
+
+	WS_ShortCircuit();
 
 
 	//COM_Recv();

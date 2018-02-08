@@ -1277,5 +1277,7 @@
 		</script>
     <script src="./scripts/script.js">
     </script>
+    <script src="./scripts/socket.js">
+    </script>
   </body>
 </html>

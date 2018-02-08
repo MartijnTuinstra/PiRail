@@ -131,8 +131,8 @@ void Connect_Segments(){
   for(int i = 0;i<MAX_Modules;i++){
     if(Units[i]){
       //printf("Unit %i ...\n",i);
-      for(int j = 0;j<MAX_Blocks*MAX_Segments;j++){
-        if(Units[i]->B[j] && j <= Units[i]->B_nr){
+      for(int j = 0;j<Units[i]->B_L;j++){
+        if(Units[i]->B[j]){
           //printf(" %iB %c%i\n",Units[i]->B[j]->Module,Units[i]->B[j]->type,Units[i]->B[j]->id);
 
           if(Units[i]->B[j]->type != 'T'){
@@ -174,7 +174,7 @@ void Connect_Segments(){
           }
         }
       }
-      for(int j = 0;j<MAX_Blocks*MAX_Segments;j++){
+      for(int j = 0;j<Units[i]->S_L;j++){
         if(Units[i]->S[j]){
       //    printf(" Sw %i\n",j);
       //    printf("  A %c%i:%i\t",Units[i]->S[j]->AppC.type,Units[i]->S[j]->AppC.Module,Units[i]->S[j]->AppC.Adr);

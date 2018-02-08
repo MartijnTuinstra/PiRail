@@ -43,30 +43,6 @@ var remote_Switch2 = function(evt){
   ws.send(String.fromCharCode(40)+String.fromCharCode(Module)+String.fromCharCode(SwNr));
 }
 
-function ev_throw_switch(evt){ //Click event throw switch
-  console.log("remote_Switch2");
-  console.log(evt);
-  var target = $(evt.currentTarget);
-
-  if(target.children().length == 2){ //Normale Switch
-    SwNr = parseInt(target.attr("class").split(' ')[0].slice(2));
-    Module = parseInt(target.parent().parent().parent().attr("class").split(' ')[0].slice(1))
-    console.log(Module+":"+SwNr);
-
-    ws.send(String.fromCharCode(0x20)+String.fromCharCode(Module)+String.fromCharCode(SwNr));
-  }else{ //MSwitch
-    SwNr = parseInt(target.attr("class").split(' ')[0].slice(2));
-    Module = parseInt(target.parent().parent().parent().attr("class").split(' ')[0].slice(1))
-    console.log(Module+":"+SwNr);
-
-    if(evt.shiftKey){ // -
-      ws.send(String.fromCharCode(0x20)+String.fromCharCode(Module)+String.fromCharCode(SwNr));
-    }else{
-      ws.send(String.fromCharCode(0x20)+String.fromCharCode(Module)+String.fromCharCode(SwNr));
-    }
-  }
-}
-
 
 
 function dir_train(obj,TrainNr,dir){
@@ -449,169 +425,6 @@ function Link_train(list,tID){
   }
 }
 
-function switch_update(data){
-  for(var i = 1;i<data.length;i+=3){
-    var M = data[i];
-    var SwNr = data[i+1];
-    var state = data[i+2];
-
-    var SwitchGroup  = $('.M'+M+' g.Sw'+SwNr);
-    var SwitchGroupB = $('.M'+M+' g.BSw'+SwNr); //Background
-
-    $('.LSw,.LSwO',SwitchGroup).css("opacity",0);
-    $('.LSw,.LSwO',SwitchGroupB).css("opacity",0);
-
-    $('.SwS'+state    ,SwitchGroup).css("opacity",1);
-    $('.SwS'+state+'o',SwitchGroupB).css("opacity",1);
-
-    //switches[M][B][S] = {"type":"S","s_len":1,"len":2,"state":state}
-
-    /*
-    if(start == 1){
-      if(S == 1){
-        $("#switches .content").html($("#switches .content").html() + '<div class="switchbox M'+M+' M'+M+'s" id="M'+M+'B'+B+'S'+S+'s">'+M+":"+B+":"+S+"</div>");
-
-        console.log("active");
-        $.ajax({
-          async: false,
-          type: 'GET',
-          cache: true,
-          url: "./../modules/"+M+"s.svg",
-          success: function(data) {
-            $("#M"+M+"B"+B+'S'+S+"s").html(data.documentElement);
-            if(s_len == 1){
-              var text = "<center><b>"+M+":"+B+':'+S+"</b><br/><img src='./img/switch_button.png' width='30px'";
-              text += "onClick=\"remote_Switch('S',"+M+","+B+","+S+")\"";
-              text += "onmouseenter=\"this.src = './img/switch_button_h.png'\" onmouseleave=\"this.src = './img/switch_button.png'\"";
-              text += "/></center>";
-              $("#M"+M+"B"+B+'S'+S+"s svg").attr("viewBox",(80*(B-1))+" "+(80*(S-1))+" 70 70");
-            }else if(s_len < 4){
-              var text = "<center><b>"+M+":"+B+":x</b><br/><img src='./img/switch_u_button.png' width='30px'";
-              text += "onClick=\"remote_gSwitch('-',"+M+","+B+")\"";
-              text += "onmouseenter=\"this.src = './img/switch_u_button_h.png'\" onmouseleave=\"this.src = './img/switch_u_button.png'\"/>";
-              text += "<img src='./img/switch_d_button.png' width='30px' style='margin-left:5px'";
-              text += "onClick=\"remote_gSwitch('+',"+M+","+B+")\"";
-              text += "onmouseenter=\"this.src = './img/switch_d_button_h.png'\" onmouseleave=\"this.src = './img/switch_d_button.png'\"/>";
-              text += "</center>";
-              $("#M"+M+"B"+B+'S'+S+"s svg").attr("viewBox",(80*(B-1))+" "+(80*(S-1))+" 70 70");
-            }else{
-              var text = "<br/><center><div style='margin-bottom:10px;'><b>"+M+":"+B+":x</b></div><img src='./img/switch_u_button.png' width='30px'";
-              text += "onClick=\"remote_gSwitch('-',"+M+","+B+")\"";
-              text += "onmouseenter=\"this.src = './img/switch_u_button_h.png'\" onmouseleave=\"this.src = './img/switch_u_button.png'\" style='margin-bottom:10px'/><br/>";
-              text += "<img src='./img/switch_d_button.png' width='30px' style='margin-left:5px'";
-              text += "onClick=\"remote_gSwitch('+',"+M+","+B+")\"";
-              text += "onmouseenter=\"this.src = './img/switch_d_button_h.png'\" onmouseleave=\"this.src = './img/switch_d_button.png'\"/>";
-              text += "</center>";
-              $("#M"+M+"B"+B+'S'+S+"s").attr("class",$("#M"+M+"B"+B+'S'+S+"s").attr("class")+" big");
-              $("#M"+M+"B"+B+'S'+S+"s svg").css("float","left");
-              $("#M"+M+"B"+B+'S'+S+"s svg").attr("viewBox",(80*(B-1))+" "+(80*(S-1))+" 70 140");
-            }
-            $("#M"+M+"B"+B+'S'+S+"s").html($("#M"+M+"B"+B+'S'+S+"s").html() + text);
-          }
-        });
-      }
-    }
-
-    if(start == 1 && data.length - 1 == idxa){
-      start = 0;
-    }
-    */
-    //$(".M"+M+" #B"+B+" #S"+S).css('stroke',color);
-
-    //console.log("SW: "+M+":"+B+":"+S+"  state:"+state);
-  };
-}
-
-function ms_switch_update(data){
-  for(var i = 1;i<data.length;i+=4){
-    M = data[i];
-    B = data[i+1];
-    state = data[i+2];
-    var len = data[i+3];
-
-    for(var i = 1;i<=len;i++){
-      $(".M"+M+" #MSw"+B+"S"+i).css("opacity",0); //Straight
-    }
-    //console.log(M+":"+B+":"+S+" State "+state+":"+".M"+M+" #B"+B+" .M"+S+"S"+state);
-    $(".M"+M+" #MSw"+B+"S"+(state+1)).css("opacity",1);
-
-    //switches[M][B][S] = {"type":"M","s_len":s_len,"len":len,"state":state}
-
-  }
-}
-
-function track_update(data){
-  for(var i = 1;i<data.length;i+=4){
-    var M = data[i];
-    var B = data[i+1];
-
-    var block_element = $(".M"+M+" .B"+B);
-
-    var D = data[i+2] >> 7;
-    var blocked = (data[i+2] & 0b00010000) >> 4;
-    var state = (data[i+2] & 0xF);
-    var tID = data[i+3];
-
-    console.log("Block "+M+":"+B+"\tdir: "+D+"\tBlocked: "+blocked+"\tstate: "+state+"\tTrain: "+tID);
-
-    var color;
-    var color2;
-
-    if(blocked == 1){
-      color = "#900";
-      color2= "#b66";
-    }else{
-      if(state == 0){ //No train / Grey
-        color = "#555";
-        color2 = "#bbb";
-      }else if(state == 1){ //SLOW
-        color = "#f70";
-        color2 = "#fd6";
-      }else if(state == 2){	//Red
-        color = "#f00";
-        color2 = "#f66";
-      }else if(state == 3){	//UNKOWN
-        color = "#ff0";
-        color2 = "#ff6";
-      }else if(state == 4){	//GHOST
-        color = "#f5f";
-        color2 = "#fbf";
-      }else if(state == 5){ //RESERVED
-        color = "#00f";
-        color2 = "#66f";
-      }
-    }
-
-    //Paint A Lines in the color
-    $(".L:not(.LSw,.LSwO)",block_element).css('stroke',color);
-    $(".L.LSw",block_element).css('stroke',color);
-    $(".L.LSwO",block_element).css('stroke',color2);
-
-
-    if(state == 5 || blocked){
-      $("g[class^=Sw]",".M"+M+" .B"+B).css('cursor','not-allowed');
-    }else{
-      $("g[class^=Sw]",".M"+M+" .B"+B).css('cursor','pointer');
-    }
-
-    //console.log(".L",".M"+M+" #B"+B+".S"+S);
-    //Write Train id to block
-    $(block_element).attr("train",tID);
-
-    //Display train ID in textbox (Not existing yet/anymore)
-    var text = "";
-    if(D == 0){
-      text = "&lt;"+tID;
-    }else if(D == 1){
-      text = tID+">";
-    }
-    $(".T",".M"+M+"B"+B).html(text);
-    if(tablet){
-      $(".M"+M+"B"+B).attr('style','display:block');
-    }
-  }
-}
-
 function station_list_update(data){
   $('#Station_List select').empty();
   var x = 0;
@@ -637,7 +450,7 @@ function message_update(response){
     $('#warning_list').css("display","block");
     $('#notify').attr('src','./img/notification_y.png');
   }*/
-  if(response[1] == 1){ //Emergency Stop
+  /*if(response[1] == 1){ //Emergency Stop
     console.log("Emergency Stop");
     console.log('#warning_list #W_EmS');
     if($('#warning_list #W_EmS').length == 0){
@@ -673,7 +486,7 @@ function message_update(response){
       $('#warning_list #W'+response[i][1]+"_"+(response[i][0]-1)).remove();
     }
   }
-  else if(response[1] == 5){ //Split train
+  else */if(response[1] == 5){ //Split train
     //2 = Train follow id
     //3 = Split Address M
     //4 =              B
@@ -744,160 +557,6 @@ function message_update(response){
   }else{
     $('#notify').attr('src','./img/notification_y.png');
   }
-}
-
-var ws;
-
-function socket(adress){
-    $('#status').attr('onClick','');
-    $('#status').css('cursor','default');
-    // Let us open a web socket
-    ws = new WebSocket("ws://"+adress+"/",0xFF);
-    ws.binaryType = 'arraybuffer';
-
-    ws.onopen = function(){
-      //alert("Connected");
-      $('.notConnected').toggleClass('Connected');
-      $('.notConnected').toggleClass('notConnected');
-      $('#warning_list').empty();
-      socket_tries = 0;
-      $('#status').attr('src','./img/status_g.png');
-
-      //Create train accept is now possible
-      $('#Train_Add #upload').attr('src','./img/checked.png');
-      $('#Train_Add #upload').css('cursor','pointer');
-      $('#Train_Add #upload').attr('onClick','add_train()');
-    };
-
-    ws.onmessage = function (evt){
-      var received_msg = evt.data;
-      var data = new Uint8Array(received_msg);
-      //console.log("Package length: "+data.length);
-      //console.log(data);
-
-      /* Opcodes *//*
-       0 - Track style (Analog/Digital)
-       1 - Message / Notification
-       2 - Track-setup
-       3 - Track occupancy
-       4 - Switches states
-       5 - MS Switches states
-       6 - Stations list
-       7 - Train data
-       8 - Request New Train
-       8 -
-       9 -
-      10 -
-      */
-      if(data[0] == 0){
-        //Track style
-        console.log("Track style");
-        console.log(data);
-        if(data[1] == 1){
-          console.log("It is a digital track");
-          $("#digital").attr("onClick","ws.send(\"tA\");");
-          $("#digital").attr("src","./img/Digital_y.svg");
-          $("#digital").attr("title","Switch to DC");
-        }else if(data[1] == 0){
-          console.log("It is a analog track");
-          $("#digital").attr("onClick","ws.send(\"tD\");");
-          $("#digital").attr("src","./img/Digital_n.svg");
-          $("#digital").attr("title","Switch to DCC");
-        }
-      }
-      else if(data[0] == 1){
-        //Message
-        console.log("Message update");
-        console.log(data);
-        message_update(data);
-      }
-      else if(data[0] == 2){
-        //Track setup
-        console.log("Setup update");
-        create_track(data);
-      }
-      else if(data[0] == 3){
-        //Track
-        console.log("Track update");
-        console.log(data);
-        track_update(data);
-      }
-      else if(data[0] == 4){
-        //Switches
-        console.log("Switch update");
-        console.log(data);
-        switch_update(data);
-      }
-      else if(data[0] == 5){
-        //Multi State Switches
-        console.log("MS Switch update");
-        console.log(data);
-        ms_switch_update(data);
-      }
-      else if(data[0] == 6){
-        //Station list
-        console.log("Station List");
-        console.log(data);
-        station_list_update(data);
-      }
-      else if(data[0] == 7){
-        //Train data
-        console.log('Train data update');
-        console.log(data);
-        train_data_update(data);
-      }
-      else if(data[0] == 8){
-        //Request New Train
-        console.log("Request for new train");
-        if(data[1] == 2){
-          //Start upload file and reload list
-          if(data.length == 3){
-            succ_add_train(data[2]);
-            train_list_t += "<option value=\""+data[2]+"\">#"+$('#train_dcc').val();+"&nbsp;&nbsp;&nbsp;"+$('#train_name').val();+"</option>";
-          }else{
-            succ_add_train(data[2],data[3]);
-            train_list_t += "<option value=\""+(data[2]+(data[3] << 8))+"\">#"+$('#train_dcc').val();+"&nbsp;&nbsp;&nbsp;"+$('#train_name').val();+"</option>";
-          }
-        }
-        else if(data[1] == 1){
-          alert("DCC address allready in use");
-          fail_add_train();
-        }
-        else{
-          alert("Error code:"+data[1]+"\n");
-          fail_add_train();
-        }
-      }
-    };
-
-    ws.onclose = function(event){
-      // websocket is closed.
-      console.log("Connection closed" + event.code);
-      if(socket_tries == 0){
-        $('.Connected').toggleClass('notConnected');
-        $('.Connected').toggleClass('Connected');
-        console.log("Connection Closed\nRetrying....");
-        $('#status').attr('src','./img/status_ow.gif');
-        $('#warning_list').css('display','none');
-        //$("#CTrain").empty();
-        $('#warning_list').empty();
-        //Resetting values
-        //active_trains = [];
-      }
-      if(socket_tries != 0){
-        setTimeout(function(){
-          console.log("Reconnecting...");
-          socket(adress);
-          socket_tries++;
-        }, 5000);
-      }else{
-        console.log("No Connection posseble\nIs the server on?");
-        $('#status').attr('src','./img/status_r.png');
-        $('#status').css('cursor','pointer');
-        $('#status').attr('onClick','socket_tries = 0;socket(window.location.host+":9000")');
-      }
-    };
-
 }
 
 function create_train_slider(DCC_ID,max_speed,speed_step){
@@ -1092,19 +751,6 @@ $(document).ready(function(){
     },
     async: false
   });
-
-  if ("WebSocket" in window){
-	try{
-      setTimeout(socket(window.location.host+':9000'),5000);
-	}
-	catch(e){
-	  console.error(e);
-	}
-  }else{
-    // The browser doesn't support WebSocket
-    alert("WebSocket NOT supported by your Browser!\nBIG PROBLEM!!\n\nPlease use Chrome/FireFox/Safari, or update your browser");
-    $('#status').attr('src','./img/status_w.png');
-  }
 
   var bg = $('#T1200 .prim_fn')[0];
 

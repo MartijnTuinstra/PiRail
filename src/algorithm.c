@@ -214,7 +214,7 @@ void procces(struct Seg * B,int debug){
 		p = l;
 
 
-		//------------------------------------------------------------------------------------------ roadmap: more efficient scanning of the block. skip the blocks that are not blocked and there neighbours are also not blocked
+		//------------------------------------------------------------------------------------------ roadmap: more efficient scanning of the block. skip the blocks that are not changed/blocked and there neighbours are also not blocked
 		//SPEEDUP function / if all blocks are not blocked skip!!
 		/*if(k > 0 && !BA.blocked && !BN.blocked){
 			if(p > 0 && !BP.blocked){
@@ -239,7 +239,8 @@ void procces(struct Seg * B,int debug){
 			else if(p > 0 && k > 0 && BA.blocked && BA.B[0]->train == 0 && BN.B[0]->train == 0 && BP.B[0]->train == 0){
 				//NEW TRAIN
 				BA.B[0]->train = ++bTrain;
-				Web_Link_Train(ACTIVATE,bTrain,(char []){BA.B[0]->Module,BA.B[0]->id});
+				//Create a message for WebSocket
+				WS_NewTrain(bTrain,BA.B[0]->Module,BA.B[0]->id);
 			}
 			else if(p > 0 && k > 0 && BN.blocked && BP.blocked && BN.B[0]->train == BP.B[0]->train){
 				//SPLIT
@@ -556,7 +557,7 @@ void procces(struct Seg * B,int debug){
 					}else{
 						//No train coupled
 						printf("COLLISION PREVENTION\tEM_STOP\n\t");
-						Web_Emergency_Stop(ACTIVATE);
+						WS_EmergencyStop(); //WebSocket Emergency Stop
 					}
 				}
 				//Check if next block is a RED block
@@ -570,7 +571,7 @@ void procces(struct Seg * B,int debug){
 					}else{
 						//No train coupled
 						printf("STOP TRAIN\tEM_STOP\n\t");
-						Web_Emergency_Stop(ACTIVATE);
+						WS_EmergencyStop();
 					}
 				}
 				else if(k > 1 && BN.blocked && !BNN.blocked && BNN.B[0]->state == RED){
@@ -583,7 +584,7 @@ void procces(struct Seg * B,int debug){
 					}else{
 						//No train coupled
 						printf("STOP TRAIN\tEM_STOP\n\t");
-						Web_Emergency_Stop(ACTIVATE);
+						WS_EmergencyStop();
 					}
 				}
 				//Check if next block is a AMBER block

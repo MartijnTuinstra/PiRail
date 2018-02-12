@@ -359,8 +359,8 @@ th {
 	padding:20px;
 	margin:20px;
 	border-radius:10px;
-	background-color: grey;
-	color:white;
+	background-color: #f1f1f1;
+	border: 1px solid #d1d1d1;
 	font-family:sans-serif;
 	text-align:center;
 	display: inline-block;
@@ -389,6 +389,7 @@ th {
 	border-top: 1px solid white;
 	padding: 5px;
 	background-color: #565656;
+	color: white;
 }
 
 .trainbox .route_tag, .trainbox .control_tag, .trainbox .dir_tag{
@@ -502,6 +503,7 @@ th {
 	stroke-linecap:round;
 	stroke-linejoin:round;
 	stroke-width:10px;
+	cursor: pointer;
 }
 
 .trainbox .dir_left:not(.selected):hover, .trainbox .dir_right:not(.selected):hover {

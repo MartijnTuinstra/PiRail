@@ -193,11 +193,11 @@ int recv_packet(int fd_client, char outbuf[], int * L){
   *L = mes_length;
 
   copy_Array(outbuf,output,mes_length);
-  printf("Binary data: ");
+  printf("WS recieved data: ");
   for(int q = 0;q<mes_length;q++){
-    printf("%02x",output[q]);
+    printf("%02x ",output[q]);
   }
-  printf("\n%s\n",output);
+  printf("\n",output);
 
   pthread_mutex_unlock(&mutex_lock_web);
   if(opcode == 8){
@@ -263,8 +263,9 @@ void send_all(char data[],int length,int flag){
 
   for(int i = 0;i<MAX_WEB_CLIENTS;i++){
     if(fd_client_list[i] != 0 && (clients[i]->client_type & flag) != 0){
-      printf("Send client %i data\n",i);
+      printf("WS send (%i)\t",i);
       for(int zi = 0;zi<(length);zi++){printf("%02X ",data[zi]);};
+      printf("\n");
       if(write(fd_client_list[i],outbuf,m_length+length) == -1){
         if(errno == EPIPE){
           printf("Broken Pipe!!!!!\n\n");
@@ -317,22 +318,40 @@ int recv_packet_procces(char data[1024]){
     }
   }
   else if(data[0] & 0x40){ //Train stuff
-    if(data[0] == 0x40){ //New train
+    if(data[0] == WSopc_AddNewTrain){ //New train
 
     }
-    else if(data[0] == 0x41){ //Train speed control
+    else if(data[0] == WSopc_LinkTrain){ //Link train
+      uint8_t fID = data[1]; //follow TrainID
+      uint8_t tID = data[2]; //TrainID
+
+      printf("Linking train %i with dcc address #%i\n",fID,trains[tID]->DCC_ID);
+      if(link_train(fID,tID)){
+        WS_clear_message(((data[3] & 0x1F) >> 8)+data[4]);
+        WS_LinkTrain(fID,tID);
+        //Web_Link_Train(RELEASE,fID,(char []){tID, trains[tID]->DCC_ID >> 8,trains[tID]->DCC_ID & 0xFF});
+        //WS_clear_message(msg_ID);
+        Z21_GET_LOCO_INFO(trains[tID]->DCC_ID);
+      }
+    }
+    else if(data[0] == WSopc_TrainSpeed){ //Train speed control
+      char tID = data[1];
+      char speed = data[2];
+      trains[tID]->cur_speed = speed & 0x7F;
+      trains[tID]->dir       = speed >> 7;
+
+      Z21_GET_LOCO_INFO(trains[tID]->DCC_ID);
+    }
+    else if(data[0] == WSopc_TrainFunction){ //Train function control
 
     }
-    else if(data[0] == 0x42){ //Train function control
+    else if(data[0] == WSopc_TrainOperation){ //Train operation change
 
     }
-    else if(data[0] == 0x43){ //Train operation change
+    else if(data[0] == WSopc_TrainAddRoute){ //Add route to train
 
     }
-    else if(data[0] == 0x44){ //Add route to train
-
-    }
-    else if(data[0] == 0x45){ //Delete route
+    else if(data[0] == WSopc_TrainClearRoute){ //Delete route
 
     }
   }
@@ -356,19 +375,16 @@ int recv_packet_procces(char data[1024]){
     else if(data[0] == WSopc_SetSwitchReserved){ //Set switch reserved
 
     }
-    else if(data[0] == WSopc_SetSwitchRout){ //Set a route for switches
+    else if(data[0] == WSopc_SetSwitchRoute){ //Set a route for switches
 
     }
   }
   else if(data[0] & 0x10){ // General Operation
     if(data[0] == WSopc_EmergencyStop){ //Enable Emergency Stop!!
-      send_all((char []){WSopc_EmergencyStop},1,0xFF);
+      WS_EmergencyStop();
     }
     else if(data[0] == WSopc_ClearEmergency){ //Disable Emergency Stop!!
-      send_all((char []){WSopc_ClearEmergency},1,0xFF);
-    }
-    else if(data[0] == WSopc_NewMessage){ //New message
-
+      WS_ClearEmergency();
     }
     else if(data[0] == WSopc_ClearMessage){
 
@@ -752,6 +768,9 @@ void * websocket_client(void * thread_data){
       printf("Send 3\n");
 
       JSON_new_client(fd_client);
+
+      printf("Send open messages\n");
+      WS_send_open_Messages(fd_client);
       printf("Done\n");
 
       while(1){
@@ -760,7 +779,7 @@ void * websocket_client(void * thread_data){
           printf("Data received\n");
           usleep(10000);
           length = 0;
-		  memset(buf,0,1024);
+		      memset(buf,0,1024);
           int status = recv_packet(fd_client,buf,&length);
 		  /*for(int x = 0;x<length;x++){
 			  printf("[%02x]",buf[x]);
@@ -777,6 +796,10 @@ void * websocket_client(void * thread_data){
             return 0;
           }
 
+        }
+
+        if(clients[i]->state == 2){
+          return 0;
         }
 
         if(stop){

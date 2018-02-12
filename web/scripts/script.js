@@ -19,7 +19,6 @@ var status_prev;
 var status_t = 0;
 var train_d = 0;
 var socket_tries = 0;
-var active_trains = [];
 var rot = 0;
 
 for(var i = 0;i<10;i++){
@@ -57,16 +56,6 @@ function dir_train(obj,TrainNr,dir){
 
 var remote_request = function(D){
   ws.send(D);
-}
-
-var remote_addTrain = function(mID,tID){//Follow ID, Train ID
-  ws.send("L"+mID+":"+tID);
-  console.log("L"+mID+":"+tID);
-  setTimeout(function () {
-    if($('#W'+mID+"_11").length != 0){
-      alert("Train is already in use!!\nSelect another train");
-    }
-  }, 500);
 }
 
 var remote_gSwitch = function(c,M,B){
@@ -407,7 +396,7 @@ function rotate(R){
     $("#Modules").css("left","0px");
   }
 }
-
+/*
 function Link_train(list,tID){
   var val;
   if(tablet == 0){
@@ -424,7 +413,7 @@ function Link_train(list,tID){
     alert('Please select a train');
   }
 }
-
+*/
 function station_list_update(data){
   $('#Station_List select').empty();
   var x = 0;
@@ -443,7 +432,7 @@ function station_list_update(data){
   }
   $('#Station_List select').append(Station_list_t);
 }
-
+/*
 function message_update(response){
   /*
   if(response.length != 0){
@@ -486,7 +475,7 @@ function message_update(response){
       $('#warning_list #W'+response[i][1]+"_"+(response[i][0]-1)).remove();
     }
   }
-  else */if(response[1] == 5){ //Split train
+  else *//*if(response[1] == 5){ //Split train
     //2 = Train follow id
     //3 = Split Address M
     //4 =              B
@@ -494,13 +483,6 @@ function message_update(response){
 
     console.log("A Train (#"+response[2]+") has split.");
     console.log('#warning_list #W5_'+response[2]);
-    if($('#warning_list #W5_'+response[2]).length == 0){
-      var text = "<div id=\"W5_"+response[2]+"\" class=\"warning\" style=\"background-color:light-red;\"><div class=\"photobox l\"><img src=\"./img/train.png\"/></div>";
-      text += "<div class=\"photobox r\"><img src=\"./img/train.png\"/></div><center><h2>A Train has split </h2> at "+response[3]+":"+response[4]+":"+response[5];
-      text += "<br/><but onClick=\"remote_request('Ec')\">";
-      text += "<b>Resume</b></but></center></div>";
-      $('#warning_list').append(text);
-    }
   }
   else if(response[1] == 6){ //Split train release
     //2 = Train follow id
@@ -508,26 +490,6 @@ function message_update(response){
     console.log('#warning_list #W5_'+response[2]);
     if($('#warning_list #W5_'+response[2]).length != 0){
       $('#warning_list #W5_'+response[2]).remove();
-    }
-  }
-  else if(response[1] == 11){//New train found
-    //2 = Train follow id
-    //3 = Address found Module
-    //4 =              id
-
-    console.log("New Train "+response[2]);
-    console.log('#warning_list #W'+response[2]+"_11");
-    if($('#warning_list #W'+response[2]+"_11").length == 0){
-      var text = "<div id=\"W"+response[2]+"_11\" class=\"warning\" style=\"background-color:grey;\"><div class=\"photobox l\"><img src=\"./img/train.png\"/></div>";
-      text += "<div class=\"photobox r\"><img src=\"./img/train.png\"/></div><center><h2>New Train</h2> at "+response[3]+":"+response[4]+"<br/>"+response[2];
-      text += "<div style=\"width:calc(100% - 100px);height:40px;\"><div style=\"float:left;color:black;width:300px\"><select class=\"cs-selectn cs-select cs-skin-rotate\"><option value=\"\" disabled selected>Select train</option>";
-      text += train_list_t+"</select></div><but style=\"float:right;position:relative;top:6px\"";
-      text += "Did=\""+response[2]+"\"onClick=\"Link_train(this,"+response[2]+")\">";
-      text += "<b>Link</b></but></div></center></div>";
-      $('#warning_list').append(text);
-      if(tablet == 0){
-        redraw_selects('#W'+response[2]+"_"+11);
-      }
     }
   }
   else if(response[1] == 12){//New train_link
@@ -558,7 +520,7 @@ function message_update(response){
     $('#notify').attr('src','./img/notification_y.png');
   }
 }
-
+*/
 function create_train_slider(DCC_ID,max_speed,speed_step){
 	var handle = $("#T"+DCC_ID+" .slider-handle" );
 
@@ -581,18 +543,14 @@ function create_train_slider(DCC_ID,max_speed,speed_step){
 				handle.html(Math.round(ui.value));
 				console.log("User Change speed");
 
-				var ID = parseInt($(this).attr("Did").slice(1));
+				var ID = parseInt($(this).attr("tid"));
 
-				var str = [31,(ID >> 8),(ID & 0xFF),(Math.round((ui.value*127)/max_speed))];
-
-				var data2 = new Int8Array(str);
-
-				ws.send(data2);
+        ev_Train_speed(ID,(Math.round((ui.value*127)/max_speed)));
 			}
 		})
 	});
 }
-
+/*
 function train_data_update(data){
   console.log('Train_Data_Update');
   console.log(active_trains);
@@ -734,7 +692,7 @@ function train_data_update(data){
     }
   }
 }
-
+*/
 function train_add_request(){
 
 }

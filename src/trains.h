@@ -1,7 +1,8 @@
 #define H_train
 struct train{
 	int DCC_ID;						//DCC address of the train
-	char type;							//Type of train (C = Cargo, P = Passenger, H = High speed)
+	int ID;							//Train ID
+	char type;						//Type of train (C = Cargo, P = Passenger, H = High speed)
 	char name[21];  				//Name of train
 	char cur_speed; 				//Current speed of train
 	long max_speed; 				//Maximum speed of train

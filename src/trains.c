@@ -8,6 +8,7 @@ int add_train(int DCC,int speed,char name[],char type){
 	struct adr Route[20] = {{0,0,0,0}};
 
 	Z->DCC_ID = DCC;
+	Z->ID = iTrain;
 	Z->type = type;
 	strcpy(Z->name,name);
 	Z->max_speed = speed;
@@ -139,6 +140,8 @@ void init_trains(){
 }
 
 int link_train(char link,int train){
+	//Link = follow ID
+	//train = tID
 	if(train_link[link] == NULL && trains[train]->use == 0){
 		printf("link is empty %i\n",train_link[link]);
 		train_link[link] = trains[train];

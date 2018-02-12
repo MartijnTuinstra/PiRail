@@ -243,8 +243,8 @@ void procces(struct Seg * B,int debug){
 				WS_NewTrain(bTrain,BA.B[0]->Module,BA.B[0]->id);
 			}
 			else if(p > 0 && k > 0 && BN.blocked && BP.blocked && BN.B[0]->train == BP.B[0]->train){
-				//SPLIT
-				Web_Train_Split(ACTIVATE,BN.B[0]->train,(char []){BA.B[0]->Module,BA.B[0]->id});
+				//A train has split
+				WS_TrainSplit(BN.B[0]->train,BP.B[0]->Module,BP.B[0]->id,BN.B[0]->Module,BN.B[0]->id);
 			}
 			if(p > 0 && BP.blocked && BA.blocked && BA.B[0]->train == 0 && BP.B[0]->train != 0){
 				BA.B[0]->train = BP.B[0]->train;

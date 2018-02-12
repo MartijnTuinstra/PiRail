@@ -43,7 +43,7 @@ void Create_Segment(int IO_Adr,struct SegC Adr ,struct SegC Next, struct SegC Pr
 	Z->state = state;
 	Z->dir = dir; //Clock wise or counter clock wise / Far side or closest side
 	Z->length = len;
-	Z->change = 0;
+	Z->change = 1;
   Z->blocked = 0;
 	Z->train = 0x00;
 	Z->oneWay = FALSE;

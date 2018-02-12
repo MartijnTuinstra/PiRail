@@ -15,7 +15,10 @@
                       32 = Trains
                       64 =
                       128=*/
-    int state;
+    int state;        /* If this client is active
+                      0 = free
+                      1 = in use
+                      2 = stopping / ready to join thread*/
   };
 
   int websocket_connect(struct web_client_t * C);
@@ -34,13 +37,33 @@
 
   void * web_server();
 
+  //Broadcast Flag
+  #define WS_Flag_Trains   0x01
+  #define WS_Flag_Track    0x02
+  #define WS_Flag_Switches 0x04
+  #define WS_Flag_Messages 0x08
+  #define WS_Flag_10       0x10
+  #define WS_Flag_20       0x20
+  #define WS_Flag_40       0x40
+  #define WS_Flag_80       0x80
+
+
   //Opcodes
+  #define WSopc_AddNewTrain        0x40
+  #define WSopc_LinkTrain          0x41
+  #define WSopc_TrainSpeed         0x42
+  #define WSopc_TrainFunction      0x43
+  #define WSopc_TrainOperation     0x44
+  #define WSopc_Z21TrainData       0x45
+  #define WSopc_TrainAddRoute      0x46
+  #define WSopc_TrainClearRoute    0x47
+
   #define WSopc_ToggleSwitch       0x20
   #define WSopc_ToggleMSSwitchUp   0x21
   #define WSopc_ToggleMSSwitchDown 0x22
   #define WSopc_SetSwitch          0x23
   #define WSopc_SetSwitchReserved  0x24
-  #define WSopc_SetSwitchRout      0x25
+  #define WSopc_SetSwitchRoute     0x25
   #define WSopc_BroadTrack         0x26
   #define WSopc_BroadSwitch        0x27
 

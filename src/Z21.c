@@ -167,7 +167,7 @@ void Z21_recv(char message[100]){
     else if(X_header == 0xEF && dataLen >= 7){
 			//LAN_X_LOCO_INFO
       printf("LOCO INFO\n");
-      char data[14];
+      char data[15];
       memset(data,0,14);
       for(int i = 5;i < (dataLen - 1);i++){
         printf("DB%02i:\t%x\n",message[i]);
@@ -215,7 +215,7 @@ void Z21_recv(char message[100]){
         printf(BYTE_TO_BINARY_PATTERN,BYTE_TO_BINARY(data[j++]));
         printf("\n%02i\t",j);
       }
-      Web_Train_Data(data);
+      WS_TrainData(data);
 
       printf("\n");
 		}
@@ -348,14 +348,14 @@ void Z21_GET_LOCO_INFO(int DCC_Adr){
     data[3] = (DCC_train[DCC_Adr]->dir << 7) + (DCC_train[DCC_Adr]->cur_speed & 0x7F);
 	//Doppeltraktion 0x40, smartsearch 0x20, F0 0x10, F1 0x1, F2 0x2, F3 0x4, F4 0x8
     data[4] = 0b00000000;
-	// F112 F11 F10 F9  F8 F7 F6 F5
+	// F12 F11 F10  F9  F8  F7  F6  F5
     data[5] = 0b00000000;
 	// F20 F19 F18 F17  F16 F15 F14 F13
     data[6] = 0b00000000;
 	// F28 F27 F26 F25  F24 F23 F22 F21
     data[7] = 0b00000000;
-    printf("DCC_Adr:0x%x\t=>\t%x %x",DCC_Adr,data[5],data[6]);
-    Web_Train_Data(data);
+    printf("DCC_Adr:0x%x\t=>\t%x %x",DCC_Adr,data[0],data[1]);
+    WS_TrainData(data);
   }
 }
 

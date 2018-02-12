@@ -38,7 +38,7 @@ int throw_switch(struct Swi * S){
     S->state = 0x80 + !(S->state & 0x7F);
 
     char buf[40];
-    buf[0] = WSopc_BroadTrack;
+    buf[0] = WSopc_BroadSwitch;
 		int index = 1;
 
 		buf[index++] = S->Module;

@@ -31,32 +31,38 @@
     <script>
       <?php
 
+      //Removing the headers of table
       array_shift($var4);
 
+
+      //get value list
       foreach ($var4 as $key => $row) {
-        $a[$key] = $row[0];
-        $b[$key] = $row[1];
-        $c[$key] = $row[2];
+        $train_nr[$key]   = $row[0];
+        $train_name[$key] = $row[1];
+        $train_dcc[$key]  = $row[2];
       }
+
+      $train_list = json_encode($var4);
+
+      $train_index = range ( 0 , count($var4) - 1);
 
       // Sort the data with volume descending, edition ascending
       // Add $data as the last parameter, to sort by the common key
       if(!isset($_GET['sort']) || $_GET['sort'] == 'Name'){
-        array_multisort($b, $var4);
+        array_multisort($train_name, $train_index);
       }else if($_GET['sort'] == 'DCC'){
-        array_multisort($c, $var4);
+        array_multisort($train_dcc, $train_index);
       }else if($_GET['sort'] == 'List'){
-        array_multisort($a, $var4);
+        array_multisort($train_nr, $train_index);
       }
-      $js_array = json_encode($var4);
-      echo "var train_list = ". $js_array . ";";
+      
+      echo "var train_list  = " .             $train_list   . ";";
+      echo "var train_index = " . json_encode($train_index) . ";";
       ?>
+      var train_follow = [];
 
-      var train_list_c = [];
-      train_list.forEach( function(item, index){
-        console.log(item);
-        console.log(parseInt(item[0])+':'+index);
-        train_list_c[parseInt(item[0])] = index;
+      $.each(train_list,function(i,v){
+        train_list[i].data = {};
       });
     </script>
 
@@ -75,7 +81,7 @@
         train_list[i][5] = chars;
       }
 
-      var train_list_t = "";
+      var train_option = "";
       var Station_list_t = "";
       var Station_list = [];
 
@@ -157,15 +163,13 @@
 
         //alert(tablet);
 
-        $.each(train_list, function(i){
-          if(i != 0){
-            train_list_t += "<option value=\""+train_list[i][0]+"\">#"+train_list[i][2]+"&nbsp;&nbsp;&nbsp;"+train_list[i][1]+"</option>";
-          }
+        $.each(train_index, function(i,v){
+          train_option += "<option value=\""+train_list[v][0]+"\">#"+train_list[v][2]+"&nbsp;&nbsp;&nbsp;"+train_list[v][1]+"</option>\n";
         });
 
         if (screen.width < 800) {
             var mvp = document.getElementById('vp');
-            mvp.setAttribute('content','width=800');
+            mvp.setAttribute('content','width=1500');
         }
         if(tablet == 1){
           $("#trains").css("width","100%");

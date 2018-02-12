@@ -2,6 +2,15 @@
 
 
 //Opcodes
+var WSopc_AddNewTrain        = 0x40;
+var WSopc_LinkTrain          = 0x41;
+var WSopc_TrainSpeed         = 0x42;
+var WSopc_TrainFunction      = 0x43;
+var WSopc_TrainOperation     = 0x44;
+var WSopc_Z21TrainData       = 0x45;
+var WSopc_TrainAddRoute      = 0x46;
+var WSopc_TrainClearRoute    = 0x47;
+
 var WSopc_ToggleSwitch       = 0x20;
 var WSopc_ToggleMSSwitchUp   = 0x21;
 var WSopc_ToggleMSSwitchDown = 0x22;
@@ -16,9 +25,14 @@ var WSopc_ClearEmergency     = 0x12;
 var WSopc_NewMessage         = 0x13;
 var WSopc_ClearMessage       = 0x14;
 
+
+
+
+var active_trains = []; //Trains that were active on the layout.
+
 /*Client to Server*/
   function ev_throw_switch(evt){ //Click event throw switch
-    console.log("remote_Switch2");
+    console.log("throw switch");
     console.log(evt);
     var target = $(evt.currentTarget);
 
@@ -47,6 +61,71 @@ var WSopc_ClearMessage       = 0x14;
 
   function ev_Emergency(evt){
     ws.send(String.fromCharCode(WSopc_EmergencyStop));
+  }
+
+  function ev_LinkTrain(evt){
+    //ws.send(String.fromCharCode(WSopc_LinkTrain));
+    var mID = parseInt($(evt.currentTarget).attr('Mid'));
+    var tID = undefined;
+
+    var val;
+    if(tablet == 0){
+      tID = parseInt($('#W'+mID+' .cs-selected').attr('data-value'));
+    }else{
+      console.log("tablet == 1");
+      console.log(mID);
+      tID = $('#W'+mID+' .cs-select').val();
+    }
+    if(typeof tID != 'undefined'){
+      console.log(tID);
+
+      var fID = $('#W'+mID+' but').attr("fID");
+      
+      ws.send(String.fromCharCode(WSopc_LinkTrain)+String.fromCharCode(fID)+String.fromCharCode(tID)+String.fromCharCode(mID >> 8)+String.fromCharCode(mID & 0xFF));
+      
+      setTimeout(function () {
+        if($('#W'+mID).length != 0){
+          alert("Train is already in use!!\nSelect another train");
+        }
+      }, 1000);
+
+    }else{
+      alert('Please select a train');
+    }
+  }
+
+  function ev_Train_speed(tID,speed){
+    var data = [];
+
+    console.log("change speed, dir: "+ train_list[tID].data.direction);
+
+    data[0] = WSopc_TrainSpeed;
+    data[1] = tID;
+    data[2] = (speed & 0x7F) + train_list[tID].data.direction;
+
+    train_list[tID].data.speed = speed;
+
+    var data2 = new Int8Array(data);
+
+    ws.send(data2);
+  }
+
+  function ev_Train_direction(tID,direction){
+    var data = [];
+
+    direction = direction << 7;
+
+    if(direction != train_list[tID].data.direction){
+      data[0] = WSopc_TrainSpeed;
+      data[1] = tID;
+      data[2] = direction + train_list[tID].data.speed;
+
+      train_list[tID].data.direction = direction;
+
+      var data2 = new Int8Array(data);
+
+      ws.send(data2);
+    }
   }
 /**/
 /*Server to Client*/
@@ -184,6 +263,214 @@ var WSopc_ClearMessage       = 0x14;
       }
     }
   }
+
+  function ws_message(data){
+    var msgID = data[2] + ((data[1] & 0x1F) << 8);
+
+    //Check type
+    if((data[1] & 0xE0) == 0){ //New train
+
+      //Check if message is not used
+      if($('#warning_list #W'+msgID+"_11").length == 0){
+        var text = "<div id=\"W"+msgID+"\" class=\"warning\" style=\"background-color:grey;\"><div class=\"photobox l\"><img src=\"./img/train.png\"/></div>";
+        text += "<div class=\"photobox r\"><img src=\"./img/train.png\"/></div><center><h2>New Train</h2> at "+data[4]+":"+data[5];
+        text += "<div style=\"width:calc(100% - 100px);height:40px;\"><div style=\"float:left;color:black;width:300px\"><select class=\"cs-selectn cs-select cs-skin-rotate\"><option value=\"\" disabled selected>Select train</option>";
+        text += train_option+"</select></div><but style=\"float:right;position:relative;top:6px\"";
+        text += "Mid=\""+msgID+"\" fID=\""+data[3]+"\">";
+        text += "<b>Link</b></but></div></center></div>";
+        $('#warning_list').append(text);
+        $('but','#warning_list #W'+msgID).on('click',ev_LinkTrain);
+        if(tablet == 0){
+          redraw_selects('#W'+msgID);
+        }
+      }
+
+    }
+    else if((data[1] & 0xE0) == 0x20){ //Split train
+
+      //Check if message is not used
+      if($('#warning_list #W'+msgID).length == 0){
+        var text = "<div id=\"W"+msgID+"\" class=\"warning\" style=\"background-color:light-red;\"><div class=\"photobox l\"><img src=\"./img/train.png\"/></div>";
+        text += "<div class=\"photobox r\"><img src=\"./img/train.png\"/></div><center><h2>A Train ("+data[3]+") has split</h2><br/>One part is at "+data[4]+":"+data[5]+", the other part is in "+data[6]+":"+data[7];
+        text += "<br/><but onClick=\"remote_request('Ec')\">";
+        text += "<b>Resume</b></but></center></div>";
+        $('#warning_list').append(text);
+      }
+    }
+
+
+    //Set bell icon
+    if($("#warning_list").html() == ""){
+      $('#warning_list').css("display","none");
+      $('#notify').attr('src','./img/notification.png');
+    }else{
+      $('#notify').attr('src','./img/notification_y.png');
+    } 
+  }
+
+  function ws_clearmessage(data){
+    var msgID = data[2] + ((data[1] & 0x1F) << 8);
+    $('#warning_list #W'+msgID).remove();
+    //Set bell icon
+    if($("#warning_list").html() == ""){
+      $('#warning_list').css("display","none");
+      $('#notify').attr('src','./img/notification.png');
+    }else{
+      $('#notify').attr('src','./img/notification_y.png');
+    } 
+  }
+
+  function ws_full_train_data(data){
+    console.log('Train_Data_Update');
+    console.log(active_trains);
+    if(data.length > 5){
+      var train_ID = data[1];
+      var DCC_ID = (data[2] << 8) + data[3];
+
+      if($('#T'+DCC_ID).length != 0){
+        console.log('Known');
+        console.log(DCC_ID);
+
+        var speed_step = (data[5] & 0x7F);
+        var max_speed = parseInt(train_list[train_ID][4]);
+
+        console.log('Speed: '+speed_step);
+
+        $("#T"+DCC_ID+" .slider" ).slider('value',((speed_step / 127)*max_speed));
+        $("#T"+DCC_ID+" .slider-handle" ).html(Math.round((speed_step / 127)*max_speed));
+        train_list[train_ID].data.speed = speed_step;
+
+        if((data[5] & 0x80) == 0){
+          train_list[train_ID].data.direction = 0x0;
+          //Reverse
+          console.log("Reverse");
+          $('#T'+DCC_ID+" .dir_right").addClass('selected');
+          $('#T'+DCC_ID+" .dir_left").removeClass('selected');
+        }else{
+          //Forward
+          train_list[train_ID].data.direction = 0x80;
+          console.log("Forward");
+          $('#T'+DCC_ID+" .dir_left").addClass('selected');
+          $('#T'+DCC_ID+" .dir_right").removeClass('selected');
+        }
+
+      }
+      else{
+        //console.log(data[6]+'<<+'+data[7]+'=='+DCC_ID);
+        console.log("New train");
+        console.log(train_list[train_ID]);
+        var train_info = train_list[train_ID];
+        var text = "";
+        try{
+          text += '<div id="T'+DCC_ID+'" class="trainbox">';
+          text += '<div style="width:calc(100% - 60px);height:250px;float:left;">';
+          text += '<div class="image_box">';
+          text += '<img src="./../trains/'+train_info[0]+'.jpg">';
+          text += '</div>';
+          text += '<div class="name_tag">';
+          text += '<span class="title">'+train_info[1]+'</span>';
+          text += '<span class="value">#'+DCC_ID+'</span>';
+          text += '<br/></div>';
+          text += '<div class="control_tag">';
+          text += '<span class="title">Control</span>';
+          text += '<span class="value">Manual</span>';
+          text += '<br/></div>';
+          text += '<div class="route_tag">';
+          text += '<span class="title">Route</span>';
+          text += '<span class="value">None</span>';
+          text += '<svg viewBox="0 0 16 16" class="route_plus" onClick="open_Route(this);"><circle fill="#bbb" cx="8" cy="8" r="6.11"/><path d="M8,0a8,8,0,1,0,8,8A8,8,0,0,0,8,0Zm4,8.8H8.8V12H7.2V8.8H4V7.2H7.2V4H8.8V7.2H12Zm0,0"/></svg>';
+          text += '<br/></div>';
+          text += '<div class="dir_tag">';
+          train_list[train_ID].data.direction = (data[5] & 0x80);
+          text += '<svg viewBox="0 0 830.48 233.25" class="dir_arrow">';
+          text +=   '<path onClick="ev_Train_direction('+train_ID+',1)" class="dir_left';
+          if((data[5] & 0x80) == 0){text += ' selected';}
+          text +=            '" d="M385.87,60.27h-238V5.07a2.14,2.14,0,0,0-3.44-1.62L3.79,115a2.07,2.07,0,0,0,0,3.24L144.44,229.8a2.09,2.09,0,0,0,1.29.45,2.33,2.33,0,0,0,1-.2,2.13,2.13,0,0,0,1.23-1.87V173H385.8a2.05,2.05,0,0,0,2.14-2V62.52a2.35,2.35,0,0,0-2.2-2.26"/>';
+          text +=   '<path onClick="ev_Train_direction('+train_ID+',0)" class="dir_right';
+          if(data[5] & 0x80){text += ' selected';}
+          text +=            '" d="M444.62,173h238v55.2A2.14,2.14,0,0,0,686,229.8L826.7,118.25a2.07,2.07,0,0,0,0-3.24L686,3.45A2.09,2.09,0,0,0,684.75,3a2.33,2.33,0,0,0-1,.2,2.13,2.13,0,0,0-1.23,1.87v55.2H444.69a2.05,2.05,0,0,0-2.14,2V170.73a2.35,2.35,0,0,0,2.2,2.26"/>'
+          text += '</svg>';
+          text += '</div>';
+
+          if((data[4] & 0b1000) != 0){
+            text += 'Andere X-BUS Handregler<br/>';
+          }
+          if((data[4] & 0b111) == 0){
+            text += '14 steps<br/>';
+          }
+          else if((data[4] & 0b111) == 2){
+            text += '28 steps<br/>';
+          }
+          else if((data[4] & 0b111) == 4){
+            text += '128 steps<br/>';
+          }
+
+          text += 'Fahrstufen KKK: ' + (data[6] & 0x7F) + '<br/>'
+
+          text += 'Options active:<br/>';
+
+          if((data[6] & 0x40) == 1){
+            text += 'Doppeltraktion<br/>';
+          }
+
+          if((data[6] & 0x20) == 1){
+            text += 'Smartsearch<br/>';
+          }
+
+          if((data[6] & 0x10) == 1){
+            text += 'F0<br/>';
+          }
+
+          if((data[6] & 0x8) == 1){
+            text += 'F4<br/>';
+          }
+
+          if((data[6] & 0x4) == 1){
+            text += 'F3<br/>';
+          }
+
+          if((data[6] & 0x2) == 1){
+            text += 'F2<br/>';
+          }
+
+          if((data[6] & 0x1) == 1){
+            text += 'F1<br/>';
+          }
+
+          text += '<br/></div>';
+
+          text += '<div style="width:50px;margin-left:10px;height:250px;float:left;">';
+          text += '<div class="slider" tid="'+train_ID+'" style="height:210px;margin:0px auto;margin-top:20px;">';
+          text += '<div class="ui-slider-handle slider-handle"></div></div></div>';
+          text += '<div class="prim_fn">';
+
+          text += train_funtion_svg("D_light",0);
+          text += train_funtion_svg("D_Cab_light",1);
+          text += train_funtion_svg("D_Cab_light",2);
+          text += train_funtion_svg("D_default",3);
+          text += train_funtion_svg("D_default",4);
+          text += train_funtion_svg("D_default",5);
+
+          text += '</div><div class="secu_fn"><div class="D1"><div class="D2">';
+          for(var i = 6;i<29;i++){
+            text += train_funtion_svg("U_default",i);
+          }
+          text += '</div></div></div></div>';
+
+          $('#CTrain').append(text);
+
+          var speed_step = (data[4] & 0x7F);
+          train_list[train_ID].data.speed = speed_step;
+          var max_speed = parseInt(train_info[4]);
+
+        }catch(e){
+          
+        }
+        create_train_slider(DCC_ID,max_speed,speed_step);
+
+      }
+    }
+  }
 /**/
 
 var ws;
@@ -216,7 +503,16 @@ function WebSocket_handler(adress){
       console.log(data);
 
       //New Opcodes
-      if(data[0] == WSopc_BroadTrack){
+      if(data[0] == WSopc_Z21TrainData){
+        console.log("Z21 Train data");
+        ws_full_train_data(data);
+      }
+      else if(data[0] == WSopc_LinkTrain){
+        console.log("Link train");
+        train_follow[data[1]] = data[2]; // Link the follow ID to the train ID
+      }
+
+      else if(data[0] == WSopc_BroadTrack){
         ws_track_update(data);
         console.log("Update for the track");
       }else if(data[0] == WSopc_BroadSwitch){
@@ -238,7 +534,11 @@ function WebSocket_handler(adress){
       }
       else if(data[0] == WSopc_NewMessage){
         console.log("New Message");
-        console.warn("Discard Message!!!");
+        ws_message(data);
+      }
+      else if(data[0] == WSopc_ClearMessage){
+        console.log("Clear Message");
+        ws_clearmessage(data);
       }
 
       /* Old Opcodes *//*
@@ -282,7 +582,7 @@ function WebSocket_handler(adress){
         console.log("Setup update");
         create_track(data);
       }
-      else if(data[0] == 3){
+      /*else if(data[0] == 3){
         //Track
         console.log("Track update");
         console.log(data);
@@ -299,7 +599,7 @@ function WebSocket_handler(adress){
         console.log("MS Switch update");
         console.log(data);
         ms_switch_update(data);
-      }
+      }*/
       else if(data[0] == 6){
         //Station list
         console.log("Station List");
@@ -319,10 +619,10 @@ function WebSocket_handler(adress){
           //Start upload file and reload list
           if(data.length == 3){
             succ_add_train(data[2]);
-            train_list_t += "<option value=\""+data[2]+"\">#"+$('#train_dcc').val();+"&nbsp;&nbsp;&nbsp;"+$('#train_name').val();+"</option>";
+            train_option += "<option value=\""+data[2]+"\">#"+$('#train_dcc').val();+"&nbsp;&nbsp;&nbsp;"+$('#train_name').val();+"</option>";
           }else{
             succ_add_train(data[2],data[3]);
-            train_list_t += "<option value=\""+(data[2]+(data[3] << 8))+"\">#"+$('#train_dcc').val();+"&nbsp;&nbsp;&nbsp;"+$('#train_name').val();+"</option>";
+            train_option += "<option value=\""+(data[2]+(data[3] << 8))+"\">#"+$('#train_dcc').val();+"&nbsp;&nbsp;&nbsp;"+$('#train_name').val();+"</option>";
           }
         }
         else if(data[1] == 1){
@@ -345,10 +645,10 @@ function WebSocket_handler(adress){
         console.log("Connection Closed\nRetrying....");
         $('#status').attr('src','./img/status_ow.gif');
         $('#warning_list').css('display','none');
-        //$("#CTrain").empty();
+        $("#CTrain").empty();
         $('#warning_list').empty();
         //Resetting values
-        //active_trains = [];
+        train_follow = [];
       }
       if(socket_tries != 5){
         setTimeout(function(){

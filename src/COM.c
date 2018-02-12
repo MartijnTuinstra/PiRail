@@ -531,7 +531,7 @@ void COM_change_switch(int M){
 			TxPacket.data[i+2] = PulseAdr[i];
 		}
 
-		printf("Sending: ");
+		printf("COM Sending: ");
 		for(int i = 0;i<(TxPacket.data[1]-1);i++){
 			printf("%02X ",TxPacket.data[i]);
 		}

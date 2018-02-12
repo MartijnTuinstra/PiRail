@@ -161,154 +161,29 @@ struct timer_thread_data a[MAX_TIMERS];
 #include "./src/COM.c"
 
 #include "./src/Z21.c"
-
+/*
 void JSON(){
 	pthread_mutex_lock(&mutex_lockB);
-	char buf[4096];
-	memset(buf,0,4096);
-
-	buf[0] = WSopc_BroadTrack; //Opcode
-	int buf_l;
-	_Bool data = FALSE;
-
-	int q = 0;
-
-	for(int i = 0;i<MAX_Modules;i++){
-		if(Units[i]){
-			for(int j = 0;j<=Units[i]->B_nr;j++){
-				struct Seg * B = Units[i]->B[j];
-				if(B && B->change){
-					data = 1;
-					buf[q*4+1] = B->Module;
-					buf[q*4+2] = B->id;
-					buf[q*4+3] = (B->dir << 7) + (B->blocked << 4) + B->state;
-					buf[q*4+4] = B->train;
-					B->change = 0;
-					q++;
-				}
-			}
-		}
-	}
-
-	buf_l = q*4;
-
-	if(data == 1){
-		send_all(buf,++buf_l,8);
-	}
+	WS_trackUpdate();
 
 	pthread_mutex_unlock(&mutex_lockB);
 }
-
+*/
 void JSON_new_client(int Client_fd){
+	WS_trackUpdate(Client_fd);
+	WS_SwitchesUpdate(Client_fd);
+
 	pthread_mutex_lock(&mutex_lockB);
+
 	char buf[4096];
-	memset(buf,0,4096);
+	char buf_l;
 
-	/*Track*/
-
-		buf[0] = WSopc_BroadTrack; //Opcode
-		int buf_l;
-		_Bool data = 0;
-
-		int q = 1;
-
-		for(int i = 0;i<MAX_Modules;i++){
-			if(Units[i]){
-				data = 1;
-				for(int j = 0;j<Units[i]->B_nr;j++){
-					struct Seg * B = Units[i]->B[j];
-					if(B){
-						buf[(q-1)*4+1] = B->Module;
-						buf[(q-1)*4+2] = B->id;
-						buf[(q-1)*4+3] = (B->dir << 7) + (B->blocked << 4) + B->state;
-						buf[(q-1)*4+4] = B->train;
-						q++;
-					}
-				}
-			}
-		}
-
-		buf_l = (q-1)*4+1;
-
-		if(data == 1){
-			send_packet(Client_fd,buf,buf_l,8);
-		}
-
-		memset(buf,0,4096);
-
-	/*Switches*/
-
-		buf[0] = WSopc_BroadSwitch;
-		buf_l  = 0;
-		data   = 0;
-
-		q = 1;
-		printf("\n\n3");
-
-		for(int i = 0;i<MAX_Modules;i++){
-			if(Units[i]){
-				data = 1;
-				for(int j = 0;j<Units[i]->Swi_nr;j++){
-					struct Swi * S = Units[i]->S[j];
-					if(S){
-						buf[(q-1)*3+1] = S->Module;
-						buf[(q-1)*3+2] = S->id & 0x7F;
-						buf[(q-1)*3+3] = S->state & 0x7F;
-						printf(",%i,%i,%i",S->Module,S->id,S->state);
-						q++;
-					}
-				}
-			}
-		}
-
-		buf_l = (q-1)*3+1;
-
-		/*
-
-		printf("\tbuf_l:%i\n\n",buf_l);
-
-		if(data == 1){
-			send_packet(Client_fd,buf,buf_l,8);
-		}
-
-		memset(buf,0,4096);*/
-
-	/*MSSwitches*/
-
-		//buf[0] = 5;
-		//buf_l = 0;
-
-		q = 1;
-
-		for(int i = 0;i<MAX_Modules;i++){
-			if(Units[i]){
-				data = 1;
-				for(int j = 0;j<Units[i]->Mod_nr;j++){
-					struct Mod * M = Units[i]->M[j];
-					if(M){
-						buf[(q-1)*4+1+buf_l] = M->Module;
-						buf[(q-1)*4+2+buf_l] = (M->id & 0x7F) + 0x80;
-						buf[(q-1)*4+3+buf_l] = M->state;
-						buf[(q-1)*4+4+buf_l] = M->length;
-						q++;
-					}
-				}
-			}
-		}
-
-		buf_l += (q-1)*4+1;
-
-		if(data == 1){
-			send_packet(Client_fd,buf,buf_l,8);
-		}
-
-		memset(buf,0,4096);
 
 	/*Stations*/
 
 	buf[0] = 6;
 	buf_l = 1;
-	data = 0;
+	_Bool data = 0;
 
 	if(St_list_i>0){
 		data = 1;
@@ -415,7 +290,8 @@ void *do_Magic(){
 				}
 			}
 		}
-		JSON();
+		WS_trackUpdate(0);
+		//WS_SwitchesUpdate(0);
 		pthread_mutex_unlock(&mutex_lockA);
 		t = clock() - t;
 		//printf ("It took me %d clicks (%f seconds).\n",t,((float)t)/CLOCKS_PER_SEC);
@@ -446,7 +322,7 @@ void do_once_Magic(){
 	}
 	COM_change_A_signal(4);
 	COM_change_switch(4);
-	JSON();
+	WS_trackUpdate(0);
 	pthread_mutex_unlock(&mutex_lockA);
 }
 

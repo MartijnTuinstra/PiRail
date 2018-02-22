@@ -314,6 +314,24 @@ void Web_Link_Train(int type,char nr,char B[]){
   }
 }*/
 
+void WS_reset_switches(int client_fd){
+  //Check if client has admin rights
+  char admin = 1;
+  if(admin){
+    //Go through all switches
+    for(int i = 0;i<MAX_Modules;i++){
+      for(int j = 0;j<Units[i]->S_L;j++){
+        if(Units[i]->S[j]){
+          Units[i]->S[j]->state = Units[i]->S[j]->default_state + 0x80;
+        }
+      }
+    }
+
+    //Send all switch updates
+    WS_SwitchesUpdate(0);
+  }
+}
+
 void WS_LinkTrain(uint8_t fID, uint8_t tID){
   send_all((char []){WSopc_LinkTrain,fID,tID},3,WS_Flag_Trains);
 }

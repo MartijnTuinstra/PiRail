@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 21 21" tool="straight+Sig2">
-  <line y1="10.5" x2="21" y2="10.5" style="fill:none;stroke:#000;stroke-width:3px"/>
-
-  <g transform="translate(3.9,15)">
-    <path d="M0,1.525 v1.2 l2.4,2.4 h8.4 l2.4,-2.4 v-2.4 l-2.4,-2.4 h-8.4 l-2.4,2.4 Z"   style="fill: black;stroke: black;stroke-width: 0.5px;"/>
-    <path d="M7.8,1.525 v0.6 l1.2,1.2 h1.2 l1.2,-1.2 v-1.2 l-1.2,-1.2 h-1.2 l-1.2,1.2 Z" style="fill: lime ;stroke: lime ;stroke-width: 0.5px;"/>
-    <path d="M1.8,1.525 v0.6 l1.2,1.2 h1.2 l1.2,-1.2 v-1.2 l-1.2,-1.2 h-1.2 l-1.2,1.2 Z" style="fill: red  ;stroke: red  ;stroke-width: 0.5px;"/>
-  </g>
-</svg>

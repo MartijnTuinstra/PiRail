@@ -26,6 +26,7 @@
 		struct SegC AppC;
 
 		char state;	//0 = Straight, 1 = Diverging / 0x80 is change bit
+		char default_state;
 		char len;
 
 		char UAdr; //Unit Address

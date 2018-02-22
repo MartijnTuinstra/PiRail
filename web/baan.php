@@ -405,7 +405,7 @@
 	  </script>
   </head>
   <body>
-    <div id="header" style="height:40px;width:100%;background-color:#B00">
+    <div id="header" style="height:40px;width:100%;background-color:#1565c0">
       <div style="width:130px;margin-left:3%;float:left;height:40px">
         <?php include("./img/back.svg"); ?>
         <img src="./img/rotate_left_w.png" width="20px" style="margin:10px;cursor:pointer;"
@@ -424,7 +424,26 @@
             onClick="menu_but()">
         <img src="./img/menu.png" width="16px"/>
       </div>
-      <img id="status" src="./img/status_o.png" width="24px" style="float:right;margin:8px;margin-right:20px;"/>
+      <div id="status"  style="float:right;padding:8px;margin-right:12px;width:24px;">
+        <object type="image/svg+xml" data="./img/reconnecting.svg" width="24px" height="24px" class="img"></object>
+        <div class="info">
+          <div class="header">
+            <b>Connecting...</b>
+          </div>
+          <div class="content">
+            <div style="width:5px;height:20px;float:left;"></div>
+            <div class="broad" nr="7" style="background-color:green;"></div>
+            <div class="broad" nr="6" style="background-color:red;"></div>
+            <div class="broad" nr="5" style="background-color:green;"></div>
+            <div class="broad" nr="4" style="background-color:red;">A</div>
+            <div class="broad" nr="3" style="background-color:green;">M</div>
+            <div class="broad" nr="2" style="background-color:red;">S</div>
+            <div class="broad" nr="1" style="background-color:green;">T</div>
+            <div class="broad" nr="0" style="background-color:red;">T</div>
+            <div style="width:5px;height:20px;float:left;"></div>
+          </div>
+        </div>
+      </div>
     </div>
     <div id="menu" style="display:none;">
     	<ul>
@@ -1282,6 +1301,9 @@
     <script src="./scripts/script.js">
     </script>
     <script src="./scripts/socket.js">
+    </script>
+    <script>
+      $('#status .content').on('click',ev_Toggle_Broadcast_Flag);
     </script>
   </body>
 </html>

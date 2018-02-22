@@ -24,11 +24,13 @@ var WSopc_ShortCircuitStop   = 0x11;
 var WSopc_ClearEmergency     = 0x12;
 var WSopc_NewMessage         = 0x13;
 var WSopc_ClearMessage       = 0x14;
+var WSopc_ChangeBroadcast    = 0x15;
 
 
 
 
 var active_trains = []; //Trains that were active on the layout.
+var broadcastFlags = 0xFF;
 
 /*Client to Server*/
   function ev_throw_switch(evt){ //Click event throw switch
@@ -125,6 +127,16 @@ var active_trains = []; //Trains that were active on the layout.
       var data2 = new Int8Array(data);
 
       ws.send(data2);
+    }
+  }
+
+  function ev_Toggle_Broadcast_Flag(evt){
+    console.log(evt);
+    if($(evt.target).attr("nr") != undefined){
+      console.log(parseInt($(evt.target).attr("nr")));
+      broadcastFlags ^= 1 << parseInt($(evt.target).attr("nr"));
+      console.log("New broadcast flag: "+broadcastFlags);
+      ws.send(new Uint8Array([WSopc_ChangeBroadcast,broadcastFlags]));
     }
   }
 /**/
@@ -471,15 +483,46 @@ var active_trains = []; //Trains that were active on the layout.
       }
     }
   }
+
+  function ws_Set_Broadcast_Flags(data){
+    $('#status .broad').each(function(i,v){
+      v.style['background'] = 'red';
+    })
+    if(data[1] & 0x80){
+      $('#status .broad')[0].style['background'] = 'green';
+    }
+    if(data[1] & 0x40){
+      $('#status .broad')[1].style['background'] = 'green';
+    }
+    if(data[1] & 0x20){
+      $('#status .broad')[2].style['background'] = 'green';
+    }
+    if(data[1] & 0x10){
+      $('#status .broad')[3].style['background'] = 'green';
+    }
+    if(data[1] & 0x8){
+      $('#status .broad')[4].style['background'] = 'green';
+    }
+    if(data[1] & 0x4){
+      $('#status .broad')[5].style['background'] = 'green';
+    }
+    if(data[1] & 0x2){
+      $('#status .broad')[6].style['background'] = 'green';
+    }
+    if(data[1] & 0x1){
+      $('#status .broad')[7].style['background'] = 'green';
+    }
+    broadcastFlags = data[1];
+  }
 /**/
 
 var ws;
 
 function WebSocket_handler(adress){
-    $('#status').attr('onClick','');
-    $('#status').css('cursor','default');
+    $('#status .img').attr('onClick','');
+    $('#status .img').css('cursor','default');
     // Let us open a web socket
-    ws = new WebSocket("ws://"+adress+"/",0xFF);
+    ws = new WebSocket("ws://"+adress+"/",broadcastFlags);
     ws.binaryType = 'arraybuffer';
 
     ws.onopen = function(){
@@ -488,7 +531,8 @@ function WebSocket_handler(adress){
       $('.notConnected').toggleClass('notConnected');
       $('#warning_list').empty();
       socket_tries = 0;
-      $('#status').attr('src','./img/status_g.png');
+      $('#status .img').attr('data','./img/connected.svg');
+      $('#status .header').html('Connected');
 
       //Create train accept is now possible
       $('#Train_Add #upload').attr('src','./img/checked.png');
@@ -539,6 +583,11 @@ function WebSocket_handler(adress){
       else if(data[0] == WSopc_ClearMessage){
         console.log("Clear Message");
         ws_clearmessage(data);
+      }
+
+      else if(data[0] == WSopc_ChangeBroadcast){
+        console.log("New Broadcast Flags");
+        ws_Set_Broadcast_Flags(data);
       }
 
       /* Old Opcodes *//*
@@ -643,7 +692,8 @@ function WebSocket_handler(adress){
         $('.Connected').toggleClass('notConnected');
         $('.Connected').toggleClass('Connected');
         console.log("Connection Closed\nRetrying....");
-        $('#status').attr('src','./img/status_ow.gif');
+        $('#status .img').attr('data','./img/reconnecting.svg');
+        $('#status .header').html('Reconnecting...');
         $('#warning_list').css('display','none');
         $("#CTrain").empty();
         $('#warning_list').empty();
@@ -658,9 +708,10 @@ function WebSocket_handler(adress){
         }, 5000);
       }else{
         console.log("No Connection posseble\nIs the server on?");
-        $('#status').attr('src','./img/status_r.png');
-        $('#status').css('cursor','pointer');
-        $('#status').attr('onClick','socket_tries = 0;WebSocket_handler(window.location.host+":9000")');
+        $('#status .img').attr('data','./img/disconnected.svg');
+        $('#status .img').contents().find('svg').css("cursor","pointer");
+        $('#status .img').contents().find('svg').attr('onClick','socket_tries = 0;WebSocket_handler(window.location.host+":9000")');
+        $('#status .header').html('Disconnected');
       }
     };
 

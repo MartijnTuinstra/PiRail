@@ -17,9 +17,10 @@
 #include <netinet/in.h>
 #include <string.h>
 #include <openssl/sha.h>
+#include <openssl/md5.h>
 #include <errno.h>
 #include <signal.h>
-#include "./src/b64.c"
+#include "./src/encryption.c"
 
 #include "settings.h"
 

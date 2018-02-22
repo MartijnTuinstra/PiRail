@@ -1,17 +1,27 @@
+#ifndef WEB_H
+  #include "./Web.h"
+#endif
+
 char websocket_magic_string[] = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
 pthread_t client_threads[MAX_WEB_CLIENTS];
 pthread_mutex_t mutex_lock_web;
 
-struct client_thread_args{
-  int fd_client;
-  int thread_id;
-};
+char * WS_password = 0;
 
 struct client_thread_args clients_data[MAX_WEB_CLIENTS];
 struct web_client_t * clients[MAX_WEB_CLIENTS];
 int fd_client_list[MAX_WEB_CLIENTS] = {0};
 int connected_clients = 0;
+
+char strcmp2(char arr1[],char arr2[], int length){
+  for(int i = 0;i<length;i++){
+    if(arr1[i] != arr2[i]){
+      return 0;
+    }
+  }
+  return 1;
+}
 
 void append_Array(char arr1[],int length1, char arr2[],int length2,char arrout[]){
   int index = 0;
@@ -82,13 +92,13 @@ int websocket_connect(struct web_client_t * C){
       if (E_prot){
           strncat(protocol,S_prot,E_prot-S_prot);
       }
-      prot = (int)strtol(protocol,NULL,10);
+      prot = (int)strtol(protocol,NULL,10) & ~(0x10); //Deselect admin properties
     }else{
       printf("Default Protocol\n");
-      prot = 255;
+      prot = 0xEF;
       protocol[0] = '2';
-      protocol[1] = '5';
-      protocol[2] = '5';
+      protocol[1] = '3';
+      protocol[2] = '9';
       protocol[3] = 0;
     }
     printf("Protocol: %i\n",prot);
@@ -280,13 +290,32 @@ void send_all(char data[],int length,int flag){
   pthread_mutex_unlock(&mutex_lock_web);
 }
 
-int recv_packet_procces(char data[1024]){
+int recv_packet_procces(char data[1024],struct client_thread_args * client_data){
   // Flag Admin Settings    0x80
   // Train stuff flag       0x40
   // Rail stuff flag        0x20
   // General Operation flag 0x10
+  printf("recv_packet_procces\n");
 
   if(data[0] & 0x80){ //Admin settings
+    printf("Admin settings: %02X\n",data[0]);
+    if(data[0] == 0xFF){ //Admin login
+      printf("\nAdmin Login\n\n");
+      if(strcmp2(&data[1],WS_password,32) == 1){
+        printf("\n\n\n\n\nSUCCESSFULL LOGIN\n\n");
+        //0xc3,0xbf,0x35,0x66,0x34,0x64,0x63,0x63,0x33,0x62,0x35,0x61,0x61,0x37,0x36,0x35,0x64,0x36,0x31,0x64,0x38,0x33,0x32,0x37,0x64,0x65,0x62,0x38,0x38,0x32,0x63,0x66,0x39,0x39
+        clients[client_data->thread_id]->client_type |= 0x10;
+
+        send_packet(client_data->fd_client,(char [2]){WSopc_ChangeBroadcast,clients[client_data->thread_id]->client_type},2,255);
+      }else{
+        printf("\n\n\n\n\nFAILED LOGIN!!\n\n");
+      }
+    }
+    if((clients[client_data->thread_id]->client_type & 0x10) != 0x10){
+      //Client is not an admin
+      printf("Not an Admin client");
+      return;
+    }
     if(data[0] == 0x80){ //Clear track
 
     }
@@ -388,6 +417,19 @@ int recv_packet_procces(char data[1024]){
     }
     else if(data[0] == WSopc_ClearMessage){
 
+    }
+    else if(data[0] == WSopc_ChangeBroadcast){
+      clients[client_data->thread_id]->client_type; //current flags
+      data[1]; //new flags
+      if(data[1] & 0x10){ //Admin flag
+        return 0; //Not allowed to set admin flag
+        printf("Changing admin flag: NOT ALLOWED\n");
+      }else if(data[1] != 0){
+        clients[client_data->thread_id]->client_type = data[1];
+        printf("Changing flags\n");
+      }
+      printf("Sending (new) flags\n");
+      send_packet(client_data->fd_client,(char [2]){WSopc_ChangeBroadcast,clients[client_data->thread_id]->client_type},2,255);
     }
   }
 
@@ -752,25 +794,31 @@ void * websocket_client(void * thread_data){
       while(initialise == 1){
 
       }
-      printf("Send 1\n");
+      printf("Send track style\n");
       char data[2];
       int length = 0;
       data[0] = 0;
       data[1] = digital_track; //(0 == Analog,1 == Digital)
       send_packet(fd_client,data,2,1);
-      printf("Send 2\n");
+      printf("Send Setupdata\n");
 
       send_packet(fd_client,setup_data,setup_data_l,8);
       printf("Recv 1\n");
       recv_packet(fd_client,buf,&length);
       memset(buf,0,1024);
 
-      printf("Send 3\n");
+      printf("Send new client JSON\n");
 
       JSON_new_client(fd_client);
 
       printf("Send open messages\n");
       WS_send_open_Messages(fd_client);
+
+
+      printf("Send broadcast flags\n");
+
+      send_packet(fd_client,(char [2]){WSopc_ChangeBroadcast,clients[i]->client_type},2,0xFF);
+
       printf("Done\n");
 
       while(1){
@@ -784,8 +832,9 @@ void * websocket_client(void * thread_data){
 		  /*for(int x = 0;x<length;x++){
 			  printf("[%02x]",buf[x]);
 		  }*/
+          printf("Status: %i\n",status);
           if(status == 1){
-            recv_packet_procces(buf);
+            recv_packet_procces(buf,thread_args);
           }
           printf("\nData: %s\n",buf);
           if(status == -8){
@@ -834,6 +883,26 @@ void * web_server(){
   int fdimg;
   int on = 1;
   //printf("Server starting...\n");
+
+  long WS_pass_length;
+  FILE * f = fopen ("./password.txt", "rb");
+
+  if (f)
+  {
+    fseek (f, 0, SEEK_END);
+    WS_pass_length = ftell (f);
+    fseek (f, 0, SEEK_SET);
+    WS_password = malloc (WS_pass_length);
+    if (WS_password && WS_pass_length == 32)
+    {
+      fread (WS_password, 1, WS_pass_length, f);
+    }
+    else{
+      printf("PASSWORD: wrong length or unable to allocate memory\n\n");
+    }
+    fclose (f);
+  }
+
 
   fd_server = socket(AF_INET, SOCK_STREAM, 0);
   if(fd_server < 0){

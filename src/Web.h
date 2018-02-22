@@ -7,18 +7,23 @@
     int client_type; /*Flags for client type
                       255 = All messages
 
-                      1  = System messages
-                      2  = Switches
-                      4  = Signals
-                      8  = Track
-                      16 = Train info
-                      32 = Trains
+                      1  = Trains
+                      2  = Track
+                      4  = Switches
+                      8  = Messages
+                      16 = Admin
+                      32 = 
                       64 =
                       128=*/
     int state;        /* If this client is active
                       0 = free
                       1 = in use
                       2 = stopping / ready to join thread*/
+  };
+
+  struct client_thread_args{
+    int fd_client;
+    int thread_id;
   };
 
   int websocket_connect(struct web_client_t * C);
@@ -29,7 +34,7 @@
 
   void send_all(char data[],int length,int flag);
 
-  int recv_packet_procces(char data[]);
+  int recv_packet_procces(char data[1024],struct client_thread_args * client_data);
 
   void * websocket_client(void * thread_data);
 
@@ -72,5 +77,6 @@
   #define WSopc_ClearEmergency     0x12
   #define WSopc_NewMessage         0x13
   #define WSopc_ClearMessage       0x14
+  #define WSopc_ChangeBroadcast    0x15
 
 #endif

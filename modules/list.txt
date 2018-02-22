@@ -128,13 +128,13 @@
         ]
     },
     "7": {
-        "name": "Rangeer station \/ Opstelplaats",
-        "blocks": 0,
+        "name": "Rangeer station \/ Opstelplaats\n'Create Module\nU",
+        "blocks": 7,
         "switch": 0,
         "signals": 0,
         "stations": 0,
-        "width": 1027,
-        "height": 216,
+        "width": 674,
+        "height": 158,
         "angle": 0,
         "anchors": [
             1

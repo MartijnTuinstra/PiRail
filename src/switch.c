@@ -144,6 +144,7 @@ void Create_Switch(struct SegC Adr,struct SegC App,struct SegC Div,struct SegC S
 	Z->DivC = Div;
 	Z->AppC = App;
 	Z->state = state + 0x80;
+	Z->default_state = state;
 	Z->len = 1;
 
 	//Check and copy addresses

@@ -1,4 +1,3 @@
 handle SIGILL nostop
 handle SIGPIPE nostop
-b baan.c:920
 run

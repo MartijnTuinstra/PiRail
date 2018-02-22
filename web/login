@@ -1,0 +1,6 @@
+<?php
+//Login page
+session_start();
+//$_SESSION;
+
+?>

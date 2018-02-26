@@ -66,7 +66,7 @@ void WS_clear_message(uint16_t ID){
 
   printf("Send clear message (ID: %i)\n",ID);
 
-  send_all((char [3]){WSopc_ClearMessage,(ID >> 8),ID&0xFF},3,1);
+  send_all((char [3]){WSopc_ClearMessage,(ID >> 8),ID&0xFF},3,0xFF);
 }
 
 
@@ -125,9 +125,9 @@ void WS_trackUpdate(int Client_fd){
 
   if(content == 1){
     if(Client_fd){
-      send_packet(Client_fd,data,data_len,8);
+      send_packet(Client_fd,data,data_len,WS_Flag_Track);
     }else{
-      send_all(data,data_len,8);
+      send_all(data,data_len,WS_Flag_Track);
     }
   }
   pthread_mutex_unlock(&mutex_lockB);
@@ -194,10 +194,10 @@ void WS_SwitchesUpdate(int Client_fd){
   if(content == 1){
     if(Client_fd){
       printf("WS_SwitchesUpdate Custom Client");
-      send_packet(Client_fd,buf,buf_l,8);
+      send_packet(Client_fd,buf,buf_l,WS_Flag_Switches);
     }else{
       printf("WS_SwitchesUpdate ALL");
-      send_all(buf,buf_l,8);
+      send_all(buf,buf_l,WS_Flag_Switches);
     }
   }
 
@@ -266,7 +266,7 @@ void WS_NewTrain(char nr,char M,char B){
   data[3] = nr;
   data[4] = M;
   data[5] = B;
-  send_all(data,6,1);
+  send_all(data,6,WS_Flag_Messages);
   WS_add_Message(msg_ID,6,data);
 }
 
@@ -284,7 +284,7 @@ void WS_TrainSplit(char nr,char M1,char B1,char M2,char B2){
   data[5] = B1;
   data[6] = M2;
   data[7] = B2;
-  send_all(data,8,1);
+  send_all(data,8,WS_Flag_Messages);
   WS_add_Message(msg_ID,8,data);
 }
 /*
@@ -333,7 +333,7 @@ void WS_reset_switches(int client_fd){
 }
 
 void WS_LinkTrain(uint8_t fID, uint8_t tID){
-  send_all((char []){WSopc_LinkTrain,fID,tID},3,WS_Flag_Trains);
+  send_all((char []){WSopc_LinkTrain,fID,tID},3,0xFF);
 }
 
 void WS_TrainData(char data[14]){

@@ -1,7 +1,16 @@
 <?php
   header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
   header("Cache-Control: post-check=0, pre-check=0", false);
-  header("Pragma: no-cache");
+  header("Pragma: no-cache");  
+
+  session_start();
+
+  //Logout each time webpage is reloaded
+  $_SESSION['login'] = FALSE;
+
+  if($_SESSION['login'] == TRUE){
+    echo "asdgujhkfsbdguiasdvivuasdhpvjiasdbhpvjiawyoujhofbhadfjvuhasdjiuogyasdpvupjofbvhadpofhbiaensbhpjovgyiasjlviheklbajlvasukevhfvgaylsehk";
+  }
 
   $data = file_get_contents("./../setup.json");
   $data = json_decode($data);
@@ -413,7 +422,10 @@
         <img src="./img/rotate_right_w.png" width="20px" style="margin:10px;cursor:pointer;"
             onClick="rotate('+');" onmouseenter="this.src = './img/rotate_right.png'" onmouseleave="this.src = './img/rotate_right_w.png'"/>
       </div>
-      <div style="margin:1.5px;font-family:Sans-serif;float:left;">
+      <div style="margin:1px;font-family:Sans-serif;float:left;">
+        <div style="position:absolute;top:1px;right: calc(50% + 50px);width:50px;font-family:sans-serif;float:left;height: 20px;line-height: 20px;color: #ffffff;font-weight: bold;padding: 5px 5px;margin: 5px;border-radius: 2.5px;background-color: #C62828;cursor: pointer;text-align: center;" onClick="ws.send(new Uint8Array([0x10]))">
+          STOP
+        </div>
         <h1 id="clock"><?php echo date('H:i');?></h1>
         <img id="notify" src="./img/notification.png" style="float:left;margin:8px;position: absolute;left: calc(50% + 50px);cursor:pointer"
                          height="24px" onClick="warning_toggle();"/>

@@ -23,8 +23,9 @@ var WSopc_EmergencyStop      = 0x10;
 var WSopc_ShortCircuitStop   = 0x11;
 var WSopc_ClearEmergency     = 0x12;
 var WSopc_NewMessage         = 0x13;
-var WSopc_ClearMessage       = 0x14;
-var WSopc_ChangeBroadcast    = 0x15;
+var WSopc_ChangeMessage      = 0x14;
+var WSopc_ClearMessage       = 0x15;
+var WSopc_ChangeBroadcast    = 0x16;
 
 
 
@@ -135,6 +136,46 @@ var broadcastFlags = 0xFF;
     if($(evt.target).attr("nr") != undefined){
       console.log(parseInt($(evt.target).attr("nr")));
       broadcastFlags ^= 1 << parseInt($(evt.target).attr("nr"));
+
+      if($(evt.target).attr("nr") == "4"){
+        if(broadcastFlags & 0x10){
+          //LOGIN
+          var passphrase = $.md5(prompt("Please enter your password", "password"));
+
+          $.post('./login.php', {'pass':passphrase}, function(response) {
+              // Log the response to the console
+              console.log("Response: "+response);
+              if(response == "LOGIN SUCCESFULL"){
+                //PHP succesfull
+                //now websocket
+                var data = [];
+                data[0] = 0xFF; //Admin login opcode
+                for(var i = 0;i<passphrase.length;i++){
+                  data[i+1] = passphrase.charCodeAt(i);
+                }
+
+                var data = new Uint8Array(data);
+
+                ws.send(data);
+              }else{
+                alert("WRONG PASSWORD\n"+response);
+              }
+          });
+        }else{
+          //Logout
+          $.post('./login.php', {'pass':''}, function(response) {
+              // Log the response to the console
+              console.log("Response: "+response);
+              if(response == "LOGIN SUCCESFULL"){
+                alert("SUCCESFULL LOGIN");
+              }else{
+                alert("WRONG PASSWORD");
+              }
+          });
+        }
+      }
+
+
       console.log("New broadcast flag: "+broadcastFlags);
       ws.send(new Uint8Array([WSopc_ChangeBroadcast,broadcastFlags]));
     }
@@ -499,6 +540,9 @@ var broadcastFlags = 0xFF;
     }
     if(data[1] & 0x10){
       $('#status .broad')[3].style['background'] = 'green';
+    }else{
+      //Admin unset: logout
+      $.post('./login.php', {'pass':''});
     }
     if(data[1] & 0x8){
       $('#status .broad')[4].style['background'] = 'green';
@@ -620,46 +664,16 @@ function WebSocket_handler(adress){
           $("#digital").attr("title","Switch to DCC");
         }
       }
-      else if(data[0] == 1){
-        //Message
-        console.log("Message update");
-        console.log(data);
-        message_update(data);
-      }
       else if(data[0] == 2){
         //Track setup
         console.log("Setup update");
         create_track(data);
       }
-      /*else if(data[0] == 3){
-        //Track
-        console.log("Track update");
-        console.log(data);
-        track_update(data);
-      }
-      else if(data[0] == 4){
-        //Switches
-        console.log("Switch update");
-        console.log(data);
-        switch_update(data);
-      }
-      else if(data[0] == 5){
-        //Multi State Switches
-        console.log("MS Switch update");
-        console.log(data);
-        ms_switch_update(data);
-      }*/
       else if(data[0] == 6){
         //Station list
         console.log("Station List");
         console.log(data);
         station_list_update(data);
-      }
-      else if(data[0] == 7){
-        //Train data
-        console.log('Train data update');
-        console.log(data);
-        train_data_update(data);
       }
       else if(data[0] == 8){
         //Request New Train
@@ -709,8 +723,8 @@ function WebSocket_handler(adress){
       }else{
         console.log("No Connection posseble\nIs the server on?");
         $('#status .img').attr('data','./img/disconnected.svg');
-        $('#status .img').contents().find('svg').css("cursor","pointer");
-        $('#status .img').contents().find('svg').attr('onClick','socket_tries = 0;WebSocket_handler(window.location.host+":9000")');
+        $('#status .img').css("cursor","pointer");
+        $('#status .img').attr('onClick','socket_tries = 0;WebSocket_handler(window.location.host+":9000")');
         $('#status .header').html('Disconnected');
       }
     };

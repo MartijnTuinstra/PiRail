@@ -47,7 +47,7 @@
   #define WS_Flag_Track    0x02
   #define WS_Flag_Switches 0x04
   #define WS_Flag_Messages 0x08
-  #define WS_Flag_10       0x10
+  #define WS_Flag_Admin    0x10
   #define WS_Flag_20       0x20
   #define WS_Flag_40       0x40
   #define WS_Flag_80       0x80
@@ -76,7 +76,8 @@
   #define WSopc_ShortCircuitStop   0x11
   #define WSopc_ClearEmergency     0x12
   #define WSopc_NewMessage         0x13
-  #define WSopc_ClearMessage       0x14
-  #define WSopc_ChangeBroadcast    0x15
+  #define WSopc_ChangeMessage      0x14
+  #define WSopc_ClearMessage       0x15
+  #define WSopc_ChangeBroadcast    0x16
 
 #endif

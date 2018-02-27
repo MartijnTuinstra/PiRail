@@ -4,7 +4,7 @@ CU	4	8	32
 '
 'Block
 'Wat	IOadr	id	type	NxM	NxID	NxType	PxM	PxID	PxType	Max_sp	dir	len	OneWay
-CB	0	0	R	I1	I	I	X	0	S	180	0	100	Y
+CB	0	0	R	C	C	c	X	0	S	180	0	100	Y
 CB	1	1	T	E	E	E	E	E	E	180	0	100	N
 '
 CB	8	2	S	X	1	s	X	3	R	90	0	100	N
@@ -18,10 +18,10 @@ CB	26	8	S	X	7	R	X	9	R	90	0	100	N
 CB	27	9	S	X	8	R	X	5	s	90	0	100	N
 '
 CB	50	10	T	E	E	E	E	E	E	90	0	100	N
-CB	51	11	R	X	6	S	E1	E	E	90	0	100	Y
+CB	51	11	R	X	6	S	C	C	C	90	0	100	Y
 '
 '
-CB	2	12	R	I2	I	I	X	2	s	90	1	100	Y
+CB	2	12	R	C	C	C	X	2	s	90	1	100	Y
 CB	3	13	T	E	E	E	E	E	E	90	1	100	N
 '
 CB	12	14	S	X	3	s	X	15	R	90	1	100	N
@@ -40,7 +40,7 @@ CB	32	24	S	X	23	R	X	25	R	90	1	100	N
 CB	33	25	S	X	24	R	X	9	s	90	1	100	N
 '
 CB	52	26	T	E	E	E	E	E	E	90	1	100	N
-CB	53	27	R	X	8	s	E2	E	E	90	1	100	Y
+CB	53	27	R	X	8	s	C	C	C	90	1	100	Y
 '
 'Switch
 'Wat	id	DectBl	AxM	AxID	AxType	SxM	SxID	SxType	DxM	DxID	DxType	IOnr	IOadr	Max_Speed

@@ -12,7 +12,7 @@ char * InputRegs, *NInputRegs, * OutputRegs, * BlinkMask, *PulseMask;
 char activatePulse;
 char blink_EN=0;
 
-int latchPinOut = 9;
+int latchPinOut = 3;
 int dataLoad = A1, latchPinIn = A0;
 
 #define PULSE_WIDTH_USEC   5
@@ -26,35 +26,23 @@ unsigned long blink_interval, pulse_interval, step_interval;
 void setup(){
   Serial.begin(115200);
 
-  pinMode(10,OUTPUT );
+  pinMode(11,OUTPUT );
+  pinMode(12,OUTPUT );
   pinMode(13,OUTPUT );
 
   /*First Boot*/
-  if(EEPROM.read(0) == 0){
+  //if(EEPROM.read(0) == 0){
     EEPROM.write(0,1);
 
-    //EEPROM.write(1,6); //Address 32
+    EEPROM.write(1,6); //Address 32
 
     EEPROM.write(2,1); //1 Input  Registers
     EEPROM.write(3,1); //1 Output Register
 
-    EEPROM.write(4,70); //Blink interval scaler
+    EEPROM.write(4,50); //Blink interval scaler
     EEPROM.write(5,20); //Pulse_interval
-    EEPROM.write(6,60); //Step_interval
-
-    for(long i = 50;i<2000;i=i<<2){
-      delay(i);
-      digitalWrite(13,HIGH);
-      delay(i);
-      digitalWrite(13,LOW);
-    }
-    for(long i = 2000;i>50;i=i>>2){
-      delay(i);
-      digitalWrite(13,HIGH);
-      delay(i);
-      digitalWrite(13,LOW);
-    }
-  }
+    EEPROM.write(6,10); //Step_interval
+  //}
   /********/
 
   SPI.begin();
@@ -64,7 +52,15 @@ void setup(){
   InputRegisters  = EEPROM.read(2);
   OutputRegisters = EEPROM.read(3);
 
-  blink_interval = ((uint32_t)EEPROM.read(4)) * 10;
+  //Reset inputs and outputs
+  digitalWrite(latchPinOut, LOW);
+  for(int i = 0;i<InputRegisters;i++){
+    SPI.transfer(0);
+  }
+  digitalWrite(latchPinOut, HIGH);
+
+
+  blink_interval = ((uint32_t)EEPROM.read(4)) * 200;
   pulse_interval = ((uint32_t)EEPROM.read(5)) * 10;
   step_interval  = ((uint32_t)EEPROM.read(6)) * 10;
 
@@ -94,18 +90,11 @@ void setup(){
   }
 
   pinMode(latchPinOut,OUTPUT ); // Latch pin
-  pinMode(latchPinIn,OUTPUT ); // Latch pin
-  pinMode(dataLoad  ,OUTPUT ); // Data load pin
+  pinMode(latchPinIn ,OUTPUT ); // Latch pin
+  pinMode(dataLoad   ,OUTPUT ); // Data load pin
 
-  OutputRegs[0] = 0b0101000;
-  BlinkMask[0]  = 0b0001100;
-
-  //Reset inputs and outputs
-  digitalWrite(latchPinOut, LOW);
-  for(int i = 0;i<InputRegisters;i++){
-    SPI.transfer(OutputRegs[i]);
-  }
-  digitalWrite(latchPinOut, HIGH);
+  OutputRegs[0] = 0b00000000;
+  BlinkMask[0]  = 0b01111111;
 
   for(int i = 0;i<InputRegisters;i++){
     InputRegs[i] = SPI.transfer(0);
@@ -119,6 +108,10 @@ void setup(){
   RailNet.send(&TxPacket);
   Serial.print("My address is: 0x");
   Serial.println(DevID,HEX);
+  Serial.print("OutRegs: ");
+  Serial.println(OutputRegisters,HEX);
+  Serial.print("InRegs:  ");
+  Serial.println(InputRegisters,HEX);
   delay(200-2*DevID);
 
   unsigned long t = millis();
@@ -145,7 +138,7 @@ void loop(){
     }
   }
   
-  //Executes on a interval of 'blink_interval'
+  //Executes on a interval of 'step_interval'
   if(step()){
     digitalWrite(dataLoad,LOW);           //Pulse Read Line
     delayMicroseconds(PULSE_WIDTH_USEC);
@@ -182,11 +175,24 @@ void loop(){
         //POST SINGLE ADDRESS
         debug("POST SINGLE ADDRESS",1);
 
+        TxPacket->data[0] = 0x05;
+        TxPacket->data[1] = DevID;
+        TxPacket->data[2] = INaddresses[i];
+        RailNet.send(&TxPacket);
+
         Serial.println(INaddresses[0],HEX);
         Serial.println();
       }else if((addres_counter*2) <= InputRegisters){
         //POST MULTIPLE
         debug("POST MULTIPLE ADDRESSES",1);
+
+        TxPacket->data[0] = 0x06;
+        TxPacket->data[1] = addres_counter;
+        TxPacket->data[2] = DevID;
+        for(uint8_t i;i<addres_counter;i++){
+          TxPacket->data[i+3] = INaddresses[i];
+        }
+        RailNet.send(&TxPacket);
 
         for(int i = 0;i<addres_counter;i++){
           Serial.println(INaddresses[i],HEX);
@@ -195,6 +201,13 @@ void loop(){
       }else{
         //POST ALL
         debug("POST ALL ADDRESSES",1);
+        TxPacket->data[0] = 0x07;
+        TxPacket->data[1] = InputRegisters;
+        TxPacket->data[2] = DevID;
+        for(uint8_t i;i<InputRegisters;i++){
+          TxPacket->data[i+3] = NInputRegs[i];
+        }
+        RailNet.send(&TxPacket);
       }
       for(int i = 0;i<InputRegisters;i++){
         InputRegs[i] = NInputRegs[i];
@@ -203,29 +216,27 @@ void loop(){
     
     //printRegs();
     Serial.println("Step");
-    if(DevID != 32){
-      TxPacket.data[0] = RN_OPC_P_S_OUT;
-      TxPacket.data[1] = 0x20; //Target DevID
-      TxPacket.data[2] = 0x01; //Address Low
-      TxPacket.data[3] = 0x00; //Address High
-      RailNet.send(&TxPacket);
-    }
   }
+
   //Executes on a interval of 'blink_interval'
-  
   if(blink()){
-    for(int i = 0;i<OutputRegisters;i++){
-      //XOR each output bit with Blink mask
-      *(OutputRegs+i) ^= *(BlinkMask+i);
-    }
+    Serial.print("Blink  ");
+
     digitalWrite(latchPinOut, LOW);
     for(int i = 0;i<OutputRegisters;i++){
+      //XOR each output bit with Blink mask
+      OutputRegs[i] ^= BlinkMask[i];
+
+      Serial.print(OutputRegs[i],HEX);
       SPI.transfer(OutputRegs[i]); //Shift out data
     }
+    Serial.println();
     digitalWrite(latchPinOut, HIGH);
   }
+
   //Executes on a interval of 'pulse_interval'
   if(pulse()){
+    Serial.println("Pulse");
     for(int i = 0;i<OutputRegisters;i++){
       //XOR each output bit with Blink mask
       *(OutputRegs+i) ^= *(PulseMask+i);

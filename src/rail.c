@@ -29,6 +29,10 @@ struct SegC CAdr(int M,int B,char type){
 
 int Adr_Comp2(struct SegC A,struct SegC B);
 
+void Create_Segment2(int IO_Adr,char M,int ID,char Type,struct SegC Next, struct SegC Prev,char max_speed,char state,char dir,char len){
+  Create_Segment(int IO_Adr,C_Adr(M,ID,Type),Next,Prev,max_speed,state,dir,len)  
+}
+
 void Create_Segment(int IO_Adr,struct SegC Adr ,struct SegC Next, struct SegC Prev,char max_speed,char state,char dir,char len){
 	struct Seg *Z = (struct Seg*)malloc(sizeof(struct Seg));
 

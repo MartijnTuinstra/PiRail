@@ -94,3 +94,5 @@ struct link{
 };
 
 void Create_Segment(int IO_Adr,struct SegC Adr ,struct SegC Next, struct SegC Prev,char max_speed,char state,char dir,char len);
+
+`char DeviceList[20];

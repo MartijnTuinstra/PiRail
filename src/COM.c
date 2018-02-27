@@ -4,43 +4,11 @@
 pthread_mutex_t mutex_UART;
 
 //------------COM PROTOCOL------------//
-//
-//Packet data
-//Adr:		8bit
-//Length:	5bit
-//OpCode: 3bit
-//Data:		8bit //Length times Repeated
-//
-//Bit size:		8				4				4				8
-//					{Adr} {Lenght}{OpCode} {Data} ...
-//
-//Special Adresses
-//	0   = Master / Computer
-//	255 = Broadcast
-//
-//Opcodes
-//	0  = My adress is {Type}
-//	1  = Reset adress line
-//	2  = {Empty}
-//
-//	3  = Block data
-//	4  = Switch Request
-//	5  = {Empty}
-//
-//	6  = Get block data
-//	7  = Set All Switches (Max 64 switches)
-//	8  = Set 1 Switch {Loc}{Data}
-//	9  = Set All Accessoires {Max 32 type 3 signals}
-//	10 = Set 1 Accessoire {Loc}{Data}
-//	11 = {Empty}
-//	12 = {Empty}
-//	13 = {Empty}
-//	14 = {Empty}
-//	15 = {Empty}
-//
-//Opcodes 3-5 block transmission
+//Is described in the techincal documentation.
 
 int uart0_filestream = -1;
+
+char COM_ACK = 0;
 
 void * UART(){
 
@@ -49,7 +17,7 @@ void * UART(){
 	if (uart0_filestream == -1)
 	{
 		//ERROR - CAN'T OPEN SERIAL PORT
-		printf("Error - Unable to open UART.  Ensure it is not in use by another application\n");
+		printf("COM - Error - Unable to open UART.  Ensure it is not in use by another application\n");
 	}
 
 	//CONFIGURE THE UART
@@ -62,8 +30,15 @@ void * UART(){
 	tcflush(uart0_filestream, TCIFLUSH);
 	tcsetattr(uart0_filestream, TCSANOW, &options);
 
+	char data[50];
+	memset(data,0,50);
+
 	while(!stop){
-		usleep(1000000);
+		if(COM_Recv(data)){
+			COM_Parse(data);
+			memset(data,0,50);
+		}
+		usleep(1000);
 	}
 
   //----- CLOSE THE UART -----
@@ -75,21 +50,10 @@ char * COM_Send(struct COM_t DATA){
 		return "No UART";
 	}
 
-	char out[40];
-
-	out[0] = DATA.Adr;
-	out[1] = DATA.Length << 4;
-	out[1] += DATA.Opcode & 0b1111;
-	for(int i = 0;i<DATA.Length;i++){
-		out[i+2] = DATA.Data[i];
-	}
-	//printf("Sending: \"%s\", and length is: %i\n",out,(DATA.Length + 2));
-	//return buf;
-
 	tcflush(uart0_filestream, TCIFLUSH);
 
 	digitalWrite(0,HIGH);
-	int count = write(uart0_filestream, &out[0], (DATA.Length + 2));		//Filestream, bytes to write, number of bytes to write
+	int count = write(uart0_filestream, &DATA.data[0], DATA.length);		//Filestream, bytes to write, number of bytes to write
 	if (count < 0)
 	{
 		printf("UART TX error\n");
@@ -150,67 +114,97 @@ int COM_Recv(char * OUT_Data){
 	}
 }
 
+char COM_Packet_Length(char * Data){
+	uint8_t Opcode = Data[0];
+	if(Opcode == RN_OPC_EMERGENCY_SET ||
+			Opcode == RN_OPC_EMERGENCY_REL ||
+			Opcode == RN_OPC_POWER_ON ||
+			Opcode == RN_OPC_POWER_OFF		){
+		return 2;
+	}else if(Opcode == RN_OPC_ACK || // Set Acknowledge
+			Opcode == RN_OPC_REPORT_ID      ||
+			Opcode == RN_OPC_REQUEST_OUT    ||
+			Opcode == RN_OPC_REQUEST_IN     ||
+			Opcode == RN_OPC_REQUEST_EEPROM    ){
+		return 3;
+	}else if(Opcode == RN_OPC_DEVID  ){ 
+		return 4;
+	}else if(Opcode == RN_OPC_IN_OUT_REGS || // Change input and output
+			Opcode == RN_OPC_T_S_OUT || // Toggle Single Address
+			Opcode == RN_OPC_P_S_OUT || // Pulse Single Address
+			Opcode == RN_OPC_TBS_OUT || // Blink Single Address
+			Opcode == RN_OPC_S_IN    // Post Single Input Address
+			){ 
+		return 5;
+	}else{
+		return Data[1];
+	}
+}
+
+void COM_Parse(char * Data){
+	char length = COM_Packet_Length(Data);
+
+	//Check Checksum
+	uint8_t Check = 0xFF;
+	for(uint8_t i = 0;i<(length-1);i++){
+		Check ^= Data[i];
+	}
+
+	if(Checksum != Data[length]){
+		printf("COM - Checksum doesn't match\n");
+		return;
+	}
+
+
+	switch (Data[0]){
+		case 0x00: //Report ID
+			//Add device to device list
+			for(uint8_t i = 0;i<MAX_Devices;i++){
+				if(DeviceList[i] != 0){
+					DeviceList[i] = Data[1];
+				}
+			}
+			break;
+		case 0x01: //Set Emergency STOP
+		case 0x02: //Release Emergency STOP
+		case 0x03: //Set Power ON
+		case 0x04: //Set Power OFF
+			break;
+		case 0x05: //Acknowledge
+			COM_ACK = 1;
+			break;
+
+		case 0x16: //Post Output
+		case 0x17: //Post Blink Mask
+			COM_ACK = 1;//Response uses same flag
+			break;
+
+
+		case 0x05: //Post Single Input
+		case 0x06: //Post Multiple Input
+		case 0x07: //Post All input
+			break;
+
+		case 0x55: //Post EEPROM Values
+			COM_ACK = 1;//Response uses same flag
+			break;
+	}
+}
+
 char * COM_SaR(char * buf[60]){
 
 }
 
 void COM_change_A_signal(int M){
-	if (uart0_filestream != -1){
+	COM_change_Output(M);
+}
 
-		struct COM_t C;
-		memset(C.Data,0,32);
-		C.Adr = M;
-		C.Opcode = 0b1001;
-
-		int nr_signals = Units[M]->Si_L;
-
-		int location = 0;
-		int position = 0;
-		int Signal_Adr = 0;
-		int empty = 0;
-
-		for(int i = 0;i<=nr_signals;i++){
-			if(Units[M]->Signals[i] != NULL){
-				printf("Signal found on 0%o\tRegister: %i\tPosition %i\tState: %i\n",Units[M]->Signals[i]->UAdr,location,position,Units[M]->Signals[i]->state);
-				C.Data[location] += Units[M]->Signals[i]->state << position;
-				position += (Units[M]->Signals[i]->type+1);
-			}else{
-				printf("No Signal\t\tRegister: %i\tPosition %i\n",location,position);
-				position += 3;
-				empty++;
-			}
-
-			if(Units[M]->Signals[i+1] != NULL && position >= (8 - Units[M]->Signals[i+1]->type - 1)){
-				position = 0;
-				if(empty != 2){
-					location++;
-					Signal_Adr++;
-				}
-				empty = 0;
-			}else if(position >= 5){
-				position = 0;
-				if(empty != 2){
-					location++;
-					Signal_Adr++;
-				}
-				empty = 0;
-			}
-		}
-
-		Signal_Adr += 1;
-
-		printf("Binary data: ");
-		for(int i = 0;i<Signal_Adr;i++){
-			printf(BYTE_TO_BINARY_PATTERN,BYTE_TO_BINARY(C.Data[i]));
-			printf(" ");
-		}
-		printf("\n");
-		C.Length = Signal_Adr;
-
-		pthread_mutex_lock(&mutex_UART);
-		COM_Send(C);
-		pthread_mutex_unlock(&mutex_UART);
-	}
+void COM_DevReset(){
+	struct COM_t Tx;
+	Tx.data[0] = COMopc_RESET;
+	Tx.length  = 2;
+	Tx.data[1] = 0xFF ^ COMopc_RESET;
+	COM_Send(Tx);
 }
 
 void COM_set_Output(int M){
@@ -256,10 +250,12 @@ void COM_set_Output(int M){
 	if(Out > 0){
 		printf("Set All Out Addresses:\n");
 		struct COM_t TxPacket;
-		TxPacket.data[0] = 0x14;
+		TxPacket.data[0] = COMopc_SetAllOut;
 		TxPacket.data[1] = (Units[M]->Out_length/8)+4;
+		TxPacket.length = TxPacket.data[1];
+		TxPacket.data[2] = M;
 		for(int i = 0;i<(Units[M]->Out_length/8)+1;i++){
-			TxPacket.data[2+i] = OutRegs[i];
+			TxPacket.data[3+i] = OutRegs[i];
 		}
 		for(int i = 0;i<(Units[M]->Out_length/8)+4;i++){
 			printf("%02X ",TxPacket.data[i]);
@@ -270,10 +266,12 @@ void COM_set_Output(int M){
 	if(Blink > 0){
 		printf("Set Blink Mask:\n");
 		struct COM_t TxPacket;
-		TxPacket.data[0] = 0x15;
+		TxPacket.data[0] = COMopc_SetBlOut;
 		TxPacket.data[1] = (Units[M]->Out_length/8)+4;
+		TxPacket.length = TxPacket.data[1];
+		TxPacket.data[2] = M;
 		for(int i = 0;i<(Units[M]->Out_length/8)+1;i++){
-			TxPacket.data[2+i] = BlinkMask[i];
+			TxPacket.data[3+i] = BlinkMask[i];
 		}
 		for(int i = 0;i<(Units[M]->Out_length/8)+4;i++){
 			printf("%02X ",TxPacket.data[i]);
@@ -382,7 +380,7 @@ void COM_change_Output(int M){
 	if(Out > 0){
 		printf("Set All Out Addresses:\n");
 		struct COM_t TxPacket;
-		TxPacket.data[0] = 0x14;
+		TxPacket.data[0] = COMopc_SetAllOut;
 		TxPacket.data[1] = (Units[M]->Out_length/8)+4;
 		for(int i = 0;i<(Units[M]->Out_length/8)+1;i++){
 			TxPacket.data[2+i] = OutRegs[i];
@@ -396,7 +394,7 @@ void COM_change_Output(int M){
 	if(Blink > 0){
 		printf("Set Blink Mask:\n");
 		struct COM_t TxPacket;
-		TxPacket.data[0] = 0x15;
+		TxPacket.data[0] = COMopc_SetBlOut;
 		TxPacket.data[1] = (Units[M]->Out_length/8)+4;
 		for(int i = 0;i<(Units[M]->Out_length/8)+1;i++){
 			TxPacket.data[2+i] = BlinkMask[i];

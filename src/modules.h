@@ -45,4 +45,6 @@
   struct Unit *Units[MAX_Modules];
 
   void clear_Modules();
+
+  void LoadModules(int M);
 #endif

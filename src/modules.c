@@ -1,3 +1,4 @@
+#include "stdlib.h"
 
 #ifndef t_Unit
 	#include "./modules.h"
@@ -104,254 +105,6 @@ void clear_Modules(){
 	    printf("\t Cleared!\n");
 	  }
 	}
-}
-
-void LoadModules(int M){
-	printf("Load module %i\n",M);
-
-	return; //Function is not ready
-
-	//Try to open file
-	FILE * fp;
-	char * line = NULL;
-	size_t len = 0;
-	ssize_t read;
-
-	char folder[]   = "./modules/";
-	char filename[] = "/prop.txt";
-	char file[30] = "";
-
-	strcat(file,folder);
-	strcat(file,itoa(M));
-	strcat(file,filename);
-
-	fp = fopen(file, "r");
-	if (fp == NULL){
-        printf("Failed to open File: %s\n",file);
-		return;
-	}
-
-
-	//Proccess Config file
-	while ((read = getline(&line, &len, fp)) != -1) {
-		if(line[0] == '\'')
-			continue;
-
-	        printf("\nRetrieved line of length %02zu : ", read);
-
-		char * p = strtok(line,"\t\r\n");
-		char * parts[20];
-		char i = 0;
-
-		while(p != NULL){
-			printf("%s  ",p);
-			parts[i++] = p;
-			p = strtok(NULL, "\t\r\n");
-		}
-		printf("\n");
-
-		struct link IN;
-
-		struct link link;
-		link.Adr3 = EMPTY_BL;
-		link.Adr4 = EMPTY_BL;
-
-		if(parts[0][0] == 'C'){ //Create a 'thing'
-			if(strcmp(parts[0],"CU") == 0){
-				//Set Module ID for this file and Create Module
-				ModuleID = atoi(parts[1]);
-				Create_Unit2(ModuleID,atoi(parts[2]),atoi(parts[3]));
-
-			}else if(strcmp(parts[0],"CB") == 0){
-				//Create a Segment with all given data from the file
-
-				struct SegC Adr,NAdr,PAdr;
-				Adr = CAdr(ModuleID,atoi(parts[2]),parts[3][0]);
-
-				//Next Block
-				if(parts[4][0] == 'I' && parts[4][1] != 0){
-					if(parts[4][1] == '1'){
-						NAdr = IN.Adr1;
-					}else if(parts[4][1] == '2'){
-						NAdr = IN.Adr2;
-					}
-				}
-				else if(parts[4][0] == 'E'){
-					if(parts[4][1] == '1'){
-						link.Adr1.Module = ModuleID;link.Adr1.Adr = atoi(parts[2]);link.Adr1.type = parts[3][0];
-					}else if(parts[4][1] == '2'){
-						link.Adr2.Module = ModuleID;link.Adr2.Adr = atoi(parts[2]);link.Adr2.type = parts[3][0];
-					}else if(parts[4][1] == '3'){
-						link.Adr3.Module = ModuleID;link.Adr3.Adr = atoi(parts[2]);link.Adr3.type = parts[3][0];
-					}else if(parts[4][1] == '4'){
-						link.Adr4.Module = ModuleID;link.Adr4.Adr = atoi(parts[2]);link.Adr4.type = parts[3][0];
-					}
-					NAdr = EMPTY_BL;
-				}
-				else{
-					if(parts[4][0] == 'X'){
-						NAdr = CAdr(ModuleID,atoi(parts[5]),parts[6][0]);
-					}else{
-						NAdr = CAdr(atoi(parts[4]),atoi(parts[5]),parts[6][0]);
-					}
-				}
-
-				//Prev Block
-				if(parts[7][0] == 'I' && parts[7][1] != 0){
-					if(parts[7][1] == '1'){
-						PAdr = IN.Adr1;
-					}else if(parts[7][1] == '2'){
-						PAdr = IN.Adr2;
-					}
-				}
-				else if(parts[7][0] == 'E'){
-					if(parts[7][1] == '1'){
-						link.Adr1.Module = ModuleID;link.Adr1.Adr = atoi(parts[2]);link.Adr1.type = parts[3][0];
-					}else if(parts[7][1] == '2'){
-						link.Adr2.Module = ModuleID;link.Adr2.Adr = atoi(parts[2]);link.Adr2.type = parts[3][0];
-					}else if(parts[7][1] == '3'){
-						link.Adr3.Module = ModuleID;link.Adr3.Adr = atoi(parts[2]);link.Adr3.type = parts[3][0];
-					}else if(parts[7][1] == '4'){
-						link.Adr4.Module = ModuleID;link.Adr4.Adr = atoi(parts[2]);link.Adr4.type = parts[3][0];
-					}
-					PAdr = EMPTY_BL;
-				}
-				else{
-					if(parts[7][0] == 'X'){
-						PAdr = CAdr(ModuleID,atoi(parts[8]),parts[9][0]);
-					}else{
-						PAdr = CAdr(atoi(parts[7]),atoi(parts[8]),parts[9][0]);
-					}
-				}
-
-				Create_Segment(atoi(parts[1]),Adr,NAdr,PAdr,atoi(parts[10]),GREEN,atoi(parts[11]),atoi(parts[12]));
-			}else if(strcmp(parts[0],"CSw") == 0){
-				//Create a Switch with all given data from the file
-
-				struct SegC Adr,AAdr,SAdr,DAdr;
-				Adr = CAdr(ModuleID,atoi(parts[1]),atoi(parts[11]));
-
-				//Approach Block
-				if(parts[2][0] == 'I' && parts[2][1] != 0){
-					if(parts[2][1] == '1'){
-						AAdr = IN.Adr1;
-					}else if(parts[2][1] == '2'){
-						AAdr = IN.Adr2;
-					}
-				}
-				else if(parts[2][0] == 'E'){
-					if(parts[2][1] == '1'){
-						link.Adr1.Module = ModuleID;link.Adr1.Adr = atoi(parts[2]);link.Adr1.type = 'S';
-					}else if(parts[2][1] == '2'){
-						link.Adr2.Module = ModuleID;link.Adr2.Adr = atoi(parts[2]);link.Adr2.type = 'S';
-					}else if(parts[2][1] == '3'){
-						link.Adr3.Module = ModuleID;link.Adr3.Adr = atoi(parts[2]);link.Adr3.type = 'S';
-					}else if(parts[2][1] == '4'){
-						link.Adr4.Module = ModuleID;link.Adr4.Adr = atoi(parts[2]);link.Adr4.type = 'S';
-					}
-					AAdr = EMPTY_BL;
-				}
-				else{
-					if(parts[2][0] == 'X'){
-						AAdr = CAdr(ModuleID,atoi(parts[3]),parts[4][0]);
-					}else{
-						AAdr = CAdr(atoi(parts[2]),atoi(parts[3]),parts[4][0]);
-					}
-				}
-
-				//Diverging Block
-				if(parts[5][0] == 'I' && parts[6][1] != 0){
-					if(parts[5][1] == '1'){
-						DAdr = IN.Adr1;
-					}else if(parts[5][1] == '2'){
-						DAdr = IN.Adr2;
-					}
-				}
-				else if(parts[5][0] == 'E'){
-					if(parts[5][1] == '1'){
-						link.Adr1.Module = ModuleID;link.Adr1.Adr = atoi(parts[2]);link.Adr1.type = 's';
-					}else if(parts[5][1] == '2'){
-						link.Adr2.Module = ModuleID;link.Adr2.Adr = atoi(parts[2]);link.Adr2.type = 's';
-					}else if(parts[5][1] == '3'){
-						link.Adr3.Module = ModuleID;link.Adr3.Adr = atoi(parts[2]);link.Adr3.type = 's';
-					}else if(parts[5][1] == '4'){
-						link.Adr4.Module = ModuleID;link.Adr4.Adr = atoi(parts[2]);link.Adr4.type = 's';
-					}
-					DAdr = EMPTY_BL;
-				}
-				else{
-					if(parts[5][0] == 'X'){
-						DAdr = CAdr(ModuleID,atoi(parts[6]),parts[7][0]);
-					}else{
-						DAdr = CAdr(atoi(parts[5]),atoi(parts[6]),parts[7][0]);
-					}
-				}
-
-				//Straigth Block
-				if(parts[8][0] == 'I' && parts[9][1] != 0){
-					if(parts[8][1] == '1'){
-						SAdr = IN.Adr1;
-					}else if(parts[8][1] == '2'){
-						SAdr = IN.Adr2;
-					}
-				}
-				else if(parts[8][0] == 'E'){
-					if(parts[8][1] == '1'){
-						link.Adr1.Module = ModuleID;link.Adr1.Adr = atoi(parts[2]);link.Adr1.type = 's';
-					}else if(parts[8][1] == '2'){
-						link.Adr2.Module = ModuleID;link.Adr2.Adr = atoi(parts[2]);link.Adr2.type = 's';
-					}else if(parts[8][1] == '3'){
-						link.Adr3.Module = ModuleID;link.Adr3.Adr = atoi(parts[2]);link.Adr3.type = 's';
-					}else if(parts[8][1] == '4'){
-						link.Adr4.Module = ModuleID;link.Adr4.Adr = atoi(parts[2]);link.Adr4.type = 's';
-					}
-					SAdr = EMPTY_BL;
-				}
-				else{
-					if(parts[8][0] == 'X'){
-						SAdr = CAdr(ModuleID,atoi(parts[9]),parts[10][0]);
-					}else{
-						SAdr = CAdr(atoi(parts[8]),atoi(parts[9]),parts[10][0]);
-					}
-				}
-
-				int IOAddress[20];
-				char * q;
-				i = 0;
-				q = strtok(parts[12], " ");
-
-				while(q != NULL){
-					IOAddress[i++] = atoi(q);
-					q = strtok(NULL, " ");
-				}
-
-				Create_Switch(Adr,AAdr,DAdr,SAdr,IOAddress,0);
-
-			}else if(strcmp(parts[0],"CSi") == 0){
-				printf("Create Signals");
-			}else if(strcmp(parts[0],"CSt") == 0){
-				printf("Create Station/Stop");
-			}
-		}else if(parts[0][0] == 'S'){ //Set settings
-			if(strcmp(parts[0],"Sdet") == 0){
-				//Set the detection Block for a Switch
-				Units[ModuleID]->S[atoi(parts[1])]->Detection_Block = Units[ModuleID]->B[atoi(parts[2])];
-			}
-		}else if(strcmp(parts[0],"J") == 0){ //Join placess
-			//Join the block of the previous Module to this one
-			if(atoi(parts[1]) == 1){
-				join(IN.Adr1,CAdr(ModuleID,atoi(parts[2]),parts[3][0]));
-			}else if(atoi(parts[1]) == 2){
-				join(IN.Adr2,CAdr(ModuleID,atoi(parts[2]),parts[3][0]));
-			}
-		}
- 	}
-
-
- 	//Close file and clean up.
-	fclose(fp);
-	if (line)
-        free(line);
 }
 
 struct link Modules(int m, struct link IN){
@@ -884,22 +637,31 @@ struct link Modules(int m, struct link IN){
 }
 
 void LoadModules(int M){
-	printf("Loading Module %i\n",M);
+	if(M == 0){
+		return;
+	}
 
-	//return; //Fuction not ready
-	//Module file handling
+	printf("Load module %i\n",M);
 
+	if(M != 4 && M != 8 && M != 1 && M != 2){
+		return; //Function is not ready
+	}
+
+	//Try to open file
 	FILE * fp;
 	char * line = NULL;
 	size_t len = 0;
 	ssize_t read;
 
-	char folder[] = "./modules/";
+	char folder[]   = "./modules/";
 	char filename[] = "/prop.txt";
 	char file[30] = "";
 
+	char nr[3] = "";
+	sprintf(nr, "%d", M);
+
 	strcat(file,folder);
-	strcat(file,itoa(M));
+	strcat(file,nr);
 	strcat(file,filename);
 
 	fp = fopen(file, "r");
@@ -908,7 +670,7 @@ void LoadModules(int M){
 		return;
 	}
 
-	return; //STOP
+	//return; //STOP
 
 	int ModuleID;
 
@@ -933,17 +695,18 @@ void LoadModules(int M){
 			if(strcmp(parts[0],"CU") == 0){ //Create Unit
 				//Set Module ID for this file and Create Module
 				ModuleID = atoi(parts[1]);
+				printf("Module ID: %i\n",ModuleID);
 				Create_Unit2(ModuleID,atoi(parts[2]),atoi(parts[3]));
 
 			}else if(strcmp(parts[0],"CB") == 0){ //Create Block
 				//Create a Segment with all given data from the file
 
 				struct SegC Adr,NAdr,PAdr;
-				Adr = C_Adr(ModuleID,atoi(parts[2]),parts[3][0]);
-
+				Adr = CAdr(ModuleID,atoi(parts[2]),parts[3][0]);
+				printf("New block in module %i",ModuleID);
 				//Next Block
 				if(parts[4][0] == 'C'){
-					NAdr = C_Adr(ModuleID,0,'C');
+					NAdr = CAdr(ModuleID,0,'C');
 				}
 				else if(parts[4][0] == 'E'){ //End of line / Empty
 					NAdr = EMPTY_BL;
@@ -958,13 +721,14 @@ void LoadModules(int M){
 
 				//Prev Block
 				if(parts[7][0] == 'C'){
-					NAdr = C_Adr(ModuleID,0,'C');
+					PAdr = CAdr(ModuleID,0,'C');
 				}
 				else if(parts[7][0] == 'E'){
 					PAdr = EMPTY_BL;
 				}
 				else{
 					if(parts[7][0] == 'X'){
+						printf("Prev block is in same module %i \n",ModuleID);
 						PAdr = CAdr(ModuleID,atoi(parts[8]),parts[9][0]);
 					}else{
 						PAdr = CAdr(atoi(parts[7]),atoi(parts[8]),parts[9][0]);
@@ -973,7 +737,7 @@ void LoadModules(int M){
 			  //Create_Segment(IO_Adr        ,Adr,Next,Prev,mspd,           state,dir,            len);
 				Create_Segment(atoi(parts[1]),Adr,NAdr,PAdr,atoi(parts[10]),GREEN,atoi(parts[11]),atoi(parts[12]));
 				//Set oneway
-				if(parts[13][0] == "Y"){
+				if(parts[13][0] == 'Y'){
 					Units[ModuleID]->B[Adr.Adr]->oneWay = TRUE;
 				}
 			}else if(strcmp(parts[0],"CSw") == 0){//Create Switch
@@ -984,7 +748,7 @@ void LoadModules(int M){
 
 				//Approach Block
 				if(parts[3][0] == 'C'){
-					AAdr = C_Adr(ModuelID,0,'C');
+					AAdr = CAdr(ModuleID,0,'C');
 				}
 				else if(parts[3][0] == 'E'){
 					AAdr = EMPTY_BL;
@@ -999,7 +763,7 @@ void LoadModules(int M){
 
 				//Diverging Block 9+
 				if(parts[9][0] == 'C'){
-					NAdr = C_Adr(ModuleID,0,'C');
+					DAdr = CAdr(ModuleID,0,'C');
 				}
 				else if(parts[9][0] == 'E'){
 					DAdr = EMPTY_BL;
@@ -1014,7 +778,7 @@ void LoadModules(int M){
 
 				//Straigth Block 6
 				if(parts[6][0] == 'C'){
-					NAdr = C_Adr(ModuleID,0,'C');
+					SAdr = CAdr(ModuleID,0,'C');
 				}
 				else if(parts[6][0] == 'E'){
 					SAdr = EMPTY_BL;
@@ -1071,9 +835,116 @@ void LoadModules(int M){
 				Create_Station(ModuleID,name,type,NrBlocks,Blocks);
 			}
 		}
+		else if(parts[0][0] == 'S'){
+			if(strcmp(parts[0],"Sdet") == 0){ //Switch detection block
+				Units[ModuleID]->S[atoi(parts[1])]->Detection_Block = Units[ModuleID]->B[atoi(parts[2])];
+			}
+		}
  	}
 
 	fclose(fp);
 	if (line)
-        	free(line);
+        free(line);
+}
+
+void JoinModules(){
+	if((_STATE & 0x0002) == 0){
+		//No track loaded
+		return;
+	}
+	printf("Ready to join modules\n");
+
+	struct ConnectList * List = (struct ConnectList *)calloc(30,sizeof(struct ConnectList));
+
+
+	int i = 0;
+	int max_j = init_connect_Algor(List);
+	int cur_j = max_j;
+	int prev_j = max_j;
+	while((_STATE & 0x0004) == 0){
+		cur_j = connect_Algor(List);
+		if(i > 70){
+			printf(" (%02i/%02i)\n",cur_j,max_j);
+			i = 0;
+		}
+		if(prev_j == cur_j){
+			printf(".");
+		}else{
+			printf("+");
+		}
+		i++;
+		usleep(200000);
+		prev_j = cur_j;
+
+		if(i == 1){
+			printf("\n1\n");
+			Units[1]->B[0]->blocked = 1;
+			Units[8]->B[0]->blocked = 1;
+
+			Units[1]->B[3]->blocked = 0;
+			Units[8]->B[4]->blocked = 0;
+		}else if(i == 2){
+			printf("\n11\n");
+			Units[8]->B[3]->blocked = 1;
+			Units[4]->B[0]->blocked = 1;
+
+			Units[1]->B[0]->blocked = 0;
+			Units[8]->B[0]->blocked = 0;
+		}else if(i == 3){
+			printf("\n21\n");
+			Units[4]->B[11]->blocked = 1;
+			Units[2]->B[ 0]->blocked = 1;
+
+			Units[8]->B[3]->blocked = 0;
+			Units[4]->B[0]->blocked = 0;
+		}else if(i == 4){
+			printf("\n31\n");
+			Units[2]->B[ 3]->blocked = 1;
+			Units[4]->B[27]->blocked = 1;
+
+			Units[4]->B[11]->blocked = 0;
+			Units[2]->B[ 0]->blocked = 0;
+		}else if(i == 5){
+			printf("\n41\n");
+			Units[8]->B[ 7]->blocked = 1;
+			Units[4]->B[12]->blocked = 1;
+
+			Units[4]->B[27]->blocked = 0;
+			Units[2]->B[ 3]->blocked = 0;
+		}else if(i == 6){
+			printf("\n51\n");
+			Units[1]->B[3]->blocked = 1;
+			Units[8]->B[4]->blocked = 1;
+
+			Units[8]->B[ 7]->blocked = 0;
+			Units[4]->B[12]->blocked = 0;
+		}else if(i == 7){
+			_STATE |= 0x4;
+			Units[1]->B[3]->blocked = 0;
+			Units[8]->B[4]->blocked = 0;
+		}
+		//IF ALL JOINED
+		//BREAK
+	}
+
+	int length = List[0].length;
+	for(int i = 0;i<length;i++){
+		if(List[i].Switch){
+			if(List[i].Switch->AppC.type == 'C'){
+				List[i].Switch->AppC.type = 0;
+			}else if(List[i].Switch->StrC.type == 'C'){
+				List[i].Switch->StrC.type = 0;
+			}else if(List[i].Switch->DivC.type == 'C'){
+				List[i].Switch->DivC.type = 0;
+			}
+		}else if(List[i].Block){
+			if(List[i].Block->NextC.type == 'C'){
+				List[i].Block->NextC.type = 0;
+			}else if(List[i].Block->PrevC.type == 'C'){
+				List[i].Block->PrevC.type = 0;
+			}
+		}
+	}
+
+	free(List);
 }

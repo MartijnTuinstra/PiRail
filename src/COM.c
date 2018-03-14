@@ -18,12 +18,13 @@ void * UART(){
 	{
 		//ERROR - CAN'T OPEN SERIAL PORT
 		printf("COM - Error - Unable to open UART.  Ensure it is not in use by another application\n");
+		return;
 	}
 
 	//CONFIGURE THE UART
 	struct termios options;
 	tcgetattr(uart0_filestream, &options);
-	options.c_cflag = B38400 | CS8 | CLOCAL | CREAD;		//<Set baud rate
+	options.c_cflag = Serial_Baud | CS8 | CLOCAL | CREAD;		//<Set baud rate
 	options.c_iflag = IGNPAR;
 	options.c_oflag = 0;
 	options.c_lflag = 0;
@@ -116,24 +117,24 @@ int COM_Recv(char * OUT_Data){
 
 char COM_Packet_Length(char * Data){
 	uint8_t Opcode = Data[0];
-	if(Opcode == RN_OPC_EMERGENCY_SET ||
-			Opcode == RN_OPC_EMERGENCY_REL ||
-			Opcode == RN_OPC_POWER_ON ||
-			Opcode == RN_OPC_POWER_OFF		){
+	if(Opcode == COMopc_EmergencyEn ||
+			Opcode == COMopc_EmergencyDis ||
+			Opcode == COMopc_PowerON ||
+			Opcode == COMopc_PowerOFF		){
 		return 2;
-	}else if(Opcode == RN_OPC_ACK || // Set Acknowledge
-			Opcode == RN_OPC_REPORT_ID      ||
-			Opcode == RN_OPC_REQUEST_OUT    ||
-			Opcode == RN_OPC_REQUEST_IN     ||
-			Opcode == RN_OPC_REQUEST_EEPROM    ){
+	}else if(Opcode == COMopc_ACK || // Set Acknowledge
+			Opcode == COMopc_ReportID      ||
+			Opcode == COMopc_ReqOut_Bl    ||
+			Opcode == COMopc_ReqIn     ||
+			Opcode == COMopc_ReqEEPROM    ){
 		return 3;
-	}else if(Opcode == RN_OPC_DEVID  ){ 
+	}else if(Opcode == COMopc_ChangeDevID  ){ 
 		return 4;
-	}else if(Opcode == RN_OPC_IN_OUT_REGS || // Change input and output
-			Opcode == RN_OPC_T_S_OUT || // Toggle Single Address
-			Opcode == RN_OPC_P_S_OUT || // Pulse Single Address
-			Opcode == RN_OPC_TBS_OUT || // Blink Single Address
-			Opcode == RN_OPC_S_IN    // Post Single Input Address
+	}else if(Opcode == COMopc_SetIN_OUT || // Change input and output
+			Opcode == COMopc_TogSinAdr || // Toggle Single Address
+			Opcode == COMopc_PulSinAdr || // Pulse Single Address
+			Opcode == COMopc_TogBlSinAdr || // Blink Single Address
+			Opcode == COMopc_PostSinAdr    // Post Single Input Address
 			){ 
 		return 5;
 	}else{
@@ -150,7 +151,7 @@ void COM_Parse(char * Data){
 		Check ^= Data[i];
 	}
 
-	if(Checksum != Data[length]){
+	if(Check != Data[length]){
 		printf("COM - Checksum doesn't match\n");
 		return;
 	}
@@ -170,7 +171,7 @@ void COM_Parse(char * Data){
 		case 0x03: //Set Power ON
 		case 0x04: //Set Power OFF
 			break;
-		case 0x05: //Acknowledge
+		case 0x7F: //Acknowledge
 			COM_ACK = 1;
 			break;
 
@@ -301,7 +302,8 @@ void COM_change_Output(int M){
 
 	uint8_t byte,offset;
 
-	for(int i = 0;i<Units[M]->S_L;i++){
+	//Signals
+	for(int i = 0;i<Units[M]->Si_L;i++){
 		for(int j = 0;j<Units[M]->Signals[i]->length;j++){
 			if(Units[M]->Signals[i]->state & 0x80){ //If output needs to be updated
 				Units[M]->Signals[i]->state &= 0x3F; //Output state is updated
@@ -356,6 +358,8 @@ void COM_change_Output(int M){
 		}
 	}
 
+
+	//Switches
 	for(int i = 0;i<Units[M]->Swi_nr;i++){
 		//for(int j = 0;j<Units[M]->S[i]->length;j++){
 		if(Units[M]->S[i]->len & 0xC0 == 0){ //Pulse Address

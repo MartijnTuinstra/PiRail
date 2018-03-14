@@ -13,13 +13,19 @@
 
 	int COM_Recv(char * OUT_Data);
 
+	void COM_Parse(char * Data);
+
 	char * COM_SaR(char * buf[60]);
+
+	void COM_change_Output(int M);
 
 	void COM_change_A_signal(int M);
 
 	void COM_change_signal(struct signal * Si);
 
 	void COM_change_switch(int M);
+
+	void COM_DevReset();
 
 	void COM_set_train_speed(struct train * T,char speed);
 

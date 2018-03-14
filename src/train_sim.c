@@ -1,14 +1,14 @@
 
 void *TRAIN_SIMA(){
-	struct Seg *B = Units[8]->B[5];
-	struct Seg *N = Units[8]->B[5];
+	struct Seg *B = Units[4]->B[16];
+	struct Seg *N = Units[4]->B[16];
 	struct Seg *A = 0;
 	int i = 0;
 
 	B->blocked = 1;
 	B->change  = 1;
 
-	//while(!train_link[Units[4]->B[23]->train]){}
+	while(!train_link[Units[4]->B[16]->train]){}
 
 
 	while(!stop){

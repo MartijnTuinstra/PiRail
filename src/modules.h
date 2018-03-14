@@ -47,4 +47,13 @@
   void clear_Modules();
 
   void LoadModules(int M);
+
+  struct ConnectList {
+    int length;
+    struct Seg * Block;
+    struct Swi * Switch;
+  };
+
+  int init_connect_Algor(struct ConnectList * List);
+  int connect_Algor(struct ConnectList * List);
 #endif

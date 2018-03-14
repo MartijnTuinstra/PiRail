@@ -35,6 +35,8 @@
 #define UNKNOWN 6
 #define BLOCK_STATES 4
 
+#define MAX_Devices 20
+
 //#define En_UART
 
 #define Arr_Count(array) (sizeof(array)/sizeof((array)[0]))
@@ -69,6 +71,14 @@ char setup_data_l = 0;
 int status_st[20] = {0};
 
 _Bool digital_track = 0;
+
+uint16_t _STATE = 0;
+// 0x0001 - Core started
+// 0x0002 - Track loaded
+// 0x0004 - Joined Track
+// 0x1000 - Z21 connected
+// 0x2000 - COM started / working
+// 0x4000 - WebSocket started / working
 
 pthread_mutex_t mutex_lockA;
 pthread_mutex_t mutex_lockB;
@@ -440,14 +450,28 @@ void main(){
 		DeviceList[3] = 8;
 
 		for(uint8_t i = 0;i<MAX_Devices;i++){
-			LoadModules(DeviceList[i]);
-			printf("|                       UART Module %i\t found                             |\n",Line_Data[2]);
+			if(DeviceList[i]){
+				LoadModules(DeviceList[i]);
+				printf("|                       UART Module %i\t found                             |\n",DeviceList[i]);
+			}
 		}
 
-		clear_Modules();
+		_STATE |= 0x0002; //Track loaded
+
+		JoinModules();
+
+
+		setup_JSON((int [4]){1,8,4,2},(int *)0,4,0);
+
+		Connect_Segments();
+		
+
+		//clear_Modules();
 
 
 		//Initialising two link object with empty blocks
+		/*struct link LINK;
+		struct link LINK2;
 		struct link LINK;
 		struct link LINK2;
 		LINK.Adr1 = EMPTY_BL;
@@ -512,7 +536,8 @@ void main(){
 		}
 		Connect_Segments();
 		setup_JSON(setup,setup2,4,0);
-		usleep(1000000);*/
+		usleep(1000000);
+		/**/
 	/*Loading Trains*/
 		printf("|                                                                          |\n");
 		printf("|                             Loading trains                               |\n");

@@ -1,15 +1,24 @@
-#include "./rail.h"
+#define _BSD_SOURCE
+// #define _GNU_SOURCE
 
-#ifndef t_Unit
-  #include "./modules.h"
-#endif
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <unistd.h>
+#include <string.h>
 
-#ifndef t_Swi
-  #include "./switch.h"
-#endif
+#include "./../lib/system.h"
+
+#include "./../lib/rail.h"
+
+
+#include "./../lib/modules.h"
+#include "./../lib/switch.h"
 
 //struct Seg * blocks2[MAX_Modules][MAX_Blocks*MAX_Segments] = {};
+
 struct Station * stations[MAX_Modules*MAX_Blocks] = {};
+int St_list_i = 0;
 
 struct SegC EMPTY_BL(){
   struct SegC A;
@@ -49,7 +58,13 @@ int dir_Comp(struct Seg *A,struct Seg *B){
   }*/
 }
 
-int Adr_Comp2(struct SegC A,struct SegC B);
+int Adr_Comp2(struct SegC A,struct SegC B){
+  if(A.Module == B.Module && A.Adr == B.Adr && A.type == B.type){
+    return 1;
+  }else{
+    return 0;
+  }
+}
 
 void Create_Segment(int IO_Adr,struct SegC Adr ,struct SegC Next, struct SegC Prev,char max_speed,char state,char dir,char len){
 	struct Seg *Z = (struct Seg*)malloc(sizeof(struct Seg));
@@ -413,7 +428,7 @@ struct Seg * Next2(struct Seg * B,int i){
       }
 		}
 		if(NAdr.type == 'S'){
-			if(NAdr.Sw->state == 0){ //Straight?
+			if((NAdr.Sw->state & 0x3F) == 0){ //Straight?
 				SNAdr = NAdr.Sw->str;
 			}else{
 				SNAdr = NAdr.Sw->div;
@@ -562,7 +577,7 @@ struct Seg * Prev2(struct Seg * B,int i){
       }
 		}
 		if(NAdr.type == 'S'){
-			if(NAdr.Sw->state == 0){ //Straight?
+			if((NAdr.Sw->state & 0x3F) == 0){ //Straight?
 				SNAdr = NAdr.Sw->str;
 			}else{
 				SNAdr = NAdr.Sw->div;

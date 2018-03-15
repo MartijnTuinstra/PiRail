@@ -1,5 +1,18 @@
 //Encryption.c
 //Has some tools for MD5 hashes and base64 encoding.
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <unistd.h>
+
+#include <openssl/sha.h>
+#include <openssl/md5.h>
+
+#include <string.h>
+
+#include "./../lib/encryption.h"
+
+const char *BASE64_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
 char *str2md5(const char *str, int length) {
     int n;
@@ -27,11 +40,6 @@ char *str2md5(const char *str, int length) {
 
     return out;
 }
-
-/**
- * characters used for Base64 encoding
- */
-const char *BASE64_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
 /**
  * encode three bytes using base64 (RFC 3548)

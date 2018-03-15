@@ -1,17 +1,40 @@
+#define _BSD_SOURCE
+// #define _GNU_SOURCE
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <unistd.h>
+#include <string.h>
+
+#include <pthread.h>
+
+#include "./../lib/system.h"
+
+#include "./../lib/rail.h"
+#include "./../lib/trains.h"
+
+#include "./../lib/modules.h"
+
+pthread_mutex_t mutex_lockA;
+
+#define delayA 5000000
+#define delayB 5000000
+
 
 void *TRAIN_SIMA(){
-	struct Seg *B = Units[4]->B[16];
-	struct Seg *N = Units[4]->B[16];
+	struct Seg *B = Units[8]->B[5];
+	struct Seg *N = Units[8]->B[5];
 	struct Seg *A = 0;
 	int i = 0;
 
 	B->blocked = 1;
 	B->change  = 1;
 
-	while(!train_link[Units[4]->B[16]->train]){}
+	while(!train_link[Units[8]->B[5]->train]){}
 
 
-	while(!stop){
+	while(_SYS->_STATE & STATE_RUN){
 		printf("Train Sim Step (id:%i)\n",pthread_self());
 
 		pthread_mutex_lock(&mutex_lockA);
@@ -68,7 +91,7 @@ void *TRAIN_SIMB(){
 
 	while(train_link[B->train]->halt == 1){}
 
-	while(!stop){
+	while(_SYS->_STATE & STATE_RUN){
 		//printf("Train Sim Step (id:%i)\n",pthread_self());
 		while(1){
 			if(train_link[2] && train_link[2]->halt == 0){
@@ -121,7 +144,7 @@ void *TRAIN_SIMC(){
 	int i2 = 0;
 	pthread_mutex_lock(&mutex_lockA);
 
-	while(!stop){
+	while(_SYS->_STATE & STATE_RUN){
 		//printf("Train Sim Step (id:%i)\t",pthread_self());
 		N2 = Next2(B2,1+i2);
 		if(i2 > 0){
@@ -164,7 +187,7 @@ void *TRAIN_SIMD(){
 	int i2 = 0;
 	pthread_mutex_lock(&mutex_lockA);
 
-	while(!stop){
+	while(_SYS->_STATE & STATE_RUN){
 		//printf("Train Sim Step (id:%i)\t",pthread_self());
 		N2 = Next2(B2,1+i2);
 		if(i2 > 0){

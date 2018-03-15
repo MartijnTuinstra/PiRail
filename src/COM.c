@@ -1,5 +1,27 @@
+#define _BSD_SOURCE
+
 #define Serial_Port "/dev/ttyAMA0"
 #define Serial_Baud B115200
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <termios.h>
+#include <pthread.h>
+#include <string.h>
+
+#include "./../lib/com.h"
+
+#include "./../lib/system.h"
+
+#include "./../lib/rail.h"
+#include "./../lib/switch.h"
+#include "./../lib/signals.h"
+#include "./../lib/trains.h"
+
+#include "./../lib/modules.h"
 
 pthread_mutex_t mutex_UART;
 
@@ -34,7 +56,7 @@ void * UART(){
 	char data[50];
 	memset(data,0,50);
 
-	while(!stop){
+	while(_SYS->_STATE & STATE_RUN){
 		if(COM_Recv(data)){
 			COM_Parse(data);
 			memset(data,0,50);
@@ -53,7 +75,6 @@ char * COM_Send(struct COM_t DATA){
 
 	tcflush(uart0_filestream, TCIFLUSH);
 
-	digitalWrite(0,HIGH);
 	int count = write(uart0_filestream, &DATA.data[0], DATA.length);		//Filestream, bytes to write, number of bytes to write
 	if (count < 0)
 	{
@@ -62,7 +83,6 @@ char * COM_Send(struct COM_t DATA){
 		//printf("Count: %i\n",count);
 	}
 	tcdrain(uart0_filestream);
-	digitalWrite(0,LOW);
 }
 
 int COM_Recv(char * OUT_Data){

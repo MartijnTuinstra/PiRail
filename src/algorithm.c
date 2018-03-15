@@ -1,8 +1,100 @@
-struct procces_block {
-	_Bool blocked;
-	char length;
-	struct Seg * B[5];
-};
+#define _BSD_SOURCE
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <unistd.h>
+#include <pthread.h>
+
+#include "./../lib/system.h"
+
+#include "./../lib/algorithm.h"
+
+
+
+#include "./../lib/rail.h"
+#include "./../lib/trains.h"
+#include "./../lib/switch.h"
+#include "./../lib/signals.h"
+
+#include "./../lib/modules.h"
+#include "./../lib/com.h"
+#include "./../lib/status.h"
+
+pthread_mutex_t mutex_lockA;
+
+void * scan_All_continiously(){
+	while(_SYS->_STATE & STATE_RUN){
+		//printf("\n\n\n");
+		clock_t t;
+		t = clock();
+		pthread_mutex_lock(&mutex_lockA);
+		#ifdef En_UART
+		for(int i = 0;i<strlen(List_of_Modules);i++){
+			printf("R%i ",List_of_Modules[i]);
+			struct COM_t C;
+			memset(C.Data,0,32);
+			C.Adr = List_of_Modules[i];
+			C.Opcode = 6;
+			C.Length = 0;
+
+			pthread_mutex_lock(&mutex_UART);
+			COM_Send(C);
+			char COM_data[20];
+			memset(COM_data,0,20);
+			COM_Recv(COM_data);
+			COM_Parse(COM_data);
+			pthread_mutex_unlock(&mutex_UART);
+			usleep(10);
+		}
+		printf("\n");
+		#endif
+		_Bool debug;
+		for(int i = 0;i<MAX_Modules;i++){
+			if(Units[i]){
+				for(int j = 0;j<=Units[i]->B_nr;j++){
+					if(Units[i]->B[j]){
+						//printf("%i:%i\n",i,j);
+						procces(Units[i]->B[j],0);
+					}
+				}
+			}
+		}
+		WS_trackUpdate(0);
+		WS_SwitchesUpdate(0);
+		pthread_mutex_unlock(&mutex_lockA);
+		t = clock() - t;
+		//printf ("It took me %d clicks (%f seconds).\n",t,((float)t)/CLOCKS_PER_SEC);
+		//printf("\n\n\n\n\n\n");
+
+		procces_accessoire();
+
+		//FILE *data;
+		//data = fopen("data.txt", "a");
+		//fprintf(data,"%d\n",t);
+		//fclose(data);
+
+		usleep(1000000);
+	}
+}
+
+void scan_All(){
+	pthread_mutex_lock(&mutex_lockA);
+	for(int i = 0;i<MAX_Modules;i++){
+		if(Units[i]){
+			for(int j = 0;j<=Units[i]->B_nr;j++){
+				if(Units[i]->B[j]){
+					//printf("%i:%i\n",i,j);
+					procces(Units[i]->B[j],0);
+				}
+			}
+		}
+	}
+	COM_change_A_signal(4);
+	COM_change_switch(4);
+	WS_trackUpdate(0);
+	pthread_mutex_unlock(&mutex_lockA);
+}
 
 void change_block_state2(struct procces_block * A,int State){
 	if(!A->blocked){
@@ -69,7 +161,7 @@ void procces(struct Seg * B,int debug){
 				Bl = bl[i];
 			}
 			i++;
-			//printf("i%i\t%i:%i:%i:%c\n",i,B.Adr.M,B.Adr.B,B.Adr.S,B.Adr.type);
+			//printf("i%i\t%i:%i:%c\n",i-1,bl[i-1]->Module,bl[i-1]->id,bl[i-1]->type);
 			struct Rail_link A;
 			if(dir_Comp(B,Bl)){
 				A = NADR2(Bl);
@@ -81,6 +173,7 @@ void procces(struct Seg * B,int debug){
 				q = i;
 				break;
 			}else if(A.type == 's' || A.type == 'S' || A.type == 'm' || A.type == 'M'){
+				//printf("%i:%i Check_switch %i:%i\n",Bl->Module,Bl->id,A.Sw->Module,A.Sw->id);
 				if(!check_Switch(Bl,0,FALSE)){
 					//printf("WSw\n");
 					q = i;
@@ -107,7 +200,7 @@ void procces(struct Seg * B,int debug){
 				Bl = bpl[p];
 			}
 			p++;
-			//printf("i%i\t%i:%i:%i:%c\n",i,B.Adr.M,B.Adr.B,B.Adr.S,B.Adr.type);
+			//printf("i%i\t%i:%i:%c\n",p-1,bpl[p-1]->Module,bpl[p-1]->id,bpl[p-1]->type);
 			struct Rail_link A;
 			if(dir_Comp(B,Bl)){
 				A = PADR2(Bl);
@@ -192,6 +285,7 @@ void procces(struct Seg * B,int debug){
 		//Assign prev pointers
 		//p == number of block backward
 		for(p;p<=r;p++){
+			//printf("p%i/%i: %c%i:%i\n",p,r,bpl[p]->type,bpl[p]->Module,bpl[p]->id);
 			if(p > 1 && bpl[p-1]->type == 'T' && bpl[p]->type == 'T'){
 				//printf("%c%i:%i==%c%i:%i\n",bpl[p-1]->type,bpl[p-1]->Module,bpl[p-1]->id,bpl[p]->type,bpl[p]->Module,bpl[p]->id);
 				j++;
@@ -684,7 +778,7 @@ void procces(struct Seg * B,int debug){
 					train_link[BA.B[0]->train]->halt = 0;
 				}
 			}
-			if(digital_track == 1){
+			if(_SYS->_STATE & STATE_TRACK_DIGITAL){
 
 			/*SPEED*/
 				//Check if current and next block are blocked, and have different trainIDs
@@ -988,7 +1082,7 @@ int connect_Algor(struct ConnectList * List){
 		}
 	}
 	if(length == return_length){
-		_STATE |= 0x0004;
+		_SYS->_STATE |= 0x0004;
 	}
 	return return_length;
 }

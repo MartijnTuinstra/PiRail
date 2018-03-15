@@ -1,14 +1,31 @@
 #define Z21_IP "192.168.2.92"
 #define Z21_PORT 4129
 
+#define _BSD_SOURCE
+
 /*
     Simple udp client
 */
 #include<stdio.h> //printf
+
 #include<string.h> //memset
 #include<stdlib.h> //exit(0);
-#include<arpa/inet.h>
+//#include <fcntl.h> // for open
+#include <unistd.h> // for close
 #include<sys/socket.h>
+#include <netinet/in.h>
+#include<arpa/inet.h>
+
+#include "./../lib/Z21.h"
+#include "./../lib/status.h"
+#include "./../lib/trains.h"
+
+
+char Z21_prio_list[05][30] = {{""}};
+char Z21_send_list[10][30] = {{""}};
+
+struct sockaddr_in si_other;
+int fd_Z21_server, slen=sizeof(si_other);
 
 void die(char *s)
 {

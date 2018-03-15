@@ -1,8 +1,20 @@
-#include "./signals.h"
+#define _BSD_SOURCE
+// #define _GNU_SOURCE
 
-#ifndef H_COM
-  #include "./COM.h"
-#endif
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <unistd.h>
+#include <string.h>
+
+#include "./../lib/system.h"
+
+#include "./../lib/signals.h"
+
+#include "./../lib/rail.h"
+
+#include "./../lib/modules.h"
+#include "./../lib/com.h"
 
 /*
 void create_signal(int Unit_Adr,struct Seg * B,int type, int side){ //Side = 0 => NSi, 1 => PSi
@@ -79,8 +91,6 @@ void create_signal2(struct Seg * B,char adr_nr, uint8_t addresses[adr_nr], char 
   memcpy(Z->states,state,BLOCK_STATES);
   memcpy(Z->flash,flash,BLOCK_STATES);
 
-  signals[Si_list_i] = Z;
-
   if(side == 0){
     B->NSi = Z;
   }else if(side == 1){
@@ -96,9 +106,6 @@ void create_signal2(struct Seg * B,char adr_nr, uint8_t addresses[adr_nr], char 
   }else{
     printf("Double signal adress %i in Module %i\n",Unit_Adr,B->Module);
   }
-
-
-  Si_list_i++;
 }
 
 void set_signal(struct signal *Si,int state){

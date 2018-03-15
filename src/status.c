@@ -1,6 +1,25 @@
-//Websocket opcodes
-#include "Web.h"
+#define _BSD_SOURCE
+// #define _GNU_SOURCE
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <unistd.h>
+#include <string.h>
+
+#include <pthread.h>
+
+//Websocket opcodes
+#include "./../lib/websocket.h"
+
+#include "./../lib/system.h"
+
+#include "./../lib/rail.h"
+#include "./../lib/switch.h"
+#include "./../lib/trains.h"
+
+#include "./../lib/modules.h"
+#include "./../lib/Z21.h"
 /**//*
 
 0 = EMPTY
@@ -18,6 +37,8 @@
 
 #define ACTIVATE 0
 #define RELEASE  1
+
+pthread_mutex_t mutex_lockB;
 
 struct WS_Message {
   uint16_t type;
@@ -150,9 +171,121 @@ void WS_SwitchesUpdate(int Client_fd){
         for(int j = 0;j<=Units[i]->S_L;j++){
           struct Swi * S = Units[i]->S[j];
           if(S){
-            if(Client_fd == 0 && (S->state & 0x80) != 0x80){
+            if((S->state & 0x80) != 0x80){
               continue;
             }
+            content = 1;
+            buf[(q-1)*3+1] = S->Module;
+            buf[(q-1)*3+2] = S->id & 0x7F;
+            buf[(q-1)*3+3] = S->state & 0x7F;
+            S->state ^= 0x80;
+           // printf(",%i,%i,%i",S->Module,S->id,S->state);
+            q++;
+          }
+        }
+      }
+    }
+
+    buf_l = (q-1)*3+1;
+
+  /*MSSwitches*/
+
+    //buf[0] = 5;
+    //buf_l = 0;
+
+    q = 1;
+
+    for(int i = 0;i<MAX_Modules;i++){
+      if(Units[i]){
+        content = 1;
+        for(int j = 0;j<=Units[i]->Mod_nr;j++){
+          struct Mod * M = Units[i]->M[j];
+          if(M){
+            buf[(q-1)*4+1+buf_l] = M->Module;
+            buf[(q-1)*4+2+buf_l] = (M->id & 0x7F) + 0x80;
+            buf[(q-1)*4+3+buf_l] = M->state;
+            buf[(q-1)*4+4+buf_l] = M->length;
+            q++;
+          }
+        }
+      }
+    }
+
+  buf_l += (q-1)*4+1;
+
+  if(content == 1){
+    if(Client_fd){
+      printf("WS_SwitchesUpdate Custom Client");
+      send_packet(Client_fd,buf,buf_l,WS_Flag_Switches);
+    }else{
+      printf("WS_SwitchesUpdate ALL");
+      send_all(buf,buf_l,WS_Flag_Switches);
+    }
+  }
+
+  pthread_mutex_unlock(&mutex_lockB);
+}
+
+void WS_NewClient_track_Switch_Update(int Client_fd){
+  pthread_mutex_lock(&mutex_lockB);
+
+  //Track
+  char buf[4096];
+
+  buf[0] = WSopc_BroadTrack; //Opcode
+
+  int data_len;
+  _Bool content = 0;
+
+  int q = 1;
+
+  for(int i = 0;i<MAX_Modules;i++){
+    if(Units[i]){
+      for(int j = 0;j<=Units[i]->B_L;j++){
+        struct Seg * B = Units[i]->B[j];
+        if(B){
+          content = 1;
+
+          buf[(q-1)*4+1] = B->Module;
+          buf[(q-1)*4+2] = B->id;
+          buf[(q-1)*4+3] = (B->dir << 7) + (B->blocked << 4) + B->state;
+          buf[(q-1)*4+4] = B->train;
+          q++;
+
+          B->change = 0;
+        }
+      }
+    }
+  }
+
+  data_len = (q-1)*4+1;
+
+  if(content == 1){
+    if(Client_fd){
+      send_packet(Client_fd,buf,data_len,WS_Flag_Track);
+    }else{
+      send_all(buf,data_len,WS_Flag_Track);
+    }
+  }
+  
+
+  /*Switches*/
+
+  memset(buf,0,4096);
+  /*Switches*/
+
+    buf[0] = WSopc_BroadSwitch;
+    int buf_l  = 0;
+    content   = 0;
+
+    q = 1;
+    //printf("\n\n3");
+
+    for(int i = 0;i<MAX_Modules;i++){
+      if(Units[i]){
+        for(int j = 0;j<=Units[i]->S_L;j++){
+          struct Swi * S = Units[i]->S[j];
+          if(S){
             content = 1;
             buf[(q-1)*3+1] = S->Module;
             buf[(q-1)*3+2] = S->id & 0x7F;
@@ -201,9 +334,47 @@ void WS_SwitchesUpdate(int Client_fd){
     }
   }
 
+  
+
+  memset(buf,0,4096);
+  buf_l = 0;
+
+
+  /*Stations*/
+
+  buf[0] = 6;
+  buf_l = 1;
+    _Bool data = 0;
+
+  if(St_list_i>0){
+    data = 1;
+  }
+  for(int i = 1;(i-1)<St_list_i;i++){
+    printf("entry %i\tStation %i:%i\t%s\tbuf_l: %i\n",i,stations[i-1]->Module,stations[i-1]->id,stations[i-1]->Name,buf_l);
+
+    buf[buf_l]   = stations[i-1]->Module;
+    buf[buf_l+1] = stations[i-1]->id;
+    buf[buf_l+2] = strlen(stations[i-1]->Name);
+    strcpy(&buf[buf_l+3],stations[i-1]->Name);
+
+    buf_l+=3+strlen(stations[i-1]->Name);
+  }
+
+  if(data == 1){
+    send_packet(Client_fd,buf,buf_l,8);
+  }
+
+  memset(buf,0,4096);
+
+  for(int i = 1;i<MAX_TRAINS;i++){
+    if(train_link[i]){
+      printf("Recall #%i\n",train_link[i]->DCC_ID);
+      Z21_GET_LOCO_INFO(train_link[i]->DCC_ID);
+    }
+  }
+
   pthread_mutex_unlock(&mutex_lockB);
 }
-
 
 
 /*

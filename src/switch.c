@@ -1,18 +1,26 @@
-#ifndef H_switch
-	#include "./switch.c"
-#endif
+#define _BSD_SOURCE
+// #define _GNU_SOURCE
 
-#ifndef H_web
-	#include "./Web.h"
-#endif
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <unistd.h>
+#include <string.h>
 
-#ifndef H_train
-	#include "./trains.h"
-#endif
 
-#ifndef H_path
-	#include "./pathfinding.h"
-#endif
+#include "./../lib/system.h"
+
+#include "./../lib/rail.h"
+#include "./../lib/switch.h"
+
+
+#include "./../lib/trains.h"
+
+#include "./../lib/websocket.h"
+#include "./../lib/pathfinding.h"
+#include "./../lib/modules.h"
+#include "./../lib/com.h"
+
 
 struct adr Switch_list[MAX_A] = {};
 struct adr MS_Switch_list[MAX_A] = {};
@@ -25,7 +33,8 @@ int throw_switch(struct Swi * S){
       struct SegC A = S->L_Swi[i]->Adr;
 
 			if(A.type == 'S' || A.type == 's'){
-	      if(Switch2[A.Module][A.Adr]->Detection_Block && (Switch2[A.Module][A.Adr]->Detection_Block->state == RESERVED || Switch2[A.Module][A.Adr]->Detection_Block->blocked)){
+	      if(Units[A.Module]->S[A.Adr]->Detection_Block && (Units[A.Module]->S[A.Adr]->Detection_Block->state == RESERVED || 
+	      				Units[A.Module]->S[A.Adr]->Detection_Block->blocked)){
 					printf("Linked switches blocked\n");
 	        return 0;
 	      }
@@ -43,19 +52,19 @@ int throw_switch(struct Swi * S){
 
 		buf[index++] = S->Module;
 		buf[index++] = S->id & 0x7F;
-		buf[index++] = Switch2[S->Module][S->id]->state & 0x7F;
+		buf[index++] = Units[S->Module]->S[S->id]->state & 0x7F;
 
     for(int i = 0;i<MAX_SWITCH_LINK;i++){
       if(S->L_Swi[i]){
         struct SegC A = S->L_Swi[i]->Adr;
         printf("Linked switching (%c%i:%i",A.type,A.Module,A.Adr);
 
-        Switch2[A.Module][A.Adr]->state = 0x80 + (S->L_Swi[i]->states[S->state&0x7F] & 0x7F);
-        printf(" => %i)\n",Switch2[A.Module][A.Adr]->state);
+        Units[A.Module]->S[A.Adr]->state = 0x80 + (S->L_Swi[i]->states[S->state&0x7F] & 0x7F);
+        printf(" => %i)\n",Units[A.Module]->S[A.Adr]->state);
 
 				buf[index++] = A.Module;
 				buf[index++] = A.Adr & 0x7F;
-				buf[index++] = Switch2[A.Module][A.Adr]->state & 0x7F;
+				buf[index++] = Units[A.Module]->S[A.Adr]->state & 0x7F;
       }
     }
     printf("Throw Switch %s\n\n",buf);
@@ -76,7 +85,8 @@ int set_switch(struct Swi * S,char state){
 			struct SegC A = S->L_Swi[i]->Adr;
 
 			if(A.type == 'S' || A.type == 's'){
-				if(Switch2[A.Module][A.Adr]->Detection_Block && (Switch2[A.Module][A.Adr]->Detection_Block->state == RESERVED || Switch2[A.Module][A.Adr]->Detection_Block->blocked)){
+				if(Units[A.Module]->S[A.Adr]->Detection_Block && (Units[A.Module]->S[A.Adr]->Detection_Block->state == RESERVED || 
+							Units[A.Module]->S[A.Adr]->Detection_Block->blocked)){
 						printf("Linked switches blocked\n");
 				return 0;
 			}
@@ -94,19 +104,19 @@ int set_switch(struct Swi * S,char state){
 
 		buf[index++] = S->Module;
 		buf[index++] = S->id;
-		buf[index++] = Switch2[S->Module][S->id]->state;
+		buf[index++] = Units[S->Module]->S[S->id]->state;
 
     for(int i = 0;i<MAX_SWITCH_LINK;i++){
       if(S->L_Swi[i]){
         struct SegC A = S->L_Swi[i]->Adr;
         printf("Linked switching (%c%i:%i",A.type,A.Module,A.Adr);
 
-        Switch2[A.Module][A.Adr]->state = S->L_Swi[i]->states[S->state];
-        printf(" => %i)\n",Switch2[A.Module][A.Adr]->state);
+        Units[A.Module]->S[A.Adr]->state = S->L_Swi[i]->states[S->state];
+        printf(" => %i)\n",Units[A.Module]->S[A.Adr]->state);
 
 				buf[index++] = A.Module;
 				buf[index++] = A.Adr;
-				buf[index++] = Switch2[A.Module][A.Adr]->state;
+				buf[index++] = Units[A.Module]->S[A.Adr]->state;
       }
     }
     printf("Throw Switch %s\n\n",buf);
@@ -182,17 +192,6 @@ void Create_Switch(struct SegC Adr,struct SegC App,struct SegC Div,struct SegC S
 		}
 		Units[Adr.Module]->S_L = 8*((Z->id + 8)/8);
 	}
-	/*
-	if(Adr.S > 1){
-		Z->len = Adr.S;
-		for(int i = 1;i<Adr.S;i++){
-			if(Switch[Adr.M][Adr.B][i] != NULL){
-				Switch[Adr.M][Adr.B][i]->len = Adr.S;
-			}else if(Moduls[Adr.M][Adr.B][i] != NULL){
-				Moduls[Adr.M][Adr.B][i]->s_length = Adr.S;
-			}
-		}
-	}*/
 
 	for(int i = 0;i<MAX_SWITCH_LINK;i++){
 		Z->L_Swi[i] = NULL;
@@ -202,7 +201,7 @@ void Create_Switch(struct SegC Adr,struct SegC App,struct SegC Div,struct SegC S
 		Z->pref[i] = NULL;
 	}
 	//printf("A Switch  is created at %i:%i:%i\tAdr:%i\n",Adr.M,Adr.B,Adr.S,Adress);
-	Switch2[Adr.Module][Adr.Adr] = Z;
+	Units[Adr.Module]->S[Adr.Adr] = Z;
 
   if(!Units[Adr.Module]->S[Adr.Adr]){
     Units[Adr.Module]->S[Adr.Adr] = Z;
@@ -227,16 +226,17 @@ void Create_Moduls(int Unit_Adr, struct adr Adr,struct adr mAdr[10],struct adr M
 	Z->state = 0;
 	Z->s_length = 1;
 
-	if(Adr.S > 1){
+	/*if(Adr.S > 1){
 		Z->s_length = Adr.S;
 		for(int i = 1;i<Adr.S;i++){
-			if(Switch[Adr.M][Adr.B][i] != NULL){
-				Switch[Adr.M][Adr.B][i]->len = Adr.S;
+			if(Units[Adr.M]->S[Adr.B] != NULL){
+				Units[Adr.M]->S[Adr.B]->len = Adr.S;
 			}else if(Moduls[Adr.M][Adr.B][i] != NULL){
 				Moduls[Adr.M][Adr.B][i]->s_length = Adr.S;
 			}
 		}
-	}
+	}*/
+	printf("NOT SUPPORTED YET\n\n");
 
 	//return Z;
 	//if(blocks[Adr.M][Adr.B][1] == NULL && blocks[Adr.M][Adr.B][0] == NULL){
@@ -244,7 +244,7 @@ void Create_Moduls(int Unit_Adr, struct adr Adr,struct adr mAdr[10],struct adr M
 		//C_Seg(C_Adr(Adr.M,Adr.B,0),0);
 	//}
 	//printf("A Moduls is created at %i:%i:%i\tAdr:%i\n",Adr.M,Adr.B,Adr.S,Adress);
-	Moduls[Adr.M][Adr.B][Adr.S] = Z;
+	//Moduls[Adr.M][Adr.B][Adr.S] = Z;
 
 
 
@@ -254,8 +254,8 @@ void Create_Moduls(int Unit_Adr, struct adr Adr,struct adr mAdr[10],struct adr M
 		printf("Double Switch adress %i in Module %i\n",Unit_Adr,Adr.M);
 	}
 
-	MS_Switch_list[M_list_i] = Adr;
-	M_list_i++;
+	//MS_Switch_list[M_list_i] = Adr;
+	//M_list_i++;
 }
 
 

@@ -1,8 +1,46 @@
-#include "stdlib.h"
+#define _BSD_SOURCE
+#define _GNU_SOURCE
 
-#ifndef t_Unit
-	#include "./modules.h"
-#endif
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <unistd.h>
+
+#include <string.h>
+
+#include "./../lib/system.h"
+
+#include "./../lib/rail.h"
+#include "./../lib/switch.h"
+#include "./../lib/signals.h"
+#include "./../lib/trains.h"
+
+#include "./../lib/modules.h"
+
+#include "./../lib/algorithm.h"
+
+struct Unit *Units[MAX_Modules];
+
+void setup_JSON(int arr[], int arr2[], int size, int size2){
+	char setup_data[100];
+
+	setup_data[0] = 2;
+	int setup_data_l = 2 + size + size2;
+
+	int i = 2;
+
+	for(i;(i-2)<size;i++){
+		setup_data[i] = arr[i-2];
+	}
+
+	if(size2 != 0){
+		setup_data[1] = size;
+
+		for(i;(i-2-size)<size2;i++){
+			setup_data[i] = arr2[i-2-size];
+		}
+	}
+}
 
 void Create_Unit(int Module){
 	struct Unit *Z = (struct Unit*)malloc(sizeof(struct Unit));
@@ -24,8 +62,10 @@ void Create_Unit2(int Module,int OUT,int IN){
 	Z->S_L = 8;
 	Z->S = (struct Swi **)calloc(Z->S_L,sizeof(struct Swi *));
 
-	for(int i = 0;i<MAX_Blocks*MAX_Segments;i++){
+	for(int i = 0;i<8;i++){
 		Z->M[i] = 0;
+	}
+	for(int i = 0;i<32;i++){
 		Z->Signals[i] = 0;
 	}
 
@@ -45,12 +85,12 @@ void join(struct SegC Adr, struct SegC link){
 		Units[Adr.Module]->B[Adr.Adr]->PrevC = link;
 		printf("D\n");
 	}else if(Adr.type == 'S'){
-		Switch2[Adr.Module][Adr.Adr]->AppC = link;
+		Units[Adr.Module]->S[Adr.Adr]->AppC = link;
 	}else if(Adr.type == 's'){
-		if(Adr_Comp2(Switch2[Adr.Module][Adr.Adr]->DivC, EMPTY_BL)){
-			Switch2[Adr.Module][Adr.Adr]->DivC = link;
+		if(Adr_Comp2(Units[Adr.Module]->S[Adr.Adr]->DivC, EMPTY_BL())){
+			Units[Adr.Module]->S[Adr.Adr]->DivC = link;
 		}else{
-			Switch2[Adr.Module][Adr.Adr]->StrC = link;
+			Units[Adr.Module]->S[Adr.Adr]->StrC = link;
 		}
 	}
 }
@@ -110,8 +150,8 @@ void clear_Modules(){
 struct link Modules(int m, struct link IN){
 	//Loop Left
 	struct link link;
-	link.Adr3 = EMPTY_BL;
-	link.Adr4 = EMPTY_BL;
+	link.Adr3 = EMPTY_BL();
+	link.Adr4 = EMPTY_BL();
 
 	int Seg_i = 0;
 	int Swi_i = 0;
@@ -136,10 +176,10 @@ struct link Modules(int m, struct link IN){
 		join(IN.Adr1,CAdr(m,1,'s'));
 		join(IN.Adr2,CAdr(m,0,'s'));
 
-		Create_Segment(0,CAdr(m,0,'R'),CAdr(m,1,'R'),EMPTY_BL,     speed_A,0,0,100);
+		Create_Segment(0,CAdr(m,0,'R'),CAdr(m,1,'R'),EMPTY_BL(),     speed_A,0,0,100);
 		Create_Segment(1,CAdr(m,1,'R'),CAdr(m,1,'S'),CAdr(m,0,'R'),speed_A,0,2,100);
  		Create_Segment(2,CAdr(m,2,'R'),CAdr(m,0,'S'),CAdr(m,3,'R'),speed_A,0,1,100);
- 		Create_Segment(3,CAdr(m,3,'R'),CAdr(m,2,'R'),EMPTY_BL,     speed_A,0,1,100);
+ 		Create_Segment(3,CAdr(m,3,'R'),CAdr(m,2,'R'),EMPTY_BL(),     speed_A,0,1,100);
 
 		//LINK
 		Create_Switch(CAdr(m,1,2),CAdr(m,1,'R'),CAdr(m,0,'s'),IN.Adr1,(int [2]){2,3},1);
@@ -169,8 +209,8 @@ struct link Modules(int m, struct link IN){
  		Create_Segment(2,CAdr(m,2,'R'),CAdr(m,3,'R'),CAdr(m,0,'S'),speed_A,0,1,100);
  		Create_Segment(3,CAdr(m,3,'R'),IN.Adr2,CAdr(m,2,'R'),speed_A,0,1,100);
 
-		Create_Switch(CAdr(m,0,2),CAdr(m,2,'R'),CAdr(m,1,'s'),EMPTY_BL,(int [2]){0,1},1);
-		Create_Switch(CAdr(m,1,2),CAdr(m,1,'R'),CAdr(m,0,'s'),EMPTY_BL,(int [2]){2,3},1);
+		Create_Switch(CAdr(m,0,2),CAdr(m,2,'R'),CAdr(m,1,'s'),EMPTY_BL(),(int [2]){0,1},1);
+		Create_Switch(CAdr(m,1,2),CAdr(m,1,'R'),CAdr(m,0,'s'),EMPTY_BL(),(int [2]){2,3},1);
 
 		Units[m]->S[0]->Detection_Block = Units[m]->B[2];
 		Units[m]->S[1]->Detection_Block = Units[m]->B[1];
@@ -223,19 +263,19 @@ struct link Modules(int m, struct link IN){
 		Create_Switch(CAdr(m,9,2),CAdr(m,7,'s'),CAdr(m,13,'R'),CAdr(m,15,'R'),(int [2]){030,031},1);     //Switch 012
 
 		Create_Segment(0,CAdr(m,0,'R'),IN.Adr1,CAdr(m,0,'S'),speed_B,0,0,100);
-		Create_Segment(1,CAdr(m,1,'T'),EMPTY_BL,EMPTY_BL,speed_B,0,0,100);
+		Create_Segment(1,CAdr(m,1,'T'),EMPTY_BL(),EMPTY_BL(),speed_B,0,0,100);
 
 		Create_Segment(010,CAdr(m,2,'R'),CAdr(m,1,'s'),CAdr(m,3,'R')  ,speed_C,0,0,50);
 		Create_Segment(011,CAdr(m,3,'R'),CAdr(m,2,'R'),CAdr(m,5,'s'),speed_C,0,0,50);
 		Create_Segment(012,CAdr(m,4,'R'),CAdr(m,1,'s'),CAdr(m,5,'R'),  speed_C,0,0,50);
 		Create_Segment(013,CAdr(m,5,'R'),CAdr(m,4,'R'),CAdr(m,5,'s'),speed_C,0,0,50);
 
-		Create_Segment(030,CAdr(m,6,'T'),EMPTY_BL,EMPTY_BL,speed_B,0,0,50);
-		Create_Segment(031,CAdr(m,7,'R'),CAdr(m,6,'S'),EMPTY_BL,speed_B,0,0,100);
+		Create_Segment(030,CAdr(m,6,'T'),EMPTY_BL(),EMPTY_BL(),speed_B,0,0,50);
+		Create_Segment(031,CAdr(m,7,'R'),CAdr(m,6,'S'),EMPTY_BL(),speed_B,0,0,100);
 
 
-		Create_Segment(2,CAdr(m,8,'R'),EMPTY_BL,CAdr(m,2,'s'),speed_B,0,1,50);
-		Create_Segment(3,CAdr(m,9,'T'),EMPTY_BL,EMPTY_BL,speed_B,0,1,50);
+		Create_Segment(2,CAdr(m,8,'R'),EMPTY_BL(),CAdr(m,2,'s'),speed_B,0,1,50);
+		Create_Segment(3,CAdr(m,9,'T'),EMPTY_BL(),EMPTY_BL(),speed_B,0,1,50);
 
 		Create_Segment(014,CAdr(m,10,'R'),CAdr(m,3,'s') ,CAdr(m,11,'R'),speed_C,0,0,50);
 		Create_Segment(015,CAdr(m,11,'R'),CAdr(m,10,'R'),CAdr(m,7,'s') ,speed_C,0,0,50);
@@ -244,8 +284,8 @@ struct link Modules(int m, struct link IN){
 		Create_Segment(020,CAdr(m,14,'R'),CAdr(m,4,'s') ,CAdr(m,15,'R'),speed_C,0,0,50);
 		Create_Segment(021,CAdr(m,15,'R'),CAdr(m,14,'R'),CAdr(m,9,'s') ,speed_C,0,0,50);
 
-		Create_Segment(032,CAdr(m,16,'T'),EMPTY_BL,EMPTY_BL,speed_B,0,0,50);
-		Create_Segment(033,CAdr(m,17,'R'),CAdr(m,8,'s'),EMPTY_BL,speed_B,0,1,50);
+		Create_Segment(032,CAdr(m,16,'T'),EMPTY_BL(),EMPTY_BL(),speed_B,0,0,50);
+		Create_Segment(033,CAdr(m,17,'R'),CAdr(m,8,'s'),EMPTY_BL(),speed_B,0,1,50);
 	}
 	else if(m == 4){//Station 4 bakken
 		Create_Unit2(m,8,32);
@@ -296,7 +336,7 @@ struct link Modules(int m, struct link IN){
 		Create_Switch(CAdr(m,9,2),CAdr(m,7,'s'),CAdr(m,21,'R'),CAdr(m,25,'R'),(int [2]){030,031},1);     //Switch 012
 
 		Create_Segment(0,CAdr(m,0,'R'),IN.Adr1,CAdr(m,0,'S'),speed_B,0,0,100);
-		Create_Segment(1,CAdr(m,1,'T'),EMPTY_BL,EMPTY_BL,speed_B,0,0,100);
+		Create_Segment(1,CAdr(m,1,'T'),EMPTY_BL(),EMPTY_BL(),speed_B,0,0,100);
 
 		Create_Segment(010,CAdr(m,2,'S'),CAdr(m,1,'s'),CAdr(m,3,'R'),speed_C,0,0,50);
 		Create_Segment(011,CAdr(m,3,'S'),CAdr(m,2,'R'),CAdr(m,4,'R'),speed_C,0,0,50);
@@ -308,12 +348,12 @@ struct link Modules(int m, struct link IN){
 		Create_Segment(032,CAdr(m,8,'S'),CAdr(m,7,'R'),CAdr(m,9,'R'),speed_C,0,0,50);
 		Create_Segment(033,CAdr(m,9,'S'),CAdr(m,8,'R'),CAdr(m,5,'s'),speed_C,0,0,50);
 
-		Create_Segment(050,CAdr(m,10,'T'),EMPTY_BL,EMPTY_BL,speed_B,0,0,50);
-		Create_Segment(051,CAdr(m,11,'R'),CAdr(m,6,'S'),EMPTY_BL,speed_B,0,0,100);
+		Create_Segment(050,CAdr(m,10,'T'),EMPTY_BL(),EMPTY_BL(),speed_B,0,0,50);
+		Create_Segment(051,CAdr(m,11,'R'),CAdr(m,6,'S'),EMPTY_BL(),speed_B,0,0,100);
 
 
 		Create_Segment(2,CAdr(m,12,'R'),IN.Adr2,CAdr(m,2,'s'),speed_B,0,1,50);
-		Create_Segment(3,CAdr(m,13,'T'),EMPTY_BL,EMPTY_BL,speed_B,0,1,50);
+		Create_Segment(3,CAdr(m,13,'T'),EMPTY_BL(),EMPTY_BL(),speed_B,0,1,50);
 
 		Create_Segment(014,CAdr(m,14,'S'),CAdr(m,3,'s') ,CAdr(m,15,'R'),speed_C,0,1,50);
 		Create_Segment(015,CAdr(m,15,'S'),CAdr(m,14,'R'),CAdr(m,16,'R'),speed_C,0,1,50);
@@ -330,8 +370,8 @@ struct link Modules(int m, struct link IN){
 		Create_Segment(040,CAdr(m,24,'S'),CAdr(m,23,'R'),CAdr(m,25,'R'),speed_C,0,1,50);
 		Create_Segment(041,CAdr(m,25,'S'),CAdr(m,24,'R'),CAdr(m,9,'s'),speed_C,0,1,50);
 
-		Create_Segment(052,CAdr(m,26,'T'),EMPTY_BL,EMPTY_BL,speed_B,0,1,50);
-		Create_Segment(053,CAdr(m,27,'R'),CAdr(m,8,'s'),EMPTY_BL,speed_B,0,1,50);
+		Create_Segment(052,CAdr(m,26,'T'),EMPTY_BL(),EMPTY_BL(),speed_B,0,1,50);
+		Create_Segment(053,CAdr(m,27,'R'),CAdr(m,8,'s'),EMPTY_BL(),speed_B,0,1,50);
 
 		Units[m]->S[0]->Detection_Block = Units[m]->B[1];
 		Units[m]->S[1]->Detection_Block = Units[m]->B[1];
@@ -351,9 +391,9 @@ struct link Modules(int m, struct link IN){
 		 B_Swi->Adr = ADR;
 		 B_Swi->states[0] = 0;
 		 B_Swi->states[1] = 1;
-		 Switch2[m][2]->L_Swi[0] = B_Swi;
-		 Switch2[m][6]->L_Swi[0] = B_Swi;
-		 Switch2[m][8]->L_Swi[0] = B_Swi;
+		 Units[m]->S[2]->L_Swi[0] = B_Swi;
+		 Units[m]->S[6]->L_Swi[0] = B_Swi;
+		 Units[m]->S[8]->L_Swi[0] = B_Swi;
 
 		 B_Swi = (struct L_Swi_t*)malloc(sizeof(struct L_Swi_t));
 
@@ -361,9 +401,9 @@ struct link Modules(int m, struct link IN){
 		 B_Swi->Adr = ADR;
 		 B_Swi->states[0] = 0;
 		 B_Swi->states[1] = 1;
-		 Switch2[m][0]->L_Swi[0] = B_Swi;
-		 Switch2[m][6]->L_Swi[1] = B_Swi;
-		 Switch2[m][8]->L_Swi[1] = B_Swi;
+		 Units[m]->S[0]->L_Swi[0] = B_Swi;
+		 Units[m]->S[6]->L_Swi[1] = B_Swi;
+		 Units[m]->S[8]->L_Swi[1] = B_Swi;
 
 		 B_Swi = (struct L_Swi_t*)malloc(sizeof(struct L_Swi_t));
 
@@ -371,9 +411,9 @@ struct link Modules(int m, struct link IN){
 	 	 B_Swi->Adr = ADR;
 		 B_Swi->states[0] = 0;
 		 B_Swi->states[1] = 1;
-		 Switch2[m][0]->L_Swi[1] = B_Swi;
-		 Switch2[m][2]->L_Swi[1] = B_Swi;
-		 Switch2[m][8]->L_Swi[2] = B_Swi;
+		 Units[m]->S[0]->L_Swi[1] = B_Swi;
+		 Units[m]->S[2]->L_Swi[1] = B_Swi;
+		 Units[m]->S[8]->L_Swi[2] = B_Swi;
 
 		 B_Swi = (struct L_Swi_t*)malloc(sizeof(struct L_Swi_t));
 
@@ -381,20 +421,20 @@ struct link Modules(int m, struct link IN){
 	 	 B_Swi->Adr = ADR;
 		 B_Swi->states[0] = 0;
 		 B_Swi->states[1] = 1;
-		 Switch2[m][0]->L_Swi[2] = B_Swi;
-		 Switch2[m][2]->L_Swi[2] = B_Swi;
-		 Switch2[m][6]->L_Swi[2] = B_Swi;
+		 Units[m]->S[0]->L_Swi[2] = B_Swi;
+		 Units[m]->S[2]->L_Swi[2] = B_Swi;
+		 Units[m]->S[6]->L_Swi[2] = B_Swi;
 		/**/
 		//
 		/*Setting Switch preferences*/
 			struct P_Swi_t * P = (struct P_Swi_t *)malloc(sizeof(struct P_Swi_t));
 			P->type = 0; 		//Always
 			P->state = 0;		//Straigth when approaching switch
-			Switch2[m][8]->pref[0] = P;
+			Units[m]->S[8]->pref[0] = P;
 			P = (struct P_Swi_t *)malloc(sizeof(struct P_Swi_t));
 			P->type = 0; 		//Always
 			P->state = 1;		//Diverging when approaching switch
-			Switch2[m][2]->pref[0] = P;
+			Units[m]->S[2]->pref[0] = P;
 		//
 		/*Stations*/
 			Create_Station(m,"Spoor 1",1,4,(int [4]){2,3,4,5});
@@ -614,12 +654,12 @@ struct link Modules(int m, struct link IN){
 		Create_Segment(0  ,CAdr(m,0,'R'),IN.Adr1      ,CAdr(m,1,'R'),speed_A,0,0,100);
 		Create_Segment(02 ,CAdr(m,1,'R'),CAdr(m,0,'R'),CAdr(m,2,'R'),speed_A,0,0,100);
 		Create_Segment(010,CAdr(m,2,'R'),CAdr(m,1,'R'),CAdr(m,3,'R'),speed_A,0,0,100);
-		Create_Segment(012,CAdr(m,3,'R'),CAdr(m,2,'R'),EMPTY_BL     ,speed_A,0,0,100);
+		Create_Segment(012,CAdr(m,3,'R'),CAdr(m,2,'R'),EMPTY_BL()   ,speed_A,0,0,100);
 
 		Create_Segment(1  ,CAdr(m,4,'R'),IN.Adr2      ,CAdr(m,5,'R'),speed_A,0,1,100);
 		Create_Segment(03 ,CAdr(m,5,'R'),CAdr(m,4,'R'),CAdr(m,6,'R'),speed_A,0,1,100);
 		Create_Segment(011,CAdr(m,6,'R'),CAdr(m,5,'R'),CAdr(m,7,'R'),speed_A,0,1,100);
-		Create_Segment(013,CAdr(m,7,'R'),CAdr(m,6,'R'),EMPTY_BL     ,speed_A,0,1,100);
+		Create_Segment(013,CAdr(m,7,'R'),CAdr(m,6,'R'),EMPTY_BL()   ,speed_A,0,1,100);
 	}
 	else if(m == 11){//Korte Bocht
 		Create_Unit2(m,8,8);
@@ -630,8 +670,8 @@ struct link Modules(int m, struct link IN){
 		join(IN.Adr1,CAdr(m,0,'R'));
 		join(IN.Adr2,CAdr(m,1,'R'));
 
-		Create_Segment(0,CAdr(m,0,'R'),IN.Adr1,EMPTY_BL,speed_A,0,0,100);
-		Create_Segment(1,CAdr(m,1,'R'),IN.Adr2,EMPTY_BL,speed_A,0,1,100);
+		Create_Segment(0,CAdr(m,0,'R'),IN.Adr1,EMPTY_BL(),speed_A,0,0,100);
+		Create_Segment(1,CAdr(m,1,'R'),IN.Adr2,EMPTY_BL(),speed_A,0,1,100);
 	}
 	return link;
 }
@@ -653,7 +693,7 @@ void LoadModules(int M){
 	size_t len = 0;
 	ssize_t read;
 
-	char folder[]   = "./modules/";
+	char folder[]   = "./../modules/";
 	char filename[] = "/prop.txt";
 	char file[30] = "";
 
@@ -709,7 +749,7 @@ void LoadModules(int M){
 					NAdr = CAdr(ModuleID,0,'C');
 				}
 				else if(parts[4][0] == 'E'){ //End of line / Empty
-					NAdr = EMPTY_BL;
+					NAdr = EMPTY_BL();
 				}
 				else{
 					if(parts[4][0] == 'X'){
@@ -724,7 +764,7 @@ void LoadModules(int M){
 					PAdr = CAdr(ModuleID,0,'C');
 				}
 				else if(parts[7][0] == 'E'){
-					PAdr = EMPTY_BL;
+					PAdr = EMPTY_BL();
 				}
 				else{
 					if(parts[7][0] == 'X'){
@@ -751,7 +791,7 @@ void LoadModules(int M){
 					AAdr = CAdr(ModuleID,0,'C');
 				}
 				else if(parts[3][0] == 'E'){
-					AAdr = EMPTY_BL;
+					AAdr = EMPTY_BL();
 				}
 				else{
 					if(parts[3][0] == 'X'){
@@ -766,7 +806,7 @@ void LoadModules(int M){
 					DAdr = CAdr(ModuleID,0,'C');
 				}
 				else if(parts[9][0] == 'E'){
-					DAdr = EMPTY_BL;
+					DAdr = EMPTY_BL();
 				}
 				else{
 					if(parts[9][0] == 'X'){
@@ -781,7 +821,7 @@ void LoadModules(int M){
 					SAdr = CAdr(ModuleID,0,'C');
 				}
 				else if(parts[6][0] == 'E'){
-					SAdr = EMPTY_BL;
+					SAdr = EMPTY_BL();
 				}
 				else{
 					if(parts[6][0] == 'X'){
@@ -811,6 +851,8 @@ void LoadModules(int M){
 				}
 
 				Create_Switch(Adr,AAdr,DAdr,SAdr,IOAddress,0);
+
+				//Units[ModuleID]->S[Adr.id]->Detection_Block = atoi(parts[2]);
 			}else if(strcmp(parts[0],"CSi") == 0){//Create Signal
 				printf("Create Signals - Not Supported");
 			}else if(strcmp(parts[0],"CSt") == 0){//Create Station
@@ -848,7 +890,7 @@ void LoadModules(int M){
 }
 
 void JoinModules(){
-	if((_STATE & 0x0002) == 0){
+	if((_SYS->_STATE & STATE_Modules_Loaded) == 0){
 		//No track loaded
 		return;
 	}
@@ -861,7 +903,7 @@ void JoinModules(){
 	int max_j = init_connect_Algor(List);
 	int cur_j = max_j;
 	int prev_j = max_j;
-	while((_STATE & 0x0004) == 0){
+	while((_SYS->_STATE & STATE_Modules_Coupled) == 0){
 		cur_j = connect_Algor(List);
 		if(i > 70){
 			printf(" (%02i/%02i)\n",cur_j,max_j);
@@ -919,7 +961,7 @@ void JoinModules(){
 			Units[8]->B[ 7]->blocked = 0;
 			Units[4]->B[12]->blocked = 0;
 		}else if(i == 7){
-			_STATE |= 0x4;
+			_SYS->_STATE |= STATE_Modules_Coupled;
 			Units[1]->B[3]->blocked = 0;
 			Units[8]->B[4]->blocked = 0;
 		}

@@ -1,376 +1,51 @@
 #define _BSD_SOURCE
-#define _GNU_SOURCE
+// #define _GNU_SOURCE
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdarg.h>
+#include <stdint.h>
 #include <unistd.h>
-#include <fcntl.h>
-#include <termios.h>
-#include <time.h>
-#include <sys/time.h>
-#include <math.h>
-#include <time.h>
+// #include <stdarg.h>
+// #include <fcntl.h>
+// #include <termios.h>
+// #include <time.h>
+// #include <sys/time.h>
+// #include <math.h>
+// #include <time.h>
 #include <pthread.h>
 #include <wiringPi.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <string.h>
-#include <openssl/sha.h>
-#include <openssl/md5.h>
-#include <errno.h>
 #include <signal.h>
-#include "./src/encryption.c"
+// #include <sys/socket.h>
+// #include <netinet/in.h>
+// #include <string.h>
+#include <errno.h>
 
-#include "settings.h"
+#include "./lib/system.h"
 
-#define MAX_A MAX_Modules*MAX_Blocks*MAX_Segments
+#include "./lib/train_sim.h"
+#include "./lib/websocket.h"
+#include "./lib/status.h"
+#include "./lib/Z21.h"
+#include "./lib/com.h"
 
-#define GREEN 0
-#define AMBER 1
-#define RED 2
-#define BLOCKED 3
-#define PARKED 4
-#define RESERVED 5
-#define UNKNOWN 6
-#define BLOCK_STATES 4
+#include "./lib/rail.h"
+#include "./lib/switch.h"
+#include "./lib/signals.h"
+#include "./lib/trains.h"
 
-#define MAX_Devices 20
+#include "./lib/modules.h"
+#include "./lib/algorithm.h"
 
-//#define En_UART
+#include "./lib/pathfinding.h"
 
-#define Arr_Count(array) (sizeof(array)/sizeof((array)[0]))
-#define ROUND(nr)  (int)(nr+0.5)
-
-#define TRACK_SCALE 160
-
-int stop = 0;
-int startup = 0;
-
-struct adr{
-	int M;		// Module
-	int B;		// Block
-	int S;		// Section
-	int type;	// Type
-};
-
-int Adr_Comp(struct adr A,struct adr B);
-
-int B_list_i = 0, St_list_i = 0, S_list_i = 0, M_list_i = 0, Si_list_i = 0;
-
-#include "./src/rail.c"
-#include "./src/signals.c"
-#include "./src/switch.c"
-#include "./src/COM.h"
-
-int delayA = 5000000;
-int delayB = 5000000;
-int initialise = 1;
-char setup_data[100];
-char setup_data_l = 0;
-int status_st[20] = {0};
-
-_Bool digital_track = 0;
-
-uint16_t _STATE = 0;
-// 0x0001 - Core started
-// 0x0002 - Track loaded
-// 0x0004 - Joined Track
-// 0x1000 - Z21 connected
-// 0x2000 - COM started / working
-// 0x4000 - WebSocket started / working
-
-pthread_mutex_t mutex_lockA;
-pthread_mutex_t mutex_lockB;
-pthread_t timer_thread[MAX_TIMERS];
-int timers[MAX_TIMERS] = {0}; //0 = Free, 1 = Busy, 2 = Done
-
-struct adr Adresses[MAX_A] = {};
-
-char List_of_Modules[MAX_Modules] = {0};
-
-struct adr StartAdr;
-
-#define END_BL C_AdrT(0,0,0,'e')
-#define EMPTY_BL EMPTY_BL()
-
-#include "./src/modules.c"
-
-#include "./src/Z21.h"
-
-int Adr_Comp2(struct SegC A,struct SegC B){
-	if(A.Module == B.Module && A.Adr == B.Adr && A.type == B.type){
-		return 1;
-	}else{
-		return 0;
-	}
-}
-
-int dir_Comp(struct Seg *A,struct Seg *B){
-	if((A->dir == 2 && (B->dir == 1 || B->dir == 0)) || ((A->dir == 1 || A->dir == 0) && B->dir == 2)){
-		return 1;
-	}else if(A->dir == B->dir){
-		return 1;
-	}else if(((A->dir == 0 || A->dir == 2) && B->dir == 0b101) || (A->dir == 1 && B->dir == 0b100)){
-		return 1;
-	}else if(((B->dir == 0 || B->dir == 2) && A->dir == 0b101) || (B->dir == 1 && A->dir == 0b100)){
-		return 1;
-	}{
-		return 0;
-	}
-		/*if(B->Adr.S == 0){
-			return 1;
-		}else{
-			return 0;
-		}
-	}else{
-		return 1;
-	}*/
-}
-
-void setup_JSON(int arr[], int arr2[], int size, int size2){
-	char buf[100];
-
-	setup_data[0] = 2;
-	setup_data_l = 2 + size + size2;
-
-	int i = 2;
-
-	for(i;(i-2)<size;i++){
-		setup_data[i] = arr[i-2];
-	}
-
-	if(size2 != 0){
-		setup_data[1] = size;
-
-		for(i;(i-2-size)<size2;i++){
-			setup_data[i] = arr2[i-2-size];
-		}
-	}
-}
-
-void change_block_state(struct Seg * Block,int State){
-	if(Block->state != State){
-		Block->change = 1;
-		Block->state = State;
-	}
-}
-
-void JSON_new_client(int Client_fd);
-
-struct timer_thread_data{
-   int  thread_id;
-	 int  t;
-};
-
-struct timer_thread_data a[MAX_TIMERS];
-
-#include "./src/status.c"
-#include "./src/trains.c"
-#include "./src/train_sim.c"
-#include "./src/Web.c"
-#include "./src/COM.c"
-
-#include "./src/Z21.c"
-/*
-void JSON(){
-	pthread_mutex_lock(&mutex_lockB);
-	WS_trackUpdate();
-
-	pthread_mutex_unlock(&mutex_lockB);
-}
-*/
-void JSON_new_client(int Client_fd){
-	WS_trackUpdate(Client_fd);
-	WS_SwitchesUpdate(Client_fd);
-
-	pthread_mutex_lock(&mutex_lockB);
-
-	char buf[4096];
-	char buf_l;
-
-
-	/*Stations*/
-
-	buf[0] = 6;
-	buf_l = 1;
-	_Bool data = 0;
-
-	if(St_list_i>0){
-		data = 1;
-	}
-	for(int i = 1;(i-1)<St_list_i;i++){
-		printf("entry %i\tStation %i:%i\t%s\tbuf_l: %i\n",i,stations[i-1]->Module,stations[i-1]->id,stations[i-1]->Name,buf_l);
-
-		buf[buf_l]   = stations[i-1]->Module;
-		buf[buf_l+1] = stations[i-1]->id;
-		buf[buf_l+2] = strlen(stations[i-1]->Name);
-		strcpy(&buf[buf_l+3],stations[i-1]->Name);
-
-		buf_l+=3+strlen(stations[i-1]->Name);
-	}
-
-	if(data == 1){
-		send_packet(Client_fd,buf,buf_l,8);
-	}
-
-	memset(buf,0,4096);
-
-	for(int i = 1;i<MAX_TRAINS;i++){
-		if(train_link[i]){
-			printf("Recall #%i\n",train_link[i]->DCC_ID);
-			Z21_GET_LOCO_INFO(train_link[i]->DCC_ID);
-		}
-	}
-
-	pthread_mutex_unlock(&mutex_lockB);
-}
-
-void *Test(void *threadArg){
-	struct timer_thread_data *my_data;
-	my_data = (struct timer_thread_data *) threadArg;
-	int i = my_data->thread_id;
-	int t = my_data->t;
-	printf("\t%i Sleep %i\n",i,t);
-	usleep(t);
-	timers[i] = 2;
-	printf("%i done\n",i);
-}
-
-void STOP_train(char train){
-	usleep(500000);
-	//timers;
-}
-
-void create_timer(){
-	int i = 0;
-	while(1){
-		if(timers[i] == 0){
-			timers[i] = 1;
-			a[i].thread_id = i;
-			a[i].t = (rand() % 50) * 100000 + 400000;
-			printf("Create time %i, sleep %i\n",i,a[i].t);
-			pthread_create(&timer_thread[i], NULL, Test, (void *) &a[i]);
-			break;
-		}
-		i++;
-		if(i==MAX_TIMERS){
-			i = 0;
-			printf("Not enought timers!!!!!\n\n");
-			usleep(100000);
-		}
-	}
-}
-
-#include "./src/algorithm.c"
-#include "./src/pathfinding.c"
-
-void *do_Magic(){
-	while(!stop){
-		//printf("\n\n\n");
-		clock_t t;
-		t = clock();
-		pthread_mutex_lock(&mutex_lockA);
-		#ifdef En_UART
-		for(int i = 0;i<strlen(List_of_Modules);i++){
-			printf("R%i ",List_of_Modules[i]);
-			struct COM_t C;
-			memset(C.Data,0,32);
-			C.Adr = List_of_Modules[i];
-			C.Opcode = 6;
-			C.Length = 0;
-
-			pthread_mutex_lock(&mutex_UART);
-			COM_Send(C);
-			char COM_data[20];
-			memset(COM_data,0,20);
-			COM_Recv(COM_data);
-			COM_Parse(COM_data);
-			pthread_mutex_unlock(&mutex_UART);
-			usleep(10);
-		}
-		printf("\n");
-		#endif
-		_Bool debug;
-		for(int i = 0;i<MAX_Modules;i++){
-			if(Units[i]){
-				for(int j = 0;j<=Units[i]->B_nr;j++){
-					if(Units[i]->B[j]){
-						//printf("%i:%i\n",i,j);
-						procces(Units[i]->B[j],0);
-					}
-				}
-			}
-		}
-		WS_trackUpdate(0);
-		//WS_SwitchesUpdate(0);
-		pthread_mutex_unlock(&mutex_lockA);
-		t = clock() - t;
-		//printf ("It took me %d clicks (%f seconds).\n",t,((float)t)/CLOCKS_PER_SEC);
-		//printf("\n\n\n\n\n\n");
-
-		procces_accessoire();
-
-		//FILE *data;
-		//data = fopen("data.txt", "a");
-		//fprintf(data,"%d\n",t);
-		//fclose(data);
-
-		usleep(1000000);
-	}
-}
-
-void do_once_Magic(){
-	pthread_mutex_lock(&mutex_lockA);
-	for(int i = 0;i<MAX_Modules;i++){
-		if(Units[i]){
-			for(int j = 0;j<=Units[i]->B_nr;j++){
-				if(Units[i]->B[j]){
-					//printf("%i:%i\n",i,j);
-					procces(Units[i]->B[j],0);
-				}
-			}
-		}
-	}
-	COM_change_A_signal(4);
-	COM_change_switch(4);
-	WS_trackUpdate(0);
-	pthread_mutex_unlock(&mutex_lockA);
-}
-
-void *STOP_FUNC(){
-	//char str[10];
-	while(!stop){
-		printf("Type q{Enter} to stop\n");
-
-		int r;
-		unsigned char c;
-    if ((r = read(0, &c, sizeof(c))) < 0) {
-        continue;
-    } else {
-        if(c == 'q'){
-					stop = 1;
-					break;
-				}
-    }
-	}
-	printf("STOPPING...\n");
-}
-
-void *clear_timers(){
-	while(!stop){
-		for(int i = 0;i<MAX_TIMERS;i++){
-			if(timers[i] == 2){
-				pthread_join(timer_thread[i], NULL);
-				timers[i] = 0;
-				printf("Reset time %i\n",i);
-			}
-		}
-		usleep(10000);
-	}
-}
+struct systemState * _SYS;
 
 void main(){
+	_SYS = (struct systemState *)malloc(sizeof(struct systemState));
+	_SYS->_STATE = STATE_RUN;
+	_SYS->_Clients = 0;
+	_SYS->_COM_fd = -1;
+
 	setbuf(stdout,NULL);
 	setbuf(stderr,NULL);
 	signal(SIGPIPE, SIG_IGN);
@@ -456,7 +131,7 @@ void main(){
 			}
 		}
 
-		_STATE |= 0x0002; //Track loaded
+		_SYS->_STATE |= STATE_Modules_Loaded;
 
 		JoinModules();
 
@@ -551,7 +226,7 @@ void main(){
 	printf("          To complete the setup please load or connect the modules          \n");
 
 	//Set all Switches and Signals to known positions
-	do_once_Magic();
+	scan_All();
 	//procces(blocks2[2][0],1);
 	//procces(blocks2[2][1],1);
 	//procces(blocks2[2][2],1);
@@ -611,7 +286,7 @@ void main(){
 		}
 		printf("\n");
 	  digitalWrite(0,LOW);/**/
-	startup = 1;
+	_SYS->_STATE |= STATE_Client_Accept;
 
 
 	/*Pathfinding test
@@ -623,13 +298,12 @@ void main(){
 		pathFinding2(Units[4]->B[23],stations[1]->Blocks[0],Route);*/
 
 	//Done with setup when there is at least one client
-	if(connected_clients == 0){
+	if(_SYS->_Clients == 0){
 		printf("                   Waiting until for a client connects\n");
 	}
-	while(connected_clients == 0){
+	while(_SYS->_Clients == 0){
 		usleep(1000000);
 	}
-	initialise = 0;
 
 	usleep(400000);
 
@@ -693,9 +367,9 @@ void main(){
 
 
 	printf("Creating Threads\n");
-	pthread_create(&tid[0], NULL, do_Magic, NULL);
-	pthread_create(&tid[1], NULL, STOP_FUNC, NULL);
-	pthread_create(&tid[2], NULL, clear_timers, NULL);
+	pthread_create(&tid[0], NULL, scan_All_continiously, NULL);
+	
+	pthread_create(&tid[2], NULL, clear_train_timers, NULL);
 
 	pthread_create(&tid[3], NULL, TRAIN_SIMA, NULL);
 	usleep(500000);
@@ -721,20 +395,20 @@ void main(){
 	*/
 	pthread_join(tid[0],NULL);
 	printf("Magic JOINED\n");
-	pthread_join(tid[1],NULL);
-	printf("STOP JOINED\n");
-	pthread_join(tid[2],NULL);
-	printf("Timer JOINED\n");
+	//pthread_join(tid[1],NULL);
+	//printf("STOP JOINED\n");
+	//pthread_join(tid[2],NULL);
+	//printf("Timer JOINED\n");
 	pthread_join(tid[3],NULL);
 	printf("SimA JOINED\n");
-	pthread_join(tid[4],NULL);
-	printf("SimB JOINED\n");
+	//pthread_join(tid[4],NULL);
+	//printf("SimB JOINED\n");
 	pthread_join(thread_UART,NULL);
 	pthread_join(thread_web_server,NULL);
 	//procces(C_Adr(6,2,1),1);
 
   //----- CLOSE THE UART -----
-	close(uart0_filestream);
+	close(_SYS->_COM_fd);
 
 	printf("STOPPED");
 	//pthread_exit(NULL);

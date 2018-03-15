@@ -1,3 +1,20 @@
+#define _BSD_SOURCE
+// #define _GNU_SOURCE
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <unistd.h>
+#include <string.h>
+
+#include "./../lib/system.h"
+
+#include "./../lib/rail.h"
+#include "./../lib/switch.h"
+#include "./../lib/trains.h"
+
+#include "./../lib/pathfinding.h"
+
 int pathFinding(struct Seg * Begin, struct Seg * End, struct Sw_train_PATH  *(OUT_Sw_Nodes)[MAX_ROUTE], int * len){
 	struct Rail_link NAdr,SNAdr;
 	struct Seg * B = Begin;

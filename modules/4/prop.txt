@@ -4,7 +4,7 @@ CU	4	8	32
 '
 'Block
 'Wat	IOadr	id	type	NxM	NxID	NxType	PxM	PxID	PxType	Max_sp	dir	len	OneWay
-CB	0	0	R	C	C	c	X	0	S	180	0	100	Y
+CB	0	0	R	C	C	C	X	0	S	180	0	100	Y
 CB	1	1	T	E	E	E	E	E	E	180	0	100	N
 '
 CB	8	2	S	X	1	s	X	3	R	90	0	100	N

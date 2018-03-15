@@ -6,9 +6,31 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <string.h>
+#include <pthread.h>
+
+#include "./../lib/system.h"
+
+#include "./../lib/rail.h"
+#include "./../lib/switch.h"
 
 #include "./../lib/trains.h"
 
+#include "./../lib/pathfinding.h"
+#include "./../lib/com.h"
+#include "./../lib/Z21.h"
+
+#define MAX_TIMERS 10
+
+#define ROUND(nr)  (int)(nr+0.5)
+
+pthread_t train_timer_thread[MAX_TIMERS];
+int        train_timer_state[MAX_TIMERS];
+
+struct train *trains[MAX_TRAINS] = {};
+struct train *DCC_train[9999] = {};
+struct train *train_link[MAX_TRAINS];
+int iTrain = 0; //Counter for trains in library
+int bTrain = 0; //Counter for trains on layout
 
 int add_train(int DCC,int speed,char name[],char type){
 	struct train *Z = (struct train*)malloc(sizeof(struct train));
@@ -62,7 +84,7 @@ int create_train(int DCC,int speed,char name[],char type){
 
 void init_trains(){
 	FILE *f;
-	f = fopen("./trains/trainlist_raw.txt","r");
+	f = fopen("./../trains/trainlist_raw.txt","r");
 	char line[256] = "";
 	int line_nr = 0;
 	int nr_trains = 0;
@@ -217,11 +239,11 @@ void *train_timer(void *threadArg){
 			T->cur_speed++;
 			printf("++");
 			usleep(time_step);
-			if(timers[id] > 2){
+			if(train_timer_state[id] > 2){
 				goto END;
 			}
 			usleep(time_step);
-			if(timers[id] > 2){
+			if(train_timer_state[id] > 2){
 				goto END;
 			}
 		}
@@ -231,17 +253,17 @@ void *train_timer(void *threadArg){
 			T->cur_speed--;
 			printf("--");
 			usleep(time_step);
-			if(timers[id] > 2){
+			if(train_timer_state[id] > 2){
 				goto END;
 			}
 			usleep(time_step);
-			if(timers[id] > 2){
+			if(train_timer_state[id] > 2){
 				goto END;
 			}
 		}
 	}
 	T->cur_speed = des_s;
-	timers[id] = 2;
+	train_timer_state[id] = 2;
 	T->timer = 0;
 	T->timer_id = 0;
 	printf("%i done\tCurrent speed %i\n",id,T->cur_speed);
@@ -249,6 +271,18 @@ void *train_timer(void *threadArg){
 	END:{}
 }
 
+void *clear_train_timers(){
+	while(_SYS->_STATE & STATE_RUN){
+		for(int i = 0;i<MAX_TIMERS;i++){
+			if(train_timer_state[i] == 2){
+				pthread_join(train_timer_thread[i], NULL);
+				train_timer_state[i] = 0;
+				printf("Reset time %i\n",i);
+			}
+		}
+		usleep(10000);
+	}
+}
 void train_speed(struct Seg * B,struct train * T,char speed){
 	if(T == NULL){
 		return;
@@ -265,8 +299,8 @@ void train_speed(struct Seg * B,struct train * T,char speed){
 
 		int i = 0;
 		while(1){
-			if(timers[i] == 0){
-				timers[i] = 1;
+			if(train_timer_state[i] == 0){
+				train_timer_state[i] = 1;
 				T->timer_id = i;
 				T->timer = 2;
 
@@ -276,7 +310,7 @@ void train_speed(struct Seg * B,struct train * T,char speed){
 				thread_data->Flag = 1;
 				thread_data->speed = des_s;
 				//printf("Create train signal timer, %ius sleep, fire %i times\n",thread_data->time,thread_data->r);
-				pthread_create(&timer_thread[i], NULL, train_timer, (void *) thread_data);
+				pthread_create(&train_timer_thread[i], NULL, train_timer, (void *) thread_data);
 				break;
 			}
 			i++;
@@ -337,8 +371,8 @@ void train_signal(struct Seg * B,struct train * T,int type){
 
 		int i = 0;
 		while(1){
-			if(timers[i] == 0){
-				timers[i] = 1;
+			if(train_timer_state[i] == 0){
+				train_timer_state[i] = 1;
 				T->timer = 1;
 				T->timer_id = i;
 				thread_data->thread_id = i;
@@ -347,7 +381,7 @@ void train_signal(struct Seg * B,struct train * T,int type){
 				thread_data->Flag = 2;
 				thread_data->speed = des_s;
 				//printf("Create train signal timer, %ius sleep, fire %i times\n",thread_data->time,thread_data->r);
-				pthread_create(&timer_thread[i], NULL, train_timer, (void *) thread_data);
+				pthread_create(&train_timer_thread[i], NULL, train_timer, (void *) thread_data);
 				break;
 			}
 			i++;

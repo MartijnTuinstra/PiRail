@@ -6,10 +6,25 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <string.h>
+#include <pthread.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <openssl/sha.h>
+#include <errno.h>
 
-#include <socket.h>
+#include "./../lib/system.h"
+
+#include "./../lib/rail.h"
+#include "./../lib/switch.h"
+#include "./../lib/trains.h"
 
 #include "./../lib/websocket.h"
+#include "./../lib/status.h"
+#include "./../lib/encryption.h"
+#include "./../lib/modules.h"
+#include "./../lib/Z21.h"
+
+#define MAX_WEB_CLIENTS 10
 
 char websocket_magic_string[] = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
@@ -21,7 +36,6 @@ char * WS_password = 0;
 struct client_thread_args clients_data[MAX_WEB_CLIENTS];
 struct web_client_t * clients[MAX_WEB_CLIENTS];
 int fd_client_list[MAX_WEB_CLIENTS] = {0};
-int connected_clients = 0;
 
 char strcmp2(char arr1[],char arr2[], int length){
   for(int i = 0;i<length;i++){
@@ -289,7 +303,7 @@ void send_all(char data[],int length,int flag){
         if(errno == EPIPE){
           printf("Broken Pipe!!!!!\n\n");
           close(fd_client_list[i]);
-          connected_clients--;
+          _SYS->_Clients--;
           fd_client_list[i] = 0;
           clients[i]->state = 2;
         }
@@ -395,10 +409,10 @@ int recv_packet_procces(char data[1024],struct client_thread_args * client_data)
   }
   else if(data[0] & 0x20){ //Track stuff
     if(data[0] == WSopc_ToggleSwitch){ //Toggle switch
-      if(Switch2[data[1]][data[2]]){ //Check if switch exists
+      if(Units[data[1]] && Units[data[1]]->S[data[2]]){ //Check if switch exists
         printf("throw switch %i:%i\t",data[1],data[2]);
-        printf("%i->%i",Switch2[data[1]][data[2]]->state, !Switch2[data[1]][data[2]]->state);
-        throw_switch(Switch2[data[1]][data[2]]);
+        printf("%i->%i",Units[data[1]]->S[data[2]]->state, !Units[data[1]]->S[data[2]]->state);
+        throw_switch(Units[data[1]]->S[data[2]]);
       }
     }
     else if(data[0] == WSopc_ToggleMSSwitchUp){ // MSwitch toggle to higher state
@@ -798,27 +812,27 @@ void * websocket_client(void * thread_data){
 
       fd_client_list[i] = fd_client;
 
-      connected_clients++;
+      _SYS->_Clients++;
 
-      while(initialise == 1){
+      while((_SYS->_STATE & STATE_Modules_Loaded) == 0){
 
       }
       printf("Send track style\n");
       char data[2];
       int length = 0;
       data[0] = 0;
-      data[1] = digital_track; //(0 == Analog,1 == Digital)
+      data[1] = (_SYS->_STATE & STATE_TRACK_DIGITAL) ? 1 : 0; //(0 == Analog,1 == Digital)
       send_packet(fd_client,data,2,1);
       printf("Send Setupdata\n");
 
-      send_packet(fd_client,setup_data,setup_data_l,8);
+      send_packet(fd_client,(char [6]){2,4,1,8,4,2},6,8);
       printf("Recv 1\n");
       recv_packet(fd_client,buf,&length);
       memset(buf,0,1024);
 
       printf("Send new client JSON\n");
 
-      JSON_new_client(fd_client);
+      WS_NewClient_track_Switch_Update(fd_client);
 
       printf("Send open messages\n");
       WS_send_open_Messages(fd_client);
@@ -848,7 +862,7 @@ void * websocket_client(void * thread_data){
           printf("\nData: %s\n",buf);
           if(status == -8){
             close(fd_client);
-            connected_clients--;
+            _SYS->_Clients--;
             fd_client_list[i] = 0;
             clients[i]->state = 2;
             return 0;
@@ -860,7 +874,7 @@ void * websocket_client(void * thread_data){
           return 0;
         }
 
-        if(stop){
+        if((_SYS->_STATE & STATE_RUN) == 0){
           close(fd_client);
         }
       }
@@ -873,7 +887,7 @@ void * websocket_client(void * thread_data){
 }
 
 void *clear_clients(){
-	while(!stop){
+	while(_SYS->_STATE & STATE_RUN){
 		for(int i = 0;i<MAX_WEB_CLIENTS;i++){
 			if(clients[i]->state == 2){
 				pthread_join(client_threads[i], NULL);
@@ -940,7 +954,7 @@ void * web_server(){
 
   int q = 0;
 
-  while(startup == 0){
+  while((_SYS->_STATE & STATE_Client_Accept) == 0){
     usleep(10000);
   }
 
@@ -990,7 +1004,7 @@ void * web_server(){
   		}
   	}
 
-    if(stop){
+    if((_SYS->_STATE & STATE_RUN) == 0){
       close(fd_server);
       break;
     }

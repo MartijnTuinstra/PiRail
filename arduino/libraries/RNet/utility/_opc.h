@@ -90,9 +90,10 @@
 #define RN_OPC_POST_OUT    0x16
 #define RN_OPC_REQUEST_OUT 0x47
 
-#define RN_OPC_S_IN       0x06
-#define RN_OPC_M_IN       0x07
-#define RN_OPC_A_IN       0x08
+#define RN_OPC_S_IN       0x05
+#define RN_OPC_M_IN       0x06
+#define RN_OPC_A_IN       0x07
+#define RN_OPC_POST_IN    0x08
 #define RN_OPC_REQUEST_IN 0x4C
 
 #define RN_OPC_DEVID 0x50

@@ -693,7 +693,7 @@ void LoadModules(int M){
 	size_t len = 0;
 	ssize_t read;
 
-	char folder[]   = "./../modules/";
+	char folder[]   = "./modules/";
 	char filename[] = "/prop.txt";
 	char file[30] = "";
 

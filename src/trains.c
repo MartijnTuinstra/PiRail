@@ -84,7 +84,7 @@ int create_train(int DCC,int speed,char name[],char type){
 
 void init_trains(){
 	FILE *f;
-	f = fopen("./../trains/trainlist_raw.txt","r");
+	f = fopen("./trains/trainlist_raw.txt","r");
 	char line[256] = "";
 	int line_nr = 0;
 	int nr_trains = 0;

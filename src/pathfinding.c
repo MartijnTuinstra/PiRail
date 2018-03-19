@@ -84,7 +84,7 @@ int pathFinding(struct Seg * Begin, struct Seg * End, struct Sw_train_PATH  *(OU
 	printf("Curr_PATH_Node: 0x%X",Curr_PATH_Node);*/
 
 	//Segment is Rail and is the same as the destination segment
-	if(NAdr.type == 'R' && End == NAdr.B){
+	if(NAdr.type == 'R' && End == (block *)NAdr.ptr){
 		printf("\nFOUND\n\n");
 		FOUND:{}
 
@@ -101,11 +101,11 @@ int pathFinding(struct Seg * Begin, struct Seg * End, struct Sw_train_PATH  *(OU
 						//printf("S  %02i:%02i\t%i\t%i\n",Sw_Nodes[i]->adr.Sw->Module,Sw_Nodes[i]->adr.Sw->id,Sw_Nodes[i]->suc[0],Sw_Nodes[i]->suc[1] );
 				_Bool A = FALSE;
 				for(int k = 0;k<MAX_Modules;k++){
-					if(Sw_Nodes[i]->adr.Sw && (list_of_M[k] == Sw_Nodes[i]->adr.Sw->Module || list_of_M[k] == 0)){
-						list_of_M[k] = Sw_Nodes[i]->adr.Sw->Module;
+					if(Sw_Nodes[i]->adr.type == 'S' && (list_of_M[k] == ((Switch *)Sw_Nodes[i]->adr.ptr)->Module || list_of_M[k] == 0)){
+						list_of_M[k] = ((Switch *)Sw_Nodes[i]->adr.ptr)->Module;
 						break;
-					}else if(Sw_Nodes[i]->adr.M && (list_of_M[k] == Sw_Nodes[i]->adr.M->Module || list_of_M[k] == 0)){
-						list_of_M[k] = Sw_Nodes[i]->adr.M->Module;
+					}else if(Sw_Nodes[i]->adr.type == 'M' && (list_of_M[k] == ((mswitch *)Sw_Nodes[i]->adr.ptr)->Module || list_of_M[k] == 0)){
+						list_of_M[k] = ((mswitch *)Sw_Nodes[i]->adr.ptr)->Module;
 						break;
 					}
 				}
@@ -152,25 +152,26 @@ int pathFinding(struct Seg * Begin, struct Seg * End, struct Sw_train_PATH  *(OU
 
 	usleep(2000);
 
-	if(NAdr.type == 0 || (NAdr.type == 'R' && NAdr.B->oneWay == 1 && (char)(dir + (prev_dir & 0x80)) != NAdr.B->dir)){ //End of rails or wrong way
-    if(NAdr.type == 0){
-	    //printf("End of rails returning to Current PATH Node\n");
-    }else{
-      //printf("Wrong Way!!\n");
-    }
+	if(NAdr.type == 0 || (NAdr.type == 'R' && ((block *)NAdr.ptr)->oneWay == 1 && (char)(dir + (prev_dir & 0x80)) != ((block *)NAdr.ptr)->dir)){ //End of rails or wrong way
+	    if(NAdr.type == 0){
+		    //printf("End of rails returning to Current PATH Node\n");
+	    }else{
+	      //printf("Wrong Way!!\n");
+	    }
 		goto FAIL;
 	}
-	else if(NAdr.type == 'R' && NAdr.B == Begin){ //Back at starting Node??
+	else if(NAdr.type == 'R' && (block *)NAdr.ptr == Begin){ //Back at starting Node??
 		//printf("Back at starting Node\n");
 		goto FAIL;
 	}
 	else if(NAdr.type == 'R'){ //If rail
-		B = NAdr.B;
+		B = (block *)NAdr.ptr;
 		goto Next_Adr;
 	}
 	else if(NAdr.type == 'S' || NAdr.type == 's' || NAdr.type == 'm' || NAdr.type == 'M'){ //Next node is a (MS) Switch
 
-		if((NAdr.type == 'S' || NAdr.type == 's') && NAdr.Sw->Detection_Block && !Block_cmp(NAdr.Sw->Detection_Block,B)){
+		if((NAdr.type == 'S' || NAdr.type == 's') && ((Switch *)NAdr.ptr)->Detection_Block && 
+						!Block_cmp(((Switch *)NAdr.ptr)->Detection_Block,B)){
 			a++;
 		}
 		if(NAdr.type == 'S'){ //If Approaching Switch
@@ -181,15 +182,15 @@ int pathFinding(struct Seg * Begin, struct Seg * End, struct Sw_train_PATH  *(OU
 			//If a node is present
 			if(Curr_PATH_Node){
 				if(Curr_PATH_Node->suc[0] == 1){ //If state 0 is in try
-					SNAdr = NAdr.Sw->str;
+					SNAdr = ((Switch *)NAdr.ptr)->str;
 				}
 				else if(Curr_PATH_Node->suc[1] == 1){ //If state 1 is in try
-					SNAdr = NAdr.Sw->div;
+					SNAdr = ((Switch *)NAdr.ptr)->div;
 				}
 			}
 		}
 		else if(NAdr.type == 's'){ //Mergin Switch
-			SNAdr = NAdr.Sw->app;
+			SNAdr = ((Switch *)NAdr.ptr)->app;
 			//printf("Approach\t");
       //printf("SNAdr: %i:%i:%i\n",SNAdr.M,SNAdr.B,SNAdr.S);
 		}
@@ -199,9 +200,9 @@ int pathFinding(struct Seg * Begin, struct Seg * End, struct Sw_train_PATH  *(OU
 
 			//If a node is present
 			if(Curr_PATH_Node){
-				for(int i = 0;i<NAdr.M->length;i++){ //Browse through all states
+				for(int i = 0;i<((mswitch *)NAdr.ptr)->length;i++){ //Browse through all states
 					if(Curr_PATH_Node->suc[i] == 1){ //If state i is in try
-						SNAdr = NAdr.M->m_Adr[i];
+						SNAdr = ((mswitch *)NAdr.ptr)->m_Adr[i];
 						break;
 		}}}}
 		else if(NAdr.type == 'm'){ //MSSwitch approach m side
@@ -210,9 +211,9 @@ int pathFinding(struct Seg * Begin, struct Seg * End, struct Sw_train_PATH  *(OU
 
 			//If a node is present
 			if(Curr_PATH_Node != NULL){
-				for(int i = 0;i<NAdr.M->length;i++){ //Browse through all states
+				for(int i = 0;i<((mswitch *)NAdr.ptr)->length;i++){ //Browse through all states
 					if(Curr_PATH_Node->suc[i] == 1){ //If state i is in try
-						SNAdr = NAdr.M->M_Adr[i];
+						SNAdr = ((mswitch *)NAdr.ptr)->M_Adr[i];
 		}}}}
 
 		if(SNAdr.type == 'S' || SNAdr.type == 's' || SNAdr.type == 'M' || SNAdr.type == 'm'){ //If next is a switch again
@@ -220,8 +221,8 @@ int pathFinding(struct Seg * Begin, struct Seg * End, struct Sw_train_PATH  *(OU
 			goto Next_Switch; //Procces switch
 		}
 		else if(SNAdr.type == 'R'){ //Just a rail
-			B = SNAdr.B;
-			NAdr.B = B;
+			B = (block *)SNAdr.ptr;
+			NAdr.ptr = (void *)B;
 			NAdr.type = 'R';
 
 			goto Next_Switch; //Procces rail segment
@@ -274,7 +275,7 @@ int pathFinding(struct Seg * Begin, struct Seg * End, struct Sw_train_PATH  *(OU
   				if(Curr_PATH_Node->suc[i] == 1){ //If state i was in try
   					Curr_PATH_Node->suc[i] = -1;  //Set it to fail
 
-						if((i+1) < Curr_PATH_Node->adr.M->length){ //If state i is not the last state
+						if((i+1) < ((mswitch *)Curr_PATH_Node->adr.ptr)->length){ //If state i is not the last state
 	  					Curr_PATH_Node->suc[i+1] = 1; //Try next state
 						}
 
@@ -329,7 +330,7 @@ int pathFinding(struct Seg * Begin, struct Seg * End, struct Sw_train_PATH  *(OU
 			else if(found == TRUE){
 				//printf("Check if between borders\t");
 				for(int i = 0;i<MAX_Modules;i++){
-					if(list_of_M[i] == NAdr.Sw->Module){
+					if(list_of_M[i] == ((Switch *)NAdr.ptr)->Module){
 						break;
 					}
 					//Oustide
@@ -438,7 +439,7 @@ int pathFinding(struct Seg * Begin, struct Seg * End, struct Sw_train_PATH  *(OU
 			else if(found == TRUE){
 				//printf("Check if between borders\n");
 				for(int i = 0;i<MAX_Modules;i++){
-					if(list_of_M[i] == NAdr.M->Module){
+					if(list_of_M[i] == ((mswitch *)NAdr.ptr)->Module){
 						break;
 					}
 					//Oustide
@@ -479,7 +480,7 @@ int pathFinding(struct Seg * Begin, struct Seg * End, struct Sw_train_PATH  *(OU
 					}else if(Sw_Nodes[i]->adr.type == 'M' || Sw_Nodes[i]->adr.type == 'm'){
 						printf("It a MS switch\t");
 						_Bool NoSucc = TRUE;
-						for(int i = 0;i<Sw_Nodes[i]->adr.M->length;i++){
+						for(int i = 0;i<((mswitch *)Sw_Nodes[i]->adr.ptr)->length;i++){
 							if(Sw_Nodes[i]->suc[i] == 2){
 								NoSucc = FALSE;
 								break;
@@ -518,11 +519,11 @@ int pathFinding(struct Seg * Begin, struct Seg * End, struct Sw_train_PATH  *(OU
 		}
 		else if(Curr_PATH_Node && Link_cmp(Curr_PATH_Node->adr,NAdr)){ //If current Node exists
 			//printf("Success [%i][%i]",Curr_PATH_Node->suc[0],Curr_PATH_Node->suc[1]);
-			for(int i = 0;i<NAdr.M->length;i++){
+			for(int i = 0;i<((mswitch *)NAdr.ptr)->length;i++){
 				if(Curr_PATH_Node->suc[i] == 0){
 					//printf("\tTry next");
 					Curr_PATH_Node->suc[i] = 1;
-				}else if(Curr_PATH_Node->suc[i] == -1 && (i+1) == NAdr.M->length){
+				}else if(Curr_PATH_Node->suc[i] == -1 && (i+1) == ((mswitch *)NAdr.ptr)->length){
 					//printf("\tAll failed");
 					Curr_PATH_Node = Curr_PATH_Node->Prev;
 					NAdr = Curr_PATH_Node->adr;
@@ -568,9 +569,11 @@ int pathFinding(struct Seg * Begin, struct Seg * End, struct Sw_train_PATH  *(OU
 				printf("\n%i\t%c",k,Sw_Nodes[i]->adr.type);
 				(*len)++;
 				if(Sw_Nodes[i]->adr.type == 'S' || Sw_Nodes[i]->adr.type == 's'){
-					printf("%i:%i  \t",Sw_Nodes[i]->adr.Sw->Module,Sw_Nodes[i]->adr.Sw->id);
+					Switch * tSw = (Switch *)Sw_Nodes[i]->adr.ptr;
+					printf("%i:%i  \t",tSw->Module,tSw->id);
 				}else if(Sw_Nodes[i]->adr.type == 'M' || Sw_Nodes[i]->adr.type == 'm'){
-					printf("%i:%i  \t",Sw_Nodes[i]->adr.M->Module,Sw_Nodes[i]->adr.M->id);
+					mswitch * tmsw = (mswitch *)Sw_Nodes[i]->adr.ptr;
+					printf("%i:%i  \t",tmsw->Module,tmsw->id);
 				}
 				for(int j = 0;j<10;j++){
 					if(Sw_Nodes[i]->suc[j] == 0){

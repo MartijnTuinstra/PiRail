@@ -20,11 +20,11 @@ struct signal;
 
 struct Rail_link {
   char type;
-
-  struct Seg * B;
-  struct Swi * Sw;
-  struct Mod * M;
-  struct signal * Si;
+  void * ptr;
+    // struct Seg * B;
+    // struct Swi * Sw;
+    // struct Mod * M;
+    // struct signal * Si;
 };
 
 struct Station_link{
@@ -38,7 +38,7 @@ struct SegC {
   char type;
 };
 
-struct Seg{
+typedef struct Seg{
   int Module;
   int id;
   char type;
@@ -68,7 +68,7 @@ struct Seg{
 	struct signal * NSi; // Signal in Next block direction
 	struct signal * PSi; // Signal in Prev block direction
 	//char signals; // AAAA BBBB, A = Prev Signal, B = Next Signal
-};
+} block;
 
 struct Switch_state_link{
   char type;

@@ -3,18 +3,21 @@ SRC=./src
 LIB=./lib
 ARGS=-std=c99 -lpthread -lssl -lcrypto -lwiringPi -lm -g
 
+ifndef VERBOSE
+.SILENT:
+endif
 
-baan: baan.o $(BIN)/algorithm.o $(BIN)/com.o $(BIN)/encryption.o $(BIN)/modules.o $(BIN)/pathfinding.o $(BIN)/rail.o $(BIN)/signals.o $(BIN)/status.o $(BIN)/switch.o $(BIN)/train_control.o $(BIN)/train_sim.o $(BIN)/trains.o $(BIN)/websocket.o $(BIN)/Z21.o
-	gcc $(ARGS) baan.o -o baan $(wildcard $(BIN)/*.o)
+baan: $(BIN)/baan.o $(BIN)/algorithm.o $(BIN)/com.o $(BIN)/encryption.o $(BIN)/modules.o $(BIN)/pathfinding.o $(BIN)/rail.o $(BIN)/signals.o $(BIN)/status.o $(BIN)/switch.o $(BIN)/train_control.o $(BIN)/train_sim.o $(BIN)/trains.o $(BIN)/websocket.o $(BIN)/Z21.o
+	gcc $(ARGS) -o baan $(wildcard $(BIN)/*.o)
 
-baan.o: baan.c $(LIB)/system.h $(LIB)/train_sim.h $(LIB)/websocket.h $(LIB)/status.h $(LIB)/Z21.h $(LIB)/com.h $(LIB)/rail.h $(LIB)/switch.h $(LIB)/signals.h $(LIB)/trains.h $(LIB)/modules.h $(LIB)/algorithm.h $(LIB)/pathfinding.h
-	gcc $(ARGS) baan.c -c -o baan.o
+$(BIN)/baan.o: baan.c $(LIB)/system.h $(LIB)/train_sim.h $(LIB)/websocket.h $(LIB)/status.h $(LIB)/Z21.h $(LIB)/com.h $(LIB)/rail.h $(LIB)/switch.h $(LIB)/signals.h $(LIB)/trains.h $(LIB)/modules.h $(LIB)/algorithm.h $(LIB)/pathfinding.h
+	gcc $(ARGS) baan.c -c -o $(BIN)/baan.o
 
 $(BIN)/algorithm.o : $(SRC)/algorithm.c $(LIB)/system.h $(LIB)/algorithm.h $(LIB)/rail.h $(LIB)/trains.h $(LIB)/switch.h $(LIB)/signals.h $(LIB)/modules.h $(LIB)/com.h $(LIB)/status.h
 	@echo Algorithm.o
 	gcc $(SRC)/algorithm.c -c -o $(BIN)/algorithm.o $(ARGS)
 
-$(BIN)/com.o : $(LIB)/com.h $(LIB)/system.h $(LIB)/rail.h $(LIB)/switch.h $(LIB)/signals.h $(LIB)/trains.h $(LIB)/modules.h
+$(BIN)/com.o : $(SRC)/com.c $(LIB)/com.h $(LIB)/system.h $(LIB)/rail.h $(LIB)/switch.h $(LIB)/signals.h $(LIB)/trains.h $(LIB)/modules.h
 	@echo COM.o
 	gcc $(SRC)/com.c -c -o $(BIN)/com.o $(ARGS)
 

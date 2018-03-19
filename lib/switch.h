@@ -12,7 +12,7 @@ struct P_Swi_t{
 	char state;
 };
 
-struct Swi{
+typedef struct Swi{
 	int Module;
 	int id;
 
@@ -36,9 +36,9 @@ struct Swi{
 	struct L_Swi_t * L_Swi[MAX_SWITCH_LINK]; //Linked switches
 
 	struct P_Swi_t * pref[MAX_SWITCH_PREFFERENCE];//Switch preference
-};
+} Switch;
 
-struct Mod{
+typedef struct Mod{
 	int Module;
 	int id;
 	struct adr Adr;
@@ -57,7 +57,7 @@ struct Mod{
 	char length;
 	char s_length;
 	char state;
-};
+} mswitch;
 
 struct train;
 

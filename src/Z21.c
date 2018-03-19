@@ -328,6 +328,11 @@ void Z21_recv(char message[100]){
 		//LAN_LOCONET_DETECTOR
     printf("LOCONET DETECTOR\nNot supported\n");
 	}
+
+  if(message[dataLen]){
+    printf("Extra message appended\n");
+    Z21_recv(&message[dataLen]);
+  }
 }
 
 void Z21_send(int Header,char data[30]){

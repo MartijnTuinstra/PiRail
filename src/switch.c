@@ -205,7 +205,7 @@ void Create_Switch(struct SegC Adr,struct SegC App,struct SegC Div,struct SegC S
 
   if(!Units[Adr.Module]->S[Adr.Adr]){
     Units[Adr.Module]->S[Adr.Adr] = Z;
-		Units[Adr.Module]->Swi_nr++;
+		Units[Adr.Module]->S_L++;
   }else{
     printf("WARNING - Double switch number %i in Module %i\n",Adr.Adr,Adr.Module);
   }
@@ -277,17 +277,17 @@ int check_Switch(struct Seg * B, int direct, _Bool incl_pref){
 
 	int debug = 0;
 
-	if(B->Module == 4 && B->id == 18){
+	//if(B->Module == 4 && B->id == 18){
 		//debug = 1;
-	}
+	//}
 
 	Adr.type = 'R';Adr.ptr = 0;
 
 	if(!B){printf("Empty ChSw2");return 0;}
 	int dir = B->dir;
 
-	//Adr.type = 'R';
-	//Adr.B = &B;
+	Adr.type = 'R';
+	Adr.ptr = B;
 
 	if(direct == 0){
 		if(dir == 0 || dir == 2 || dir == 5){
@@ -403,9 +403,9 @@ int free_Switch(struct Seg *B, int direct){
 
 	int debug = 0;
 
-	if(B->Module == 4 && B->id == 17){
-		debug = 1;
-	}
+	// if(B->Module == 4 && B->id == 17){
+	// 	debug = 1;
+	// }
 
 	Adr.type = 'R';Adr.ptr = 0;
 	int return_Value = 1;

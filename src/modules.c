@@ -18,6 +18,7 @@
 #include "./../lib/modules.h"
 
 #include "./../lib/algorithm.h"
+#include "./../lib/websocket.h"
 
 struct Unit *Units[MAX_Modules];
 
@@ -42,19 +43,18 @@ void setup_JSON(int arr[], int arr2[], int size, int size2){
 	}
 }
 
-void Create_Unit(int Module){
+void Create_Unit(int Module,int OUT,int IN,char points){
 	struct Unit *Z = (struct Unit*)malloc(sizeof(struct Unit));
 
 	Units[Module] = Z;
-}
 
-void Create_Unit2(int Module,int OUT,int IN){
-	struct Unit *Z = (struct Unit*)malloc(sizeof(struct Unit));
-
-	Units[Module] = Z;
+	Z->Module = Module;
 
 	struct Rail_link ** A = (struct Rail_link**)calloc( IN,sizeof(struct Rail_link));
 	struct Rail_link ** B = (struct Rail_link**)calloc(OUT,sizeof(struct Rail_link));
+
+	Z->connect_points = points;
+	Z->Connect = (struct Unit **)calloc(points,sizeof(struct Unit *));
 
 	Z->B_L = 8;
 	Z->B = (struct Seg **)calloc(Z->B_L,sizeof(struct Seg *));
@@ -109,23 +109,30 @@ void clear_Modules(){
 	    Units[i]->In = NULL;
 
 	    //clear Segments
-	    for(int j = 0;j<=Units[i]->B_nr;j++){
-	      printf("- Block %i\n",j);
-	      free(Units[i]->B[j]);
-	      Units[i]->B[j] = NULL;
+	    for(int j = 0;j<=Units[i]->B_L;j++){
+	      if(Units[i]->B[j]){
+		    printf("- Block %i\n",j);
+		    free(Units[i]->B[j]);
+		    Units[i]->B[j] = NULL;
+		  }
 	    }
 	    //clear Switches
-	    for(int j = 0;j<=Units[i]->Swi_nr;j++){
-	    	printf("- Switch %i\n",j);
-	      free(Units[i]->S[j]);
-	      Units[i]->S[j] = NULL;
+	    for(int j = 0;j<=Units[i]->S_L;j++){
+	      if(Units[i]->S[j]){
+	        printf("- Switch %i\n",j);
+	        free(Units[i]->S[j]);
+	        Units[i]->S[j] = NULL;
+	      }
 	    }
 	    //clear Mods
-	    for(int j = 0;j<=Units[i]->Mod_nr;j++){
+	    /*
+	    for(int j = 0;j<=Units[i]->M_L;j++){
+	      if(Units[i]->Mod[j]){
 	    	printf("- Mod %i\n",j);
-	      free(Units[i]->M[j]);
-	      Units[i]->M[j] = NULL;
-	    }
+	        free(Units[i]->M[j]);
+	        Units[i]->M[j] = NULL;
+	      }
+	    }*/
 	    //clear Signals
 	    for(int j = 0;j<=Units[i]->Signal_nr;j++){
 	    	printf("- Signal %i\n",j);
@@ -158,7 +165,7 @@ struct link Modules(int m, struct link IN){
 	int Sig_i = 0;
 
 	if(m == 1){
-		Create_Unit2(m,8,8);
+		Create_Unit(m,8,8,2);
 
 		/*			,-1--.
 					 |     `--0--
@@ -189,7 +196,7 @@ struct link Modules(int m, struct link IN){
 		Units[m]->S[1]->Detection_Block = Units[m]->B[1];
 	}
 	else if(m == 2){
-		Create_Unit2(m,8,8);
+		Create_Unit(m,8,8,2);
 
 		/*			,--1-.
 			--0--'     |
@@ -216,7 +223,7 @@ struct link Modules(int m, struct link IN){
 		Units[m]->S[1]->Detection_Block = Units[m]->B[1];
 	}
 	else if(m == 3){//Station 4 bakken
-		Create_Unit2(m,8,8);
+		Create_Unit(m,8,8,2);
 		/*
 		Blocks address (Octal)
 		  				 /-- -10-11- --\
@@ -288,7 +295,7 @@ struct link Modules(int m, struct link IN){
 		Create_Segment(033,CAdr(m,17,'R'),CAdr(m,8,'s'),EMPTY_BL(),speed_B,0,1,50);
 	}
 	else if(m == 4){//Station 4 bakken
-		Create_Unit2(m,8,32);
+		Create_Unit(m,8,32,2);
 		/*
 		Blocks addresses (Octal)
 		  				 /-- -10-11- -30-31- --\
@@ -521,7 +528,7 @@ struct link Modules(int m, struct link IN){
 	}/*
 	else if(m == 5){//T piece
 
-		Create_Unit(m);
+		Create_Unit___(m,8,8,3);
 
 		join(IN.Adr1,C_Adr(m,1,1));
 		Create_Segment(Seg_i++,C_Adr(m,1,1),IN.Adr1,END_BL,speed_A,0,0,100);
@@ -545,7 +552,7 @@ struct link Modules(int m, struct link IN){
 		link.Adr4 = C_AdrT(m,3,1,'R');
 	}
 	else if(m == 6){//Rangeer Brug
-		Create_Unit(m);
+		Create_Unit___(m);
 		join(IN.Adr1,C_Adr(m,1,1));
 		Create_Segment(Seg_i++,C_Adr(m,1,1),IN.Adr1,C_AdrT(m,3,1,'s'),speed_A,0,0,90);
 
@@ -563,7 +570,7 @@ struct link Modules(int m, struct link IN){
 		link.Adr2 = END_BL;
 	}
 	else if(m == 7){//Rangeer
-		Create_Unit(m);
+		Create_Unit___(m,8,8,1);
 
 		C_Seg(Seg_i++,C_Adr(m,1,0),0);
 
@@ -633,7 +640,7 @@ struct link Modules(int m, struct link IN){
 		link.Adr2 = END_BL;
 	}*/
 	else if(m == 8 || m == 9 || m == 10 || m == 12 || m == 13 || m == 14){//Stad
-		Create_Unit2(m,8,8);
+		Create_Unit(m,8,8,2);
 		/*
 		Block addresses (Octal)
 		--00--02--010--012--
@@ -662,7 +669,7 @@ struct link Modules(int m, struct link IN){
 		Create_Segment(013,CAdr(m,7,'R'),CAdr(m,6,'R'),EMPTY_BL()   ,speed_A,0,1,100);
 	}
 	else if(m == 11){//Korte Bocht
-		Create_Unit2(m,8,8);
+		Create_Unit(m,8,8,2);
 
 		link.Adr1.Module = m;link.Adr1.Adr = 0;link.Adr1.type = 'R';
 		link.Adr2.Module = m;link.Adr2.Adr = 1;link.Adr2.type = 'R';
@@ -683,7 +690,7 @@ void LoadModules(int M){
 
 	printf("Load module %i\n",M);
 
-	if(M != 4 && M != 8 && M != 1 && M != 2){
+	if(M != 4 && M != 8 && M != 1 && M != 2 && M != 5 && M != 10 && M != 11){
 		return; //Function is not ready
 	}
 
@@ -736,7 +743,7 @@ void LoadModules(int M){
 				//Set Module ID for this file and Create Module
 				ModuleID = atoi(parts[1]);
 				printf("Module ID: %i\n",ModuleID);
-				Create_Unit2(ModuleID,atoi(parts[2]),atoi(parts[3]));
+				Create_Unit(ModuleID,atoi(parts[2]),atoi(parts[3]),atoi(parts[4]));
 
 			}else if(strcmp(parts[0],"CB") == 0){ //Create Block
 				//Create a Segment with all given data from the file
@@ -745,32 +752,30 @@ void LoadModules(int M){
 				Adr = CAdr(ModuleID,atoi(parts[2]),parts[3][0]);
 				printf("New block in module %i",ModuleID);
 				//Next Block
-				if(parts[4][0] == 'C'){
-					NAdr = CAdr(ModuleID,0,'C');
-				}
-				else if(parts[4][0] == 'E'){ //End of line / Empty
+				if(parts[4][0] == 'E'){ //End of line / Empty
 					NAdr = EMPTY_BL();
 				}
 				else{
-					if(parts[4][0] == 'X'){
+					if(parts[4][0] == 'C'){
+						NAdr = CAdr(atoi(parts[5]),atoi(parts[6]),'C');
+					}else if(parts[4][0] == 'X'){
 						NAdr = CAdr(ModuleID,atoi(parts[5]),parts[6][0]);
-					}else{
+					}else {
 						NAdr = CAdr(atoi(parts[4]),atoi(parts[5]),parts[6][0]);
 					}
 				}
 
 				//Prev Block
-				if(parts[7][0] == 'C'){
-					PAdr = CAdr(ModuleID,0,'C');
-				}
-				else if(parts[7][0] == 'E'){
+				if(parts[7][0] == 'E'){
 					PAdr = EMPTY_BL();
 				}
 				else{
-					if(parts[7][0] == 'X'){
+					if(parts[7][0] == 'C'){
+						PAdr = CAdr(atoi(parts[8]),atoi(parts[9]),'C');
+					}else if(parts[7][0] == 'X'){
 						printf("Prev block is in same module %i \n",ModuleID);
 						PAdr = CAdr(ModuleID,atoi(parts[8]),parts[9][0]);
-					}else{
+					}else {
 						PAdr = CAdr(atoi(parts[7]),atoi(parts[8]),parts[9][0]);
 					}
 				}
@@ -787,45 +792,42 @@ void LoadModules(int M){
 				Adr = CAdr(ModuleID,atoi(parts[1]),atoi(parts[12]));
 
 				//Approach Block
-				if(parts[3][0] == 'C'){
-					AAdr = CAdr(ModuleID,0,'C');
-				}
-				else if(parts[3][0] == 'E'){
+				if(parts[3][0] == 'E'){
 					AAdr = EMPTY_BL();
 				}
 				else{
 					if(parts[3][0] == 'X'){
 						AAdr = CAdr(ModuleID,atoi(parts[4]),parts[5][0]);
+					}else if(parts[3][0] == 'C'){
+						AAdr = CAdr(atoi(parts[4]),atoi(parts[5]),'C');
 					}else{
 						AAdr = CAdr(atoi(parts[3]),atoi(parts[4]),parts[5][0]);
 					}
 				}
 
 				//Diverging Block 9+
-				if(parts[9][0] == 'C'){
-					DAdr = CAdr(ModuleID,0,'C');
-				}
-				else if(parts[9][0] == 'E'){
+				if(parts[9][0] == 'E'){
 					DAdr = EMPTY_BL();
 				}
 				else{
 					if(parts[9][0] == 'X'){
 						DAdr = CAdr(ModuleID,atoi(parts[10]),parts[11][0]);
+					}else if(parts[9][0] == 'C'){
+						DAdr = CAdr(atoi(parts[10]),atoi(parts[11]),'C');
 					}else{
 						DAdr = CAdr(atoi(parts[9]),atoi(parts[10]),parts[11][0]);
 					}
 				}
 
 				//Straigth Block 6
-				if(parts[6][0] == 'C'){
-					SAdr = CAdr(ModuleID,0,'C');
-				}
-				else if(parts[6][0] == 'E'){
+				if(parts[6][0] == 'E'){
 					SAdr = EMPTY_BL();
 				}
 				else{
 					if(parts[6][0] == 'X'){
 						SAdr = CAdr(ModuleID,atoi(parts[7]),parts[8][0]);
+					}else if(parts[6][0] == 'C'){
+						SAdr = CAdr(atoi(parts[7]),atoi(parts[8]),'C');
 					}else{
 						SAdr = CAdr(atoi(parts[6]),atoi(parts[7]),parts[8][0]);
 					}
@@ -896,97 +898,138 @@ void JoinModules(){
 	}
 	printf("Ready to join modules\n");
 
-	struct ConnectList * List = (struct ConnectList *)calloc(30,sizeof(struct ConnectList));
+	struct ConnectList List;
+	List.length = 0;
+	List.list_index = 8;
+	List.R_L = (struct Rail_link **)calloc(8,sizeof(struct Rail_link *));
 
 
 	int i = 0;
-	int max_j = init_connect_Algor(List);
+	int x = 0;
+	int max_j = init_connect_Algor(&List);
 	int cur_j = max_j;
 	int prev_j = max_j;
 	while((_SYS->_STATE & STATE_Modules_Coupled) == 0){
-		cur_j = connect_Algor(List);
-		if(i > 70){
+		cur_j = connect_Algor(&List);
+		if(i > 30){
 			printf(" (%02i/%02i)\n",cur_j,max_j);
 			i = 0;
+			x++;
 		}
 		if(prev_j == cur_j){
 			printf(".");
 		}else{
 			printf("+");
+
+			char data[20];
+			data[0] = 0x82;
+			data[1] = cur_j;
+			data[2] = max_j;
+			int k = 3;
+			for(int j = 0;j<MAX_Modules;j++){
+				if(Units[j]){
+					data[k++] = j;
+				}
+			}
+			send_all(data,k,0x10);
 		}
 		i++;
-		usleep(200000);
+		usleep(100000);
 		prev_j = cur_j;
 
-		if(i == 1){
+		if(i == 15){
+		if(x == 1){
 			printf("\n1\n");
 			Units[1]->B[0]->blocked = 1;
 			Units[8]->B[0]->blocked = 1;
 
 			Units[1]->B[3]->blocked = 0;
 			Units[8]->B[4]->blocked = 0;
-		}else if(i == 2){
+		}else if(x == 2){
 			printf("\n11\n");
 			Units[8]->B[3]->blocked = 1;
 			Units[4]->B[0]->blocked = 1;
 
 			Units[1]->B[0]->blocked = 0;
 			Units[8]->B[0]->blocked = 0;
-		}else if(i == 3){
+		}else if(x == 3){
 			printf("\n21\n");
 			Units[4]->B[11]->blocked = 1;
-			Units[2]->B[ 0]->blocked = 1;
+			Units[5]->B[ 0]->blocked = 1;
 
 			Units[8]->B[3]->blocked = 0;
 			Units[4]->B[0]->blocked = 0;
-		}else if(i == 4){
+		}else if(x == 4){
 			printf("\n31\n");
-			Units[2]->B[ 3]->blocked = 1;
-			Units[4]->B[27]->blocked = 1;
+			Units[10]->B[0]->blocked = 1;
+			Units[ 5]->B[1]->blocked = 1;
 
 			Units[4]->B[11]->blocked = 0;
-			Units[2]->B[ 0]->blocked = 0;
-		}else if(i == 5){
+			Units[5]->B[ 0]->blocked = 0;
+		}else if(x == 5){
 			printf("\n41\n");
-			Units[8]->B[ 7]->blocked = 1;
-			Units[4]->B[12]->blocked = 1;
-
-			Units[4]->B[27]->blocked = 0;
-			Units[2]->B[ 3]->blocked = 0;
-		}else if(i == 6){
+			Units[10]->B[3]->blocked = 1;
+			Units[ 2]->B[0]->blocked = 1;
+			Units[10]->B[0]->blocked = 0;
+			Units[ 5]->B[1]->blocked = 0;
+		}else if(x == 6){
 			printf("\n51\n");
-			Units[1]->B[3]->blocked = 1;
-			Units[8]->B[4]->blocked = 1;
-
-			Units[8]->B[ 7]->blocked = 0;
-			Units[4]->B[12]->blocked = 0;
-		}else if(i == 7){
-			_SYS->_STATE |= STATE_Modules_Coupled;
-			Units[1]->B[3]->blocked = 0;
-			Units[8]->B[4]->blocked = 0;
+			Units[ 5]->B[5]->blocked = 1;
+			Units[11]->B[0]->blocked = 1;
+			Units[10]->B[3]->blocked = 0;
+			Units[ 2]->B[0]->blocked = 0;
+		}
+		else if(x == 7){
+			Units[ 5]->B[5]->blocked = 0;
+			Units[11]->B[0]->blocked = 0;
+		}
+		else if(x == 10){
+			_SYS_change(STATE_Modules_Coupled,1);
+		}
 		}
 		//IF ALL JOINED
 		//BREAK
 	}
+	Units[1]->B[3]->blocked = 0;
+	Units[8]->B[4]->blocked = 0;
+	Units[10]->B[3]->blocked = 0;
+	Units[ 2]->B[0]->blocked = 0;
 
-	int length = List[0].length;
-	for(int i = 0;i<length;i++){
-		if(List[i].Switch){
-			if(List[i].Switch->AppC.type == 'C'){
-				List[i].Switch->AppC.type = 0;
-			}else if(List[i].Switch->StrC.type == 'C'){
-				List[i].Switch->StrC.type = 0;
-			}else if(List[i].Switch->DivC.type == 'C'){
-				List[i].Switch->DivC.type = 0;
+	for(int i = 0;i<List.length;i++){
+		if(List.R_L[i]->type == 'S'){
+			if(((Switch *)List.R_L[i]->ptr)->AppC.type == 'C'){
+				((Switch *)List.R_L[i]->ptr)->AppC.type = 0;
+			}else if(((Switch *)List.R_L[i]->ptr)->StrC.type == 'C'){
+				((Switch *)List.R_L[i]->ptr)->StrC.type = 0;
+			}else if(((Switch *)List.R_L[i]->ptr)->DivC.type == 'C'){
+				((Switch *)List.R_L[i]->ptr)->DivC.type = 0;
 			}
-		}else if(List[i].Block){
-			if(List[i].Block->NextC.type == 'C'){
-				List[i].Block->NextC.type = 0;
-			}else if(List[i].Block->PrevC.type == 'C'){
-				List[i].Block->PrevC.type = 0;
+		}else if(((block *)List.R_L[i]->ptr)){
+			if(((block *)List.R_L[i]->ptr)->NextC.type == 'C'){
+				((block *)List.R_L[i]->ptr)->NextC.type = 0;
+			}else if(((block *)List.R_L[i]->ptr)->PrevC.type == 'C'){
+				((block *)List.R_L[i]->ptr)->PrevC.type = 0;
 			}
 		}
+
+		free(List.R_L[i]);
 	}
 
-	free(List);
+	send_all((char [6]){2,4,1,8,4,2},6,8);
+
+	WS_Track_Layout();
+
+}
+
+void ConnectModulePoints(block * A,block * B){
+	char anchor_A,rail_A,anchor_B,rail_B;
+	if(A->NextC.type == 'C'){
+		anchor_A = A->NextC.Module;
+		rail_A   = A->NextC.Adr;
+	}else{
+		anchor_A = A->NextC.Module;
+		rail_A   = A->NextC.Adr;
+	}
+
+
 }

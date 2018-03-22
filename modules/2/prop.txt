@@ -1,19 +1,27 @@
 'Loop Rechts
+'
+'
+'          ,--1-.
+'    --0--'     |
+'    --3---2-.-/					0 1
+'            ||
+'
+'
 'Create Module
-'	Mnr	In	Out
-CU	2	8	8
+'	Mnr	In	Out	Anchors
+CU	2	8	8	2
 '
 'Create block
 'Wat	IOadr	id	type	NxM	NxID	NxType	PxM	PxID	PxType	Max_sp	dir	len
-CB	0	0	R	C	C	C	X	1	R	180	0	100
+CB	0	0	R	C	1	1	X	1	R	180	0	100
 CB	1	1	R	X	0	R	X	1	S	180	2	100
 CB	2	2	R	X	3	R	X	0	S	180	1	100
-CB	3	3	R	C	C	C	X	2	R	180	1	100
+CB	3	3	R	C	1	2	X	2	R	180	1	100
 '
 'Create Switch
 'Wat	id	DetBl	AxM	AxID	AxType	DxM	DxID	DxType	SxM	SxID	SxType	IOnr	IOadr
-CSw	0	2	X	2	R	X	1	s	C	C	C	2	0 1
-CSw	1	1	X	1	R	X	0	s	C	C	C	2	2 3
+CSw	0	2	X	2	R	X	1	s	C	2	2	2	0 1
+CSw	1	1	X	1	R	X	0	s	C	2	1	2	2 3
 '
 'Set detection blocks
 '	SwID	B_ID

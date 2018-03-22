@@ -473,8 +473,20 @@
     </div>
     <div id="track"    class="Window" style="display:none">
       <center>
+        <div id="Modules_scan">
+          <h1 style="margin-top:30px">Scanning for modules</h1><br/>
+          <object type="image/svg+xml" data="./img/loading.svg" style="margin:40px;"></object><br/>
+          <span class="admin">
+            <span class="progress">10/16 connections</span><br/>
+            <div class="button" style="max-width:90px;" onClick="ev_Stop_Scan()">
+              Stop scan
+            </div>
+            <b>Modules found:</b><br/>
+            <span class="found_modules"></span><br/>
+          </span>
+        </div>
         <div id="Modules_wrapper">
-          <div id="Modules">
+          <div id="Modules" style="height:0px;width:0px;margin-left:0px;margin-top:0px">
           </div>
         </div>
       </center>
@@ -1105,23 +1117,23 @@
       </div>
     </div>
     <div id="index"    class="Window" style="display:none">
-      <div class="button" onClick="mTrain_win()">
+      <div class="Bigbutton" onClick="mTrain_win()">
         <h1>Manage trains</h1><br/>
         <img src="./img/list.png" width="200px" style="position:absolute;left:calc(50% - 100px);bottom:20px;"/>
       </div>
-      <div class="button" onClick="mModules_win()">
+      <div class="Bigbutton" onClick="mModules_win()">
         <h1>Manage Modules</h1><br/>
         <?php include("./img/Module.svg"); ?>
       </div>
-      <div class="button" onClick="cTrain_win()">
+      <div class="Bigbutton" onClick="cTrain_win()">
         <h1>Remote control</h1>
         <img src="./img/remote-control.png" width="240px" style="position:absolute;left:calc(50% - 120px);bottom:20px;"/>
       </div>
-      <div class="button" onClick="track_win()">
+      <div class="Bigbutton" onClick="track_win()">
         <h1>Track</h1>
         <img src="./img/rail.png" height="64px" style="position:absolute;left:calc(50% - 150px);bottom:20px;"/>
       </div>
-      <div class="button" onClick="switch_win()">
+      <div class="Bigbutton" onClick="switch_win()">
         <h1>Switches</h1>
         <img src="./img/switch.png" height="106px" style="position:absolute;left:calc(50% - 150px);bottom:20px;"/>
       </div>

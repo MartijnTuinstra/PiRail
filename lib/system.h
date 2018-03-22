@@ -13,6 +13,8 @@ struct adr{
 	int type;	// Type
 };
 
+void _SYS_change(int STATE,char send);
+
 extern struct systemState * _SYS;	
 
 #ifndef TRUE

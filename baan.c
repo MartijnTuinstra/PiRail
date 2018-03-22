@@ -101,6 +101,9 @@ void main(){
 		//pthread_create(&thread_Z21_client, NULL, Z21_client, NULL);
 		//Z21_client();
 		usleep(100000);
+	/*Enable web clients*/
+		_SYS_change(STATE_Client_Accept,0);
+
 	/*Search all blocks*/
 		printf("|                              BLOCK LINKING                               |\n");
 		printf("|                                                                          |\n");
@@ -123,6 +126,9 @@ void main(){
 		DeviceList[1] = 2;
 		DeviceList[2] = 4;
 		DeviceList[3] = 8;
+		DeviceList[4] = 5;
+		DeviceList[5] =10;
+		DeviceList[6] =11;
 
 		for(uint8_t i = 0;i<MAX_Devices;i++){
 			if(DeviceList[i]){
@@ -131,7 +137,7 @@ void main(){
 			}
 		}
 
-		_SYS->_STATE |= STATE_Modules_Loaded;
+		_SYS_change(STATE_Modules_Loaded,1);
 
 		JoinModules();
 
@@ -286,7 +292,6 @@ void main(){
 		}
 		printf("\n");
 	  digitalWrite(0,LOW);/**/
-	_SYS->_STATE |= STATE_Client_Accept;
 
 
 	/*Pathfinding test
@@ -412,4 +417,24 @@ void main(){
 
 	printf("STOPPED");
 	//pthread_exit(NULL);
+}
+
+
+void _SYS_change(int STATE,char send){
+	printf("_SYS_change %x\n",_SYS->_STATE);
+	//printf("%x & %x = %i",_SYS->_STATE &);
+	if(_SYS->_STATE & STATE && send & 0x02){
+		_SYS->_STATE &= 0xFFFF ^ STATE;
+	}else if(!(_SYS->_STATE & STATE)){
+		_SYS->_STATE |= STATE;
+	}
+	printf("_SYS_change %x\n",_SYS->_STATE);
+
+	if(send & 0x01){
+		char data[5];
+		data[0] = WSopc_Service_State;
+		data[1] = _SYS->_STATE >> 8;
+		data[2] = _SYS->_STATE & 0xFF;
+		send_all(data,3,WS_Flag_Admin || WS_Flag_Track);
+	}
 }

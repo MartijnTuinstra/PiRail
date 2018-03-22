@@ -339,16 +339,20 @@ int recv_packet_procces(char data[1024],struct client_thread_args * client_data)
       printf("Not an Admin client");
       return;
     }
-    if(data[0] == 0x80){ //Clear track
+    
 
+    if(data[0] == WSopc_Track_Scan){
+      if(data[1] == 1){
+        //Stop connecting
+        _SYS_change(STATE_Modules_Coupled,1);
+      }else if(data[1] == 2){
+        //reload setup
+        printf("\n\nReload setup not implemented\n\n");
+      }
     }
-    else if(data[0] == 0x81){ //Reload track
 
-    }
-    else if(data[0] == 0x82){ //Reload previous setup track
 
-    }
-    else if(data[0] == 0x83){ //Reset switches to default
+    if(data[0] == 0x83){ //Reset switches to default
 
     }
     else if(data[0] == 0x84){ //Toggle Light Output
@@ -817,22 +821,25 @@ void * websocket_client(void * thread_data){
       while((_SYS->_STATE & STATE_Modules_Loaded) == 0){
 
       }
-      printf("Send track style\n");
-      char data[2];
+      char data[3];
+      data[0] = WSopc_Service_State;
+      data[1] = _SYS->_STATE >> 8;
+      data[2] = _SYS->_STATE & 0xFF;
+      send_packet(fd_client,data,3,1);
       int length = 0;
-      data[0] = 0;
-      data[1] = (_SYS->_STATE & STATE_TRACK_DIGITAL) ? 1 : 0; //(0 == Analog,1 == Digital)
-      send_packet(fd_client,data,2,1);
-      printf("Send Setupdata\n");
+      if(_SYS->_STATE & STATE_Modules_Loaded && _SYS->_STATE & STATE_Modules_Coupled){
+        send_packet(fd_client,(char [6]){2,4,1,8,4,2},6,8);
 
-      send_packet(fd_client,(char [6]){2,4,1,8,4,2},6,8);
-      printf("Recv 1\n");
-      recv_packet(fd_client,buf,&length);
-      memset(buf,0,1024);
+        printf("Recv 1\n");
+        // recv_packet(fd_client,buf,&length);
+        memset(buf,0,1024);
 
-      printf("Send new client JSON\n");
+        WS_Track_Layout();
+        
+        printf("Send new client JSON\n");
 
-      WS_NewClient_track_Switch_Update(fd_client);
+        WS_NewClient_track_Switch_Update(fd_client);
+      }
 
       printf("Send open messages\n");
       WS_send_open_Messages(fd_client);
@@ -954,6 +961,8 @@ void * web_server(){
 
   int q = 0;
 
+  _SYS->_STATE |= STATE_WebSocket_FLAG;
+
   while((_SYS->_STATE & STATE_Client_Accept) == 0){
     usleep(10000);
   }
@@ -1006,6 +1015,7 @@ void * web_server(){
 
     if((_SYS->_STATE & STATE_RUN) == 0){
       close(fd_server);
+      _SYS->_STATE &= 0xFFFF ^ STATE_WebSocket_FLAG;
       break;
     }
   }

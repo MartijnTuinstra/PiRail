@@ -457,32 +457,43 @@ $OptionList[$data['ModuleNr']]["signals"]  = count($data['Signals']);
 $OptionList[$data['ModuleNr']]["stations"] = count($data['Stations']);
 $OptionList[$data['ModuleNr']]["width"] = $SVG_w;
 $OptionList[$data['ModuleNr']]["height"] = $SVG_h;
+$OptionList[$data['ModuleNr']]["anchor_len"] = 0;
+$OptionList[$data['ModuleNr']]["anchors"] = array();
 
 if(($AttachFlags & 0b0011) == 0b11){
 	$OptionList[$data['ModuleNr']]["angle"] = 0;
 
-	$OptionList[$data['ModuleNr']]["anchors"] = array(array($Attach[0][0],$Attach[0][1]),array($Attach[1][0],$Attach[1][1]));
+	$OptionList[$data['ModuleNr']]["anchor_pos"] = array(array($Attach[0][0],$Attach[0][1]),array($Attach[1][0],$Attach[1][1]));
+
+	$OptionList[$data['ModuleNr']]["anchor_len"] += 2;
 
 	if(($AttachFlags & 0b0100) != 0){
 		array_push($OptionList[$data['ModuleNr']]["anchors"],array($Attach[2][0],$Attach[2][1],$Attach[2][2]));
+		$OptionList[$data['ModuleNr']]["anchor_len"]++;
 	}
 	if(($AttachFlags & 0b1000) != 0){
 		array_push($OptionList[$data['ModuleNr']]["anchors"],array($Attach[3][0],$Attach[3][1],$Attach[3][2]));
+		$OptionList[$data['ModuleNr']]["anchor_len"]++;
 	}
 }elseif(($AttachFlags & 0b0101) == 0b0101){
 	$OptionList[$data['ModuleNr']]["angle"] = -90;
 
-	$OptionList[$data['ModuleNr']]["anchors"] = array(array($Attach[0][0],$Attach[0][1]),array($Attach[2][0],$Attach[2][1]));
+	$OptionList[$data['ModuleNr']]["anchor_pos"] = array(array($Attach[0][0],$Attach[0][1]),array($Attach[2][0],$Attach[2][1]));
+
+	$OptionList[$data['ModuleNr']]["anchor_len"] += 2;
 }elseif(($AttachFlags & 0b0110) == 0b0110){
 	$OptionList[$data['ModuleNr']]["angle"] = 90;
 
-	$OptionList[$data['ModuleNr']]["anchors"] = array(array($Attach[2][0],$Attach[2][1]),array($Attach[1][0],$Attach[1][1]));
+	$OptionList[$data['ModuleNr']]["anchor_pos"] = array(array($Attach[2][0],$Attach[2][1]),array($Attach[1][0],$Attach[1][1]));
+
+	$OptionList[$data['ModuleNr']]["anchor_len"] += 2;
 }else{
-	$OptionList[$data['ModuleNr']]["anchors"] = array($AttachFlags);
+	$OptionList[$data['ModuleNr']]["anchor_pos"] = array($AttachFlags);
+	$OptionList[$data['ModuleNr']]["anchor_len"] += 1;
 }
 
 $writeOptionList = json_encode($OptionList,JSON_PRETTY_PRINT);
-$listFile = fopen("./../modules/list.txt","w");
+$listFile = fopen("./../modules/temp_list.txt","w");
 fwrite($listFile,$writeOptionList);
 fclose($listFile);
 

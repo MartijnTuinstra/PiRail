@@ -1,25 +1,23 @@
-'Small Curve
+'Big curve
 'Create Module
-CU	11	0	0
+CU	11	8	8	2
 '
-'Blocks
+'Create block
+'Wat	IOadr	id	type	NxM	NxID	NxType	PxM	PxID	PxType	Max_sp	dir	len	OneWay
+CB	0	0	R	C	1	1	X	1	R	180	0	100	N
+CB	2	1	R	X	0	R	C	2	1	180	0	100	N
 '
-CB	0	0	R	I1	I	I	X	1	R	180	0	100	N
-CB	1	1	R	X	0	R	E1	E	E	180	0	100	N
-CB	2	2	R	I2	I	I	X	3	R	180	0	100	N
-CB	3	3	R	X	2	R	E2	E	E	180	0	100	N
+CB	1	2	R	C	1	2	X	3	R	180	1	100	N
+CB	4	3	R	X	2	R	C	2	2	180	1	100	N
 '
-'Switches
+'Create Switch
+'Wat	id	AxM	AxID	AxType	SxM	SxID	SxType	DxM	DxID	DxType	IOnr	IOadr	Max_Speed
 '
+'Create Signals
+'Wat	Name    	type	IOAdr	states	ENsts.	OUTPUT	Blockid	side
 '
-'Signals
+'Create Station/Stops
+'	Name	Type	Nr-B	Bl
 '
-'
-'Station
-'
-'
-'Join Previous
-'
-J	1	X	0	R
-J	2	X	2	R
-'
+'Set detection blocks for Switches
+'	SwID	B_ID

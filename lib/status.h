@@ -27,6 +27,10 @@ void WS_ShortCircuit();
 
 void WS_ClearEmergency();
 
+void WS_Partial_Layout(char M_A,char M_B);
+
+void WS_Track_Layout();
+
 void WS_trackUpdate(int Client_fd);
 
 void WS_SwitchesUpdate(int Client_fd);

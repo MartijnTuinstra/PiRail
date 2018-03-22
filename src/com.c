@@ -56,6 +56,8 @@ void * UART(){
 	char data[50];
 	memset(data,0,50);
 
+	_SYS_change(STATE_COM_FLAG,0);
+
 	while(_SYS->_STATE & STATE_RUN){
 		if(COM_Recv(data)){
 			COM_Parse(data);
@@ -251,7 +253,7 @@ void COM_set_Output(int M){
 		}
 	}
 
-	for(int i = 0;i<Units[M]->Swi_nr;i++){
+	for(int i = 0;i<Units[M]->S_L;i++){
 		//for(int j = 0;j<Units[M]->S[i]->length;j++){
 		if(Units[M]->S[i]->len & 0xC0 == 0){ //Pulse Address
 			Units[M]->S[i]->state &= 0x3F;
@@ -324,6 +326,7 @@ void COM_change_Output(int M){
 
 	//Signals
 	for(int i = 0;i<Units[M]->Si_L;i++){
+		if(!Units[M]->Signals[i]){continue;}
 		for(int j = 0;j<Units[M]->Signals[i]->length;j++){
 			if(Units[M]->Signals[i]->state & 0x80){ //If output needs to be updated
 				Units[M]->Signals[i]->state &= 0x3F; //Output state is updated
@@ -380,7 +383,7 @@ void COM_change_Output(int M){
 
 
 	//Switches
-	for(int i = 0;i<Units[M]->Swi_nr;i++){
+	for(int i = 0;i<Units[M]->S_L;i++){
 		//for(int j = 0;j<Units[M]->S[i]->length;j++){
 		if(Units[M]->S[i]->len & 0xC0 == 0){ //Pulse Address
 			if(Units[M]->S[i]->state & 0x80){
@@ -521,7 +524,10 @@ void COM_change_switch(int M){
 		char Pulse = 0, Toggle = 0;
 		uint8_t byte,offset;	
 
-		for(int i = 0;i<Units[M]->Swi_nr;i++){
+		for(int i = 0;i<Units[M]->S_L;i++){
+			if(!Units[M]->S[i]){
+				continue;
+			}
 			//for(int j = 0;j<Units[M]->S[i]->length;j++){
 			printf("Switch: %i\t",Units[M]->S[i]->id);
 			if((Units[M]->S[i]->len & 0xC0) == 0){ //Pulse One Addresses

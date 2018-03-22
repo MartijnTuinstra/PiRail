@@ -70,7 +70,6 @@ void Create_Segment(int IO_Adr,struct SegC Adr ,struct SegC Next, struct SegC Pr
 	struct Seg *Z = (struct Seg*)malloc(sizeof(struct Seg));
 
 
-	//Z->id = Units[Adr.Module]->B_nr++;
   Z->id = Adr.Adr;
   Z->Module = Adr.Module;
 	Z->type = Adr.type;
@@ -124,10 +123,7 @@ void Create_Segment(int IO_Adr,struct SegC Adr ,struct SegC Next, struct SegC Pr
 	if(Units[Adr.Module]->B[Z->id] == NULL){
     printf("Module %i segment %i\n",Adr.Module,Z->id);
 		Units[Adr.Module]->B[Z->id] = Z;
-    //Units[Adr.Module]->B_nr++;
-    if(Z->id > Units[Adr.Module]->B_nr){
-      Units[Adr.Module]->B_nr = Z->id;
-    }
+
 	}else{
 		printf("Double Block Number %i in Module %i\n",Z->id,Adr.Module);
 	}
@@ -158,7 +154,7 @@ int Block_cmp(struct Seg * A,struct Seg * B){
 }
 
 int Link_cmp(struct Rail_link A, struct Rail_link B){
-  //printf("Link_cmp\t%c:%x:%x:%x:%x==%c:%x:%x:%x:%x\n",A.type,A.B,A.Sw,A.M,A.Si,B.type,B.B,B.Sw,B.M,B.Si);
+  //printf("Link_cmp\t%c:%x==%c:%x\n",A.type,A.ptr,B.type,B.ptr);
   if(A.ptr == B.ptr){
     if(A.type == B.type || (A.type == 'S' && B.type == 's') || (A.type == 's' && B.type == 'S')){
       return 1;
@@ -339,11 +335,11 @@ struct Seg * Next2(struct Seg * B,int i){
   struct Swi * S;struct Mod * M;
 	int Search_len = i;
 	int a = 0;
-	//printf("\n%i\n",i);
+	// printf("\n%i\n",i);
 	//int direct = blocks[Adr.M][Adr.B][Adr.S]->dir;
 
 	char prev_dir = B->dir;
-  //printf("Prev_dir:\t%i\t",prev_dir);
+  // printf("Prev_dir:\t%i\t",prev_dir);
 
 	I:{};
   /*
@@ -384,44 +380,53 @@ struct Seg * Next2(struct Seg * B,int i){
 	J:{};
 
 	if(i <= 0){
-		//printf("\n");
-		//printf("Done: R  %c%i:%i\n",B->type,B->Module,B->id);
+		// printf("\n");
+		// printf("Done: R  %c%i:%i\n",B->type,B->Module,B->id);
 		return B;
 	}
 
-  /*
-  printf("NAdr type:%c\t",NAdr.type);
-  if(NAdr.type == 'R'){
-    printf("%iR   %i:%i\n",i,NAdr.B->Module,NAdr.B->id);
-  }else if(NAdr.type == 'S' || NAdr.type == 's'){
-    printf("%iSw  %i:%i\n",i,NAdr.Sw->Module,NAdr.Sw->id);
-  }else if(NAdr.type == 'M' || NAdr.type == 'm'){
-    printf("%iMSw %i:%i\n",i,NAdr.M->Module,NAdr.M->id);
-  }*/
+  
+  // printf("NAdr type:%c\t",NAdr.type);
+  // if(NAdr.type == 'R'){
+  //   printf("%iR   %i:%i\n",i,((block *)NAdr.ptr)->Module,((block *)NAdr.ptr)->id);
+  // }else if(NAdr.type == 'S' || NAdr.type == 's'){
+  //   printf("%iSw  %i:%i\n",i,((Switch *)NAdr.ptr)->Module,((Switch *)NAdr.ptr)->id);
+  // }else if(NAdr.type == 'M' || NAdr.type == 'm'){
+  //   printf("%iMSw %i:%i\n",i,((mswitch *)NAdr.ptr)->Module,((mswitch *)NAdr.ptr)->id);
+  // }
 
-	//printf("\ni:%i",i);
-	//printf("\t%i:%i:%i\ttype:%c\n",NAdr.M,NAdr.B,NAdr.S,NAdr.type);
+	// printf("\ni:%i",i);
+	// printf("\t%i:%i:%i\ttype:%c\n",NAdr.M,NAdr.B,NAdr.S,NAdr.type);
 	if(NAdr.type == 'R'){
 		i--;
 		B = (block *)NAdr.ptr;
 		goto I;
 	}else if(NAdr.type == 'S' || NAdr.type == 's' || NAdr.type == 'm' || NAdr.type == 'M'){
 		R:{};
-    /*
-    printf("R:%c\t",NAdr.type);
-    if(NAdr.type == 'S' || NAdr.type == 's'){
-      printf("%iSw  %i:%i\n",i,NAdr.Sw->Module,NAdr.Sw->id);
-    }else if(NAdr.type == 'M' || NAdr.type == 'm'){
-      printf("%iMSw %i:%i\n",i,NAdr.M->Module,NAdr.M->id);
-    }*/
+    // printf("R:%c\t",NAdr.type);
+    // if(NAdr.type == 'S' || NAdr.type == 's'){
+    //   printf("%iSw  %i:%i\n",i,((Switch *)NAdr.ptr)->Module,((Switch *)NAdr.ptr)->id);
+    // }else if(NAdr.type == 'M' || NAdr.type == 'm'){
+    //   printf("%iMSw %i:%i\n",i,((mswitch *)NAdr.ptr)->Module,((mswitch *)NAdr.ptr)->id);
+    // }
 
 		if((NAdr.type == 'S' || NAdr.type=='s') && ((Switch *)NAdr.ptr)->Detection_Block){
       if(((Switch *)NAdr.ptr)->Detection_Block->type == 'T'){
         if(i == 1){
-          //printf("Switch has a Detection_Block\n");
+          // printf("Switch has a Detection_Block\n");
     			i--;
     			B = ((Switch *)NAdr.ptr)->Detection_Block;
     			goto J;
+        }else{
+          a++;
+        }
+      }
+      else if(!Block_cmp(B,((Switch *)NAdr.ptr)->Detection_Block)){
+        if(i == 1){
+          // printf("Switch has a Detection_Block\n");
+          i--;
+          B = ((Switch *)NAdr.ptr)->Detection_Block;
+          goto J;
         }else{
           a++;
         }
@@ -449,10 +454,11 @@ struct Seg * Next2(struct Seg * B,int i){
 			SNAdr = ((mswitch *)NAdr.ptr)->M_Adr[s];
 			//printf("\t%i:%i:%i\ttype:%c\n",Adr.M,Adr.B,Adr.S,Adr.type);
 		}
-		//printf("SN %i:%i:%i%c\tN %i:%i:%i\ti:%i\n",SNAdr.M,SNAdr.B,SNAdr.S,SNAdr.type,NAdr.M,NAdr.B,NAdr.S,i);
+		// printf("SN %i:%c\tN %i\ti:%i\n",SNAdr.ptr,SNAdr.type,NAdr.ptr,i);
 		if(SNAdr.type == 'S' || SNAdr.type == 's'){
-			if(!Block_cmp(((Switch *)SNAdr.ptr)->Detection_Block,((Switch *)SNAdr.ptr)->Detection_Block)){
-      //  printf("Second Detection_Block\n");
+      // printf("Second Detection_Block Check?\t%x=%x\n",NAdr.ptr,SNAdr.ptr);
+			if(!Block_cmp(((Switch *)NAdr.ptr)->Detection_Block,((Switch *)SNAdr.ptr)->Detection_Block)){
+        // printf("Second Detection_Block\n");
 				i--;
 			}
 			NAdr = SNAdr;
@@ -468,7 +474,7 @@ struct Seg * Next2(struct Seg * B,int i){
 			//usleep(20000);
 			//printf("\n%i:%i:%i type:%c\n",NAdr.M,NAdr.B,NAdr.S,NAdr.type);
       if(NAdr.type == 'S' || NAdr.type == 's'){
-        if(Block_cmp((block *)SNAdr.ptr,((Switch *)NAdr.ptr)->Detection_Block)){
+        if(Block_cmp(B,((Switch *)NAdr.ptr)->Detection_Block)){
           i++;
         }
       }
@@ -571,6 +577,16 @@ struct Seg * Prev2(struct Seg * B,int i){
     			i--;
     			B = ((Switch *)NAdr.ptr)->Detection_Block;
     			goto J;
+        }else{
+          a++;
+        }
+      }
+      else if(!Block_cmp(B,((Switch *)NAdr.ptr)->Detection_Block)){
+        if(i == 1){
+          // printf("Switch has a Detection_Block\n");
+          i--;
+          B = ((Switch *)NAdr.ptr)->Detection_Block;
+          goto J;
         }else{
           a++;
         }

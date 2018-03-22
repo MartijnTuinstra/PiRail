@@ -52,7 +52,7 @@ void * scan_All_continiously(){
 		_Bool debug;
 		for(int i = 0;i<MAX_Modules;i++){
 			if(Units[i]){
-				for(int j = 0;j<=Units[i]->B_nr;j++){
+				for(int j = 0;j<=Units[i]->B_L;j++){
 					if(Units[i]->B[j]){
 						//printf("%i:%i\n",i,j);
 						procces(Units[i]->B[j],0);
@@ -82,7 +82,7 @@ void scan_All(){
 	pthread_mutex_lock(&mutex_lockA);
 	for(int i = 0;i<MAX_Modules;i++){
 		if(Units[i]){
-			for(int j = 0;j<=Units[i]->B_nr;j++){
+			for(int j = 0;j<=Units[i]->B_L;j++){
 				if(Units[i]->B[j]){
 					//printf("%i:%i\n",i,j);
 					procces(Units[i]->B[j],0);
@@ -173,7 +173,7 @@ void procces(struct Seg * B,int debug){
 				q = i;
 				break;
 			}else if(A.type == 's' || A.type == 'S' || A.type == 'm' || A.type == 'M'){
-				//printf("%i:%i Check_switch %i:%i\n",Bl->Module,Bl->id,A.Sw->Module,A.Sw->id);
+				//printf("%i:%i Check_switch %i:%i\n",Bl->Module,Bl->id,((Switch *)A.ptr)->Module,((Switch *)A.ptr)->id);
 				if(!check_Switch(Bl,0,FALSE)){
 					//printf("WSw\n");
 					q = i;
@@ -314,7 +314,7 @@ void procces(struct Seg * B,int debug){
 			if(BA.B[0]->train != 0){
 				//printf("ID: %i\t%i:%i:%i\n",BA->train,BA->Adr.M,BA->Adr.B,BA->Adr.S);
 			}
-			if(!debug){// || B->Module == 4){
+			if(debug || B->Module == 10 || B->Module == 5){
 				if(p > 2){
 					printf("PPP ");
 					for(int i = 1;i>=0;i--){
@@ -674,6 +674,7 @@ void procces(struct Seg * B,int debug){
 						}
 					}
 				}else{
+					printf("Block %x\n",BNN.B[0]);
 					BNN.B[0]->dir ^= 0b100;
 				}
 			}
@@ -687,6 +688,9 @@ void procces(struct Seg * B,int debug){
 			//Double 0-block counts as one block
 
 			//If current block is blocked and previous block is free
+			if(BA.B[0]->Module == 5 && (BA.B[0]->id == 2 || BA.B[0]->id == 3)){
+				int karamba = 0;
+			}
 			if(p > 0 && BA.blocked && !BP.blocked){
 				change_block_state2(&BP,RED);
 				if(p > 2)
@@ -895,9 +899,19 @@ int init_connect_Algor(struct ConnectList * List){
 			for(int j = 0;j < Units[i]->B_L; j++){
 				if(Units[i]->B[j]){
 					if(Units[i]->B[j]->NextC.type == 'C' || Units[i]->B[j]->PrevC.type == 'C'){
-						printf("module %i, block %i\n",i,j);
-						List[List[0].length++].Block = Units[i]->B[j];
-						return_value++;
+						// printf("module %i, block %i\n",i,j);
+						if(List->list_index <= List->length + 1){
+							struct Rail_link ** temp = (struct Rail_link **)calloc(List->list_index+8,sizeof(struct Rail_link *));
+							for(int q = 0;q < List->list_index;q++){
+								temp[q] = List->R_L[q];
+							}
+							List->R_L = temp;
+							List->list_index += 8;
+						}
+						// printf("write index: %i\n",List->length);
+						List->R_L[List->length] = (struct Rail_link *)malloc(sizeof(struct Rail_link));
+						List->R_L[List->length]->type = 'R';
+						List->R_L[List->length++]->ptr  = Units[i]->B[j];
 					}
 				}
 			}
@@ -905,184 +919,385 @@ int init_connect_Algor(struct ConnectList * List){
 			for(int j = 0;j < Units[i]->S_L; j++){
 				if(Units[i]->S[j]){
 					if(Units[i]->S[j]->AppC.type == 'C' || Units[i]->S[j]->DivC.type == 'C' || Units[i]->S[j]->StrC.type == 'C'){
-						List[List[0].length  ].Switch = Units[i]->S[j];
-						List[List[0].length++].Block  = Units[i]->S[j]->Detection_Block;
-						return_value++;
+						// printf("module %i, switch %i\n",i,j);
+						if(List->list_index <= List->length + 1){
+							struct Rail_link ** temp = (struct Rail_link **)calloc(List->list_index+8,sizeof(struct Rail_link *));
+							for(int q = 0;q < List->list_index;q++){
+								temp[q] = List->R_L[q];
+							}
+							List->R_L = temp;
+							List->list_index += 8;
+						}
+						List->R_L[List->length] = (struct Rail_link *)malloc(sizeof(struct Rail_link));
+						List->R_L[List->length]->type = 'S';
+						List->R_L[List->length++]->ptr  = Units[i]->S[j];
 					}
 				}
 			}
+
+			return_value += Units[i]->connect_points;
 		}
 	}
 	return return_value;
 }
 
+_Bool find_and_connect(char ModuleA, char anchor_A, char ModuleB, char anchor_B){
+	//Node shouldn't be connected to the same Module
+	if(ModuleA == ModuleB){return FALSE;}
+
+	char typeA = 0;
+	char typeB = 0;
+
+	_Bool connected = FALSE;
+
+	// printf("find_and_connect: %i:%i\t\t%i:%i\n",ModuleA,anchor_A,ModuleB,anchor_B);
+
+	for(int Rail = 1;Rail<3;Rail++){
+		struct Rail_link A;A.ptr = 0;
+		struct Rail_link B;B.ptr = 0;
+
+		//Find Anchor A
+		// - Find a Block
+			for(int k = 0;k<Units[ModuleA]->B_L;k++){
+				if(Units[ModuleA]->B[k]){
+					if(Units[ModuleA]->B[k]->PrevC.type == 'C'){
+						// printf(" - A block Prev %i:%i",ModuleA,k);
+						if(Units[ModuleA]->B[k]->PrevC.Module == anchor_A && Units[ModuleA]->B[k]->PrevC.Adr == Rail){
+							// printf("++++++\n");
+							A.type = 'R';
+							typeA  = 'P';
+							A.ptr = Units[ModuleA]->B[k];
+							break;
+						}
+						// printf("\n");
+					}
+					else if(Units[ModuleA]->B[k]->NextC.type == 'C'){
+						// printf(" - A block Next %i:%i",ModuleA,k);
+						if(Units[ModuleA]->B[k]->NextC.Module == anchor_A && Units[ModuleA]->B[k]->NextC.Adr == Rail){
+							// printf("++++++\n");
+							A.type = 'R';
+							typeA  = 'N';
+							A.ptr = Units[ModuleA]->B[k];
+							break;
+						}
+						// printf("\n");
+					}
+				}
+			}
+		// - Find a switch
+			if(!A.ptr){
+				for(int k = 0;k<Units[ModuleA]->S_L;k++){
+					if(Units[ModuleA]->S[k]){
+						if(Units[ModuleA]->S[k]->AppC.type == 'C'){
+							// printf(" - A Switch App %i:%i",ModuleA,k);
+							if(Units[ModuleA]->S[k]->AppC.Module == anchor_A && Units[ModuleA]->S[k]->AppC.Adr == Rail){
+								// printf("++++++\n");
+								A.type = 'S';
+								typeA  = 'A';
+								A.ptr = Units[ModuleA]->S[k];
+								break;
+							}
+							// printf("\n");
+						}
+						else if(Units[ModuleA]->S[k]->StrC.type == 'C'){
+							// printf(" - A Switch Str %i:%i",ModuleA,k);
+							if(Units[ModuleA]->S[k]->StrC.Module == anchor_A && Units[ModuleA]->S[k]->StrC.Adr == Rail){
+								// printf("++++++\n");
+								A.type = 'S';
+								typeA  = 'S';
+								A.ptr = Units[ModuleA]->S[k];
+								break;
+							}
+							// printf("\n");
+						}
+						else if(Units[ModuleA]->S[k]->DivC.type == 'C'){
+							// printf(" - A Switch Div %i:%i",ModuleA,k);
+							if(Units[ModuleA]->S[k]->DivC.Module == anchor_A && Units[ModuleA]->S[k]->DivC.Adr == Rail){
+								// printf("++++++\n");
+								A.type = 'S';
+								typeA  = 'D';
+								A.ptr = Units[ModuleA]->S[k];
+								break;
+							}
+							// printf("\n");
+						}
+					}
+				}
+			}
+		// - Find a msswitch
+			if(!A.ptr){
+				printf("Mayby a MSwitch, but not IMPLEMENTED!!\n");
+				continue;
+			}
+
+		//Find Anchor B
+		// - Find a block
+			for(int k = 0;k<Units[ModuleB]->B_L;k++){
+				if(Units[ModuleB]->B[k]){
+					if(Units[ModuleB]->B[k]->NextC.type == 'C'){
+						// printf(" - B block Prev %i:%i",ModuleB,k);
+						if(Units[ModuleB]->B[k]->NextC.Module == anchor_B && Units[ModuleB]->B[k]->NextC.Adr == Rail){
+							// printf("++++++\n");
+							B.type = 'R';
+							typeB  = 'N';
+							B.ptr = Units[ModuleB]->B[k];
+							break;
+						}
+						// printf("\n");
+					}
+					else if(Units[ModuleB]->B[k]->PrevC.type == 'C'){
+						// printf(" - B block Prev %i:%i",ModuleB,k);
+						if(Units[ModuleB]->B[k]->PrevC.Module == anchor_B && Units[ModuleB]->B[k]->PrevC.Adr == Rail){
+							// printf("++++++\n");
+							B.type = 'R';
+							typeB  = 'P';
+							B.ptr = Units[ModuleB]->B[k];
+							break;
+						}
+						// printf("\n");
+					}
+				}
+			}
+		// - Find a Switch
+			if(!B.ptr){
+				for(int k = 0;k<Units[ModuleB]->S_L;k++){
+					if(Units[ModuleB]->S[k]){
+						if(Units[ModuleB]->S[k]->AppC.type == 'C'){
+							// printf(" - B switch App %i:%i",ModuleB,k);
+							if(Units[ModuleB]->S[k]->AppC.Module == anchor_B && Units[ModuleB]->S[k]->AppC.Adr == Rail){
+								// printf("++++++\n");
+								B.type = 'S';
+								typeB  = 'A';
+								B.ptr = Units[ModuleB]->S[k];
+								break;
+							}
+							// printf("\n");
+						}
+						else if(Units[ModuleB]->S[k]->StrC.type == 'C'){
+							// printf(" - B switch Str %i:%i",ModuleB,k);
+							if(Units[ModuleB]->S[k]->StrC.Module == anchor_B && Units[ModuleB]->S[k]->StrC.Adr == Rail){
+								// printf("++++++\n");
+								B.type = 'S';
+								typeB  = 'S';
+								B.ptr = Units[ModuleB]->S[k];
+								break;
+							}
+							// printf("\n");
+						}
+						else if(Units[ModuleB]->S[k]->DivC.type == 'C'){
+							// printf(" - B switch Div %i:%i",ModuleB,k);
+							if(Units[ModuleB]->S[k]->DivC.Module == anchor_B && Units[ModuleB]->S[k]->DivC.Adr == Rail){
+								// printf("++++++\n");
+								B.type = 'S';
+								typeB  = 'D';
+								B.ptr = Units[ModuleB]->S[k];
+								break;
+							}
+							// printf("\n");
+						}
+					}
+				}
+			}
+		// - Find a MSwitch
+			if(!B.ptr){
+				printf("Mayby a MSwitch, but not IMPLEMENTED!!\n");
+				continue;
+			}
+
+		if(A.type == 'R' && B.type == 'R'){
+			printf("Connecting R %i:%i <==> %i:%i R\n",((block *)A.ptr)->Module,((block *)A.ptr)->id,((block *)B.ptr)->Module,((block *)B.ptr)->id);
+		}
+		else if(A.type == 'S' && B.type == 'R'){
+			printf("Connecting S %i:%i <==> %i:%i R\n",((Switch *)A.ptr)->Module,((Switch *)A.ptr)->id,((block *)B.ptr)->Module,((block *)B.ptr)->id);	
+		}
+		else if(A.type == 'R' && B.type == 'S'){
+			printf("Connecting R %i:%i <==> %i:%i S\n",((block *)A.ptr)->Module,((block *)A.ptr)->id,((Switch *)B.ptr)->Module,((Switch *)B.ptr)->id);		
+		}
+
+		connected = TRUE;
+
+		//Connect
+		if(A.type == 'R' && B.type == 'R'){
+			if(typeA == 'P'){
+				((block *)A.ptr)->PrevC.Module = ((block *)B.ptr)->Module;
+				((block *)A.ptr)->PrevC.Adr    = ((block *)B.ptr)->id;
+				((block *)A.ptr)->PrevC.type   = 'R';
+				((block *)B.ptr)->NextC.Module = ((block *)A.ptr)->Module;
+				((block *)B.ptr)->NextC.Adr    = ((block *)A.ptr)->id;
+				((block *)B.ptr)->NextC.type   = 'R';
+			}
+			else{
+				((block *)A.ptr)->NextC.Module = ((block *)B.ptr)->Module;
+				((block *)A.ptr)->NextC.Adr    = ((block *)B.ptr)->id;
+				((block *)A.ptr)->NextC.type   = 'R';
+				((block *)B.ptr)->PrevC.Module = ((block *)A.ptr)->Module;
+				((block *)B.ptr)->PrevC.Adr    = ((block *)A.ptr)->id;
+				((block *)B.ptr)->PrevC.type   = 'R';
+			}
+		}
+		else if(A.type == 'S' && B.type == 'R'){
+			if(typeB == 'N'){
+				((block  *)B.ptr)->NextC.Module = ((Switch *)A.ptr)->Module;
+				((block  *)B.ptr)->NextC.Adr    = ((Switch *)A.ptr)->id;
+				((block  *)B.ptr)->NextC.type   = (typeA == 'A') ? 'S' : 's';
+			}
+			else{
+				((block  *)B.ptr)->PrevC.Module = ((Switch *)A.ptr)->Module;
+				((block  *)B.ptr)->PrevC.Adr    = ((Switch *)A.ptr)->id;
+				((block  *)B.ptr)->PrevC.type   = (typeA == 'A') ? 'S' : 's';
+			}
+
+			if(typeA == 'A'){
+				((Switch *)A.ptr)->AppC.Module = ((block *)B.ptr)->Module;
+				((Switch *)A.ptr)->AppC.Adr    = ((block *)B.ptr)->id;
+				((Switch *)A.ptr)->AppC.type   = 'R';
+			}
+			else if(typeA == 'S'){
+				((Switch *)A.ptr)->StrC.Module = ((block *)B.ptr)->Module;
+				((Switch *)A.ptr)->StrC.Adr    = ((block *)B.ptr)->id;
+				((Switch *)A.ptr)->StrC.type   = 'R';
+			}
+			else if(typeA == 'D'){
+				((Switch *)A.ptr)->DivC.Module = ((block *)B.ptr)->Module;
+				((Switch *)A.ptr)->DivC.Adr    = ((block *)B.ptr)->id;
+				((Switch *)A.ptr)->DivC.type   = 'R';
+			}
+		}
+		else if(A.type == 'R' && B.type == 'S'){
+			if(typeA == 'N'){
+				((block  *)A.ptr)->NextC.Module = ((Switch *)B.ptr)->Module;
+				((block  *)A.ptr)->NextC.Adr    = ((Switch *)B.ptr)->id;
+				((block  *)A.ptr)->NextC.type   = (typeB == 'A') ? 'S' : 's';
+			}
+			else{
+				((block  *)A.ptr)->PrevC.Module = ((Switch *)B.ptr)->Module;
+				((block  *)A.ptr)->PrevC.Adr    = ((Switch *)B.ptr)->id;
+				((block  *)A.ptr)->PrevC.type   = (typeB == 'A') ? 'S' : 's';
+			}
+
+			if(typeB == 'A'){
+				((Switch *)B.ptr)->AppC.Module = ((block *)A.ptr)->Module;
+				((Switch *)B.ptr)->AppC.Adr    = ((block *)A.ptr)->id;
+				((Switch *)B.ptr)->AppC.type   = 'R';
+			}
+			else if(typeB == 'S'){
+				((Switch *)B.ptr)->StrC.Module = ((block *)A.ptr)->Module;
+				((Switch *)B.ptr)->StrC.Adr    = ((block *)A.ptr)->id;
+				((Switch *)B.ptr)->StrC.type   = 'R';
+			}
+			else if(typeB == 'D'){
+				((Switch *)B.ptr)->DivC.Module = ((block *)A.ptr)->Module;
+				((Switch *)B.ptr)->DivC.Adr    = ((block *)A.ptr)->id;
+				((Switch *)B.ptr)->DivC.type   = 'R';
+			}
+		}
+	}
+
+	if(connected && ModuleA && anchor_A && ModuleB && anchor_B){
+		Units[ModuleA]->Connect[anchor_A-1] = Units[ModuleB];
+		Units[ModuleB]->Connect[anchor_B-1] = Units[ModuleA];
+	}
+
+	return connected;
+}
+
 int connect_Algor(struct ConnectList * List){
-	struct Seg * ConnectBlock  = 0;
-	struct Swi * ConnectSwitch = 0;
-	int PListItem = 0;
-	int length = List[0].length;
-	int return_length = 0;
-	for(int i = 0;i<length;i++){
-		if(!List[i].Block){
-			return_length++;
+	struct Rail_link * R = 0;
+
+	char Anchor_A,Rail_A,Anchor_B,Rail_B;
+
+	int value = 0;
+
+	for(int i = 0;i<List->length;i++){
+		if(!List->R_L[i]->ptr){
 			continue;
 		}
-		else if(List[i].Block->blocked){
-			if(List[i].Switch){
-				//If it is an switch detection block
-				ConnectSwitch = List[i].Switch;
-				if(!ConnectBlock && !ConnectSwitch){
-					ConnectSwitch = List[i].Switch;
-					PListItem = i;
-				}
-				else{
-					return_length += 2;
-					if(ConnectBlock){
-						if(ConnectSwitch->AppC.type == 'C'){
-							ConnectSwitch->AppC.type = 'R';
-							ConnectSwitch->AppC.Module = List[i].Block->Module;
-							ConnectSwitch->AppC.Adr = List[i].Block->id;
-						}else if(ConnectSwitch->StrC.type == 'C'){
-							ConnectSwitch->StrC.type = 'R';
-							ConnectSwitch->StrC.Module = List[i].Block->Module;
-							ConnectSwitch->StrC.Adr = List[i].Block->id;
-						}else{
-							ConnectSwitch->DivC.type = 'R';
-							ConnectSwitch->DivC.Module = List[i].Block->Module;
-							ConnectSwitch->DivC.Adr = List[i].Block->id;
-						}
-
-						if(List[i].Block->NextC.type == 'C'){
-							List[i].Block->NextC.type = (ConnectSwitch->AppC.type == 'C') ? 'S' : 's';
-							List[i].Block->NextC.Module = ConnectSwitch->Module;
-							List[i].Block->NextC.Adr = ConnectSwitch->id;
-						}else{
-							List[i].Block->PrevC.type = (ConnectSwitch->AppC.type == 'C') ? 'S' : 's';
-							List[i].Block->PrevC.Module = ConnectSwitch->Module;
-							List[i].Block->PrevC.Adr = ConnectSwitch->id;
-						}
-					}
-					else if(ConnectSwitch){
-						printf("!!! --- Switch to Switch Join is not supported (jet) --- !!!\n");
-						/*if(ConnectSwitch->AppC.type == 'C'){
-							ConnectSwitch->AppC.type = 'R';
-							ConnectSwitch->AppC.Module = List[i].Block->Module;
-							ConnectSwitch->AppC.id = List[i].Block->id;
-
-							if(List[i].Block->NextC.type == 'C'){
-								List[i].Block->NextC.type = 'S';
-								List[i].Block->NextC.Module = ConnectSwitch->Module;
-								List[i].Block->NextC.Adr = ConnectSwitch->id;
-							}else{
-								List[i].Block->PrevC.type = 'S';
-								List[i].Block->PrevC.Module = ConnectSwitch->Module;
-								List[i].Block->PrevC.Adr = ConnectSwitch->id;
-							}
-						}
-						else{ //Str or Div
-							if(ConnectSwitch->StrC.type == 'C'){
-								ConnectSwitch->StrC.type = 'R';
-								ConnectSwitch->StrC.Module = List[i].Block->Module;
-								ConnectSwitch->StrC.id = List[i].Block->id;
-							}else{
-								ConnectSwitch->DivC.type = 'R';
-								ConnectSwitch->DivC.Module = List[i].Block->Module;
-								ConnectSwitch->DivC.id = List[i].Block->id;
-							}
-
-							if(List[i].Block->NextC.type == 'C'){
-								List[i].Block->NextC.type = 's';
-								List[i].Block->NextC.Module = ConnectSwitch->Module;
-								List[i].Block->NextC.Adr = ConnectSwitch->id;
-							}else{
-								List[i].Block->PrevC.type = 's';
-								List[i].Block->PrevC.Module = ConnectSwitch->Module;
-								List[i].Block->PrevC.Adr = ConnectSwitch->id;
-							}
-						}*/
-					}
-					List[i].Block = 0;
-					List[i].Switch = 0;
-					List[PListItem].Block = 0;
-					List[PListItem].Switch = 0;
-				}
+		if(List->R_L[i]->type == 'R'){
+			if(((block *)List->R_L[i]->ptr)->NextC.type != 'C' && ((block *)List->R_L[i]->ptr)->PrevC.type != 'C') {
+				value++;
 				continue;
-			}else{
-				if(!ConnectBlock && !ConnectSwitch){
-					ConnectBlock = List[i].Block;
-					PListItem = i;
+			}
+			if(((block *)List->R_L[i]->ptr)->blocked){
+				//Blocked block
+				if(!R){
+					R = List->R_L[i];
 				}
 				else{
-					return_length += 2;
-					if(ConnectBlock){
-						if(ConnectBlock->NextC.type == 'C'){
-							ConnectBlock->NextC.type = 'R';
-							ConnectBlock->NextC.Module = List[i].Block->Module;
-							ConnectBlock->NextC.Adr = List[i].Block->id;
-						}else{
-							ConnectBlock->PrevC.type = 'R';
-							ConnectBlock->PrevC.Module = List[i].Block->Module;
-							ConnectBlock->PrevC.Adr = List[i].Block->id;
+					_Bool connected = FALSE;
+					char anchor_A = 0;
+					char anchor_B = 0;
+
+					int ModuleA = 0;
+					int ModuleB = 0;
+					if(R->type == 'R'){
+						ModuleA = ((block *)R->ptr)->Module;
+						ModuleB = ((block *)List->R_L[i]->ptr)->Module;
+
+						if(((block *)R->ptr)->NextC.type == 'C'){
+							anchor_A = ((block *)R->ptr)->NextC.Module;
+							anchor_B = ((block *)List->R_L[i]->ptr)->PrevC.Module;
+						}
+						else if(((block *)R->ptr)->PrevC.type == 'C'){
+							anchor_A = ((block *)R->ptr)->PrevC.Module;
+							anchor_B = ((block *)List->R_L[i]->ptr)->NextC.Module;
 						}
 
-						if(List[i].Block->NextC.type == 'C'){
-							List[i].Block->NextC.type = 'R';
-							List[i].Block->NextC.Module = ConnectBlock->Module;
-							List[i].Block->NextC.Adr = ConnectBlock->id;
-						}else{
-							List[i].Block->PrevC.type = 'R';
-							List[i].Block->PrevC.Module = ConnectBlock->Module;
-							List[i].Block->PrevC.Adr = ConnectBlock->id;
-						}
+						connected = find_and_connect(ModuleA,anchor_A,ModuleB,anchor_B);
 					}
-					else if(ConnectSwitch){
-						if(ConnectSwitch->AppC.type == 'C'){
-							ConnectSwitch->AppC.type = 'R';
-							ConnectSwitch->AppC.Module = List[i].Block->Module;
-							ConnectSwitch->AppC.Adr = List[i].Block->id;
-
-							if(List[i].Block->NextC.type == 'C'){
-								List[i].Block->NextC.type = 'S';
-								List[i].Block->NextC.Module = ConnectSwitch->Module;
-								List[i].Block->NextC.Adr = ConnectSwitch->id;
-							}else{
-								List[i].Block->PrevC.type = 'S';
-								List[i].Block->PrevC.Module = ConnectSwitch->Module;
-								List[i].Block->PrevC.Adr = ConnectSwitch->id;
-							}
+					else if(R->type == 'S'){
+						ModuleA = ((Switch *)R->ptr)->Module;
+						ModuleB = ((block *)List->R_L[i]->ptr)->Module;
+						if(((block *)List->R_L[i]->ptr)->NextC.type == 'C'){
+							anchor_B = ((block *)List->R_L[i]->ptr)->NextC.Module;
 						}
-						else{ //Str or Div
-							if(ConnectSwitch->StrC.type == 'C'){
-								ConnectSwitch->StrC.type = 'R';
-								ConnectSwitch->StrC.Module = List[i].Block->Module;
-								ConnectSwitch->StrC.Adr = List[i].Block->id;
-							}else{
-								ConnectSwitch->DivC.type = 'R';
-								ConnectSwitch->DivC.Module = List[i].Block->Module;
-								ConnectSwitch->DivC.Adr = List[i].Block->id;
-							}
-
-							if(List[i].Block->NextC.type == 'C'){
-								List[i].Block->NextC.type = 's';
-								List[i].Block->NextC.Module = ConnectSwitch->Module;
-								List[i].Block->NextC.Adr = ConnectSwitch->id;
-							}else{
-								List[i].Block->PrevC.type = 's';
-								List[i].Block->PrevC.Module = ConnectSwitch->Module;
-								List[i].Block->PrevC.Adr = ConnectSwitch->id;
-							}
+						else{
+							anchor_B = ((block *)List->R_L[i]->ptr)->PrevC.Module;
 						}
+
+						if(((Switch *)R->ptr)->AppC.type == 'C'){
+							anchor_A = ((Switch *)R->ptr)->AppC.Module;
+						}
+						else if(((Switch *)R->ptr)->StrC.type == 'C'){
+							anchor_A = ((Switch *)R->ptr)->StrC.Module;
+						}
+						else if(((Switch *)R->ptr)->DivC.type == 'C'){
+							anchor_A = ((Switch *)R->ptr)->DivC.Module;
+						} //End Switch approach type
+
+						connected = find_and_connect(ModuleA,anchor_A,ModuleB,anchor_B);
+					} // End Switch type
+
+					if(connected){
+						WS_Partial_Layout(ModuleA,ModuleB);
+						_Bool connected = FALSE;
 					}
-					List[i].Block = 0;
-					List[i].Switch = 0;
-					List[PListItem].Block = 0;
-					List[PListItem].Switch = 0;
+				}
+			}
+		}
+		else if(List->R_L[i]->type == 'S' && ((Switch *)List->R_L[i]->ptr)->Detection_Block->blocked){
+			//Blocked switch
+			if(!R){
+				R = List->R_L[i];
+			}
+		}
+	}
+
+	value = 0;
+	int total = 0;
+
+	for(int i = 0;i < MAX_Modules;i++){
+		if(Units[i]){
+			for(int j = 0;j<Units[i]->connect_points;j++){
+				total++;
+				if(Units[i]->Connect[j]){
+					value++;
 				}
 			}
 		}
 	}
-	if(length == return_length){
+	
+	if(value == total){
 		_SYS->_STATE |= 0x0004;
 	}
-	return return_length;
+	return value;
 }

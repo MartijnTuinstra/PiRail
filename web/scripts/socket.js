@@ -2,6 +2,11 @@
 
 
 //Opcodes
+var WSopc_Track_Scan         = 0x82;
+var WSopc_Track_PUp_Layout   = 0x83;
+var WSopc_Track_Info         = 0x84;
+
+
 var WSopc_AddNewTrain        = 0x40;
 var WSopc_LinkTrain          = 0x41;
 var WSopc_TrainSpeed         = 0x42;
@@ -18,6 +23,7 @@ var WSopc_SetSwitch          = 0x23;
 var WSopc_SetSwitchReserved  = 0x24;
 var WSopc_BroadTrack         = 0x26;
 var WSopc_BroadSwitch        = 0x27;
+var WSopc_Track_Layout       = 0x30;
 
 var WSopc_EmergencyStop      = 0x10;
 var WSopc_ShortCircuitStop   = 0x11;
@@ -26,12 +32,29 @@ var WSopc_NewMessage         = 0x13;
 var WSopc_ChangeMessage      = 0x14;
 var WSopc_ClearMessage       = 0x15;
 var WSopc_ChangeBroadcast    = 0x16;
+var WSopc_Service_State      = 0x17;
 
 
+//Service States
 
+var STATE_Z21_FLAG        = 0x8000;
+var STATE_WebSocket_FLAG  = 0x4000;
+var STATE_COM_FLAG        = 0x2000;
+var STATE_Client_Accept   = 0x1000;
+
+var STATE_TRACK_DIGITAL   = 0x0200;
+var STATE_RUN             = 0x0100;
+
+var STATE_Modules_Loaded  = 0x0002;
+var STATE_Modules_Coupled = 0x0004;
+
+var admin;
 
 var active_trains = []; //Trains that were active on the layout.
 var broadcastFlags = 0xFF;
+
+var Track_Layout_data;
+var blocks_load = 0;
 
 /*Client to Server*/
   function ev_throw_switch(evt){ //Click event throw switch
@@ -180,6 +203,19 @@ var broadcastFlags = 0xFF;
       ws.send(new Uint8Array([WSopc_ChangeBroadcast,broadcastFlags]));
     }
   }
+
+  function ev_Stop_Scan(){
+    if(admin){
+      var data = [];
+
+      data[0] = WSopc_Track_Scan;
+      data[1] = 1;
+
+      ws.send(new Int8Array(data));
+    }else{
+      console.log("No Admin");
+    }
+  }
 /**/
 /*Server to Client*/
   function ws_switch_update(data){
@@ -286,6 +322,53 @@ var broadcastFlags = 0xFF;
         $(".M"+M+"B"+B).attr('style','display:block');
       }
     }
+  }
+
+  function ws_partial_layout(data){
+    for(var i = 1;i<data.length;i++){
+      for(var j = 1;j<=Track_Layout_data[data[i]].anchor_len;j++){
+        Track_Layout_data[data[i]].anchors[j-1] = data[i+j];
+      }
+      i += Track_Layout_data[data[i]].anchor_len;
+    }
+  }
+
+  function ws_layout(data){
+    for(var i = 1;i<data.length;i++){
+      for(var j = 1;j<=Track_Layout_data[data[i]].anchor_len;j++){
+        Track_Layout_data[data[i]].anchors[j-1] = data[i+j];
+      }
+      i += Track_Layout_data[data[i]].anchor_len;
+    }
+
+    console.log("Finding first module");
+    $.each(Track_Layout_data, function(i,v){
+      console.log("Module "+i);
+      if(Track_Layout_data[i] != [] && Track_Layout_data[i].anchors.length != 0 && i == 4){
+        Track_Layout_data[i].x = 0;
+        Track_Layout_data[i].y = 0;
+        Track_Layout_data[i].r = 0;
+
+        $('#Modules').append("<div class=\"M"+i+" Module M"+i+"b\"></div>");
+        blocks_load++;
+        $('.M'+i+'b').load('./../modules/'+i+'/layout.svg',function (evt){
+          blocks_load--;
+          if(blocks_load == 0){ //Done loading all modules?
+            $('#Modules').css('display','block');
+            ws.send("Ready");
+            $('g.SwGroup','.Module').on("click",ev_throw_switch);  //Attach click event to all switch and mswitches
+          }
+        });
+
+        for(var j = 0;j<Track_Layout_data[i].anchor_len;j++){
+          if(Track_Layout_data[i].anchors[j] != 0){
+            console.log("=============== "+j+" ===============");
+            track_layout(Track_Layout_data[i].anchors[j],i);
+          }
+        }
+        return false;
+      }
+    });
   }
 
   function ws_emergency(type){
@@ -540,9 +623,13 @@ var broadcastFlags = 0xFF;
     }
     if(data[1] & 0x10){
       $('#status .broad')[3].style['background'] = 'green';
+      admin = 1;
+      change_admin();
     }else{
       //Admin unset: logout
       $.post('./login.php', {'pass':''});
+      admin = 0;
+      change_admin();
     }
     if(data[1] & 0x8){
       $('#status .broad')[4].style['background'] = 'green';
@@ -558,7 +645,156 @@ var broadcastFlags = 0xFF;
     }
     broadcastFlags = data[1];
   }
+
+  function ws_scan_progress(data){
+
+    $('#Modules_scan .progress').html(data[1]+'/'+data[2]+' connections');
+    $('#Modules_scan .found_modules').html("");
+    var i = 3;
+    for(i;i<data.length;i++){
+      text = data[i] + "<br/>"
+
+      $('#Modules_scan .found_modules').append(text);
+    }
+  }
+
+  function ws_service_state(data){
+    state = (data[1] << 8) + data[2];
+    if(state & STATE_Modules_Coupled){
+      $('#Modules_scan').css('display','none');
+    }else{
+      $('#Modules_scan').css('display','block');
+    }
+
+    if(state & STATE_Modules_Loaded && state & STATE_Modules_Coupled){
+      $('#Modules_wrapper').css('display','block');
+    }else{
+      $('#Modules_wrapper').css('display','none');
+    }
+    console.log("service State: "+state);
+  }
 /**/
+
+function track_layout(module,prev){
+  console.log("At "+module+" from "+prev);
+
+  //Check if the recursive function hasn't allready passed this node.
+  if(Track_Layout_data[module].done){
+    console.log("Allready done");
+    return;
+  }else{
+    Track_Layout_data[module].done = true;
+  }
+
+
+
+
+  //Add Module to the HTML page
+  $('#Modules').append("<div class=\"M"+module+" Module M"+module+"b\"></div>");
+  blocks_load++;
+  $('.M'+module+'b').load('./../modules/'+module+'/layout.svg',function (evt){
+    blocks_load--;
+    if(blocks_load == 0){ //Done loading all modules?
+      $('#Modules').css('display','block');
+      ws.send("Ready");
+      $('g.SwGroup','.Module').on("click",ev_throw_switch);  //Attach click event to all switch and mswitches
+    }
+  });
+
+  var anchor_id;
+  $.each(Track_Layout_data[prev].anchors,function(i,v){
+    if(v == module){
+      anchor_id = i;
+      return false;
+    }
+  });
+
+  var id;
+  $.each(Track_Layout_data[module].anchors,function(i,v){
+    if(v == prev){
+      id = i;
+      return false;
+    }
+  });
+
+  var x = Track_Layout_data[prev].x;
+  var y = Track_Layout_data[prev].y;
+  var r = Track_Layout_data[prev].r;
+
+  //                                                                               dX                                                                             dY
+  x = x + Math.cos(Math.PI * r/180) * Track_Layout_data[prev].anchor_pos[anchor_id][0] + Math.sin(Math.PI * r/180) * Track_Layout_data[prev].anchor_pos[anchor_id][1];
+  y = y + Math.sin(Math.PI * r/180) * Track_Layout_data[prev].anchor_pos[anchor_id][0] + Math.cos(Math.PI * r/180) * Track_Layout_data[prev].anchor_pos[anchor_id][1];
+  
+  r = r + Track_Layout_data[prev].anchor_pos[anchor_id][2] + Track_Layout_data[module].anchor_pos[id][2] + 180; //dR
+
+  //                                                                          dX                                                                        dY
+  x = x - Math.cos(Math.PI * r/180) * Track_Layout_data[module].anchor_pos[id][0] - Math.sin(Math.PI * r/180) * Track_Layout_data[module].anchor_pos[id][1];
+  y = y - Math.sin(Math.PI * r/180) * Track_Layout_data[module].anchor_pos[id][0] - Math.cos(Math.PI * r/180) * Track_Layout_data[module].anchor_pos[id][1];
+
+  var ma_x = Math.max(parseInt($("#Modules").css("width").slice(0,-2)),  x + Math.cos(Math.PI * r/180) * Track_Layout_data[module].width + Math.sin(Math.PI * r/180) * Track_Layout_data[module].height);
+  var ma_y = Math.max(parseInt($("#Modules").css("height").slice(0,-2)), y + Math.sin(Math.PI * r/180) * Track_Layout_data[module].width + Math.cos(Math.PI * r/180) * Track_Layout_data[module].height);
+
+  var mi_x = Math.min(-parseInt($("#Modules").css("margin-left").slice(0,-2)), x + Math.cos(Math.PI * r/180) * Track_Layout_data[module].width + Math.sin(Math.PI * r/180) * Track_Layout_data[module].height);
+  var mi_y = Math.min(-parseInt($("#Modules").css("margin-top").slice(0,-2)),  y + Math.sin(Math.PI * r/180) * Track_Layout_data[module].width + Math.cos(Math.PI * r/180) * Track_Layout_data[module].height);
+  mi_x = Math.min(mi_x,x);
+  mi_y = Math.min(mi_y,y);
+
+  $("#Modules").css("height",(ma_y)+"px");
+  $("#Modules").css("width",ma_x+"px");
+  $("#Modules").css("margin-top",(-mi_y)+"px");
+  $("#Modules").css("margin-left",(-mi_x)+"px");
+
+  /*if(rotate == 0){
+    x -= segments[M]['anchors'][0][0];
+    y -= segments[M]['anchors'][0][1];
+    max_x = Math.max(max_x,x+segments[M]['width']);
+    max_y = Math.max(max_y,y+segments[M]['height']);
+    min_x = Math.min(min_x,x);
+    min_y = Math.min(min_y,y);
+  }else if(r == 90){
+    x -= segments[M]['anchors'][0][1];
+    y += segments[M]['anchors'][0][0];
+    max_x = Math.max(max_x,x);
+    max_y = Math.max(max_y,y+segments[M]['width']);
+    min_x = Math.min(min_x,x-segments[M]['height']);
+    min_y = Math.min(min_y,y);
+  }else if(r == 180){
+    x += segments[M]['anchors'][0][0];
+    y += segments[M]['anchors'][0][1];
+    max_x = Math.max(max_x,x);
+    max_y = Math.max(max_y,y);
+    min_x = Math.min(min_x,x-segments[M]['width']);
+    min_y = Math.min(min_y,y-segments[M]['height']);
+  }*/
+  //console.log("M"+setup[i]+" x:"+x+", y:"+y+", R:"+r);
+  //console.log("MAX_X: "+max_x+"MAX_Y: "+max_y+":MIN_X "+min_x+"MIN_Y "+min_y);
+  $(".M"+module+"b","#Modules").css("left",x+"px");
+  $(".M"+module+"b","#Modules").css("top",y+"px");
+  $(".M"+module+"b","#Modules").css("-ms-transform","rotate("+r+"deg)");
+  $(".M"+module+"b","#Modules").css("-webkit-transform","rotate("+r+"deg)");
+  $(".M"+module+"b","#Modules").css("transform","rotate("+r+"deg)");
+  $(".M"+module+"b","#Modules").css("transform-origin","0px 0px");
+
+
+  Track_Layout_data[module].x = x;
+  Track_Layout_data[module].y = y;
+  Track_Layout_data[module].r = r;
+
+  //Go recursivly to the next
+  $.each(Track_Layout_data[module].anchors, function(i,v){
+    if(v != prev && v != 0){
+      track_layout(v,module);
+    }
+  });
+}
+
+function change_admin(){
+  if(admin){
+    $('#Modules_scan .admin').css('display','block');
+  }else{
+    $('#Modules_scan .admin').css('display','none');
+  }
+}
 
 var ws;
 
@@ -590,8 +826,21 @@ function WebSocket_handler(adress){
       console.log("Package length: "+data.length);
       console.log(data);
 
+
+
+
       //New Opcodes
-      if(data[0] == WSopc_Z21TrainData){
+      if(data[0] == WSopc_Track_Scan){
+        console.log("Scan Progress");
+        ws_scan_progress(data);
+      }
+      else if(data[0] == WSopc_Track_PUp_Layout){
+        console.log("Partial Track Layout");
+        ws_partial_layout(data);
+      }
+
+
+      else if(data[0] == WSopc_Z21TrainData){
         console.log("Z21 Train data");
         ws_full_train_data(data);
       }
@@ -601,11 +850,15 @@ function WebSocket_handler(adress){
       }
 
       else if(data[0] == WSopc_BroadTrack){
-        ws_track_update(data);
         console.log("Update for the track");
+        ws_track_update(data);
       }else if(data[0] == WSopc_BroadSwitch){
-        ws_switch_update(data);
         console.log("Update for the Switches");
+        ws_switch_update(data);
+      }
+      else if(data[0] == WSopc_Track_Layout){
+        console.log("Track Layout");
+        ws_layout(data);
       }
 
       else if(data[0] == WSopc_EmergencyStop){
@@ -632,6 +885,10 @@ function WebSocket_handler(adress){
       else if(data[0] == WSopc_ChangeBroadcast){
         console.log("New Broadcast Flags");
         ws_Set_Broadcast_Flags(data);
+      }
+      else if(data[0] == WSopc_Service_State){
+        console.log("Service State");
+        ws_service_state(data);
       }
 
       /* Old Opcodes *//*
@@ -667,7 +924,8 @@ function WebSocket_handler(adress){
       else if(data[0] == 2){
         //Track setup
         console.log("Setup update");
-        create_track(data);
+        console.warn("create_track(data) is disable. It is going to be depricated")
+        //create_track(data);
       }
       else if(data[0] == 6){
         //Station list
@@ -713,6 +971,11 @@ function WebSocket_handler(adress){
         $('#warning_list').empty();
         //Resetting values
         train_follow = [];
+
+        $.each(Track_Layout_data,function(i,v){
+          Track_Layout_data[i].done = false;
+        });
+        $('#Modules').empty();
       }
       if(socket_tries != 5){
         setTimeout(function(){
@@ -732,6 +995,18 @@ function WebSocket_handler(adress){
 }
 
 $(document).ready(function(){
+
+  //Loading all track data, asynchronous
+  $.ajax({
+    url: './../modules/list.txt',
+    success: function (result) {
+        Track_Layout_data = JSON.parse(result);
+    },
+    async: false
+  });
+
+
+  //Open websocket or fail on unsupported browsers
   if ("WebSocket" in window){
   try{
       setTimeout(WebSocket_handler(window.location.host+':9000'),5000);
@@ -745,3 +1020,4 @@ $(document).ready(function(){
     $('#status').attr('src','./img/status_w.png');
   }
 });
+

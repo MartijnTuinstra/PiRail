@@ -16,8 +16,8 @@ void procces_accessoire();
 
 struct ConnectList {
   int length;
-  struct Seg * Block;
-  struct Swi * Switch;
+  int list_index;
+  struct Rail_link ** R_L;
 };
 
 int init_connect_Algor(struct ConnectList * List);

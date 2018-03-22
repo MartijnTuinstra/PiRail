@@ -646,7 +646,7 @@ th {
 	text-align: center;
 }
 
-#index .button {
+#index .Bigbutton {
 	width:300px;
 	height:150px;
 	padding:20px;
@@ -661,17 +661,17 @@ th {
 	position: relative;
 }
 @media screen and (max-width: 800px) {
-    #index  .button {
+    #index  .Bigbutton {
         float: none;
         width: calc(100% - 80px);
     }
 }
 
-#index .button:hover {
+#index .Bigbutton:hover {
 	background-color: #3F51B5;
 }
 
-#index .button svg {
+#index .Bigbutton svg {
 	position: absolute;
 	left: calc(50% - 100px);
 	bottom: 20px;
@@ -708,4 +708,24 @@ th {
 
 .ui-widget-header {
 	background-color: #adadad;
+}
+
+
+.button {
+	padding: 5px;
+	margin: 10px auto;
+	border-radius: 5px;
+	border: 1px solid black;
+	background-color: black;
+	color: white;
+	font-family: sans-serif;
+	font-weight: bold;
+	vertical-align: center;
+	text-align: center;
+	position: relative;
+	cursor: pointer;
+}
+
+.button:hover {
+	background-color: grey;
 }

@@ -50,6 +50,10 @@ void * web_server();
 
 
 //Opcodes
+#define WSopc_Track_Scan         0x82
+#define WSopc_Track_PUp_Layout   0x83
+#define WSopc_Track_Info         0x84
+
 #define WSopc_AddNewTrain        0x40
 #define WSopc_LinkTrain          0x41
 #define WSopc_TrainSpeed         0x42
@@ -67,6 +71,7 @@ void * web_server();
 #define WSopc_SetSwitchRoute     0x25
 #define WSopc_BroadTrack         0x26
 #define WSopc_BroadSwitch        0x27
+#define WSopc_Track_Layout       0x30
 
 #define WSopc_EmergencyStop      0x10
 #define WSopc_ShortCircuitStop   0x11
@@ -75,3 +80,4 @@ void * web_server();
 #define WSopc_ChangeMessage      0x14
 #define WSopc_ClearMessage       0x15
 #define WSopc_ChangeBroadcast    0x16
+#define WSopc_Service_State      0x17

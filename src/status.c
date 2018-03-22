@@ -112,6 +112,83 @@ void WS_ClearEmergency(){
 
 
 
+void WS_Partial_Layout(char M_A,char M_B){
+
+  char data[20];
+  int q = 1;
+  memset(data,0,20);
+  data[0] = WSopc_Track_PUp_Layout;
+
+  printf("WS_Partial_Layout\n");
+  printf("Checking Module A, %i\n",M_A);
+  data[q++] = M_A;
+  for(int i = 0;i<Units[M_A]->connect_points;i++){
+    if(Units[M_A]->Connect[i]){
+      printf(" - Connect found, module %i\n",Units[M_A]->Connect[i]->Module);
+      data[q++] = Units[M_A]->Connect[i]->Module;
+    }
+    else{
+      printf("Reset\n");
+      q = 1;
+      break;
+    }
+  }
+
+  printf("Checking Module B, %i\n",M_B);
+
+  data[q++] = M_B;
+  for(int i = 0;i<Units[M_B]->connect_points;i++){
+    if(Units[M_B]->Connect[i]){
+      printf(" - Connect found, module %i\n",Units[M_B]->Connect[i]->Module);
+      data[q++] = Units[M_B]->Connect[i]->Module;
+    }
+    else{
+      printf("Reset\n");
+      q = 1;
+      break;
+    }
+  }
+
+  if(q > 1){
+    printf("Send %i\n",q);
+    send_all(data,q,WS_Flag_Admin);
+  }
+
+}
+
+void WS_Track_Layout(){
+
+  char data[100];
+  int q = 1;
+  memset(data,0,100);
+  data[0] = WSopc_Track_Layout;
+
+  printf("WS_Track_Layout\n");
+
+  for(int i = 0;i<MAX_Modules;i++){
+    if(Units[i]){
+      data[q++] = i;
+      for(int j = 0;j<Units[i]->connect_points;j++){
+        if(Units[i]->Connect[j]){
+          printf(" - Connect found, module %i\n",Units[i]->Connect[j]->Module);
+          data[q++] = Units[i]->Connect[j]->Module;
+        }
+        else{
+          printf(" - No Connect found\n");
+          data[q++] = 0;
+        }
+      }
+    }
+  }
+
+  if(q > 1){
+    printf("Send %i\n",q);
+    send_all(data,q,WS_Flag_Track);
+  }
+
+}
+
+
 void WS_trackUpdate(int Client_fd){
   pthread_mutex_lock(&mutex_lockB);
   char data[4096];
@@ -188,7 +265,7 @@ void WS_SwitchesUpdate(int Client_fd){
 
     buf_l = (q-1)*3+1;
 
-  /*MSSwitches*/
+  /*MSSwitches
 
     //buf[0] = 5;
     //buf_l = 0;
@@ -222,7 +299,7 @@ void WS_SwitchesUpdate(int Client_fd){
       send_all(buf,buf_l,WS_Flag_Switches);
     }
   }
-
+  */
   pthread_mutex_unlock(&mutex_lockB);
 }
 
@@ -299,7 +376,7 @@ void WS_NewClient_track_Switch_Update(int Client_fd){
 
     buf_l = (q-1)*3+1;
 
-  /*MSSwitches*/
+  /*MSSwitches
 
     //buf[0] = 5;
     //buf_l = 0;

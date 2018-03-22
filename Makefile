@@ -25,7 +25,7 @@ $(BIN)/encryption.o : $(SRC)/encryption.c $(LIB)/encryption.h
 	@echo encryption.o
 	gcc $(SRC)/encryption.c -c -o $(BIN)/encryption.o $(ARGS)
 
-$(BIN)/modules.o : $(SRC)/modules.c $(LIB)/system.h $(LIB)/rail.h $(LIB)/switch.h $(LIB)/signals.h $(LIB)/trains.h $(LIB)/modules.h $(LIB)/algorithm.h
+$(BIN)/modules.o : $(SRC)/modules.c $(LIB)/system.h $(LIB)/rail.h $(LIB)/switch.h $(LIB)/signals.h $(LIB)/trains.h $(LIB)/modules.h $(LIB)/algorithm.h $(LIB)/websocket.h
 	@echo modules.o
 	gcc $(SRC)/modules.c -c -o $(BIN)/modules.o $(ARGS)
 

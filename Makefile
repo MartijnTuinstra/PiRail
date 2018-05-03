@@ -7,8 +7,14 @@ ifndef VERBOSE
 .SILENT:
 endif
 
+memory: memory.o $(BIN)/algorithm.o $(BIN)/com.o $(BIN)/encryption.o $(BIN)/modules.o $(BIN)/pathfinding.o $(BIN)/rail.o $(BIN)/signals.o $(BIN)/status.o $(BIN)/switch.o $(BIN)/train_control.o $(BIN)/train_sim.o $(BIN)/trains.o $(BIN)/websocket.o $(BIN)/Z21.o
+	gcc $(ARGS) -o memory $(wildcard $(BIN)/*.o) memory.o
+
 baan: baan.o $(BIN)/algorithm.o $(BIN)/com.o $(BIN)/encryption.o $(BIN)/modules.o $(BIN)/pathfinding.o $(BIN)/rail.o $(BIN)/signals.o $(BIN)/status.o $(BIN)/switch.o $(BIN)/train_control.o $(BIN)/train_sim.o $(BIN)/trains.o $(BIN)/websocket.o $(BIN)/Z21.o
 	gcc $(ARGS) -o baan $(wildcard $(BIN)/*.o) baan.o
+
+memory.o: memory.c $(LIB)/system.h $(LIB)/train_sim.h $(LIB)/websocket.h $(LIB)/status.h $(LIB)/Z21.h $(LIB)/com.h $(LIB)/rail.h $(LIB)/switch.h $(LIB)/signals.h $(LIB)/trains.h $(LIB)/modules.h $(LIB)/algorithm.h $(LIB)/pathfinding.h
+	gcc $(ARGS) memory.c -c -o memory.o
 
 baan.o: baan.c $(LIB)/system.h $(LIB)/train_sim.h $(LIB)/websocket.h $(LIB)/status.h $(LIB)/Z21.h $(LIB)/com.h $(LIB)/rail.h $(LIB)/switch.h $(LIB)/signals.h $(LIB)/trains.h $(LIB)/modules.h $(LIB)/algorithm.h $(LIB)/pathfinding.h
 	gcc $(ARGS) baan.c -c -o baan.o

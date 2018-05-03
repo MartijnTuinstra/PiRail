@@ -221,8 +221,8 @@ ISR(LN_TMR_SIGNAL)     /* signal handler for timer0 overflow */
       lnBitCount = 0 ;
       lnCurrentByte = lnTxData->data[ lnTxIndex ] ;
       //Serial.println();
-      Serial.print("TX ");
-      Serial.println(lnCurrentByte,HEX);
+      // Serial.print("TX ");
+      // Serial.println(lnCurrentByte,HEX);
       //Serial.print(" ");
 
       // Begin the Start Bit
@@ -415,7 +415,7 @@ RN_STATUS sendLocoNetPacketTry(lnMsg *TxData, unsigned char ucPrioDelay)
   lnBitCount = 0 ;
 
   //RN_DUPLEX_TX_ENABLE(RN_DUPLEX_PORT,RN_DUPLEX_BIT);
-  digitalWrite(5,HIGH);
+  digitalWrite(9,HIGH);
 
   // Clear the current Compare interrupt status bit and enable the Compare interrupt
   sbi(LN_TMR_INT_STATUS_REG, LN_TMR_INT_STATUS_BIT) ;
@@ -425,7 +425,7 @@ RN_STATUS sendLocoNetPacketTry(lnMsg *TxData, unsigned char ucPrioDelay)
     // now busy wait until the interrupts do the rest
   }
   delayMicroseconds(2);
-  digitalWrite(5,LOW);
+  digitalWrite(9,LOW);
   //RN_DUPLEX_TX_DISABLE(RN_DUPLEX_PORT,RN_DUPLEX_BIT);
   
   if (lnTxSuccess) {

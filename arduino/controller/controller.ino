@@ -13,7 +13,7 @@ char activatePulse;
 char blink_EN=0;
 
 int latchPinOut = 3;
-int dataLoad = A1, latchPinIn = A0;
+int dataLoad = A2, latchPinIn = A0;
 
 #define PULSE_WIDTH_USEC   5
 
@@ -34,14 +34,14 @@ void setup(){
   //if(EEPROM.read(0) == 0){
     EEPROM.write(0,1);
 
-    EEPROM.write(1,6); //Address 32
+    EEPROM.write(1,8); //Address 8
 
-    EEPROM.write(2,2); //1 Input  Registers
-    EEPROM.write(3,2); //1 Output Register
+    EEPROM.write(2,2); //3 Input  Registers
+    EEPROM.write(3,6); //6 Output Register
 
     EEPROM.write(4,50); //Blink interval scaler
     EEPROM.write(5,20); //Pulse_interval
-    EEPROM.write(6,10); //Step_interval
+    EEPROM.write(6,5); //Step_interval
   //}
   /********/
 
@@ -71,8 +71,8 @@ void setup(){
   PulseMask  = (uint8_t *)malloc(OutputRegisters);
 
 
-  //RX is stand. 8 and TX is 7, Duplex pin 5
-  RailNet.init(7,5);
+  //RX is stand. 8 and TX is 7, Duplex pin 9
+  RailNet.init(7,9);
 
   //Empty packets
   memset(RxPacket->data,16,0);
@@ -92,10 +92,6 @@ void setup(){
   pinMode(latchPinOut,OUTPUT ); // Latch pin
   pinMode(latchPinIn ,OUTPUT ); // Latch pin
   pinMode(dataLoad   ,OUTPUT ); // Data load pin
-
-  OutputRegs[0] = 0b00000000;
-  BlinkMask[1]  = 0b01111111;
-  BlinkMask[0]  = 0b00011100;
 
   for(int i = 0;i<InputRegisters;i++){
     InputRegs[i] = SPI.transfer(0);
@@ -169,7 +165,7 @@ void loop(){
       }
     }
     digitalWrite(latchPinIn, HIGH);
-    Serial.println(addres_counter);
+    //Serial.println(addres_counter);
 
     //Create Message for master
     if(addres_counter != 0){
@@ -216,29 +212,27 @@ void loop(){
       }
     }
     
-    //printRegs();
-    Serial.println("Step");
+    printRegs();
+    //Serial.println("Step");
   }
 
   //Executes on a interval of 'blink_interval'
   if(blink()){
-    Serial.print("Blink  ");
+    //Serial.print("Blink  ");
 
     digitalWrite(latchPinOut, LOW);
     for(int i = 0;i<OutputRegisters;i++){
       //XOR each output bit with Blink mask
       OutputRegs[i] ^= BlinkMask[i];
-
-      Serial.print(OutputRegs[i],HEX);
       SPI.transfer(OutputRegs[i]); //Shift out data
     }
-    Serial.println();
+    //Serial.println();
     digitalWrite(latchPinOut, HIGH);
   }
 
   //Executes on a interval of 'pulse_interval'
   if(pulse()){
-    Serial.println("Pulse");
+    //Serial.println("Pulse");
     for(int i = 0;i<OutputRegisters;i++){
       //XOR each output bit with Blink mask
       *(OutputRegs+i) ^= *(PulseMask+i);
@@ -291,7 +285,7 @@ void printBits(byte myByte){
  Serial.print(" ");
 }
 
-void printRegs(){
+void printRegs(){/*
   Serial.print("Out:   ");
   for(int i = 0;i<OutputRegisters;i++){
     printBits(OutputRegs[i]);
@@ -306,7 +300,7 @@ void printRegs(){
   for(int i = 0;i<OutputRegisters;i++){
     printBits(PulseMask[i]);
   }
-  Serial.println();Serial.println();/*
+  Serial.println();Serial.println();/**/
   Serial.print("In:    ");
   for(int i = 0;i<InputRegisters;i++){
     printBits(InputRegs[i]);
@@ -316,7 +310,7 @@ void printRegs(){
   for(int i = 0;i<InputRegisters;i++){
     printBits(NInputRegs[i]);
   }
-  Serial.println();Serial.println();Serial.println();*/
+  /*Serial.println();Serial.println();Serial.println();/**/
 }
 
 char proccess_packet(lnMsg * RxPacket){

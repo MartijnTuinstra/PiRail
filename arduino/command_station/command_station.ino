@@ -6,12 +6,9 @@ lnMsg *RxPacket;
 lnMsg TxPacket;
 
 void setup(){
-  Serial.begin(115200);
+  Serial.begin(9600);
 
-  pinMode(5,OUTPUT);
-  digitalWrite(5,LOW);
-
-  RailNet.init(7);
+  RailNet.init(7,5);
 
   memset(RxPacket->data,16,0);
   memset(TxPacket.data,16,0);
@@ -35,7 +32,7 @@ void loop(){
     TxPacket.data[0] = Serial.read();
     TxPacket.data[1] = Serial.read();
     uint8_t size = getRnMsgSize(&TxPacket) - 1; //No checksum included
-    while(Serial.available != (size - 2));
+    while(Serial.available() != (size - 2));
     for(int i = 2;i<size;i++){
       TxPacket.data[i] = Serial.read();
     }

@@ -1,6 +1,6 @@
 #define _BSD_SOURCE
 
-#define Serial_Port "/dev/ttyAMA0"
+#define Serial_Port "/dev/ttyAMB0"
 #define Serial_Baud B115200
 
 #include <stdio.h>
@@ -306,6 +306,10 @@ void COM_set_Output(int M){
 		printf("Set Pulse Mask: \n");
 
 	}
+
+	free(OutRegs);
+	free(BlinkMask);
+	free(PulseMask);
 }
 
 void COM_change_Output(int M){
@@ -436,6 +440,14 @@ void COM_change_Output(int M){
 		printf("Set Pulse Mask: \n");
 
 	}
+
+	free(OutRegs);
+	free(BlinkMask);
+	free(PulseMask);
+
+	free(PulseAdr);
+	free(BlinkAdr);
+	free(ToggleAdr);
 }
 
 void COM_change_signal(struct signal * Si){
@@ -567,6 +579,9 @@ void COM_change_switch(int M){
 		//Send via UART and get send bytes back
 		int count = write(uart0_filestream, TxPacket.data, TxPacket.data[1]-1);
 		//Check if all bytes were send
+
+		free(ToggleAdr);
+		free(PulseAdr);
 	}
 }
 

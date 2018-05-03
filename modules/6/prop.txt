@@ -1,3 +1,19 @@
 'Rangeer brug
 'Create Module
-U	6	8	8
+CU	6	8	8	2
+'
+'
+'Create block
+'Wat	IOadr	id	type	NxM	NxID	NxType	PxM	PxID	PxType	Max_sp	dir	len
+CB	0	0	R	C	1	1	X	0	s	180	0	90
+CB	1	1	R	C	1	2	X	0	s	180	1	90
+CB	2	2	T	E	E	E	E	E	E	180	2	10
+'
+'Create Switch
+'Wat	id	DetBl	AxM	AxID	AxType	SxM	SxID	SxType	DxM	DxID	DxType	IOnr	IOadr
+CSw	0	2	C	2	1	X	0	R	X	1	R	2	0 1
+'
+'Set detection blocks
+'	SwID	B_ID
+Sdet	0	2
+'

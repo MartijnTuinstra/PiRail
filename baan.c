@@ -1,3 +1,9 @@
+
+#define _malloc(X)   my_malloc( X,   __FILE__, __LINE__, __FUNCTION__)
+#define _calloc(X,Y) my_calloc( X,Y, __FILE__, __LINE__, __FUNCTION__)
+
+
+
 #define _BSD_SOURCE
 // #define _GNU_SOURCE
 
@@ -20,6 +26,27 @@
 // #include <string.h>
 #include <errno.h>
 
+void* my_calloc(int i ,size_t size, const char *file, int line, const char *func)
+{
+
+    void *p = calloc(i, size);
+    printf ("Cleared and Allocated\t= %s, %i, %s, %p[%li*%li]\n", file, line, func, p, i, size);
+
+    /*Link List functionality goes in here*/
+
+    return p;
+}
+
+void* my_malloc(size_t size, const char *file, int line, const char *func)
+{
+
+    void *p = malloc(size);
+    printf ("            Allocated\t= %s, %i, %s, %p[%li]\n", file, line, func, p, size);
+
+    /*Link List functionality goes in here*/
+
+    return p;
+}
 #include "./lib/system.h"
 
 #include "./lib/train_sim.h"
@@ -46,6 +73,10 @@ void main(){
 	_SYS->_Clients = 0;
 	_SYS->_COM_fd = -1;
 
+
+
+
+
 	setbuf(stdout,NULL);
 	setbuf(stderr,NULL);
 	signal(SIGPIPE, SIG_IGN);
@@ -63,7 +94,7 @@ void main(){
 		printf("        o oO  o\n");
 		printf("      OoO\n");
 		printf("     oOo ___             __________  ___________  ___________  __-----__\n");
-	 printf("    _\\/__|_|_  _,o—o.,_  | |.\\/.| |  |         |  | EXPRESS |  ||_| |_||\n");
+	   printf("    _\\/__|_|_  _,o—o.,_  | |.\\/.| |  |         |  | EXPRESS |  ||_| |_||\n");
 		printf("   [=      _|--|______|--|_|_/\\_|_|--|_________|--|_________|--|_______|\n");
 		printf("   //o--=OOO-  ‘o’  ‘o’  ‘o’    ‘o’  ‘o’     ‘o’  ‘o’     ‘o’  ‘o’   ‘o’\n");
 
@@ -105,7 +136,7 @@ void main(){
 		_SYS_change(STATE_Client_Accept,0);
 
 	/*Search all blocks*/
-		printf("|                              BLOCK LINKING                               |\n");
+		printf("|                              FINDING BLOCKS                              |\n");
 		printf("|                                                                          |\n");
 		/*--             NEW LINKING              --*/
 		/* new linking is just scanning for devices */
@@ -126,16 +157,22 @@ void main(){
 		DeviceList[1] = 2;
 		DeviceList[2] = 4;
 		DeviceList[3] = 8;
-		DeviceList[4] = 5;
-		DeviceList[5] =10;
-		DeviceList[6] =11;
+		// DeviceList[4] = 5;
+		// DeviceList[5] =10;
+		// DeviceList[6] =11;
+		// DeviceList[7] = 6;
 
 		for(uint8_t i = 0;i<MAX_Devices;i++){
 			if(DeviceList[i]){
 				LoadModules(DeviceList[i]);
-				printf("|                       UART Module %i\t found                             |\n",DeviceList[i]);
+				printf("|                            Module %03i found                             |\n",DeviceList[i]);
 			}
 		}
+		
+		printf("|                                                                          |\n");
+		printf("|                                                                          |\n");
+		printf("|                              BLOCK LINKING                               |\n");
+		printf("|                                                                          |\n");
 
 		_SYS_change(STATE_Modules_Loaded,1);
 
@@ -414,6 +451,8 @@ void main(){
 
   //----- CLOSE THE UART -----
 	close(_SYS->_COM_fd);
+
+	free(_SYS);
 
 	printf("STOPPED");
 	//pthread_exit(NULL);

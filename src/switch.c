@@ -143,7 +143,7 @@ int throw_ms_switch(struct Mod * M, char c){ //Multi state object
 }
 
 
-void Create_Switch(struct SegC Adr,struct SegC App,struct SegC Div,struct SegC Str,int * adr,char state){
+void Create_Switch(struct SegC Adr,struct SegC App,struct SegC Div,struct SegC Str,int adr[2],char state){
 	struct Swi *Z = (struct Swi*)malloc(sizeof(struct Swi));
 
 	Adr.type = 'S';
@@ -160,9 +160,6 @@ void Create_Switch(struct SegC Adr,struct SegC App,struct SegC Div,struct SegC S
 	//Check and copy addresses
 	for(char i = 0;i<2;i++){
 		if(Units[Adr.Module]->OutRegisters*8 < adr[i]){
-			printf("Expansion needed\t");
-			printf("Address %i doesn't fit\n",adr[i]);
-
 			//Expand range
 			Units[Adr.Module]->OutRegisters++;
 
@@ -403,11 +400,11 @@ int free_Switch(struct Seg *B, int direct){
 
 	int debug = 0;
 
-	// if(B->Module == 4 && B->id == 17){
-	// 	debug = 1;
-	// }
+	if((B->Module == 4 && B->id == 12) || (B->Module == 8 && B->id == 7)){
+		debug = 1;
+	}
 
-	Adr.type = 'R';Adr.ptr = 0;
+	Adr.type = 'R';Adr.ptr = B;
 	int return_Value = 1;
 	int dir = B->dir;
 
@@ -427,7 +424,7 @@ int free_Switch(struct Seg *B, int direct){
 	//printf("NAdr %i:%i:%i\n",NAdr.M,NAdr.B,NAdr.S);
 	R:{};
 	if(debug){
-	  printf("Switch P type:%c\t",NAdr.type);
+	  printf("Switch type:%c\t",NAdr.type);
 	  if(NAdr.type == 'R'){
 	    printf("R   %i:%i\n",((block *)NAdr.ptr)->Module,((block *)NAdr.ptr)->id);
 	  }else if(NAdr.type == 'S' || NAdr.type == 's'){
@@ -445,6 +442,7 @@ int free_Switch(struct Seg *B, int direct){
 		Switch * S = NAdr.ptr;
 		uint8_t SwState = S->state & 0x3F;
 		if(S->pref[0] && S->pref[0]->type == 0 && SwState != S->pref[0]->state){
+			if(debug) printf("throw switch");
 			throw_switch(S);
 		}
 		if(SwState == 0 && S->str.type != 0){ //Straight?
@@ -454,6 +452,7 @@ int free_Switch(struct Seg *B, int direct){
 			Adr = NAdr;
 			NAdr = S->div;
 		}else{
+			if(debug) printf("throw switch");
 			throw_switch(S);
 		}
 		goto R;
@@ -465,10 +464,12 @@ int free_Switch(struct Seg *B, int direct){
 		if(Link_cmp(Div,Adr)){
 			if(SwState == 0){
 				return_Value = throw_switch(S);
+				if(debug) printf("throw switch");
 			}
 		}else if(Link_cmp(Str,Adr)){
 			if(SwState == 1){
 				return_Value = throw_switch(S);
+				if(debug) printf("throw switch");
 			}
 		}
 
@@ -486,6 +487,7 @@ int free_Switch(struct Seg *B, int direct){
 			for(int i = 0;i<M->length;i++){
 				if(Link_cmp(M->M_Adr[i],Adr)){
 					return_Value = throw_ms_switch(M,i);
+					if(debug) printf("throw switch");
 					break;
 				}
 			}
@@ -502,6 +504,7 @@ int free_Switch(struct Seg *B, int direct){
 			for(int i = 0;i<M->length;i++){
 				if(Link_cmp(M->m_Adr[i],Adr)){
 					return_Value = throw_ms_switch(M,i);
+					if(debug) printf("throw switch");
 					break;
 				}
 			}

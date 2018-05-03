@@ -20,6 +20,8 @@
 #include "./../lib/algorithm.h"
 #include "./../lib/websocket.h"
 
+#include "./../lib/status.h"
+
 struct Unit *Units[MAX_Modules];
 
 void setup_JSON(int arr[], int arr2[], int size, int size2){
@@ -44,7 +46,7 @@ void setup_JSON(int arr[], int arr2[], int size, int size2){
 }
 
 void Create_Unit(int Module,int OUT,int IN,char points){
-	struct Unit *Z = (struct Unit*)malloc(sizeof(struct Unit));
+	struct Unit *Z = (struct Unit*)calloc(1,sizeof(struct Unit));
 
 	Units[Module] = Z;
 
@@ -70,8 +72,10 @@ void Create_Unit(int Module,int OUT,int IN,char points){
 	}
 
 	Z->In_length = IN;
+	Z->InRegisters = (IN/8)+1;
 	Z->In = A;
 	Z->Out_length = OUT;
+	Z->OutRegisters = (OUT/8)+1;
 	Z->Out = B;
 	IN--;OUT--;//To make the division round down;
 	Z->InRegs    = (uint8_t *)malloc(( IN/8)+1);
@@ -683,14 +687,40 @@ struct link Modules(int m, struct link IN){
 	return link;
 }
 
+// Binary structured files
+// #define MAXBUFLEN 1000000
+// struct test_struct {
+// 	char a;
+// 	char b;
+// 	char c;
+// 	char d;
+// 	char e;
+// 	char f;
+// };
+
+// char source[MAXBUFLEN + 1];
+// memset(source,0,MAXBUFLEN+1);
+
+// FILE *fp = fopen("test_bin.bin", "r");
+// if (fp != NULL) {
+//     size_t newLen = fread(source, sizeof(char), MAXBUFLEN, fp);
+//     if ( ferror( fp ) != 0 ) {
+//         fputs("Error reading file", stderr);
+//     }
+
+//     fclose(fp);
+// }
+
+//  struct test_struct * test = &source[0];
+
 void LoadModules(int M){
 	if(M == 0){
 		return;
 	}
 
-	printf("Load module %i\n",M);
+	// printf("Load module %i\n",M);
 
-	if(M != 4 && M != 8 && M != 1 && M != 2 && M != 5 && M != 10 && M != 11){
+	if(M != 4 && M != 8 && M != 1 && M != 2 && M != 5 && M != 6 && M != 10 && M != 11){
 		return; //Function is not ready
 	}
 
@@ -725,24 +755,24 @@ void LoadModules(int M){
 		if(line[0] == '\'')
 			continue;
 
-	        printf("\nRetrieved line of length %02zu : ", read);
+	        //printf("\nRetrieved line of length %02zu : ", read);
 
 		char * p = strtok(line,"\t\r\n");
 		char * parts[20];
 		char i = 0;
 
 		while(p != NULL){
-			printf("%s  ",p);
+			// printf("%s  ",p);
 			parts[i++] = p;
 			p = strtok(NULL, "\t\r\n");
 		}
-		printf("\n");
+		// printf("\n");
 
 		if(parts[0][0] == 'C'){
 			if(strcmp(parts[0],"CU") == 0){ //Create Unit
 				//Set Module ID for this file and Create Module
 				ModuleID = atoi(parts[1]);
-				printf("Module ID: %i\n",ModuleID);
+				// printf("Module ID: %i\n",ModuleID);
 				Create_Unit(ModuleID,atoi(parts[2]),atoi(parts[3]),atoi(parts[4]));
 
 			}else if(strcmp(parts[0],"CB") == 0){ //Create Block
@@ -750,7 +780,7 @@ void LoadModules(int M){
 
 				struct SegC Adr,NAdr,PAdr;
 				Adr = CAdr(ModuleID,atoi(parts[2]),parts[3][0]);
-				printf("New block in module %i",ModuleID);
+				// printf("New block in module %i",ModuleID);
 				//Next Block
 				if(parts[4][0] == 'E'){ //End of line / Empty
 					NAdr = EMPTY_BL();
@@ -773,14 +803,14 @@ void LoadModules(int M){
 					if(parts[7][0] == 'C'){
 						PAdr = CAdr(atoi(parts[8]),atoi(parts[9]),'C');
 					}else if(parts[7][0] == 'X'){
-						printf("Prev block is in same module %i \n",ModuleID);
+						// printf("Prev block is in same module %i \n",ModuleID);
 						PAdr = CAdr(ModuleID,atoi(parts[8]),parts[9][0]);
 					}else {
 						PAdr = CAdr(atoi(parts[7]),atoi(parts[8]),parts[9][0]);
 					}
 				}
 			  //Create_Segment(IO_Adr        ,Adr,Next,Prev,mspd,           state,dir,            len);
-				Create_Segment(atoi(parts[1]),Adr,NAdr,PAdr,atoi(parts[10]),GREEN,atoi(parts[11]),atoi(parts[12]));
+				Create_Segment(strtol(parts[1],NULL,8),Adr,NAdr,PAdr,atoi(parts[10]),GREEN,atoi(parts[11]),atoi(parts[12]));
 				//Set oneway
 				if(parts[13][0] == 'Y'){
 					Units[ModuleID]->B[Adr.Adr]->oneWay = TRUE;
@@ -858,7 +888,7 @@ void LoadModules(int M){
 			}else if(strcmp(parts[0],"CSi") == 0){//Create Signal
 				printf("Create Signals - Not Supported");
 			}else if(strcmp(parts[0],"CSt") == 0){//Create Station
-				printf("Create Station/Stop");
+				// printf("Create Station/Stop");
 
 				char name[30];
 				strcpy(name,parts[1]);
@@ -934,7 +964,7 @@ void JoinModules(){
 			send_all(data,k,0x10);
 		}
 		i++;
-		usleep(100000);
+		usleep(10000);
 		prev_j = cur_j;
 
 		if(i == 15){
@@ -955,33 +985,41 @@ void JoinModules(){
 		}else if(x == 3){
 			printf("\n21\n");
 			Units[4]->B[11]->blocked = 1;
-			Units[5]->B[ 0]->blocked = 1;
+			//Units[5]->B[ 0]->blocked = 1;
+			Units[2]->B[ 0]->blocked = 1;
 
 			Units[8]->B[3]->blocked = 0;
 			Units[4]->B[0]->blocked = 0;
 		}else if(x == 4){
 			printf("\n31\n");
-			Units[10]->B[0]->blocked = 1;
-			Units[ 5]->B[1]->blocked = 1;
+			// Units[10]->B[0]->blocked = 1;
+			//Units[ 5]->B[1]->blocked = 1;
 
 			Units[4]->B[11]->blocked = 0;
-			Units[5]->B[ 0]->blocked = 0;
+			// Units[5]->B[ 0]->blocked = 0;
+			Units[2]->B[ 0]->blocked = 0;
 		}else if(x == 5){
 			printf("\n41\n");
-			Units[10]->B[3]->blocked = 1;
-			Units[ 2]->B[0]->blocked = 1;
-			Units[10]->B[0]->blocked = 0;
-			Units[ 5]->B[1]->blocked = 0;
+			// Units[10]->B[3]->blocked = 1;
+			// Units[ 2]->B[0]->blocked = 1;
+			// Units[10]->B[0]->blocked = 0;
+			// Units[ 5]->B[1]->blocked = 0;
 		}else if(x == 6){
 			printf("\n51\n");
-			Units[ 5]->B[5]->blocked = 1;
-			Units[11]->B[0]->blocked = 1;
-			Units[10]->B[3]->blocked = 0;
-			Units[ 2]->B[0]->blocked = 0;
+			// Units[ 5]->B[5]->blocked = 1;
+			// Units[11]->B[0]->blocked = 1;
+			// Units[10]->B[3]->blocked = 0;
+			// Units[ 2]->B[0]->blocked = 0;
 		}
 		else if(x == 7){
-			Units[ 5]->B[5]->blocked = 0;
-			Units[11]->B[0]->blocked = 0;
+			// Units[ 6]->B[0]->blocked = 1;
+			// Units[11]->B[3]->blocked = 1;
+			// Units[ 5]->B[5]->blocked = 0;
+			// Units[11]->B[0]->blocked = 0;
+		}
+		else if(x == 8){
+			// Units[ 6]->B[0]->blocked = 0;
+			// Units[11]->B[3]->blocked = 0;
 		}
 		else if(x == 10){
 			_SYS_change(STATE_Modules_Coupled,1);
@@ -992,7 +1030,7 @@ void JoinModules(){
 	}
 	Units[1]->B[3]->blocked = 0;
 	Units[8]->B[4]->blocked = 0;
-	Units[10]->B[3]->blocked = 0;
+	// Units[10]->B[3]->blocked = 0;
 	Units[ 2]->B[0]->blocked = 0;
 
 	for(int i = 0;i<List.length;i++){

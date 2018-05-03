@@ -1,41 +1,26 @@
-<svg preserveAspectRatio="xMidYMid meet" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:svg="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 136 140" id="svg6" height="140px" width="136px" version="1.1">
-  <metadata id="metadata12">
-    <rdf:rdf>
-      <cc:work rdf:about="">
-        <dc:format>image/svg+xml</dc:format>
-      </cc:work>
-    </rdf:rdf>
-  </metadata>
-  <path class="B" d="M 0,40 h 121"></path>
-  <path class="B" d="M 0,60 h 121"></path>
-  <path class="B" d="M 119,39 l 12,12"></path>
-  <path class="B" d="M 119,61 l 12,-12"></path>
-  <path class="B" d="M 135,50 h -5"></path>
+<?xml version="1.0" encoding="utf-8"?>
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width='273' height='75' viewBox='0 -20 273 75'>
+<g class="BSw0">
+	<path class="L LSwO SwS0o" nr="3" part="CRail" transform="translate(217.35533905933,20) rotate(180)" d="M -0.2,0 h 0.2 a 25,25 0,0,0 17.677669529663685,-7.32233047033631 l 0.14142135623730953,-0.1414213562373095" style="fill:none;stroke:lightgrey;stroke-width:6px;opacity:0"/>
+	<path class="L LSwO SwS0o" nr="2" part="CRail" transform="translate(182,34.644660940673) rotate(0)" d="M -0.2,0 h 0.2 a 25,25 0,0,0 17.677669529663685,-7.32233047033631 l 0.14142135623730953,-0.1414213562373095" style="fill:none;stroke:lightgrey;stroke-width:6px;opacity:0"/>
 
-  <g>
-    <g id="B1" class="S1">
-      <path class="L" style="stroke: rgb(0, 255, 0);" d="M 0,40 h 120"></path>
-    </g>
-    <g id="B2" class="S1">
-      <path class="L" style="stroke: rgb(0, 255, 0);" d="M 0,60 h 120"></path>
-    </g>
-    <g id="B3" class="S0">
-
-      <path id="S1S" class="L" style="stroke: rgb(255, 255, 0); opacity: 0;" d="M 119.5,39.5 l 11,11"></path>
-      <path id="S1D" class="L" style="stroke: rgb(255, 255, 0); opacity: 1;" d="M 119.5,60.5 l 11,-11"></path>
-      <path class="L" style="stroke:#ffff00" d="M 130,50 h 5"></path>
-
-      <rect x="119" y="39" height="22" width="11" class="Switch" onclick="remote_Switch('S',6,3,1);"></rect>
-    </g>
-  </g>
-  <g><!-- Text blocks -->
-    <g id="S0B" style="display:none">
-      <rect x="90" y="35" width="20" height="10" fill="black"></rect>
-      <text class="T" x="90" y="43.5" font-family="Verdana" font-size="10" fill="white">&lt;FF</text>
-    </g>
-    <g id="S1B" style="display:none">
-      <rect x="290" y="35" width="20" height="10" fill="black"></rect>
-      <text class="T" x="290" y="43.5" font-family="Verdana" font-size="10" fill="white">&lt;FF</text>
-    </g>
-  </g>
+	<path class="L LSwO SwS1o" nr="5" part="CRail" transform="translate(199.67766952966,12.677669529664) rotate(45)" d="M -0.2,0 h 0.2 a 25,25 0,0,0 17.677669529663685,-7.32233047033631 l 0.14142135623730953,-0.1414213562373095" style="fill:none;stroke:lightgrey;stroke-width:6px;opacity:1;"/>
+	<path class="L LSwO SwS1o" nr="6" part="CRail" transform="translate(199.67766952966,12.677691411009) rotate(225)" d="M -0.2,0 h 0.2 a 25,25 0,0,0 17.677669529663685,-7.32233047033631 l 0.14142135623730953,-0.1414213562373095" style="fill:none;stroke:lightgrey;stroke-width:6px;opacity:1;"/>
+</g>
+<g class="B0">
+	<line class="L" nr="0" part="RS" transform="translate(20,5.3553609406725) rotate(0)" x1="-0.2" x2="162.2" y2="0" style="fill:none;stroke:#555;stroke-width:6px;"/>
+</g>
+<g class="B1">
+	<line class="L" nr="1" part="RS" transform="translate(20,34.644660940673) rotate(0)" x1="-0.2" x2="162.2" y2="0" style="fill:none;stroke:#555;stroke-width:6px;"/>
+</g>
+<g class="B2">
+	<g class="Sw0 SwGroup">
+		<path class="L LSw SwS0" nr="5" part="CRail" transform="translate(199.67766952966,12.677669529664) rotate(45)" d="M -0.2,0 h 0.2 a 25,25 0,0,0 17.677669529663685,-7.32233047033631 l 0.14142135623730953,-0.1414213562373095" style="fill:none;stroke:#555;stroke-width:6px;opacity:0"/>
+		<path class="L LSw SwS0" nr="6" part="CRail" transform="translate(199.67766952966,12.677691411009) rotate(225)" d="M -0.2,0 h 0.2 a 25,25 0,0,0 17.677669529663685,-7.32233047033631 l 0.14142135623730953,-0.1414213562373095" style="fill:none;stroke:#555;stroke-width:6px;opacity:0"/>
+		
+		<path class="L LSw SwS1" nr="3" part="CRail" transform="translate(217.35533905933,20) rotate(180)" d="M -0.2,0 h 0.2 a 25,25 0,0,0 17.677669529663685,-7.32233047033631 l 0.14142135623730953,-0.1414213562373095" style="fill:none;stroke:#555;stroke-width:6px;opacity:1;"/>
+		<path class="L LSw SwS1" nr="2" part="CRail" transform="translate(182,34.644660940673) rotate(0)" d="M -0.2,0 h 0.2 a 25,25 0,0,0 17.677669529663685,-7.32233047033631 l 0.14142135623730953,-0.1414213562373095" style="fill:none;stroke:#555;stroke-width:6px;opacity:1"/>
+	</g>
+	<line class="L" nr="4" part="RS" transform="translate(217.35533905933,20) rotate(0)" x1="-0.2" x2="35.56" y2="0" style="fill:none;stroke:#555;stroke-width:6px;"/>
+</g>
 </svg>

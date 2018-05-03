@@ -337,7 +337,7 @@ int recv_packet_procces(char data[1024],struct client_thread_args * client_data)
     if((clients[client_data->thread_id]->client_type & 0x10) != 0x10){
       //Client is not an admin
       printf("Not an Admin client");
-      return;
+      return 0;
     }
     
 
@@ -937,7 +937,8 @@ void * web_server(){
   fd_server = socket(AF_INET, SOCK_STREAM, 0);
   if(fd_server < 0){
     printf("ERROR, SOCKET\n");
-    exit(1);
+    _SYS->_STATE = _SYS->_STATE & ~(STATE_RUN);
+    return 0;
   }
   //fcntl(fd_server, F_SETFL, fcntl(fd_server, F_GETFL) | O_NONBLOCK);
 
@@ -950,13 +951,15 @@ void * web_server(){
   if(bind(fd_server, (struct sockaddr *) &server_addr, sizeof(server_addr)) == -1){
     printf("ERROR, BIND\n");
     close(fd_server);
-    exit(1);
+    _SYS->_STATE = _SYS->_STATE & ~(STATE_RUN);
+    return 0;
   }
 
   if(listen(fd_server, MAX_WEB_CLIENTS) == -1){
     printf("ERROR, LISTEN\n");
     close(fd_server);
-    exit(1);
+    _SYS->_STATE = _SYS->_STATE & ~(STATE_RUN);
+    return 0;
   }
 
   int q = 0;
@@ -1016,6 +1019,10 @@ void * web_server(){
     if((_SYS->_STATE & STATE_RUN) == 0){
       close(fd_server);
       _SYS->_STATE &= 0xFFFF ^ STATE_WebSocket_FLAG;
+
+      // Memory Cleanup
+      free(WS_password);
+
       break;
     }
   }

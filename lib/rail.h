@@ -41,7 +41,8 @@ struct SegC {
 typedef struct Seg{
   int Module;
   int id;
-  char type;
+  char type:4;
+  char dir:4;
 
   struct Rail_link Next;
   struct Rail_link Prev;
@@ -53,7 +54,6 @@ typedef struct Seg{
 
 	char max_speed;		// 5 times the speed (25 => 125km/h )
 	char state;
-	char dir;		//0xAABB, A = Current travel direction, B = Travel direction
 	char length;
 	char train;		 //0x00 <-> 0xFF
 	_Bool blocked;

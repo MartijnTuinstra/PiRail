@@ -316,6 +316,54 @@
             ]
         ]
     },
+    "20": {
+        "name": "Station 2 Blocks",
+        "blocks": 0,
+        "switch": 0,
+        "signals": 0,
+        "stations": 0,
+        "width": 700,
+        "height": 300,
+        "angle": 0,
+        "anchor_len": 2,
+        "anchors": [],
+        "anchor_pos": [
+            [
+                54.8,
+                20,
+                180
+            ],
+            [
+                679.35,
+                20,
+                0
+            ]
+        ]
+    },
+    "21": {
+        "name": "Siding 2 Blocks",
+        "blocks": 0,
+        "switch": 0,
+        "signals": 0,
+        "stations": 0,
+        "width": 700,
+        "height": 300,
+        "angle": 0,
+        "anchor_len": 2,
+        "anchors": [],
+        "anchor_pos": [
+            [
+                54.8,
+                20,
+                180
+            ],
+            [
+                679.35,
+                20,
+                0
+            ]
+        ]
+    },
     "Test": {
         "name": "Station 4 blocks",
         "blocks": 28,

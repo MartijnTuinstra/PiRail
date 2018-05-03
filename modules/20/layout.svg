@@ -1,0 +1,80 @@
+<svg width="700" height="300" viewBox="0 0 700 300" xmlns="http://www.w3.org/2000/svg">
+  <g id="Rail">
+    <g id="B0">
+      <line x1="54.8" y1="20" x2="97.2" y2="20" style="stroke-width:6px;fill:none;stroke:black;"/>
+      <path d="M 97.2,20 a 50,50 0,0,1 35.36,14.64466094067262" style="stroke-width:6px;fill:none;stroke:black"/>
+      <line x1="97.2" y1="20" x2="132.56" y2="20" style="stroke-width:6px;fill:none;stroke:black"/>
+    </g>
+    <g id="B1">
+      <line x1="132.56" y1="20" x2="285.68" y2="20" style="stroke-width:6px;fill:none;stroke:black"/>
+    </g>
+    <g id="B2">
+      <line x1="284.88" y1="20" x2="367.28" y2="20" style="stroke-width:6px;fill:none;stroke:black"/>
+    </g>
+    <g id="B3">
+      <line x1="367.28" y1="20" x2="449.28" y2="20" style="stroke-width:6px;fill:none;stroke:black"/>
+    </g>
+    <g id="B4">
+      <line x1="449.28" y1="20" x2="620.4" y2="20" style="stroke-width:6px;fill:none;stroke:black"/>
+    </g>
+    <g id="B5">
+      <line x1="601.39" y1="20" x2="679.35" y2="20" style="stroke-width:6px;fill:none;stroke:black"/>
+      <path transform="translate(637.1506781186547,20) rotate(180)" d="M -0.2,0 h 0.2 a 50,50 0,0,0 35.35533905932737,-14.64466094067262 l 0.14142135623730953,-0.1414213562373095" style="stroke-width:6px;fill:none;stroke:black"/>
+    </g>
+    <g id="B6">
+      <line x1="-0.2" y1="0" x2="35.56" y2="0" style="stroke-width:6px;fill:none;stroke:black;" transform="translate(55,49.2893) rotate(0)"/>
+      <line x1="-0.2" y1="0" x2="35.56" y2="0" style="stroke-width:6px;fill:none;stroke:black;" transform="translate(90.36,49.2893) rotate(0)"/>
+      <path d="M -0.2,0 h 0.2 a 50,50 0,0,0 35.35533905932737,-14.64466094067262 l 0.14142135623730953,-0.1414213562373095" style="stroke-width:6px;fill:none;stroke:black;" transform="translate(161.0753390593274,63.9340) rotate(225)"/>
+      <path d="M -0.2,0 h 0.2 a 50,50 0,0,0 35.35533905932737,-14.64466094067262 l 0.14142135623730953,-0.1414213562373095" style="stroke-width:6px;fill:none;stroke:black;" transform="translate(161.0753390593274,63.9340) rotate(45)"/>
+      <line x1="-0.2" y1="0" x2="42.2" y2="0" style="stroke-width:6px;fill:none;stroke:black;" transform="translate(125.72,49.2893) rotate(0)"/>
+      <path d="M -0.2,0 h 0.2 a 50,50 0,0,0 35.35533905932737,-14.64466094067262 l 0.14142135623730953,-0.1414213562373095" style="stroke-width:6px;fill:none;stroke:black" transform="translate(132.36466094067265,34.6446) rotate(45)"/>
+      <line x1="-0.2" y1="0" x2="42.2" y2="0" style="stroke-width:6px;fill:none;stroke:black" transform="translate(131.3768542494924,34.2355) rotate(45)"/>
+      <line x1="-0.2" y1="0" x2="35.56" y2="0" style="stroke-width:6px;fill:none;stroke:black" transform="translate(161.0753390593274,63.9340) rotate(45)"/>
+    </g>
+    <g id="B7">
+      <line x1="-0.2" y1="0" x2="35.56" y2="0" style="stroke-width:6px;fill:none;stroke:black" transform="translate(167.72,49.2893) rotate(0)"/>
+      <line x1="-0.2" y1="0" x2="82.2" y2="0" style="stroke-width:6px;fill:none;stroke:black" transform="translate(203,49.2893) rotate(0)"/>
+    </g>
+    <g id="B8">
+        <line x1="-0.2" y1="0" x2="82.2" y2="0" style="stroke-width:6px;fill:none;stroke:black" transform="translate(285.08,49.2893) rotate(0)"/>
+    </g>
+    <g id="B9">
+      <line x1="-0.2" y1="0" x2="82.2" y2="0" style="stroke-width:6px;fill:none;stroke:black" transform="translate(367.08,49.2893) rotate(0)"/>
+    </g>
+    <g id="B10">
+      <line x1="-0.2" y1="0" x2="82.2" y2="0" style="stroke-width:6px;fill:none;stroke:black" transform="translate(449.08,49.2893) rotate(0)"/>
+      <line x1="-0.2" y1="0" x2="35.56" y2="0" style="stroke-width:6px;fill:none;stroke:black" transform="translate(531.08,49.2893) rotate(0)"/>
+    </g>
+    <g id="B11">
+      <path d="M -0.2,0 h 0.2 a 50,50 0,0,0 35.35533905932737,-14.64466094067262 l 0.14142135623730953,-0.1414213562373095" style="stroke-width:6px;fill:none;stroke:black" transform="translate(566.44,49.2893) rotate(0)"/>
+      <path d="M -0.2,0 h 0.2 a 50,50 0,0,0 35.35533905932737,-14.64466094067262 l 0.14142135623730953,-0.1414213562373095" style="stroke-width:6px;fill:none;stroke:black" transform="translate(608.44,49.2893) rotate(-180)"/>
+      <line x1="-0.2" y1="0" x2="42.2" y2="0" style="stroke-width:6px;fill:none;stroke:black" transform="translate(573,63.9340) rotate(-45)"/>
+      <line x1="-0.2" y1="0" x2="42.2" y2="0" style="stroke-width:6px;fill:none;stroke:black" transform="translate(566.44,49.2893) rotate(0)"/>
+      <line x1="-0.2" y1="0" x2="35.56" y2="0" style="stroke-width:6px;fill:none;stroke:black" transform="translate(608.44,49.2893) rotate(0)"/>
+      <line x1="-0.2" y1="0" x2="35.56" y2="0" style="stroke-width:6px;fill:none;stroke:black" transform="translate(643.8,49.2893) rotate(0)"/>
+    </g>
+    <g id="B12">
+      <line x1="-0.2" y1="0" x2="162.2" y2="0" style="stroke-width:6px;fill:none;stroke:black" transform="translate(196.4306781186548,78.5786) rotate(0)"/>
+    </g>
+    <g id="B13">
+      <line x1="-0.2" y1="0" x2="82.2" y2="0" style="stroke-width:6px;fill:none;stroke:black" transform="translate(358.4306781186548,78.5786) rotate(0)"/>
+    </g>
+    <g id="B14">
+      <line x1="-0.2" y1="0" x2="82.2" y2="0" style="stroke-width:6px;fill:none;stroke:black" transform="translate(440.4306781186548,78.5786) rotate(0)"/>
+      <path d="M 0,0 l 15.298643762716438,0 a 49.99999999997175,49.99999999997175 0,0,0 35.355339059301514,-14.644660940672622" style="stroke-width:6px;fill:none;stroke:black" transform="translate(522.4306781186548,78.5786) rotate(0)"/>
+    </g>
+    <g id="B15">
+      <path d="M -0.2,0 h 0.2 a 50,50 0,0,0 35.35533905932737,-14.64466094067262 l 0.14142135623730953,-0.1414213562373095" style="stroke-width:6px;fill:none;stroke:black" transform="translate(186.0786348420837,88.9373) rotate(45)"/>
+      <line x1="-0.2" y1="0" x2="162.2" y2="0" style="stroke-width:6px;fill:none;stroke:black" transform="translate(221.433973901411,103.5819) rotate(0)"/>
+    </g>
+    <g id="B16">
+      <line x1="-0.2" y1="0" x2="82.2" y2="0" style="stroke-width:6px;fill:none;stroke:black" transform="translate(383.433973901411,103.5819) rotate(0)"/>
+    </g>
+    <g id="B17">
+      <line x1="-0.2" y1="0" x2="82.2" y2="0" style="stroke-width:6px;fill:none;stroke:black" transform="translate(465.433973901411,103.5819) rotate(0)"/>
+    </g>
+    <g id="B18">
+      <line x1="-0.2" y1="0" x2="35.56" y2="0" style="stroke-width:6px;fill:none;stroke:black" transform="translate(547.433973901411,103.5819) rotate(0)"/>
+    </g>
+  </g>
+</svg>

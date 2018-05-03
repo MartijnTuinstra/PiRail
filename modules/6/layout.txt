@@ -1,0 +1,23 @@
+{
+	"Rail": [
+		{"nr": 0,"part": "RS","transform": "translate(391,284) rotate(0)","BlockID": 0,"length": 4,"x": "162.2","y": "0"},
+		{"nr": 1,"part": "RS","transform": "translate(391,313.2893) rotate(0)","BlockID": 1,"length": 4,"x": "162.2","y": "0"},
+		{"nr": 2,"part": "RC","transform": "translate(553,313.2893) rotate(0)","BlockID": 2,"angle": 3,"radius": 2,"d": "M -0.2,0 h 0.2 a 25,25 0,0,0 17.677669529663685,-7.32233047033631 l 0.14142135623730953,-0.1414213562373095","x": "17.677669529663685","y": "-7.32233047033631"},
+		{"nr": 3,"part": "RC","transform": "translate(588.3553390593274,298.64463905932746) rotate(180)","BlockID": 2,"angle": 3,"radius": 2,"d": "M -0.2,0 h 0.2 a 25,25 0,0,0 17.677669529663685,-7.32233047033631 l 0.14142135623730953,-0.1414213562373095","x": "17.677669529663685","y": "-7.32233047033631"},
+		{"nr": 4,"part": "RS","transform": "translate(588.3553390593274,298.64463905932746) rotate(0)","BlockID": 2,"length": 1,"x": "35.56","y": "0"},
+		{"nr": 5,"part": "RC","transform": "translate(570.6776695296637,291.3223085889911) rotate(45)","BlockID": 2,"angle": 3,"radius": 2,"d": "M -0.2,0 h 0.2 a 25,25 0,0,0 17.677669529663685,-7.32233047033631 l 0.14142135623730953,-0.1414213562373095","x": "17.677669529663685","y": "-7.32233047033631"},
+		{"nr": 6,"part": "RC","transform": "translate(570.6776695296637,291.32233047033634) rotate(225)","BlockID": 2,"angle": 3,"radius": 2,"d": "M -0.2,0 h 0.2 a 25,25 0,0,0 17.677669529663685,-7.32233047033631 l 0.14142135623730953,-0.1414213562373095","x": "17.677669529663685","y": "-7.32233047033631"}
+	],
+	"Nodes": [
+		{"nr": 0,"part": "MAN","transform": "translate(391,284) rotate(0)","length": 2},
+		{"nr": 1,"part": "MAN","transform": "translate(623.7153390593274,298.64463905932746) rotate(180)","length": 1},
+		{"nr": 2,"part": "SwN","transform": "translate(588.3553390593274,298.64463905932746) rotate(0)","SwitchPID": 0,"SwitchNID": -1,"Pstates": [{"nr": "5","BID": 2},{"nr": "3","BID": 2}],"Nstates": [{"nr": "4","BID": 2}],"ConRailPart": "5","Pstate": 1,"Nstate": 2},
+		{"nr": 3,"part": "BI","transform": "translate(553,284) rotate(0)","AnchorID": 14,"ConRailPart": "0"},
+		{"nr": 4,"part": "BI","transform": "translate(553,313.2893) rotate(0)","AnchorID": 15,"ConRailPart": "1"},
+		{"nr": 5,"part": "BI","transform": "translate(391,284) rotate(0)","AnchorID": 0,"ConRailPart": "0"},
+		{"nr": 6,"part": "BI","transform": "translate(391,313.2893) rotate(0)","AnchorID": 1,"ConRailPart": "0"},
+		{"nr": 7,"part": "BI","transform": "translate(623.7153390593274,298.64463905932746) rotate(0)","AnchorID": 31,"ConRailPart": "4"}
+	],
+	"Signals": [
+	]
+}

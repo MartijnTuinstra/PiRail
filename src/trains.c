@@ -33,7 +33,9 @@ int iTrain = 0; //Counter for trains in library
 int bTrain = 0; //Counter for trains on layout
 
 int add_train(int DCC,int speed,char name[],char type){
+	printf("Add train\n");
 	struct train *Z = (struct train*)malloc(sizeof(struct train));
+	printf("Add train\n");
 
 	struct adr Route[20] = {{0,0,0,0}};
 
@@ -140,7 +142,7 @@ void init_trains(){
 				}
 			}
 
-			//printf("line %02i:\t%s\t\t%s(#%i)\t\t%s\t\t%s\n",line_nr,L1,L2,atoi(L2),L3,L4);
+			printf("line %02i:\t%s\t\t%s(#%i)\t\t%s\t\t%s\n",line_nr,L1,L2,atoi(L2),L3,L4);
 			if(line_nr != 0){
 				if(atoi(L2) < 10000){
 					add_train(atoi(L2),atoi(L4),L1,L3[0]);

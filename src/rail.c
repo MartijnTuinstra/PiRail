@@ -86,22 +86,30 @@ void Create_Segment(int IO_Adr,struct SegC Adr ,struct SegC Next, struct SegC Pr
   Z->NSi = 0;
   Z->PSi = 0;
 
-  Z->Next.type = 0;Z->Next.ptr = 0;
-  Z->Prev.type = 0;Z->Prev.ptr = 0;
-	//printf("A Segment is created at %i:%i:%i\tAdr:%i\n",Adr.M,Adr.B,Adr.S,B_list_i);
+  Z->Next.type = 0;
+  Z->Next.ptr = 0;
+
+  Z->Prev.type = 0;
+  Z->Prev.ptr = 0;
+
+	printf("A Segment is created at %i:%i\tIO Adr:%i\n",Adr.Module,Adr.Adr,IO_Adr);
 
   //Check if input is in range
-	if(Units[Adr.Module]->InRegisters*8 <= IO_Adr){
+  int reg_length = Units[Adr.Module]->InRegisters*8;
+	if(reg_length <= IO_Adr){
     //Expand range
 		Units[Adr.Module]->InRegisters++;
 
     printf("Expand to %i shift register, size(%i)\n",Units[Adr.Module]->InRegisters,8*Units[Adr.Module]->InRegisters);
 
     //Realloc Input array, lenght: Inregisters * sizeof()
-    Units[Adr.Module]->In = (struct Rail_link **)realloc(Units[Adr.Module]->In,8*Units[Adr.Module]->InRegisters*sizeof(struct Rail_link *));
+    int new_reg_length = 8*Units[Adr.Module]->InRegisters*sizeof(struct Rail_link *);
+    Units[Adr.Module]->In = (struct Rail_link **)realloc(Units[Adr.Module]->In,new_reg_length);
 
     //Clear new spaces
-    for(int i = 8*Units[Adr.Module]->InRegisters-8;i<8*Units[Adr.Module]->InRegisters;i++){
+    int i = 8*Units[Adr.Module]->InRegisters-8;
+    reg_length = Units[Adr.Module]->InRegisters*8;
+    for(i; i<reg_length; i++){
       Units[Adr.Module]->In[i] = 0;
     }
 	}
@@ -121,7 +129,7 @@ void Create_Segment(int IO_Adr,struct SegC Adr ,struct SegC Next, struct SegC Pr
   }
 
 	if(Units[Adr.Module]->B[Z->id] == NULL){
-    printf("Module %i segment %i\n",Adr.Module,Z->id);
+    // printf("Module %i segment %i\n",Adr.Module,Z->id);
 		Units[Adr.Module]->B[Z->id] = Z;
 
 	}else{

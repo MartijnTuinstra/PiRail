@@ -473,7 +473,7 @@
     </div>
     <div id="track"    class="Window" style="display:none">
       <center>
-        <div id="Modules_scan">
+        <div id="Modules_scan" style="display:none;">
           <h1 style="margin-top:30px">Scanning for modules</h1><br/>
           <object type="image/svg+xml" data="./img/loading.svg" style="margin:40px;"></object><br/>
           <span class="admin">

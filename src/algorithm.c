@@ -314,7 +314,7 @@ void procces(struct Seg * B,int debug){
 			if(BA.B[0]->train != 0){
 				//printf("ID: %i\t%i:%i:%i\n",BA->train,BA->Adr.M,BA->Adr.B,BA->Adr.S);
 			}
-			if(debug || B->Module == 10 || B->Module == 5){
+			if(debug || (B->Module == 4 && B->id == 12)){
 				if(p > 2){
 					printf("PPP ");
 					for(int i = 1;i>=0;i--){
@@ -1295,6 +1295,7 @@ int connect_Algor(struct ConnectList * List){
 			}
 		}
 	}
+	int i = List->length - 1;
 	
 	if(value == total){
 		_SYS->_STATE |= 0x0004;

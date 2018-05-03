@@ -1,0 +1,16 @@
+<svg width="300" height="500" viewBox="0 0 300 500" xmlns="http://www.w3.org/2000/svg">
+  <g id="Rail">
+    <g id="B0">
+      <path d="M 54.8,20 a 200,200 0,0,1 200,200" style="stroke-width:6px;fill:none;stroke:black;"/>
+    </g>
+    <g id="B1">
+      <path d="M 254.8,220 a 200,200 0,0,1 -200,200" style="stroke-width:6px;fill:none;stroke:black"/>
+    </g>
+    <g id="B2">
+      <path d="M 54.8,49.29 a 170.71,170.71 0,0,1 170.71,170.71" style="stroke-width:6px;fill:none;stroke:black"/>
+    </g>
+    <g id="B3">
+      <path d="M 225.51,220 a 170.71,170.71 0,0,1 -170.71,170.71" style="stroke-width:6px;fill:none;stroke:black"/>
+    </g>
+  </g>
+</svg>

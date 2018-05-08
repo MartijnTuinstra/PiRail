@@ -16,10 +16,8 @@ var WSopc_Z21TrainData       = 0x45;
 var WSopc_TrainAddRoute      = 0x46;
 var WSopc_TrainClearRoute    = 0x47;
 
-var WSopc_ToggleSwitch       = 0x20;
-var WSopc_ToggleMSSwitchUp   = 0x21;
-var WSopc_ToggleMSSwitchDown = 0x22;
-var WSopc_SetSwitch          = 0x23;
+var WSopc_SetSwitch       = 0x20;
+
 var WSopc_SetSwitchReserved  = 0x24;
 var WSopc_BroadTrack         = 0x26;
 var WSopc_BroadSwitch        = 0x27;
@@ -57,28 +55,9 @@ var Track_Layout_data;
 var blocks_load = 0;
 
 /*Client to Server*/
-  function ev_throw_switch(evt){ //Click event throw switch
-    console.log("throw switch");
-    console.log(evt);
-    var target = $(evt.currentTarget);
-
-    if(target.children().length == 2){ //Normale Switch
-      SwNr = parseInt(target.attr("class").split(' ')[0].slice(2));
-      Module = parseInt(target.parent().parent().parent().attr("class").split(' ')[0].slice(1))
-      console.log(Module+":"+SwNr);
-
-      ws.send(String.fromCharCode(WSopc_ToggleSwitch)+String.fromCharCode(Module)+String.fromCharCode(SwNr));
-    }else{ //MSwitch
-      SwNr = parseInt(target.attr("class").split(' ')[0].slice(2));
-      Module = parseInt(target.parent().parent().parent().attr("class").split(' ')[0].slice(1))
-      console.log(Module+":"+SwNr);
-
-      if(evt.shiftKey){ // -
-        ws.send(String.fromCharCode(WSopc_ToggleMSSwitchDown)+String.fromCharCode(Module)+String.fromCharCode(SwNr));
-      }else{
-        ws.send(String.fromCharCode(WSopc_ToggleMSSwitchUp)+String.fromCharCode(Module)+String.fromCharCode(SwNr));
-      }
-    }
+  function ev_set_switch(m,s,st){ //Module, Switch, NewState
+    console.log("Set switch "+m+":"+s+"=>"+st);
+    ws.send(String.fromCharCode(WSopc_SetSwitch)+String.fromCharCode(m)+String.fromCharCode(s)+String.fromCharCode(st));
   }
 
   function ev_release_Emergency(evt){
@@ -87,71 +66,6 @@ var blocks_load = 0;
 
   function ev_Emergency(evt){
     ws.send(String.fromCharCode(WSopc_EmergencyStop));
-  }
-
-  function ev_LinkTrain(evt){
-    //ws.send(String.fromCharCode(WSopc_LinkTrain));
-    var mID = parseInt($(evt.currentTarget).attr('Mid'));
-    var tID = undefined;
-
-    var val;
-    if(tablet == 0){
-      tID = parseInt($('#W'+mID+' .cs-selected').attr('data-value'));
-    }else{
-      console.log("tablet == 1");
-      console.log(mID);
-      tID = $('#W'+mID+' .cs-select').val();
-    }
-    if(typeof tID != 'undefined'){
-      console.log(tID);
-
-      var fID = $('#W'+mID+' but').attr("fID");
-      
-      ws.send(String.fromCharCode(WSopc_LinkTrain)+String.fromCharCode(fID)+String.fromCharCode(tID)+String.fromCharCode(mID >> 8)+String.fromCharCode(mID & 0xFF));
-      
-      setTimeout(function () {
-        if($('#W'+mID).length != 0){
-          alert("Train is already in use!!\nSelect another train");
-        }
-      }, 1000);
-
-    }else{
-      alert('Please select a train');
-    }
-  }
-
-  function ev_Train_speed(tID,speed){
-    var data = [];
-
-    console.log("change speed, dir: "+ train_list[tID].data.direction);
-
-    data[0] = WSopc_TrainSpeed;
-    data[1] = tID;
-    data[2] = (speed & 0x7F) + train_list[tID].data.direction;
-
-    train_list[tID].data.speed = speed;
-
-    var data2 = new Int8Array(data);
-
-    ws.send(data2);
-  }
-
-  function ev_Train_direction(tID,direction){
-    var data = [];
-
-    direction = direction << 7;
-
-    if(direction != train_list[tID].data.direction){
-      data[0] = WSopc_TrainSpeed;
-      data[1] = tID;
-      data[2] = direction + train_list[tID].data.speed;
-
-      train_list[tID].data.direction = direction;
-
-      var data2 = new Int8Array(data);
-
-      ws.send(data2);
-    }
   }
 
   function ev_Toggle_Broadcast_Flag(evt){
@@ -222,156 +136,110 @@ var blocks_load = 0;
     for(var i = 1;i<data.length;){
       var M = data[i];
 
-      if(SwNr & 0x80){ //MSSwitch
-        var MSSwNr= data[i+1] & 0x7F;
-        var state = data[i+2];
+      if(data[i+1] & 0x80){ //MSSwitch
         var len   = data[i+3];
 
-        for(var i = 1;i<=len;i++){
-          $(".M"+M+" #MSw"+MSSwNr+"S"+i).css("opacity",0); //Straight
-        }
-        //console.log(M+":"+B+":"+S+" State "+state+":"+".M"+M+" #B"+B+" .M"+S+"S"+state);
-        $(".M"+M+" #MSw"+MSSwNr+"S"+(state+1)).css("opacity",1);
+        modules[M].switches[data[i+1]&0x7F] = data[i+2] & 0x7F;
 
         i += 4;
       }else{ //Switch
-        var SwNr = data[i+1];
-        var state = data[i+2];
-
-        var SwitchGroup  = $('.M'+M+' g.Sw'+SwNr);
-        var SwitchGroupB = $('.M'+M+' g.BSw'+SwNr); //Background
-
-        $('.LSw,.LSwO',SwitchGroup).css("opacity",0);
-        $('.LSw,.LSwO',SwitchGroupB).css("opacity",0);
-
-        $('.SwS'+state    ,SwitchGroup).css("opacity",1);
-        $('.SwS'+state+'o',SwitchGroupB).css("opacity",1);
+        modules[M].switches[data[i+1]] = data[i+2] & 0x7F;
 
         i += 3;
       }
-    };
+    }
+
+    update_frame();
   }
 
   function ws_track_update(data){
     for(var i = 1;i<data.length;i+=4){
-      var M = data[i];
+      var m = data[i];
       var B = data[i+1];
-
-      var block_element = $(".M"+M+" .B"+B);
 
       var D = data[i+2] >> 7;
       var blocked = (data[i+2] & 0b00010000) >> 4;
       var state = (data[i+2] & 0xF);
       var tID = data[i+3];
 
-      console.log("Block "+M+":"+B+"\tdir: "+D+"\tBlocked: "+blocked+"\tstate: "+state+"\tTrain: "+tID);
-
-      var color;
-      var color2;
+      console.log("Block "+m+":"+B+"\tdir: "+D+"\tBlocked: "+blocked+"\tstate: "+state+"\tTrain: "+tID);
 
       if(blocked == 1){
-        color = "#900";
-        color2= "#b66";
+        modules[m].blocks[B] = 0;
       }else{
         if(state == 0){ //No train / Grey
-          color = "#555";
-          color2 = "#bbb";
+          modules[m].blocks[B] = 5;
         }else if(state == 1){ //SLOW
-          color = "#f70";
-          color2 = "#fd6";
+          modules[m].blocks[B] = 2;
         }else if(state == 2){ //Red
-          color = "#f00";
-          color2 = "#f66";
+          modules[m].blocks[B] = 1;
         }else if(state == 3){ //UNKOWN
-          color = "#ff0";
-          color2 = "#ff6";
+          modules[m].blocks[B] = 6;
         }else if(state == 4){ //GHOST
-          color = "#f5f";
-          color2 = "#fbf";
+          modules[m].blocks[B] = 3;
         }else if(state == 5){ //RESERVED
-          color = "#00f";
-          color2 = "#66f";
+          modules[m].blocks[B] = 4;
         }
       }
-
-      //Paint A Lines in the color
-      $(".L:not(.LSw,.LSwO)",block_element).css('stroke',color);
-      $(".L.LSw",block_element).css('stroke',color);
-      $(".L.LSwO",block_element).css('stroke',color2);
-
-
-      if(state == 5 || blocked){
-        $("g[class^=Sw]",".M"+M+" .B"+B).css('cursor','not-allowed');
-      }else{
-        $("g[class^=Sw]",".M"+M+" .B"+B).css('cursor','pointer');
-      }
-
-      //console.log(".L",".M"+M+" #B"+B+".S"+S);
-      //Write Train id to block
-      $(block_element).attr("train",tID);
-
-      //Display train ID in textbox (Not existing yet/anymore)
-      var text = "";
-      if(D == 0){
-        text = "&lt;"+tID;
-      }else if(D == 1){
-        text = tID+">";
-      }
-      $(".T",".M"+M+"B"+B).html(text);
-      if(tablet){
-        $(".M"+M+"B"+B).attr('style','display:block');
-      }
     }
+
+    update_frame();
   }
 
   function ws_partial_layout(data){
-    for(var i = 1;i<data.length;i++){
-      for(var j = 1;j<=Track_Layout_data[data[i]].anchor_len;j++){
-        Track_Layout_data[data[i]].anchors[j-1] = data[i+j];
-      }
-      i += Track_Layout_data[data[i]].anchor_len;
-    }
+    console.warn("TODO: implement");return;
+    // for(var i = 1;i<data.length;i++){
+    //   for(var j = 1;j<=Track_Layout_data[data[i]].anchor_len;j++){
+    //     Track_Layout_data[data[i]].anchors[j-1] = data[i+j];
+    //   }
+    //   i += Track_Layout_data[data[i]].anchor_len;
+    // }
   }
 
   function ws_layout(data){
-    for(var i = 1;i<data.length;i++){
-      for(var j = 1;j<=Track_Layout_data[data[i]].anchor_len;j++){
-        Track_Layout_data[data[i]].anchors[j-1] = data[i+j];
-      }
-      i += Track_Layout_data[data[i]].anchor_len;
-    }
+    console.warn("TODO: implement");return;
+    // for(var i = 1;i<data.length;i++){
+    //   for(var j = 1;j<=Track_Layout_data[data[i]].anchor_len;j++){
+    //     Track_Layout_data[data[i]].anchors[j-1] = data[i+j];
+    //   }
+    //   i += Track_Layout_data[data[i]].anchor_len;
+    // }
 
-    console.log("Finding first module");
-    $.each(Track_Layout_data, function(i,v){
-      console.log("Module "+i);
-      if(Track_Layout_data[i] != [] && Track_Layout_data[i].anchors.length != 0 && i == 4){
-        Track_Layout_data[i].x = 0;
-        Track_Layout_data[i].y = 0;
-        Track_Layout_data[i].r = 0;
+    // console.log("Finding first module");
+    // $.each(Track_Layout_data, function(i,v){
+    //   console.log("Module "+i);
+    //   if(Track_Layout_data[i] != [] && Track_Layout_data[i].anchors.length != 0 && i == 20){
+    //     Track_Layout_data[i].x = 0;
+    //     Track_Layout_data[i].y = 0;
+    //     Track_Layout_data[i].r = 0;
 
-        $('#Modules').append("<div class=\"M"+i+" Module M"+i+"b\"></div>");
-        blocks_load++;
-        $('.M'+i+'b').load('./../modules/'+i+'/layout.svg',function (evt){
-          blocks_load--;
-          if(blocks_load == 0){ //Done loading all modules?
-            $('#Modules').css('display','block');
-            ws.send("Ready");
-            $('g.SwGroup','.Module').on("click",ev_throw_switch);  //Attach click event to all switch and mswitches
-          }
-        });
+    //     $('#Modules').append("<div class=\"M"+i+" Module M"+i+"b\"></div>");
+    //     blocks_load++;
+    //     console.log("Load: "+'./../modules/'+i+'/layout.svg');
+    //     $('.M'+i+'b').load('./../modules/'+i+'/layout.svg',function (evt){
+    //       blocks_load--;
+    //       if(blocks_load == 0){ //Done loading all modules?
+    //         $('#Modules').css('display','block');
+    //         ws.send("Ready");
+    //         $('g.SwGroup','.Module').on("click",ev_throw_switch);  //Attach click event to all switch and mswitches
+    //       }
+    //     });
 
-        for(var j = 0;j<Track_Layout_data[i].anchor_len;j++){
-          if(Track_Layout_data[i].anchors[j] != 0){
-            console.log("=============== "+j+" ===============");
-            track_layout(Track_Layout_data[i].anchors[j],i);
-          }
-        }
-        return false;
-      }
-    });
+    //     Track_Layout_data[i].done = true;
+
+    //     for(var j = 0;j<Track_Layout_data[i].anchor_len;j++){
+    //       if(Track_Layout_data[i].anchors[j] != 0){
+    //         console.log("=============== "+j+" ===============");
+    //         track_layout(Track_Layout_data[i].anchors[j],i);
+    //       }
+    //     }
+    //     return false;
+    //   }
+    // });
   }
 
   function ws_emergency(type){
+    console.warn("TODO: reimplement");return;
     if(type == 0){ //Emergency stop
       if($('#warning_list #W_EmS').length == 0){
         var text = "<div id=\"W_EmS\" class=\"warning\"><div class=\"photobox l\"><img src=\"./img/stop.png\"/></div>";
@@ -401,6 +269,7 @@ var blocks_load = 0;
   }
 
   function ws_message(data){
+    console.warn("TODO: reimplement");return;
     var msgID = data[2] + ((data[1] & 0x1F) << 8);
 
     //Check type
@@ -445,6 +314,7 @@ var blocks_load = 0;
   }
 
   function ws_clearmessage(data){
+    console.warn("TODO: reimplement");return;
     var msgID = data[2] + ((data[1] & 0x1F) << 8);
     $('#warning_list #W'+msgID).remove();
     //Set bell icon
@@ -457,6 +327,7 @@ var blocks_load = 0;
   }
 
   function ws_full_train_data(data){
+    console.warn("TODO: reimplement");return;
     console.log('Train_Data_Update');
     console.log(active_trains);
     if(data.length > 5){
@@ -609,6 +480,7 @@ var blocks_load = 0;
   }
 
   function ws_Set_Broadcast_Flags(data){
+    console.warn("TODO: reimplement");return;
     $('#status .broad').each(function(i,v){
       v.style['background'] = 'red';
     })
@@ -647,7 +519,7 @@ var blocks_load = 0;
   }
 
   function ws_scan_progress(data){
-
+    console.warn("TODO: reimplement");return;
     $('#Modules_scan .progress').html(data[1]+'/'+data[2]+' connections');
     $('#Modules_scan .found_modules').html("");
     var i = 3;
@@ -659,6 +531,7 @@ var blocks_load = 0;
   }
 
   function ws_service_state(data){
+    console.warn("TODO: reimplement");return;
     state = (data[1] << 8) + data[2];
     if(state & STATE_Modules_Coupled){
       $('#Modules_scan').css('display','none');
@@ -692,12 +565,16 @@ function track_layout(module,prev){
   //Add Module to the HTML page
   $('#Modules').append("<div class=\"M"+module+" Module M"+module+"b\"></div>");
   blocks_load++;
+  console.log("Load: "+'./../modules/'+module+'/layout.svg');
   $('.M'+module+'b').load('./../modules/'+module+'/layout.svg',function (evt){
     blocks_load--;
     if(blocks_load == 0){ //Done loading all modules?
       $('#Modules').css('display','block');
       ws.send("Ready");
       $('g.SwGroup','.Module').on("click",ev_throw_switch);  //Attach click event to all switch and mswitches
+      $('.L:not(.LSwO)','.Module').attr("stroke","#555555");
+      $('.L.LSwO','.Module').attr("stroke","lightgrey");
+      $('.L.LSwS1','.Module').css("display","none");
     }
   });
 
@@ -726,6 +603,7 @@ function track_layout(module,prev){
   y = y + Math.sin(Math.PI * r/180) * Track_Layout_data[prev].anchor_pos[anchor_id][0] + Math.cos(Math.PI * r/180) * Track_Layout_data[prev].anchor_pos[anchor_id][1];
   
   r = r + Track_Layout_data[prev].anchor_pos[anchor_id][2] + Track_Layout_data[module].anchor_pos[id][2] + 180; //dR
+  r = r % 360;
 
   //                                                                          dX                                                                        dY
   x = x - Math.cos(Math.PI * r/180) * Track_Layout_data[module].anchor_pos[id][0] - Math.sin(Math.PI * r/180) * Track_Layout_data[module].anchor_pos[id][1];
@@ -797,27 +675,15 @@ function change_admin(){
 }
 
 var ws;
+var socket_tries = 0;
 
 function WebSocket_handler(adress){
-    $('#status .img').attr('onClick','');
-    $('#status .img').css('cursor','default');
     // Let us open a web socket
     ws = new WebSocket("ws://"+adress+"/",broadcastFlags);
     ws.binaryType = 'arraybuffer';
 
     ws.onopen = function(){
-      //alert("Connected");
-      $('.notConnected').toggleClass('Connected');
-      $('.notConnected').toggleClass('notConnected');
-      $('#warning_list').empty();
       socket_tries = 0;
-      $('#status .img').attr('data','./img/connected.svg');
-      $('#status .header').html('Connected');
-
-      //Create train accept is now possible
-      $('#Train_Add #upload').attr('src','./img/checked.png');
-      $('#Train_Add #upload').css('cursor','pointer');
-      $('#Train_Add #upload').attr('onClick','add_train()');
     };
 
     ws.onmessage = function (evt){
@@ -891,69 +757,57 @@ function WebSocket_handler(adress){
         ws_service_state(data);
       }
 
-      /* Old Opcodes *//*
-       0 - Track style (Analog/Digital)
-       1 - Message / Notification
-       2 - Track-setup
-       3 - Track occupancy
-       4 - Switches states
-       5 - MS Switches states
-       6 - Stations list
-       7 - Train data
-       8 - Request New Train
-       8 -
-       9 -
-      10 -
-      */
+      /* Old Opcodes */
+      /* Deprecated  */
       if(data[0] == 0){
         //Track style
-        console.log("Track style");
-        console.log(data);
-        if(data[1] == 1){
-          console.log("It is a digital track");
-          $("#digital").attr("onClick","ws.send(\"tA\");");
-          $("#digital").attr("src","./img/Digital_y.svg");
-          $("#digital").attr("title","Switch to DC");
-        }else if(data[1] == 0){
-          console.log("It is a analog track");
-          $("#digital").attr("onClick","ws.send(\"tD\");");
-          $("#digital").attr("src","./img/Digital_n.svg");
-          $("#digital").attr("title","Switch to DCC");
-        }
+        console.error("OLD OPCODE: Track style");
+        // console.log(data);
+        // if(data[1] == 1){
+        //   console.log("It is a digital track");
+        //   $("#digital").attr("onClick","ws.send(\"tA\");");
+        //   $("#digital").attr("src","./img/Digital_y.svg");
+        //   $("#digital").attr("title","Switch to DC");
+        // }else if(data[1] == 0){
+        //   console.log("It is a analog track");
+        //   $("#digital").attr("onClick","ws.send(\"tD\");");
+        //   $("#digital").attr("src","./img/Digital_n.svg");
+        //   $("#digital").attr("title","Switch to DCC");
+        // }
       }
       else if(data[0] == 2){
         //Track setup
-        console.log("Setup update");
-        console.warn("create_track(data) is disable. It is going to be depricated")
+        console.error("OLD OPCODE: Setup update");
+        // console.warn("create_track(data) is disable. It is going to be depricated")
         //create_track(data);
       }
       else if(data[0] == 6){
         //Station list
-        console.log("Station List");
-        console.log(data);
-        station_list_update(data);
+        console.error("OLD OPCODE: Station List");
+        // console.log(data);
+        // station_list_update(data);
       }
       else if(data[0] == 8){
         //Request New Train
-        console.log("Request for new train");
-        if(data[1] == 2){
-          //Start upload file and reload list
-          if(data.length == 3){
-            succ_add_train(data[2]);
-            train_option += "<option value=\""+data[2]+"\">#"+$('#train_dcc').val();+"&nbsp;&nbsp;&nbsp;"+$('#train_name').val();+"</option>";
-          }else{
-            succ_add_train(data[2],data[3]);
-            train_option += "<option value=\""+(data[2]+(data[3] << 8))+"\">#"+$('#train_dcc').val();+"&nbsp;&nbsp;&nbsp;"+$('#train_name').val();+"</option>";
-          }
-        }
-        else if(data[1] == 1){
-          alert("DCC address allready in use");
-          fail_add_train();
-        }
-        else{
-          alert("Error code:"+data[1]+"\n");
-          fail_add_train();
-        }
+        console.error("OLD OPCODE: Request for new train");
+        // if(data[1] == 2){
+        //   //Start upload file and reload list
+        //   if(data.length == 3){
+        //     succ_add_train(data[2]);
+        //     train_option += "<option value=\""+data[2]+"\">#"+$('#train_dcc').val();+"&nbsp;&nbsp;&nbsp;"+$('#train_name').val();+"</option>";
+        //   }else{
+        //     succ_add_train(data[2],data[3]);
+        //     train_option += "<option value=\""+(data[2]+(data[3] << 8))+"\">#"+$('#train_dcc').val();+"&nbsp;&nbsp;&nbsp;"+$('#train_name').val();+"</option>";
+        //   }
+        // }
+        // else if(data[1] == 1){
+        //   alert("DCC address allready in use");
+        //   fail_add_train();
+        // }
+        // else{
+        //   alert("Error code:"+data[1]+"\n");
+        //   fail_add_train();
+        // }
       }
     };
 
@@ -961,21 +815,7 @@ function WebSocket_handler(adress){
       // websocket is closed.
       console.log("Connection closed" + event.code);
       if(socket_tries == 0){
-        $('.Connected').toggleClass('notConnected');
-        $('.Connected').toggleClass('Connected');
         console.log("Connection Closed\nRetrying....");
-        $('#status .img').attr('data','./img/reconnecting.svg');
-        $('#status .header').html('Reconnecting...');
-        $('#warning_list').css('display','none');
-        $("#CTrain").empty();
-        $('#warning_list').empty();
-        //Resetting values
-        train_follow = [];
-
-        $.each(Track_Layout_data,function(i,v){
-          Track_Layout_data[i].done = false;
-        });
-        $('#Modules').empty();
       }
       if(socket_tries != 5){
         setTimeout(function(){
@@ -985,27 +825,12 @@ function WebSocket_handler(adress){
         }, 5000);
       }else{
         console.log("No Connection posseble\nIs the server on?");
-        $('#status .img').attr('data','./img/disconnected.svg');
-        $('#status .img').css("cursor","pointer");
-        $('#status .img').attr('onClick','socket_tries = 0;WebSocket_handler(window.location.host+":9000")');
-        $('#status .header').html('Disconnected');
       }
     };
 
 }
 
 $(document).ready(function(){
-
-  //Loading all track data, asynchronous
-  $.ajax({
-    url: './../modules/list.txt',
-    success: function (result) {
-        Track_Layout_data = JSON.parse(result);
-    },
-    async: false
-  });
-
-
   //Open websocket or fail on unsupported browsers
   if ("WebSocket" in window){
   try{
@@ -1016,8 +841,8 @@ $(document).ready(function(){
   }
   }else{
     // The browser doesn't support WebSocket
-    alert("WebSocket NOT supported by your Browser!\nBIG PROBLEM!!\n\nPlease use Chrome/FireFox/Safari, or update your browser");
-    $('#status').attr('src','./img/status_w.png');
+    alert("WebSocket NOT supported by your Browser!\nBIG PROBLEM!!\n\nPlease use the latest version of Chrome/FireFox/Safari, IE/Edge not supported");
+    $('body').html("<h2>No Websocket support</h2><i>Use latest version of Chrome, FireFox or Safari</i>");
   }
 });
 

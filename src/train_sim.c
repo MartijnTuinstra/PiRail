@@ -23,15 +23,17 @@ pthread_mutex_t mutex_lockA;
 
 
 void *TRAIN_SIMA(){
-	struct Seg *B = Units[4]->B[27];
-	struct Seg *N = Units[4]->B[27];
+	// struct Seg *B = Units[4]->B[27];
+	// struct Seg *N = Units[4]->B[27];
+	struct Seg *B = Units[20]->B[0];
+	struct Seg *N = Units[20]->B[0];
 	struct Seg *A = 0;
 	int i = 0;
 
 	B->blocked = 1;
 	B->change  = 1;
 
-	while(!train_link[Units[4]->B[27]->train]){}
+	while(!train_link[Units[20]->B[0]->train]){}
 
 
 	while(_SYS->_STATE & STATE_RUN){

@@ -322,20 +322,20 @@
         "switch": 0,
         "signals": 0,
         "stations": 0,
-        "width": 700,
-        "height": 300,
+        "width": 950,
+        "height": 158,
         "angle": 0,
         "anchor_len": 2,
         "anchors": [],
         "anchor_pos": [
             [
-                54.8,
-                20,
+                0,
+                40,
                 180
             ],
             [
-                679.35,
-                20,
+                950,
+                40,
                 0
             ]
         ]
@@ -346,21 +346,69 @@
         "switch": 0,
         "signals": 0,
         "stations": 0,
-        "width": 700,
-        "height": 300,
+        "width": 950,
+        "height": 158,
         "angle": 0,
         "anchor_len": 2,
         "anchors": [],
         "anchor_pos": [
             [
-                54.8,
-                20,
+                0,
+                40,
                 180
             ],
             [
-                679.35,
-                20,
+                950,
+                40,
                 0
+            ]
+        ]
+    },
+    "22": {
+        "name": "180 Curve A 1 Block",
+        "blocks": 0,
+        "switch": 0,
+        "signals": 0,
+        "stations": 0,
+        "width": 240,
+        "height": 500,
+        "angle": 180,
+        "anchor_len": 2,
+        "anchors": [],
+        "anchor_pos": [
+            [
+                0,
+                40,
+                180
+            ],
+            [
+                0,
+                460,
+                180
+            ]
+        ]
+    },
+    "23": {
+        "name": "180 Curve A 1 Block",
+        "blocks": 0,
+        "switch": 0,
+        "signals": 0,
+        "stations": 0,
+        "width": 240,
+        "height": 500,
+        "angle": 180,
+        "anchor_len": 2,
+        "anchors": [],
+        "anchor_pos": [
+            [
+                0,
+                40,
+                180
+            ],
+            [
+                0,
+                460,
+                180
             ]
         ]
     },

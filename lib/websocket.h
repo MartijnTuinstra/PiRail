@@ -63,11 +63,9 @@ void * web_server();
 #define WSopc_TrainAddRoute      0x46
 #define WSopc_TrainClearRoute    0x47
 
-#define WSopc_ToggleSwitch       0x20
-#define WSopc_ToggleMSSwitchUp   0x21
-#define WSopc_ToggleMSSwitchDown 0x22
-#define WSopc_SetSwitch          0x23
-#define WSopc_SetSwitchReserved  0x24
+#define WSopc_SetSwitch       0x20
+#define WSopc_SetSwitchReserved  0x21
+#define WSopc_ChangeSwitchReserved  0x22
 #define WSopc_SetSwitchRoute     0x25
 #define WSopc_BroadTrack         0x26
 #define WSopc_BroadSwitch        0x27

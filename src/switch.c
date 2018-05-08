@@ -99,7 +99,7 @@ int set_switch(struct Swi * S,char state){
     S->state = state + 0x80;
 
     char buf[40];
-    buf[0] = WSopc_BroadTrack;
+    buf[0] = WSopc_BroadSwitch;
 		int index = 1;
 
 		buf[index++] = S->Module;

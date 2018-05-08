@@ -1,6 +1,6 @@
 #define MAX_Segments 8
 #define MAX_Blocks 16
-#define MAX_Modules 16
+#define MAX_Modules 26
 
 //Block Speed (Cat. A)
 #define speed_A 250

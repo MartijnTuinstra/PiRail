@@ -153,10 +153,10 @@ void main(){
 
 		usleep(200000); //Startup time of devices
 		usleep(1000000);//Extra time to make sure it collects all info
-		DeviceList[0] = 1;
-		DeviceList[1] = 2;
-		DeviceList[2] = 4;
-		DeviceList[3] = 8;
+		DeviceList[0] = 20;
+		DeviceList[1] = 21;
+		DeviceList[2] = 22;
+		DeviceList[3] = 23;
 		// DeviceList[4] = 5;
 		// DeviceList[5] =10;
 		// DeviceList[6] =11;
@@ -179,7 +179,7 @@ void main(){
 		JoinModules();
 
 
-		setup_JSON((int [4]){1,8,4,2},(int *)0,4,0);
+		setup_JSON((int [4]){20,21,22,23},(int *)0,4,0);
 
 		Connect_Segments();
 		

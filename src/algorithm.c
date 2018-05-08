@@ -90,8 +90,8 @@ void scan_All(){
 			}
 		}
 	}
-	COM_change_A_signal(4);
-	COM_change_switch(4);
+	// COM_change_A_signal(4);
+	// COM_change_switch(4);
 	WS_trackUpdate(0);
 	pthread_mutex_unlock(&mutex_lockA);
 }
@@ -893,13 +893,14 @@ void procces_accessoire(){
 }
 
 int init_connect_Algor(struct ConnectList * List){
+	// printf("init_connect_Algor\n");
 	int return_value = 0;
 	for(int i = 0;i < MAX_Modules;i++){
 		if(Units[i]){
 			for(int j = 0;j < Units[i]->B_L; j++){
 				if(Units[i]->B[j]){
 					if(Units[i]->B[j]->NextC.type == 'C' || Units[i]->B[j]->PrevC.type == 'C'){
-						// printf("module %i, block %i\n",i,j);
+						printf("found block %i:%i\n",i,j);
 						if(List->list_index <= List->length + 1){
 							struct Rail_link ** temp = (struct Rail_link **)calloc(List->list_index+8,sizeof(struct Rail_link *));
 							for(int q = 0;q < List->list_index;q++){
@@ -919,7 +920,7 @@ int init_connect_Algor(struct ConnectList * List){
 			for(int j = 0;j < Units[i]->S_L; j++){
 				if(Units[i]->S[j]){
 					if(Units[i]->S[j]->AppC.type == 'C' || Units[i]->S[j]->DivC.type == 'C' || Units[i]->S[j]->StrC.type == 'C'){
-						// printf("module %i, switch %i\n",i,j);
+						printf("module %i, switch %i\n",i,j);
 						if(List->list_index <= List->length + 1){
 							struct Rail_link ** temp = (struct Rail_link **)calloc(List->list_index+8,sizeof(struct Rail_link *));
 							for(int q = 0;q < List->list_index;q++){
@@ -1217,8 +1218,10 @@ int connect_Algor(struct ConnectList * List){
 				value++;
 				continue;
 			}
+			// printf("Found block %i:%i %i\t",((block*)List->R_L[i]->ptr)->Module,((block*)List->R_L[i]->ptr)->id,((block*)List->R_L[i]->ptr)->blocked);
 			if(((block *)List->R_L[i]->ptr)->blocked){
 				//Blocked block
+				// printf("Found\n");
 				if(!R){
 					R = List->R_L[i];
 				}
@@ -1298,6 +1301,7 @@ int connect_Algor(struct ConnectList * List){
 	int i = List->length - 1;
 	
 	if(value == total){
+		// printf("algorithm.c:1301 Disabled\n");
 		_SYS->_STATE |= 0x0004;
 	}
 	return value;

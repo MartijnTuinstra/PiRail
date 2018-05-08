@@ -720,7 +720,8 @@ void LoadModules(int M){
 
 	// printf("Load module %i\n",M);
 
-	if(M != 4 && M != 8 && M != 1 && M != 2 && M != 5 && M != 6 && M != 10 && M != 11){
+	if(M != 4 && M != 8 && M != 1 && M != 2 && M != 5 && M != 6 && M != 10 && M != 11 && M != 20 && M != 21 && M != 22 && M != 23){
+		printf("Module not ready\n");
 		return; //Function is not ready
 	}
 
@@ -772,6 +773,10 @@ void LoadModules(int M){
 			if(strcmp(parts[0],"CU") == 0){ //Create Unit
 				//Set Module ID for this file and Create Module
 				ModuleID = atoi(parts[1]);
+				if(ModuleID != M){
+					printf("MODULE ID in file is not consistent with FolderNr\n");
+					return;
+				}
 				// printf("Module ID: %i\n",ModuleID);
 				Create_Unit(ModuleID,atoi(parts[2]),atoi(parts[3]),atoi(parts[4]));
 
@@ -964,48 +969,68 @@ void JoinModules(){
 			send_all(data,k,0x10);
 		}
 		i++;
-		usleep(10000);
+		usleep(100000);
 		prev_j = cur_j;
 
 		if(i == 15){
 		if(x == 1){
+			Units[20]->B[5]->blocked = 1;
+			Units[22]->B[0]->blocked = 1;
 			printf("\n1\n");
-			Units[1]->B[0]->blocked = 1;
-			Units[8]->B[0]->blocked = 1;
+			// Units[1]->B[0]->blocked = 1;
+			// Units[8]->B[0]->blocked = 1;
 
-			Units[1]->B[3]->blocked = 0;
-			Units[8]->B[4]->blocked = 0;
+			// Units[1]->B[3]->blocked = 0;
+			// Units[8]->B[4]->blocked = 0;
 		}else if(x == 2){
-			printf("\n11\n");
-			Units[8]->B[3]->blocked = 1;
-			Units[4]->B[0]->blocked = 1;
+			Units[21]->B[3]->blocked = 1;
+			Units[23]->B[0]->blocked = 1;
 
-			Units[1]->B[0]->blocked = 0;
-			Units[8]->B[0]->blocked = 0;
+			Units[20]->B[5]->blocked = 0;
+			Units[22]->B[0]->blocked = 0;
+			printf("\n2\n");
+			// printf("\n11\n");
+			// Units[8]->B[3]->blocked = 1;
+			// Units[4]->B[0]->blocked = 1;
+
+			// Units[1]->B[0]->blocked = 0;
+			// Units[8]->B[0]->blocked = 0;
 		}else if(x == 3){
-			printf("\n21\n");
-			Units[4]->B[11]->blocked = 1;
-			//Units[5]->B[ 0]->blocked = 1;
-			Units[2]->B[ 0]->blocked = 1;
+			Units[20]->B[0]->blocked = 1;
+			Units[23]->B[1]->blocked = 1;
 
-			Units[8]->B[3]->blocked = 0;
-			Units[4]->B[0]->blocked = 0;
+			Units[21]->B[3]->blocked = 0;
+			Units[23]->B[0]->blocked = 0;
+			printf("\n3\n");
+			// Units[4]->B[11]->blocked = 1;
+			// //Units[5]->B[ 0]->blocked = 1;
+			// Units[2]->B[ 0]->blocked = 1;
+
+			// Units[8]->B[3]->blocked = 0;
+			// Units[4]->B[0]->blocked = 0;
 		}else if(x == 4){
-			printf("\n31\n");
-			// Units[10]->B[0]->blocked = 1;
-			//Units[ 5]->B[1]->blocked = 1;
+			Units[21]->B[0]->blocked = 1;
+			Units[22]->B[1]->blocked = 1;
 
-			Units[4]->B[11]->blocked = 0;
-			// Units[5]->B[ 0]->blocked = 0;
-			Units[2]->B[ 0]->blocked = 0;
+			Units[20]->B[0]->blocked = 0;
+			Units[23]->B[1]->blocked = 0;
+			printf("\n4\n");
+			// // Units[10]->B[0]->blocked = 1;
+			// //Units[ 5]->B[1]->blocked = 1;
+
+			// Units[4]->B[11]->blocked = 0;
+			// // Units[5]->B[ 0]->blocked = 0;
+			// Units[2]->B[ 0]->blocked = 0;
 		}else if(x == 5){
+			Units[21]->B[0]->blocked = 0;
+			Units[22]->B[1]->blocked = 0;
 			printf("\n41\n");
 			// Units[10]->B[3]->blocked = 1;
 			// Units[ 2]->B[0]->blocked = 1;
 			// Units[10]->B[0]->blocked = 0;
 			// Units[ 5]->B[1]->blocked = 0;
 		}else if(x == 6){
-			printf("\n51\n");
+			printf("\nend\n");
 			// Units[ 5]->B[5]->blocked = 1;
 			// Units[11]->B[0]->blocked = 1;
 			// Units[10]->B[3]->blocked = 0;
@@ -1022,16 +1047,18 @@ void JoinModules(){
 			// Units[11]->B[3]->blocked = 0;
 		}
 		else if(x == 10){
-			_SYS_change(STATE_Modules_Coupled,1);
+			// _SYS_change(STATE_Modules_Coupled,1);
 		}
 		}
 		//IF ALL JOINED
 		//BREAK
 	}
-	Units[1]->B[3]->blocked = 0;
-	Units[8]->B[4]->blocked = 0;
+	Units[21]->B[0]->blocked = 0;
+	Units[22]->B[1]->blocked = 0;
+	// Units[1]->B[3]->blocked = 0;
+	// Units[8]->B[4]->blocked = 0;
 	// Units[10]->B[3]->blocked = 0;
-	Units[ 2]->B[0]->blocked = 0;
+	// Units[ 2]->B[0]->blocked = 0;
 
 	for(int i = 0;i<List.length;i++){
 		if(List.R_L[i]->type == 'S'){

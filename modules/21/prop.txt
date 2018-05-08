@@ -1,0 +1,38 @@
+'Straight track (8)
+'Create Module
+CU	21	8	8	2
+'
+'Create block
+'Wat	IOadr	id	type	NxM	NxID	NxType	PxM	PxID	PxType	Max_sp	dir	len	OneWay
+CB	0	0	R	C	1	1	X	1	R	180	0	100	N
+CB	1	1	R	X	0	R	X	2	R	180	0	100	N
+CB	8	2	R	X	1	R	X	3	R	180	0	100	N
+CB	9	3	R	X	2	R	C	2	1	180	0	100	N
+'
+CB	2	4	R	C	1	2	X	0	S	180	1	100	N
+
+CB	3	5	R	X	0	s	X	6	R	180	1	100	N
+CB	4	6	R	X	5	R	X	7	R	180	1	100	N
+CB	10	7	R	X	6	R	X	8	R	180	1	100	N
+CB	11	8	R	X	7	R	X	1	s	180	1	100	N
+
+CB	5	10	R	X	0	s	X	6	R	180	1	100	N
+CB	6	11	R	X	5	R	X	7	R	180	1	100	N
+CB	12	12	R	X	6	R	X	8	R	180	1	100	N
+CB	13	13	R	X	7	R	X	1	s	180	1	100	N
+
+CB	14	9	R	X	1	S	C	2	2	180	1	100	N
+'
+'Create Switch
+'Wat	id	DetBl	AxM	AxID	AxType	SxM	SxID	SxType	DxM	DxID	DxType	IOnr	IOadr	Max_Speed
+CSw	0	1	X	2	R	X	5	R	X	10	R	2	0 1	180 90
+CSw	1	1	X	9	R	X	8	R	X	13	R	2	2 3	180 90
+'
+'Create Signals
+'Wat	Name    	type	IOAdr	states	ENsts.	OUTPUT	Blockid	side
+'
+'Create Station/Stops
+'	Name	Type	Nr-B	Bl
+'
+'Set detection blocks for Switches
+'	SwID	B_ID

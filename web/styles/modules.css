@@ -1,7 +1,11 @@
 
 
-#Modules{
+#Modules{ /* Modules container */
 	position: relative;
+}
+
+.Module{ /* A Module */
+	position: absolute;
 }
 
 #Modules .B, .MBox svg .B {
@@ -13,9 +17,9 @@
 	stroke-dasharray:none
 }
 
-#Modules .L {
+.Module .L {
 	fill:none;
-	stroke-width:2px;
+	stroke-width:6px;
 	stroke-linecap:butt;
 	stroke-linejoin:round;
 	stroke-dasharray:none

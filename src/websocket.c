@@ -412,21 +412,12 @@ int recv_packet_procces(char data[1024],struct client_thread_args * client_data)
     }
   }
   else if(data[0] & 0x20){ //Track stuff
-    if(data[0] == WSopc_ToggleSwitch){ //Toggle switch
+    if(data[0] == WSopc_SetSwitch){ //Toggle switch
       if(Units[data[1]] && Units[data[1]]->S[data[2]]){ //Check if switch exists
-        printf("throw switch %i:%i\t",data[1],data[2]);
+        printf("throw switch %i:%i to state: \t",data[1],data[2],data[3]);
         printf("%i->%i",Units[data[1]]->S[data[2]]->state, !Units[data[1]]->S[data[2]]->state);
-        throw_switch(Units[data[1]]->S[data[2]]);
+        set_switch(Units[data[1]]->S[data[2]],data[3]);
       }
-    }
-    else if(data[0] == WSopc_ToggleMSSwitchUp){ // MSwitch toggle to higher state
-
-    }
-    else if(data[0] == WSopc_ToggleMSSwitchDown){ //MSwitch toggle to lower state
-
-    }
-    else if(data[0] == WSopc_SetSwitch){ //Set switch
-
     }
     else if(data[0] == WSopc_SetSwitchReserved){ //Set switch reserved
 

@@ -104,8 +104,8 @@ int pathFinding(struct Seg * Begin, struct Seg * End, struct Sw_train_PATH  *(OU
 					if(Sw_Nodes[i]->adr.type == 'S' && (list_of_M[k] == ((Switch *)Sw_Nodes[i]->adr.ptr)->Module || list_of_M[k] == 0)){
 						list_of_M[k] = ((Switch *)Sw_Nodes[i]->adr.ptr)->Module;
 						break;
-					}else if(Sw_Nodes[i]->adr.type == 'M' && (list_of_M[k] == ((mswitch *)Sw_Nodes[i]->adr.ptr)->Module || list_of_M[k] == 0)){
-						list_of_M[k] = ((mswitch *)Sw_Nodes[i]->adr.ptr)->Module;
+					}else if(Sw_Nodes[i]->adr.type == 'M' && (list_of_M[k] == ((msswitch *)Sw_Nodes[i]->adr.ptr)->Module || list_of_M[k] == 0)){
+						list_of_M[k] = ((msswitch *)Sw_Nodes[i]->adr.ptr)->Module;
 						break;
 					}
 				}
@@ -200,9 +200,9 @@ int pathFinding(struct Seg * Begin, struct Seg * End, struct Sw_train_PATH  *(OU
 
 			//If a node is present
 			if(Curr_PATH_Node){
-				for(int i = 0;i<((mswitch *)NAdr.ptr)->length;i++){ //Browse through all states
+				for(int i = 0;i<((msswitch *)NAdr.ptr)->length;i++){ //Browse through all states
 					if(Curr_PATH_Node->suc[i] == 1){ //If state i is in try
-						SNAdr = ((mswitch *)NAdr.ptr)->m_Adr[i];
+						SNAdr = ((msswitch *)NAdr.ptr)->m_Adr[i];
 						break;
 		}}}}
 		else if(NAdr.type == 'm'){ //MSSwitch approach m side
@@ -211,9 +211,9 @@ int pathFinding(struct Seg * Begin, struct Seg * End, struct Sw_train_PATH  *(OU
 
 			//If a node is present
 			if(Curr_PATH_Node != NULL){
-				for(int i = 0;i<((mswitch *)NAdr.ptr)->length;i++){ //Browse through all states
+				for(int i = 0;i<((msswitch *)NAdr.ptr)->length;i++){ //Browse through all states
 					if(Curr_PATH_Node->suc[i] == 1){ //If state i is in try
-						SNAdr = ((mswitch *)NAdr.ptr)->M_Adr[i];
+						SNAdr = ((msswitch *)NAdr.ptr)->M_Adr[i];
 		}}}}
 
 		if(SNAdr.type == 'S' || SNAdr.type == 's' || SNAdr.type == 'M' || SNAdr.type == 'm'){ //If next is a switch again
@@ -275,7 +275,7 @@ int pathFinding(struct Seg * Begin, struct Seg * End, struct Sw_train_PATH  *(OU
   				if(Curr_PATH_Node->suc[i] == 1){ //If state i was in try
   					Curr_PATH_Node->suc[i] = -1;  //Set it to fail
 
-						if((i+1) < ((mswitch *)Curr_PATH_Node->adr.ptr)->length){ //If state i is not the last state
+						if((i+1) < ((msswitch *)Curr_PATH_Node->adr.ptr)->length){ //If state i is not the last state
 	  					Curr_PATH_Node->suc[i+1] = 1; //Try next state
 						}
 
@@ -439,7 +439,7 @@ int pathFinding(struct Seg * Begin, struct Seg * End, struct Sw_train_PATH  *(OU
 			else if(found == TRUE){
 				//printf("Check if between borders\n");
 				for(int i = 0;i<MAX_Modules;i++){
-					if(list_of_M[i] == ((mswitch *)NAdr.ptr)->Module){
+					if(list_of_M[i] == ((msswitch *)NAdr.ptr)->Module){
 						break;
 					}
 					//Oustide
@@ -480,7 +480,7 @@ int pathFinding(struct Seg * Begin, struct Seg * End, struct Sw_train_PATH  *(OU
 					}else if(Sw_Nodes[i]->adr.type == 'M' || Sw_Nodes[i]->adr.type == 'm'){
 						printf("It a MS switch\t");
 						_Bool NoSucc = TRUE;
-						for(int i = 0;i<((mswitch *)Sw_Nodes[i]->adr.ptr)->length;i++){
+						for(int i = 0;i<((msswitch *)Sw_Nodes[i]->adr.ptr)->length;i++){
 							if(Sw_Nodes[i]->suc[i] == 2){
 								NoSucc = FALSE;
 								break;
@@ -519,11 +519,11 @@ int pathFinding(struct Seg * Begin, struct Seg * End, struct Sw_train_PATH  *(OU
 		}
 		else if(Curr_PATH_Node && Link_cmp(Curr_PATH_Node->adr,NAdr)){ //If current Node exists
 			//printf("Success [%i][%i]",Curr_PATH_Node->suc[0],Curr_PATH_Node->suc[1]);
-			for(int i = 0;i<((mswitch *)NAdr.ptr)->length;i++){
+			for(int i = 0;i<((msswitch *)NAdr.ptr)->length;i++){
 				if(Curr_PATH_Node->suc[i] == 0){
 					//printf("\tTry next");
 					Curr_PATH_Node->suc[i] = 1;
-				}else if(Curr_PATH_Node->suc[i] == -1 && (i+1) == ((mswitch *)NAdr.ptr)->length){
+				}else if(Curr_PATH_Node->suc[i] == -1 && (i+1) == ((msswitch *)NAdr.ptr)->length){
 					//printf("\tAll failed");
 					Curr_PATH_Node = Curr_PATH_Node->Prev;
 					NAdr = Curr_PATH_Node->adr;
@@ -572,7 +572,7 @@ int pathFinding(struct Seg * Begin, struct Seg * End, struct Sw_train_PATH  *(OU
 					Switch * tSw = (Switch *)Sw_Nodes[i]->adr.ptr;
 					printf("%i:%i  \t",tSw->Module,tSw->id);
 				}else if(Sw_Nodes[i]->adr.type == 'M' || Sw_Nodes[i]->adr.type == 'm'){
-					mswitch * tmsw = (mswitch *)Sw_Nodes[i]->adr.ptr;
+					msswitch * tmsw = (msswitch *)Sw_Nodes[i]->adr.ptr;
 					printf("%i:%i  \t",tmsw->Module,tmsw->id);
 				}
 				for(int j = 0;j<10;j++){

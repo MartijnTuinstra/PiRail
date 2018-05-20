@@ -10,9 +10,6 @@
 
 #include "./../lib/system.h"
 
-#include "./../lib/rail.h"
-#include "./../lib/switch.h"
-#include "./../lib/signals.h"
 #include "./../lib/trains.h"
 
 #include "./../lib/modules.h"

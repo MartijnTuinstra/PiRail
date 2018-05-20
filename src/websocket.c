@@ -374,7 +374,7 @@ int recv_packet_procces(char data[1024],struct client_thread_args * client_data)
     }
   }
   else if(data[0] & 0x40){ //Train stuff
-    if(data[0] == WSopc_AddNewTrain){ //New train
+    if(data[0] == WSopc_AddNewTraintolib){ //New train
 
     }
     else if(data[0] == WSopc_LinkTrain){ //Link train
@@ -391,6 +391,7 @@ int recv_packet_procces(char data[1024],struct client_thread_args * client_data)
       }
     }
     else if(data[0] == WSopc_TrainSpeed){ //Train speed control
+      printf("Train speed control\n");
       char tID = data[1];
       char speed = data[2];
       trains[tID]->cur_speed = speed & 0x7F;
@@ -407,9 +408,6 @@ int recv_packet_procces(char data[1024],struct client_thread_args * client_data)
     else if(data[0] == WSopc_TrainAddRoute){ //Add route to train
 
     }
-    else if(data[0] == WSopc_TrainClearRoute){ //Delete route
-
-    }
   }
   else if(data[0] & 0x20){ //Track stuff
     if(data[0] == WSopc_SetSwitch){ //Toggle switch
@@ -418,6 +416,10 @@ int recv_packet_procces(char data[1024],struct client_thread_args * client_data)
         printf("%i->%i",Units[data[1]]->S[data[2]]->state, !Units[data[1]]->S[data[2]]->state);
         set_switch(Units[data[1]]->S[data[2]],data[3]);
       }
+    }
+    else if(data[0] == WSopc_SetMultiSwitch){ // Set mulitple switches at once
+      printf("Throw multiple switches\n");
+      set_multiple_switches(data[1],&data[2]);
     }
     else if(data[0] == WSopc_SetSwitchReserved){ //Set switch reserved
 

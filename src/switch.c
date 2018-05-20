@@ -100,11 +100,11 @@ int set_switch(struct Swi * S,char state){
 
     char buf[40];
     buf[0] = WSopc_BroadSwitch;
-		int index = 1;
+	int index = 1;
 
-		buf[index++] = S->Module;
-		buf[index++] = S->id;
-		buf[index++] = Units[S->Module]->S[S->id]->state;
+	buf[index++] = S->Module;
+	buf[index++] = S->id;
+	buf[index++] = Units[S->Module]->S[S->id]->state;
 
     for(int i = 0;i<MAX_SWITCH_LINK;i++){
       if(S->L_Swi[i]){
@@ -127,6 +127,64 @@ int set_switch(struct Swi * S,char state){
 		printf("Switch blocked\n");
     return 0;
   }
+}
+
+int set_multiple_switches(char length, char * data){
+	struct switchdata {
+		char Module;
+		char id:7;
+		char type:1;
+		char state;
+	};
+
+	char Module = 0;
+
+	for(int i = 0; i < length; i++){
+		struct switchdata * p = (void *)&data[i*sizeof(struct switchdata)];
+
+		Module = p->Module;
+
+		printf("check %d:%d\n",p->Module,p->id,0);//p->state);
+
+		if(!(Units[p->Module] && (
+			(p->type == 0 && Units[p->Module]->S[p->id]) || 
+			(p->type == 1 && Units[p->Module]->M[p->id]) )) ){
+			printf("Switch doesnt exist\n");
+			return -1;
+		}
+		if((p->type == 0 && Units[p->Module]->S[p->id]->Detection_Block && Units[p->Module]->S[p->id]->Detection_Block->blocked) || 
+				(p->type == 1 && Units[p->Module]->M[p->id]->Detection_Block && Units[p->Module]->M[p->id]->Detection_Block->blocked)){
+			printf("Switch is blocked\n");
+			return -2;
+		}
+	}
+
+    char buf[40];
+    buf[0] = WSopc_BroadSwitch;
+	int index = 1;
+
+	for(int i = 0; i < length; i++){
+		struct switchdata * p = (void *)&data[i*sizeof(struct switchdata)];
+
+		printf("check %d:%d\n",p->Module,p->id,0);//p->state);
+
+		if(p->type == 0){
+			Switch * S = Units[p->Module]->S[p->id];
+
+			buf[index++] = S->Module;
+			buf[index++] = S->id;
+			buf[index++] = p->state |= 0x80;
+		}
+		else if(p->type == 1){
+			Units[p->Module]->M[p->id];
+			printf("Set mulbitple switch msswitch not implemented\n");
+			return -3;
+		}
+	}
+
+	COM_change_switch(Module);
+    send_all(buf,index,2);
+    return 1;
 }
 
 int throw_ms_switch(struct Mod * M, char c){ //Multi state object
@@ -259,8 +317,8 @@ void Create_Moduls(int Unit_Adr, struct adr Adr,struct adr mAdr[10],struct adr M
 int check_Switch_state(struct Rail_link NAdr){
 	if(((NAdr.type == 's' || NAdr.type == 'S') && ((Switch *)NAdr.ptr)->Detection_Block && 
 					((Switch *)NAdr.ptr)->Detection_Block->state != RESERVED) ||
-		 ((NAdr.type == 'm' || NAdr.type == 'M') &&  ((mswitch *)NAdr.ptr)->Detection_Block && 
-		 			((mswitch *)NAdr.ptr)->Detection_Block->state != RESERVED)){
+		 ((NAdr.type == 'm' || NAdr.type == 'M') &&  ((msswitch *)NAdr.ptr)->Detection_Block && 
+		 			((msswitch *)NAdr.ptr)->Detection_Block->state != RESERVED)){
 
 		return 1;
 	}else{
@@ -309,7 +367,7 @@ int check_Switch(struct Seg * B, int direct, _Bool incl_pref){
 	  }else if(NAdr.type == 'S' || NAdr.type == 's'){
 	    printf("Sw  %i:%i\n",((Switch *)NAdr.ptr)->Module,((Switch *)NAdr.ptr)->id);
 	  }else if(NAdr.type == 'M' || NAdr.type == 'm'){
-	    printf("MSw %i:%i\n",((mswitch *)NAdr.ptr)->Module,((mswitch *)NAdr.ptr)->id);
+	    printf("MSw %i:%i\n",((msswitch *)NAdr.ptr)->Module,((msswitch *)NAdr.ptr)->id);
 	  }
 	}
 	//printf("NAdr %i:%i:%i:%c\n",NAdr.M,NAdr.B,NAdr.S,NAdr.type);
@@ -341,18 +399,18 @@ int check_Switch(struct Seg * B, int direct, _Bool incl_pref){
 		goto R;
 	}
 	else if(NAdr.type == 'M'){
-		int s = ((mswitch *)NAdr.ptr)->state;
-		if(Link_cmp(((mswitch *)NAdr.ptr)->M_Adr[s],Adr)){
-			NAdr = ((mswitch *)NAdr.ptr)->m_Adr[s];
+		int s = ((msswitch *)NAdr.ptr)->state;
+		if(Link_cmp(((msswitch *)NAdr.ptr)->M_Adr[s],Adr)){
+			NAdr = ((msswitch *)NAdr.ptr)->m_Adr[s];
 			goto R;
 		}else{
 			return 0;
 		}
 	}
 	else if(NAdr.type == 'm'){
-		int s = ((mswitch *)NAdr.ptr)->state;
-		if(Link_cmp(((mswitch *)NAdr.ptr)->m_Adr[s],Adr)){
-			NAdr = ((mswitch *)NAdr.ptr)->M_Adr[s];
+		int s = ((msswitch *)NAdr.ptr)->state;
+		if(Link_cmp(((msswitch *)NAdr.ptr)->m_Adr[s],Adr)){
+			NAdr = ((msswitch *)NAdr.ptr)->M_Adr[s];
 			goto R;
 		}else{
 			return 0;
@@ -430,7 +488,7 @@ int free_Switch(struct Seg *B, int direct){
 	  }else if(NAdr.type == 'S' || NAdr.type == 's'){
 	    printf("Sw  %i:%i\n",((Switch *)NAdr.ptr)->Module,((Switch *)NAdr.ptr)->id);
 	  }else if(NAdr.type == 'M' || NAdr.type == 'm'){
-	    printf("MSw %i:%i\n",((mswitch *)NAdr.ptr)->Module,((mswitch *)NAdr.ptr)->id);
+	    printf("MSw %i:%i\n",((msswitch *)NAdr.ptr)->Module,((msswitch *)NAdr.ptr)->id);
 	  }
 	}
 	//printf("NAdr: %i:%i:%i\t",NAdr.M,NAdr.B,NAdr.S);
@@ -479,7 +537,7 @@ int free_Switch(struct Seg *B, int direct){
 		goto R;
 
 	}else if(NAdr.type == 'M'){
-		mswitch * M = NAdr.ptr;
+		msswitch * M = NAdr.ptr;
 		int s = M->state;
 		if(Link_cmp(M->M_Adr[s],Adr)){
 			NAdr = M->m_Adr[s];
@@ -496,7 +554,7 @@ int free_Switch(struct Seg *B, int direct){
 		NAdr = M->m_Adr[M->state];
 		goto R;
 	}else if(NAdr.type == 'm'){
-		mswitch * M = NAdr.ptr;
+		msswitch * M = NAdr.ptr;
 		int s = M->state;
 		if(Link_cmp(M->m_Adr[s],Adr)){
 			NAdr = M->M_Adr[s];
@@ -592,7 +650,7 @@ int free_Route_Switch(struct Seg *B, int direct, struct train * T){
 
 	}
 	else if(NAdr.type == 'M'){
-		mswitch * M = (mswitch *)NAdr.ptr;
+		msswitch * M = (msswitch *)NAdr.ptr;
 		Adr = NAdr;
 		for(int x = 0;x<T->Sw_len;x++){
 			if(T->Route[x]->adr.ptr == M && T->Route[x]->states > 0){
@@ -607,7 +665,7 @@ int free_Route_Switch(struct Seg *B, int direct, struct train * T){
 		goto R;
 	}
 	else if(NAdr.type == 'm'){
-		mswitch * M = (mswitch *)NAdr.ptr;
+		msswitch * M = (msswitch *)NAdr.ptr;
 		Adr = NAdr;
 		for(int x = 0;x<T->Sw_len;x++){
 			if(T->Route[x]->adr.ptr == M && T->Route[x]->states > 0){

@@ -1,25 +1,29 @@
-struct procces_block {
-	_Bool blocked;
-	char length;
-	struct Seg * B[5];
-};
 
-void change_block_state2(struct procces_block * A,int State);
+#ifndef _INCLUDE_ALGORITHM_H
+	#define _INCLUDE_ALGORITHM_H
+	struct procces_block {
+		_Bool blocked;
+		char length;
+		struct Seg * B[5];
+	};
 
-void scan_All();
+	void change_block_state2(struct procces_block * A,int State);
 
-void * scan_All_continiously();
+	void scan_All();
 
-void procces(struct Seg * B,int debug);
+	void * scan_All_continiously();
 
-void procces_accessoire();
+	void procces(struct Seg * B,int debug);
 
-struct ConnectList {
-  int length;
-  int list_index;
-  struct Rail_link ** R_L;
-};
+	void procces_accessoire();
 
-int init_connect_Algor(struct ConnectList * List);
+	struct ConnectList {
+	  int length;
+	  int list_index;
+	  struct Rail_link ** R_L;
+	};
 
-int connect_Algor(struct ConnectList * List);
+	int init_connect_Algor(struct ConnectList * List);
+
+	int connect_Algor(struct ConnectList * List);
+#endif

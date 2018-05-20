@@ -75,8 +75,6 @@ void main(){
 
 
 
-
-
 	setbuf(stdout,NULL);
 	setbuf(stderr,NULL);
 	signal(SIGPIPE, SIG_IGN);

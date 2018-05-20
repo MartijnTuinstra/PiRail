@@ -1,53 +1,61 @@
-struct Unit_IO{
-	char type;
-	struct Seg * B;
-	struct Swi * S;
-	struct Mod * M;
-	struct signal * Signals;
-};
+#include "switch.h"
+#include "rail.h"
+#include "signals.h"
 
-struct Unit{
-	int B_L;  //Length of Block list;
-	int S_L;  //Length of Switch list;
-	int Si_L; //Length of Signals list;
+#ifndef _INCLUDE_MODULE_H
+	#define _INCLUDE_MODULE_H
 
-	char Module;
+	struct Unit_IO{
+		char type;
+		struct Seg * B;
+		struct Swi * S;
+		struct Mod * M;
+		struct signal * Signals;
+	};
 
-	_Bool Sig_change;
+	struct Unit{
+		int B_L;  //Length of Block list;
+		int S_L;  //Length of Switch list;
+		int Si_L; //Length of Signals list;
 
-	char Out_length;
-	char In_length;
+		char Module;
 
-	struct Unit ** Connect;
-	char connect_points;
+		_Bool Sig_change;
 
-  struct Rail_link ** Out;
-  struct Rail_link ** In;
+		char Out_length;
+		char In_length;
 
-  uint8_t *BlinkMask;
-  uint8_t *OutRegs;
-  uint8_t  *InRegs;
+		struct Unit ** Connect;
+		char connect_points;
 
-  uint8_t  InRegisters;
-  uint8_t OutRegisters;
+		struct Rail_link ** Out;
+		struct Rail_link ** In;
 
-	struct Seg ** B;
-	struct Swi ** S;
-	struct Mod * M[8];
-	struct signal * Signals[32];
-  struct Station * St[20];
+		uint8_t *BlinkMask;
+		uint8_t *OutRegs;
+		uint8_t  *InRegs;
 
-	char Signal_nr,Station_nr; //Number of elements in array
-};
+		uint8_t  InRegisters;
+		uint8_t OutRegisters;
 
-#define END_BL C_AdrT(0,0,0,'e')
+		block ** B;
+		Switch ** S;
+		msswitch * M[8];
+		struct signal * Signals[32];
+		struct Station * St[20];
 
-extern struct Unit *Units[MAX_Modules];
+		char Signal_nr,Station_nr; //Number of elements in array
+	};
 
-void clear_Modules();
+	#define END_BL C_AdrT(0,0,0,'e')
 
-void LoadModules(int M);
+	extern struct Unit *Units[MAX_Modules];
 
-void JoinModules();
+	void clear_Modules();
 
-void setup_JSON(int arr[], int arr2[], int size, int size2);
+	void LoadModules(int M);
+
+	void JoinModules();
+
+	void setup_JSON(int arr[], int arr2[], int size, int size2);
+#endif

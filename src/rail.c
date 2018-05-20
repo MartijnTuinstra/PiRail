@@ -400,7 +400,7 @@ struct Seg * Next2(struct Seg * B,int i){
   // }else if(NAdr.type == 'S' || NAdr.type == 's'){
   //   printf("%iSw  %i:%i\n",i,((Switch *)NAdr.ptr)->Module,((Switch *)NAdr.ptr)->id);
   // }else if(NAdr.type == 'M' || NAdr.type == 'm'){
-  //   printf("%iMSw %i:%i\n",i,((mswitch *)NAdr.ptr)->Module,((mswitch *)NAdr.ptr)->id);
+  //   printf("%iMSw %i:%i\n",i,((msswitch *)NAdr.ptr)->Module,((msswitch *)NAdr.ptr)->id);
   // }
 
 	// printf("\ni:%i",i);
@@ -415,7 +415,7 @@ struct Seg * Next2(struct Seg * B,int i){
     // if(NAdr.type == 'S' || NAdr.type == 's'){
     //   printf("%iSw  %i:%i\n",i,((Switch *)NAdr.ptr)->Module,((Switch *)NAdr.ptr)->id);
     // }else if(NAdr.type == 'M' || NAdr.type == 'm'){
-    //   printf("%iMSw %i:%i\n",i,((mswitch *)NAdr.ptr)->Module,((mswitch *)NAdr.ptr)->id);
+    //   printf("%iMSw %i:%i\n",i,((msswitch *)NAdr.ptr)->Module,((msswitch *)NAdr.ptr)->id);
     // }
 
 		if((NAdr.type == 'S' || NAdr.type=='s') && ((Switch *)NAdr.ptr)->Detection_Block){
@@ -452,14 +452,14 @@ struct Seg * Next2(struct Seg * B,int i){
 		}
 		else if(NAdr.type == 'M'){
 			//printf("m\n");
-			int s = ((mswitch *)NAdr.ptr)->state;
-			SNAdr = ((mswitch *)NAdr.ptr)->m_Adr[s];
+			int s = ((msswitch *)NAdr.ptr)->state;
+			SNAdr = ((msswitch *)NAdr.ptr)->m_Adr[s];
 			//printf("\tm:%i:%i:%i\ttype:%c\n",SNAdr.M,SNAdr.B,SNAdr.S,SNAdr.type);
 		}
 		else if(NAdr.type == 'm'){
 			//printf("M\n");
-			int s = ((mswitch *)NAdr.ptr)->state;
-			SNAdr = ((mswitch *)NAdr.ptr)->M_Adr[s];
+			int s = ((msswitch *)NAdr.ptr)->state;
+			SNAdr = ((msswitch *)NAdr.ptr)->M_Adr[s];
 			//printf("\t%i:%i:%i\ttype:%c\n",Adr.M,Adr.B,Adr.S,Adr.type);
 		}
 		// printf("SN %i:%c\tN %i\ti:%i\n",SNAdr.ptr,SNAdr.type,NAdr.ptr,i);
@@ -612,14 +612,14 @@ struct Seg * Prev2(struct Seg * B,int i){
 		}
 		else if(NAdr.type == 'M'){
 			//printf("m\n");
-			int s = ((mswitch *)NAdr.ptr)->state;
-			SNAdr = ((mswitch *)NAdr.ptr)->m_Adr[s];
+			int s = ((msswitch *)NAdr.ptr)->state;
+			SNAdr = ((msswitch *)NAdr.ptr)->m_Adr[s];
 			//printf("\tm:%i:%i:%i\ttype:%c\n",SNAdr.M,SNAdr.B,SNAdr.S,SNAdr.type);
 		}
 		else if(NAdr.type == 'm'){
 			//printf("M\n");
-			int s = ((mswitch *)NAdr.ptr)->state;
-			SNAdr = ((mswitch *)NAdr.ptr)->M_Adr[s];
+			int s = ((msswitch *)NAdr.ptr)->state;
+			SNAdr = ((msswitch *)NAdr.ptr)->M_Adr[s];
 			//printf("\t%i:%i:%i\ttype:%c\n",Adr.M,Adr.B,Adr.S,Adr.type);
 		}
 		//printf("SN %i:%i:%i%c\tN %i:%i:%i\ti:%i\n",SNAdr.M,SNAdr.B,SNAdr.S,SNAdr.type,NAdr.M,NAdr.B,NAdr.S,i);

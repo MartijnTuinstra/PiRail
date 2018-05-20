@@ -20,12 +20,14 @@ var websocket = {
     TrainOperation:      0x44,
     Z21TrainData:        0x45,
     TrainAddRoute:       0x46,
+    StationLibrary:      0x4D,
     AddNewTraintoLibrary:0x4E,
     TrainLibrary:        0x4F,
 
     SetSwitch:           0x20,
-    SetSwitchReserved:   0x21,
-    ChangeReservedSwitch:0x22,
+    SetMultiSwitch:      0x21,
+    SetSwitchReserved:   0x22,
+    ChangeReservedSwitch:0x23,
     SetSwitchRoute:      0x25,
 
     BroadTrack:          0x26,
@@ -63,16 +65,33 @@ var websocket = {
   },
 
 /*Client to Server*/
-  cts_set_switch: function(m,s,st){ //Module, Switch, NewState
-    console.log("Set switch "+m+":"+s+"=>"+st);
+  cts_set_switch: function(d){ //Module, Switch, NewState
+    // console.log("Set switch "+m+":"+s+"=>"+st);
     var data = [];
 
-    data[0] = this.opc.SetSwitch;
-    data[1] = m;
-    data[2] = s;
-    data[3] = st;
+    if(d.length == 1){
+      data[0] = this.opc.SetSwitch;
+      data[1] = d[0][0];
+      data[2] = d[0][1];
+      data[3] = d[0][2];
 
-    this.send(data);
+      this.send(data);
+      console.log("Throw switch: ");
+      console.log(data);
+    }
+    else{
+      var di = 2; // Dataindex
+      data[0] = this.opc.SetMultiSwitch
+      data[1] = d.length;
+      for (var i = 0; i < d.length; i++) {
+        data[di++] = d[i][0]
+        data[di++] = d[i][1]
+        data[di++] = d[i][2]
+      }
+      this.send(data);
+      console.log("Throw switches: ")
+      console.log(data)
+    }
   },
 
   cts_release_Emergency: function(evt){
@@ -148,7 +167,7 @@ var websocket = {
 
   cts_train_speed: function(tid, direction, speed_step){
     var data = ((direction)?0x80:0) | (speed_step & 0x7F);
-    this.send([this.opc.TrainSpeed, data]);
+    this.send([this.opc.TrainSpeed, tid, data]);
   },
 /**/
 /*Server to Client*/
@@ -188,32 +207,36 @@ var websocket = {
 
     // Train data
     stc_train_data: function(data){
-      console.warn("TODO: Train_Data_Update reimplement");return;
+      console.warn("TODO: Train_Data_Update reimplement");
       if(data.length > 5){
         var train_ID = data[1];
         var DCC_ID = (data[2] << 8) + data[3];
 
         var speed_step = (data[5] & 0x7F); // divide by 127
 
-        (data[5] & 0x80) == 0 // direction reverse
+        Train.data[train_ID-2].speed = (speed_step/127)*Train.data[train_ID-2].max_speed;
 
-        (data[4] & 0b1000) != 0 //'Andere X-BUS Handregler<br/>';
+        Train.update();
+
+        // (data[5] & 0x80) == 0 // direction reverse
+
+        // (data[4] & 0b1000) != 0 //'Andere X-BUS Handregler<br/>';
           
-        (data[4] & 0b111) == 0 // '14 steps<br/>';
-        (data[4] & 0b111) == 2 // 28 steps
-        (data[4] & 0b111) == 4 // 128 steps
+        // (data[4] & 0b111) == 0 // '14 steps<br/>';
+        // (data[4] & 0b111) == 2 // 28 steps
+        // (data[4] & 0b111) == 4 // 128 steps
 
-        (data[6] & 0x7F) // Fahrstufen KKK: 
+        // (data[6] & 0x7F) // Fahrstufen KKK: 
 
-        (data[6] & 0x40) == 1 // 'Doppeltraktion<br/>';
+        // (data[6] & 0x40) == 1 // 'Doppeltraktion<br/>';
         
-        (data[6] & 0x20) == 1 // 'Smartsearch<br/>';
+        // (data[6] & 0x20) == 1 // 'Smartsearch<br/>';
         
-        (data[6] & 0x10) == 1 // F0
-        (data[6] & 0x8) == 1  // F4
-        (data[6] & 0x4) == 1  // F3
-        (data[6] & 0x2) == 1  // F2
-        (data[6] & 0x1) == 1  // F1
+        // (data[6] & 0x10) == 1 // F0
+        // (data[6] & 0x8) == 1  // F4
+        // (data[6] & 0x4) == 1  // F3
+        // (data[6] & 0x2) == 1  // F2
+        // (data[6] & 0x1) == 1  // F1
       }
     },
 
@@ -613,7 +636,7 @@ function WebSocket_handler(adress){
 
         else if(data[0] == websocket.opc.Z21TrainData){
           console.log("Z21 Train data");
-          websocket.stc_full_train_data(data);
+          websocket.stc_train_data(data);
         }
         else if(data[0] == websocket.opc.LinkTrain){
           console.log("Link train");
@@ -736,6 +759,8 @@ function WebSocket_handler(adress){
       // websocket is closed.
       console.log("Connection closed" + event.code);
       if(socket_tries == 0){
+        reset_blocks_in_modules();
+        Canvas.update_frame();
         console.log("Connection Closed\nRetrying....");
       }
       if(socket_tries != 5){

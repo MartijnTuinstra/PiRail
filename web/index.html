@@ -340,6 +340,10 @@
 			width:100%;
 		}
 
+		#trains.half {
+			width: 50%;
+		}
+
 		#trains .controlA, #trains .controlB {
 			margin:20px;
 			height: calc(100% - 52px);
@@ -350,10 +354,6 @@
 			border: 1px solid lightgrey;
 			border-radius: 5px;
 			position: relative;
-		}
-
-		#trains.half {
-			width: 50%;
 		}
 		#trains.half .controlA {
 			width: calc(100% - 52px);
@@ -368,7 +368,7 @@
 
 		#trains .specs {
 			width:calc(100% - 78px);
-			height:100%;
+			height:calc(100% - 10px);
 			position: relative;
 		}
 
@@ -382,14 +382,39 @@
 			 }
 		}
 
+		#trains .funcs, #train_hover .funcs {
+			display: flex;
+			width: 100%;
+			overflow-x: hidden;
+			flex-wrap: wrap;
+			justify-content: center;
+			align-items: flex-end;
+			margin-top:5px;
+		}
+
+		#trains .func, #train_hover .func {
+			width: 25px;
+			height: 20px;
+			line-height: 20px;
+			text-align: center;
+			background: grey;
+			margin: 2px;
+			border-radius: 2px;
+			color: white;
+			font-size: smaller;
+			font-weight: bold;
+		}
+
 		#train_hover {
 			position: fixed;
 			width:260px;
 			padding: 5px;
 			height:360px;
-			border: 1px solid lightgrey;
+			border: 1px solid grey;
 			border-radius: 5px;
+			box-shadow: 0px 0px 20px 2px grey;
 			background: lightgrey;
+			z-index: 1;
 		}
 
 		.slider_containter {
@@ -409,6 +434,7 @@
 			height: 75%;
 			width:100%;
 			background: #ff9800;
+			transition: 0.2s;
 			position: absolute;
 		}
 
@@ -428,7 +454,9 @@
 		}
 
 		#train_hover .specs {
-			width:180px;height:100%;position: relative;
+			width:calc(100% - 78px);
+			height:calc(100% - 10px);
+			position: relative;
 		}
 
 		#train_hover .specs .img, #trains .specs .img {
@@ -512,6 +540,12 @@
 			<div class="row control">
 				<span class="type">FA</span>
 				<span class="route">Yard 1</span>
+			</div>
+			<div class="funcs" style="display:flex;width:100%; overflow-x: hidden; flex-wrap: wrap">
+				<div class="func">F1</div>
+				<div class="func">F1</div>
+				<div class="func">F1</div>
+				<div class="func">F1</div>
 			</div>
 		</div>
 		<div style="width: 78px; right:0px; top:0px;position: absolute;height:100%">
@@ -687,7 +721,11 @@
 			</div>
 		</div>
 	</div>
-	<div style="position: absolute;right: 0px;bottom: 0px;height: 50px;width: 50px;background: red" onClick='window.location.replace("");'></div>
+	<div id="settings">
+		test settings
+	</div>
+
+	<div style="position: absolute;right: 0px;bottom: 0px;height: 50px;width: 50px;background: red" onClick='window.location.replace("");'></div> <!-- TODO remove -->
 	<div class="menu" style="bottom:-185px;">
 		<div class="Emergency_btn">
 			<span>STOP</span>
@@ -700,7 +738,7 @@
 		<div class="menu_btn trains">
 			<img src="./img/trains.png" width="26px" style="margin:12px;"/>
 		</div>
-		<div class="menu_btn">
+		<div class="menu_btn settings">
 			<img src="./img/setting_cog.svg" width="26px" style="margin:12px;"/>
 		</div>
 	</div>
@@ -758,8 +796,8 @@
 
 		var Menu = {
 			min: -185,
-			open: {track:true,trains:false,stations:false},
-			window_sizes: {"track":{min_h:500},"trains":{min_h:300},"route":{min_h:300}},
+			open: {track:true,trains:false,stations:false,settings:false},
+			window_sizes: {"track":{min_h:500},"trains":{min_h:300},"route":{min_h:300},"settings":{min_h:700}},
 			window_height: window.innerHeight - 90,
 			init: function(){
 				this.resize();
@@ -820,16 +858,23 @@
 
 				if(this.window_type == 0){
 					//Mobile
-					$('#track, #trains, #route').css("display","none");
+					$('#track, #trains, #route, #settings').css("display","none");
 					if(w == "trains"){
 						this.open.trains = !this.open.trains;
 						this.open.stations = false;
+						this.open.settings = false;
 					}
 					if(w == "route"){
 						this.open.stations = !this.open.stations;
 						this.open.trains = false;
+						this.open.settings = false;
 					}
-					if(!this.open.trains && !this.open.stations){
+					if(w == "settings"){
+						this.open.settings = !this.open.settings;
+						this.open.trains = false;
+						this.open.stations = false;
+					}
+					if(!this.open.trains && !this.open.stations && !this.open.settings){
 						$('#track').css("display","block");
 					}
 					if(this.open.trains){
@@ -838,6 +883,9 @@
 					if(this.open.stations){
 						$('#route').css("display","flex");
 					}
+					if(this.open.settings){
+						$('#settings').css("display","block");
+					}
 
 					$('#track, #trains, #route').css("height",this.window_height+"px");
 
@@ -845,15 +893,20 @@
 				}
 				else if(this.window_type == 1){
 					//Tablet landscape
-					$('#track, #trains, #route').css("display","none");
+					$('#track, #trains, #route, #settings').css("display","none");
 					if(w == "trains"){
 						this.open.trains = !this.open.trains;
 					}
 					if(w == "route"){
 						this.open.stations = !this.open.stations;
 					}
+					if(w == "settings"){
+						this.open.settings = !this.open.settings;
+						this.open.stations = false;
+						this.open.trains = false;
+					}
 
-					if(!this.open.stations && !this.open.trains){
+					if(!this.open.stations && !this.open.trains && !this.open.settings){
 						$('#track').css("height",this.window_height+"px");
 						$('#track').css("display","block");
 					}
@@ -886,6 +939,9 @@
 							$('#trains').css("display","block");
 						}
 					}
+					else if(this.open.settings){
+						$('#settings').css("display","block");
+					}
 
 					Canvas.resize()
 
@@ -893,7 +949,7 @@
 				}
 				else if(this.window_type == 2){
 					//Portrait Tablet
-					$('#trains, #route').css("display","none");
+					$('#trains, #route, #route').css("display","none");
 					$('#track').css("display","block");
 					if(w == "trains"){
 						this.open.trains = !this.open.trains;
@@ -901,8 +957,13 @@
 					if(w == "route"){
 						this.open.stations = !this.open.stations;
 					}
+					if(w == "settings"){
+						this.open.settings = !this.open.settings;
+						this.open.stations = false;
+						this.open.trains = false;
+					}
 
-					if(!this.open.stations && !this.open.trains){
+					if(!this.open.stations && !this.open.trains && !this.open.settings){
 						$('#track').css("height",this.window_height+"px");
 					}
 					else if(this.open.stations){
@@ -944,24 +1005,37 @@
 							$('#track').css("height",(this.window_height-500)+"px");
 						}
 					}
+					else if(this.open.settings){
+						$('#track').css("display","none");
+						$('#settings').css("display","block");
+					}
 
 					Canvas.resize()
 
 					return;
 				}
 				else{
-					$('#trains, #route').css("display","none");
+					$('#trains, #route, #settings').css("display","none");
 					$('#track').css("height",this.window_height+"px");
 					if(w == "route"){
 						this.open.stations = !this.open.stations;
 					}
+					if(w == "settings"){
+						this.open.settings = !this.open.settings;
+						this.open.stations = false;
+					}
 
-					if(!this.open.stations){
+					if(this.open.stations){
 						$('#route').css("display","flex");
 						$('#route').css("height",355+"px");
 						$('#track').css("height",(this.window_height-355)+"px");
 						
 					}
+					else if(this.open.settings){
+						$('#track').css("display","none");
+						$('#settings').css("display","block");
+					}
+					
 
 					Canvas.resize();
 
@@ -1070,7 +1144,8 @@
 				$('.slider_containter').on("mousedown touchstart",function(evt){
 					Train.slider(evt);
 					$('.slider_containter').on("mousemove touchmove",Train.slider);
-					$('.slider_containter').on("mouseup touchend",function(){
+					$('.slider_containter').on("mouseup touchend",function(evt){
+						Train.slider(evt);
 						$('.slider_containter').off("mousemove mouseup touchmove touchend");
 					});
 				});
@@ -1124,27 +1199,36 @@
 			// User Events
 			slider: function(evt){
 				var clickY;
-				if(evt.clientY == undefined){
-					clickY = $(evt.currentTarget).offset().top - evt.touches[0].clientY
-					evt.preventDefault();
-					evt.stopPropagation();
+				console.log(evt)
+				if(evt.type == "touchmove" || evt.type == "mousemove" || evt.type == "touchstart" || evt.type == "mousedown"){
+					if(evt.clientY == undefined){
+						clickY = $(evt.currentTarget).offset().top - evt.touches[0].clientY
+						evt.preventDefault();
+						evt.stopPropagation();
+					}
+					else{
+						clickY = $(evt.currentTarget).offset().top - evt.clientY
+						evt.preventDefault();
+						evt.stopPropagation();
+					}
+					var procent = ((clickY + $(evt.currentTarget).height())/$(evt.currentTarget).height())
+					procent = (procent < 0)?0:((procent > 1)?1:procent);
+					if($(evt.currentTarget).hasClass("sliderB")){
+						Train.data[Train.selected[1]].speed = procent*Train.data[Train.selected[1]].max_speed;
+					}
+					else{
+						Train.data[Train.selected[0]].speed = procent*Train.data[Train.selected[0]].max_speed;
+					}
 				}
-				else{
-					clickY = $(evt.currentTarget).offset().top - evt.clientY
-					evt.preventDefault();
-					evt.stopPropagation();
-				}
-				var procent = ((clickY + $(evt.currentTarget).height())/$(evt.currentTarget).height())
-				procent = (procent < 0)?0:((procent > 1)?1:procent);
 				if($(evt.currentTarget).hasClass("sliderB")){
-					Train.data[Train.selected[1]].speed = procent*Train.data[Train.selected[1]].max_speed;
-
-					websocket.cts_train_speed(Train.data[Train.selected[1]].id, 0, Math.round(procent*127));
+					if(evt.type != "touchmove" && evt.type != "mousemove"){
+						websocket.cts_train_speed(Train.data[Train.selected[1]].id, 0, Math.round((Train.data[Train.selected[1]].speed/Train.data[Train.selected[1]].max_speed)*127));
+					}
 				}
 				else{
-					Train.data[Train.selected[0]].speed = procent*Train.data[Train.selected[0]].max_speed;
-
-					websocket.cts_train_speed(Train.data[Train.selected[0]].id, 0, Math.round(procent*127));
+					if(evt.type != "touchmove" && evt.type != "mousemove"){
+						websocket.cts_train_speed(Train.data[Train.selected[0]].id, 0, Math.round((Train.data[Train.selected[0]].speed/Train.data[Train.selected[0]].max_speed)*127));
+					}
 				}
 				Train.update();
 
@@ -1290,6 +1374,7 @@
 
 		$('.menu_btn.trains').on("click",function(){Menu.open_window("trains")});
 		$('.menu_btn.route').on("click",function(){Menu.open_window("route")});
+		$('.menu_btn.settings').on("click",function(){Menu.open_window("settings")});
 
 		$('.train_list_box').on("click",function(evt){Train.select(parseInt(evt.currentTarget.id.slice(2)));});
 
@@ -2090,6 +2175,15 @@
 			]},
 		}
 
+		function reset_blocks_in_modules(){
+			$.each(modules, function(i,v){
+				console.log(v)
+				$.each(v.blocks,function(i2,v2){
+					modules[i].blocks[i2] = 6;
+				})
+			})
+		}
+
 		Canvas.calc_dotmatrix();
 
 		var Draw = {
@@ -2300,62 +2394,54 @@
 		});
 
 		function throw_Switch(m,s){
-			if(!ws.connected)
+			if(!ws.connected){
+				console.error("Throw_switch: Not connected");
 				return;
+			}
 
 			if(modules[m].switches[s] == 0){
-				modules[m].switches[s] = 1;
+				websocket.cts_set_switch([[m,s,1]]);
 			}else{
-				modules[m].switches[s] = 0;
+				websocket.cts_set_switch([[m,s,0]]);
 			}
-			websocket.cts_set_switch(m,s,modules[m].switches[s]);
 		}
 
 		function throw_doubleSlib(m,sw){
-			if(!ws.connected)
+			if(!ws.connected){
+				console.error("throw_doubleSlib: Not connected");
 				return;
+			}
 			
 			if(modules[m].switches[sw[0]] == 0){
 				if(modules[m].switches[sw[1]] == 0){
-					modules[m].switches[sw[1]] = 1;
+					websocket.cts_set_switch([[m,sw[0],0],[m,sw[1],1]]);
 				}else{
-					modules[m].switches[sw[0]] = 1;
+					websocket.cts_set_switch([[m,sw[0],1],[m,sw[1],1]]);
 				}
 			}else{
 				if(modules[m].switches[sw[1]] == 1){
-					modules[m].switches[sw[1]] = 0;
+					websocket.cts_set_switch([[m,sw[0],1],[m,sw[1],0]]);
 				}else{
-					modules[m].switches[sw[0]] = 0;
+					websocket.cts_set_switch([[m,sw[0],0],[m,sw[1],0]]);
 				}
 			}
-			websocket.cts_set_switch(m,sw[0],modules[m].switches[sw[0]]);
-			websocket.cts_set_switch(m,sw[1],modules[m].switches[sw[1]]);
 		}
 
 		function throw_doubleCrossover(m,sw){
-			if(!ws.connected)
+			if(!ws.connected){
+				console.error("throw_doubleCrossover: Not connected");
 				return;
+			}
 			
 			if(modules[m].switches[sw[0]] == 0 && modules[m].switches[sw[1]] == 0 && modules[m].switches[sw[2]] == 0 && modules[m].switches[sw[3]] == 0){
-				modules[m].switches[sw[0]] = 1;
-				modules[m].switches[sw[3]] = 1;
+				websocket.cts_set_switch([[m,sw[0],1],[m,sw[1],0],[m,sw[2],0],[m,sw[3],1]]);
 			}
 			else if(modules[m].switches[sw[0]] == 1 && modules[m].switches[sw[1]] == 0 && modules[m].switches[sw[2]] == 0 && modules[m].switches[sw[3]] == 1){
-				modules[m].switches[sw[0]] = 0;
-				modules[m].switches[sw[3]] = 0;
-				modules[m].switches[sw[1]] = 1;
-				modules[m].switches[sw[2]] = 1;
+				websocket.cts_set_switch([[m,sw[0],0],[m,sw[1],1],[m,sw[2],1],[m,sw[3],0]]);
 			}
 			else{
-				modules[m].switches[sw[0]] = 0;
-				modules[m].switches[sw[1]] = 0;
-				modules[m].switches[sw[2]] = 0;
-				modules[m].switches[sw[3]] = 0;
+				websocket.cts_set_switch([[m,sw[0],0],[m,sw[1],0],[m,sw[2],0],[m,sw[3],0]]);
 			}
-			websocket.cts_set_switch(m,sw[0],modules[m].switches[sw[0]]);
-			websocket.cts_set_switch(m,sw[1],modules[m].switches[sw[1]]);
-			websocket.cts_set_switch(m,sw[2],modules[m].switches[sw[2]]);
-			websocket.cts_set_switch(m,sw[3],modules[m].switches[sw[3]]);
 		}
 	</script>
 

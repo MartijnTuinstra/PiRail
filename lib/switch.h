@@ -1,80 +1,89 @@
-#define MAX_SW 8
-#define MAX_SWITCH_LINK 5
-#define MAX_SWITCH_PREFFERENCE 5
 
-struct L_Swi_t{
-	struct SegC Adr;
-	int states[5];
-};
+#include "rail.h"
 
-struct P_Swi_t{
-	char type;
-	char state;
-};
+#ifndef _INCLUDE_SWITCH_H
+	#define _INCLUDE_SWITCH_H
 
-typedef struct Swi{
-	int Module;
-	int id;
+	#define MAX_SW 8
+	#define MAX_SWITCH_LINK 5
+	#define MAX_SWITCH_PREFFERENCE 5
 
-	struct Rail_link div;
-	struct Rail_link str;
-	struct Rail_link app;
+	struct L_Swi_t{
+		struct SegC Adr;
+		int states[5];
+	};
 
-	struct SegC DivC;
-	struct SegC StrC;
-	struct SegC AppC;
+	struct P_Swi_t{
+		char type;
+		char state;
+	};
 
-	char state;	//0 = Straight, 1 = Diverging / 0x80 is change bit
-	char default_state;
-	char len;
+	typedef struct Swi{
+		int Module;
+		int id;
 
-	char UAdr; //Unit Address
-	char Out[5]; //Output Addresses
+		struct Rail_link div;
+		struct Rail_link str;
+		struct Rail_link app;
 
-	struct Seg * Detection_Block;
+		struct SegC DivC;
+		struct SegC StrC;
+		struct SegC AppC;
 
-	struct L_Swi_t * L_Swi[MAX_SWITCH_LINK]; //Linked switches
+		char state;	//0 = Straight, 1 = Diverging / 0x80 is change bit
+		char default_state;
+		char len;
 
-	struct P_Swi_t * pref[MAX_SWITCH_PREFFERENCE];//Switch preference
-} Switch;
+		char UAdr; //Unit Address
+		char Out[5]; //Output Addresses
 
-typedef struct Mod{
-	int Module;
-	int id;
-	struct adr Adr;
+		struct Seg * Detection_Block;
 
-	struct Seg * Detection_Block;
+		struct L_Swi_t * L_Swi[MAX_SWITCH_LINK]; //Linked switches
 
-	struct adr mAdr[10];
-	struct adr MAdr[10];
+		struct P_Swi_t * pref[MAX_SWITCH_PREFFERENCE];//Switch preference
+	} Switch;
 
-	struct Rail_link m_Adr[10];
-	struct Rail_link M_Adr[10];
+	typedef struct Mod{
+		int Module;
+		int id;
+		struct adr Adr;
 
-	struct SegC m_AdrC[10];
-	struct SegC M_AdrC[10];
+		struct Seg * Detection_Block;
 
-	char length;
-	char s_length;
-	char state;
-} mswitch;
+		struct adr mAdr[10];
+		struct adr MAdr[10];
 
-struct train;
+		struct Rail_link m_Adr[10];
+		struct Rail_link M_Adr[10];
 
-int throw_switch(struct Swi * S);
+		struct SegC m_AdrC[10];
+		struct SegC M_AdrC[10];
 
-int set_switch(struct Swi * S,char state);
+		char length;
+		char s_length;
+		char state;
+	} msswitch;
 
-int throw_ms_switch(struct Mod * M, char c);
+	struct train;
 
-void Create_Switch(struct SegC Adr,struct SegC App,struct SegC Div,struct SegC Str,int * adr,char state);
+	int throw_switch(struct Swi * S);
 
-void Create_Moduls(int Unit_Adr, struct adr Adr,struct adr mAdr[10],struct adr MAdr[10],char length);
+	int set_switch(struct Swi * S,char state);
 
-int check_Switch_state(struct Rail_link NAdr);
+	int set_multiple_switches(char length, char * data);
 
-int check_Switch(struct Seg * B, int direct, _Bool incl_pref);
+	int throw_ms_switch(struct Mod * M, char c);
 
-int free_Switch(struct Seg *B, int direct);
+	void Create_Switch(struct SegC Adr,struct SegC App,struct SegC Div,struct SegC Str,int * adr,char state);
 
-int free_Route_Switch(struct Seg *B, int direct, struct train * T);
+	void Create_Moduls(int Unit_Adr, struct adr Adr,struct adr mAdr[10],struct adr MAdr[10],char length);
+
+	int check_Switch_state(struct Rail_link NAdr);
+
+	int check_Switch(struct Seg * B, int direct, _Bool incl_pref);
+
+	int free_Switch(struct Seg *B, int direct);
+
+	int free_Route_Switch(struct Seg *B, int direct, struct train * T);
+#endif

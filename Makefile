@@ -22,6 +22,7 @@ $(BIN)/logger.o: $(SRC)/logger.c $(LIB)/logger.h
 	@echo logger.o
 	$(GCC) $(SRC)/logger.c -c -o $(BIN)/logger.o
 
+$(LIB)/train.h: $(LIB)/rail.h $(LIB)/route.h
 $(BIN)/train.o: $(SRC)/train.c $(LIB)/train.h
 	@echo train.o
 	$(GCC) $(SRC)/train.c -c -o $(BIN)/train.o

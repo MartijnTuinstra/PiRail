@@ -1,11 +1,30 @@
 BIN=./bin
 SRC=./src
 LIB=./lib
-ARGS=-std=c99 -lpthread -lssl -lcrypto -lwiringPi -lm -g
+INCLUDE = -I $(LIB) -I $(SRC)
+ARGS=-std=c99 -lpthread -lssl -lcrypto -lwiringPi -lm -g $(INCLUDE)
+
+GCC = gcc $(ARGS)
 
 ifndef VERBOSE
 .SILENT:
 endif
+
+baan: $(BIN)/baan.o $(BIN)/logger.o
+	@echo baan
+	$(GCC) -o baan $(wildcard $(BIN)/*.o)
+
+$(BIN)/baan.o: baan.c $(LIB)/logger.h $(LIB)/train.h
+	@echo baan.o
+	$(GCC) baan.c -c -o $(BIN)/baan.o
+
+$(BIN)/logger.o: $(SRC)/logger.c $(LIB)/logger.h
+	@echo logger.o
+	$(GCC) $(SRC)/logger.c -c -o $(BIN)/logger.o
+
+$(BIN)/train.o: $(SRC)/train.c $(LIB)/train.h
+	@echo train.o
+	$(GCC) $(SRC)/train.c -c -o $(BIN)/train.o
 
 # baan: baan.o $(BIN)/algorithm.o $(BIN)/com.o $(BIN)/encryption.o $(BIN)/modules.o $(BIN)/pathfinding.o $(BIN)/rail.o $(BIN)/signals.o $(BIN)/status.o $(BIN)/switch.o $(BIN)/train_control.o $(BIN)/train_sim.o $(BIN)/trains.o $(BIN)/websocket.o $(BIN)/Z21.o $(BIN)/logger.o
 # 	gcc $(ARGS) -o baan $(wildcard $(BIN)/*.o) baan.o

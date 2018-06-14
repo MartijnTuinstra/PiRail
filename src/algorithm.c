@@ -458,8 +458,8 @@ void procces(struct Seg * B,int debug){
 			if(!BA.blocked && BA.B[0]->train != 0){
 				//Reset
 				BA.B[0]->train = 0;
-			}else if(BA.blocked && BA.B[0]->train != 0 && train_link[BA.B[0]->train] && !train_link[BA.B[0]->train]->Cur_Block){
-				 train_link[BA.B[0]->train]->Cur_Block = BA.B[0];
+			}else if(BA.blocked && BA.B[0]->train != 0 && train_link[BA.B[0]->train] && !train_link[BA.B[0]->train]->Block){
+				 train_link[BA.B[0]->train]->Block = BA.B[0];
 			}
 			if(k > 0 && BA.blocked && !BP.blocked && BN.blocked && BN.B[0]->train && !BA.B[0]->train){
 				//REVERSED
@@ -479,19 +479,19 @@ void procces(struct Seg * B,int debug){
 			if(p > 0 && BP.blocked && BA.blocked && BA.B[0]->train == 0 && BP.B[0]->train != 0){
 				BA.B[0]->train = BP.B[0]->train;
 				if(train_link[BA.B[0]->train])
-					train_link[BA.B[0]->train]->Cur_Block = BA.B[0];
+					train_link[BA.B[0]->train]->Block = BA.B[0];
 			}
 			if(k > 0 && BN.B[0]->type == 'T' && BN.blocked){
 				if(BN.B[0]->train == 0 && BN.B[0]->blocked && BA.blocked && BA.B[0]->train != 0){
 					BN.B[0]->train = BA.B[0]->train;
 					if(train_link[BN.B[0]->train])
-						train_link[BN.B[0]->train]->Cur_Block = BN.B[0];
+						train_link[BN.B[0]->train]->Block = BN.B[0];
 				}else if(BN.length > 1){
 					for(int a = 1;a<BN.length;a++){
 						if(BN.B[a-1]->blocked && BN.B[a]->blocked && BN.B[a]->train == 0 && BN.B[a-1]->train != 0){
 							BN.B[a]->train = BN.B[a-1]->train;
 							if(train_link[BN.B[a]->train])
-								train_link[BN.B[a]->train]->Cur_Block = BN.B[a];
+								train_link[BN.B[a]->train]->Block = BN.B[a];
 							break;
 						}
 					}
@@ -839,7 +839,7 @@ void procces(struct Seg * B,int debug){
 				//If the next 2 blocks are free, accelerate
 				//If the next block has a higher speed limit than the current
 				if(k > 0 && !BN.blocked && BA.B[0]->train != 0 && train_link[BA.B[0]->train] && train_link[BA.B[0]->train]->timer != 2 && train_link[BA.B[0]->train]->timer != 1){
-					if((BN.B[0]->state == GREEN || BN.B[0]->state == RESERVED) && train_link[BA.B[0]->train]->cur_speed < BA.B[0]->max_speed && BN.B[0]->max_speed >= BA.B[0]->max_speed){
+					if((BN.B[0]->state == GREEN || BN.B[0]->state == RESERVED) && train_link[BA.B[0]->train]->cur_spd < BA.B[0]->max_speed && BN.B[0]->max_speed >= BA.B[0]->max_speed){
 						printf("Next block has a higher speed limit (%i > %i)",BN.B[0]->max_speed,BA.B[0]->max_speed);
 						train_speed(BA.B[0],train_link[BA.B[0]->train],BA.B[0]->max_speed);
 					}
@@ -847,14 +847,14 @@ void procces(struct Seg * B,int debug){
 
 				//If the next block has a lower speed limit than the current
 				if(BA.B[0]->train != 0 && train_link[BA.B[0]->train] && train_link[BA.B[0]->train]->timer != 2){
-					if(k > 0 && (BN.B[0]->state == GREEN || BN.B[0]->state == RESERVED) && train_link[BA.B[0]->train]->cur_speed > BN.B[0]->max_speed && BN.B[0]->type != 'T'){
+					if(k > 0 && (BN.B[0]->state == GREEN || BN.B[0]->state == RESERVED) && train_link[BA.B[0]->train]->cur_spd > BN.B[0]->max_speed && BN.B[0]->type != 'T'){
 						printf("Next block has a lower speed limit");
 						train_speed(BN.B[0],train_link[BA.B[0]->train],BN.B[0]->max_speed);
-					}else if(k > 1 && BN.B[0]->type == 'T' && BNN.B[0]->type != 'T' && (BNN.B[0]->state == GREEN || BNN.B[0]->state == RESERVED) && train_link[BA.B[0]->train]->cur_speed > BNN.B[0]->max_speed){
+					}else if(k > 1 && BN.B[0]->type == 'T' && BNN.B[0]->type != 'T' && (BNN.B[0]->state == GREEN || BNN.B[0]->state == RESERVED) && train_link[BA.B[0]->train]->cur_spd > BNN.B[0]->max_speed){
 						printf("Block after Switches has a lower speed limit");
 						train_speed(BNN.B[0],train_link[BA.B[0]->train],BNN.B[0]->max_speed);
-					}else if(train_link[BA.B[0]->train]->cur_speed != BN.B[0]->max_speed && BN.B[0]->type != 'T'){
-						printf("%i <= %i\n",train_link[BA.B[0]->train]->cur_speed,BN.B[0]->max_speed && BN.B[0]->type != 'T');
+					}else if(train_link[BA.B[0]->train]->cur_spd != BN.B[0]->max_speed && BN.B[0]->type != 'T'){
+						printf("%i <= %i\n",train_link[BA.B[0]->train]->cur_spd,BN.B[0]->max_speed && BN.B[0]->type != 'T');
 					}
 				}
 			//
@@ -1301,8 +1301,8 @@ int connect_Algor(struct ConnectList * List){
 	int i = List->length - 1;
 	
 	if(value == total){
-		// printf("algorithm.c:1301 Disabled\n");
-		_SYS->_STATE |= 0x0004;
+		_SYS_change(STATE_Modules_Coupled, 1);
 	}
+	
 	return value;
 }

@@ -91,9 +91,6 @@
 			transform: scaleY(-1);
 		}
 
-		.menu_toggle_btn:hover{
-		}
-
 		.menu {
 			position: absolute;
 			transition: 0.75s;
@@ -434,7 +431,6 @@
 			height: 75%;
 			width:100%;
 			background: #ff9800;
-			transition: 0.2s;
 			position: absolute;
 		}
 
@@ -493,10 +489,743 @@
 			float: right;
 		}
 
+		#settings {
+			width:100%;
+			height: calc(100% - 90px);
+			overflow: hidden;
+			overflow-y: auto;
+		}
+
+		.settings_box {
+			overflow: hidden;
+			min-height: 100%;
+		}
+
+		.set-box {
+		    width: calc(100% - 40px);
+		    padding: 10px;
+		    margin: 10px;
+		    border: 2px solid #1565C0;
+		    border-radius: 10px;
+		    overflow: hidden;
+		}
+
+		.set-box > .header {
+			width: calc(100% + 20px);
+			padding: 10px 0px;
+			padding-top: 10px;
+			margin-top: -10px;
+			margin-left: -10px;
+			background: #1565C0;
+			text-align: center;
+			font-weight: bold;
+			margin-bottom: 10px;
+			color: white;
+		}
+
+		.box-containter {
+			display: flex;
+			flex-wrap: wrap;
+		}
+
+		.set-box .checkbox input[type="checkbox"] {
+			display: inline-block;
+		}
+
+		.set-box .box,
+		.set-box .checkbox,
+		.set-box .buttonbox,
+		.set-box .collapsebox {
+			margin: 10px;
+			border-radius: 5px;
+			background: lightgrey;
+			min-width: calc(50% - 30px);
+			position: relative;
+			overflow:hidden;
+		}
+
+		.set-box .checkbox {
+			height: 30px;
+			vertical-align: middle;
+			padding-left: 10px;
+			line-height: 30px;
+			cursor: pointer;
+		}
+
+		.set-box .checkbox div {
+			line-height: 30px;
+			position: absolute;
+			right: 0px;
+			top: 0px;
+			height: 30px;
+			width: 100%;
+			text-align: center;
+		}
+
+		.set-box .buttonbox, .set-box .collapsebox {
+			height: 30px;
+			vertical-align: middle;
+			line-height: 30px;
+			cursor: pointer;
+			background: lightgrey;
+			font-weight: bold;
+			text-align: center;
+		}
+
+		.set-box .collapsebox.active{
+			height: unset;
+		}
+
+		.set-box .collapsebox div {
+			display: none;
+		}
+
+		.set-box .collapsebox.active div {
+			display: block;
+			border-top: 1px solid grey;
+		}
+
+		.set-box .collapsebox.active div:first-child {
+			margin-top:5px;
+		}
+
+		@media only screen and (max-width: 600px){
+			.set-box .checkbox,
+			.set-box .buttonbox,
+			.set-box .collapsebox {
+				min-width: calc(100% - 30px);
+			}
+		}
+
+		.set-box .box textarea {
+			width: calc(100% - 12px);
+			margin: 5px;
+			height: 200px;
+			white-space: nowrap;
+			overflow: auto;
+			resize: none;
+			margin-bottom: 1px;
+		}
+
+		#log_box {
+			height: 200px;
+			margin: 5px;
+			position: relative;
+			width: calc(100% - 10px);
+			font-family: monospace;
+			overflow-y: auto;
+			overflow-x: auto;
+			white-space: nowrap;
+			background: white;
+		}
+		
+		.box.status-box-container {
+			background: white;
+			display: flex;
+			flex-wrap: wrap;
+			flex-direction: column;
+			max-height:180px;
+		}
+
+		.status-box {
+			float: left;
+			width: calc(25% - 20px);
+			margin: 5px;
+			background: lightgrey;
+			border-radius: 2px;
+			text-align: center;
+			padding: 5px;
+			position: relative;
+			overflow: hidden;
+		}
+
+		@media only screen and (max-width: 800px){
+			.status-box {
+				min-width: calc(50% - 20px);
+			}
+			.box.status-box-container {
+				max-height: 340px;
+			}
+		}
+
+		@media only screen and (min-width: 1000px){
+			.status-box {
+				min-width: calc(50% - 20px);
+			}
+			.box.status-box-container {
+				max-height: 340px;
+			}
+		}
+
+		@media only screen and (min-width: 1600px){
+			.status-box {
+				min-width: calc(25% - 20px);
+			}
+			.box.status-box-container {
+				max-height: 180px;
+			}
+		}
+
+		.status-box:before {
+		    content: "";
+		    position: absolute;
+		    left: 0px;
+		    top: 0px;
+		    height: 100%;
+		    width: 20px;
+		}
+
+		.status-box.green:before{
+		    background: #66BB6A;
+		}
+		.status-box.red:before{
+			background: #EF5350;
+		}
+
+
+
+
+
+
+
+		#train_compositor {
+		    width: calc(100% - 80px);
+		    max-height: calc(100% - 80px);
+		    max-width: 1200px;
+		    padding: 10px;
+		    margin: 30px;
+		    border: 2px solid #1565C0;
+		    border-radius: 10px;
+		    overflow: hidden;
+		    background: white;
+		    position: fixed;
+		    top: 0px;
+		    left: 50%;
+		    box-shadow: 0px 0px 10px 5px lightgrey;
+		    -webkit-transform: translate(calc(-50% - 30px), 0);
+		    transform: translate(calc(-50% - 30px),0);
+		    min-height: 200px;
+		}
+
+		#train_compositor .header {
+			width: calc(100% + 20px);
+			padding: 10px 0px;
+			padding-top: 10px;
+			margin-top: -10px;
+			margin-left: -10px;
+			background: #1565C0;
+			text-align: center;
+			font-weight: bold;
+			margin-bottom: 10px;
+			color: white;
+		}
+
+		#train_compositor .compositor {
+			width: calc(100% - 2px);
+			height: 106px;
+			overflow: hidden;
+			border: 1px solid grey;
+		}
+
+		#train_compositor .compositor .scroller {
+			height: 150%;
+			overflow-x: scroll;
+		}
+
+		#train_compositor .compositor .scroller > div{
+			height: 106px;
+		}
+
+		#train_compositor .compositor .box{
+			height: calc(100% - 6px);
+			float: left;
+			margin: 2px;
+			border: 1px solid lightgrey;
+		}
+
+		#train_compositor .compositor .box img{
+			height: 56px;
+			margin: 2px;
+			cursor: move;
+		}
+
+		#train_compositor .compositor .box .name{
+			height: 14px;
+			padding: 2px;
+			line-height: 14px;
+			width: calc(100% - 4px);
+			background: lightgrey;
+			text-align: center;
+			font-size: smaller;
+			font-weight: bold;
+		}
+
+		#train_compositor .compositor .box .control{
+			height: 14px;
+			padding: 2px;
+			line-height: 14px;
+			width: calc(100% - 4px);
+			background: lightgreen;
+			font-size: smaller;
+			text-align: center;
+			display: flex;
+			justify-content: center;
+		}
+
+		#train_compositor .compositor .box .cbtn{
+			height: 16px;
+			width: 16px;
+			margin: 0px 2px;
+			background: grey;
+			color: white;
+			border-top-left-radius: 2px;
+			border-top-right-radius: 2px;
+		}
+
+		#train_compositor .btn {
+			width: 200px;
+			margin: 5px;
+			padding: 5px;
+			float:left;
+			background: lightgrey;
+			text-align: center;
+			border-radius: 2px;
+		}
+
+		#train_compositor .btn_container {
+			width:440px;
+			margin:20px auto;
+			height:38px;
+		}
+
+		@media only screen and (max-width: 500px){
+			#train_compositor .btn {
+				width: calc(50% - 20px);
+			}
+
+			#train_compositor .btn_container {
+				width: 100%;
+			}
+		}
+
+		#train_compositor .selector {
+			width: 100%;
+			overflow-y: auto;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			flex-wrap: wrap;
+		}
+
+		#train_compositor .list_box {
+			width:200px;
+			height:40px;
+			padding:5px;
+			border-radius:5px;
+			background:lightgrey;
+			border: 1px solid lightgrey;
+			position:relative;
+			margin:10px 5px;
+			float:left;
+			cursor: pointer;
+		}
+
+		#train_compositor .list_box .img {
+			width:70px;
+			height:50px;
+			top:0px;
+			left:0px;
+			position: absolute;
+			border-top-left-radius: 5px;
+			border-bottom-left-radius: 5px;
+			overflow: hidden;
+    		background-size: contain;
+    		background-repeat: no-repeat;
+    		background-position: center; 
+		}
+
+		#train_compositor .list_box .name {
+			left: 70px;
+			top: 7px;
+			width: calc(100% - 70px);
+			position: absolute;
+			text-align: center;
+			font-weight: bold;
+			font-size:small;
+		}
+
+		#train_compositor .list_box .id {
+			left: 70px;
+			bottom: 7px;
+			width: calc(100% - 70px);
+			position: absolute;
+			text-align: center;
+			font-size:small;
+		}
+
+
+
+
+
+		#train_linker {
+		    width: calc(100% - 80px);
+		    max-height: calc(100% - 80px);
+		    max-width: 600px;
+		    padding: 10px;
+		    margin: 30px;
+		    border: 2px solid #1565C0;
+		    border-radius: 10px;
+		    background: white;
+		    position: fixed;
+		    top: 0px;
+		    left: 50%;
+		    box-shadow: 0px 0px 10px 5px lightgrey;
+		    -webkit-transform: translate(calc(-50% - 30px), 0);
+		    transform: translate(calc(-50% - 30px),0);
+		    min-height: 200px;
+		}
+
+		#train_linker .header {
+			width: calc(100% + 20px);
+			padding: 10px 0px;
+			padding-top: 10px;
+			margin-top: -10px;
+			margin-left: -10px;
+			background: #1565C0;
+			text-align: center;
+			font-weight: bold;
+			margin-bottom: 10px;
+			color: white;
+		}
+
+		#train_linker .selected {
+			width: calc(100% - 20px);
+			border: 1px solid grey;
+			margin: 20px auto;
+			position: relative;
+			height: 60px;
+		}
+
+		#train_linker .selected .container {
+			width: 100%;
+			height: 60px;
+			cursor: pointer;
+		}
+
+		#train_linker .selected .selector{
+			width: calc(100% - 2px);
+			border: 2px solid grey;
+			position: absolute;
+			top: 100%;
+			left: -1px;
+			max-height: 290px;
+			background: white;
+			display: none;
+			overflow: overlay;
+		}
+
+		#train_linker .selected .selector.active{
+			display: block;
+		}
+
+		#train_linker .selector > div {
+			width: 100%;
+			height: 60px;
+			position: relative;
+			overflow: hidden;
+			cursor: pointer;
+		}
+
+		#train_linker .selector > div:not(:last-child) {
+			border-bottom: 1px solid grey;
+		}
+
+		#train_linker .selector > div:hover {
+			background: #ddd;
+		}
+
+		#train_linker .selector .imgbox, #train_linker .selected .container .imgbox {
+			width: calc(100% - 12px);
+			height: 30px;
+			border:1px solid lightgrey;
+			top:5px;
+			left:5px;
+			position: absolute;
+			overflow: hidden;
+		}
+
+		#train_linker .selector .imgbox .scroller, #train_linker .selected .container .imgbox .scroller {
+			height: 60px;
+			width: 100%;
+			overflow-x: scroll;
+			overflow-y: hidden;
+		}
+
+		#train_linker .selector .imgbox img, #train_linker .selected .container .imgbox img{
+			height: 30px;
+		}
+
+		#train_linker .selector .textbox, #train_linker .selected .container .textbox {
+			position: absolute;
+			bottom: 0.25em;
+			left: 0.5em;
+			height: 1em;
+			font-weight: bold;
+			width: calc(100% - 0.5em);
+		}
+
+		#train_linker .name {
+			position: absolute;
+			left: 0px;
+		}
+
+		#train_linker .dcc {
+			position: absolute;
+			right: 20%;
+			bottom: 0px;
+			white-space: nowrap;
+			font-size: x-small;
+			vertical-align: text-bottom;
+		}
+
+		#train_linker .btn {
+			width: calc(33% - 20px);
+			margin: 5px;
+			padding: 5px;
+			float:left;
+			background: lightgrey;
+			text-align: center;
+			border-radius: 2px;
+            cursor: pointer;
+		}
+
+		#train_linker .btn_container {
+			width: calc(100% - 40px);
+			max-width:550px;
+			margin:20px auto;
+			height:38px;
+		}
+
+		@media only screen and (max-width: 550px){
+			#train_linker .btn {
+				width: calc(100% - 20px);
+			}
+
+			#train_linker .btn_container {
+				width: 100%;
+			}
+		}
+
+
+
+		#engine_car_creator {
+		    width: calc(100% - 80px);
+		    max-height: calc(100% - 80px);
+		    max-width: 600px;
+		    padding: 10px;
+		    margin: 30px;
+		    border: 2px solid #1565C0;
+		    border-radius: 10px;
+		    background: white;
+		    position: fixed;
+		    overflow-y: overlay;
+		    top: 0px;
+		    left: 50%;
+		    box-shadow: 0px 0px 10px 5px lightgrey;
+		    -webkit-transform: translate(calc(-50% - 30px), 0);
+		    transform: translate(calc(-50% - 30px),0);
+		    min-height: 200px;
+		}
+
+		#engine_car_creator .header {
+			width: calc(100% + 20px);
+			padding: 10px 0px;
+			padding-top: 10px;
+			margin-top: -10px;
+			margin-left: -10px;
+			background: #1565C0;
+			text-align: center;
+			font-weight: bold;
+			margin-bottom: 10px;
+			color: white;
+		}
+
+		#engine_car_creator .field_container {
+			float: left;
+			width: calc(50% - 20px);
+			background: #eee;
+			border-radius: 3px;
+			margin: 5px;
+			padding: 5px;
+		}
+
+		#engine_car_creator .field_container span {
+			font-weight: bold;
+			display: block;
+		}
+
+		#engine_car_creator .field_container input {
+			width: calc(100% - 10px);
+			border: 1px solid grey;
+			padding: 5px;
+			margin-top: 2px;
+			border-radius: 5px;
+		}
+
+		#engine_car_creator .field_container input:not(:first) {
+			margin-bottom: 3px;
+		}
+
+		#engine_car_creator .radio_container {
+			width: 100%;
+		}
+
+		#engine_car_creator .radio_button {
+			width: calc(33% - 20px);
+			padding: 5px;
+			margin: 5px;
+			border-radius: 5px;
+			background: #ddd;
+			text-align: center;
+			font-size: smaller;
+			font-weight: bold;
+			float: left;
+		}
+
+		#engine_car_creator .radio_button input {
+			width: 100%;
+		}
+
+		#engine_car_creator .btn {
+			width: calc(33% - 20px);
+			margin: 5px;
+			padding: 5px;
+			float:left;
+			background: lightgrey;
+			text-align: center;
+			border-radius: 2px;
+			cursor: pointer;
+		}
+
+		#engine_car_creator .btn_container {
+			width: calc(100% - 40px);
+			max-width:550px;
+			margin:20px auto;
+			height:38px;
+		}
+
+		@media only screen and (max-width: 550px){
+			#engine_car_creator .btn {
+				width: calc(100% - 20px);
+			}
+
+			#engine_car_creator .btn_container {
+				width: 100%;
+			}
+		}
+
+		#message_popup {
+			top: -1px;
+			position: fixed;
+			transform: translate(-50%,0);
+			left: 50%;
+			padding-top: 10px;
+			width: calc(100% - 10px);
+			background: white;
+			border: 1px solid grey;
+			padding: 5px;
+			max-width: 350px;
+			box-shadow: 2px 2px 3px 0px #c5c5c5;
+		}
+		@media only screen and (min-width: 362px){
+			#message_popup {
+				border-bottom-left-radius: 5px;
+				border-bottom-right-radius: 5px;
+			}
+		}
+
+		.set-box .messages, #message_popup .messages {
+			width: 100%;
+			max-height: 250px;
+			overflow: auto;
+			display: flex;
+			flex-wrap: wrap;
+		}
+
+		.set-box .messages .message, #message_popup .messages .message {
+			width: calc(100% - 20px);
+			min-width: 200px;
+			padding: 5px;
+			margin: 5px;
+			min-height: 20px;
+			max-height: 55px;
+			background: lightgrey;
+			border-radius: 3px;
+			overflow: hidden;
+			float:left;
+			position: relative;
+		}
+		@media only screen and (min-width: 500px){
+			.set-box .messages .message {
+				width: calc(50% - 20px);
+			}
+		}
+
+		.message .color-box {
+			height: calc(100% + 10px);
+			width: 30px;
+			top: 0px;
+			left: 0px;
+			position: relative;
+			float: left;
+			margin-right: 10px;
+			position: absolute;
+		}
+
+		.message .color-box.info {
+			background: #03A9F4;
+		}
+		.message .color-box.warning {
+			background: #FF9800;
+		}
+		.message .color-box.servere {
+			background: #EF5350;
+		}
+
+		.message .header, .message .content {
+			float: left;
+			position: relative;
+		}
+		.message .header {
+			left: 40px;
+			width: calc(100% - 40px);
+			font-weight: bold;
+		}
+		.message .content {
+			left: 60px;
+			width: calc(100% - 60px);
+		}
+
+
+		.masonry { /* Masonry container */
+			column-count: 2;
+			column-gap: 0;
+		}
+
+		@media only screen and (max-width: 1000px){
+			.masonry {
+				column-count: 1;
+			}
+		}
+
+		.masonry > .masonry-item { /* Masonry bricks or child elements */
+			display: inline-block;
+		}
+
 	</style>
 </head>
 <body>
-	<div id="track" style="height:calc(100% - 90px);display:block"><canvas></canvas></div>
+	<div id="track" style="height:calc(100% - 90px);display:none"><canvas></canvas></div>
 	<div id="trains" style="display:none;">
 		<div class="control controlA">
 			<div class="specs">
@@ -535,17 +1264,17 @@
 	</div>
 	<div id="train_hover" style="display:none">
 		<div class="specs">
-			<div class="img" style="background-image: url('./../trains/2.jpg');"></div>
-			<div class="row name">Koploper</div>
+			<div class="img" style="background-image: url('./../trains/NoTrain.jpg');"></div>
+			<div class="row name"></div>
 			<div class="row control">
-				<span class="type">FA</span>
-				<span class="route">Yard 1</span>
+				<span class="type"></span>
+				<span class="route"></span>
 			</div>
 			<div class="funcs" style="display:flex;width:100%; overflow-x: hidden; flex-wrap: wrap">
-				<div class="func">F1</div>
-				<div class="func">F1</div>
-				<div class="func">F1</div>
-				<div class="func">F1</div>
+				<div class="func"></div>
+				<div class="func"></div>
+				<div class="func"></div>
+				<div class="func"></div>
 			</div>
 		</div>
 		<div style="width: 78px; right:0px; top:0px;position: absolute;height:100%">
@@ -558,171 +1287,224 @@
 	</div>
 	<div id="train_list">
 		<div class="scroller">
-				<div style="width:2270px;height:10px;"><!--content-->
-					<div id="Tr1" class="train_list_box">
-						<div  class="img" style="background-image: url('./../trains/2.jpg');"></div>
-						<span class="id">3513</span>
-						<span class="name">Koploper</span>
+			<div style="width:2270px;height:10px;"><!--content--></div>
+		</div>
+	</div>
+	<div id="route" class="vertical" style="display:none;">
+	</div>
+	<div id="settings">
+		<div class="settings_box masonry">
+			<div class="set-box masonry-item">
+				<div class="header">Broadcastflags</div>
+				<div id="Broadcastflags" class="box-containter">
+					<div class="checkbox bf80">
+						<input type="checkbox"/>
+						<div>X</div>
 					</div>
-					<div id="Tr2" class="train_list_box">
-						<div  class="img" style="background-image: url('./../trains/3.jpg');"></div>
-						<span class="id">1200</span>
-						<span class="name">TGV</span>
+					<div class="checkbox bf40">
+						<input type="checkbox"/>
+						<div>X</div>
 					</div>
-					<div id="Tr3" class="train_list_box">
-						<div  class="img" style="background-image: url('./../trains/4.jpg');"></div>
-						<span class="id">4123</span>
-						<span class="name">Eurostar</span>
+					<div class="checkbox bf20">
+						<input type="checkbox"/>
+						<div>X</div>
 					</div>
-					<div id="Tr4" class="train_list_box">
-						<div  class="img" style="background-image: url('./../trains/5.jpg');"></div>
-						<span class="id">300</span>
-						<span class="name">Hondekop</span>
+					<div class="checkbox bf10">
+						<input type="checkbox"/>
+						<div>Admin</div>
 					</div>
-					<div class="train_list_box">
-						<span class="id">3513</span>
-						<span class="name">Koploper</span>
+					<div class="checkbox bf08">
+						<input type="checkbox"/>
+						<div>Messages</div>
 					</div>
-					<div class="train_list_box">
-						<span class="id">3513</span>
-						<span class="name">Koploper</span>
+					<div class="checkbox bf04">
+						<input type="checkbox"/>
+						<div>Switches</div>
 					</div>
-					<div class="train_list_box">
-						<span class="id">3513</span>
-						<span class="name">Koploper</span>
+					<div class="checkbox bf02">
+						<input type="checkbox"/>
+						<div>Track</div>
 					</div>
-					<div class="train_list_box">
-						<span class="id">3513</span>
-						<span class="name">Koploper</span>
-					</div>
-					<div class="train_list_box">
-						<span class="id">3513</span>
-						<span class="name">Thalys</span>
+					<div class="checkbox bf01">
+						<input type="checkbox"/>
+						<div>Trains</div>
 					</div>
 				</div>
 			</div>
-	</div>
-	<div id="route" class="vertical" style="display:none;">
-		<div class="station_Box">
-			<div class="header">Station A</div>
-			<div class="station">
-				<div class="station_type person"></div>
-				<div class="station_name">Spoor 1</div>
-				<div class="station_DCC_id">#3219</div>
-				<div class="station_state"><small>Approach</small> 02:00</div>
-				<div class="length_1 lengthL lengthR expected"></div>
-			</div>
-			<div class="station">
-				<div class="station_type cargo"></div>
-				<div class="station_name">Spoor 2</div>
-				<div class="station_DCC_id"></div>
-				<div class="station_state">Free</div>
-				<div class="length_2 lengthL"></div>
-				<div class="length_2 lengthR"></div>
-			</div>
-			<div class="station">
-				<div class="station_type storage"></div>
-				<div class="station_name">Spoor 3</div>
-				<div class="station_DCC_id">#3219</div>
-				<div class="station_state">Stopped</div>
-				<div class="length_1 lengthL lengthR set"></div>
-			</div>
-			<div class="station">
-				<div class="station_type person"></div>
-				<div class="station_name">Spoor 4</div>
-				<div class="station_DCC_id">#1201</div>
-				<div class="station_state"><small>Leaving</small> 02:00</div>
-				<div class="length_1 lengthL lengthR leaving"></div>
-			</div>
-			<div class="station">
-				<div class="station_type person"></div>
-				<div class="station_name">Spoor 5</div>
-				<div class="station_DCC_id">#3219</div>
-				<div class="station_state"></div>
-				<div class="length_1 lengthL lengthR"></div>
-			</div>
-		</div>
 
-		<div class="station_Box">
-			<div class="header">Station B</div>
-			<div class="station">
-				<div class="station_type person"></div>
-				<div class="station_name">Spoor 1</div>
-				<div class="station_DCC_id">#3219</div>
-				<div class="station_state"><small>Approach</small> 02:00</div>
-				<div class="length_1 lengthL lengthR expected"></div>
+			<div class="set-box masonry-item">
+				<div class="header">Track layout</div>
+				<div class="box-containter">
+					<div class="buttonbox">
+						Reload
+					</div>
+					<div class="collapsebox" done="websocket.cts_reload_previous(value);">
+						Reload Previous
+						<div class="0">20-05-2018</div>
+						<div class="1">20-05-2018</div>
+						<div class="2">20-05-2018</div>
+						<div class="3">20-05-2018</div>
+						<div class="4">20-05-2018</div>
+						<div class="5">20-05-2018</div>
+						<div class="6">20-05-2018</div>
+						<div class="7">20-05-2018</div>
+					</div>
+					<div class="buttonbox">
+						Add a module
+					</div>
+					<div class="buttonbox">
+						Update / Remove module
+					</div>
+				</div>
 			</div>
-			<div class="station">
-				<div class="station_type cargo"></div>
-				<div class="station_name">Spoor 2</div>
-				<div class="station_DCC_id"></div>
-				<div class="station_state">Free</div>
-				<div class="length_2 lengthL"></div>
-				<div class="length_2 lengthR"></div>
-			</div>
-		</div>
 
-		<div class="station_Box">
-			<div class="header">Station A</div>
-			<div class="station">
-				<div class="station_type person"></div>
-				<div class="station_name">Spoor 1</div>
-				<div class="station_DCC_id">#3219</div>
-				<div class="station_state"><small>Approach</small> 02:00</div>
-				<div class="length_1 lengthL lengthR expected"></div>
+			<div class="set-box masonry-item">
+				<div class="header">Trains / Engines</div>
+				<div class="box-containter">
+					<div class="buttonbox" onclick="Train.comp.open()">
+						Add a Train
+					</div>
+					<div class="buttonbox">
+						Update / Remove a Train
+					</div>
+					<div class="buttonbox" onclick="Train.engine_car_creator.open('E')">
+						Add an Engine
+					</div>
+					<div class="buttonbox">
+						Update / Remove an Engine
+					</div>
+					<div class="buttonbox" onclick="Train.engine_car_creator.open('C')">
+						Add an Car
+					</div>
+					<div class="buttonbox">
+						Update / Remove an Car
+					</div>
+				</div>
 			</div>
-			<div class="station">
-				<div class="station_type cargo"></div>
-				<div class="station_name">Spoor 2</div>
-				<div class="station_DCC_id"></div>
-				<div class="station_state">Free</div>
-				<div class="length_2 lengthL"></div>
-				<div class="length_2 lengthR"></div>
-			</div>
-			<div class="station">
-				<div class="station_type storage"></div>
-				<div class="station_name">Spoor 3</div>
-				<div class="station_DCC_id">#3219</div>
-				<div class="station_state">Stopped</div>
-				<div class="length_1 lengthL lengthR set"></div>
-			</div>
-			<div class="station">
-				<div class="station_type person"></div>
-				<div class="station_name">Spoor 4</div>
-				<div class="station_DCC_id">#1201</div>
-				<div class="station_state"><small>Leaving</small> 02:00</div>
-				<div class="length_1 lengthL lengthR leaving"></div>
-			</div>
-			<div class="station">
-				<div class="station_type person"></div>
-				<div class="station_name">Spoor 5</div>
-				<div class="station_DCC_id">#3219</div>
-				<div class="station_state"></div>
-				<div class="length_1 lengthL lengthR"></div>
-			</div>
-		</div>
 
-		<div class="station_Box">
-			<div class="header">Station B</div>
-			<div class="station">
-				<div class="station_type person"></div>
-				<div class="station_name">Spoor 1</div>
-				<div class="station_DCC_id">#3219</div>
-				<div class="station_state"><small>Approach</small> 02:00</div>
-				<div class="length_1 lengthL lengthR expected"></div>
+			<div class="set-box masonry-item">
+				<div class="header">Status</div>
+				<div id="status_flags" class="box status-box-container">
+					<div class="status-box f8000 green">Z21</div>
+					<div class="status-box f4000 green">Websocket</div>
+					<div class="status-box f2000 red">COM</div>
+					<div class="status-box f1000 green">Client accept</div>
+
+					<div class="status-box f0800 green">.</div>
+					<div class="status-box f0400 green">.</div>
+					<div class="status-box f0200 green">Digital</div>
+					<div class="status-box f0100 green">Running</div>
+
+					<div class="status-box f0080 green">.</div>
+					<div class="status-box f0040 green">.</div>
+					<div class="status-box f0020 green">.</div>
+					<div class="status-box f0010 green">.</div>
+
+					<div class="status-box f0008 green">Modules Coupled</div>
+					<div class="status-box f0004 green">Modules Found</div>
+					<div class="status-box f0002 green">.</div>
+					<div class="status-box f0001 green">Trains Loaded</div>
+				</div>
+				<div class="box">
+					<div id="log_box">
+					</div>
+				</div>
 			</div>
-			<div class="station">
-				<div class="station_type cargo"></div>
-				<div class="station_name">Spoor 2</div>
-				<div class="station_DCC_id"></div>
-				<div class="station_state">Free</div>
-				<div class="length_2 lengthL"></div>
-				<div class="length_2 lengthR"></div>
+
+			<div class="set-box masonry-item">
+				<div class="header">Messages</div>
+				<div class="messages"></div>
 			</div>
 		</div>
 	</div>
-	<div id="settings">
-		test settings
+
+	<div id="train_linker" style="display:none">
+		<div class="header">Train Linker</div>
+
+		<div class="selected">
+			<div class="container">
+				<div data="10">
+					<div class="imgbox"></div>
+				</div>
+			</div>
+			<div class="selector"></div>
+		</div>
+		<div class="btn_container">
+			<div class="btn select">Select</div>
+			<div class="btn close">Discard</div>
+			<div class="btn add_cars">Create new train</div>
+		</div>
+	</div>
+
+	<div id="train_compositor" style="display:none">
+		<div class="header">Train Compositor</div>
+
+		<div class="compositor">
+			<div class="scroller">
+				<div></div>
+			</div>
+		</div>
+		<div class="btn_container">
+			<div class="btn save">Save</div>
+			<div class="btn close">Discard</div>
+			<div class="btn add_cars">Add Car</div>
+			<div class="btn add_engines">Add Engine</div>
+		</div>
+		<div class="cars selector"></div>
+		<div class="engines selector"></div>
+	</div>
+
+	<div id="engine_car_creator" style="display:none">
+		<div class="header">Some Title</div>
+		<div style="width: 100%; float: left; display: flex; flex-wrap: wrap;">
+			<div class="field_container" style="width: 100%;">
+				<span>Images</span>
+				<div style="width: 140px;height: 100px;margin: auto;border-top-left-radius: 5px;border-bottom-left-radius: 5px;overflow: hidden;background-size: cover;background-position: center;background-image: url(./../trains/6.png);"></div>
+				<input type="file" id="icon"/>
+				<div style="margin: auto; height: 50px; max-width: 100%;">
+					<img src="./../trains/cars/traxx.png" style="height: 100%;">
+				</div>
+				<input type="file" id="img"/>
+			</div>
+			<div class="field_container name">
+				<span>Name</span>
+				<input type="text" placeholder="A name for the car"/>
+			</div>
+			<div class="field_container nr">
+				<span>Nr</span>
+				<input type="number" placeholder="Reference number"/>
+			</div>
+			<div class="field_container dcc">
+				<span>DCC address</span>
+				<input type="number" placeholder="DCC id"/>
+			</div>
+			<div class="field_container length">
+				<span>Length</span>
+				<input type="number" step="0.1" placeholder="length in cm"/>
+			</div>
+			<div class="field_container speed">
+				<span>Max speed</span>
+				<input type="number" placeholder="max speed in km/h"/>
+			</div>
+			<div class="field_container type">
+				<span>Type</span>
+				<div class="radio_container">
+					<div class="radio_button"><input name="car_type" type="radio"/>Passenger</div>
+					<div class="radio_button"><input name="car_type" type="radio"/>Both</div>
+					<div class="radio_button"><input name="car_type" type="radio"/>Cargo</div>
+				</div>
+			</div>
+		</div>
+
+		<div class="btn_container">
+			<div class="btn save">Save</div>
+			<div class="btn save_new">Save + New</div>
+			<div class="btn close">Discard</div>
+		</div>
+	</div>
+
+	<div id="message_popup">
+		<div class="messages"></div>
 	</div>
 
 	<div style="position: absolute;right: 0px;bottom: 0px;height: 50px;width: 50px;background: red" onClick='window.location.replace("");'></div> <!-- TODO remove -->
@@ -745,6 +1527,10 @@
 	<div class="menu_btn menu_toggle_btn" style="">
 		<img src="./img/arrow_up.png"/>
 	</div>
+
+    <script src="./scripts/Sortable.js">
+    </script>
+
 	<script type="text/javascript">
 		var Emergency = {
 			enabled: false,
@@ -752,8 +1538,11 @@
 			timer:0,
 			start: function(type,w=true){
 				if(this.enabled == false){
+					if(window.navigator.vibrate != undefined){
+						window.navigator.vibrate([100,50,100,50,100]);
+					}
 					$('.Emergency_btn').off("click");
-					$('.Emergency_btn').on("click",function(){Emergency.stop(type)});
+					$('.Emergency_btn').on("click",function(){Emergency.stop()});
 					if(w == true && ws.connected)
 						websocket.cts_Emergency();
 					this.timer = setInterval(function(){
@@ -775,17 +1564,19 @@
 					this.enabled = true;
 				}
 			},
-			stop: function(type,w=true){
+			stop: function(w=true){
 				if(this.enabled){
 					this.enabled = false;
-					if(w == true && ws.connected)
+					if(w == true && ws.connected){
+						console.warn("RESEND");
 						websocket.cts_release_Emergency();
+					}
 					$('.Emergency_btn').off("click");
 					$('.Emergency_btn').on("click",function(){Emergency.start("Em")});
 					clearInterval(this.timer);
 					$('.Emergency_btn').css('background','#F44336');
 
-					if(this.type == "Es"){
+					if($('.Emergency_btn').hasClass("Emergency_Es")){
 						$('.Emergency_btn').toggleClass("Emergency_Es");
 					}else{
 						$('.Emergency_btn').toggleClass("Emergency_Em");
@@ -838,7 +1629,7 @@
 					$('#route').toggleClass("horizontal");
 				}
 
-				$('#track, #trains, #route').css("height",this.window_height+"px");
+				$('#track, #trains, #route, #settings').css("height",this.window_height+"px");
 
 				this.open_window();
 			},
@@ -943,13 +1734,15 @@
 						$('#settings').css("display","block");
 					}
 
+					$('#track, #trains, #route').css("height",this.window_height+"px");
+
 					Canvas.resize()
 
 					return;
 				}
 				else if(this.window_type == 2){
 					//Portrait Tablet
-					$('#trains, #route, #route').css("display","none");
+					$('#trains, #route, #route, #settings').css("display","none");
 					$('#track').css("display","block");
 					if(w == "trains"){
 						this.open.trains = !this.open.trains;
@@ -1035,6 +1828,9 @@
 						$('#track').css("display","none");
 						$('#settings').css("display","block");
 					}
+					else{
+						$("#track").css("display","block");
+					}
 					
 
 					Canvas.resize();
@@ -1045,11 +1841,29 @@
 		}
 
 		var Train = {
-			data: [
+			trains: [], //Train compositions
+			engines: [
+				// {name:"TRAXX",dcc:300,img:"6.png",icon:"cars/traxx.png"},
+				// {name:"TRAXX",dcc:301,img:"6.png",icon:"cars/traxx.png"},
+				// {name:"ns 1800",dcc:1800,img:"cars/ns1800.png",icon:"cars/ns1800.png"},
+				// {name:"ns 1700",dcc:1700,img:"cars/ns1700.png",icon:"cars/ns1700.png"},
+				// {name:"Koploper 4",dcc:1252,img:"cars/icm_4_.png",icon:"cars/icm_4.png"},
+				// {name:"Koploper 3",dcc:1253,img:"cars/icm_3_.png",icon:"cars/icm_3.png"},
+				// {name:"ICE3",dcc:100,img:"cars/ice.png",icon:"cars/ice.png"},
+				// {name:"Thalys",dcc:10,img:"cars/thalys.png",icon:"cars/thalys.png"}
+			],
+			cars: [
+				// {name:"ICR 2de klas",nr:13333,img:"cars/ns_2nd_class.png",icon:"cars/ns_2nd_class.png"},
+				// {name:"ICR 1de klas",nr:13334,img:"cars/ns_1nd_class.png",icon:"cars/ns_1nd_class.png"},
+				// {name:"DB",nr:10243,img:"cars/db.png",icon:"cars/db.png"}
+			],
+				
+			engine: [
 				{name:"Koploper",dcc:3515,id:2,speed:100,max_speed:160,route:{S:-1,P:0},funcs:[{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0}]},
 				{name:"TGV",     dcc:1200,id:3,speed:100,max_speed:350,route:{S:-1,P:0},funcs:[{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0}]},
 				{name:"Eurostar",dcc:4123,id:4,speed:100,max_speed:300,route:{S:-1,P:0},funcs:[{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0}]},
-				{name:"Hondekop",dcc:300, id:5,speed:80, max_speed:140,route:{S:-1,P:0},funcs:[{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0}]}],
+				{name:"Hondekop",dcc:300, id:5,speed:80, max_speed:140,route:{S:-1,P:0},funcs:[{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0}]},
+				{name:"TRAXX",dcc:301, id:6,speed:80, max_speed:160,route:{S:-1,P:0},funcs:[{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0},{t:'P',a:0}]}],
 			selected: [],
 			select: function(id){
 				var n = false;
@@ -1081,15 +1895,17 @@
 
 				if(Menu.window_type != 3){
 					if(this.selected[0] != undefined){
-						var train = this.data[this.selected[0]];
+						var train = this.trains[this.selected[0]];
 						$('#trains .controlA .name').text(train.name);
-						$('#trains .controlA .specs .img').css('background-image',"url('./../trains/"+train.id+".jpg'");
+						$('#trains .controlA .specs .img').css('background-image',"url('./../trains/"+train.img+"'");
+						$('#trains .controlA .control .type').text(((train.control & 0xC0) == 0)?"Manual":(((train.control & 0xC0) == 0x40)?"Semi-auto":"Full-auto"));
 					}
 
 					if(this.selected[1] != undefined){
-						var train = this.data[this.selected[1]];
+						var train = this.trains[this.selected[1]];
 						$('#trains .controlB .name').text(train.name);
-						$('#trains .controlB .specs .img').css('background-image',"url('./../trains/"+train.id+".jpg'");
+						$('#trains .controlB .specs .img').css('background-image',"url('./../trains/"+train.img+"'");
+						$('#trains .controlB .control .type').text(((train.control & 0xC0) == 0)?"Manual":(((train.control & 0xC0) == 0x40)?"Semi-auto":"Full-auto"));
 					}
 
 					this.update();
@@ -1110,8 +1926,12 @@
 					$('#train_hover').css("left",(pos.left-20)+"px"); //272 - 252
 					$('#train_hover').css("bottom","120px")
 
-					$('#train_hover .specs .img').css('background-image',"url('./../trains/"+this.data[this.selected[0]].id+".jpg'");
-					$('#train_hover .specs .name').text(this.data[this.selected[0]].name);
+					var train = this.trains[this.selected[0]];
+
+					$('#train_hover .specs .img').css('background-image',"url('./../trains/"+train.img+"'");
+					$('#train_hover .specs .name').text(train.name);
+					$('#train_hover .control .type').text(((train.control & 0xC0) == 0)?"M":(((train.control & 0xC0) == 0x40)?"SA":"FA"));
+					$('#train_hover .control .route').text((train.route.S >= 0)?(train.route.S + ":" + train.route.P):"No Route");
 
 					this.update();
 				}
@@ -1120,12 +1940,321 @@
 				$('.train_list_box').off("click");
 				$('#train_list .scroller').empty();
 
+				this.comp.init();
+				this.linker.init();
+				this.engine_car_creator.init();
+
+				this.update_list();
+			},
+			resize: function(){
+				$('#train_compositor .selector').css("max-height",(window.innerHeight - 80 - 38 - 106 - 38 - 40)+"px");
+			},
+			setRoute: function(dcc,from,to){
+				console.warn("Implement: Train set route:",dcc,from,to);
+			},
+			route: function(tid,DestM,DestS){
+				console.warn("Implement: Train "+tid+" has a route to "+DestM+"-"+DestS);
+			},
+			import: function(data){
+				console.warn("Implement")
+			},
+
+			comp:{
+				index: 0,
+				list: [],
+				init: function(){
+					$('#train_compositor .selector').hide();
+
+					$('#train_compositor .btn.add_cars').on("click",this.toggleCar);
+					$('#train_compositor .btn.add_engines').on("click",this.toggleEngines);
+					$('#train_compositor .btn.save').on("click",this.save);
+					$('#train_compositor .btn.close').on("click",this.close);
+
+                    this.update_list();
+
+					$('#train_compositor .compositor .scroller > div').empty();
+				},
+
+                update_list: function(){
+                    $('#train_compositor .engines.selector, #train_compositor .cars.selector').empty();
+                    $.each(Train.engines, function(i,v){
+                        text =  '<div index="'+i+'" class="list_box">';
+                        text += '<div  class="img" style="background-image: url(\'./../trains/'+v.img+'\');"></div>'
+                        text += '<div class="name">'+v.name+'</div>';
+                        text += '<div class="id">'+v.dcc+'</div>';
+                        text += '</div>';
+
+                        $('#train_compositor .engines.selector').append(text);
+                    });
+
+                    $.each(Train.cars, function(i,v){
+                        text =  '<div index="'+i+'" class="list_box">';
+                        text += '<div  class="img" style="background-image: url(\'./../trains/'+v.img+'\');"></div>'
+                        text += '<div class="name">'+v.name+'</div>';
+                        text += '<div class="id">'+v.nr+'</div>';
+                        text += '</div>';
+
+                        $('#train_compositor .cars.selector').append(text);
+                    });
+
+                    $('#train_compositor .cars .list_box, #train_compositor .engines .list_box').on("click",this.add);
+                },
+
+				toggleCar: function(){
+					if($('#train_compositor .cars.selector').css("display") == "none"){
+						$('#train_compositor .cars.selector').show();
+						$('#train_compositor .engines.selector').hide();
+					}
+					else{
+						$('#train_compositor .cars.selector').hide();
+					}
+				},
+				toggleEngines: function(){
+					if($('#train_compositor .engines.selector').css("display") == "none"){
+						$('#train_compositor .engines.selector').show();
+						$('#train_compositor .cars.selector').hide();
+					}
+					else{
+						$('#train_compositor .engines.selector').hide();
+					}
+				},
+				add: function(evt){
+					var index = parseInt($(evt.currentTarget).attr("index"));
+					var text = "";
+					if($(evt.currentTarget).parent().hasClass("engines")){
+						console.log("Add engine");
+						text = '<div class="box new b'+Train.comp.index+'">' +
+							   '<img src="./../trains/'+Train.engines[index].icon+'"/>' +
+							   '<div class="name">'+Train.engines[index].name+' - '+Train.engines[index].dcc+'</div>' +
+							   '<div class="control">' +
+							   '<div class="cbtn l">&lt;</div>' +
+							   '<div class="cbtn b">b</div>' +
+							   '<div class="cbtn r">&gt;</div>' +
+							   '</div></div>';
+						Train.comp.list.push({t:"E",i:Train.comp.index});
+					}
+					else{
+						console.log("Add car");
+						text = '<div class="box new b'+Train.comp.index+'">' +
+							   '<img src="./../trains/'+Train.cars[index].icon+'"/>' +
+							   '<div class="name">'+Train.cars[index].name+'</div>' +
+							   '<div class="control">' +
+							   '<div class="cbtn l">&lt;</div>' +
+							   '<div class="cbtn b">b</div>' +
+							   '<div class="cbtn r">&gt;</div>' +
+							   '</div></div>';
+						Train.comp.list.push({t:"C",i:Train.comp.index});
+					}
+					Train.comp.index++;
+					$('#train_compositor .compositor .scroller > div').append(text);
+
+					var width_sum = 0;
+					$.each($('#train_compositor .compositor img'),function(){
+						if($(this).width() < 20){
+							width_sum += 200
+						}
+						width_sum += $(this).width()
+						console.log($(this).width())
+						width_sum += 10
+					});
+
+					$('#train_compositor .compositor .scroller > div').css("width",width_sum + "px");
+
+
+					$('#train_compositor .compositor .box.new .cbtn.b').on("click",Train.comp.del);
+
+
+					$('#train_compositor .compositor .box.new').toggleClass("new");
+				},
+				del: function(evt){
+					Train.comp.list[parseInt($(evt.currentTarget).parent().parent()[0].classList[1].slice(1))] = undefined;
+					$('.cbtn',$(evt.currentTarget).parent().parent()).off();
+					$(evt.currentTarget).parent().parent().remove();
+				},
+				open: function(){
+					$('#train_compositor').show();
+					Train.comp.list = [];
+					$('#train_compositor .compositor .scroller > div').empty();
+				},
+				save: function(evt){
+					console.warn("Implement Train compositor save");
+					$('#train_compositor').hide();
+				},
+				close: function(evt){
+					$('#train_compositor').hide();
+				}
+			},
+
+			linker:{
+				message: undefined,
+
+				init: function(){
+					$('#train_linker .selected .container').on("click",function(){
+						$('#train_linker .selected .selector').toggleClass("active");
+					});
+
+                    this.update_list();
+
+                    $('#train_linker .btn.select').on("click", this.done);
+                    $('#train_linker .btn.close').on("click", this.close);
+                    $('#train_linker .btn.add_cars').on("click", Train.comp.open);
+				},
+
+                update_list: function(){
+
+                    $('#train_linker .selected .selector').empty();
+
+                    Train.trains.forEach(function(e,i){
+                        text = '<div train="'+i+'">' +
+                               '<div class="imgbox"><div class="scroller"><div style="white-space: nowrap;">';
+
+                        e.link.forEach(function(e2,i2){
+                            if((String.fromCharCode(e2[0]) == "E" || String.fromCharCode(e2[0]) == "e") && Train.engines[e2[1]] != undefined){
+                                text += '<img src="./../trains/'+Train.engines[e2[1]].icon+'"/>';
+                            }else if(Train.cars[e2[1]] != undefined){
+                                text += '<img src="./../trains/'+Train.cars[e2[1]].icon+'"/>';
+                            }
+                        })
+                                
+                        text += '</div></div></div>'+
+                                '<div class="textbox"><span class="name">'+e.name+'</span><span class="dcc">'+e.dcc+'</span></div>'+
+                                '</div>'
+
+                        $('#train_linker .selected .selector').append(text);
+                    });
+
+                    Train.engines.forEach(function(e,i){
+                        text = '<div engine="'+i+'">' +
+                            '<div class="imgbox"><div class="scroller"><div style="white-space: nowrap;">'+
+                                '<img src="./../trains/'+e.icon+'"/>'+
+                            '</div></div></div>'+
+                            '<div class="textbox"><span class="name">&nbsp;&nbsp;&nbsp;'+e.name+'</span><span class="dcc">'+e.dcc+'</span></div>'+
+                        '</div>'
+
+                        $('#train_linker .selected .selector').append(text);
+                    });
+
+                    $('#train_linker .selected .selector > div').on("click", this.select);
+
+                },
+
+                select: function(evt){
+                    train = $(evt.currentTarget).clone();
+                    $('#train_linker .selected .container').off();
+                    $('#train_linker .selected .container').remove();
+                    $('#train_linker .selected').prepend(train);
+                    $('#train_linker .selected > div:first-child').toggleClass("container");
+                    $('#train_linker .selected .selector').toggleClass("active");
+
+                    $('#train_linker .selected .container').on("click",function(){
+                        $('#train_linker .selected .selector').toggleClass("active");
+                    });
+                },
+
+                done: function(){
+                    console.log(parseInt($('#train_linker .selected .container').attr("train")))
+                    console.log(parseInt($('#train_linker .selected .container').attr("engine")));
+                    Train.linker.close();
+                },
+
+                open: function(msg){
+                	this.message = msg.id;
+					$('#train_linker .header').html("Train "+msg.data[0]+" on "+msg.data[1] + ":" + msg.data[2]);
+
+                    $('#train_linker .selected .container').empty();
+                    $('#train_linker').show();
+                },
+
+                close: function(){
+                    console.log("CLOSE linker")
+                    $('#train_linker').hide();
+                }
+			},
+
+			engine_car_creator:{
+				init: function(){
+                    $('#engine_car_creator .btn.save').on("click", this.done);
+                    $('#engine_car_creator .btn.save_new').on("click", this.done_n);
+                    $('#engine_car_creator .btn.close').on("click", this.close);
+				},
+
+				upload: function(){
+					var file = $("#file1").get(0).files[0];
+					var formdata = new FormData();
+					formdata.append("file1", file);
+					formdata.append("name", name);
+					var ajax = new XMLHttpRequest();
+					ajax.addEventListener("load", function(){}, false);
+					ajax.addEventListener("error", function(){}, false);
+					ajax.addEventListener("abort", function(){}, false);
+					ajax.open("POST", "./train_img_upload.php");
+					ajax.send(formdata);
+				},
+
+				done: function(close = true){
+
+					
+					if(close && close.target == undefined){
+						this.close();
+					}
+				},
+				done_n: function(){
+					this.done(false);
+					// some_extra_shit
+				},
+				close: function(){
+					$('#engine_car_creator').hide();
+				},
+				open: function(type){
+					$('#engine_car_creator').show();
+
+					if(type == "E"){
+						$('#engine_car_creator .field_container.nr').hide();
+						$('#engine_car_creator .field_container.dcc').show();
+					}
+					else{
+						$('#engine_car_creator .field_container.nr').show();
+						$('#engine_car_creator .field_container.dcc').hide();
+					}
+
+				}
+			},
+
+			// System Events
+			update_list: function(){
+				$('#train_list .train_list_box').off("click");
+				$('#train_list .slider_containter').off("mousedown touchstart");
+
+                var notFirst;
+
+                Train.trains.forEach(function(e,i){
+                    if(Train.trains[i].dcc == "" || Train.trains[i].dcc == undefined){
+                    	Train.trains[i].dcc = "";
+                        notFirst = false;
+                        e.link.forEach(function(e2,i2){
+                            if(String.fromCharCode(e2[0]) == "E" || String.fromCharCode(e2[0]) == 'e'){
+                                if(notFirst == true){
+                                    Train.trains[i].dcc += ", "
+                                }
+	                            if(e.img == "" || e.img == undefined){
+	                            	Train.trains[i].img = Train.engines[ e2[1] ].img;
+	                            }
+                                notFirst = true;
+                                Train.trains[i].dcc += Train.engines[ e2[1] ].dcc;
+                            }
+                        });
+                    }
+                });
+
 				var content = "";
 				var width = 0;
 
-				$.each(this.data,function(i,v){
+				$.each(this.trains,function(i,v){
+					if(v.use == false){
+						return true;
+					}
 					content += '<div id="Tr'+i+'" class="train_list_box">' +
-								'<div  class="img" style="background-image: url(\'./../trains/'+v.id+'.jpg\');"></div>' +
+								'<div  class="img" style="background-image: url(\'./../trains/'+v.img+'\');"></div>' +
 								'<span class="id">'+v.dcc+'</span>' +
 								'<span class="name">'+v.name+'</span>' +
 							   '</div>';
@@ -1140,7 +2269,6 @@
 					Train.select(parseInt(evt.currentTarget.id.slice(2)));
 				});
 
-
 				$('.slider_containter').on("mousedown touchstart",function(evt){
 					Train.slider(evt);
 					$('.slider_containter').on("mousemove touchmove",Train.slider);
@@ -1150,21 +2278,10 @@
 					});
 				});
 			},
-			setRoute: function(dcc,from,to){
-				console.warn("Implement: Train set route:",dcc,from,to);
-			},
-			route: function(tid,DestM,DestS){
-				console.warn("Implement: Train "+tid+" has a route to "+DestM+"-"+DestS);
-			},
-			import: function(data){
-				console.warn("Implement")
-			},
-
-			// System Events
 
 			update: function(data){
 				if(Menu.window_type != 3){
-					var train_data = this.data[this.selected[0]];
+					var train_data = this.trains[this.selected[0]];
 					if(train_data != undefined){
 						$('#trains .controlA .slider').css('height',(train_data.speed/train_data.max_speed)*100+"%");
 						$('#trains .controlA .slider_value').text(Math.round(train_data.speed));
@@ -1175,7 +2292,7 @@
 					}
 
 
-					var train_data = this.data[this.selected[1]];
+					var train_data = this.trains[this.selected[1]];
 					if(train_data != undefined){
 						$('#trains .controlB .slider').css('height',(train_data.speed/train_data.max_speed)*100+"%");
 						$('#trains .controlB .slider_value').text(Math.round(train_data.speed));
@@ -1186,7 +2303,7 @@
 					}
 				}
 				else{
-					var train_data = this.data[this.selected[0]]
+					var train_data = this.trains[this.selected[0]]
 					$('#train_hover .slider').css('height',(train_data.speed/train_data.max_speed)*100+"%");
 					$('#train_hover .slider_value').text(Math.round(train_data.speed));
 
@@ -1214,27 +2331,27 @@
 					var procent = ((clickY + $(evt.currentTarget).height())/$(evt.currentTarget).height())
 					procent = (procent < 0)?0:((procent > 1)?1:procent);
 					if($(evt.currentTarget).hasClass("sliderB")){
-						Train.data[Train.selected[1]].speed = procent*Train.data[Train.selected[1]].max_speed;
+						Train.trains[Train.selected[1]].speed = procent*Train.trains[Train.selected[1]].max_speed;
 					}
 					else{
-						Train.data[Train.selected[0]].speed = procent*Train.data[Train.selected[0]].max_speed;
+						Train.trains[Train.selected[0]].speed = procent*Train.trains[Train.selected[0]].max_speed;
 					}
 				}
 				if($(evt.currentTarget).hasClass("sliderB")){
 					if(evt.type != "touchmove" && evt.type != "mousemove"){
-						websocket.cts_train_speed(Train.data[Train.selected[1]].id, 0, Math.round((Train.data[Train.selected[1]].speed/Train.data[Train.selected[1]].max_speed)*127));
+						websocket.cts_train_speed(Train.trains[Train.selected[1]].id, 0, Math.round((Train.trains[Train.selected[1]].speed/Train.trains[Train.selected[1]].max_speed)*127));
 					}
 				}
 				else{
 					if(evt.type != "touchmove" && evt.type != "mousemove"){
-						websocket.cts_train_speed(Train.data[Train.selected[0]].id, 0, Math.round((Train.data[Train.selected[0]].speed/Train.data[Train.selected[0]].max_speed)*127));
+						websocket.cts_train_speed(Train.trains[Train.selected[0]].id, 0, Math.round((Train.trains[Train.selected[0]].speed/Train.trains[Train.selected[0]].max_speed)*127));
 					}
 				}
 				Train.update();
 
 				return false;
 			},
-			hide: function(evt){
+			hide: function(event){
 				if(!$(event.target).closest('#train_hover').length && !$(event.target).hasClass("train_list_box") && !$(event.target.parentNode).hasClass("train_list_box")) {
 			        if($('#train_hover').is(":visible")) {
 			            $('#train_hover').hide();
@@ -1334,23 +2451,100 @@
 
 		var Messages = {
 			open_messages: [],
+			popup_messages: [],
+			message_counter: 0,
 
 			add: function(msg){
-				console.warn("add Messages.add()");
-				return;
+
+				var id = msg.id;
+				this.open_messages[id] = msg;
 
 				//Check type
 				if(msg.type == 0){ //New train
 					msg.data[0] // Folow ID
 					msg.data[1] // Found on module
 					msg.data[2] // and Section
+					text = '<div class="message mID'+id+'">'+
+							'<div class="color-box warning"></div>'+
+							'<div class="header">A new Train</div>'+
+							'<div class="content">Near '+msg.data[1]+':'+msg.data[2]+'</div>'+
+						   '</div>'
+
+					$('#settings .messages').append(text);
+					this.show(text,id);
+
+					$('#settings .messages .mID'+id+', #message_popup .messages .mID'+id).css("cursor", "pointer");
+					$('#settings .messages .mID'+id+', #message_popup .messages .mID'+id).on("click", function(evt){
+						Train.linker.open(msg);
+						Messages.hide(id);
+					});
+
+					setTimeout(function(){Messages.hide(id);},5000);
 				}
-				else if(msg.type == 0x20){ //Split train
+				else if(msg.type == 0x20){ //Split train in yard
 					msg.data[0] // Folow ID
 					msg.data[1] // Found A on module
 					msg.data[2] // and Section
 					msg.data[3] // Found B on module
 					msg.data[4] // and Section
+					text = '<div class="message mID'+id+'">'+
+							'<div class="color-box warning"></div>'+
+							'<div class="header">Train has split in a yard</div>'+
+							'<div class="content">Near '+msg.data[1]+':'+msg.data[2]+'</div>'+
+						   '</div>'
+
+					$('#settings .messages').append(text);
+					this.show(text,id);
+					setTimeout(function(){Messages.hide(id);},5000);
+				}
+				else if(msg.type == 0x40){ //Split train on mainline
+					msg.data[0] // Folow ID
+					msg.data[1] // Found A on module
+					msg.data[2] // and Section
+					msg.data[3] // Found B on module
+					msg.data[4] // and Section
+					text = '<div class="message mID'+id+'">'+
+							'<div class="color-box servere"></div>'+
+							'<div class="header">Train has split on main line</div>'+
+							'<div class="content">Near '+msg.data[1]+':'+msg.data[2]+'</div>'+
+						   '</div>'
+
+					$('#settings .messages').append(text);
+					this.show(text,id);
+				}
+				else if(msg.type == 0xFF){ // Disconnected
+					text = '<div class="message mID'+id+'">'+
+							'<div class="color-box servere"></div>'+
+							'<div class="header">Reconnecting</div>'+
+							'<div class="content"></div>'+
+						   '</div>'
+
+					$('#settings .messages').append(text);
+					this.show(text,id);
+				}
+                else{
+                    console.warn("add Messages.add() type "+msg.type);
+                }
+				if(msg[0] == 0){
+					setTimeout(function(){Messages.hide(id);},5000);
+				}
+
+				return id;
+			},
+
+			show: function(text,id){
+				$('#message_popup').show();
+				this.popup_messages.push(id);
+				$('#message_popup .messages').append(text);
+			},
+
+			hide: function(id){
+				if(this.popup_messages.indexOf(id) >= 0){
+					console.warn("HIDE");
+					$('#message_popup .messages .mID'+id).remove();
+					this.popup_messages.pop(this.popup_messages.indexOf(id));
+					if(this.popup_messages.length == 0)
+						$('#message_popup').hide();
 				}
 			},
 
@@ -1359,11 +2553,18 @@
 			},
 
 			remove: function(msg_id){
-				console.warn("add Messages.remove()");
+				this.open_messages.pop(this.open_messages.indexOf(msg_id));
+				$('#message_popup .messages .mID'+msg_id.id).off();
+
+				$('#settings .messages .message.mID'+msg_id.id).remove();
+				this.hide(msg_id);
 			},
 
 			clear: function(){
-				open_messages = [];
+				this.open_messages.forEach(function(element){
+					Messages.remove(element);
+				});
+				this.open_messages = [];
 			}
 		}
 
@@ -1380,22 +2581,107 @@
 
 		$('#route .station').on("click",function(evt){Stations.click(evt)});
 
+		$('#settings .set-box .collapsebox').on("click",function(evt){
+			if(!$(evt.target).hasClass("collapsebox")){
+				// console.log(evt);
+				var value = parseInt(evt.target.className);
+				eval(evt.currentTarget.getAttribute("done"));
+			}
+			$(evt.currentTarget).toggleClass('active');
+		});
+
 		$(document).on("keydown",function(evt){
+			if($(evt.target).is("textarea") || $(evt.target).is("input"))
+				return
 			if(evt.key == "s" || evt.key == "S"){
-				Emergency.start_EM();
+				Emergency.start('Em');
 			}
 		});
 
-		alert(window.innerWidth+","+window.innerHeight)
+		//alert(window.innerWidth+","+window.innerHeight)
 
 		$(document).resize(function(){
 			Menu.resize();
+			Train.resize();
 		});
 
+		var container = $("#train_compositor .compositor .scroller > div")[0];
+		var sort = Sortable.create(container, {
+		  animation: 150, // ms, animation speed moving items when sorting, `0` - without animation
+		  handle: 'img',
+		  draggable: ".box", // Specifies which items inside the element should be sortable
+		  onUpdate: function (evt/**Event*/){
+		     var item = evt.item; // the current dragged HTMLElement
+		     console.log(evt);
+		  }
+		});
+
+		log_lines = [];
+
+		function log_data(data){
+			//$('#log_box').html(data.replace(/(\n)+/g,'<br/>'));
+			// lines = data.split(/(\n)/);
+			lines = data.split("\n");
+			for(var i = log_lines.length; i < lines.length; i++){
+				if(lines[i] == ""){
+					continue;
+				}
+				if(/CRITICAL/.test(lines[i])){
+					lines[i] = '<pre style="color: red;font-weight: bold;">'+lines[i]+'</pre>';
+				}
+				else if(/ERROR/.test(lines[i])){
+					lines[i] = '<pre style="color: red">'+lines[i]+'</pre>';
+				}
+				else if(/WARNING/.test(lines[i])){
+					lines[i] = '<pre style="color: orange">'+lines[i]+'</pre>';
+				}
+				else{
+					lines[i] = '<pre>'+lines[i]+'</pre>';
+				}
+				$('#log_box').append(lines[i]);
+				log_lines.push(lines[i]);
+			}
+
+			if((document.getElementById('log_box').scrollTop - document.getElementById('log_box').scrollHeight + document.getElementById('log_box').clientHeight) > -10){
+				document.getElementById('log_box').scrollTo(0,document.getElementById('log_box').scrollHeight+document.getElementById('log_box').clientHeight);
+			}
+		}
+
+
 		$(document).ready(function(){
+			Canvas.init();
+			if(window.innerWidth < 764){
+				Canvas.rescale(0.5);
+			}
+
 			Train.init();
 			Stations.init();
 			Menu.init();
+			Train.resize();
+
+			Canvas.calc_dotmatrix();
+
+			Canvas.dimensions.content_width = 1300;
+			Canvas.dimensions.content_height= 460;
+			Canvas.dimensions.box_width  = Canvas.dimensions.content_width;
+			Canvas.dimensions.box_height = Canvas.dimensions.content_height;
+			Canvas.dimensions.width = $('#track').width();
+			Canvas.dimensions.height = $('#track').height();
+			Canvas.dimensions.ofX = Canvas.dimensions.width/2-Canvas.dimensions.content_width/2;
+			Canvas.calc_limits();
+
+			Canvas.update_frame();
+
+			$('#settings .set-box .checkbox').on("click",websocket.cts_BroadcastFlag);
+
+			setInterval(function(){
+				$.ajax({
+				    url: "./../log.txt",
+				    success: function (data){
+				        log_data(data);
+				    }
+				});
+			},5000);
 		});
 
 			// document.ontouchmove = function(event){
@@ -1413,19 +2699,33 @@
 			c: undefined,
 			canvas: undefined,
 			dimensions: {scale:1,width:0,height:0,ofX:0,ofY:0,content_width:0,content_height:0,box_width:0,box_height:0,x_left:0,x_right:0,y_top:0,y_bottom:0},
-			init: function(){
+			init_calc: function(){
 				this.ro = [{x:this.radia[0]*Math.cos(Math.PI*0.25),y:this.radia[0] - this.radia[0]*Math.sin(Math.PI*0.25),yr:this.radia[0]*Math.sin(Math.PI*0.25)}];
 				this.ro[0].l = Math.sqrt(Math.pow(this.ro[0].x-this.ds,2)+Math.pow(this.ro[0].y,2));
-
+			},
+			init: function(){
 				this.canvas = document.querySelector('canvas');
 				this.c = this.canvas.getContext('2d');
 				c = this.c;
 
 			    this.canvas.height = $('#track').height();
 				this.canvas.width = $('#track').width();
+
+				$('canvas').on('mousedown',this.evt_mousedown);
+				$('canvas').on('mouseup',this.evt_mouseup);
+
+				$('canvas').on("mousewheel",this.evt_scrolled)
+
+				$('canvas').on("touchstart",this.evt_drag_start);
+				$('canvas').on("touchmove",this.evt_drag_move);
+				$('canvas').on("touchend",this.evt_drag_end);
 			},
 			resize: function(){
 				console.log("resize");
+
+				tmp_scale = this.dimensions.scale;
+				this.rescale(1);
+
 			    this.canvas.height = $('#track').height();
 				this.canvas.width  = $('#track').width();
 
@@ -1435,8 +2735,11 @@
 				this.dimensions.ofX = 0.5*this.dimensions.width-0.5*this.dimensions.content_width;
 				this.dimensions.ofY = 0;
 
-				this.update_frame();
 				this.calc_limits();
+
+				this.rescale(tmp_scale);
+
+				this.update_frame();
 			},
 			rescale: function(new_scale){
 				c.scale(1/this.dimensions.scale,1/this.dimensions.scale);
@@ -1588,6 +2891,9 @@
 				var dot_radius = Math.min(2.8*this.dimensions.scale,2.8);
 				var tmp_this = this;
 				$.each(modules,function(module,module_v){
+					if (module_v.visible == false){
+						return true;
+					}
 					var ofX = module_v.OffsetX + tmp_this.dimensions.ofX;
 					var ofY = module_v.OffsetY + tmp_this.dimensions.ofY;
 					var rvX = Math.cos(module_v.r*Math.PI);
@@ -1616,6 +2922,9 @@
 				var tmp_this = this;
 				//Draw background lines
 				$.each(modules,function(module,module_v){
+					if (module_v.visible == false){
+						return true;
+					}
 					var ofX = module_v.OffsetX + tmp_this.dimensions.ofX;
 					var ofY = module_v.OffsetY + tmp_this.dimensions.ofY;
 					var rvX = Math.cos(module_v.r*Math.PI);
@@ -1625,77 +2934,27 @@
 					$.each(module_v.data,function(i,v){
 						c.beginPath();
 						c.strokeStyle = v.stroke;
+
+						if(v.type == "ds"){
+							test = 13;
+						}
+
+						if(v.type == "arc"){
+
+						}else{
+							nx = rvX*v.x + rvY_*v.y + ofX;
+							ny = rvY*v.y + rvX_*v.x + ofY;
+						}
+						nr = v.r - module_v.r;
+
 						if(v.type == "swr"){ // Switch Right
-							Draw.switch(rvX*v.x +rvY_*v.y +ofX,rvY*v.y +rvX_*v.x +ofY,v.r-module_v.r,"swr","B",module_v.blocks[v.block],module_v.switches[v.switch]);
+							Draw.switch(nx, ny, nr, "swr","B",module_v.blocks[v.block],module_v.switches[v.switch]);
 						}
 						else if(v.type == "swl"){ // Switch Left
-							Draw.switch(rvX*v.x +rvY_*v.y +ofX,rvY*v.y +rvX_*v.x +ofY,v.r-module_v.r,"swl","B",module_v.blocks[v.block],module_v.switches[v.switch]);
-						}else if(v.type == "ds"){ //Double slip
-							if(v.xtl != undefined && v.ytl != undefined){
-								tmp_this.setStrokeColor(module_v.blocks[v.block],1)
-								if(module_v.switches[v.switchA] == 0){
-									if(module_v.switches[v.switchB] == 0){
-										c.moveTo(v.xtl+ofX,v.ytl+ofY);
-										c.lineTo(v.xtl+ofX+ro[0].x+ds,v.ytl+ofY+2*ro[0].y);
-										c.stroke();c.beginPath();
-									}else{
-										c.arc(v.xtl+ofX+ro[0].x,v.ytl+ofY-ro[0].yr,radia[0],Math.PI* 0.75,Math.PI* 0.50,true);
-										c.stroke();c.beginPath();
-									}
-									c.moveTo(v.xtl+ofX+ds,v.ytl+ofY+ro[0].y);
-									c.lineTo(v.xtl+ofX+ro[0].x,v.ytl+ofY+ro[0].y);
-									c.stroke();c.beginPath();
-									c.arc(v.xtl+ofX-8.28,v.ytl+ofY+radia[0]+ro[0].y,radia[0],Math.PI*-0.50,Math.PI*-0.25,false);
-									c.stroke();c.beginPath();
-								}else{
-									if(module_v.switches[v.switchB] == 0){
-										c.arc(v.xtl+ofX-8.28,v.ytl+ofY+radia[0]+ro[0].y,radia[0],Math.PI*-0.50,Math.PI*-0.25,false);
-										c.stroke();c.beginPath();
-									}
-									else{
-										c.moveTo(v.xtl+ofX+ds,v.ytl+ofY+ro[0].y);
-										c.lineTo(v.xtl+ofX+ro[0].x,v.ytl+ofY+ro[0].y);
-										c.stroke();c.beginPath();
-									}
-									c.arc(v.xtl+ofX+ro[0].x,v.ytl+ofY-ro[0].yr,radia[0],Math.PI* 0.75,Math.PI* 0.50,true);
-									c.stroke();c.beginPath();
-									c.moveTo(v.xtl+ofX,v.ytl+ofY);
-									c.lineTo(v.xtl+ofX+ro[0].x+ds,v.ytl+ofY+2*ro[0].y);
-									c.stroke();c.beginPath();
-								}
-							}
-							else{
-								tmp_this.setStrokeColor(module_v.blocks[v.block],1)
-								if(module_v.switches[v.switchA] == 0){
-									if(module_v.switches[v.switchB] == 0){
-										c.arc(v.xtr+ofX-ro[0].x,v.ytr+ofY-ro[0].yr,radia[0],Math.PI*0.25,Math.PI*0.50,false);
-										c.stroke();c.beginPath();
-									}else{
-										c.moveTo(v.xtr+ofX-ds,v.ytr+ofY+ro[0].y);
-										c.lineTo(v.xtr+ofX-ro[0].x,v.ytr+ofY+ro[0].y);
-										c.stroke();c.beginPath();
-									}
-									c.arc(v.xtr+ofX+8.28,v.ytr+ofY+radia[0]+ro[0].y,radia[0],Math.PI*-0.50,Math.PI*-0.75,true);
-									c.stroke();c.beginPath();
-									c.moveTo(v.xtr+ofX,v.ytr+ofY);
-									c.lineTo(v.xtr+ofX-ro[0].x-ds,v.ytr+ofY+2*ro[0].y);
-									c.stroke();c.beginPath();
-								}else{
-									if(module_v.switches[v.switchB] == 0){
-										c.moveTo(v.xtr+ofX,v.ytr+ofY);
-										c.lineTo(v.xtr+ofX-ro[0].x-ds,v.ytr+ofY+2*ro[0].y);
-										c.stroke();c.beginPath();
-									}else{
-										c.arc(v.xtr+ofX+8.28,v.ytr+ofY+radia[0]+ro[0].y,radia[0],Math.PI*-0.50,Math.PI*-0.75,true);
-										c.stroke();c.beginPath();	
-									}
-									c.arc(v.xtr+ofX-ro[0].x,v.ytr+ofY-ro[0].yr,radia[0],Math.PI*0.25,Math.PI*0.50,false);
-									c.stroke();c.beginPath();
-									c.moveTo(v.xtr+ofX-ds,v.ytr+ofY+ro[0].y);
-									c.lineTo(v.xtr+ofX-ro[0].x,v.ytr+ofY+ro[0].y);
-									c.stroke();c.beginPath();
-								}
-							}
+							Draw.switch(nx, ny, nr, "swl","B",module_v.blocks[v.block],module_v.switches[v.switch]);
+						}
+						else if(v.type == "ds"){ //Double slip
+							Draw.double_slip(nx, ny, nr, "B",module_v.blocks[v.block],module_v.switches[v.switchA], module_v.switches[v.switchB]);
 						}
 						else if(v.type == "dc"){ //Double crossover
 							if(v.xtl != undefined && v.ytl != undefined){
@@ -1749,6 +3008,9 @@
 				//Draw lines
 				c.lineWidth = 6;
 				$.each(modules,function(module,module_v){
+					if (module_v.visible == false){
+						return true;
+					}
 					var ofX = module_v.OffsetX + tmp_this.dimensions.ofX;
 					var ofY = module_v.OffsetY + tmp_this.dimensions.ofY;
 					var rvX = Math.cos(module_v.r*Math.PI);
@@ -1758,9 +3020,22 @@
 					$.each(module_v.data,function(i,v){
 						c.beginPath();
 						c.strokeStyle = v.stroke;
+
+						if(v.type == "ds"){
+							test = 13;
+						}
+
+						if(v.type == "arc"){
+
+						}else{
+							nx = rvX*v.x + rvY_*v.y + ofX;
+							ny = rvY*v.y + rvX_*v.x + ofY;
+						}
+						nr = v.r - module_v.r
+
 						if(v.type == "line"){
 							tmp_this.setStrokeColor(module_v.blocks[v.block]);
-							c.moveTo(rvX*v.x +rvY_*v.y +ofX,rvY*v.y +rvX_*v.x +ofY);
+							c.moveTo(nx, ny);
 							c.lineTo(rvX*v.x2+rvY_*v.y2+ofX,rvY*v.y2+rvX_*v.x2+ofY);
 						}
 						else if(v.type == "arc"){
@@ -1768,57 +3043,13 @@
 							c.arc(rvX*v.cx+rvY_*v.cy+ofX,rvY*v.cy+rvX_*v.cx+ofY,v.r,Math.PI*(-module_v.r+v.start),Math.PI*(-module_v.r+v.end),v.CW);
 						}
 						else if(v.type == "swr"){ // Switch Right
-							Draw.switch(rvX*v.x +rvY_*v.y +ofX,rvY*v.y +rvX_*v.x +ofY,v.r-module_v.r,"swr","P",module_v.blocks[v.block],module_v.switches[v.switch]);
+							Draw.switch(nx, ny, nr, "swr","P",module_v.blocks[v.block],module_v.switches[v.switch]);
 						}
 						else if(v.type == "swl"){ // Switch Left
-							Draw.switch(rvX*v.x +rvY_*v.y +ofX,rvY*v.y +rvX_*v.x +ofY,v.r-module_v.r,"swl","P",module_v.blocks[v.block],module_v.switches[v.switch]);
+							Draw.switch(nx, ny, nr,"swl","P",module_v.blocks[v.block],module_v.switches[v.switch]);
 						}
 						else if(v.type == "ds"){ //Double slip
-							if(v.xtl != undefined && v.ytl != undefined){
-								tmp_this.setStrokeColor(module_v.blocks[v.block],0)
-								if(module_v.switches[v.switchA] == 0){
-									if(module_v.switches[v.switchB] == 0){
-										c.arc(v.xtl+ofX+ro[0].x,v.ytl+ofY-ro[0].yr,radia[0],Math.PI* 0.75,Math.PI* 0.50,true);
-										c.stroke();c.beginPath();
-									}else{
-										c.moveTo(v.xtl+ofX,v.ytl+ofY);
-										c.lineTo(v.xtl+ofX+ro[0].x+ds,v.ytl+ofY+2*ro[0].y);
-										c.stroke();c.beginPath();
-									}
-								}else{
-									if(module_v.switches[v.switchB] == 0){
-										c.moveTo(v.xtl+ofX+ds,v.ytl+ofY+ro[0].y);
-										c.lineTo(v.xtl+ofX+ro[0].x,v.ytl+ofY+ro[0].y);
-										c.stroke();c.beginPath();
-									}
-									else{
-										c.arc(v.xtl+ofX-8.28,v.ytl+ofY+radia[0]+ro[0].y,radia[0],Math.PI*-0.50,Math.PI*-0.25,false);
-										c.stroke();c.beginPath();
-									}
-								}
-							}
-							else{
-								tmp_this.setStrokeColor(module_v.blocks[v.block],0)
-								if(module_v.switches[v.switchA] == 0){
-									if(module_v.switches[v.switchB] == 0){
-										c.moveTo(v.xtr+ofX-ds,v.ytr+ofY+ro[0].y);
-										c.lineTo(v.xtr+ofX-ro[0].x,v.ytr+ofY+ro[0].y);
-										c.stroke();c.beginPath();
-									}else{
-										c.arc(v.xtr+ofX-ro[0].x,v.ytr+ofY-ro[0].yr,radia[0],Math.PI*0.25,Math.PI*0.50,false);
-										c.stroke();c.beginPath();
-									}
-								}else{
-									if(module_v.switches[v.switchB] == 0){
-										c.arc(v.xtr+ofX+8.28,v.ytr+ofY+radia[0]+ro[0].y,radia[0],Math.PI*-0.50,Math.PI*-0.75,true);
-										c.stroke();c.beginPath();
-									}else{
-										c.moveTo(v.xtr+ofX,v.ytr+ofY);
-										c.lineTo(v.xtr+ofX-ro[0].x-ds,v.ytr+ofY+2*ro[0].y);
-										c.stroke();c.beginPath();	
-									}
-								}
-							}
+							Draw.double_slip(nx, ny, nr, "F",module_v.blocks[v.block],module_v.switches[v.switchA], module_v.switches[v.switchB]);
 						}
 						else if(v.type == "dc"){
 							if(v.xtl != undefined && v.ytl != undefined){
@@ -1908,6 +3139,9 @@
 
 				//Draw Tooltips
 				$.each(modules,function(module,module_v){
+					if (module_v.visible == false){
+						return true;
+					}
 					var ofX = module_v.OffsetX + tmp_this.dimensions.ofX;
 					var ofY = module_v.OffsetY + tmp_this.dimensions.ofY;
 					var rvX = Math.cos(module_v.r*Math.PI);
@@ -2018,7 +3252,7 @@
 		    },
 
 		    // Events //
-
+		    // Control functions
 
 			click: function(x,y){
 				var update = false;
@@ -2069,8 +3303,8 @@
 					if((this.dimensions.x_left) > -this.dimensions.ofX){
 						this.dimensions.ofX = -this.dimensions.x_left;
 					}
-					if((this.dimensions.x_right) < -this.dimensions.ofX+this.canvas.width){
-						this.dimensions.ofX = -(this.dimensions.x_right - this.canvas.width);
+					if((this.dimensions.x_right) < -this.dimensions.ofX+this.canvas.width / this.dimensions.scale){
+						this.dimensions.ofX = -(this.dimensions.x_right - this.canvas.width / this.dimensions.scale);
 					}
 				}
 				if(this.dimensions.height < this.dimensions.content_height){
@@ -2078,63 +3312,153 @@
 					if((this.dimensions.y_top) > -this.dimensions.ofY){
 						this.dimensions.ofY = this.dimensions.y_top;
 					}
-					if((this.dimensions.y_bottom) < -this.dimensions.ofY+this.canvas.height){
-						this.dimensions.ofY = -(this.dimensions.y_bottom - this.canvas.height);
+					if((this.dimensions.y_bottom) < -this.dimensions.ofY+this.canvas.height / this.dimensions.scale){
+						this.dimensions.ofY = -(this.dimensions.y_bottom - this.canvas.height / this.dimensions.scale);
 					}
 				}
 
 				this.update_frame();
+			},
+
+			longClick: function(evt){
+				alert("Long Click");
+				Longclick = true;
+			},
+
+			// Events //
+
+			LongclickTimer: undefined,
+			Longclick: false,
+
+			evt_mousedown: function(evt){
+				Canvas.Longclick = false;
+				Canvas.LongclickTimer = setTimeout(function(){Canvas.longClick(evt)},400);
+				Train.hide(evt);
+			},
+			evt_mouseup: function(evt){
+				clearTimeout(Canvas.LongclickTimer);
+				if(!Canvas.touchClicked && !Canvas.Longclick)
+					Canvas.click(evt.offsetX,evt.offsetY);
+				else
+					Canvas.touchClicked = false;
+			},
+
+
+			touchStart: {x:0,y:0},
+			touchMove: {x:0,y:0},
+			touchMoved: false,
+			touchClicked: false,
+			evt_drag_start: function(evt){
+				Canvas.touchStart.x = (Canvas.touchMove.x = evt.touches[0].pageX);
+				Canvas.touchStart.y = (Canvas.touchMove.y = evt.touches[0].pageY);
+				Canvas.touchMoved = false;
+
+				Canvas.LongclickTimer = setTimeout(function(){longClick(evt)},600);
+
+				Train.hide(evt);
+			},
+			evt_drag_move: function(evt){
+				if(Canvas.touchMoved == true){
+					if(Canvas.dimensions.width < Canvas.dimensions.content_width){
+						Canvas.dimensions.ofX += (evt.touches[0].pageX - Canvas.touchMove.x)/Canvas.dimensions.scale;
+					}
+					if(Canvas.dimensions.height < Canvas.dimensions.content_height){
+						Canvas.dimensions.ofY += (evt.touches[0].pageY - Canvas.touchMove.y)/Canvas.dimensions.scale;
+					}
+
+					Canvas.moved()
+
+					Canvas.touchMove.x = evt.touches[0].pageX;
+					Canvas.touchMove.y = evt.touches[0].pageY;
+
+					return false;
+				}else{
+					if(Math.sqrt(Math.pow(Canvas.touchStart.x - evt.touches[0].pageX,2)+Math.pow(Canvas.touchStart.y - evt.touches[0].pageY,2)) >= 10){
+						Canvas.touchMoved = true;
+						clearTimeout(Canvas.LongclickTimer);
+						console.log("Touch Moved");
+					}
+				}
+			},
+			evt_drag_end: function(evt){
+				if(Canvas.touchMoved == false){
+					Canvas.touchClicked = true;
+					Canvas.click(Canvas.touchStart.x,Canvas.touchStart.y);
+					clearTimeout(Canvas.LongclickTimer);
+				}
+
+				evt.preventDefault();
+				return false;
+			},
+
+			evt_scrolled: function(evt){
+				console.log("Scroll");
+
+				if(Canvas.dimensions.width < Canvas.dimensions.content_width){
+					Canvas.dimensions.ofX -= evt.originalEvent.deltaX/10;
+				}
+				if(Canvas.dimensions.height < Canvas.dimensions.content_height){
+					Canvas.dimensions.ofY -= evt.originalEvent.deltaY/10;
+				}
+
+				Canvas.moved();
 			}
 		}
 
-		Canvas.init();
-
+		Canvas.init_calc();
 		ro = Canvas.ro;
 		ds = Canvas.ds;
 		radia = Canvas.radia;
 
 		var modules = {
-			20:{Name: "Straight",OffsetX:250,OffsetY:20,width:800,height:160,r:0,blocks:[5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5],switches:[],dotmatrix:[],data:[
-				{type:"line",block:0,   x:0,y:20,          x2:5,y2:20},
-				{type:"swr" ,block:0,   x:5,y:20,          x2:5,y2:20,r:0,switch:0},
-				{type:"line",block:6,   x:0,y:20+2*ro[0].y,x2:5+ro[0].x+ds,y2:20+2*ro[0].y},
-				{type:"ds"  ,block:6, xtl:5+ro[0].x,ytl:20+ro[0].y,switchA:1,switchB:2},
-				{type:"swl" ,block:6,   x:5+ds+2*ro[0].x,y:20+3*ro[0].y,switch:3,r:0.25},
-				{type:"arc" ,block:6,  cx:5+2*ds+4*ro[0].x,cy:20+6*ro[0].y-radia[0],r:radia[0],start:0.75,end:0.5,CW:true},
+			20:{Name: "Straight",visible: true, OffsetX:250,OffsetY:20,width:800,height:160,r:0,blocks:[5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5],switches:[],dotmatrix:[],
+				data:[
+					{type:"line",block:0, x:0,y:20,          x2:5,y2:20},
+					{type:"swr" ,block:0, x:5,y:20,          x2:5,y2:20,r:0,switch:0},
+					{type:"line",block:6, x:0,y:20+2*ro[0].y,x2:5+ro[0].x+ds,y2:20+2*ro[0].y},
 
-				{type:"line",block:1,   x:5+ro[0].x,y:20,x2:250,y2:20},
-				{type:"line",block:7,   x:5+2*ro[0].x,y:20+2*ro[0].y,x2:250,y2:20+2*ro[0].y},
-				
-				{type:"line",block:2,   x:250,y:20,                       x2:400,y2:20},
-				{type:"line",block:8,   x:250,y:20+2*ro[0].y,             x2:400,y2:20+2*ro[0].y},
-				{type:"line",block:12,  x:5+3*ro[0].x+ds  ,y:20+4*ro[0].y,x2:400,y2:20+4*ro[0].y},
-				{type:"line",block:15,  x:5+4*ro[0].x+2*ds,y:20+6*ro[0].y,x2:400,y2:20+6*ro[0].y},
+					{type:"ds"  ,block:6, x:5+ro[0].x,y:20+ro[0].y,r:0,switchA:1,switchB:2},
 
-				{type:"line",block:3,   x:400,y:20,          x2:550,y2:20},
-				{type:"line",block:9,   x:400,y:20+2*ro[0].y,x2:550,y2:20+2*ro[0].y},
-				{type:"line",block:13,  x:400,y:20+4*ro[0].y,x2:550,y2:20+4*ro[0].y},
-				{type:"line",block:16,  x:400,y:20+6*ro[0].y,x2:550,y2:20+6*ro[0].y},
+					{type:"swl" ,block:6, x:5+ds+2*ro[0].x,y:20+3*ro[0].y,switch:3,r:0.25},
+					{type:"arc" ,block:6,cx:5+2*ds+4*ro[0].x,cy:20+6*ro[0].y-radia[0],r:radia[0],start:0.75,end:0.5,CW:true},
 
-				{type:"line",block:4,   x:550,y:20,x2:795-ro[0].x,y2:20},
-				{type:"line",block:10,  x:550,y:20+2*ro[0].y,x2:795-2*ro[0].x,y2:20+2*ro[0].y},
-				{type:"line",block:14,  x:550,y:20+4*ro[0].y,x2:795-3*ro[0].x-ds,y2:20+4*ro[0].y},
-				{type:"arc" ,block:14,  cx:795-3*ro[0].x-ds,cy:20+4*ro[0].y-radia[0],r:radia[0],start:0.5,end:0.25,CW:true},
-				{type:"line",block:17,  x:550,y:20+6*ro[0].y,x2:800-3*ro[0].x-ds,y2:20+6*ro[0].y},
-				{type:"line",block:18,  x:800-3*ro[0].x-ds,y:20+6*ro[0].y,x2:700,y2:20+6*ro[0].y},
+					{type:"line",block:1,   x:5+ro[0].x,y:20,x2:250,y2:20},
+					{type:"line",block:7,   x:5+2*ro[0].x,y:20+2*ro[0].y,x2:250,y2:20+2*ro[0].y},
+					
+					{type:"line",block:2,   x:250,y:20,                       x2:400,y2:20},
+					{type:"line",block:8,   x:250,y:20+2*ro[0].y,             x2:400,y2:20+2*ro[0].y},
+					{type:"line",block:12,  x:5+3*ro[0].x+ds  ,y:20+4*ro[0].y,x2:400,y2:20+4*ro[0].y},
+					{type:"line",block:15,  x:5+4*ro[0].x+2*ds,y:20+6*ro[0].y,x2:400,y2:20+6*ro[0].y},
+
+					{type:"line",block:3,   x:400,y:20,          x2:550,y2:20},
+					{type:"line",block:9,   x:400,y:20+2*ro[0].y,x2:550,y2:20+2*ro[0].y},
+					{type:"line",block:13,  x:400,y:20+4*ro[0].y,x2:550,y2:20+4*ro[0].y},
+					{type:"line",block:16,  x:400,y:20+6*ro[0].y,x2:550,y2:20+6*ro[0].y},
+
+					{type:"line",block:4,   x:550,y:20,x2:795-ro[0].x,y2:20},
+					{type:"line",block:10,  x:550,y:20+2*ro[0].y,x2:795-2*ro[0].x,y2:20+2*ro[0].y},
+					{type:"line",block:14,  x:550,y:20+4*ro[0].y,x2:795-3*ro[0].x-ds,y2:20+4*ro[0].y},
+					{type:"arc" ,block:14,  cx:795-3*ro[0].x-ds,cy:20+4*ro[0].y-radia[0],r:radia[0],start:0.5,end:0.25,CW:true},
+					{type:"line",block:17,  x:550,y:20+6*ro[0].y,x2:800-3*ro[0].x-ds,y2:20+6*ro[0].y},
+					{type:"line",block:18,  x:800-3*ro[0].x-ds,y:20+6*ro[0].y,x2:700,y2:20+6*ro[0].y},
 
 
-				{type:"swl" ,block:5,  x:795,y:20,r:1,switch:6},
-				{type:"line",block:5,  x:800,y:20,x2:795,y2:20},
-				{type:"line",block:11, x:800,y:20+2*ro[0].y,x2:795-ro[0].x-ds,y2:20+2*ro[0].y},
-				{type:"ds"  ,block:11, xtr:795-ro[0].x,ytr:20+ro[0].y,switchA:4,switchB:5},
-			],hitboxes:[
-				{eval_code:"(_x > 2.5 && _x < 52.5 && _y > 15 && _y < 40)?1:0;",name:"Switch 1",action:"tSw",switch:0},
-				{eval_code:"(_x > 42.5 && _x < 97.5 && _y > 40 && _y < 80)?1:0;",name:"Switch 2&3",action:"tDS",switch:[1,2]},
-				{eval_code:"(_x > 90 && _x < 150 && _y > 80 && _y < 120)?1:0;",name:"Switch 4",action:"tSw",switch:3},
-				{eval_code:"(_x > 702.5 && _x < 757.5 && _y > 40 && _y < 80)?1:0;",name:"Switch 5&6",action:"tDS",switch:[4,5]},
-				{eval_code:"(_x > 748.5 && _x < 797.5 && _y > 15 && _y < 40)?1:0;",name:"Switch 6",action:"tSw",switch:6},
-			]},
-			21:{Name: "Straight",OffsetX:1050,OffsetY:460,width:800,height:160,r:1,blocks:[5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5],switches:[],dotmatrix:[],data:[
+					{type:"swl" ,block:5,  x:795,y:20,r:1,switch:6},
+					{type:"line",block:5,  x:800,y:20,x2:795,y2:20},
+					{type:"line",block:11, x:800,y:20+2*ro[0].y,x2:795-ro[0].x-ds,y2:20+2*ro[0].y},
+
+					{type:"ds"  ,block:11, x:795-ro[0].x-ds,y:20+2*ro[0].y,r:-1.25,switchA:4,switchB:5},
+				],
+				hitboxes:[
+					{eval_code:"(_x > 2.5 && _x < 52.5 && _y > 15 && _y < 40)?1:0;",name:"Switch 1",action:"tSw",switch:0},
+					{eval_code:"(_x > 42.5 && _x < 97.5 && _y > 40 && _y < 80)?1:0;",name:"Switch 2&3",action:"tDS",switch:[1,2]},
+					{eval_code:"(_x > 90 && _x < 150 && _y > 80 && _y < 120)?1:0;",name:"Switch 4",action:"tSw",switch:3},
+					{eval_code:"(_x > 702.5 && _x < 757.5 && _y > 40 && _y < 80)?1:0;",name:"Switch 5&6",action:"tDS",switch:[4,5]},
+					{eval_code:"(_x > 748.5 && _x < 797.5 && _y > 15 && _y < 40)?1:0;",name:"Switch 6",action:"tSw",switch:6},
+				]
+			},
+			21:{Name: "Straight",visible: true, OffsetX:1050,OffsetY:460,width:800,height:160,r:1,blocks:[5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5],switches:[],dotmatrix:[],
+				data:[
 				{type:"line",block:0,   x:0,y:20,          x2:200,y2:20},
 				{type:"line",block:1,   x:200,y:20,        x2:400,y2:20},
 				{type:"line",block:2,   x:400,y:20,        x2:600,y2:20},
@@ -2157,22 +3481,27 @@
 				{type:"line",block:12,  x:400,y:20+4*ro[0].y,x2:600,y2:20+4*ro[0].y},
 				{type:"line",block:13,  x:795-2*ro[0].x,y:20+4*ro[0].y,x2:600,y2:20+4*ro[0].y},
 				{type:"arc" ,block:13, cx:795-2*ro[0].x,cy:20+4*ro[0].y-radia[0],r:radia[0],start:0.5,end:0.25,CW:true},
-			],hitboxes:[
-				{eval_code:"(_x > 2.5 && _x < 52.5 && _y > 45 && _y < 70)?1:0;",name:"Switch 1",action:"tSw",switch:0},
-				{eval_code:"(_x > 748.5 && _x < 797.5 && _y > 45 && _y < 70)?1:0;",name:"Switch 2",action:"tSw",switch:1},
-			]},
-			22:{Name: "Bocht",OffsetX:1050,OffsetY:20,width:250,height:440,r:0,blocks:[5,5,5,5],switches:[],dotmatrix:[],data:[
+				],hitboxes:[
+					{eval_code:"(_x > 2.5 && _x < 52.5 && _y > 45 && _y < 70)?1:0;",name:"Switch 1",action:"tSw",switch:0},
+					{eval_code:"(_x > 748.5 && _x < 797.5 && _y > 45 && _y < 70)?1:0;",name:"Switch 2",action:"tSw",switch:1},
+				]
+			},
+			22:{Name: "Bocht",visible: true, OffsetX:1050,OffsetY:20,width:250,height:440,r:0,blocks:[5,5,5,5],switches:[],dotmatrix:[],
+				data:[
 				{type:"arc",block:0,cx:0,cy:220,r:200,start:-0.5,end:0,CW:false},
 				{type:"arc",block:1,cx:0,cy:220,r:200-2*ro[0].y,start:-0.5,end:0,CW:false},
 				{type:"arc",block:2,cx:0,cy:220,r:200,start:0,end:0.5,CW:false},
 				{type:"arc",block:3,cx:0,cy:220,r:200-2*ro[0].y,start:0,end:0.5,CW:false}
-			]},
-			23:{Name: "Bocht",OffsetX:250,OffsetY:460,width:250,height:440,r:1,blocks:[5,5,5,5],switches:[],dotmatrix:[],data:[
+				]
+			},
+			23:{Name: "Bocht",visible: true, OffsetX:250,OffsetY:460,width:250,height:440,r:1,blocks:[5,5,5,5],switches:[],dotmatrix:[],
+				data:[
 				{type:"arc",block:0,cx:0,cy:220,r:200,start:-0.5,end:0,CW:false},
 				{type:"arc",block:1,cx:0,cy:220,r:200-2*ro[0].y,start:-0.5,end:0,CW:false},
 				{type:"arc",block:2,cx:0,cy:220,r:200,start:0,end:0.5,CW:false},
 				{type:"arc",block:3,cx:0,cy:220,r:200-2*ro[0].y,start:0,end:0.5,CW:false}
-			]},
+				]
+			},
 		}
 
 		function reset_blocks_in_modules(){
@@ -2184,12 +3513,11 @@
 			})
 		}
 
-		Canvas.calc_dotmatrix();
-
 		var Draw = {
 			switch: function(x,y,r,lr,type,bl,sw){
-				if(r >=  2){r -= 2;}
-				if(r <= -2){r += 2;}
+				if(r >  1){r -= 2;}
+				if(r < -1){r += 2;}
+
 				var rvX = Math.cos(r*Math.PI);
 				var rvX_ = Math.cos((r+0.5)*Math.PI);
 				var rvY = Math.sin((r+0.5)*Math.PI);
@@ -2225,8 +3553,14 @@
 							c.arc(x-rvX*radia[0],y+rvY*radia[0],radia[0],Math.PI*(r-0.25),Math.PI*(r-0.5),true);
 						}else if(r == 0){
 							c.arc(x,y+radia[0],radia[0],Math.PI*(r-0.25),Math.PI*(r-0.5),true);
-						}else{
+						}else if(r == -1 || r == 1){
 							c.arc(x,y-radia[0],radia[0],Math.PI*(r-0.25),Math.PI*(r-0.5),true);
+						}
+						else if(r == -0.5){
+							c.arc(x+radia[0],y,radia[0],Math.PI*(r-0.25),Math.PI*(r-0.5),true);
+						}
+						else if(r == 0.5){
+							c.arc(x-radia[0],y,radia[0],Math.PI*(r-0.25),Math.PI*(r-0.5),true);
 						}
 					}
 					else{
@@ -2243,14 +3577,189 @@
 						}else if(r == -1 || r == 1){
 							c.arc(x,y+radia[0],radia[0],Math.PI*(r+0.5),Math.PI*(r+0.25),true);
 						}
+						else if(r == -0.5){
+							c.arc(x+radia[0],y,radia[0],Math.PI*(r+0.5),Math.PI*(r+0.25),true);
+						}
+						else if(r == 0.5){
+							c.arc(x+radia[0],y,radia[0], Math.PI*(r+0.5), Math.PI*(r+0.25), true)
+						}
 					}
 				}
+			},
+
+			double_slip: function(x,y,r,type,bl,swA,swB){
+				if(r >  1){r -= 2;}
+				if(r < -1){r += 2;}
+
+				var rvX = Math.cos(r*Math.PI);
+				var rvX_ = -Math.cos((r+0.5)*Math.PI);
+				var rvY = Math.sin((r+0.5)*Math.PI);
+				var rvY_ = -Math.sin((r)*Math.PI);
+
+				if((swA == 0 && swB == 0 && type == "F") || ((swA == 1 || swB == 1) && type == "B")){
+					(type == "F")?Canvas.setStrokeColor(bl,0):Canvas.setStrokeColor(bl,1);
+
+					if(r == 0.25 || r == -1.75){
+						c.arc(x+radia[0],y,radia[0],Math.PI*(r+0.75),Math.PI*(r+0.5),true);//
+					}else if(r == -0.25 || r == 1.75){
+						c.arc(x,y-radia[0],radia[0],Math.PI*(r+0.750),Math.PI*(r+0.5),true);
+					}else if(r == 0.75 || r == -1.25){
+						c.arc(x,y+radia[0],radia[0],Math.PI*(r+0.75),Math.PI*(r+0.5),true);//
+					}else if(r == -0.75 || r == 1.25){
+						c.arc(x-radia[0],y,radia[0],Math.PI*(r+0.75),Math.PI*(r+0.5),true);
+					}
+					else if(r == 0){
+						c.arc(x+ro[0].x,y-radia[0]+ro[0].y,radia[0],Math.PI*(r+0.75),Math.PI*(r+0.50),true);
+					}else if(r == -1 || r == 1){
+						c.arc(x-ro[0].x,y-ro[0].y+radia[0],radia[0],Math.PI*(r+0.75),Math.PI*(r+0.5),true);
+					}else if(r == -0.5){
+						c.arc(x-radia[0]+ro[0].y,y-ro[0].x,radia[0],Math.PI*(r+0.75),Math.PI*(r+0.5),true);
+					}else if(r == 0.5){
+						c.arc(x-ro[0].y+radia[0],y+ro[0].x,radia[0], Math.PI*(r+0.75), Math.PI*(r+0.5), true)
+					}
+
+					c.stroke();c.beginPath();
+				}
+				if((swA == 0 && swB == 1 && type == "F") || ((swA == 1 || swB == 0) && type == "B")){
+					(type == "F")?Canvas.setStrokeColor(bl,0):Canvas.setStrokeColor(bl,1);
+
+					dis_X = ro[0].x+ds;
+					dis_Y = 2 * ro[0].y;
+
+					if(r == 0.25 || r == 0.75 || r == 1.25 || r == 1.75 || r == -0.25 || r == -0.75 || r == -1.25 || r == -1.75){
+						c.moveTo(x,y);
+						if(r == -0.25 || r == 1.75){
+							c.lineTo(x+ro[0].x-ds,y);
+						}else if(r == -0.75 || r == 1.25){
+							c.lineTo(x,y-ro[0].x+ds);
+						}else if(r == -1.25 || r == 0.75){
+							c.lineTo(x-ro[0].x+ds,y);
+						}else if(r == -1.75 || r == 0.25){
+							c.lineTo(x,y+ro[0].x-ds);
+						}
+					}else if(r == 0 || r == 0.5 || r == 1 || r == 1.5 || r == 2 || r == -0.5 || r == -1 || r == -1.5 || r == -2){
+						c.moveTo(x,y);
+						c.lineTo(x+rvX*dis_X+rvY_*dis_Y, y+rvX_*dis_X+rvY*dis_Y);
+					}
+					c.stroke();c.beginPath();
+				}
+
+				if((swA == 1 && swB == 0 && type == "F") || ((swA == 0 || swB == 1) && type == "B")){
+					(type == "F")?Canvas.setStrokeColor(bl,0):Canvas.setStrokeColor(bl,1);
+					tx = x; ty = y;
+
+					x += rvX*ds + rvY_*ro[0].y;
+					y += rvX_*ds + rvY*ro[0].y;
+					dis_X = ro[0].x - ds;
+					dis_Y = 0;
+
+					if(r == 0.25 || r == 0.75 || r == 1.25 || r == 1.75 || r == -0.25 || r == -0.75 || r == -1.25 || r == -1.75){
+						dis_X += -ds;
+					}
+
+					c.moveTo(x,y);
+					c.lineTo(x+rvX*dis_X+rvY_*dis_Y, y+rvX_*dis_X+rvY*dis_Y);
+					c.stroke();c.beginPath();
+
+					x = tx; y = ty;
+				}
+				if((swA == 1 && swB == 1 && type == "F") || ((swA == 0 || swB == 0) && type == "B")){
+					(type == "F")?Canvas.setStrokeColor(bl,0):Canvas.setStrokeColor(bl,1);
+
+					x += rvX*ds + rvY_*ro[0].y;
+					y += rvX_*ds + rvY*ro[0].y;
+
+					if(r == 0.25 || r == -1.75){
+						c.arc(x-rvX*radia[0],y+rvY*radia[0],radia[0],Math.PI*(r-0.25),Math.PI*(r-0.5),true);
+					}else if(r == -0.25 || r == 1.75){
+						c.arc(x+rvX*radia[0],y+rvY*radia[0],radia[0],Math.PI*(r-0.25),Math.PI*(r-0.5),true);
+					}else if(r == 0.75 || r == -1.25){
+						c.arc(x+rvX*radia[0],y+rvY*radia[0],radia[0],Math.PI*(r-0.25),Math.PI*(r-0.5),true);
+					}else if(r == -0.75 || r == 1.25){
+						c.arc(x-rvX*radia[0],y+rvY*radia[0],radia[0],Math.PI*(r-0.25),Math.PI*(r-0.5),true);
+					}
+					else if(r == 0){
+						c.arc(x,y+radia[0],radia[0],Math.PI*(r-0.25),Math.PI*(r-0.5),true);
+					}else if(r == -1 || r == 1){
+						c.arc(x,y-radia[0],radia[0],Math.PI*(r-0.25),Math.PI*(r-0.5),true);
+					}else if(r == -0.5){
+						c.arc(x+radia[0],y,radia[0],Math.PI*(r-0.25),Math.PI*(r-0.5),true);
+					}else if(r == 0.5){
+						c.arc(x-radia[0],y,radia[0],Math.PI*(r-0.25),Math.PI*(r-0.5),true);
+					}
+
+					c.stroke();c.beginPath();
+				}
+					// if(swB == 0){
+					// 	c.moveTo(v.xtl+ofX+ds,v.ytl+ofY+ro[0].y);
+					// 	c.lineTo(v.xtl+ofX+ro[0].x,v.ytl+ofY+ro[0].y);
+					// 	c.stroke();c.beginPath();
+					// }
+					// else{
+					// 	c.arc(v.xtl+ofX-8.28,v.ytl+ofY+radia[0]+ro[0].y,radia[0],Math.PI*-0.50,Math.PI*-0.25,false);
+					// 	c.stroke();c.beginPath();
+					// }
+				
+
+
+
+
+
+
+				// if((sw == 0 && type == "P") || (sw == 1 && type == "B")){
+				// 	(type == "P")?Canvas.setStrokeColor(bl,0):Canvas.setStrokeColor(bl,1);
+				// 	if(r == 0.25 || r == 0.75 || r == 1.25 || r == 1.75 || r == -0.25 || r == -0.75 || r == -1.25 || r == -1.75){
+				// 		c.moveTo(x,y);
+				// 		if(r == -0.25 || r == 1.75){
+				// 			c.lineTo(x+ro[0].x+ds,y-2*ro[0].y);
+				// 		}else if(r == -0.75 || r == 1.25){
+				// 			c.lineTo(x-ro[0].x-ds,y-2*ro[0].y);
+				// 		}else if(r == -1.25 || r == 0.75){
+				// 			c.lineTo(x-ro[0].x-ds,y+2*ro[0].y);
+				// 		}else if(r == -1.75 || r == 0.25){
+				// 			c.lineTo(x+ro[0].x+ds,y+2*ro[0].y);
+				// 		}
+				// 	}else if(r == 0 || r == 0.5 || r == 1 || r == 1.5 || r == 2 || r == -0.5 || r == -1 || r == -1.5 || r == -2){
+				// 		c.moveTo(x,y);
+				// 		c.lineTo(x+rvX*ro[0].x,y+rvY_*ro[0].x);
+				// 	}
+				// }
+				// else{
+				// 	(type == "P")?Canvas.setStrokeColor(bl,0):Canvas.setStrokeColor(bl,1);
+				// 	if(lr == "swr"){
+				// 		if(r == 0.25 || r == -1.75){
+				// 			c.arc(x-rvX*radia[0],y+rvY*radia[0],radia[0],Math.PI*(r-0.25),Math.PI*(r-0.5),true);
+				// 		}else if(r == -0.25 || r == 1.75){
+				// 			c.arc(x+rvX*radia[0],y+rvY*radia[0],radia[0],Math.PI*(r-0.25),Math.PI*(r-0.5),true);
+				// 		}else if(r == 0.75 || r == -1.25){
+				// 			c.arc(x+rvX*radia[0],y+rvY*radia[0],radia[0],Math.PI*(r-0.25),Math.PI*(r-0.5),true);
+				// 		}else if(r == -0.75 || r == 1.25){
+				// 			c.arc(x-rvX*radia[0],y+rvY*radia[0],radia[0],Math.PI*(r-0.25),Math.PI*(r-0.5),true);
+				// 		}else if(r == 0){
+				// 			c.arc(x,y+radia[0],radia[0],Math.PI*(r-0.25),Math.PI*(r-0.5),true);
+				// 		}else{
+				// 			c.arc(x,y-radia[0],radia[0],Math.PI*(r-0.25),Math.PI*(r-0.5),true);
+				// 		}
+				// 	}
+				// 	else{
+				// 		if(r == 0.25 || r == -1.75){
+				// 			c.arc(x+rvX*radia[0],y-rvY*radia[0],radia[0],Math.PI*(r+0.5),Math.PI*(r+0.25),true);//
+				// 		}else if(r == -0.25 || r == 1.75){
+				// 			c.arc(x-rvX*radia[0],y-rvY*radia[0],radia[0],Math.PI*(r+0.5),Math.PI*(r+0.25),true);//
+				// 		}else if(r == 0.75 || r == -1.25){
+				// 			c.arc(x-rvX*radia[0],y-rvY*radia[0],radia[0],Math.PI*(r+0.5),Math.PI*(r+0.25),true);//
+				// 		}else if(r == -0.75 || r == 1.25){
+				// 			c.arc(x+rvX*radia[0],y-rvY*radia[0],radia[0],Math.PI*(r+0.5),Math.PI*(r+0.25),true);
+				// 		}else if(r == 0){
+				// 			c.arc(x,y-radia[0],radia[0],Math.PI*(r+0.5),Math.PI*(r+0.25),true);
+				// 		}else if(r == -1 || r == 1){
+				// 			c.arc(x,y+radia[0],radia[0],Math.PI*(r+0.5),Math.PI*(r+0.25),true);
+				// 		}
+				// 	}
+				// }
 			}
 		}
 
-		if(window.innerWidth < 764){
-			Canvas.rescale(0.5);
-		}
 
 		// if(window.innerWidth < 764 && window.innerWidth/window.innerHeight < 1){
 			//Small Portrait window
@@ -2262,6 +3771,10 @@
 			console.log("rotate");
 			Menu.resize();
 			Canvas.resize();
+
+			setTimeout(function(){
+				Canvas.resize();
+			}, 100);
 		}
 
 		
@@ -2272,7 +3785,9 @@
 			    });
 			}, false);
 	    }else{
-	    	window.addEventListener("resize", function(){Menu.resize();Canvas.resize()}, false);
+	    	window.addEventListener("resize", function(){
+	    		Menu.resize();Canvas.resize()
+	    	}, false);
 	    }
 
 		
@@ -2280,15 +3795,6 @@
 
 		//Calculate dotmatrix
 		
-
-		Canvas.dimensions.content_width = 1300;
-		Canvas.dimensions.content_height= 460;
-		Canvas.dimensions.box_width  = Canvas.dimensions.content_width;
-		Canvas.dimensions.box_height = Canvas.dimensions.content_height;
-		Canvas.dimensions.width = $('#track').width();
-		Canvas.dimensions.height = $('#track').height();
-		Canvas.dimensions.ofX = Canvas.dimensions.width/2-Canvas.dimensions.content_width/2;
-		Canvas.calc_limits();
 		// Canvas.resize();
 
 		// Wait until innerheight changes, for max 120 frames
@@ -2305,93 +3811,6 @@
 		}
 
 		
-
-		Canvas.update_frame();
-
-		var LongclickTimer;
-		var Longclick = false;
-		
-		$('canvas').on('mousedown',function(evt){
-			Longclick = false;
-			LongclickTimer = setTimeout(function(){longClick(evt)},400);
-			Train.hide();
-		});
-
-		function longClick(evt){
-			alert("Long Click");
-			Longclick = true;
-		}
-
-		$('canvas').on('mouseup',function(evt){
-			clearTimeout(LongclickTimer);
-			if(!touchClicked && !Longclick)
-				Canvas.click(evt.offsetX,evt.offsetY);
-			else
-				touchClicked = false;
-		});
-
-		$('canvas').on("mousewheel",function(evt){
-			console.log("Scroll");
-
-			if(Canvas.dimensions.width < Canvas.dimensions.content_width){
-				Canvas.dimensions.ofX -= evt.originalEvent.deltaX/10;
-			}
-			if(Canvas.dimensions.height < Canvas.dimensions.content_height){
-				Canvas.dimensions.ofY -= evt.originalEvent.deltaY/10;
-			}
-
-			Canvas.moved();
-		})
-
-		var touchStart = {x:0,y:0};
-		var touchMove = {x:0,y:0};
-		var touchMoved = false;
-		var touchClicked = false;
-
-		$('canvas').on("touchstart",function(evt){
-			touchStart.x = (touchMove.x = evt.touches[0].pageX);
-			touchStart.y = (touchMove.y = evt.touches[0].pageY);
-			touchMoved = false;
-
-			LongclickTimer = setTimeout(function(){longClick(evt)},600);
-
-			Train.hide();
-		});
-
-		$('canvas').on("touchmove",function(evt){
-			if(touchMoved == true){
-				if(Canvas.dimensions.width < Canvas.dimensions.content_width){
-					Canvas.dimensions.ofX += (evt.touches[0].pageX - touchMove.x)/Canvas.dimensions.scale;
-				}
-				if(Canvas.dimensions.height < Canvas.dimensions.content_height){
-					Canvas.dimensions.ofY += (evt.touches[0].pageY - touchMove.y)/Canvas.dimensions.scale;
-				}
-
-				Canvas.moved()
-
-				touchMove.x = evt.touches[0].pageX;
-				touchMove.y = evt.touches[0].pageY;
-
-				return false;
-			}else{
-				if(Math.sqrt(Math.pow(touchStart.x - evt.touches[0].pageX,2)+Math.pow(touchStart.y - evt.touches[0].pageY,2)) >= 10){
-					touchMoved = true;
-					clearTimeout(LongclickTimer);
-					console.log("Touch Moved");
-				}
-			}
-		});
-
-		$('canvas').on("touchend",function(evt){
-			if(touchMoved == false){
-				touchClicked = true;
-				Canvas.click(touchStart.x,touchStart.y);
-				clearTimeout(LongclickTimer);
-			}
-
-			evt.preventDefault();
-			return false;
-		});
 
 		function throw_Switch(m,s){
 			if(!ws.connected){

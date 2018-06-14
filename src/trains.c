@@ -15,6 +15,8 @@
 
 #include "./../lib/trains.h"
 
+#include "./../lib/logger.h"
+
 #include "./../lib/pathfinding.h"
 #include "./../lib/com.h"
 #include "./../lib/Z21.h"
@@ -26,13 +28,477 @@
 pthread_t train_timer_thread[MAX_TIMERS];
 int        train_timer_state[MAX_TIMERS];
 
-struct train *trains[MAX_TRAINS] = {};
+Trains ** trains;
+int trains_len = 0;
+Engines ** engines;
+int engines_len = 0;
+Cars ** cars;
+int cars_len = 0;
+struct train_composition ** trains_comp;
+int trains_comp_len = 0;
+
+void init_trains(){
+	loggerf(INFO, "Initializing cars/engines/trains");
+	alloc_trains();
+	train_read_confs();
+}
+
+int find_free_index(void ** list, int * length){
+	if(!list){
+		logger("LIST DOESNT EXIST",CRITICAL);
+		return -1;
+	}
+	for(int i = 0;i<*length;i++){
+		if(!list[i]){
+			return i;
+		}
+	}
+
+	list = (void **)realloc(list,*length+10);
+	*length += 10;
+	logger("EXPANDING LIST",WARNING);
+	return find_free_index(list, length);
+}
+
+void alloc_trains(){
+	trains = (Trains **)calloc(10,sizeof(Trains *));
+	trains_len = 10;
+	engines = (Engines **)calloc(10,sizeof(Engines *));
+	engines_len = 10;
+	cars = (Cars **)calloc(10,sizeof(Cars *));
+	cars_len = 10;
+	trains_comp = (struct train_composition **)calloc(10,sizeof(struct train_composition *));
+	trains_comp_len = 10;
+}
+
+void free_trains(){
+	logger("Clearing trains memory",INFO);
+
+	for(int i = 0;i<trains_len;i++){
+		if(trains[i]){
+			trains[i]->name = free0(trains[i]->name);
+			trains[i]->composition = free0(trains[i]->composition);
+			trains[i] = free0(trains[i]);
+		}
+	}
+
+	for(int i = 0;i<engines_len;i++){
+		if(engines[i]){
+			engines[i]->name = free0(engines[i]->name);
+			engines[i]->img_path = free0(engines[i]->img_path);
+			engines[i]->icon_path = free0(engines[i]->icon_path);
+			engines[i] = free0(engines[i]);
+		}
+	}
+
+	for(int i = 0;i<cars_len;i++){
+		if(cars[i]){
+			cars[i]->name = free0(cars[i]->name);
+			cars[i]->img_path = free0(cars[i]->img_path);
+			cars[i]->icon_path = free0(cars[i]->icon_path);
+			cars[i] = free0(cars[i]);
+		}
+	}
+
+	for(int i = 0;i<trains_comp_len;i++){
+		if(trains_comp[i]){
+			trains_comp[i]->name = free0(trains_comp[i]->name);
+			trains_comp[i]->composition = free0(trains_comp[i]->composition);
+			trains_comp[i] = free0(trains_comp[i]);
+		}
+	}
+
+	trains = free0(trains);
+	engines = free0(engines);
+	cars = free0(cars);
+	trains_comp = free0(trains_comp);
+
+	trains_len = 0;
+	engines_len	= 0;
+	cars_len = 0;
+	trains_comp_len = 0;
+}
+
+int create_train(char * name, int nr_stock, struct train_comp_ws * comps){
+	Trains * Z = (Trains *)malloc(sizeof(Trains));
+
+	Z->nr_stock = nr_stock;
+	Z->composition = (struct train_comp *)malloc(nr_stock * sizeof(struct train_comp));
+
+	Z->max_spd = 0xFFFF;
+	Z->length = 0;
+
+	for(int i = 0;i<nr_stock;i++){
+		loggerf(DEBUG, "create_train: stock %c %i", comps[i].type, comps[i].ID);
+		Z->composition[i].type = comps[i].type;
+		Z->composition[i].id = comps[i].ID;
+		if(comps[i].type == 'E' || comps[i].type == 'e'){
+			if(comps[i].ID < engines_len && engines[comps[i].ID]){
+				Z->length += engines[comps[i].ID]->length;
+				if(Z->max_spd > engines[comps[i].ID]->max_spd){
+					Z->max_spd = engines[comps[i].ID]->max_spd;
+				}
+
+				Z->composition[i].p = engines[comps[i].ID];
+				loggerf(DEBUG, "Engine (%i) found", comps[i].ID);
+			}
+			else{
+				loggerf(ERROR, "Engine (%i) doesn't exist", comps[i].ID);
+			}
+		}
+		else{ //Car
+			if(comps[i].ID < cars_len && cars[comps[i].ID]){
+				Z->length += cars[comps[i].ID]->length;
+				if(Z->max_spd > cars[comps[i].ID]->max_spd){
+					Z->max_spd = cars[comps[i].ID]->max_spd;
+				}
+
+				loggerf(DEBUG, "Car (%i) found", comps[i].ID);
+				Z->composition[i].p = cars[comps[i].ID];
+			}
+			else{
+				loggerf(ERROR, "Car (%i) doesn't exist", comps[i].ID);
+			}
+		}
+	}
+
+	Z->name = (char *)malloc(strlen(name)+2);
+	strcpy(Z->name,name);
+
+	int index = find_free_index((void **)trains,&trains_len);
+
+	trains[index] = Z;
+
+	loggerf(INFO, "Train created at %i",index);
+}
+
+int create_train_from_comp(){}
+
+int create_engine(char * name,int DCC,char * img, char * icon, int max, char type, int length){
+	//DCC cant be used twice
+	for(int i = 0;i<engines_len;i++){
+		if(engines[i] && engines[i]->DCC_ID == DCC){
+			loggerf(WARNING,"create_engine: found duplicate: %s",engines[i]->name);
+		}
+	}
+	Engines * Z = (Engines *)malloc(sizeof(Engines));
+
+	Z->name = (char *)malloc(strlen(name)+2);
+	Z->img_path = (char *)malloc(strlen(img)+2);
+	Z->icon_path = (char *)malloc(strlen(icon)+2);
+
+	strcpy(Z->name,name);
+	strcpy(Z->img_path,img);
+	strcpy(Z->icon_path,icon);
+
+	Z->DCC_ID = DCC;
+
+	Z->length = length;
+	Z->max_spd = max;
+	Z->cur_spd = 0;
+
+	Z->type = type;
+	_Bool dir = FALSE;
+
+	int index = find_free_index((void **)engines,&engines_len);
+
+	engines[index] = Z;
+
+	loggerf(INFO, "Engine \"%s\" created at %i\t%s, %s", name, index, img, icon);
+}
+
+int create_car(char * name,int nr,char * img, char * icon, char type, int length){
+	Cars * Z = (Cars *)malloc(sizeof(Cars));
+
+	Z->name = (char *)malloc(strlen(name)+2);
+	Z->img_path = (char *)malloc(strlen(img)+2);
+	Z->icon_path = (char *)malloc(strlen(icon)+2);
+
+	Z->nr = nr;
+	Z->length = length;
+
+	strcpy(Z->name,name);
+	strcpy(Z->img_path,img);
+	strcpy(Z->icon_path,icon);
+
+	Z->type = type;
+	_Bool dir = FALSE;
+
+	int index = find_free_index((void **)cars,&cars_len);
+
+	cars[index] = Z;
+
+	loggerf(INFO, "Car \"%s\" created at %i",name,index);
+}
+
+int train_read_confs(){
+	char * header = (char *)malloc(2);
+
+	memset(header,2,0);
+
+	FILE *f;
+	f = fopen(ENGINES_CONF,"rb");
+
+	if(!f){
+		loggerf(CRITICAL, "ENGINES COMPS CONFIG FILE NOT FOUND");
+		raise(SIGTERM);
+		return 0;
+	}
+
+	fread(header, 2, 2, f);
+
+	fseek(f, 0, SEEK_END);
+	long fsize = ftell(f);
+	fseek(f, 2, SEEK_SET);  //same as rewind(f);
+
+	if(header[0] == CONF_VERSION){
+		// Compatible Read further
+		int engines_nr = header[1];
+		if(engines_nr > 0){
+			char *buffer = malloc(fsize - 1);
+			fread(buffer, fsize, 1, f);
+
+			long index = 0;
+
+			for(int i = 0;i < engines_nr;i++){
+				struct engine_conf * engine = (void *)&buffer[index];
+				
+				if(engine->check != 0){
+					loggerf(ERROR,"Enignes config file wrong format in engine number %i",i+1);
+					break;
+				}
+
+				char * name = (char *)malloc(engine->name_len+2);
+				char * img = (char *)malloc(engine->img_path_len+2);
+				char * icon = (char *)malloc(engine->icon_path_len+2);
+
+				index += sizeof(struct engine_conf);
+
+				memset(name,0,engine->name_len+2);
+				memset(img,0,engine->img_path_len+2);
+				memset(icon,0,engine->icon_path_len+2);
+
+				strncpy(name,&buffer[index],engine->name_len);
+				index += engine->name_len;
+
+				strncpy(img,&buffer[index],engine->img_path_len);
+				index += engine->img_path_len;
+
+				strncpy(icon,&buffer[index],engine->icon_path_len);
+				index += engine->icon_path_len;
+
+				if(buffer[index] != 0){
+					loggerf(ERROR, "%s, %s, %s", name, img, icon);
+					loggerf(ERROR, "Engines config file wrong format / padding after engine number %i",i+1);
+					break;
+				}
+				create_engine(name, engine->DCC_ID, img, icon, engine->max_spd, engine->type, engine->length);
+
+				free(name);
+				free(img);
+				free(icon);
+				index += 1;
+			}
+
+			free(buffer);
+
+			// struct engine_conf;
+		}
+	}
+	else{
+		loggerf(ERROR,"ENGINES_CONF has wrong format (%i) and is not compatible",header[0]);
+		return 0;
+	}
+
+	fclose(f);
+
+	memset(header,2,0);
+
+	f = fopen(CARS_CONF,"rb");
+
+	if(!f){
+		loggerf(CRITICAL, "CARS COMPS CONFIG FILE NOT FOUND");
+		raise(SIGTERM);
+		return 0;
+	}
+
+	fread(header, 2, 2, f);
+
+	fseek(f, 0, SEEK_END);
+	fsize = ftell(f);
+	fseek(f, 2, SEEK_SET);  //same as rewind(f);
+
+	if(header[0] == CONF_VERSION){
+		// Compatible Read further
+		int cars_nr = header[1];
+		if(cars_nr > 0){
+			char *buffer = malloc(fsize - 1);
+			fread(buffer, fsize, 1, f);
+
+			long index = 0;
+
+			for(int i = 0;i < cars_nr;i++){
+				struct car_conf * car = (void *)&buffer[index];
+				
+				if(car->check != 0){
+					loggerf(ERROR,"Cars config file wrong format in car number %i",i+1);
+					break;
+				}
+
+				char * name = (char *)malloc(car->name_len+2);
+				char * img = (char *)malloc(car->img_path_len+2);
+				char * icon = (char *)malloc(car->icon_path_len+2);
+
+				index += sizeof(struct car_conf);
+
+				memset(name,0,car->name_len+2);
+				memset(img,0,car->img_path_len+2);
+				memset(icon,0,car->icon_path_len+2);
+
+				strncpy(name,&buffer[index],car->name_len);
+
+				index += car->name_len;
+				strncpy(img,&buffer[index],car->img_path_len);
+
+				index += car->img_path_len;
+				strncpy(icon,&buffer[index],car->icon_path_len);
+
+				index += car->icon_path_len;
+
+				if(buffer[index] != 0){
+					loggerf(ERROR,"Cars config file wrong format / padding after car number %i",i+1);
+					break;
+				}
+				create_car(name, car->nr, img, icon, car->type, car->length);
+
+				free(name);
+				free(img);
+				free(icon);
+				index += 1;
+			}
+
+			free(buffer);
+
+			// struct engine_conf;
+		}
+	}
+	else{
+		loggerf(ERROR,"CARS_CONF has wrong format (%i) and is not compatible",header[0]);
+		return 0;
+	}
+
+	fclose(f);
+
+	memset(header,2,0);
+
+	f = fopen(TRAIN_COMPS_CONF,"r");
+
+	if(!f){
+		loggerf(CRITICAL, "TRAINS COMPS CONFIG FILE NOT FOUND");
+		raise(SIGTERM);
+		return 0;
+	}
+
+	fread(header, 2, 2, f);
+
+	fseek(f, 0, SEEK_END);
+	fsize = ftell(f);
+	fseek(f, 2, SEEK_SET);  //same as rewind(f);
+
+	if(header[0] == CONF_VERSION){
+		// Compatible Read further
+		int trains_nr = header[1];
+		if(trains_nr > 0){
+			char *buffer = malloc(fsize - 1);
+			fread(buffer, fsize, 1, f);
+
+			long index = 0;
+
+			for(int i = 0;i < trains_nr;i++){
+				struct train_comp_conf * train = (void *)&buffer[index];
+				
+				if(train->check != 0){
+					loggerf(ERROR,"Trains config file wrong format in train number %i",i+1);
+					break;
+				}
+
+				char * name = (char *)malloc(train->name_len+2);
+				memset(name,0,train->name_len+2);
+
+				index += sizeof(struct train_comp_conf);
+
+				strncpy(name,&buffer[index],train->name_len);
+
+				index += train->name_len;
+
+				struct train_comp_ws * comp = (struct train_comp_ws *)calloc(train->nr_stock,sizeof(struct train_comp_ws));
+
+				memcpy(comp,&buffer[index],train->nr_stock*sizeof(struct train_comp_ws));
+
+				index += train->nr_stock * sizeof(struct train_comp_ws);
+
+				if(buffer[index] != 0){
+					loggerf(ERROR,"Trains config file wrong format / padding after train number %i",i+1);
+					break;
+				}
+				create_train(name, train->nr_stock, comp);
+
+				index += 1;
+			}
+
+			free(buffer);
+
+			// struct engine_conf;
+		}
+	}
+	else{
+		loggerf(ERROR,"TRAIN_COMPS_CONF has wrong format (%i) and is not compatible",header[0]);
+		return 0;
+	}
+
+	fclose(f);
+
+	_SYS_change(STATE_TRAIN_LOADED, 1);
+	return 1;
+}
+
+int link_train(char link,char train, char type){
+	//Link = follow ID
+	//train = tID
+	if(type > 0){
+		// Create train from engine
+		return;
+	}
+
+	for(int i = 0; i < trains[train]->nr_engines; i++){
+		if(engines[trains[train]->engines[i]]->use){
+			return 0;
+		}
+	}
+
+	if(train_link[link] == NULL){
+		printf("link is empty %i\n",train_link[link]);
+		train_link[link] = trains[train];
+		if(train != 0 || train != 1){
+			train_link[link]->use = 1;
+		}else{
+			printf("Duplicates allowed");
+		}
+		printf("Set to %i\n",train_link[link]);
+		return 1;
+	}else{
+		return 0;
+	}
+}
+
+
+struct train *trains2[MAX_TRAINS] = {};
 struct train *DCC_train[9999] = {};
 struct train *train_link[MAX_TRAINS];
 int iTrain = 0; //Counter for trains in library
 int bTrain = 0; //Counter for trains on layout
 
-int add_train(int DCC,int speed,char name[],char type){
+int add_train2(int DCC,int speed,char name[],char type){
 	printf("Add train\n");
 	struct train *Z = (struct train*)malloc(sizeof(struct train));
 	printf("Add train\n");
@@ -53,25 +519,25 @@ int add_train(int DCC,int speed,char name[],char type){
 	Z->halt = FALSE;
 	//return Z;
 	//printf("Add train %i (#%i)\n",iTrain,Z->DCC_ID);
-	trains[iTrain++] = Z;
+	trains2[iTrain++] = Z;
 	if(DCC < 9999){
 		DCC_train[DCC] = Z;
 	}
 	return (iTrain - 1);
 }
 
-int create_train(int DCC,int speed,char name[],char type){
+int create_train2(int DCC,int speed,char name[],char type){
 	printf("Create train, %i trains in library\n",iTrain);
 	for(int i = 0;i<iTrain;i++){
 		printf("Train[%i]\n",i);
-		if(trains[i]->DCC_ID == DCC){
+		if(trains2[i]->DCC_ID == DCC){
 			printf("Address already in use");
 			return -1;
 		}
 	}
 	printf("Add train\n");
 
-	int value = add_train(DCC,speed,name,type);
+	int value = add_train2(DCC,speed,name,type);
 
 	printf("Open file\n");
 	FILE * f;
@@ -84,7 +550,7 @@ int create_train(int DCC,int speed,char name[],char type){
 	return value;
 }
 
-void init_trains(){
+void init_trains2(){
 	FILE *f;
 	f = fopen("./trains/trainlist_raw.txt","r");
 	char line[256] = "";
@@ -145,7 +611,7 @@ void init_trains(){
 			printf("line %02i:\t%s\t\t%s(#%i)\t\t%s\t\t%s\n",line_nr,L1,L2,atoi(L2),L3,L4);
 			if(line_nr != 0){
 				if(atoi(L2) < 10000){
-					add_train(atoi(L2),atoi(L4),L1,L3[0]);
+					add_train2(atoi(L2),atoi(L4),L1,L3[0]);
 					nr_trains++;
 				}
 			}
@@ -161,7 +627,7 @@ void init_trains(){
 
 	for(int i = 0;i<nr_trains;i++){
 		char buf[40] = "|                    ";
-		sprintf(buf,"%s(%02i) #%04i  %s",buf,i,trains[i]->DCC_ID,trains[i]->name);
+		sprintf(buf,"%s(%02i) #%04i  %s",buf,i,trains2[i]->DCC_ID,trains2[i]->name);
 		printf("%s",buf);
 		for(int j = strlen(buf);j<69;j++)
 			printf(" ");
@@ -171,12 +637,13 @@ void init_trains(){
 	printf("|                                                                          |\n");
 }
 
-int link_train(char link,int train){
+int link_train2(char link,int train){
+	loggerf(ERROR, "Depricated");
 	//Link = follow ID
 	//train = tID
-	if(train_link[link] == NULL && trains[train]->use == 0){
+	if(train_link[link] == NULL && trains2[train]->use == 0){
 		printf("link is empty %i\n",train_link[link]);
-		train_link[link] = trains[train];
+		train_link[link] = trains2[train];
 		if(train != 0 || train != 1){
 			train_link[link]->use = 1;
 		}else{
@@ -189,7 +656,8 @@ int link_train(char link,int train){
 	}
 }
 
-void unlink_train(char link){
+void unlink_train2(char link){
+	loggerf(ERROR, "Depricated");
 	train_link[link]->use = 0;
 	train_link[link] = NULL;
 }
@@ -285,7 +753,9 @@ void *clear_train_timers(){
 		usleep(10000);
 	}
 }
-void train_speed(struct Seg * B,struct train * T,char speed){
+void train_speed(block * B, Trains * T, char speed){
+	loggerf(ERROR, "TODO: implement train_speed");
+	return;
 	if(T == NULL){
 		return;
 	}
@@ -323,13 +793,17 @@ void train_speed(struct Seg * B,struct train * T,char speed){
 	}
 }
 
-void train_set_speed(struct train *T,char speed){
+void train_set_speed(Trains *T, char speed){
+	loggerf(ERROR, "TODO: implement train_set_speed");
+	return;
 	if(!T){ return;printf("Empty T\n");}
 	T->cur_speed = speed;
 	Z21_GET_LOCO_INFO(T->DCC_ID);
 }
 
-void train_set_dir(struct train *T,char dir){
+void train_set_dir(Trains *T, char dir){
+	loggerf(ERROR, "TODO: implement train_set_dir");
+	return;
 	if(!T){ return;printf("Empty T\n");}
 	if(dir == 0){
 		printf("Set dir to forward\n");
@@ -341,18 +815,23 @@ void train_set_dir(struct train *T,char dir){
 	Z21_GET_LOCO_INFO(T->DCC_ID);
 }
 
-void train_set_route(struct train *T,struct Station * S){
+void train_set_route(Trains *T, struct Station * S){
+	loggerf(ERROR, "TODO: implement train_set_route");
+	return;
 	if(pathFinding(T->Cur_Block,S->Blocks[0],T->Route,&T->Sw_len)){
 		T->halt = 0;
 		T->Destination = S->Blocks[0];
 	}
 }
 
-void train_stop(struct train * T){
+void train_stop(Trains * T){
+	loggerf(ERROR, "TODO: implement train_stop");
 	printf("KILL TRAIN:\t#%i\t%s\n",T->DCC_ID,T->name);
 }
 
-void train_signal(struct Seg * B,struct train * T,int type){
+void train_signal(block * B, Trains * T, int type){
+	loggerf("TODO: reimplement train_signal")
+	return;
 	if(T == NULL){
 		return;
 	}

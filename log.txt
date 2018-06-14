@@ -1,0 +1,56 @@
+10:58 - ..INFO.. -     websocket.c: 930 - Starting websocket sever at port 9000
+10:58 - ..INFO.. -           com.c:  34 - Starting UART thread
+10:58 - CRITICAL -           com.c:  40 - Unable to open UART
+10:58 - ..INFO.. -          baan.c: 135 - Connecting to Z21@192.168.2.92:4129
+10:58 - ..INFO.. -          baan.c: 142 - Accepting Websocket Clients
+10:58 - ..INFO.. -        trains.c:  41 - Initializing cars/engines/trains
+10:58 - ..INFO.. -        trains.c: 207 - Engine "NS 1800" created at 0	./cars/ns1800.png, ./cars/ns1800.png
+10:58 - ..INFO.. -        trains.c: 207 - Engine "Koploper 3" created at 1	./2.jpg, ./cars/icm_3.png
+10:58 - ..INFO.. -        trains.c: 207 - Engine "Koploper 4" created at 2	./2.jpg, ./cars/icm_4.png
+10:58 - ..INFO.. -        trains.c: 207 - Engine "NS 1700" created at 3	./cars/ns1700.png, ./cars/ns1700.png
+10:58 - ..INFO.. -        trains.c: 207 - Engine "ICE 3" created at 4	./cars/ice.png, ./cars/ice.png
+10:58 - ..INFO.. -        trains.c: 207 - Engine "Thalys" created at 5	./cars/thalys.png, ./cars/thalys.png
+10:58 - ..INFO.. -        trains.c: 231 - Car "NS ICR 1ste" created at 0
+10:58 - ..INFO.. -        trains.c: 231 - Car "NS ICR 2de" created at 1
+10:58 - ..INFO.. -     websocket.c: 819 - New websocket_client
+10:58 - ..DEBUG. -        trains.c: 132 - create_train: stock e 0
+10:58 - ..DEBUG. -        trains.c: 143 - Engine (0) found
+10:58 - ..DEBUG. -        trains.c: 132 - create_train: stock c 0
+10:58 - ..DEBUG. -        trains.c: 156 - Car (0) found
+10:58 - ..DEBUG. -        trains.c: 132 - create_train: stock c 1
+10:58 - ..DEBUG. -        trains.c: 156 - Car (1) found
+10:58 - ..DEBUG. -        trains.c: 132 - create_train: stock c 257
+10:58 - ..ERROR. -        trains.c: 160 - Car (257) doesn't exist
+10:58 - ..INFO.. -        trains.c: 172 - Train created at 0
+10:58 - ..INFO.. -          baan.c: 173 - Found module 20
+10:58 - ..INFO.. -          baan.c: 175 - Found module 21
+10:58 - ..INFO.. -          baan.c: 177 - Found module 22
+10:58 - ..INFO.. -          baan.c: 179 - Found module 23
+10:58 - ..INFO.. -     websocket.c: 859 - Update clients libs 0
+10:58 - ..INFO.. -        status.c: 165 - CarsLib for client 7
+10:58 - ..INFO.. -        status.c: 213 - TrainsLib for client 7
+10:58 - ..INFO.. -     websocket.c: 819 - New websocket_client
+10:58 - ..INFO.. -     websocket.c: 859 - Update clients libs 1
+10:58 - ..INFO.. -        status.c: 165 - CarsLib for client 6
+10:58 - ..INFO.. -        status.c: 213 - TrainsLib for client 6
+10:58 - ..INFO.. -     websocket.c: 819 - New websocket_client
+10:58 - ..INFO.. -     websocket.c: 859 - Update clients libs 2
+10:58 - ..INFO.. -        status.c: 165 - CarsLib for client 5
+10:58 - ..INFO.. -        status.c: 213 - TrainsLib for client 5
+10:58 - .WARNING -        status.c: 106 - SHORT CIRCUIT
+10:59 - ..INFO.. -     websocket.c: 922 - Reset client 2
+10:59 - ..INFO.. -     websocket.c: 819 - New websocket_client
+10:59 - ..INFO.. -     websocket.c: 859 - Update clients libs 2
+10:59 - ..INFO.. -        status.c: 165 - CarsLib for client 8
+10:59 - ..INFO.. -        status.c: 213 - TrainsLib for client 8
+11:14 - ..INFO.. -     websocket.c: 819 - New websocket_client
+11:14 - ..INFO.. -     websocket.c: 859 - Update clients libs 3
+11:14 - ..INFO.. -        status.c: 165 - CarsLib for client 5
+11:14 - ..INFO.. -        status.c: 213 - TrainsLib for client 5
+11:35 - ..INFO.. -     websocket.c: 922 - Reset client 0
+11:35 - ..INFO.. -     websocket.c: 922 - Reset client 1
+11:35 - ..INFO.. -     websocket.c: 922 - Reset client 3
+13:40 - ..INFO.. -     websocket.c: 819 - New websocket_client
+13:40 - ..INFO.. -     websocket.c: 859 - Update clients libs 0
+13:40 - ..INFO.. -        status.c: 165 - CarsLib for client 9
+13:40 - ..INFO.. -        status.c: 213 - TrainsLib for client 9

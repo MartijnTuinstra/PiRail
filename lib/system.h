@@ -17,6 +17,8 @@
 
 	void _SYS_change(int STATE,char send);
 
+	void * free0(void * p);
+
 	extern struct systemState * _SYS;	
 
 	#ifndef TRUE
@@ -46,6 +48,8 @@
 	#define STATE_TRACK_DIGITAL   0x0200
 	#define STATE_RUN             0x0100
 
-	#define STATE_Modules_Loaded  0x0002
-	#define STATE_Modules_Coupled 0x0004
+	#define STATE_Modules_Coupled 0x0008
+	#define STATE_Modules_Loaded  0x0004
+
+	#define STATE_TRAIN_LOADED    0x0001
 #endif

@@ -17,6 +17,7 @@
 #include "./../lib/rail.h"
 #include "./../lib/switch.h"
 #include "./../lib/trains.h"
+#include "./../lib/logger.h"
 
 #include "./../lib/modules.h"
 #include "./../lib/Z21.h"
@@ -97,18 +98,159 @@ void WS_clear_message(uint16_t ID){
 
 
 void WS_EmergencyStop(){
+  loggerf(WARNING, "EMERGENCY STOP");
   send_all((char []){WSopc_EmergencyStop},1,0xFF); //Everyone
 }
 
 void WS_ShortCircuit(){
+  loggerf(WARNING, "SHORT CIRCUIT");
   send_all((char []){WSopc_ShortCircuitStop},1,0xFF); //Everyone
 }
 
 void WS_ClearEmergency(){
+  loggerf(INFO, "EMERGENCY Released");
   send_all((char []){WSopc_ClearEmergency},1,0xFF); //Everyone
 }
 
 
+
+void WS_EnginesLib(int client_fd){
+  int buffer_size = 1024;
+
+  char * data = (char *)calloc(buffer_size, 1);
+
+  int len = 0;
+
+  data[len++] = WSopc_EnginesLibrary;
+
+  for(int i = 0;i<engines_len;i++){
+    if(buffer_size < (len + 100)){
+      buffer_size += 1024;
+      data = realloc(data, buffer_size);
+    }
+    if(engines[i]){
+      data[len++] = engines[i]->DCC_ID & 0xFF;
+      data[len++] = engines[i]->DCC_ID >> 8;
+      data[len++] = engines[i]->max_spd & 0xFF;
+      data[len++] = engines[i]->max_spd >> 8;
+      data[len++] = engines[i]->length & 0xFF;
+      data[len++] = engines[i]->length >> 8;
+      data[len++] = engines[i]->type;
+      data[len++] = strlen(engines[i]->name);
+      data[len++] = strlen(engines[i]->img_path);
+      data[len++] = strlen(engines[i]->icon_path);
+
+      int l = strlen(engines[i]->name);
+      memcpy(&data[len], engines[i]->name, l);
+      len += l;
+
+      l = strlen(engines[i]->img_path);
+      memcpy(&data[len], engines[i]->img_path, l);
+      len += l;
+
+      l = strlen(engines[i]->icon_path);
+      memcpy(&data[len], engines[i]->icon_path, l);
+      len += l;
+    }
+  }
+  if(client_fd <= 0){
+    send_all(data, len, WS_Flag_Trains);
+  }
+  else{
+    send_packet(client_fd, data, len, WS_Flag_Trains);
+  }
+}
+
+void WS_CarsLib(int client_fd){
+  loggerf(INFO, "CarsLib for client %i", client_fd);
+  int buffer_size = 1024;
+
+  char * data = (char *)calloc(buffer_size, 1);
+
+  int len = 0;
+
+  data[len++] = WSopc_CarsLibrary;
+
+  for(int i = 0;i<cars_len;i++){
+    if(buffer_size < (len + 100)){
+      buffer_size += 1024;
+      data = realloc(data, buffer_size);
+    }
+    if(cars[i]){
+      data[len++] = cars[i]->nr & 0xFF;
+      data[len++] = cars[i]->nr >> 8;
+      data[len++] = cars[i]->max_spd & 0xFF;
+      data[len++] = cars[i]->max_spd >> 8;
+      data[len++] = cars[i]->length & 0xFF;
+      data[len++] = cars[i]->length >> 8;
+      data[len++] = cars[i]->type;
+      data[len++] = strlen(cars[i]->name);
+      data[len++] = strlen(cars[i]->img_path);
+      data[len++] = strlen(cars[i]->icon_path);
+
+      int l = strlen(cars[i]->name);
+      memcpy(&data[len], cars[i]->name, l);
+      len += l;
+
+      l = strlen(cars[i]->img_path);
+      memcpy(&data[len], cars[i]->img_path, l);
+      len += l;
+
+      l = strlen(cars[i]->icon_path);
+      memcpy(&data[len], cars[i]->icon_path, l);
+      len += l;
+    }
+  }
+  if(client_fd <= 0){
+    send_all(data, len, WS_Flag_Trains);
+  }
+  else{
+    send_packet(client_fd, data, len, WS_Flag_Trains);
+  }
+}
+
+void WS_TrainsLib(int client_fd){
+  loggerf(INFO, "TrainsLib for client %i", client_fd);
+  int buffer_size = 1024;
+
+  char * data = (char *)calloc(buffer_size, 1);
+
+  int len = 0;
+
+  data[len++] = WSopc_TrainsLibrary;
+
+  for(int i = 0;i<trains_len;i++){
+    if(buffer_size < (len + 100)){
+      buffer_size += 1024;
+      data = realloc(data, buffer_size);
+    }
+    if(trains[i]){
+      data[len++] = trains[i]->max_spd & 0xFF;
+      data[len++] = trains[i]->max_spd >> 8;
+      data[len++] = trains[i]->length & 0xFF;
+      data[len++] = trains[i]->length >> 8;
+      data[len++] = trains[i]->type;
+      data[len++] = strlen(trains[i]->name);
+      data[len++] = trains[i]->nr_stock;
+
+      int l = strlen(trains[i]->name);
+      memcpy(&data[len], trains[i]->name, l);
+      len += l;
+
+      for(int c = 0; c<trains[i]->nr_stock; c++){
+        data[len++] = trains[i]->composition[c].type;
+        data[len++] = trains[i]->composition[c].id & 0xFF;
+        data[len++] = trains[i]->composition[c].id >> 8;
+      }
+    }
+  }
+  if(client_fd <= 0){
+    send_all(data, len, WS_Flag_Trains);
+  }
+  else{
+    send_packet(client_fd, data, len, WS_Flag_Trains);
+  }
+}
 
 
 
@@ -443,10 +585,13 @@ void WS_NewClient_track_Switch_Update(int Client_fd){
 
   memset(buf,0,4096);
 
+  loggerf(INFO, "Z21_GET_LOCO_INFO check");
   for(int i = 1;i<MAX_TRAINS;i++){
     if(train_link[i]){
-      printf("Recall #%i\n",train_link[i]->DCC_ID);
-      Z21_GET_LOCO_INFO(train_link[i]->DCC_ID);
+      for(int j = 0; j < train_link[i]->nr_engines; j++){
+        printf("Recall #%i\n",train_link[i]->engines[j]->DCC_ID);
+        Z21_GET_LOCO_INFO(train_link[i]->engines[j]->DCC_ID);
+      }
     }
   }
 

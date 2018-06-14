@@ -1,8 +1,5 @@
 #define _BSD_SOURCE
 
-#define Serial_Port "/dev/ttyAMB0"
-#define Serial_Baud B115200
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -20,6 +17,7 @@
 #include "./../lib/switch.h"
 #include "./../lib/signals.h"
 #include "./../lib/trains.h"
+#include "./../lib/logger.h"
 
 #include "./../lib/modules.h"
 
@@ -33,14 +31,14 @@ int uart0_filestream = -1;
 char COM_ACK = 0;
 
 void * UART(){
-
+	loggerf(INFO, "Starting UART thread");
 	//OPEN THE UART
 	uart0_filestream = open(Serial_Port, O_RDWR | O_NOCTTY);
 	if (uart0_filestream == -1)
 	{
 		//ERROR - CAN'T OPEN SERIAL PORT
-		printf("COM - Error - Unable to open UART.  Ensure it is not in use by another application\n");
-		return;
+		logger("Unable to open UART",CRITICAL);
+		return 0;
 	}
 
 	//CONFIGURE THE UART

@@ -2,6 +2,8 @@
 #ifndef _INCLUDE_WEBSOCKET_H
   #define _INCLUDE_WEBSOCKET_H
 
+  #define WEBSOCKET_PORT 9000
+
   struct web_client_t{
     int fd_client;
     int client_type; /*Flags for client type
@@ -42,6 +44,8 @@
 
   void * web_server();
 
+  #define WEBSOCKET_CLIENT_TIMEOUT 5
+
   //Broadcast Flag
   #define WS_Flag_Trains   0x01
   #define WS_Flag_Track    0x02
@@ -64,18 +68,23 @@
   #define WSopc_TrainOperation     0x44
   #define WSopc_Z21TrainData       0x45
   #define WSopc_TrainAddRoute      0x46
-  #define WSopc_StationLibrary     0x4D
-  #define WSopc_AddNewTraintolib   0x4E
-  #define WSopc_TrainLibrary       0x4F
 
-  #define WSopc_SetSwitch       0x20
-  #define WSopc_SetMultiSwitch  0x21
+  #define WSopc_AddNewCartolib     0x50
+  #define WSopc_CarsLibrary         0x51
+  #define WSopc_AddNewEnginetolib  0x52
+  #define WSopc_EnginesLibrary      0x53
+  #define WSopc_AddNewTraintolib   0x54
+  #define WSopc_TrainsLibrary       0x55
+
+  #define WSopc_SetSwitch          0x20
+  #define WSopc_SetMultiSwitch     0x21
   #define WSopc_SetSwitchReserved  0x22
   #define WSopc_ChangeSwitchReserved  0x23
   #define WSopc_SetSwitchRoute     0x25
   #define WSopc_BroadTrack         0x26
   #define WSopc_BroadSwitch        0x27
   #define WSopc_Track_Layout       0x30
+  #define WSopc_StationLibrary     0x31
 
   #define WSopc_EmergencyStop      0x10
   #define WSopc_ShortCircuitStop   0x11

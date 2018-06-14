@@ -6,44 +6,64 @@ var broadcastFlags = 0xFF;
 var Track_Layout_data;
 var blocks_load = 0;
 
+function IntArrayToString(data){
+  var i, str = '';
+
+  for (i = 0; i < data.length; i++) {
+      str += String.fromCharCode(data[i]);
+  }
+
+  return str;
+}
+
 var websocket = {
   //Opcodes
   opc: {
-    Track_Scan:          0x82,
-    Track_PUp_Layout:    0x83,
-    Track_Info:          0x84,
+    Track_Scan:           0x82,
+    Track_PUp_Layout:     0x83,
+    Track_Info:           0x84,
+
+    AdminLogout:          0xFE,
+    AdminLogin:           0xFF,
 
 
-    LinkTrain:           0x41,
-    TrainSpeed:          0x42,
-    TrainFunction:       0x43,
-    TrainOperation:      0x44,
-    Z21TrainData:        0x45,
-    TrainAddRoute:       0x46,
-    StationLibrary:      0x4D,
-    AddNewTraintoLibrary:0x4E,
-    TrainLibrary:        0x4F,
+    LinkTrain:            0x41,
+    TrainSpeed:           0x42,
+    TrainFunction:        0x43,
+    TrainOperation:       0x44,
+    Z21TrainData:         0x45,
+    TrainAddRoute:        0x46,
 
-    SetSwitch:           0x20,
-    SetMultiSwitch:      0x21,
-    SetSwitchReserved:   0x22,
-    ChangeReservedSwitch:0x23,
-    SetSwitchRoute:      0x25,
+    AddNewCartolib:    0x50,
+    CarsLibrary:       0x51,
+    AddNewEnginetolib: 0x52,
+    EnginesLibrary:    0x53,
+    AddNewTraintolib:  0x54,
+    TrainsLibrary:     0x55,
 
-    BroadTrack:          0x26,
-    BroadSwitch:         0x27,
-    TrackLayoutSetup:    0x30,
+    SetSwitch:            0x20,
+    SetMultiSwitch:       0x21,
+    SetSwitchReserved:    0x22,
+    ChangeReservedSwitch: 0x23,
+    SetSwitchRoute:       0x25,
 
-    EmergencyStop:       0x10,
-    ShortCircuitStop:    0x11,
-    ClearEmergency:      0x12,
-    NewMessage:          0x13,
-    UpdateMessage:       0x14,
-    ClearMessage:        0x15,
-    ChangeBroadcast:     0x16,
-    Service_State:       0x17,
-    Canvas_Data:         0x1F,
+    BroadTrack:           0x26,
+    BroadSwitch:          0x27,
+    TrackLayoutSetup:     0x30,
+    StationLibrary:       0x31,
+
+    EmergencyStop:        0x10,
+    ShortCircuitStop:     0x11,
+    ClearEmergency:       0x12,
+    NewMessage:           0x13,
+    UpdateMessage:        0x14,
+    ClearMessage:         0x15,
+    ChangeBroadcast:      0x16,
+    Service_State:        0x17,
+    Canvas_Data:          0x1F,
   },
+
+  message_id: -1,
 
   states: {
     //Service States
@@ -65,6 +85,19 @@ var websocket = {
   },
 
 /*Client to Server*/
+  cts_reload_previous: function(entry){
+    console.warn("WEBSOCKET: RELOAD_PREVIOUS, not implemented, entry: "+entry);
+  },
+
+  cts_link_train: function(fid, rid, type, mid){
+    data[0] = this.opc.LinkTrain;
+    data[1] = fid;
+    data[2] = rid;
+    data[3] = ((type == "E")?0x80:0) + ((mid & 0x1F) >> 8)
+
+    this.send(data);
+  }.
+
   cts_set_switch: function(d){ //Module, Switch, NewState
     // console.log("Set switch "+m+":"+s+"=>"+st);
     var data = [];
@@ -102,54 +135,24 @@ var websocket = {
     this.send([this.opc.EmergencyStop]);
   },
 
-  cts_Toggle_Broadcast_Flag: function(evt){
-    console.log(evt);
-    if($(evt.target).attr("nr") != undefined){
-      console.log(parseInt($(evt.target).attr("nr")));
-      broadcastFlags ^= 1 << parseInt($(evt.target).attr("nr"));
+  cts_BroadcastFlag: function(evt){
+    var name = evt.currentTarget.classList[1];
+    console.warn(name);
+    broadcastFlags ^= parseInt(name.slice(2),16);
 
-      if($(evt.target).attr("nr") == "4"){
-        if(broadcastFlags & 0x10){
-          //LOGIN
-          var passphrase = $.md5(prompt("Please enter your password", "password"));
+    if($(evt.target).attr("nr") == "4"){
+      if(broadcastFlags & 0x10){
+        var passphrase = $.md5(prompt("Please enter your password", "password"));
 
-          $.post('./login.php', {'pass':passphrase}, function(response) {
-              // Log the response to the console
-              console.log("Response: "+response);
-              if(response == "LOGIN SUCCESFULL"){
-                //PHP succesfull
-                //now websocket
-                var data = [];
-                data[0] = 0xFF; //Admin login opcode
-                for(var i = 0;i<passphrase.length;i++){
-                  data[i+1] = passphrase.charCodeAt(i);
-                }
-
-                var data = new Uint8Array(data);
-
-                ws.send(data);
-              }else{
-                alert("WRONG PASSWORD\n"+response);
-              }
-          });
-        }else{
-          //Logout
-          $.post('./login.php', {'pass':''}, function(response) {
-              // Log the response to the console
-              console.log("Response: "+response);
-              if(response == "LOGIN SUCCESFULL"){
-                alert("SUCCESFULL LOGIN");
-              }else{
-                alert("WRONG PASSWORD");
-              }
-          });
-        }
+        //LOGIN
+        websocket.cts_login(passphrase);
+      }else{
+        websocket.cts_logout();
       }
-
-
-      console.log("New broadcast flag: "+broadcastFlags);
-      this.send([this.opc.ChangeBroadcast,broadcastFlags]);
     }
+
+    console.log("New broadcast flag: "+broadcastFlags);
+    websocket.send([websocket.opc.ChangeBroadcast,broadcastFlags]);
   },
 
   cts_Stop_Scan: function(){
@@ -168,6 +171,20 @@ var websocket = {
   cts_train_speed: function(tid, direction, speed_step){
     var data = ((direction)?0x80:0) | (speed_step & 0x7F);
     this.send([this.opc.TrainSpeed, tid, data]);
+  },
+
+  cts_login: function(passphrase){
+    var data = [];
+    data[0] = this.opc.AdminLogin;
+    for(var i = 0;i<passphrase.length;i++){
+      data[i+1] = passphrase.charCodeAt(i);
+    }
+
+    ws.send(data);
+  },
+
+  cts_logout: function(){
+    ws.send([this.opc.AdminLogout]);
   },
 /**/
 /*Server to Client*/
@@ -245,21 +262,112 @@ var websocket = {
       Train.route(data[1],data[2],data[3])
     },
 
-    // Station Library
-    stc_station_lib: function(data){
-      console.warn("implement");
-      Stations.import(data.slice(1,data.length));
+    // Engines Lib 0x51
+    stc_engines_lib: function(data){
+      console.log("Engines lib");
+      Train.engines = [];
+      for(var i = 0;i<data.length;i++){
+        var dcc_id = (data[i] + (data[i+1] << 8));
+        i += 2;
+        var max_spd = (data[i] + (data[i+1] << 8));
+        i += 2;
+        var length = (data[i] + (data[i+1] << 8));
+        i += 2;
+        type = data[i++];
+
+        var name = IntArrayToString(data.slice(i+3, i+3+data[i]));
+        var text_length = data[i++];
+
+        var img = IntArrayToString(data.slice(i+2+text_length, i+2+text_length+data[i]));
+        text_length += data[i++];
+
+        var icon = IntArrayToString(data.slice(i+1+text_length, i+1+text_length+data[i]));
+        text_length += data[i];
+
+        Train.engines.push({name: name, dcc: dcc_id, img: img, icon: icon, max_speed: max_spd, length: length, type: type});
+        i += text_length;
+      }
+      Train.comp.update_list();
     },
 
     // Add new train to library
-    stc_newtrain_tolib: function(data){
+    stc_newengine_tolib: function(data){
       console.warn("implement");
     },
 
-    // Train library
-    stc_train_lib: function(data){
+    // Cars Lib 0x53
+    stc_cars_lib: function(data){
+      console.log("Cars lib");
+      Train.cars = [];
+      for(var i = 0;i<data.length;i++){
+        var nr_id = (data[i] + (data[i+1] << 8));
+        i += 2;
+        var max_spd = (data[i] + (data[i+1] << 8));
+        i += 2;
+        var length = (data[i] + (data[i+1] << 8));
+        i += 2;
+        type = data[i++];
+
+        var name = IntArrayToString(data.slice(i+3, i+3+data[i]));
+        var text_length = data[i++];
+
+        var img = IntArrayToString(data.slice(i+2+text_length, i+2+text_length+data[i]));
+        text_length += data[i++];
+
+        var icon = IntArrayToString(data.slice(i+1+text_length, i+1+text_length+data[i]));
+        text_length += data[i];
+
+        Train.cars.push({name: name, nr: nr_id, img: img, icon: icon, max_speed: max_spd, length: length, type: type});
+        i += text_length;
+      }
+      Train.comp.update_list();
+    },
+
+    // Add new train to library
+    stc_newcar_tolib: function(data){
       console.warn("implement");
-      Train.import(data.slice(1,data.length));
+    },
+
+    //Trains 0x55
+    stc_trains_lib: function(data){
+      console.log("Trains lib");
+      Train.trains = [];
+      for(var i = 0;i<data.length;i++){
+        var max_spd = (data[i] + (data[i+1] << 8));
+        i += 2;
+        var length = (data[i] + (data[i+1] << 8));
+        i += 2;
+        var type = data[i] & 0b111;
+        var use;
+        if((data[i++] & 0b1000) == 0)
+          use = false
+        else
+          use = true
+
+        var name = IntArrayToString(data.slice(i+2, i+2+data[i]));
+        var data_len = data[i++];
+
+        console.log("Namelen: "+data_len);
+
+        var links = data.slice(i+1+data_len, i+1+data_len+3*data[i]);
+        data_len += data[i++]*3;
+
+        var link_list = [];
+        
+        for(var j = 0; j<links.length; j+=3){
+          link_list.push([links[j], links[j+1]+ (links[j+2] << 8)]);
+        }
+
+        Train.trains.push({name: name, max_speed: max_spd, length: length, type: type, link: link_list, use: use});
+        i += data_len;
+      }
+      Train.comp.update_list();
+      Train.update_list();
+      Train.linker.update_list();
+    },
+
+    stc_newtrain_tolib: function(data){
+      console.warn("implement");
     },
 
   /*  TRACK MESSAGES  */
@@ -362,6 +470,12 @@ var websocket = {
       // });
     },
 
+    // Station Library
+    stc_station_lib: function(data){
+      console.warn("implement");
+      Stations.import(data.slice(1,data.length));
+    },
+
 
   /* GENERAL MESSAGES */
     // Emergency Stops
@@ -379,7 +493,6 @@ var websocket = {
 
     // Message Add
     stc_new_message: function(data){
-      console.warn("TODO: reimplement");return;
       var msgID = data[2] + ((data[1] & 0x1F) << 8);
 
       Messages.add({id: msgID,type: (data[1] & 0xE0),data: data.slice(3,data.length)});
@@ -399,61 +512,117 @@ var websocket = {
 
     // Broadcast flags
     stc_Broadcast_Flags: function(data){
-      console.warn("TODO: reimplement");return;
-      $('#status .broad').each(function(i,v){
-        v.style['background'] = 'red';
-      })
+      
+      $('#Broadcastflags .checkbox input[type="checkbox"]:checked').prop("checked",false);
+
       if(data[1] & 0x80){
-        $('#status .broad')[0].style['background'] = 'green';
+        $('#Broadcastflags .checkbox.bf80 input[type="checkbox"]').prop("checked",true);
       }
       if(data[1] & 0x40){
-        $('#status .broad')[1].style['background'] = 'green';
+        $('#Broadcastflags .checkbox.bf40 input[type="checkbox"]').prop("checked",true);
       }
       if(data[1] & 0x20){
-        $('#status .broad')[2].style['background'] = 'green';
+        $('#Broadcastflags .checkbox.bf20 input[type="checkbox"]').prop("checked",true);
       }
       if(data[1] & 0x10){
-        $('#status .broad')[3].style['background'] = 'green';
+        $('#Broadcastflags .checkbox.bf10 input[type="checkbox"]').prop("checked",true);
         admin = 1;
         change_admin();
       }else{
         //Admin unset: logout
-        $.post('./login.php', {'pass':''});
         admin = 0;
         change_admin();
       }
+
       if(data[1] & 0x8){
-        $('#status .broad')[4].style['background'] = 'green';
+        $('#Broadcastflags .checkbox.bf08 input[type="checkbox"]').prop("checked",true);
       }
       if(data[1] & 0x4){
-        $('#status .broad')[5].style['background'] = 'green';
+        $('#Broadcastflags .checkbox.bf04 input[type="checkbox"]').prop("checked",true);
       }
       if(data[1] & 0x2){
-        $('#status .broad')[6].style['background'] = 'green';
+        $('#Broadcastflags .checkbox.bf02 input[type="checkbox"]').prop("checked",true);
       }
       if(data[1] & 0x1){
-        $('#status .broad')[7].style['background'] = 'green';
+        $('#Broadcastflags .checkbox.bf01 input[type="checkbox"]').prop("checked",true);
       }
       broadcastFlags = data[1];
     },
 
     // Server state
     stc_service_state: function(data){
-      console.warn("TODO: reimplement");
       state = (data[1] << 8) + data[2];
       console.log("service State: "+state);
-      return;
 
-      if(state & STATE_Modules_Coupled){
-        $('#Modules_scan').css('display','none');
-      }else{
-        $('#Modules_scan').css('display','block');
+      $('#status_flags .green').toggleClass("red");
+      $('#status_flags .green').toggleClass("green");
+
+      if(state & 0x8000){
+          $('.f8000','#status_flags').toggleClass("green");
+          $('.f8000','#status_flags').toggleClass("red");
+      }
+      if(state & 0x4000){
+          $('.f4000','#status_flags').toggleClass("green");
+          $('.f4000','#status_flags').toggleClass("red");
+      }
+      if(state & 0x2000){
+          $('.f2000','#status_flags').toggleClass("green");
+          $('.f2000','#status_flags').toggleClass("red");
+      }
+      if(state & 0x1000){
+          $('.f1000','#status_flags').toggleClass("green");
+          $('.f1000','#status_flags').toggleClass("red");
       }
 
-      if(state & STATE_Modules_Loaded && state & STATE_Modules_Coupled){
-        $('#Modules_wrapper').css('display','block');
-      }else{
-        $('#Modules_wrapper').css('display','none');
+      if(state & 0x0800){
+          $('.f0800','#status_flags').toggleClass("green");
+          $('.f0800','#status_flags').toggleClass("red");
+      }
+      if(state & 0x0400){
+          $('.f0400','#status_flags').toggleClass("green");
+          $('.f0400','#status_flags').toggleClass("red");
+      }
+      if(state & 0x0200){
+          $('.f0200','#status_flags').toggleClass("green");
+          $('.f0200','#status_flags').toggleClass("red");
+      }
+      if(state & 0x0100){
+          $('.f0100','#status_flags').toggleClass("green");
+          $('.f0100','#status_flags').toggleClass("red");
+      }
+
+      if(state & 0x0080){
+          $('.f0080','#status_flags').toggleClass("green");
+          $('.f0080','#status_flags').toggleClass("red");
+      }
+      if(state & 0x0040){
+          $('.f0040','#status_flags').toggleClass("green");
+          $('.f0040','#status_flags').toggleClass("red");
+      }
+      if(state & 0x0020){
+          $('.f0020','#status_flags').toggleClass("green");
+          $('.f0020','#status_flags').toggleClass("red");
+      }
+      if(state & 0x0010){
+          $('.f0010','#status_flags').toggleClass("green");
+          $('.f0010','#status_flags').toggleClass("red");
+      }
+
+      if(state & 0x0008){
+          $('.f0008','#status_flags').toggleClass("green");
+          $('.f0008','#status_flags').toggleClass("red");
+      }
+      if(state & 0x0004){
+          $('.f0004','#status_flags').toggleClass("green");
+          $('.f0004','#status_flags').toggleClass("red");
+      }
+      if(state & 0x0002){
+          $('.f0002','#status_flags').toggleClass("green");
+          $('.f0002','#status_flags').toggleClass("red");
+      }
+      if(state & 0x0001){
+          $('.f0001','#status_flags').toggleClass("green");
+          $('.f0001','#status_flags').toggleClass("red");
       }
     },
 
@@ -606,12 +775,14 @@ function WebSocket_handler(adress){
     ws.onopen = function(){
       socket_tries = 0;
       ws.connected = true;
+      if(websocket.message_id >= 0){
+        Messages.remove(websocket.message_id);
+      }
     };
 
     ws.onmessage = function (evt){
       var received_msg = evt.data;
       var data = new Uint8Array(received_msg);
-      console.log("Package length: "+data.length);
       console.log(data);
 
 
@@ -641,6 +812,28 @@ function WebSocket_handler(adress){
         else if(data[0] == websocket.opc.LinkTrain){
           console.log("Link train");
           train_follow[data[1]] = data[2]; // Link the follow ID to the train ID
+        }
+
+        else if(data[0] == websocket.opc.EnginesLibrary){
+          websocket.stc_engines_lib(data.slice(1));
+        }
+
+        else if(data[0] == websocket.opc.AddNewEnginetoLibrary){
+          console.log("AddNewEnginetoLibrary");
+          websocket.stc_newengine_tolib(data);
+        }
+
+        else if(data[0] == websocket.opc.CarsLibrary){
+          websocket.stc_cars_lib(data.slice(1));
+        }
+
+        else if(data[0] == websocket.opc.AddNewCartoLibrary){
+          console.log("AddNewCartoLibrary");
+          websocket.stc_newcar_tolib(data);
+        }
+
+        else if(data[0] == websocket.opc.TrainsLibrary){
+          websocket.stc_trains_lib(data.slice(1));
         }
 
         else if(data[0] == websocket.opc.AddNewTraintoLibrary){
@@ -692,7 +885,6 @@ function WebSocket_handler(adress){
           websocket.stc_Broadcast_Flags(data);
         }
         else if(data[0] == websocket.opc.Service_State){
-          console.log("Service State");
           websocket.stc_service_state(data);
         }
         else if(data[0] == websocket.opc.Canvas_Data){
@@ -756,22 +948,19 @@ function WebSocket_handler(adress){
 
     ws.onclose = function(event){
       ws.connected = false;
+
       // websocket is closed.
-      console.log("Connection closed" + event.code);
       if(socket_tries == 0){
         reset_blocks_in_modules();
         Canvas.update_frame();
-        console.log("Connection Closed\nRetrying....");
+        Messages.clear();
+        websocket.message_id = Messages.add({type:0xff,data:[socket_tries]});
       }
-      if(socket_tries != 5){
-        setTimeout(function(){
-          console.log("Reconnecting...");
-          WebSocket_handler(adress);
-          socket_tries++;
-        }, 5000);
-      }else{
-        console.log("No Connection posseble\nIs the server on?");
-      }
+      setTimeout(function(){
+        console.log("Reconnecting...");
+        socket_tries++;
+        WebSocket_handler(adress);
+      }, 5000);
     };
 
 }

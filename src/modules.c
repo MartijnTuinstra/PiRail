@@ -9,6 +9,7 @@
 #include <string.h>
 
 #include "./../lib/system.h"
+#include "./../lib/logger.h"
 
 #include "./../lib/trains.h"
 
@@ -110,6 +111,7 @@ void clear_Modules(){
 	    Units[i]->In = NULL;
 
 	    //clear Segments
+	    loggerf(DEBUG,"Clear segments (%i)",Units[i]->B_L);
 	    for(int j = 0;j<=Units[i]->B_L;j++){
 	      if(Units[i]->B[j]){
 		    printf("- Block %i\n",j);
@@ -118,6 +120,7 @@ void clear_Modules(){
 		  }
 	    }
 	    //clear Switches
+	    loggerf(DEBUG,"Clear switches (%i)",Units[i]->S_L);
 	    for(int j = 0;j<=Units[i]->S_L;j++){
 	      if(Units[i]->S[j]){
 	        printf("- Switch %i\n",j);
@@ -709,6 +712,11 @@ struct link Modules(int m, struct link IN){
 // }
 
 //  struct test_struct * test = &source[0];
+
+void free_modules(){
+	logger("FREE_MODULES IMPLEMENT",CRITICAL);
+	clear_Modules();
+}
 
 void LoadModules(int M){
 	if(M == 0){

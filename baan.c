@@ -11,19 +11,11 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <unistd.h>
-// #include <stdarg.h>
-// #include <fcntl.h>
-// #include <termios.h>
-// #include <time.h>
-// #include <sys/time.h>
-// #include <math.h>
-// #include <time.h>
+
 #include <pthread.h>
 #include <wiringPi.h>
 #include <signal.h>
-// #include <sys/socket.h>
-// #include <netinet/in.h>
-// #include <string.h>
+
 #include <errno.h>
 
 void* my_calloc(int i ,size_t size, const char *file, int line, const char *func)
@@ -54,6 +46,7 @@ void* my_malloc(size_t size, const char *file, int line, const char *func)
 #include "./lib/status.h"
 #include "./lib/Z21.h"
 #include "./lib/com.h"
+#include "./lib/logger.h"
 
 #include "./lib/rail.h"
 #include "./lib/switch.h"
@@ -67,18 +60,36 @@ void* my_malloc(size_t size, const char *file, int line, const char *func)
 
 struct systemState * _SYS;
 
+void sigint_func(int sig)
+{
+	if(sig == SIGINT){
+		printf("-- SIGINT -- STOPPING");
+		logger("-- SIGINT -- STOPPING",INFO);
+		_SYS_change(STATE_RUN | STATE_Client_Accept, 3);
+	}
+}
+
 void main(){
 	_SYS = (struct systemState *)malloc(sizeof(struct systemState));
 	_SYS->_STATE = STATE_RUN;
 	_SYS->_Clients = 0;
 	_SYS->_COM_fd = -1;
 
+	init_logger("log.txt");
+	set_level(DEBUG);
 
+	if (signal(SIGINT, sigint_func) == SIG_ERR){
+		logger("Cannot catch SIGINT",ERROR);
+		return;
+	}
 
 	setbuf(stdout,NULL);
 	setbuf(stderr,NULL);
 	signal(SIGPIPE, SIG_IGN);
 	srand(time(NULL));
+
+	pthread_t th_web_server, th_UART, th_Z21;
+
 	/*Starting wiringPi*/
 		wiringPiSetup();
 
@@ -109,8 +120,7 @@ void main(){
 		printf("|                                                                          |\n");
 		printf("|                               Web server                                 |\n");
 		printf("|                                                                          |\n");
-		pthread_t thread_web_server;
-		pthread_create(&thread_web_server, NULL, web_server, NULL);
+		pthread_create(&th_web_server, NULL, web_server, NULL);
 		WS_init_Message_List();
 		printf("|                           MessageBox Cleared                             |\n");
 		printf("|                                                                          |\n");
@@ -119,19 +129,28 @@ void main(){
 		printf("|                                  UART                                    |\n");
 		printf("|                                                                          |\n");
 		//Start UART port and recv handler
-		pthread_t thread_UART;
-		pthread_create(&thread_UART, NULL, UART, NULL);
+		pthread_create(&th_UART, NULL, UART, NULL);
 		usleep(100000);
 	/*Z21 Client*/
+		loggerf(INFO,"Connecting to Z21@%s:%i",Z21_IP,Z21_PORT);
 		printf("|                          Z21@%s:%i\t                   |\n",Z21_IP,Z21_PORT);
 		printf("|                                                                          |\n");
 		//Start UDP port
-		pthread_t thread_Z21_client;
-		//pthread_create(&thread_Z21_client, NULL, Z21_client, NULL);
-		//Z21_client();
+		//pthread_create(&th_Z21_client, NULL, Z21_client, NULL);
 		usleep(100000);
 	/*Enable web clients*/
+		logger("Accepting Websocket Clients",INFO);
 		_SYS_change(STATE_Client_Accept,0);
+
+	/* Load Engines, Cars and Trains */
+		init_trains();
+		/* Allocate space for trains */
+		//logger("Allocate space for trains",INFO);
+		//alloc_trains();
+		//if(!train_read_confs()){
+		//	printf("Failed to read train configs, continue?\n");
+		//	scanf("\n");
+		//}
 
 	/*Search all blocks*/
 		printf("|                              FINDING BLOCKS                              |\n");
@@ -151,9 +170,13 @@ void main(){
 
 		usleep(200000); //Startup time of devices
 		usleep(1000000);//Extra time to make sure it collects all info
+		logger("Found module 20",INFO);
 		DeviceList[0] = 20;
+		logger("Found module 21",INFO);
 		DeviceList[1] = 21;
+		logger("Found module 22",INFO);
 		DeviceList[2] = 22;
+		logger("Found module 23",INFO);
 		DeviceList[3] = 23;
 		// DeviceList[4] = 5;
 		// DeviceList[5] =10;
@@ -254,12 +277,6 @@ void main(){
 		setup_JSON(setup,setup2,4,0);
 		usleep(1000000);
 		/**/
-	/*Loading Trains*/
-		printf("|                                                                          |\n");
-		printf("|                             Loading trains                               |\n");
-		printf("|                                                                          |\n");
-
-		init_trains();
 
 	printf("|                                                                          |\n");
 	printf("----------------------------------------------------------------------------\n\n");
@@ -433,18 +450,31 @@ void main(){
 	//throw_switch(Switch[4][6][2]);
 	pthread_mutex_unlock(&mutex_lockB);
 	*/
+	while(_SYS->_STATE & STATE_RUN){
+		usleep(100000);
+	}
+
+	logger("Stopping Argor",INFO);
 	pthread_join(tid[0],NULL);
-	printf("Magic JOINED\n");
+
+	logger("Free memory",INFO);
+	logger("FREE MEMORY",CRITICAL);
+	free_modules();
+	free_trains();
 	//pthread_join(tid[1],NULL);
 	//printf("STOP JOINED\n");
 	//pthread_join(tid[2],NULL);
 	//printf("Timer JOINED\n");
+	logger("Stopping Train Sim",INFO);
 	pthread_join(tid[3],NULL);
-	printf("SimA JOINED\n");
 	//pthread_join(tid[4],NULL);
 	//printf("SimB JOINED\n");
-	pthread_join(thread_UART,NULL);
-	pthread_join(thread_web_server,NULL);
+
+	logger("Stopping UART control",INFO);
+	pthread_join(th_UART,NULL);
+
+	logger("Stopping Websocket server",INFO);
+	pthread_join(th_web_server,NULL);
 	//procces(C_Adr(6,2,1),1);
 
   //----- CLOSE THE UART -----
@@ -456,6 +486,10 @@ void main(){
 	//pthread_exit(NULL);
 }
 
+void * free0(void * p){
+	free(p);
+	return 0;
+}
 
 void _SYS_change(int STATE,char send){
 	printf("_SYS_change %x\n",_SYS->_STATE);

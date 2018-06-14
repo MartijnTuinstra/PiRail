@@ -114,7 +114,7 @@
 
   void Create_Segment2(int IO_Adr,char M,int ID,char Type,struct SegC Next, struct SegC Prev,char max_speed,char state,char dir,char len);
 
-  int Block_cmp(struct Seg * A,struct Seg * B);
+  int Block_cmp(struct Seg * A, struct Seg * B);
 
   int Link_cmp(struct Rail_link A, struct Rail_link B);
 

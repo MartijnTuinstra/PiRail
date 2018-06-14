@@ -17,6 +17,7 @@
 #include "./../lib/rail.h"
 #include "./../lib/switch.h"
 #include "./../lib/trains.h"
+#include "./../lib/logger.h" 
 
 #include "./../lib/websocket.h"
 #include "./../lib/status.h"
@@ -265,7 +266,9 @@ int send_packet(int fd_client, char data[],int length,int flag){
 
   append_Array(buf,m_length,data,length,outbuf);
 
-  //printf("Send: %s\n\n",data);
+  printf("WS send (%i)\t",fd_client);
+  for(int zi = 0;zi<(length);zi++){printf("%02X ",data[zi]);};
+  printf("\n");
 
   write(fd_client,outbuf,m_length+length);
 }
@@ -380,24 +383,23 @@ int recv_packet_procces(char data[1024],struct client_thread_args * client_data)
     else if(data[0] == WSopc_LinkTrain){ //Link train
       uint8_t fID = data[1]; //follow TrainID
       uint8_t tID = data[2]; //TrainID
-
-      printf("Linking train %i with dcc address #%i\n",fID,trains[tID]->DCC_ID);
-      if(link_train(fID,tID)){
+      loggerf(ERROR,"RE-IMPLEMENT WSopc_LinkTrain");
+      printf("Linking train %i with dcc address #%i\n",fID,trains2[tID]->DCC_ID);
+      if(link_train(fID,tID,data[3] & 0x80)){
         WS_clear_message(((data[3] & 0x1F) >> 8)+data[4]);
-        WS_LinkTrain(fID,tID);
-        //Web_Link_Train(RELEASE,fID,(char []){tID, trains[tID]->DCC_ID >> 8,trains[tID]->DCC_ID & 0xFF});
-        //WS_clear_message(msg_ID);
-        Z21_GET_LOCO_INFO(trains[tID]->DCC_ID);
+        
+        // Z21_GET_LOCO_INFO(trains2[tID]->DCC_ID);
       }
     }
     else if(data[0] == WSopc_TrainSpeed){ //Train speed control
       printf("Train speed control\n");
+      loggerf(ERROR,"RE-IMPLEMENT WSopc_TrainSpeed");
       char tID = data[1];
       char speed = data[2];
-      trains[tID]->cur_speed = speed & 0x7F;
-      trains[tID]->dir       = speed >> 7;
+      trains2[tID]->cur_speed = speed & 0x7F;
+      trains2[tID]->dir       = speed >> 7;
 
-      Z21_GET_LOCO_INFO(trains[tID]->DCC_ID);
+      Z21_GET_LOCO_INFO(trains2[tID]->DCC_ID);
     }
     else if(data[0] == WSopc_TrainFunction){ //Train function control
 
@@ -407,6 +409,16 @@ int recv_packet_procces(char data[1024],struct client_thread_args * client_data)
     }
     else if(data[0] == WSopc_TrainAddRoute){ //Add route to train
 
+    }
+
+    else if(data[0] == WSopc_AddNewCartolib){
+      logger("WSopc_AddNewCartolib TODO",WARNING);
+    }
+    else if(data[0] == WSopc_AddNewEnginetolib){
+      logger("WSopc_AddNewEnginetolib TODO",WARNING);
+    }
+    else if(data[0] == WSopc_AddNewTraintolib){
+      logger("WSopc_AddNewTraintolib TODO",WARNING);
     }
   }
   else if(data[0] & 0x20){ //Track stuff
@@ -439,8 +451,8 @@ int recv_packet_procces(char data[1024],struct client_thread_args * client_data)
 
     }
     else if(data[0] == WSopc_ChangeBroadcast){
-      clients[client_data->thread_id]->client_type; //current flags
-      data[1]; //new flags
+      // clients[client_data->thread_id]->client_type; //current flags
+      // data[1]; //new flags
       if(data[1] & 0x10){ //Admin flag
         return 0; //Not allowed to set admin flag
         printf("Changing admin flag: NOT ALLOWED\n");
@@ -448,7 +460,7 @@ int recv_packet_procces(char data[1024],struct client_thread_args * client_data)
         clients[client_data->thread_id]->client_type = data[1];
         printf("Changing flags\n");
       }
-      printf("Sending (new) flags\n");
+      loggerf(DEBUG,"Websocket:\t%02x - New flag for client %d\n",clients[client_data->thread_id]->client_type,client_data->thread_id);
       send_packet(client_data->fd_client,(char [2]){WSopc_ChangeBroadcast,clients[client_data->thread_id]->client_type},2,255);
     }
   }
@@ -531,23 +543,23 @@ int recv_packet_procces(char data[1024],struct client_thread_args * client_data)
   }
   else if(data[0] == 33){ //Train function press
     printf("Train %i function %i\n",(data[1] << 8) + data[2],data[3]);
-    //train_set_dir(trains[(data[1] << 8 + data[2])],data[3]);
+    //train_set_dir(trains2[(data[1] << 8 + data[2])],data[3]);
   }
 
   else if(data[0] == 34){ //Train set Route
     printf("Train %i Set route %i\n",(data[1] << 8) + data[2],data[3]);
     printf("%s\n",stations[data[3]]->Name);
     train_set_route(DCC_train[(data[1] << 8) + data[2]],stations[data[3]]);
-    //train_set_dir(trains[(data[1] << 8 + data[2])],data[3]);
+    //train_set_dir(trains2[(data[1] << 8 + data[2])],data[3]);
   }
   else if(data[0] == 35){ //Train delete Route
     printf("Train %i function %i\n",data[1],data[2]);
-    //train_set_dir(trains[(data[1] << 8 + data[2])],data[3]);
+    //train_set_dir(trains2[(data[1] << 8 + data[2])],data[3]);
   }
 
   else if(data[0] == 36){ //Train change control
     printf("Train %i function %i\n",data[1],data[2]);
-    //train_set_dir(trains[(data[1] << 8 + data[2])],data[3]);
+    //train_set_dir(trains2[(data[1] << 8 + data[2])],data[3]);
   }
 
   else if(data[0] == 40){ //Throw Switch
@@ -674,11 +686,11 @@ int recv_packet_procces(char data[1024],struct client_thread_args * client_data)
       int fID = atoi(f_ID);
       int tID = atoi(t_ID);
 
-      printf("Linking train %i with dcc address #%i\n",fID,trains[tID]->DCC_ID);
+      printf("Linking train %i with dcc address #%i\n",fID,trains2[tID]->DCC_ID);
       if(link_train(fID,tID)){
-        Web_Link_Train(RELEASE,fID,(char []){tID, trains[tID]->DCC_ID >> 8,trains[tID]->DCC_ID & 0xFF});
+        Web_Link_Train(RELEASE,fID,(char []){tID, trains2[tID]->DCC_ID >> 8,trains2[tID]->DCC_ID & 0xFF});
         //WS_clear_message(msg_ID);
-        Z21_GET_LOCO_INFO(trains[tID]->DCC_ID);
+        Z21_GET_LOCO_INFO(trains2[tID]->DCC_ID);
       }
     }
   }
@@ -802,7 +814,7 @@ void * websocket_client(void * thread_data){
 	int i = thread_args->thread_id;
 	int fd_client = thread_args->fd_client;
 
-  printf("New websocket_client");
+  loggerf(INFO,"New websocket_client");
   if(websocket_connect(clients[i])){
       char buf[1024];
       memset(buf,0,1024);
@@ -814,11 +826,12 @@ void * websocket_client(void * thread_data){
       while((_SYS->_STATE & STATE_Modules_Loaded) == 0){
 
       }
+
       char data[3];
       data[0] = WSopc_Service_State;
       data[1] = _SYS->_STATE >> 8;
       data[2] = _SYS->_STATE & 0xFF;
-      send_packet(fd_client,data,3,1);
+      send_packet(fd_client,data,3,WS_Flag_Admin || WS_Flag_Track);
       int length = 0;
       if(_SYS->_STATE & STATE_Modules_Loaded && _SYS->_STATE & STATE_Modules_Coupled){
         send_packet(fd_client,(char [6]){2,4,1,8,4,2},6,8);
@@ -839,10 +852,19 @@ void * websocket_client(void * thread_data){
 
 
       printf("Send broadcast flags\n");
-
       send_packet(fd_client,(char [2]){WSopc_ChangeBroadcast,clients[i]->client_type},2,0xFF);
 
+      loggerf(INFO, "Update clients libs %i",i);
+      WS_EnginesLib(fd_client);
+      WS_CarsLib(fd_client);
+      WS_TrainsLib(fd_client);
+
       printf("Done\n");
+
+      struct timeval tv;
+      tv.tv_sec = WEBSOCKET_CLIENT_TIMEOUT;
+      tv.tv_usec = 0;
+      setsockopt(fd_client, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
 
       while(1){
         // If threre is data recieved
@@ -875,7 +897,10 @@ void * websocket_client(void * thread_data){
         }
 
         if((_SYS->_STATE & STATE_RUN) == 0){
+          logger("Websocket kill client",DEBUG);
           close(fd_client);
+          clients[i]->state = 2;
+          return 0;
         }
       }
   }else{
@@ -892,7 +917,7 @@ void *clear_clients(){
 			if(clients[i]->state == 2){
 				pthread_join(client_threads[i], NULL);
 				clients[i]->state = 0;
-				printf("Reset client %i\n",i);
+				loggerf(INFO, "Reset client %i",i);
 			}
 		}
     usleep(100000);
@@ -900,6 +925,7 @@ void *clear_clients(){
 }
 
 void * web_server(){
+  loggerf(INFO, "Starting websocket sever at port %i", WEBSOCKET_PORT);
   struct sockaddr_in server_addr, client_addr;
   socklen_t sin_len = sizeof(client_addr);
   int fd_server, fd_client;
@@ -939,7 +965,7 @@ void * web_server(){
 
   server_addr.sin_family = AF_INET;
   server_addr.sin_addr.s_addr = INADDR_ANY;
-  server_addr.sin_port = htons(9000);
+  server_addr.sin_port = htons(WEBSOCKET_PORT);
 
   if(bind(fd_server, (struct sockaddr *) &server_addr, sizeof(server_addr)) == -1){
     printf("ERROR, BIND\n");
@@ -989,7 +1015,7 @@ void * web_server(){
     q = 0;
 
     int i = 0;
-  	while(1){
+  	while((_SYS->_STATE & STATE_Client_Accept) != 0){
   		if(clients[i]->state == 0){
   			clients_data[i].thread_id = i;
   			clients_data[i].fd_client = fd_client;

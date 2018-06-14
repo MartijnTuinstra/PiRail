@@ -29,6 +29,10 @@
 
 	void WS_ClearEmergency();
 
+	void WS_EnginesLib(int client_fd);
+	void WS_CarsLib(int client_fd);
+	void WS_TrainsLib(int client_fd);
+
 	void WS_Partial_Layout(char M_A,char M_B);
 
 	void WS_Track_Layout();

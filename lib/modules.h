@@ -51,6 +51,8 @@
 
 	extern struct Unit *Units[MAX_Modules];
 
+	void free_modules();
+
 	void clear_Modules();
 
 	void LoadModules(int M);

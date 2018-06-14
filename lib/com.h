@@ -1,6 +1,10 @@
 
 #ifndef _INCLUDE_COM_H
 	#define _INCLUDE_COM_H
+
+	#define Serial_Port "/dev/ttyAMB0"
+	#define Serial_Baud B115200
+
 	struct train;
 
 	struct signal;

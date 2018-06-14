@@ -1,6 +1,3 @@
-#define Z21_IP "192.168.2.92"
-#define Z21_PORT 4129
-
 #define _BSD_SOURCE
 
 /*

@@ -1,6 +1,6 @@
 'Straight track (8)
 'Create Module
-CU	20	8	8	2
+CU	20	24	8	2
 '
 'Create block
 'Wat	IOadr	id	type	NxM	NxID	NxType	PxM	PxID	PxType	Max_sp	dir	len	OneWay

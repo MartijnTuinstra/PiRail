@@ -13,8 +13,7 @@
 #include "./../lib/rail.h"
 #include "./../lib/switch.h"
 
-
-#include "./../lib/trains.h"
+#include "./../lib/logger.h"
 
 #include "./../lib/websocket.h"
 #include "./../lib/pathfinding.h"
@@ -574,110 +573,112 @@ int free_Switch(struct Seg *B, int direct){
 	return 1;
 }
 
-int free_Route_Switch(struct Seg *B, int direct, struct train * T){
-	struct Rail_link Adr,NAdr,SNAdr;
+int free_Route_Switch(struct Seg *B, int direct, Trains * T){
+	loggerf(ERROR, "REIMPLEMENT");
+	return;
+	// struct Rail_link Adr,NAdr,SNAdr;
 
-	int debug = 0;
+	// int debug = 0;
 
-	if(B->Module == 4 && B->id == 17){
-		debug = 1;
-	}
+	// if(B->Module == 4 && B->id == 17){
+	// 	debug = 1;
+	// }
 
-	Adr.type = 'R';Adr.ptr = 0;
-	int return_Value = 1;
-	int dir = B->dir;
+	// Adr.type = 'R';Adr.ptr = 0;
+	// int return_Value = 1;
+	// int dir = B->dir;
 
-	if(direct == 0){
-		if(dir == 0 || dir == 2 || dir == 5){
-			NAdr = B->Next;
-		}else{
-			NAdr = B->Prev;
-		}
-	}else{
-		if(dir == 0 || dir == 2 || dir == 5){
-			NAdr = B->Prev;
-		}else{
-			NAdr = B->Next;
-		}
-	}
-	//printf("NAdr %i:%i:%i\n",NAdr.M,NAdr.B,NAdr.S);
-	R:{};
-	//printf("NAdr: %i:%i:%i\t",NAdr.M,NAdr.B,NAdr.S);
-	if(return_Value == 0){
-		return 0;
-	}
+	// if(direct == 0){
+	// 	if(dir == 0 || dir == 2 || dir == 5){
+	// 		NAdr = B->Next;
+	// 	}else{
+	// 		NAdr = B->Prev;
+	// 	}
+	// }else{
+	// 	if(dir == 0 || dir == 2 || dir == 5){
+	// 		NAdr = B->Prev;
+	// 	}else{
+	// 		NAdr = B->Next;
+	// 	}
+	// }
+	// //printf("NAdr %i:%i:%i\n",NAdr.M,NAdr.B,NAdr.S);
+	// R:{};
+	// //printf("NAdr: %i:%i:%i\t",NAdr.M,NAdr.B,NAdr.S);
+	// if(return_Value == 0){
+	// 	return 0;
+	// }
 
-	if(NAdr.type == 'S'){
-		Switch * S = (Switch *)NAdr.ptr;
-		Adr = NAdr;
-		for(int x = 0;x<T->Sw_len;x++){
-			if(T->Route[x]->adr.ptr == S && T->Route[x]->states > 0){
-				char r = (rand() % T->Route[x]->states);
-				printf("Random selected nr %i (state %i)\n",r,T->Route[x]->suc[r]);
-				char state = T->Route[x]->suc[r];
+	// if(NAdr.type == 'S'){
+	// 	Switch * S = (Switch *)NAdr.ptr;
+	// 	Adr = NAdr;
+	// 	for(int x = 0;x<T->Sw_len;x++){
+	// 		if(T->Route[x]->adr.ptr == S && T->Route[x]->states > 0){
+	// 			char r = (rand() % T->Route[x]->states);
+	// 			printf("Random selected nr %i (state %i)\n",r,T->Route[x]->suc[r]);
+	// 			char state = T->Route[x]->suc[r];
 
-				if(!set_switch(S,state)) //If failing to set switches to state
-					return 0;
-				if(state == 0){
-					printf("Straight\t");
-					NAdr = S->str;
-				}else if(state == 1){
-					printf("Diverging\t");
-					NAdr = S->div;
-				}
-			}
-		}
-		goto R;
-	}
-	else if(NAdr.type == 's'){
-		struct Rail_link Div = ((Switch *)NAdr.ptr)->div;
-		struct Rail_link Str = ((Switch *)NAdr.ptr)->str;
-		uint8_t SwState = ((Switch *)NAdr.ptr)->state & 0x3F;
-		if(Link_cmp(Div,Adr)){
-			if(SwState == 0){
-				return_Value = throw_switch((Switch *)NAdr.ptr);
-			}
-		}else if(Link_cmp(Str,Adr)){
-			if(SwState == 1){
-				return_Value = throw_switch((Switch *)NAdr.ptr);
-			}
-		}
+	// 			if(!set_switch(S,state)) //If failing to set switches to state
+	// 				return 0;
+	// 			if(state == 0){
+	// 				printf("Straight\t");
+	// 				NAdr = S->str;
+	// 			}else if(state == 1){
+	// 				printf("Diverging\t");
+	// 				NAdr = S->div;
+	// 			}
+	// 		}
+	// 	}
+	// 	goto R;
+	// }
+	// else if(NAdr.type == 's'){
+	// 	struct Rail_link Div = ((Switch *)NAdr.ptr)->div;
+	// 	struct Rail_link Str = ((Switch *)NAdr.ptr)->str;
+	// 	uint8_t SwState = ((Switch *)NAdr.ptr)->state & 0x3F;
+	// 	if(Link_cmp(Div,Adr)){
+	// 		if(SwState == 0){
+	// 			return_Value = throw_switch((Switch *)NAdr.ptr);
+	// 		}
+	// 	}else if(Link_cmp(Str,Adr)){
+	// 		if(SwState == 1){
+	// 			return_Value = throw_switch((Switch *)NAdr.ptr);
+	// 		}
+	// 	}
 
-		//	printf("New switch\n");
-		Adr = NAdr;
-		NAdr = ((Switch *)NAdr.ptr)->app;
-		goto R;
+	// 	//	printf("New switch\n");
+	// 	Adr = NAdr;
+	// 	NAdr = ((Switch *)NAdr.ptr)->app;
+	// 	goto R;
 
-	}
-	else if(NAdr.type == 'M'){
-		msswitch * M = (msswitch *)NAdr.ptr;
-		Adr = NAdr;
-		for(int x = 0;x<T->Sw_len;x++){
-			if(T->Route[x]->adr.ptr == M && T->Route[x]->states > 0){
-				char state = T->Route[x]->suc[0];
+	// }
+	// else if(NAdr.type == 'M'){
+	// 	msswitch * M = (msswitch *)NAdr.ptr;
+	// 	Adr = NAdr;
+	// 	for(int x = 0;x<T->Sw_len;x++){
+	// 		if(T->Route[x]->adr.ptr == M && T->Route[x]->states > 0){
+	// 			char state = T->Route[x]->suc[0];
 
-				//if(!set_switch(S,state)) //If failing to set switches to state
-					//return 0;
-				M->state = state;
-				NAdr = M->m_Adr[state];
-			}
-		}
-		goto R;
-	}
-	else if(NAdr.type == 'm'){
-		msswitch * M = (msswitch *)NAdr.ptr;
-		Adr = NAdr;
-		for(int x = 0;x<T->Sw_len;x++){
-			if(T->Route[x]->adr.ptr == M && T->Route[x]->states > 0){
-				char state = T->Route[x]->suc[0];
+	// 			//if(!set_switch(S,state)) //If failing to set switches to state
+	// 				//return 0;
+	// 			M->state = state;
+	// 			NAdr = M->m_Adr[state];
+	// 		}
+	// 	}
+	// 	goto R;
+	// }
+	// else if(NAdr.type == 'm'){
+	// 	msswitch * M = (msswitch *)NAdr.ptr;
+	// 	Adr = NAdr;
+	// 	for(int x = 0;x<T->Sw_len;x++){
+	// 		if(T->Route[x]->adr.ptr == M && T->Route[x]->states > 0){
+	// 			char state = T->Route[x]->suc[0];
 
-				//if(!set_switch(S,state)) //If failing to set switches to state
-					//return 0;
-				M->state = state;
-				NAdr = M->M_Adr[state];
-			}
-		}
-		goto R;
-	}
-	return 1;
+	// 			//if(!set_switch(S,state)) //If failing to set switches to state
+	// 				//return 0;
+	// 			M->state = state;
+	// 			NAdr = M->M_Adr[state];
+	// 		}
+	// 	}
+	// 	goto R;
+	// }
+	// return 1;
 }

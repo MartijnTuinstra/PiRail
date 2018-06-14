@@ -1,5 +1,6 @@
 
 #include "rail.h"
+#include "trains.h"
 
 #ifndef _INCLUDE_SWITCH_H
 	#define _INCLUDE_SWITCH_H
@@ -85,5 +86,5 @@
 
 	int free_Switch(struct Seg *B, int direct);
 
-	int free_Route_Switch(struct Seg *B, int direct, struct train * T);
+	int free_Route_Switch(struct Seg *B, int direct, Trains * T);
 #endif

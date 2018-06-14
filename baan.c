@@ -1,38 +1,165 @@
+#define _BSD_SOURCE
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <unistd.h>
 
-#include <logger.h>
-#include <train.h>
+#include <pthread.h>
+#include <wiringPi.h>
+#include <signal.h>
 
+#include <errno.h>
 
-#define _calloc(elements, type) my_calloc(elements, sizeof(type), __FILE__, __LINE__)
-#define _realloc(p, elements, type) my_realloc(p, sizeof(type) * elements, __FILE__, __LINE__)
-#define _free(p) my_free(p, __FILE__, __LINE__)
+#include "logger.h"
+#include "rail.h"
+#include "switch.h"
+#include "train.h"
 
-void * my_calloc(int elements, int size, char * file, int line){
-  void * p = calloc(elements, size);
-  floggerf(MEMORY, file, line, "calloc\tsize: %i\tpointer: %08x", elements * size, p);
-  return p;
-}
+#include "websocket_control.h"
 
-void * my_realloc(void * p, int size, char * file, int line){
-  void * old_p = p;
-  p = realloc(p, size);
-  floggerf(MEMORY, file, line, "realloc\told_pointer: %08x\tnew_size: %i\tnew_pointer: %08x", old_p, size, p);
-  return p;
-}
+#include "system.h"
 
-void my_free(void * p, char * file, int line){
-  free(p);
-  floggerf(MEMORY, file, line, "free\tpointer: %08x", p);
-}
+struct systemState * _SYS;
 
-void main(){
+int main(){
+  _SYS = (struct systemState *)malloc(sizeof(struct systemState));
+  _SYS->_STATE = STATE_RUN;
+  _SYS->_Clients = 0;
+  _SYS->_COM_fd = -1;
+
   init_logger("log.txt");
   set_level(MEMORY);
-  uint16_t * p = _calloc(5, uint16_t);
-  p = _realloc(p, 10, uint16_t);
-  _free(p);
+
+  if (signal(SIGINT, sigint_func) == SIG_ERR){
+    logger("Cannot catch SIGINT",CRITICAL);
+    return 0;
+  }
+
+  setbuf(stdout,NULL);
+  setbuf(stderr,NULL);
+  signal(SIGPIPE, SIG_IGN);
+  srand(time(NULL));
+
+  pthread_t th_web_server, th_UART, th_Z21;
+
+  /* Wiring PI */
+    wiringPiSetup();
+
+    pinMode(0, OUTPUT); //GPIO17
+    pinMode(1, OUTPUT); //GPIO17
+    digitalWrite(0,LOW);
+    digitalWrite(1,LOW);
+  /* Websocket server */
+    pthread_create(&th_web_server, NULL, web_server, NULL);
+    WS_init_Message_List();
+  /* UART */
+
+  /* Z21 Client */
+
+  /* Enable Web clients */
+
+  /* Load cars, engines and trains*/
+    init_trains();
+
+  /* Search all blocks */
+    if(DeviceList[0] != 0){
+      //There are allready some device listed. Clear.
+      memset(DeviceList,0,MAX_Devices);
+    }
+
+    //Send restart message
+    COM_DevReset();
+
+    usleep(200000); //Startup time of devices
+    usleep(1000000);//Extra time to make sure it collects all info
+    logger("Found module 20",INFO);
+    DeviceList[0] = 20;
+    logger("Found module 21",INFO);
+    DeviceList[1] = 21;
+    logger("Found module 22",INFO);
+    DeviceList[2] = 22;
+    logger("Found module 23",INFO);
+    DeviceList[3] = 23;
+    // DeviceList[4] = 5;
+    // DeviceList[5] =10;
+    // DeviceList[6] =11;
+    // DeviceList[7] = 6;
+
+    for(uint8_t i = 0;i<MAX_Devices;i++){
+      if(DeviceList[i]){
+        LoadModules(DeviceList[i]);
+      }
+    }
+    
+
+    _SYS_change(STATE_Modules_Loaded,1);
+
+    JoinModules();
+
+
+    setup_JSON((int [4]){20,21,22,23},(int *)0,4,0);
+
+    Connect_Segments();
+
+  //#############################################################
+  //Init done
+
+  scan_All();
+
+  delay(5);
+
+  if(_SYS->_Clients == 0){
+    printf("                   Waiting until for a client connects\n");
+  }
+  while(_SYS->_Clients == 0){
+    usleep(1000000);
+  }
+
+  usleep(400000);
+
+  pthread_t pt_scan_All, pt_train_timers, pt_train_simA;
+
+  pthread_create(&pt_scan_All, NULL, scan_All_continiously, NULL);
+  // pthread_create(&pt_train_timers, NULL, clear_train_timers, NULL);
+  pthread_create(&pt_train_simA, NULL, TRAIN_SIMA, NULL);
+
+  usleep(10000000);
+
+  WS_ShortCircuit();
+
+  while(_SYS->_STATE & STATE_RUN){
+    usleep(100000);
+  }
+
+  logger("Stopping Argor",INFO);
+  pthread_join(pt_scan_All,NULL);
+
+  logger("Free memory",INFO);
+  logger("FREE MEMORY",CRITICAL);
+  free_modules();
+  free_trains();
+  //pthread_join(tid[1],NULL);
+  //printf("STOP JOINED\n");
+  //pthread_join(tid[2],NULL);
+  //printf("Timer JOINED\n");
+  logger("Stopping Train Sim",INFO);
+  pthread_join(pt_train_simA,NULL);
+  //pthread_join(tid[4],NULL);
+  //printf("SimB JOINED\n");
+
+  logger("Stopping UART control",INFO);
+  pthread_join(th_UART,NULL);
+
+  logger("Stopping Websocket server",INFO);
+  pthread_join(th_web_server,NULL);
+  //procces(C_Adr(6,2,1),1);
+
+  //----- CLOSE THE UART -----
+  close(_SYS->_COM_fd);
+
+  free(_SYS);
+
+  printf("STOPPED");
+  //pthread_exit(NULL);
 }

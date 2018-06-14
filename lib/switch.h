@@ -2,7 +2,7 @@
   #define _INCLUDE_SWITCH_H
   
   #include "rail.h"
-  #include "trains.h"
+  #include "train.h"
 
   struct switch_link {
     char type;
@@ -14,7 +14,7 @@
   struct switch_preference {
     char type;
     char state;
-  }
+  };
 
   typedef struct _switch {
     int module;
@@ -61,7 +61,7 @@
     char len;
     char * type;
     void ** p;
-  }
+  };
 
   int throw_switch(Switch * S);
   int throw_msswitch(MSSwitch * S);

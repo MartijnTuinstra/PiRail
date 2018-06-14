@@ -2,7 +2,8 @@ BIN=./bin
 SRC=./src
 LIB=./lib
 INCLUDE = -I $(LIB) -I $(SRC)
-ARGS=-std=c99 -lpthread -lssl -lcrypto -lwiringPi -lm -g $(INCLUDE)
+# ARGS=-std=c99 -lpthread -lssl -lcrypto -lwiringPi -lm -g $(INCLUDE)
+ARGS=-std=c99 -lm -g $(INCLUDE)
 
 GCC = gcc $(ARGS)
 
@@ -10,7 +11,7 @@ ifndef VERBOSE
 .SILENT:
 endif
 
-baan: $(BIN)/baan.o $(BIN)/logger.o
+baan: $(BIN)/baan.o $(BIN)/logger.o $(BIN)/rail.o $(BIN)/train.o $(BIN)/system.o $(BIN)/websocket_control.o
 	@echo baan
 	$(GCC) -o baan $(wildcard $(BIN)/*.o)
 
@@ -18,16 +19,30 @@ $(BIN)/baan.o: baan.c $(LIB)/logger.h $(LIB)/train.h
 	@echo baan.o
 	$(GCC) baan.c -c -o $(BIN)/baan.o
 
+$(BIN)/system.o: $(SRC)/system.c $(LIB)/system.h $(LIB)/websocket_control.h
+	@echo system.o
+	$(GCC) $(SRC)/system.c -c -o $(BIN)/system.o
+
 $(BIN)/logger.o: $(SRC)/logger.c $(LIB)/logger.h
 	@echo logger.o
 	$(GCC) $(SRC)/logger.c -c -o $(BIN)/logger.o
 
 $(LIB)/train.h: $(LIB)/rail.h $(LIB)/route.h
-$(BIN)/train.o: $(SRC)/train.c $(LIB)/train.h
+$(BIN)/train.o: $(SRC)/train.c $(LIB)/train.h $(LIB)/system.h
 	@echo train.o
 	$(GCC) $(SRC)/train.c -c -o $(BIN)/train.o
 
 $(LIB)/switch.h: $(LIB)/rail.h $(LIB)/train.h
+
+$(BIN)/rail.o: $(SRC)/rail.c $(LIB)/rail.h
+	@echo rail.o
+	$(GCC) $(SRC)/rail.c -c -o $(BIN)/rail.o
+
+$(LIB)/websocket_control.h: $(LIB)/websocket.h $(LIB)/websocket_msg.h
+$(BIN)/websocket_control.o: $(SRC)/websocket_control.c $(LIB)/websocket_control.h
+	$(GCC) $(SRC)/websocket_control.c -c -o $(BIN)/websocket_control.o
+
+$LIB)/module.h: $(LIB)/rail.h $(LIB)/switch.h $(LIB)/signals.h
 
 # baan: baan.o $(BIN)/algorithm.o $(BIN)/com.o $(BIN)/encryption.o $(BIN)/modules.o $(BIN)/pathfinding.o $(BIN)/rail.o $(BIN)/signals.o $(BIN)/status.o $(BIN)/switch.o $(BIN)/train_control.o $(BIN)/train_sim.o $(BIN)/trains.o $(BIN)/websocket.o $(BIN)/Z21.o $(BIN)/logger.o
 # 	gcc $(ARGS) -o baan $(wildcard $(BIN)/*.o) baan.o
@@ -100,6 +115,5 @@ $(LIB)/switch.h: $(LIB)/rail.h $(LIB)/train.h
 
 
 clean: baan.c
-	rm baan
-	rm bin -rf
-	mkdir bin
+	sudo rm baan
+	sudo rm bin/*

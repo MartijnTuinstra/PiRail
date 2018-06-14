@@ -5,9 +5,9 @@
   #include "rail.h"
   #include "route.h"
 
-  #define TRAIN_COMPS_CONF "./trains/train_comp.conf"
-  #define CARS_CONF "./trains/cars.conf"
-  #define ENGINES_CONF "./trains/engines.conf"
+  #define TRAIN_COMPS_CONF "./configs/train_comp.conf"
+  #define CARS_CONF "./configs/cars.conf"
+  #define ENGINES_CONF "./configs/engines.conf"
   #define CONF_VERSION 1
 
   struct train_funcs {
@@ -48,6 +48,8 @@
     char dir:1;
     char halt:2;
 
+    _Bool use;
+
     char cur_speed_step;
     char max_speed_step;
     uint16_t max_speed;
@@ -78,7 +80,7 @@
     char control:2;
     char dir:1;
     char halt:1;
-    int max_spd;
+    int max_speed;
 
     char funcs_len;
     struct train_funcs ** funcs;
@@ -110,8 +112,8 @@
 
     int length; //in mm
 
-    int max_spd;
-    int cur_spd;
+    int max_speed;
+    int cur_speed;
 
     char type:2;
     char in_use:1;
@@ -149,4 +151,5 @@
   int train_read_confs();
 
   int link_train(int fid, int tid, int mid, char type);
+  int unlink_train(int fid);
 #endif

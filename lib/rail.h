@@ -1,6 +1,12 @@
 #ifndef INCLUDE_RAIL_H
   #define INCLUDE_RAIL_H
 
+  #include <stdio.h>
+  #include <stdlib.h>
+  #include <stdint.h>
+  #include <unistd.h>
+  #include <string.h>
+
   struct _switch;
   struct _signal;
   struct _station;
@@ -12,8 +18,8 @@
   struct rail_link {
     char type;
     void * p;
-    char Module;
-    uint16_t Adr;
+    char module;
+    uint16_t id;
   };
 
   enum Rail_types {
@@ -35,11 +41,13 @@
   };
 
   typedef struct rail_segment {
-    int Module;
-    int Adr;
+    int module;
+    int id;
+    int ioadr;
 
     enum Rail_types type;
     char dir;
+    int length;
 
     struct rail_link next;
     struct rail_link prev;
@@ -58,6 +66,20 @@
     Signal * PrevSignal;
 
   } Block;
+
+  struct segment_connect {
+    int module;
+    int id;
+    enum Rail_types type;
+
+    int next_module;
+    int next_id;
+    char next_type;
+    
+    int prev_module;
+    int prev_id;
+    char prev_type;
+  };
 
   enum Station_types {
     PERSON,
@@ -84,13 +106,15 @@
   extern Station * stations;
   extern int stations_len;
 
-
   void init_rail();
 
-  void Create_Segment();
+  void Create_Segment(int IO_Adr, struct segment_connect connect ,char max_speed, char dir,char len);
   void Create_Station();
 
   void Connect_Segments();
+
+  int dircmp(Block *A, Block *B);
+  int block_adrcmp(Block *A, Block *B);
 
   Block Next(Block * B, int dir);
   Block Prev(Block * B, int dir);

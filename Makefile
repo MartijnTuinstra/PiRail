@@ -27,6 +27,8 @@ $(BIN)/train.o: $(SRC)/train.c $(LIB)/train.h
 	@echo train.o
 	$(GCC) $(SRC)/train.c -c -o $(BIN)/train.o
 
+$(LIB)/switch.h: $(LIB)/rail.h $(LIB)/train.h
+
 # baan: baan.o $(BIN)/algorithm.o $(BIN)/com.o $(BIN)/encryption.o $(BIN)/modules.o $(BIN)/pathfinding.o $(BIN)/rail.o $(BIN)/signals.o $(BIN)/status.o $(BIN)/switch.o $(BIN)/train_control.o $(BIN)/train_sim.o $(BIN)/trains.o $(BIN)/websocket.o $(BIN)/Z21.o $(BIN)/logger.o
 # 	gcc $(ARGS) -o baan $(wildcard $(BIN)/*.o) baan.o
 

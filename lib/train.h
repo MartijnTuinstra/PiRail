@@ -121,7 +121,7 @@
 
     Route route;
 
-    block * Block;
+    Block * Block;
 
     char timer;
     int timer_id;

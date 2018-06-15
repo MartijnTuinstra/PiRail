@@ -36,6 +36,8 @@
     Station ** St;
   } Unit;
 
+  struct rail_link CAdr(int module, int id, char type);
+
   extern int unit_len;
   extern Unit ** Units;
 

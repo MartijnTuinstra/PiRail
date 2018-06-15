@@ -1,3 +1,4 @@
+#include "rail.h"
 #include "system.h"
 #include "module.h"
 #include "switch.h"
@@ -20,7 +21,7 @@ int dircmp(Block *A, Block *B){
   }
 }
 
-int block_adrcmp(Block *A, Block *B){
+int block_cmp(Block *A, Block *B){
   if(A && !B){
     //Compare with empty block
     if(A->module == 0 && A->id == 0 && A->type == 'e'){
@@ -44,7 +45,7 @@ void init_rail(){
 
 }
 
-void Create_Segment(int IO_Adr, struct segment_connect connect ,char max_speed, char dir,char len){
+void Create_Segment(int IO_Adr, struct block_connect connect ,char max_speed, char dir,char len){
   Block * p = _calloc(1, Block);
 
   p->ioadr = IO_Adr;
@@ -53,39 +54,235 @@ void Create_Segment(int IO_Adr, struct segment_connect connect ,char max_speed, 
   p->id = connect.id;
   p->type = connect.type;
 
-  p->next.type = connect.next_type;
-  p->next.module = connect.next_module;
-  p->next.id = connect.next_id;
+  p->next.type = connect.next.type;
+  p->next.module = connect.next.module;
+  p->next.id = connect.next.id;
 
-  p->prev.type = connect.prev_type;
-  p->prev.module = connect.prev_module;
-  p->prev.id = connect.prev_id;
+  p->prev.type = connect.prev.type;
+  p->prev.module = connect.prev.module;
+  p->prev.id = connect.prev.id;
 
   p->max_speed = max_speed;
   p->dir = dir;
   p->length = len;
+
+  if(Units[connect.module]->B[p->id]){
+    loggerf(ERROR, "Duplicate segment");
+    free(Units[connect.module]->B[p->id]);
+  }
+  Units[connect.module]->B[p->id] = p;
 }
 
-void Create_Station(){
+void Create_Station(int module, int id, char * name, char name_len, enum Station_types type, int len, Block ** blocks){
+  Station * Z = _calloc(1, Station);
+  Z->module = module;
+  Z->id = id;
+  Z->type = type;
+
+  Z->name = _calloc(name_len+1, char);
+  strncpy(Z->name, name, name_len);
+
+  for(int i = 0; i < len; i++){
+    Z->blocks[find_free_index((void **)Z->blocks, &Z->blocks_len)] = blocks[i];
+  }
+  
+  Z->uid = find_free_index((void **)stations, &stations_len);
+
+  stations[Z->uid] = Z;
+}
+
+void * rail_link_pointer(struct rail_link link){
+  if(link.type == 'R'){
+    return Units[link.module]->B[link.id];
+  }
+  else if(link.type == 'S' || link.type == 's'){
+    return Units[link.module]->Sw[link.id];
+  }
+  else if(link.type == 'M' || link.type == 'm'){
+    return Units[link.module]->MSSw[link.id];
+  }
+  return 0;
+}
+
+void Connect_Rail_links(){
+  // add pointer to the rail_link
+  for(int m = 0; m<unit_len; m++){
+    if(!Units[m]){
+      continue;
+    }
+
+    Unit * tU = Units[m];
+
+    for(int i = 0; i<tU->block_len; i++){
+      if(!tU->B[i]){
+        continue;
+      }
+
+      Block * tB = tU->B[i];
+
+      tB->next.p = rail_link_pointer(tB->next);
+      tB->prev.p = rail_link_pointer(tB->prev);
+    }
+
+    for(int i = 0; i<tU->switch_len; i++){
+      if(!tU->Sw[i]){
+        continue;
+      }
+
+      Switch * tSw = tU->Sw[i];
+
+      tSw->app.p = rail_link_pointer(tSw->app);
+      tSw->str.p = rail_link_pointer(tSw->str);
+      tSw->div.p = rail_link_pointer(tSw->div);
+    }
+
+    for(int i = 0; i<tU->msswitch_len; i++){
+      if(!tU->MSSw[i]){
+        continue;
+      }
+
+      MSSwitch * tMSSw = tU->MSSw[i];
+
+      for(int s = 0; s < tMSSw->state_len; s++){
+        tMSSw->sideA[s].p = rail_link_pointer(tMSSw->sideA[s]);
+        tMSSw->sideB[s].p = rail_link_pointer(tMSSw->sideB[s]);
+      }
+    }
+  }
+}
+
+Block * Next(Block * B, int dir, int level){
+  // Find next (detection) block in direction dir. Could be used recurse for x-levels
+  // dir: 0 next, 1 prev
+  if(!B){
+    loggerf(ERROR, "Empty block");
+  }
+
+  level--;
+
+  struct rail_link next;
+
+  if((dir == 0 && B->dir == 1) || (dir == 1 && B->dir == 0)
+      || (dir == 1 && B->dir == 2)){
+    // If next + reversed direction
+    // Or prev + normal direction
+    // or prev + switching direction (normal)
+    next = B->prev;
+  }
+  else if((dir == 0 && B->dir == 0) || (dir == 1 && B->dir == 1)
+      || (dir == 0 && B->dir == 2)){
+    // If next + normal direction
+    // or prev + reversed direction
+    // or next + switching direction (normal)
+    next = B->next;
+  }
+
+  if(B->dir == 2){
+    dir = !dir;
+  }
+
+  printf("Next     : dir:%i\t%i:%i => %i:%i:%c\t%i\n", dir, B->module, B->id, next.module, next.id, next.type, level);
+
+  if(!next.p){
+    loggerf(ERROR, "NO POINTERS");
+    return 0;
+  }
+
+  if(next.type == 'R'){
+    if(level <= 0){
+      return (Block *)next.p;
+    }
+    else{
+      return Next((Block *)next.p, dir, level);
+    }
+  }
+  else if(next.type == 'S' || next.type == 's'){
+    if(level <= 0 && !block_cmp( ((Switch *)next.p)->Detection, B)){
+      printf("Detection block\n");
+      return ((Switch *)next.p)->Detection;
+    }
+    else{
+      return Next_Switch_Block((Switch *)next.p, next.type, dir, level);
+    }
+  }
+  else if(next.type == 'M' || next.type == 'm'){
+    if(level <= 0 && !block_cmp( ((MSSwitch *)next.p)->Detection, B)){
+      printf("Detection block\n");
+      return ((MSSwitch *)next.p)->Detection;
+    }
+    else{
+      return Next_MSSwitch_Block((MSSwitch *)next.p, next.type, dir, level);
+    }
+  }
+  else if(next.type == 'e'){
+    return 0;
+  }
+
+  loggerf(ERROR, "FIX Next");
+  return 0;
+}
+
+Block * Next_Switch_Block(Switch * S, char type, int dir, int level){
+  struct rail_link next;
+
+  if(type == 's'){
+    next = S->app;
+  }
+  else{
+    if(S->state == 0){
+      next = S->str;
+    }
+    else{
+      next = S->div;
+    }
+  }
+
+  printf("Next   Sw: dir:%i\t%i:%i => %i:%i:%c\t%i\n", dir, S->module, S->id, next.module, next.id, next.type, level);
+
+  if(!next.p){
+    loggerf(ERROR, "NO POINTERS");
+    return 0;
+  }
+
+  if(next.type == 'R'){
+    if(!block_cmp(S->Detection, next.p)){
+      level--;
+    }
+    if(level <= 0){
+      return (Block *)next.p;
+    }
+    else{
+      return Next((Block *)next.p, dir, level);
+    }
+  }
+  else if(next.type == 'S' || next.type == 's'){
+    return Next_Switch_Block((Switch *)next.p, next.type, dir, level);
+  }
+  else if(next.type == 'M'){
+
+  }
+  else if(next.type == 'm'){
+
+  }
+  else if(next.type == 'e'){
+    return 0;
+  }
+
+  return 0;
+}
+
+Block * Next_MSSwitch_Block(MSSwitch * S, char type, int dir, int level){
 
 }
 
-void Connect_Segments(){
-
-}
-
-Block * Next(Block * B, int dir){
-
-}
-
-Block * Prev(Block * B, int dir){
-
+Block * Prev(){
+  loggerf(ERROR, "Depricated");
 }
 
 struct rail_link Next_link(Block * B){
-
+  loggerf(ERROR, "FIX Next_link");
 }
 
 struct rail_link Prev_link(Block * B){
-
+  loggerf(ERROR, "FIX Prev_link");
 }

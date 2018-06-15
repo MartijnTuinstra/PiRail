@@ -9,6 +9,7 @@
 
 #include <pthread.h>
 
+#include "train_sim.h"
 #include "system.h"
 
 #include "rail.h"
@@ -41,9 +42,9 @@ void *TRAIN_SIMA(){
 
     pthread_mutex_lock(&mutex_lockA);
 
-    N = Next(B,1+i);
+    N = Next(B,0,1+i);
     if(i > 0){
-      A = Next(B,i);
+      A = Next(B,0,i);
     }
     if(!N){
       while(1){
@@ -104,9 +105,9 @@ void *TRAIN_SIMB(){
 
     pthread_mutex_lock(&mutex_lockA);
 
-    N = Next(B,1+i);
+    N = Next(B,0,1+i);
     if(i > 0){
-      A = Next(B,i);
+      A = Next(B,0,i);
     }
     if(!N){
       while(1){

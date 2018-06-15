@@ -26,5 +26,6 @@
 
   // void create_signal2(struct Seg * B,char adr_nr, uint8_t addresses[adr_nr], char state[BLOCK_STATES], char flash[BLOCK_STATES], char side);
 
-  void set_signal(Signal *Si,int state);
+  void set_signal(Signal *Si, enum Rail_states state);
 #endif
+

@@ -20,15 +20,23 @@
     int module;
     int id;
 
+    _Bool hold;
+
+    _Bool feedback;
+    char input_len;
+    char * input_pins;
+    _Bool ** input_states;
+
+    char output_len;
+    char * output_pins;
+    _Bool ** output_states;
+
     struct rail_link div;
     struct rail_link str;
     struct rail_link app;
 
     char state;
     char default_state;
-
-    char UAdr;
-    char Out[5];
 
     Block * Detection;
 
@@ -50,12 +58,31 @@
     char default_state;
     char state;
 
+    Block * Detection;
+
     char links_len;
     struct switch_link * link;
 
     char pref_len;
     struct switch_preference * preferences;
   } MSSwitch;
+
+  struct switch_connect {
+    int module;
+    int id;
+
+    struct rail_link app;
+    struct rail_link str;
+    struct rail_link div;
+  };
+
+  struct msswitch_connect {
+    int module;
+    int id;
+
+    struct rail_link * sideA;
+    struct rail_link * sideB;
+  };
 
   struct switch_list {
     char len;
@@ -71,10 +98,11 @@
 
   int set_multiple_switches(struct switch_list list, char * states);
 
-  void Create_Switch();
+  void Create_Switch(struct switch_connect connect, char block_id, char output_len, char * output_pins, _Bool ** output_states);
   void Create_MSSwitch();
 
   int check_Switch(Block * B, int dir, _Bool pref);
+  int check_Switch_State(struct rail_link adr);
 
   int free_Switch(Block * B, int dir);
 

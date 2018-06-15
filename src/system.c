@@ -53,3 +53,20 @@ void sigint_func(int sig){
     _SYS_change(STATE_RUN | STATE_Client_Accept, 3);
   }
 }
+
+int find_free_index(void ** list, int * length){
+  if(!list){
+    logger("LIST DOESNT EXIST",CRITICAL);
+    return -1;
+  }
+  for(int i = 0;i<*length;i++){
+    if(!list[i]){
+      return i;
+    }
+  }
+
+  list = _realloc(list,*length+2, void *);
+  *length += 2;
+  logger("EXPANDING LIST",INFO);
+  return find_free_index(list, length);
+}

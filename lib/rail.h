@@ -8,11 +8,13 @@
   #include <string.h>
 
   struct _switch;
+  struct _msswitch;
   struct _signal;
   struct _station;
 
   typedef struct _station Station;
   typedef struct _switch Switch;
+  typedef struct _msswitch MSSwitch;
   typedef struct _signal Signal;
 
   struct rail_link {
@@ -62,6 +64,7 @@
 
     char train; //Follow id
     _Bool changed;
+    _Bool reversed;
     _Bool oneWay;
 
     Signal * NextSignal;
@@ -69,18 +72,13 @@
 
   } Block;
 
-  struct segment_connect {
+  struct block_connect {
     int module;
     int id;
     enum Rail_types type;
 
-    int next_module;
-    int next_id;
-    char next_type;
-    
-    int prev_module;
-    int prev_id;
-    char prev_type;
+    struct rail_link next;
+    struct rail_link prev;
   };
 
   enum Station_types {
@@ -90,13 +88,13 @@
   };
 
   typedef struct _station {
-    int Module;
+    int module;
     int id;
     int uid;
     char * name;
 
     Block ** blocks;
-    char blocks_len;
+    int blocks_len;
 
     enum Station_types type;
 
@@ -110,16 +108,18 @@
 
   void init_rail();
 
-  void Create_Segment(int IO_Adr, struct segment_connect connect ,char max_speed, char dir,char len);
-  void Create_Station();
+  void Create_Segment(int IO_Adr, struct block_connect connect ,char max_speed, char dir,char len);
+  void Create_Station(int module, int id, char * name, char name_len, enum Station_types type, int len, Block ** blocks);
 
-  void Connect_Segments();
+  void Connect_Rail_links();
 
   int dircmp(Block *A, Block *B);
-  int block_adrcmp(Block *A, Block *B);
+  int block_cmp(Block *A, Block *B);
 
-  Block * Next(Block * B, int dir);
-  Block * Prev(Block * B, int dir);
+  Block * Next_Switch_Block(Switch * S, char type, int dir, int level);
+  Block * Next_MSSwitch_Block(MSSwitch * S, char type, int dir, int level);
+  Block * Next(Block * B, int dir, int level);
+  Block * Prev();
 
   struct rail_link Next_link(Block * B);
   struct rail_link Prev_link(Block * B);

@@ -45,23 +45,6 @@ void init_trains(){
   train_read_confs();
 }
 
-int find_free_index(void ** list, int * length){
-  if(!list){
-    logger("LIST DOESNT EXIST",CRITICAL);
-    return -1;
-  }
-  for(int i = 0;i<*length;i++){
-    if(!list[i]){
-      return i;
-    }
-  }
-
-  list = _realloc(list,*length+10, void *);
-  *length += 10;
-  logger("EXPANDING LIST",WARNING);
-  return find_free_index(list, length);
-}
-
 void alloc_trains(){
   trains = _calloc(10, Trains *);
   trains_len = 10;

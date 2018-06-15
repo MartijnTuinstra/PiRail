@@ -162,7 +162,7 @@ void procces(Block * B,int debug){
       i++;
       //printf("i%i\t%i:%i:%c\n",i-1,bl[i-1]->module,bl[i-1]->id,bl[i-1]->type);
       struct rail_link A;
-      if(dir_Comp(B,Bl)){
+      if(dircmp(B,Bl)){
         A = Next_link(Bl);
       }else{
         A = Prev_link(Bl);
@@ -179,10 +179,10 @@ void procces(Block * B,int debug){
           break;
         }
       }
-      bl[i] = Next(B,i);
+      bl[i] = Next(B,0,i);
       //printf(".%i<%i\n",i,q);
       //printf("%i  %c%i:%i\t",i,bl[i]->type,bl[i]->module,bl[i]->id);
-      if(i > 1 && bl[i-1]->type == 'T' && bl[i]->type == 'T' && !Block_cmp(bl[i-1],bl[i])){
+      if(i > 1 && bl[i-1]->type == 'T' && bl[i]->type == 'T' && !block_cmp(bl[i-1],bl[i])){
         //printf("Double T rail\n");
         q++;
       }else if(!bl[i]){
@@ -201,7 +201,7 @@ void procces(Block * B,int debug){
       p++;
       //printf("i%i\t%i:%i:%c\n",p-1,bpl[p-1]->module,bpl[p-1]->id,bpl[p-1]->type);
       struct rail_link A;
-      if(dir_Comp(B,Bl)){
+      if(dircmp(B,Bl)){
         A = Prev_link(Bl);
       }else{
         A = Next_link(Bl);
@@ -218,7 +218,7 @@ void procces(Block * B,int debug){
           break;
         }
       }
-      bpl[p] = Prev(B,p);
+      bpl[p] = Next(B,1,p);
       
       if(!bpl[p]){
         r = p-1;
@@ -226,7 +226,7 @@ void procces(Block * B,int debug){
       }
       //printf(".%i<%i\n",p,r);
       //printf("%i  %c%i:%i\t",p,bpl[p]->type,bpl[p]->module,bpl[p]->id);
-      if(p > 1 && bpl[p-1]->type == 'T' && bpl[p]->type == 'T' && !Block_cmp(bpl[p-1],bpl[p])){
+      if(p > 1 && bpl[p-1]->type == 'T' && bpl[p]->type == 'T' && !block_cmp(bpl[p-1],bpl[p])){
         //printf("Double T rail\n");
         r++;
       }
@@ -504,7 +504,7 @@ void procces(Block * B,int debug){
     /*Check switch*/
       //
       int New_Switch = 0;
-      struct rail_link NAdr,NNA, bTraindr;
+      struct rail_link NAdr,NNAdr, bTraindr;
 
       NAdr = Next_link(BA.B[BA.length - 1]);
       if(k > 0){
@@ -515,7 +515,7 @@ void procces(Block * B,int debug){
         //There is a switch after the next block
         if(BA.B[0]->train != 0 && train_link[BA.B[0]->train] && train_link[BA.B[0]->train]->route.Destination){
           //If train has a route
-          if(check_Switch_state(NNAdr)){
+          if(check_Switch_State(NNAdr)){
             //Switch is free to use
             New_Switch = 2;
             printf("Free switch ahead (OnRoute %i:%i)\n",BA.B[0]->module,BA.B[0]->id);
@@ -526,7 +526,7 @@ void procces(Block * B,int debug){
           }
         }else{
           //No route
-          if(check_Switch_state(NNAdr)){
+          if(check_Switch_State(NNAdr)){
             //Switch is free to use
             New_Switch = 2;
             printf("Free switch ahead %i:%i\n",BA.B[0]->module,BA.B[0]->id);
@@ -543,7 +543,7 @@ void procces(Block * B,int debug){
         //There is a switch after the current block
         if(BA.B[0]->train != 0 && train_link[BA.B[0]->train] && train_link[BA.B[0]->train]->route.Destination){
           //If train has a route
-          if(check_Switch_state(NAdr)){
+          if(check_Switch_State(NAdr)){
             //Switch is free to use
             New_Switch = 1;
             printf("Free switch ahead (OnRoute %i:%i)\n",BA.B[0]->module,BA.B[0]->id);
@@ -553,7 +553,7 @@ void procces(Block * B,int debug){
           }
         }else{
           //No route
-          if(check_Switch_state(NNAdr)){
+          if(check_Switch_State(NNAdr)){
             New_Switch = 1;
             //Switch is free to use
             printf("Free switch ahead %i:%i\n",BA.B[0]->module,BA.B[0]->id);
@@ -571,12 +571,12 @@ void procces(Block * B,int debug){
         printf("Switch thrown");
         if(k < 1){
           printf("BN  NEEDED\t");
-          BN.B[0] = Next(BA.B[0],1+BN.length);
+          BN.B[0] = Next(BA.B[0],0,1+BN.length);
           if(BN.B[0]){
             BN.length++;
             BN.blocked |= BN.B[0]->blocked;
             if(BN.B[0]->type == 'T'){
-              BN.B[1] = Next(BA.B[0],1+BN.length);
+              BN.B[1] = Next(BA.B[0],0,1+BN.length);
               if(BN.B[1]->type == 'T'){
                 BN.length++;
                 BN.blocked |= BN.B[1]->blocked;
@@ -589,12 +589,12 @@ void procces(Block * B,int debug){
         }
         if(k < 2){
           printf("BNN  NEEDED\t");
-          BNN.B[0] = Next(BA.B[0],1+BN.length+BNN.length);
+          BNN.B[0] = Next(BA.B[0],0,1+BN.length+BNN.length);
           if(BNN.B[0]){
             BNN.length++;
             BNN.blocked |= BNN.B[0]->blocked;
             if(BNN.B[0]->type == 'T'){
-              BNN.B[1] = Next(BA.B[0],1+BN.length+BNN.length);
+              BNN.B[1] = Next(BA.B[0],0,1+BN.length+BNN.length);
               if(BNN.B[1]->type == 'T'){
                 BNN.length++;
                 BNN.blocked |= BNN.B[1]->blocked;
@@ -606,12 +606,12 @@ void procces(Block * B,int debug){
           }
         }
         if(k < 3){
-          BNNN.B[0] = Next(BA.B[0],1+BN.length+BNN.length+BNNN.length);
+          BNNN.B[0] = Next(BA.B[0],0,1+BN.length+BNN.length+BNNN.length);
           if(BNNN.B[0]){
             BNNN.length++;
             BNNN.blocked |= BNNN.B[0]->blocked;
             if(BNNN.B[0]->type == 'T'){
-              BNNN.B[1] = Next(BA.B[0],1+BN.length+BNN.length+BNNN.length);
+              BNNN.B[1] = Next(BA.B[0],0,1+BN.length+BNN.length+BNNN.length);
               if(BNNN.B[1]->type == 'T'){
                 BNNN.length++;
                 BNNN.blocked |= BNNN.B[1]->blocked;
@@ -654,13 +654,13 @@ void procces(Block * B,int debug){
     /**/
     /*Reverse block after one or two zero-blocks*/
       //If the next block is reversed, and not blocked
-      if(i > 0 && BA.blocked && BN.B[0] && BN.B[0]->type != 'T' && !BN.blocked && !dir_Comp(BA.B[0],BN.B[0])){
+      if(i > 0 && BA.blocked && BN.B[0] && BN.B[0]->type != 'T' && !BN.blocked && !dircmp(BA.B[0],BN.B[0])){
         BN.B[0]->dir ^= 0b100;
       }
 
       //Reverse one block in advance
-      if(i > 1 && BA.blocked && BNN.B[0] && BNN.B[0]->type != 'T' && !dir_Comp(BA.B[0],BNN.B[0]) &&
-              (BN.B[0]->type == 'T' || !(dir_Comp(BA.B[0],BN.B[0]) == dir_Comp(BN.B[0],BNN.B[0])))){
+      if(i > 1 && BA.blocked && BNN.B[0] && BNN.B[0]->type != 'T' && !dircmp(BA.B[0],BNN.B[0]) &&
+              (BN.B[0]->type == 'T' || !(dircmp(BA.B[0],BN.B[0]) == dircmp(BN.B[0],BNN.B[0])))){
 
         printf("Reverse in advance 1\n");
         if(BNN.B[0]->type == 'S'){ //Reverse whole platform if it is one
@@ -790,7 +790,8 @@ void procces(Block * B,int debug){
           if(train_link[BA.B[0]->train]){
             //Kill train
             printf("COLLISION PREVENTION\n\t");
-            train_stop(train_link[BA.B[0]->train]);
+            loggerf(ERROR, "FIX train_stop");
+            //train_stop(train_link[BA.B[0]->train]);
           }else{
             //No train coupled
             printf("COLLISION PREVENTION\tEM_STOP\n\t");
@@ -803,7 +804,8 @@ void procces(Block * B,int debug){
             if(train_link[BA.B[0]->train]->timer != 1){
               //Fire stop timer
               printf("NEXT SIGNAL: RED\n\tSTOP TRAIN:");
-              train_signal(BA.B[0],train_link[BA.B[0]->train], DANGER);
+              loggerf(ERROR, "FIX train_signal");
+              //train_signal(BA.B[0],train_link[BA.B[0]->train], DANGER);
             }
           }else{
             //No train coupled
@@ -816,7 +818,8 @@ void procces(Block * B,int debug){
             if(train_link[BN.B[0]->train]->timer != 1){
               //Fire stop timer
               printf("NEXT SIGNAL: RED\n\tSTOP TRAIN:");
-              train_signal(BN.B[0],train_link[BN.B[0]->train], DANGER);
+              loggerf(ERROR, "FIX train_signal");
+              //train_signal(BN.B[0],train_link[BN.B[0]->train], DANGER);
             }
           }else{
             //No train coupled
@@ -831,7 +834,8 @@ void procces(Block * B,int debug){
             if(train_link[BA.B[0]->train]->timer != 1){
               //Fire slowdown timer
               printf("NEXT SIGNAL: AMBER\n\tSLOWDOWN TRAIN:\t");
-              train_signal(BA.B[0],train_link[BA.B[0]->train], CAUTION);
+              loggerf(ERROR, "FIX train_signal");
+              //train_signal(BA.B[0],train_link[BA.B[0]->train], CAUTION);
             }
           }
         }
@@ -841,7 +845,8 @@ void procces(Block * B,int debug){
         if(k > 0 && !BN.blocked && BA.B[0]->train != 0 && train_link[BA.B[0]->train] && train_link[BA.B[0]->train]->timer != 2 && train_link[BA.B[0]->train]->timer != 1){
           if((BN.B[0]->state == PROCEED || BN.B[0]->state == RESERVED) && train_link[BA.B[0]->train]->cur_speed < BA.B[0]->max_speed && BN.B[0]->max_speed >= BA.B[0]->max_speed){
             printf("Next block has a higher speed limit (%i > %i)",BN.B[0]->max_speed,BA.B[0]->max_speed);
-            train_speed(BA.B[0],train_link[BA.B[0]->train],BA.B[0]->max_speed);
+            loggerf(ERROR, "FIX train_speed");
+            //train_speed(BA.B[0],train_link[BA.B[0]->train],BA.B[0]->max_speed);
           }
         }
 
@@ -849,10 +854,12 @@ void procces(Block * B,int debug){
         if(BA.B[0]->train != 0 && train_link[BA.B[0]->train] && train_link[BA.B[0]->train]->timer != 2){
           if(k > 0 && (BN.B[0]->state == PROCEED || BN.B[0]->state == RESERVED) && train_link[BA.B[0]->train]->cur_speed > BN.B[0]->max_speed && BN.B[0]->type != 'T'){
             printf("Next block has a lower speed limit");
-            train_speed(BN.B[0],train_link[BA.B[0]->train],BN.B[0]->max_speed);
+            loggerf(ERROR, "FIX train_speed");
+            ///train_speed(BN.B[0],train_link[BA.B[0]->train],BN.B[0]->max_speed);
           }else if(k > 1 && BN.B[0]->type == 'T' && BNN.B[0]->type != 'T' && (BNN.B[0]->state == PROCEED || BNN.B[0]->state == RESERVED) && train_link[BA.B[0]->train]->cur_speed > BNN.B[0]->max_speed){
             printf("Block after Switches has a lower speed limit");
-            train_speed(BNN.B[0],train_link[BA.B[0]->train],BNN.B[0]->max_speed);
+            loggerf(ERROR, "FIX train_speed");
+            //train_speed(BNN.B[0],train_link[BA.B[0]->train],BNN.B[0]->max_speed);
           }else if(train_link[BA.B[0]->train]->cur_speed != BN.B[0]->max_speed && BN.B[0]->type != 'T'){
             printf("%i <= %i\n",train_link[BA.B[0]->train]->cur_speed,BN.B[0]->max_speed && BN.B[0]->type != 'T');
           }
@@ -860,13 +867,15 @@ void procces(Block * B,int debug){
       //
       /*Station / Route*/
         //If next block is the destination
-        if(BA.B[0]->train != 0 && train_link[BA.B[0]->train] && !Block_cmp(0,train_link[BA.B[0]->train]->route.Destination)){
-          if(k > 0 && Block_cmp(train_link[BA.B[0]->train]->route.Destination,BN.B[0])){
+        if(BA.B[0]->train != 0 && train_link[BA.B[0]->train] && !block_cmp(0,train_link[BA.B[0]->train]->route.Destination)){
+          if(k > 0 && block_cmp(train_link[BA.B[0]->train]->route.Destination,BN.B[0])){
             printf("Destination almost reached\n");
-            train_signal(BA.B[0],train_link[BA.B[0]->train], CAUTION);
-          }else if(Block_cmp(train_link[BA.B[0]->train]->route.Destination,BA.B[0])){
+            loggerf(ERROR, "FIX train_signal");
+            //train_signal(BA.B[0],train_link[BA.B[0]->train], CAUTION);
+          }else if(block_cmp(train_link[BA.B[0]->train]->route.Destination,BA.B[0])){
             printf("Destination Reached\n");
-            train_signal(BA.B[0],train_link[BA.B[0]->train], DANGER);
+            loggerf(ERROR, "FIX train_signal");
+            //train_signal(BA.B[0],train_link[BA.B[0]->train], DANGER);
             train_link[BA.B[0]->train]->route.Destination = 0;
             train_link[BA.B[0]->train]->halt = TRUE;
           }

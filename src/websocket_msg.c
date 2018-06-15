@@ -538,15 +538,15 @@ void WS_NewClient_track_Switch_Update(int Client_fd){
   if(stations_len>0){
     data = 1;
   }
-  for(int i = 1;(i-1)<stations_len;i++){
-    printf("entry %i\tStation %i:%i\t%s\tbuf_l: %i\n",i,stations[i-1]->Module,stations[i-1]->id,stations[i-1]->name,buf_l);
+  for(int i = 0; i<stations_len;i++){
+    printf("entry %i\tStation %i:%i\t%s\tbuf_l: %i\n",i,stations[i]->module,stations[i]->id,stations[i]->name,buf_l);
 
-    buf[buf_l]   = stations[i-1]->Module;
-    buf[buf_l+1] = stations[i-1]->id;
-    buf[buf_l+2] = strlen(stations[i-1]->name);
-    strcpy(&buf[buf_l+3],stations[i-1]->name);
+    buf[buf_l]   = stations[i]->module;
+    buf[buf_l+1] = stations[i]->id;
+    buf[buf_l+2] = strlen(stations[i]->name);
+    strcpy(&buf[buf_l+3],stations[i]->name);
 
-    buf_l+=3+strlen(stations[i-1]->name);
+    buf_l+=3+strlen(stations[i]->name);
   }
 
   if(data == 1){

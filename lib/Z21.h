@@ -30,8 +30,6 @@
 
   void die(char *s);
 
-  void Z21_recv(char message[100]);
-
   void Z21_client();
 
   extern char Z21_prio_list[05][30];

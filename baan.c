@@ -36,7 +36,7 @@ int main(){
   _SYS->_COM_fd = -1;
 
   init_logger("log.txt");
-  set_level(MEMORY);
+  set_level(DEBUG);
 
   if (signal(SIGINT, sigint_func) == SIG_ERR){
     logger("Cannot catch SIGINT",CRITICAL);
@@ -70,6 +70,7 @@ int main(){
     init_trains();
 
   /* Search all blocks */
+    init_modules();
     char * DeviceList = _calloc(10, char);
 
     if(DeviceList[0] != 0){
@@ -109,14 +110,34 @@ int main(){
 
     setup_JSON((int [4]){20,21,22,23},(int *)0,4,0);
 
-    Connect_Segments();
+    Connect_Rail_links();
 
   //#############################################################
   //Init done
 
-  scan_All();
+  //scan_All();
+  printf("Next 1\n");
+  Block *B = Next(Units[20]->B[3],0,1);
+  if(B){printf("Block %i:%i\n",B->module, B->id);}
+  printf("Next 2\n");
+  B = Next(Units[20]->B[3],0,2);
+  if(B){printf("Block %i:%i\n",B->module, B->id);}
+  printf("Next 3\n");
+  B = Next(Units[20]->B[3],0,3);
+  if(B){printf("Block %i:%i\n",B->module, B->id);}
+  printf("\nPrev 1\n");
+  B = Next(Units[20]->B[3],1,1);
+  if(B){printf("Block %i:%i\n",B->module, B->id);}
+  printf("Prev 2\n");
+  B = Next(Units[20]->B[3],1,2);
+  if(B){printf("Block %i:%i\n",B->module, B->id);}
+  printf("Prev 3\n");
+  B = Next(Units[20]->B[3],1,3);
+  if(B){printf("Block %i:%i\n",B->module, B->id);}
 
   delay(5);
+
+  return 1;
 
   if(_SYS->_Clients == 0){
     printf("                   Waiting until for a client connects\n");

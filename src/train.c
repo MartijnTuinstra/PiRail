@@ -37,6 +37,8 @@ int trains_comp_len = 0;
 Trains ** train_link;
 int train_link_len;
 
+Trains * DCC_train[9999];
+
 void init_trains(){
   loggerf(INFO, "Initializing cars/engines/trains");
   alloc_trains();

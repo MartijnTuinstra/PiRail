@@ -2,8 +2,7 @@ BIN=./bin
 SRC=./src
 LIB=./lib
 INCLUDE = -I $(LIB) -I $(SRC)
-# ARGS=-std=c99 -lpthread -lssl -lcrypto -lwiringPi -lm -g $(INCLUDE)
-ARGS=-std=c99 -lm -g $(INCLUDE)
+ARGS=-std=c99 -lpthread -lssl -lcrypto -lwiringPi -lm -g $(INCLUDE)
 
 GCC = gcc $(ARGS)
 
@@ -11,11 +10,12 @@ ifndef VERBOSE
 .SILENT:
 endif
 
-baan: $(BIN)/baan.o $(BIN)/logger.o $(BIN)/rail.o $(BIN)/train.o $(BIN)/system.o $(BIN)/websocket_control.o
+baan: $(BIN)/baan.o $(BIN)/logger.o $(BIN)/rail.o $(BIN)/train.o $(BIN)/system.o $(BIN)/websocket_control.o $(BIN)/websocket_msg.o $(BIN)/module.o \
+		$(BIN)/train_sim.o $(BIN)/com.o $(BIN)/algorithm.o
 	@echo baan
 	$(GCC) -o baan $(wildcard $(BIN)/*.o)
 
-$(BIN)/baan.o: baan.c $(LIB)/logger.h $(LIB)/train.h
+$(BIN)/baan.o: baan.c $(LIB)/logger.h $(LIB)/train.h $(LIB)/rail.h $(LIB)/switch.h $(LIB)/com.h $(LIB)/websocket_control.h $(LIB)/system.h
 	@echo baan.o
 	$(GCC) baan.c -c -o $(BIN)/baan.o
 
@@ -32,6 +32,10 @@ $(BIN)/train.o: $(SRC)/train.c $(LIB)/train.h $(LIB)/system.h
 	@echo train.o
 	$(GCC) $(SRC)/train.c -c -o $(BIN)/train.o
 
+$(BIN)/train_sim.o: $(SRC)/train_sim.c $(LIB)/train_sim.h
+	@echo train_sim.o
+	$(GCC) $(SRC)/train_sim.c -c -o $(BIN)/train_sim.o
+
 $(LIB)/switch.h: $(LIB)/rail.h $(LIB)/train.h
 
 $(BIN)/rail.o: $(SRC)/rail.c $(LIB)/rail.h
@@ -40,10 +44,27 @@ $(BIN)/rail.o: $(SRC)/rail.c $(LIB)/rail.h
 
 $(LIB)/websocket_control.h: $(LIB)/websocket.h $(LIB)/websocket_msg.h
 $(BIN)/websocket_control.o: $(SRC)/websocket_control.c $(LIB)/websocket_control.h
+	@echo websocket_control.o
 	$(GCC) $(SRC)/websocket_control.c -c -o $(BIN)/websocket_control.o
 
-$LIB)/module.h: $(LIB)/rail.h $(LIB)/switch.h $(LIB)/signals.h
+$(BIN)/websocket_msg.o: $(SRC)/websocket_msg.c $(LIB)/websocket_msg.h
+	@echo websocket_msg.o
+	$(GCC) $(SRC)/websocket_msg.c -c -o $(BIN)/websocket_msg.o
 
+$(LIB)/module.h: $(LIB)/rail.h $(LIB)/switch.h $(LIB)/signals.h
+$(BIN)/module.o: $(SRC)/module.c $(LIB)/module.h
+	@echo module.c
+	$(GCC) $(SRC)/module.c -c -o $(BIN)/module.o
+
+
+$(BIN)/com.o: $(SRC)/com.c $(LIB)/com.h $(LIB)/signals.h
+	@echo com.c
+	$(GCC) $(SRC)/com.c -c -o $(BIN)/com.o
+
+$(BIN)/algorithm.o: $(SRC)/algorithm.c $(LIB)/algorithm.h $(LIB)/system.h $(LIB)/rail.h $(LIB)/logger.h\
+		$(LIB)/train.h $(LIB)/switch.h $(LIB)/signals.h $(LIB)/module.h $(LIB)/com.h $(LIB)/websocket_msg.h
+	@echo algorithm.o
+	$(GCC) $(SRC)/algorithm.c -c -o $(BIN)/algorithm.o
 # baan: baan.o $(BIN)/algorithm.o $(BIN)/com.o $(BIN)/encryption.o $(BIN)/modules.o $(BIN)/pathfinding.o $(BIN)/rail.o $(BIN)/signals.o $(BIN)/status.o $(BIN)/switch.o $(BIN)/train_control.o $(BIN)/train_sim.o $(BIN)/trains.o $(BIN)/websocket.o $(BIN)/Z21.o $(BIN)/logger.o
 # 	gcc $(ARGS) -o baan $(wildcard $(BIN)/*.o) baan.o
 

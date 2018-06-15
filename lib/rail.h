@@ -33,6 +33,7 @@
   enum Rail_states {
     BLOCKED,
     DANGER,
+    RESTRICTED,
     CAUTION,
     PROCEED,
     RESERVED,
@@ -57,6 +58,7 @@
     char max_speed;
 
     enum Rail_states state;
+    _Bool blocked;
 
     char train; //Follow id
     _Bool changed;
@@ -93,7 +95,7 @@
     int uid;
     char * name;
 
-    Block * blocks;
+    Block ** blocks;
     char blocks_len;
 
     enum Station_types type;
@@ -103,7 +105,7 @@
   } Station;
 
 
-  extern Station * stations;
+  extern Station ** stations;
   extern int stations_len;
 
   void init_rail();
@@ -116,8 +118,8 @@
   int dircmp(Block *A, Block *B);
   int block_adrcmp(Block *A, Block *B);
 
-  Block Next(Block * B, int dir);
-  Block Prev(Block * B, int dir);
+  Block * Next(Block * B, int dir);
+  Block * Prev(Block * B, int dir);
 
   struct rail_link Next_link(Block * B);
   struct rail_link Prev_link(Block * B);

@@ -1,8 +1,9 @@
 #include "system.h"
 #include "module.h"
 #include "switch.h"
+#include "logger.h"
 
-Station * stations;
+Station ** stations;
 int stations_len;
 
 int dircmp(Block *A, Block *B){
@@ -20,10 +21,21 @@ int dircmp(Block *A, Block *B){
 }
 
 int block_adrcmp(Block *A, Block *B){
-  if(A->module == B->module && A->id == B->id && A->type == B->type){
-    return 1;
+  if(A && !B){
+    //Compare with empty block
+    if(A->module == 0 && A->id == 0 && A->type == 'e'){
+      return 1;
+    }
+    else{
+      loggerf(ERROR, "SOMETHING WENT WRONG");
+    }
+
   }else{
-    return 0;
+    if(A->module == B->module && A->id == B->id && A->type == B->type){
+      return 1;
+    }else{
+      return 0;
+    }
   }
 }
 
@@ -62,11 +74,11 @@ void Connect_Segments(){
 
 }
 
-Block Next(Block * B, int dir){
+Block * Next(Block * B, int dir){
 
 }
 
-Block Prev(Block * B, int dir){
+Block * Prev(Block * B, int dir){
 
 }
 

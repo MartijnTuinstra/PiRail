@@ -139,6 +139,7 @@
   extern int trains_comp_len;
   extern Trains ** train_link;
   extern int train_link_len;
+  extern Trains * DCC_train[9999];
 
   void init_trains();
   void alloc_trains();

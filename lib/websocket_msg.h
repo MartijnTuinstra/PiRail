@@ -3,6 +3,8 @@
   #define ACTIVATE 0
   #define RELEASE  1
 
+  #include <stdint.h>
+
   struct WS_Message {
     uint16_t type;
     char data[16];

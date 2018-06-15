@@ -2,6 +2,7 @@
   #define INCLUDE_ROUTE_H
 
   typedef struct route {
+    Block * Destination;
     int test;
   } Route;
 

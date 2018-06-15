@@ -15,15 +15,22 @@
 #include "rail.h"
 #include "switch.h"
 #include "train.h"
+#include "module.h"
+
+#include "algorithm.h"
+
+#include "com.h"
 
 #include "websocket_control.h"
 
 #include "system.h"
 
+#include "train_sim.h"
+
 struct systemState * _SYS;
 
 int main(){
-  _SYS = (struct systemState *)malloc(sizeof(struct systemState));
+  _SYS = _calloc(1, struct systemState);
   _SYS->_STATE = STATE_RUN;
   _SYS->_Clients = 0;
   _SYS->_COM_fd = -1;
@@ -63,9 +70,11 @@ int main(){
     init_trains();
 
   /* Search all blocks */
+    char * DeviceList = _calloc(10, char);
+
     if(DeviceList[0] != 0){
       //There are allready some device listed. Clear.
-      memset(DeviceList,0,MAX_Devices);
+      memset(DeviceList,0,10);
     }
 
     //Send restart message
@@ -86,7 +95,7 @@ int main(){
     // DeviceList[6] =11;
     // DeviceList[7] = 6;
 
-    for(uint8_t i = 0;i<MAX_Devices;i++){
+    for(uint8_t i = 0;i<10;i++){
       if(DeviceList[i]){
         LoadModules(DeviceList[i]);
       }
@@ -158,7 +167,9 @@ int main(){
   //----- CLOSE THE UART -----
   close(_SYS->_COM_fd);
 
-  free(_SYS);
+  _free(_SYS);
+
+  _free(DeviceList);
 
   printf("STOPPED");
   //pthread_exit(NULL);

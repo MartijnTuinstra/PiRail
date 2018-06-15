@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <signal.h>
+#include <errno.h>
+
 #include "system.h"
 #include "websocket_control.h"
 #include "logger.h"

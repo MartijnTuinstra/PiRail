@@ -5,13 +5,20 @@
   #include "rail.h"
   #include "signals.h"
 
+  enum gpio_types {
+    gpio_NC,
+    gpio_RAIL,
+    gpio_SWITCH,
+    gpio_MSSWITCH
+  };
+
   typedef struct gpio_link {
-    char type;
+    enum gpio_types type;
     void * p;
   } gpio_link;
 
   typedef struct _unit{
-    char Module;
+    char module;
 
     char connections_len;
     struct _unit ** connection;
@@ -23,7 +30,7 @@
     uint8_t *OutRegs;
     uint8_t  *InRegs;
 
-    gpio_link * output_link;
+    gpio_link * input_link;
 
     int block_len;
     Block ** B;
@@ -51,6 +58,8 @@
   void free_modules();
 
   void clear_modules();
+
+  void Unit_expand_IO(_Bool type, Unit * U);
 
   void LoadModules(int M);
 

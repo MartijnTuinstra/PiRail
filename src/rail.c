@@ -48,11 +48,11 @@ void init_rail(){
 void Create_Segment(int IO_Adr, struct block_connect connect ,char max_speed, char dir,char len){
   Block * p = _calloc(1, Block);
 
-  p->ioadr = IO_Adr;
-
   p->module = connect.module;
   p->id = connect.id;
   p->type = connect.type;
+
+  Unit * U = Units[p->module];
 
   p->next.type = connect.next.type;
   p->next.module = connect.next.module;
@@ -65,6 +65,22 @@ void Create_Segment(int IO_Adr, struct block_connect connect ,char max_speed, ch
   p->max_speed = max_speed;
   p->dir = dir;
   p->length = len;
+
+  if(IO_Adr >= (U->input_regs * 8)){
+    printf("JOLO");
+  }
+  while(IO_Adr >= (U->input_regs * 8)){
+    Unit_expand_IO(0, U); //Expand input
+  }
+  p->ioadr = IO_Adr;
+
+  gpio_link gpio;
+  gpio.type = gpio_RAIL;
+  gpio.p = p;
+  if(Units[p->module]->input_link[IO_Adr].type != gpio_NC){
+    loggerf(WARNING, "Overwriting gpio link");
+  }
+  Units[p->module]->input_link[IO_Adr] = gpio;
 
 
   // If block array is to small

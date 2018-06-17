@@ -247,8 +247,8 @@ void WS_Partial_Layout(char M_A,char M_B){
   data[q++] = M_A;
   for(int i = 0;i<Units[M_A]->connections_len;i++){
     if(Units[M_A]->connection[i]){
-      printf(" - Connect found, module %i\n",Units[M_A]->connection[i]->Module);
-      data[q++] = Units[M_A]->connection[i]->Module;
+      printf(" - Connect found, module %i\n",Units[M_A]->connection[i]->module);
+      data[q++] = Units[M_A]->connection[i]->module;
     }
     else{
       printf("Reset\n");
@@ -262,8 +262,8 @@ void WS_Partial_Layout(char M_A,char M_B){
   data[q++] = M_B;
   for(int i = 0;i<Units[M_B]->connections_len;i++){
     if(Units[M_B]->connection[i]){
-      printf(" - Connect found, module %i\n",Units[M_B]->connection[i]->Module);
-      data[q++] = Units[M_B]->connection[i]->Module;
+      printf(" - Connect found, module %i\n",Units[M_B]->connection[i]->module);
+      data[q++] = Units[M_B]->connection[i]->module;
     }
     else{
       printf("Reset\n");

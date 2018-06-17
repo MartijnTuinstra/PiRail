@@ -51,18 +51,18 @@ void setup_JSON(int arr[], int arr2[], int size, int size2){
   }
 }
 
-void Create_Unit(int Module,int OUT,int IN,char points){
+void Create_Unit(int module,int OUT,int IN,char points){
   Unit * Z = _calloc(1, Unit);
 
-  if(Module < unit_len){
-    Units[Module] = Z;
+  if(module < unit_len){
+    Units[module] = Z;
   }
   else{
-    loggerf(ERROR, "NEED TO EXPAND UNITS");
+    loggerf(CRITICAL, "NEED TO EXPAND UNITS");
     return;
   }
 
-  Z->Module = Module;
+  Z->module = module;
 
   struct rail_link ** A = _calloc( IN,struct rail_link);
   struct rail_link ** B = _calloc(OUT,struct rail_link);
@@ -87,10 +87,32 @@ void Create_Unit(int Module,int OUT,int IN,char points){
   Z->output_regs = (OUT/8)+1;
   // Z->Out = B;
   IN--;OUT--;//To make the division round down;
-  Z->InRegs    = _calloc(( IN/8)+1, char);
-  Z->OutRegs   = _calloc((OUT/8)+1, char);
-  Z->BlinkMask = _calloc((OUT/8)+1, char);
-  Z->output_link = _calloc(((OUT/8)+1) * 8, gpio_link);
+  Z->InRegs    = _calloc(Z->input_regs, char);
+  Z->OutRegs   = _calloc(Z->output_regs, char);
+  Z->BlinkMask = _calloc(Z->output_regs, char);
+  Z->input_link = _calloc(Z->input_regs * 8, gpio_link);
+}
+
+void Unit_expand_IO(_Bool type, Unit * U){
+  if(type == 0){
+    loggerf(INFO, "Expand input of Unit %i to %i", U->module, U->output_regs+1);
+    U->InRegs = _realloc(U->InRegs, U->input_regs + 1, uint8_t);
+    U->input_link = _realloc(U->input_link, (U->input_regs + 1)*8, gpio_link);
+
+    U->InRegs[U->input_regs] = 0;
+    memset(U->input_link + (U->input_regs)*8, 0, 8);
+    U->input_regs += 1;
+  }
+  else{
+    loggerf(INFO, "Expand output of Unit %i to %i", U->module, U->output_regs+1);
+    U->OutRegs = _realloc(U->OutRegs, U->output_regs + 1, uint8_t);
+    U->BlinkMask = _realloc(U->BlinkMask, U->output_regs + 1, uint8_t);
+
+    U->OutRegs[U->output_regs] = 0;
+    U->BlinkMask[U->output_regs] = 0;
+
+    U->output_regs += 1;
+  }
 }
 
 void join(struct rail_link Adr, struct rail_link link){
@@ -101,12 +123,11 @@ void join(struct rail_link Adr, struct rail_link link){
   }else if(Adr.type == 'S'){
     Units[Adr.module]->Sw[Adr.id]->app = link;
   }else if(Adr.type == 's'){
-    loggerf(ERROR, "FIX block_adrcmp");
-    // if(block_adrcmp(Units[Adr.module]->Sw[Adr.id]->div, 0)){
-    //   Units[Adr.module]->Sw[Adr.id]->div = link;
-    // }else{
-    //   Units[Adr.module]->Sw[Adr.id]->str = link;
-    // }
+    if(Units[Adr.module]->Sw[Adr.id]->div.p == 0){
+      Units[Adr.module]->Sw[Adr.id]->div = link;
+    }else{
+      Units[Adr.module]->Sw[Adr.id]->str = link;
+    }
   }
 }
 

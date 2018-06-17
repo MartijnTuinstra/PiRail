@@ -12,19 +12,20 @@
   #include "rail.h"
 
   typedef struct _signal{
-    int id;
-    int MAdr;
-    int UAdr;
+    char id;
+    char module;
+    Block * B;
     enum Rail_states state;
-    int type; // 0 = 2-state / 1 = 4-state / 2 = 8-state
-    uint8_t length;
+    char io; // 0 = 2-state / 1 = 4-state / 2 = 8-state
 
-    short adr[6];
+    short adr[8];
     char states[4];
     char flash[4];
   } Signal;
 
-  // void create_signal2(struct Seg * B,char adr_nr, uint8_t addresses[adr_nr], char state[BLOCK_STATES], char flash[BLOCK_STATES], char side);
+  void create_signal(Block * B, _Bool side, char length, char * addresses, char * states, char * flash);
+
+  void signal_create_states(char io, enum Rail_states state, char * list, ...);
 
   void set_signal(Signal *Si, enum Rail_states state);
 #endif

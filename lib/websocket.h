@@ -1,9 +1,17 @@
 #ifndef _INCLUDE_WEBSOCKET_H
   #define _INCLUDE_WEBSOCKET_H
 
+  #include "websocket_control.h"
+
   struct websocket_client_thread_args;
 
-  int recv_packet_procces(char data[1024], struct websocket_client_thread_args * client_data);
+  int websocket_get_msg(int fd_client, char outbuf[], int * L);
+
+  int send_packet(int fd_client, char data[],int length,int flag);
+
+  void send_all(char data[],int length,int flag);
+
+  int recv_packet_procces(char data[1024], struct web_client_t * client);
 
   #define WEBSOCKET_CLIENT_TIMEOUT 5
 

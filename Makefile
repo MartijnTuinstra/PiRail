@@ -11,7 +11,7 @@ ifndef VERBOSE
 endif
 
 baan: $(BIN)/baan.o $(BIN)/logger.o $(BIN)/rail.o $(BIN)/train.o $(BIN)/system.o $(BIN)/websocket_control.o $(BIN)/websocket_msg.o $(BIN)/module.o \
-		$(BIN)/train_sim.o $(BIN)/com.o $(BIN)/algorithm.o $(BIN)/signals.o $(BIN)/switch.o $(BIN)/Z21.o
+		$(BIN)/train_sim.o $(BIN)/com.o $(BIN)/algorithm.o $(BIN)/signals.o $(BIN)/switch.o $(BIN)/Z21.o $(BIN)/websocket.o
 	@echo baan
 	$(GCC) -o baan $(wildcard $(BIN)/*.o)
 
@@ -76,6 +76,10 @@ $(BIN)/train_sim.o: $(SRC)/train_sim.c $(LIB)/train_sim.h $(LIB)/rail.h \
 		$(LIB)/train.h $(LIB)/system.h $(LIB)/module.h
 	@echo train_sim.o
 	$(GCC) $(SRC)/train_sim.c -c -o $(BIN)/train_sim.o
+
+$(BIN)/websocket.o: $(SRC)/websocket.c $(LIB)/websocket.h
+	@echo websocket.o
+	$(GCC) $(SRC)/websocket.c -c -o $(BIN)/websocket.o
 
 $(LIB)/websocket_control.h: $(LIB)/websocket.h $(LIB)/websocket_msg.h
 $(BIN)/websocket_control.o: $(SRC)/websocket_control.c \

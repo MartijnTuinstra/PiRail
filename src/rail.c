@@ -66,11 +66,25 @@ void Create_Segment(int IO_Adr, struct block_connect connect ,char max_speed, ch
   p->dir = dir;
   p->length = len;
 
-  if(Units[connect.module]->B[p->id]){
-    loggerf(ERROR, "Duplicate segment");
-    free(Units[connect.module]->B[p->id]);
+
+  // If block array is to small
+  if(Units[p->module]->block_len <= p->id){
+    loggerf(INFO, "Expand block len %i", Units[p->module]->block_len+8); 
+    Units[p->module]->B = _realloc(Units[p->module]->B, (Units[p->module]->block_len + 8), Block *);
+
+    int i = Units[p->module]->block_len;
+    for(0; i < Units[p->module]->block_len+8; i++){
+      Units[p->module]->B[i] = 0;
+    }
+    Units[p->module]->block_len += 8;
   }
-  Units[connect.module]->B[p->id] = p;
+
+  // If id is already in use
+  if(Units[p->module]->B[p->id]){
+    loggerf(ERROR, "Duplicate segment %i", p->id);
+    free(Units[p->module]->B[p->id]);
+  }
+  Units[p->module]->B[p->id] = p;
 }
 
 void Create_Station(int module, int id, char * name, char name_len, enum Station_types type, int len, Block ** blocks){
@@ -81,6 +95,18 @@ void Create_Station(int module, int id, char * name, char name_len, enum Station
 
   Z->name = _calloc(name_len+1, char);
   strncpy(Z->name, name, name_len);
+
+  // If block array is to small
+  if(Units[Z->module]->station_len <= Z->id){
+    loggerf(INFO, "Expand station len %i", Units[Z->module]->station_len+8); 
+    Units[Z->module]->St = _realloc(Units[Z->module]->St, (Units[Z->module]->station_len + 8), Station *);
+
+    int i = Units[Z->module]->station_len;
+    for(0; i < Units[Z->module]->station_len+8; i++){
+      Units[Z->module]->St[i] = 0;
+    }
+    Units[Z->module]->station_len += 8;
+  }
 
   for(int i = 0; i < len; i++){
     Z->blocks[find_free_index((void **)Z->blocks, &Z->blocks_len)] = blocks[i];

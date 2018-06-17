@@ -2,12 +2,14 @@
   #define INCLUDE_WEBSOCKET_CONTROL_H
 
   #include "websocket.h"
+  #include <pthread.h>
 
   #define WEBSOCKET_PORT 9000
+  #define MAX_WEB_CLIENTS 10
 
   struct web_client_t{
-    int fd_client;
-    int client_type; /*Flags for client type
+    int fd;
+    int type; /*Flags for client type
                       255 = All messages
                       1  = Trains
                       2  = Track
@@ -17,31 +19,35 @@
                       32 = 
                       64 =
                       128=*/
+    int id;
+    pthread_t thread;
     int state;        /* If this client is active
                       0 = free
                       1 = in use
                       2 = stopping / ready to join thread*/
   };
 
-  struct websocket_client_thread_args{
-    int fd_client;
-    int thread_id;
-  };
+  extern char * WS_password;
 
+#include "websocket_control.h"
+#include "system.h"
+#include "logger.h"
 
-  int websocket_connect(struct web_client_t * C);
+pthread_t websocket_threads[MAX_WEB_CLIENTS];
+struct web_client_t * websocket_clients;
+char * WS_password;
 
-  int recv_packet(int fd_client, char outbuf[], int * L);
+  int websocket_client_check(struct web_client_t * C);
 
-  int send_packet(int fd_client, char data[],int length,int flag);
-
-  void send_all(char data[],int length,int flag);
-  
-  void * websocket_client(void * thread_data);
+  void * websocket_client_connect(void * p);
 
   void *clear_clients();
 
-  void * web_server();
+  void read_password();
+
+  void new_websocket_client(int fd);
+
+  void * websocket_server();
 
   #include "websocket_msg.h"
 

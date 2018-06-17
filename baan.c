@@ -1,15 +1,4 @@
-#define _BSD_SOURCE
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <unistd.h>
-
-#include <pthread.h>
-#include <wiringPi.h>
-#include <signal.h>
-
-#include <errno.h>
+#include "system.h"
 
 #include "logger.h"
 #include "rail.h"
@@ -23,8 +12,6 @@
 
 #include "websocket_control.h"
 
-#include "system.h"
-
 #include "train_sim.h"
 
 struct systemState * _SYS;
@@ -36,7 +23,7 @@ int main(){
   _SYS->_COM_fd = -1;
 
   init_logger("log.txt");
-  set_level(DEBUG);
+  set_level(MEMORY);
 
   if (signal(SIGINT, sigint_func) == SIG_ERR){
     logger("Cannot catch SIGINT",CRITICAL);
@@ -58,7 +45,7 @@ int main(){
     digitalWrite(0,LOW);
     digitalWrite(1,LOW);
   /* Websocket server */
-    pthread_create(&th_web_server, NULL, web_server, NULL);
+    pthread_create(&th_web_server, NULL, websocket_server, NULL);
     WS_init_Message_List();
   /* UART */
 

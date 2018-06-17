@@ -2,7 +2,25 @@
 #ifndef _INCLUDE_system_H
   #define _INCLUDE_system_H
 
+  
+  #define _BSD_SOURCE
+  #define _GNU_SOURCE
+
+  #include <stdio.h>
+  #include <stdlib.h>
   #include <stdint.h>
+  #include <unistd.h>
+  #include <string.h>
+  #include <pthread.h>
+  #include <sys/socket.h>
+  #include <sys/time.h>
+  #include <netinet/in.h>
+  #include <openssl/sha.h>
+
+  #include <wiringPi.h>
+  #include <signal.h>
+
+  #include <errno.h>
 
   #define _calloc(elements, type) my_calloc(elements, sizeof(type), __FILE__, __LINE__)
   #define _realloc(p, elements, type) my_realloc(p, sizeof(type) * elements, __FILE__, __LINE__)
@@ -25,7 +43,7 @@
     int type; // Type
   };
 
-  void _SYS_change(int STATE,char send);
+  void _SYS_change(int STATE, char send);
 
   void sigint_func(int sig);
 

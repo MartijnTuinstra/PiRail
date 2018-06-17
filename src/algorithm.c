@@ -907,49 +907,54 @@ int init_connect_Algor(struct ConnectList * List){
   // printf("init_connect_Algor\n");
   int return_value = 0;
   for(int i = 0;i < unit_len;i++){
-    if(Units[i]){
-      for(int j = 0;j < Units[i]->block_len; j++){
-        if(Units[i]->B[j]){
-          if(Units[i]->B[j]->next.type == 'C' || Units[i]->B[j]->prev.type == 'C'){
-            printf("found block %i:%i\n",i,j);
-            if(List->list_index <= List->length + 1){
-              struct rail_link ** temp = _calloc(List->list_index+8, struct rail_link *);
-              for(int q = 0;q < List->list_index;q++){
-                temp[q] = List->R_L[q];
-              }
-              List->R_L = temp;
-              List->list_index += 8;
-            }
-            // printf("write index: %i\n",List->length);
-            List->R_L[List->length] = _calloc(1, struct rail_link);
-            List->R_L[List->length]->type = 'R';
-            List->R_L[List->length++]->p  = Units[i]->B[j];
-          }
-        }
-      }
-
-      for(int j = 0;j < Units[i]->switch_len; j++){
-        if(Units[i]->Sw[j]){
-          if(Units[i]->Sw[j]->app.type == 'C' || Units[i]->Sw[j]->div.type == 'C' || Units[i]->Sw[j]->str.type == 'C'){
-            printf("module %i, switch %i\n",i,j);
-            if(List->list_index <= List->length + 1){
-              struct rail_link ** temp = _calloc(List->list_index+8, struct rail_link *);
-              for(int q = 0;q < List->list_index;q++){
-                temp[q] = List->R_L[q];
-              }
-              List->R_L = temp;
-              List->list_index += 8;
-            }
-            List->R_L[List->length] = _calloc(1, struct rail_link);
-            List->R_L[List->length]->type = 'S';
-            List->R_L[List->length++]->p  = Units[i]->Sw[j];
-          }
-        }
-      }
-
-      loggerf(ERROR, "FIX CONNECT_POINTS");
-      // return_value += Units[i]->connect_points;
+    if(!Units[i]){
+      continue;
     }
+    for(int j = 0;j < Units[i]->block_len; j++){
+      if(!Units[i]->B[j]){
+        continue;
+      }
+
+      if(Units[i]->B[j]->next.type == 'C' || Units[i]->B[j]->prev.type == 'C' || Units[i]->B[j]->next.type == 'c' || Units[i]->B[j]->prev.type == 'c'){
+        printf("found block %i:%i\n",i,j);
+        if(List->list_index <= List->length + 1){
+          struct rail_link ** temp = _calloc(List->list_index+8, struct rail_link *);
+          for(int q = 0;q < List->list_index;q++){
+            temp[q] = List->R_L[q];
+          }
+          List->R_L = temp;
+          List->list_index += 8;
+        }
+        // printf("write index: %i\n",List->length);
+        List->R_L[List->length] = _calloc(1, struct rail_link);
+        List->R_L[List->length]->type = 'R';
+        List->R_L[List->length++]->p  = Units[i]->B[j];
+      }
+    }
+
+    for(int j = 0;j < Units[i]->switch_len; j++){
+      if(!Units[i]->Sw[j]){
+        continue;
+      }
+
+      if(Units[i]->Sw[j]->app.type == 'C' || Units[i]->Sw[j]->div.type == 'C' || Units[i]->Sw[j]->str.type == 'C'){
+        printf("module %i, switch %i\n",i,j);
+        if(List->list_index <= List->length + 1){
+          struct rail_link ** temp = _calloc(List->list_index+8, struct rail_link *);
+          for(int q = 0;q < List->list_index;q++){
+            temp[q] = List->R_L[q];
+          }
+          List->R_L = temp;
+          List->list_index += 8;
+        }
+        List->R_L[List->length] = _calloc(1, struct rail_link);
+        List->R_L[List->length]->type = 'S';
+        List->R_L[List->length++]->p  = Units[i]->Sw[j];
+      }
+    }
+
+    loggerf(ERROR, "FIX CONNECT_POINTS");
+    // return_value += Units[i]->connect_points;
   }
   return return_value;
 }

@@ -35,7 +35,7 @@ void _SYS_change(int STATE,char send){
   }else if(!(_SYS->_STATE & STATE)){
     _SYS->_STATE |= STATE;
   }
-  printf("_SYS_change %x\n",_SYS->_STATE);
+  loggerf(INFO, "_SYS_change %x\n", _SYS->_STATE);
 
   if(send & 0x01){
     char data[5];

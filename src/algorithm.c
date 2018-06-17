@@ -89,8 +89,7 @@ void scan_All(){
       }
     }
   }
-  // COM_change_A_signal(4);
-  // COM_change_switch(4);
+
   WS_trackUpdate(0);
   pthread_mutex_unlock(&mutex_lockA);
 }
@@ -98,17 +97,19 @@ void scan_All(){
 void change_block_state(struct procces_block * A, enum Rail_states state){
   if(!A->blocked){
     for(int i = 0;i<A->length;i++){
-      if(A->B[i]->state != state){
+      if(A->B[i]->state > state){
+        printf("change_block_state: %i:%i    %i => %i\n", A->B[i]->module, A->B[i]->id, A->B[i]->state, state);
         A->B[i]->changed = 1;
         A->B[i]->state = state;
       }
     }
   }else{
     for(int i = 0;i<A->length;i++){
+      printf("change_block_state: %i:%i    %i => %i\n", A->B[i]->module, A->B[i]->id, A->B[i]->state, state);
       if(A->B[i]->blocked){
         break;
       }
-      if(A->B[i]->state != state){
+      if(A->B[i]->state > state){
         A->B[i]->changed = 1;
         A->B[i]->state = state;
       }
@@ -135,7 +136,6 @@ void procces(Block * B,int debug){
   }
   else{
     //printf("B\n");
-    debug = 1;
 
     struct procces_block BPPP,BPP,BP,BA,BN,BNN,BNNN;
     BA.B[0] = B;
@@ -314,7 +314,7 @@ void procces(Block * B,int debug){
       if(BA.B[0]->train != 0){
         //printf("ID: %i\t%i:%i:%i\n",BA->train,BA->Adr.M,BA->Adr.B,BA->Adr.S);
       }
-      if(debug || (B->module == 4 && B->id == 12)){
+      if(!debug){
         if(p > 2){
           printf("PPP ");
           for(int i = 1;i>=0;i--){
@@ -442,7 +442,7 @@ void procces(Block * B,int debug){
         }
       }
     /**/
-
+    return;
 
     //------------------------------------------------------------------------------------------ roadmap: more efficient scanning of the block. skip the blocks that are not changed/blocked and there neighbours are also not blocked
     //SPEEDUP function / if all blocks are not blocked skip!!
@@ -469,11 +469,11 @@ void procces(Block * B,int debug){
       else if(p > 0 && k > 0 && BA.blocked && BA.B[0]->train == 0 && BN.B[0]->train == 0 && BP.B[0]->train == 0){
         //NEW TRAIN
         // find a new follow id
-        loggerf(ERROR, "FOLLOW ID INCREMENT, bTrain");
-        // BA.B[0]->train = ++bTrain;
+        // loggerf(ERROR, "FOLLOW ID INCREMENT, bTrain");
+        BA.B[0]->train = find_free_index((void **)trains,&trains_len);
 
         //Create a message for WebSocket
-        // WS_NewTrain(bTrain,BA.B[0]->module,BA.B[0]->id);
+        WS_NewTrain(BA.B[0]->train,BA.B[0]->module,BA.B[0]->id);
       }
       else if(p > 0 && k > 0 && BN.blocked && BP.blocked && BN.B[0]->train == BP.B[0]->train){
         //A train has split
@@ -890,7 +890,7 @@ void procces(Block * B,int debug){
 
 void procces_accessoire(){
   for(int i = 0;i<unit_len;i++){
-    if(Units[i] && 1){ //Units[i]->Sig_change
+    if(Units[i] && Units[i]->output_changed){
       printf("Signals of module %i changed\n",i);
       for(int j = 0;j<Units[i]->signal_len;j++){
         if(Units[i]->Sig[j]){
@@ -898,8 +898,7 @@ void procces_accessoire(){
         }
       }
 
-      loggerf(ERROR, "FIX UNIT_SIGNAL_CHANGE");
-      // Units[i]->Sig_change = FALSE;
+      Units[i]->output_changed = FALSE;
     }
   }
 }

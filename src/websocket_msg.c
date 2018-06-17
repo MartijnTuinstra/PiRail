@@ -324,6 +324,8 @@ void WS_trackUpdate(int Client_fd){
 
   int q = 1;
 
+  loggerf(DEBUG, "WS_trackUpdate");
+
   for(int i = 0;i<unit_len;i++){
     if(Units[i]){
       for(int j = 0;j<=Units[i]->block_len;j++){

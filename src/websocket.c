@@ -123,7 +123,8 @@ int websocket_decode(char data[1024], struct web_client_t * client){
     else if(data[0] == WSopc_SetMultiSwitch){ // Set mulitple switches at once
       printf("Throw multiple switches\n");
       #warning (ERROR, "TODO implement multiple switches");
-      // set_multiple_switches(data[1],&data[2]);
+      loggerf(ERROR, "set_multiple_switches");
+      set_multiple_switches(data[1],&data[2]);
     }
     else if(data[0] == WSopc_SetSwitchReserved){ //Set switch reserved
 

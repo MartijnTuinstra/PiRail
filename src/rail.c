@@ -225,7 +225,7 @@ Block * Next(Block * B, int dir, int level){
 
   // printf("Next     : dir:%i\t%i:%i => %i:%i:%c\t%i\n", dir, B->module, B->id, next.module, next.id, next.type, level);
 
-  if(!next.p){
+  if(!next.p && next.type != 'e'){
     loggerf(ERROR, "NO POINTERS");
     return 0;
   }

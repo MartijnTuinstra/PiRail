@@ -107,7 +107,7 @@
   int set_switch(Switch * S, char state);
   int set_msswitch(MSSwitch * S, char state);
 
-  int set_multiple_switches(struct switch_list list, char * states);
+  int set_multiple_switches(char len, char * data);
 
   void Create_Switch(struct switch_connect connect, char block_id, char output_len, char * output_pins, char * output_states);
   void Create_MSSwitch(struct msswitch_connect connect, char block_id, char output_len, char * output_pins, uint16_t * output_states);

@@ -30,6 +30,7 @@
     uint8_t *OutRegs;
     uint8_t  *InRegs;
 
+    _Bool output_changed;
     gpio_link * input_link;
 
     int block_len;

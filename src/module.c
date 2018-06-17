@@ -1074,6 +1074,9 @@ void JoinModules(){
     //IF ALL JOINED
     //BREAK
   }
+  
+  Units[21]->B[0]->blocked = 0;
+  Units[22]->B[1]->blocked = 0;
 
   for(int i = 0;i<List.length;i++){
     if(List.R_L[i]->type == 'S'){

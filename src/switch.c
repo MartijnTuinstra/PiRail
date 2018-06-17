@@ -2,6 +2,9 @@
 #include "logger.h"
 #include "system.h"
 #include "module.h"
+#include "websocket_msg.h"
+#include "websocket.h"
+#include "com.h"
 
 void Create_Switch(struct switch_connect connect, char block_id, char output_len, char * output_pins, char * output_states){
   Switch * Z = _calloc(1, Switch);
@@ -74,16 +77,124 @@ int throw_msswitch(MSSwitch * S){
 }
 
 
-int set_switch(Switch * S, char state){
-  loggerf(ERROR, "Implement set_switch");
+int set_switch(Switch * S,char state){
+  int linked = 0;
+  for(int i = 0;i<S->links_len;i++){
+    if(S->links[i].p){
+      linked = 1;
+
+      if(S->links[i].type == 'S' || S->links[i].type == 's'){
+        if(((Switch *)S->links[i].p)->Detection && (((Switch *)S->links[i].p)->Detection->state == RESERVED || 
+              ((Switch *)S->links[i].p)->Detection->blocked)){
+            printf("Linked switches blocked\n");
+          return 0;
+        }
+      }else if(S->links[i].type == 'M' || S->links[i].type == 'm'){
+        loggerf(ERROR, "set_switch linked MSSwitch implement");
+      }
+    }
+  }
+  if(S->Detection && (S->Detection->state != RESERVED && !S->Detection->blocked) || !S->Detection){
+    S->state = state + 0x80;
+
+    char buf[40];
+    buf[0] = WSopc_BroadSwitch;
+    int index = 1;
+
+    buf[index++] = S->module;
+    buf[index++] = S->id;
+    buf[index++] = S->state;
+
+    for(int i = 0;i<S->links_len;i++){
+      if(S->links[i].p){
+        if(S->links[i].type == 'S' || S->links[i].type == 's'){
+          Switch * LSw = S->links[i].p;
+          LSw->state = S->links[i].states[S->state];
+
+          buf[index++] = LSw->module;
+          buf[index++] = LSw->id;
+          buf[index++] = LSw->state;
+        }
+        else if(S->links[i].type == 'M' || S->links[i].type == 'm'){
+
+        }
+      }
+    }
+    printf("Throw Switch %s\n\n",buf);
+    COM_change_switch(S->module);
+    ws_send_all(buf,index,2);
+    return 1;
+  }else{
+    printf("Switch blocked\n");
+    return 0;
+  }
 }
 
 int set_msswitch(MSSwitch * S, char state){
   loggerf(ERROR, "Implement set_msswitch");
 }
 
-int set_multiple_switches(struct switch_list list, char * states){
-  loggerf(ERROR, "Implement set_multiple_switches");
+int set_multiple_switches(char len, char * data){
+  struct switchdata {
+    char module;
+    char id:7;
+    char type:1;
+    char state;
+  };
+
+  char module = 0;
+
+  for(int i = 0; i < len; i++){
+    struct switchdata * p = (void *)&data[i*sizeof(struct switchdata)];
+
+    module = p->module;
+
+    printf("check %d:%d\n",p->module,p->id,0);//p->state);
+
+    if(!(Units[p->module] && (
+      (p->type == 0 && Units[p->module]->Sw[p->id]) || 
+      (p->type == 1 && Units[p->module]->MSSw[p->id]) )) ){
+      printf("Switch doesnt exist\n");
+      return -1;
+    }
+
+    Unit * U = Units[p->module];
+
+    if((p->type == 0 && U->Sw[p->id]->Detection && U->Sw[p->id]->Detection->blocked) || 
+        (p->type == 1 && U->MSSw[p->id]->Detection && U->MSSw[p->id]->Detection->blocked)){
+      printf("Switch is blocked\n");
+      return -2;
+    }
+  }
+
+  char buf[40];
+  buf[0] = WSopc_BroadSwitch;
+  int index = 1;
+
+  for(int i = 0; i < len; i++){
+    struct switchdata * p = (void *)&data[i*sizeof(struct switchdata)];
+
+    Unit * U = Units[p->module];
+
+    printf("check %d:%d\n",p->module,p->id,0);//p->state);
+
+    if(p->type == 0){
+      Switch * S = U->Sw[p->id];
+
+      buf[index++] = S->module;
+      buf[index++] = S->id;
+      buf[index++] = p->state |= 0x80;
+    }
+    else if(p->type == 1){
+      U->MSSw[p->id];
+      printf("Set mulbitple switch msswitch not implemented\n");
+      return -3;
+    }
+  }
+
+  COM_change_switch(module);
+  ws_send_all(buf,index,2);
+  return 1;
 }
 
 int check_Switch(struct rail_link link, _Bool pref){

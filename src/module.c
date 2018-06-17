@@ -21,15 +21,6 @@ struct rail_link EMPTY_BL(){
   return A;
 }
 
-struct rail_link CAdr(int module, int id, char type){
-  struct rail_link A;
-  A.module = module;
-  A.id = id;
-  A.type = type;
-  loggerf(INFO, "CAdr DEPRICATED");
-  return A;
-}
-
 void setup_JSON(int arr[], int arr2[], int size, int size2){
   char setup_data[100];
 
@@ -805,11 +796,17 @@ void LoadModules(int M){
         }
         else{
           if(parts[4][0] == 'C'){
-            NAdr = CAdr(atoi(parts[5]),atoi(parts[6]),'C');
+            NAdr.type = 'C';
+            NAdr.module = atoi(parts[5]);
+            NAdr.id = atoi(parts[6]);
           }else if(parts[4][0] == 'X'){
-            NAdr = CAdr(ModuleID,atoi(parts[5]),parts[6][0]);
+            NAdr.type = parts[6][0];
+            NAdr.module = ModuleID;
+            NAdr.id = atoi(parts[5]);
           }else {
-            NAdr = CAdr(atoi(parts[4]),atoi(parts[5]),parts[6][0]);
+            NAdr.type = parts[6][0];
+            NAdr.module = atoi(parts[4]);
+            NAdr.id = atoi(parts[5]);
           }
         }
 
@@ -819,12 +816,17 @@ void LoadModules(int M){
         }
         else{
           if(parts[7][0] == 'C'){
-            PAdr = CAdr(atoi(parts[8]),atoi(parts[9]),'C');
+            PAdr.type = 'C';
+            PAdr.module = atoi(parts[8]);
+            PAdr.id = atoi(parts[9]);
           }else if(parts[7][0] == 'X'){
-            // printf("Prev block is in same module %i \n",ModuleID);
-            PAdr = CAdr(ModuleID,atoi(parts[8]),parts[9][0]);
+            PAdr.type = parts[9][0];
+            PAdr.module = ModuleID;
+            PAdr.id = atoi(parts[8]);
           }else {
-            PAdr = CAdr(atoi(parts[7]),atoi(parts[8]),parts[9][0]);
+            PAdr.type = parts[9][0];
+            PAdr.module = atoi(parts[7]);
+            PAdr.id = atoi(parts[8]);
           }
         }
         //Create_Segment(IO_Adr        ,Adr,Next,Prev,mspd,           state,dir,            len);
@@ -843,19 +845,27 @@ void LoadModules(int M){
         //Create a Switch with all given data from the file
 
         struct rail_link Adr,AAdr,SAdr,DAdr;
-        Adr = CAdr(ModuleID,atoi(parts[1]),atoi(parts[12]));
+        Adr.module = ModuleID;
+        Adr.id = atoi(parts[1]);
+        Adr.type = atoi(parts[12]); //IO length
 
         //Approach Block
         if(parts[3][0] == 'E'){
           AAdr = EMPTY_BL();
         }
         else{
-          if(parts[3][0] == 'X'){
-            AAdr = CAdr(ModuleID,atoi(parts[4]),parts[5][0]);
-          }else if(parts[3][0] == 'C'){
-            AAdr = CAdr(atoi(parts[4]),atoi(parts[5]),'C');
-          }else{
-            AAdr = CAdr(atoi(parts[3]),atoi(parts[4]),parts[5][0]);
+          if(parts[3][0] == 'C'){
+            AAdr.type = 'C';
+            AAdr.module = atoi(parts[4]);
+            AAdr.id = atoi(parts[5]);
+          }else if(parts[3][0] == 'X'){
+            AAdr.type = parts[5][0];
+            AAdr.module = ModuleID;
+            AAdr.id = atoi(parts[4]);
+          }else {
+            AAdr.type = parts[5][0];
+            AAdr.module = atoi(parts[3]);
+            AAdr.id = atoi(parts[4]);
           }
         }
 
@@ -864,12 +874,18 @@ void LoadModules(int M){
           DAdr = EMPTY_BL();
         }
         else{
-          if(parts[9][0] == 'X'){
-            DAdr = CAdr(ModuleID,atoi(parts[10]),parts[11][0]);
-          }else if(parts[9][0] == 'C'){
-            DAdr = CAdr(atoi(parts[10]),atoi(parts[11]),'C');
-          }else{
-            DAdr = CAdr(atoi(parts[9]),atoi(parts[10]),parts[11][0]);
+          if(parts[9][0] == 'C'){
+            DAdr.type = 'C';
+            DAdr.module = atoi(parts[10]);
+            DAdr.id = atoi(parts[11]);
+          }else if(parts[9][0] == 'X'){
+            DAdr.type = parts[11][0];
+            DAdr.module = ModuleID;
+            DAdr.id = atoi(parts[10]);
+          }else {
+            DAdr.type = parts[11][0];
+            DAdr.module = atoi(parts[9]);
+            DAdr.id = atoi(parts[10]);
           }
         }
 
@@ -878,12 +894,18 @@ void LoadModules(int M){
           SAdr = EMPTY_BL();
         }
         else{
-          if(parts[6][0] == 'X'){
-            SAdr = CAdr(ModuleID,atoi(parts[7]),parts[8][0]);
-          }else if(parts[6][0] == 'C'){
-            SAdr = CAdr(atoi(parts[7]),atoi(parts[8]),'C');
-          }else{
-            SAdr = CAdr(atoi(parts[6]),atoi(parts[7]),parts[8][0]);
+          if(parts[6][0] == 'C'){
+            SAdr.type = 'C';
+            SAdr.module = atoi(parts[7]);
+            SAdr.id = atoi(parts[8]);
+          }else if(parts[6][0] == 'X'){
+            SAdr.type = parts[8][0];
+            SAdr.module = ModuleID;
+            SAdr.id = atoi(parts[7]);
+          }else {
+            SAdr.type = parts[8][0];
+            SAdr.module = atoi(parts[6]);
+            SAdr.id = atoi(parts[7]);
           }
         }
 

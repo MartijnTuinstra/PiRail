@@ -112,7 +112,7 @@
   void Create_Switch(struct switch_connect connect, char block_id, char output_len, char * output_pins, _Bool ** output_states);
   void Create_MSSwitch(struct msswitch_connect connect, char block_id, char output_len, char * output_pins, _Bool ** output_states);
 
-  int check_Switch(Block * B, int dir, _Bool pref);
+  int check_Switch(struct rail_link link, _Bool pref);
   int check_Switch_State(struct rail_link adr);
 
   int free_Switch(Block * B, int dir);

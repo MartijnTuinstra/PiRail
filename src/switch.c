@@ -79,8 +79,80 @@ int set_multiple_switches(struct switch_list list, char * states){
   loggerf(ERROR, "Implement set_multiple_switches");
 }
 
-int check_Switch(Block * B, int dir, _Bool pref){
+int check_Switch(struct rail_link link, _Bool pref){
+  struct rail_link next;
+
+  if(link.type == 'R'){
+    return 1;
+  }
+  else if(link.type == 'e'){
+    return 0;
+  }
+  else if(link.type == 'S'){
+    if(((Switch *)link.p)->state == 0)
+      next = ((Switch *)link.p)->str;
+    else
+      next = ((Switch *)link.p)->div;
+  }
+  else if(link.type == 's'){
+    next = ((Switch *)link.p)->app;
+  }
+  else if(link.type == 'M'){
+    next = ((MSSwitch *)link.p)->sideB[((MSSwitch *)link.p)->state];
+  }
+  else if(link.type == 'm'){
+    next = ((MSSwitch *)link.p)->sideA[((MSSwitch *)link.p)->state];
+  }
+
+  if(next.type == 'S' || next.type == 'R' || next.type == 'e'){
+    return check_Switch(next, pref);
+  }
+  else if(next.type == 's'){
+    Switch * S = next.p;
+
+    if(S->state == 0){
+      //If next switch is straight
+      if(S->str.p != link.p){
+        return 0;
+      }
+      else{
+        return check_Switch(next, pref);
+      }
+    }
+    else{
+      //If next switch is diverging
+      if(S->div.p != link.p){
+        return 0;
+      }
+      else{
+        return check_Switch(next, pref);
+      }
+    }
+  }
+  else if(next.type == 'M'){
+    MSSwitch * S = next.p;
+
+    if(S->sideB[S->state].p != link.p){
+      return 0;
+    }
+    else{
+      return check_Switch(next, pref);
+    }
+  }
+  else if(next.type == 'm'){
+    MSSwitch * S = next.p;
+
+    if(S->sideA[S->state].p != link.p){
+      return 0;
+    }
+    else{
+      return check_Switch(next, pref);
+    }
+  }
+
+
   loggerf(ERROR, "Implement check_Switch");
+
 }
 int check_Switch_State(struct rail_link adr){
   loggerf(ERROR, "Implement check_Switch_State");

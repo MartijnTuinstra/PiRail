@@ -207,7 +207,7 @@ Block * Next(Block * B, int dir, int level){
     dir = !dir;
   }
 
-  printf("Next     : dir:%i\t%i:%i => %i:%i:%c\t%i\n", dir, B->module, B->id, next.module, next.id, next.type, level);
+  // printf("Next     : dir:%i\t%i:%i => %i:%i:%c\t%i\n", dir, B->module, B->id, next.module, next.id, next.type, level);
 
   if(!next.p){
     loggerf(ERROR, "NO POINTERS");
@@ -224,7 +224,7 @@ Block * Next(Block * B, int dir, int level){
   }
   else if(next.type == 'S' || next.type == 's'){
     if(level <= 0 && !block_cmp( ((Switch *)next.p)->Detection, B)){
-      printf("Detection block\n");
+      // printf("Detection block\n");
       return ((Switch *)next.p)->Detection;
     }
     else{
@@ -233,7 +233,7 @@ Block * Next(Block * B, int dir, int level){
   }
   else if(next.type == 'M' || next.type == 'm'){
     if(level <= 0 && !block_cmp( ((MSSwitch *)next.p)->Detection, B)){
-      printf("Detection block\n");
+      // printf("Detection block\n");
       return ((MSSwitch *)next.p)->Detection;
     }
     else{
@@ -263,7 +263,7 @@ Block * Next_Switch_Block(Switch * S, char type, int dir, int level){
     }
   }
 
-  printf("Next   Sw: dir:%i\t%i:%i => %i:%i:%c\t%i\n", dir, S->module, S->id, next.module, next.id, next.type, level);
+  // printf("Next   Sw: dir:%i\t%i:%i => %i:%i:%c\t%i\n", dir, S->module, S->id, next.module, next.id, next.type, level);
 
   if(!next.p){
     loggerf(ERROR, "NO POINTERS");
@@ -284,11 +284,8 @@ Block * Next_Switch_Block(Switch * S, char type, int dir, int level){
   else if(next.type == 'S' || next.type == 's'){
     return Next_Switch_Block((Switch *)next.p, next.type, dir, level);
   }
-  else if(next.type == 'M'){
-
-  }
-  else if(next.type == 'm'){
-
+  else if(next.type == 'M' || next.type == 'm'){
+    return Next_MSSwitch_Block((MSSwitch *)next.p, next.type, dir, level);
   }
   else if(next.type == 'e'){
     return 0;
@@ -298,17 +295,66 @@ Block * Next_Switch_Block(Switch * S, char type, int dir, int level){
 }
 
 Block * Next_MSSwitch_Block(MSSwitch * S, char type, int dir, int level){
+  struct rail_link next;
 
-}
+  if(type == 'M'){
+    next = S->sideB[S->state];
+  }
+  else{
+    next = S->sideA[S->state];
+  }
 
-Block * Prev(){
-  loggerf(ERROR, "Depricated");
+  // printf("Next MSSw: dir:%i\t%i:%i => %i:%i:%c\t%i\n", dir, S->module, S->id, next.module, next.id, next.type, level);
+
+  if(!next.p){
+    loggerf(ERROR, "NO POINTERS");
+    return 0;
+  }
+
+  if(next.type == 'R'){
+    if(!block_cmp(S->Detection, next.p)){
+      level--;
+    }
+    if(level <= 0){
+      return (Block *)next.p;
+    }
+    else{
+      return Next((Block *)next.p, dir, level);
+    }
+  }
+  else if(next.type == 'S' || next.type == 's'){
+    return Next_Switch_Block((Switch *)next.p, next.type, dir, level);
+  }
+  else if(next.type == 'M' || next.type == 'm'){
+    return Next_MSSwitch_Block((MSSwitch *)next.p, next.type, dir, level);
+  }
+  else if(next.type == 'e'){
+    return 0;
+  }
+
+  return 0;
 }
 
 struct rail_link Next_link(Block * B){
+  struct rail_link link;
+  int dir = B->dir;
+  if(dir == 0 || dir == 2 || dir == 0b101){
+    link = B->next;
+  }else{
+    link = B->prev;
+  }
+  return link;
   loggerf(ERROR, "FIX Next_link");
 }
 
 struct rail_link Prev_link(Block * B){
+  struct rail_link link;
+  int dir = B->dir;
+  if(dir == 0 || dir == 2 || dir == 0b101){
+    link = B->prev;
+  }else{
+    link = B->next;
+  }
+  return link;
   loggerf(ERROR, "FIX Prev_link");
 }

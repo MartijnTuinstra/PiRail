@@ -174,7 +174,7 @@ void procces(Block * B,int debug){
         break;
       }else if(A.type == 's' || A.type == 'S' || A.type == 'm' || A.type == 'M'){
         //printf("%i:%i Check_switch %i:%i\n",Bl->module,Bl->id,((Switch *)A.ptr)->module,((Switch *)A.ptr)->id);
-        if(!check_Switch(Bl,0,FALSE)){
+        if(!check_Switch(A,FALSE)){
           //printf("WSw\n");
           q = i;
           break;
@@ -213,7 +213,7 @@ void procces(Block * B,int debug){
         break;
       }else if(A.type == 's' || A.type == 'S' || A.type == 'm' || A.type == 'M'){
         //printf("Check_switch %i:%i\n",Bl->module,Bl->id);
-        if(!check_Switch(Bl,1,FALSE)){
+        if(!check_Switch(A,FALSE)){
           //printf("WSw\n");
           r = p;
           break;
@@ -534,7 +534,7 @@ void procces(Block * B,int debug){
             if(!BN.B[BN.length - 1]){
               printf("Check_switch but no block R\n");
             }
-            if(!check_Switch(BN.B[BN.length - 1],0,TRUE)){
+            if(!check_Switch(Next_link(BN.B[BN.length - 1]),TRUE)){
               //The switch is in the wrong state / position
               printf("Check Switch\n");
               if(!free_Switch(BN.B[BN.length - 1],0)){
@@ -558,7 +558,7 @@ void procces(Block * B,int debug){
             New_Switch = 1;
             //Switch is free to use
             printf("Free switch ahead %i:%i\n",BA.B[0]->module,BA.B[0]->id);
-            if(!check_Switch(BN.B[BN.length - 1],0,TRUE)){
+            if(!check_Switch(Next_link(BN.B[BN.length - 1]),TRUE)){
               //The switch is in the wrong state / position
               printf("Check Switch\n");
               if(!free_Switch(BN.B[BN.length - 1],0)){
@@ -723,11 +723,11 @@ void procces(Block * B,int debug){
         //Wrong Switch
         //if current block is in forward and there are blocked switches
         // or if the block is in the wrong direction (reverse)
-        if(((BA.B[0]->dir == 0 || BA.B[0]->dir == 1 || BA.B[0]->dir == 2) && !check_Switch(BA.B[0],0,TRUE)) || (BA.B[0]->dir == 4 || BA.B[0]->dir == 5 || BA.B[0]->dir == 6)){
+        if(((BA.B[0]->dir == 0 || BA.B[0]->dir == 1 || BA.B[0]->dir == 2) && !check_Switch(Next_link(BA.B[0]),TRUE)) || (BA.B[0]->dir == 4 || BA.B[0]->dir == 5 || BA.B[0]->dir == 6)){
           set_signal(BA.B[0]->NextSignal, DANGER);
         }
 
-        if(!(BA.B[0]->dir == 4 || BA.B[0]->dir == 5 || BA.B[0]->dir == 6) && check_Switch(BA.B[0],0,TRUE) && i > 0){
+        if(!(BA.B[0]->dir == 4 || BA.B[0]->dir == 5 || BA.B[0]->dir == 6) && check_Switch(Next_link(BA.B[0]),TRUE) && i > 0){
           //Next block is RED/Blocked
           if(BN.blocked || BN.B[0]->state == DANGER){
             set_signal(BA.B[0]->NextSignal, DANGER);
@@ -751,12 +751,12 @@ void procces(Block * B,int debug){
         //printf("Signal at %i:%i:%i\t0x%x\n",BA->Adr.M,BA->Adr.B,BA->Adr.S,BA->signals);
         //if current block is in reverse and there are blocked switches
         // or if the block is in the wrong direction (forward)
-        if(((BA.B[0]->dir == 4 || BA.B[0]->dir == 5 || BA.B[0]->dir == 6) && !check_Switch(BA.B[0],0,TRUE)) || (BA.B[0]->dir == 0 || BA.B[0]->dir == 1 || BA.B[0]->dir == 2)){
+        if(((BA.B[0]->dir == 4 || BA.B[0]->dir == 5 || BA.B[0]->dir == 6) && !check_Switch(Next_link(BA.B[0]),TRUE)) || (BA.B[0]->dir == 0 || BA.B[0]->dir == 1 || BA.B[0]->dir == 2)){
           set_signal(BA.B[0]->PrevSignal, DANGER);
           //printf("%i:%i:%i\tRed signal R2\n",BA->Adr.M,BA->Adr.B,BA->Adr.S);
         }
 
-        if(!(BA.B[0]->dir == 0 || BA.B[0]->dir == 1 || BA.B[0]->dir == 2) && check_Switch(BA.B[0],0,TRUE) && i > 0){
+        if(!(BA.B[0]->dir == 0 || BA.B[0]->dir == 1 || BA.B[0]->dir == 2) && check_Switch(Next_link(BA.B[0]),TRUE) && i > 0){
           //Next block is RED/Blocked
           if(BN.blocked || BN.B[0]->state == DANGER){
             set_signal(BA.B[0]->PrevSignal, DANGER);

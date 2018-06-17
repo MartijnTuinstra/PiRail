@@ -19,7 +19,6 @@ void Create_Switch(struct switch_connect connect, char block_id, char output_len
 
   if(Units[Z->module]->B[block_id]){
     Z->Detection = Units[Z->module]->B[block_id];
-    loggerf(INFO, "SWITCH %i:%i has detection block %i", connect.module, connect.id, block_id);
   }
   else{
     loggerf(ERROR, "SWITCH %i:%i has no detection block %i", connect.module, connect.id, block_id);
@@ -27,7 +26,7 @@ void Create_Switch(struct switch_connect connect, char block_id, char output_len
 
 
   if(Units[connect.module]->Sw[connect.id]){
-    loggerf(INFO, "Duplicate switch, overwriting ...");
+    loggerf(INFO, "Duplicate switch %i, overwriting ...", connect.id);
     _free(Units[connect.module]->Sw[connect.id]);
   }
   Units[connect.module]->Sw[connect.id] = Z;

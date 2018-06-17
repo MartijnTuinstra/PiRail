@@ -16,6 +16,8 @@ int websocket_client_check(struct web_client_t * client){
 
   read(client->fd, buf, 2040);
 
+  printf("Client buffer: %s\n\n", buf);
+
   char Connection[20] = "Connection: Upgrade";
   char Connection2[35] = "Connection: keep-alive, Upgrade";
   char UpgradeType[20] = "Upgrade: websocket";
@@ -32,11 +34,13 @@ int websocket_client_check(struct web_client_t * client){
     printf("\nIt is a HTML5 WebSocket!!\n");
 
     //Search for the Security Key
-    key_s = strstr(buf, Key) + strlen(Key);
-    if(key_s){
-      key_e = strstr(key_s,"\r\n");
-      strncat(key, key_s, key_e - key_s);
-    }
+    // key_s = strstr(buf, Key) + strlen(Key);
+    // if(key_s){
+    //   key_e = strstr(key_s,"\r\n");
+    //   strncat(key, key_s, key_e - key_s);
+    // }
+    strcpy(key, "dGhlIHNhbXBsZSBub25jZQ==");
+    printf("Key: %s\n", key);
 
     // Append magic string
     strcat(key, websocket_magic_string);
@@ -55,10 +59,11 @@ int websocket_client_check(struct web_client_t * client){
       protocol = 0xEF;
       strcpy(_protocol, "239");
     }
+    printf("Protocol: %s => %d\n", _protocol, protocol);
 
     //Create response Security key by hashing it with SHA1 + base64 encryption
     char hash[SHA_DIGEST_LENGTH];
-    SHA1(key, sizeof(key), hash);
+    SHA1(key, strlen(key), hash);
     char * response_key = _calloc(40, char);
     base64_encode(hash, sizeof(hash), response_key, 40);
 

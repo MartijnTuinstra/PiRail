@@ -135,6 +135,7 @@ void procces(Block * B,int debug){
   }
   else{
     //printf("B\n");
+    debug = 1;
 
     struct procces_block BPPP,BPP,BP,BA,BN,BNN,BNNN;
     BA.B[0] = B;
@@ -953,8 +954,7 @@ int init_connect_Algor(struct ConnectList * List){
       }
     }
 
-    loggerf(ERROR, "FIX CONNECT_POINTS");
-    // return_value += Units[i]->connect_points;
+    return_value += Units[i]->connections_len;
   }
   return return_value;
 }
@@ -1211,12 +1211,10 @@ _Bool find_and_connect(char ModuleA, char anchor_A, char ModuleB, char anchor_B)
     }
   }
 
-
-  loggerf(ERROR, "FIX CONNECT_POINTS");
-  // if(connected && ModuleA && anchor_A && ModuleB && anchor_B){
-  //   Units[ModuleA]->Connect[anchor_A-1] = Units[ModuleB];
-  //   Units[ModuleB]->Connect[anchor_B-1] = Units[ModuleA];
-  // }
+  if(connected && ModuleA && anchor_A && ModuleB && anchor_B){
+    Units[ModuleA]->connection[anchor_A-1] = Units[ModuleB];
+    Units[ModuleB]->connection[anchor_B-1] = Units[ModuleA];
+  }
 
   return connected;
 }
@@ -1237,7 +1235,7 @@ int connect_Algor(struct ConnectList * List){
         value++;
         continue;
       }
-      // printf("Found block %i:%i %i\t",((block*)List->R_L[i]->p)->module,((block*)List->R_L[i]->p)->id,((block*)List->R_L[i]->p)->blocked);
+      // printf("Found block %i:%i %i\t",((Block*)List->R_L[i]->p)->module,((Block*)List->R_L[i]->p)->id,((Block*)List->R_L[i]->p)->blocked);
       if(((Block *)List->R_L[i]->p)->blocked){
         //Blocked block
         // printf("Found\n");
@@ -1308,14 +1306,15 @@ int connect_Algor(struct ConnectList * List){
   int total = 0;
 
   for(int i = 0;i < unit_len;i++){
-    if(Units[i]){
-      loggerf(ERROR, "FIX CONNECT_POINTS");
-      // for(int j = 0;j<Units[i]->connect_points;j++){
-      //   total++;
-      //   if(Units[i]->Connect[j]){
-      //     value++;
-      //   }
-      // }
+    if(!Units[i]){
+      continue;
+    }
+
+    for(int j = 0;j<Units[i]->connections_len;j++){
+      total++;
+      if(Units[i]->connection[j]){
+        value++;
+      }
     }
   }
   int i = List->length - 1;

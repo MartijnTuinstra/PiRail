@@ -242,42 +242,40 @@ void WS_Partial_Layout(char M_A,char M_B){
   memset(data,0,20);
   data[0] = WSopc_Track_PUp_Layout;
 
-  loggerf(ERROR, "FIX UNIT CONNECT_POINTS");
+  printf("WS_Partial_Layout\n");
+  printf("Checking Module A, %i\n",M_A);
+  data[q++] = M_A;
+  for(int i = 0;i<Units[M_A]->connections_len;i++){
+    if(Units[M_A]->connection[i]){
+      printf(" - Connect found, module %i\n",Units[M_A]->connection[i]->Module);
+      data[q++] = Units[M_A]->connection[i]->Module;
+    }
+    else{
+      printf("Reset\n");
+      q = 1;
+      break;
+    }
+  }
 
-  // printf("WS_Partial_Layout\n");
-  // printf("Checking Module A, %i\n",M_A);
-  // data[q++] = M_A;
-  // for(int i = 0;i<Units[M_A]->connect_points;i++){
-  //   if(Units[M_A]->Connect[i]){
-  //     printf(" - Connect found, module %i\n",Units[M_A]->Connect[i]->Module);
-  //     data[q++] = Units[M_A]->Connect[i]->Module;
-  //   }
-  //   else{
-  //     printf("Reset\n");
-  //     q = 1;
-  //     break;
-  //   }
-  // }
+  printf("Checking Module B, %i\n",M_B);
 
-  // printf("Checking Module B, %i\n",M_B);
+  data[q++] = M_B;
+  for(int i = 0;i<Units[M_B]->connections_len;i++){
+    if(Units[M_B]->connection[i]){
+      printf(" - Connect found, module %i\n",Units[M_B]->connection[i]->Module);
+      data[q++] = Units[M_B]->connection[i]->Module;
+    }
+    else{
+      printf("Reset\n");
+      q = 1;
+      break;
+    }
+  }
 
-  // data[q++] = M_B;
-  // for(int i = 0;i<Units[M_B]->connect_points;i++){
-  //   if(Units[M_B]->Connect[i]){
-  //     printf(" - Connect found, module %i\n",Units[M_B]->Connect[i]->Module);
-  //     data[q++] = Units[M_B]->Connect[i]->Module;
-  //   }
-  //   else{
-  //     printf("Reset\n");
-  //     q = 1;
-  //     break;
-  //   }
-  // }
-
-  // if(q > 1){
-  //   printf("Send %i\n",q);
-  //   ws_send_all(data,q,WS_Flag_Admin);
-  // }
+  if(q > 1){
+    printf("Send %i\n",q);
+    ws_send_all(data,q,WS_Flag_Admin);
+  }
 
 }
 

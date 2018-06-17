@@ -991,7 +991,7 @@ void JoinModules(){
       ws_send_all(data,k,0x10);
     }
     i++;
-    usleep(100000);
+    usleep(10000);
     prev_j = cur_j;
 
     if(i == 15){
@@ -999,11 +999,6 @@ void JoinModules(){
       Units[20]->B[5]->blocked = 1;
       Units[22]->B[0]->blocked = 1;
       printf("\n1\n");
-      // Units[1]->B[0]->blocked = 1;
-      // Units[8]->B[0]->blocked = 1;
-
-      // Units[1]->B[3]->blocked = 0;
-      // Units[8]->B[4]->blocked = 0;
     }else if(x == 2){
       Units[21]->B[3]->blocked = 1;
       Units[23]->B[0]->blocked = 1;
@@ -1011,12 +1006,6 @@ void JoinModules(){
       Units[20]->B[5]->blocked = 0;
       Units[22]->B[0]->blocked = 0;
       printf("\n2\n");
-      // printf("\n11\n");
-      // Units[8]->B[3]->blocked = 1;
-      // Units[4]->B[0]->blocked = 1;
-
-      // Units[1]->B[0]->blocked = 0;
-      // Units[8]->B[0]->blocked = 0;
     }else if(x == 3){
       Units[20]->B[0]->blocked = 1;
       Units[23]->B[1]->blocked = 1;
@@ -1024,12 +1013,6 @@ void JoinModules(){
       Units[21]->B[3]->blocked = 0;
       Units[23]->B[0]->blocked = 0;
       printf("\n3\n");
-      // Units[4]->B[11]->blocked = 1;
-      // //Units[5]->B[ 0]->blocked = 1;
-      // Units[2]->B[ 0]->blocked = 1;
-
-      // Units[8]->B[3]->blocked = 0;
-      // Units[4]->B[0]->blocked = 0;
     }else if(x == 4){
       Units[21]->B[0]->blocked = 1;
       Units[22]->B[1]->blocked = 1;
@@ -1037,36 +1020,12 @@ void JoinModules(){
       Units[20]->B[0]->blocked = 0;
       Units[23]->B[1]->blocked = 0;
       printf("\n4\n");
-      // // Units[10]->B[0]->blocked = 1;
-      // //Units[ 5]->B[1]->blocked = 1;
-
-      // Units[4]->B[11]->blocked = 0;
-      // // Units[5]->B[ 0]->blocked = 0;
-      // Units[2]->B[ 0]->blocked = 0;
     }else if(x == 5){
       Units[21]->B[0]->blocked = 0;
       Units[22]->B[1]->blocked = 0;
       printf("\n41\n");
-      // Units[10]->B[3]->blocked = 1;
-      // Units[ 2]->B[0]->blocked = 1;
-      // Units[10]->B[0]->blocked = 0;
-      // Units[ 5]->B[1]->blocked = 0;
     }else if(x == 6){
       printf("\nend\n");
-      // Units[ 5]->B[5]->blocked = 1;
-      // Units[11]->B[0]->blocked = 1;
-      // Units[10]->B[3]->blocked = 0;
-      // Units[ 2]->B[0]->blocked = 0;
-    }
-    else if(x == 7){
-      // Units[ 6]->B[0]->blocked = 1;
-      // Units[11]->B[3]->blocked = 1;
-      // Units[ 5]->B[5]->blocked = 0;
-      // Units[11]->B[0]->blocked = 0;
-    }
-    else if(x == 8){
-      // Units[ 6]->B[0]->blocked = 0;
-      // Units[11]->B[3]->blocked = 0;
     }
     else if(x == 10){
       // _SYS_change(STATE_Modules_Coupled,1);
@@ -1075,12 +1034,6 @@ void JoinModules(){
     //IF ALL JOINED
     //BREAK
   }
-  Units[21]->B[0]->blocked = 0;
-  Units[22]->B[1]->blocked = 0;
-  // Units[1]->B[3]->blocked = 0;
-  // Units[8]->B[4]->blocked = 0;
-  // Units[10]->B[3]->blocked = 0;
-  // Units[ 2]->B[0]->blocked = 0;
 
   for(int i = 0;i<List.length;i++){
     if(List.R_L[i]->type == 'S'){
@@ -1101,8 +1054,6 @@ void JoinModules(){
 
     free(List.R_L[i]);
   }
-
-  ws_send_all((char [6]){2,4,1,8,4,2},6,8);
 
   WS_Track_Layout();
 

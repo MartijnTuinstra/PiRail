@@ -201,6 +201,7 @@ void * websocket_clear_clients(){
       if(websocket_clients[i].state == 2){
         loggerf(INFO, "Stopping websocket client thread");
         pthread_join(websocket_clients[i].thread, NULL);
+        websocket_clients[i].fd = 0;
       }
     }
 
@@ -301,12 +302,14 @@ void * websocket_server(){
     usleep(100000);
   }
 
+  loggerf(DEBUG, "Listening for Websocket Clients");
   while((_SYS->_STATE & (STATE_RUN | STATE_Client_Accept)) == (STATE_RUN | STATE_Client_Accept)){
     // Run until system is stopped, or until client_accept is closed
 
     fd_client = accept(server, (struct sockaddr *)&client_addr, &sin_len);
 
     if(_SYS->_STATE & STATE_Client_Accept == 0){
+      loggerf(WARNING, "Client_Accept has been disabled");
       break;
     }
 

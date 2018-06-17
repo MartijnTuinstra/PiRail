@@ -3,7 +3,7 @@
 #include "system.h"
 #include "module.h"
 
-void Create_Switch(struct switch_connect connect, char block_id, char output_len, char * output_pins, _Bool ** output_states){
+void Create_Switch(struct switch_connect connect, char block_id, char output_len, char * output_pins, char * output_states){
   Switch * Z = _calloc(1, Switch);
 
   Z->module = connect.module;
@@ -32,7 +32,14 @@ void Create_Switch(struct switch_connect connect, char block_id, char output_len
   Units[connect.module]->Sw[connect.id] = Z;
 }
 
-void Create_MSSwitch(struct msswitch_connect connect, char block_id, char output_len, char * output_pins, _Bool ** output_states){
+void Switch_Add_Feedback(Switch * S, char input_len, char * pins, char * state){
+  S->feedback = 1;
+  S->input_len = input_len;
+  S->input_pins = pins;
+  S->input_states = state;
+}
+
+void Create_MSSwitch(struct msswitch_connect connect, char block_id, char output_len, char * output_pins, uint16_t * output_states){
   MSSwitch * Z = _calloc(1, MSSwitch);
 
   Z->module = connect.module;

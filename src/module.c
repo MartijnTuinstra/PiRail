@@ -917,13 +917,9 @@ void LoadModules(int M){
         A[0] = 03;
         A[1] = 04;
 
-        _Bool ** B = _calloc(2, _Bool *);
-        B[0] = _calloc(2, _Bool);
-        B[1] = _calloc(2, _Bool);
-        B[0][0] = 1; //State 0  - Output 0
-        B[0][1] = 0; //State 0  - Output 1
-        B[1][0] = 0; //State 1  - Output 0
-        B[1][1] = 1; //State 1  - Output 1
+        char * B = _calloc(2, _Bool *);
+        B[0] = 1 + (0 << 1); //State 0 - Address 0 hight, address 1 low
+        B[1] = 0 + (1 << 1); //State 1 - Address 1 hight, address 0 low
 
         Create_Switch(tmp,atoi(parts[2]), 2, A, B);
 

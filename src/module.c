@@ -90,6 +90,7 @@ void Create_Unit(int Module,int OUT,int IN,char points){
   Z->InRegs    = _calloc(( IN/8)+1, char);
   Z->OutRegs   = _calloc((OUT/8)+1, char);
   Z->BlinkMask = _calloc((OUT/8)+1, char);
+  Z->output_link = _calloc(((OUT/8)+1) * 8, gpio_link);
 }
 
 void join(struct rail_link Adr, struct rail_link link){

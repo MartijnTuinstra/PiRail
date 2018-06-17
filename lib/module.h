@@ -23,6 +23,8 @@
     uint8_t *OutRegs;
     uint8_t  *InRegs;
 
+    gpio_link * output_link;
+
     int block_len;
     Block ** B;
 

@@ -558,7 +558,7 @@ void WS_NewClient_track_Switch_Update(int Client_fd){
     if(train_link[i]){
       for(int j = 0; j < train_link[i]->nr_engines; j++){
         printf("Recall #%i\n",train_link[i]->engines[j]->DCC_ID);
-        Z21_GET_LOCO_INFO(train_link[i]->engines[j]->DCC_ID);
+        Z21_get_engine(train_link[i]->engines[j]->DCC_ID);
       }
     }
   }

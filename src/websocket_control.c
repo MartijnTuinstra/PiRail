@@ -168,7 +168,7 @@ void * websocket_client_connect(void * p){
 
       printf("Status: %i\n", status);
       if(status == 1){
-        recv_packet_procces(buf, client);
+        websocket_decode(buf, client);
       }
       printf("\nData: %s\n", buf);
       if(status == -8){

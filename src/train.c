@@ -451,7 +451,7 @@ int train_read_confs(){
   return 1;
 }
 
-int link_train(int fid, int tid, int mid, char type){
+int link_train(int fid, int tid, char type){
   //Link = follow ID
   //train = tID
 

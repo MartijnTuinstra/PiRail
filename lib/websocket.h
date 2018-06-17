@@ -11,7 +11,7 @@
 
   void ws_send_all(char data[],int length,int flag);
 
-  int recv_packet_procces(char data[1024], struct web_client_t * client);
+  int websocket_decode(char data[1024], struct web_client_t * client);
 
   #define WEBSOCKET_CLIENT_TIMEOUT 5
 

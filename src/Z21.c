@@ -1,3 +1,4 @@
+#include "Z21.h"
 #include "logger.h"
 
 void die(char *s){
@@ -12,8 +13,12 @@ void Z21_recv(char message[100]){}
 
 void Z21_send(int Header,char data[30]){}
 
-void Z21_GET_LOCO_INFO(int DCC_Adr){
-  loggerf(ERROR, "Implement Z21_GET_LOCO_INFO");
+void Z21_get_train(Trains * T){
+  loggerf(ERROR, "Implement Z21_get_train");
+}
+
+void Z21_get_engine(int dcc){
+  loggerf(ERROR, " Implement Z21_get_engine");
 }
 
 void Z21_SET_LOCO_DRIVE(int DCC_Adr,char steps,_Bool dir,char drive){}

@@ -7,11 +7,9 @@
   /*
       Simple udp client
   */
-  #include<stdio.h> //printf
-  #include<string.h> //memset
-  #include<stdlib.h> //exit(0);
-  #include<arpa/inet.h>
-  #include<sys/socket.h>
+
+  #include "system.h"
+  #include "train.h"
 
   #define BYTE_TO_BINARY_PATTERN "%c%c%c%c%c%c%c%c"
   #define BYTE_TO_BINARY(byte)  \
@@ -39,7 +37,8 @@
 
   void Z21_send(int Header,char data[30]);
 
-  void Z21_GET_LOCO_INFO(int DCC_Adr);
+  void Z21_get_train(Trains * T);
+  void Z21_get_engine(int dcc);
 
   void Z21_SET_LOCO_DRIVE(int DCC_Adr,char steps,_Bool dir,char drive);
 

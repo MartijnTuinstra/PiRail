@@ -1,12 +1,161 @@
 #include "system.h"
-
+#include "train.h"
+#include "module.h"
+#include "Z21.h"
 #include "websocket.h"
 #include "websocket_control.h"
 
 pthread_mutex_t m_websocket_send;
 
-int recv_packet_procces(char data[1024], struct web_client_t * client){
-  loggerf(ERROR, "FIX recv_packet_procces");  
+int websocket_decode(char data[1024], struct web_client_t * client){
+  // Flag Admin Settings    0x80
+  // Train stuff flag       0x40
+  // Rail stuff flag        0x20
+  // General Operation flag 0x10
+  printf("recv_packet_procces\n");
+
+  if(data[0] & 0x80){ //Admin settings
+    printf("Admin settings: %02X\n",data[0]);
+    if(data[0] == 0xFF){ //Admin login
+      printf("\nAdmin Login\n\n");
+      if(strcmp(&data[1],WS_password) == 1){
+        printf("\n\n\n\n\nSUCCESSFULL LOGIN\n\n");
+        //0xc3,0xbf,0x35,0x66,0x34,0x64,0x63,0x63,0x33,0x62,0x35,0x61,0x61,0x37,0x36,0x35,0x64,0x36,0x31,0x64,0x38,0x33,0x32,0x37,0x64,0x65,0x62,0x38,0x38,0x32,0x63,0x66,0x39,0x39
+        client->type |= 0x10;
+
+        ws_send(client->fd,(char [2]){WSopc_ChangeBroadcast,client->type},2,255);
+      }else{
+        printf("\n\n\n\n\nFAILED LOGIN!!\n\n");
+      }
+    }
+    if((client->type & 0x10) != 0x10){
+      //Client is not an admin
+      printf("Not an Admin client");
+      return 0;
+    }
+    
+
+    if(data[0] == WSopc_Track_Scan){
+      if(data[1] == 1){
+        //Stop connecting
+        _SYS_change(STATE_Modules_Coupled,1);
+      }else if(data[1] == 2){
+        //reload setup
+        printf("\n\nReload setup not implemented\n\n");
+      }
+    }
+
+
+    if(data[0] == 0x83){ //Reset switches to default
+
+    }
+    else if(data[0] == 0x84){ //Toggle Light Output
+
+    }
+    else if(data[0] == 0x88){ //All trains back to depot
+
+    }
+
+    else if(data[0] == 0xA0){ //Force switch
+
+    }
+
+    else if(data[0] == 0x90){ //Emergency stop, Admin authority / Disable track voltage
+
+    }
+    else if(data[0] == 0x91){ //Emergency stop, Admin authority / Enable track voltage
+
+    }
+  }
+  else if(data[0] & 0x40){ //Train stuff
+    if(data[0] == WSopc_AddNewTraintolib){ //New train
+
+    }
+    else if(data[0] == WSopc_LinkTrain){ //Link train
+      uint8_t fID = data[1]; //follow ID
+      uint8_t tID = data[2]; //TrainID
+      printf("Linking train %i with %s\n",fID,trains[tID]->name);
+      #warning FIX
+      if(link_train(fID,tID,data[3] & 0x80)){
+        WS_clear_message(((data[3] & 0x1F) >> 8)+data[4]);
+        
+        Z21_get_train(trains[tID]);
+      }
+    }
+    else if(data[0] == WSopc_TrainSpeed){ //Train speed control
+      printf("Train speed control\n");
+      loggerf(ERROR,"RE-IMPLEMENT WSopc_TrainSpeed");
+      char tID = data[1];
+      char speed = data[2];
+      trains[tID]->cur_speed = speed & 0x7F;
+      trains[tID]->dir       = speed >> 7;
+
+      Z21_get_train(trains[tID]);
+    }
+    else if(data[0] == WSopc_TrainFunction){ //Train function control
+
+    }
+    else if(data[0] == WSopc_TrainOperation){ //Train operation change
+
+    }
+    else if(data[0] == WSopc_TrainAddRoute){ //Add route to train
+
+    }
+
+    else if(data[0] == WSopc_AddNewCartolib){
+      logger("WSopc_AddNewCartolib TODO",WARNING);
+    }
+    else if(data[0] == WSopc_AddNewEnginetolib){
+      logger("WSopc_AddNewEnginetolib TODO",WARNING);
+    }
+    else if(data[0] == WSopc_AddNewTraintolib){
+      logger("WSopc_AddNewTraintolib TODO",WARNING);
+    }
+  }
+  else if(data[0] & 0x20){ //Track stuff
+    if(data[0] == WSopc_SetSwitch){ //Toggle switch
+      if(Units[data[1]] && Units[data[1]]->Sw[data[2]]){ //Check if switch exists
+        printf("throw switch %i:%i to state: \t",data[1],data[2],data[3]);
+        printf("%i->%i",Units[data[1]]->Sw[data[2]]->state, !Units[data[1]]->Sw[data[2]]->state);
+        set_switch(Units[data[1]]->Sw[data[2]],data[3]);
+      }
+    }
+    else if(data[0] == WSopc_SetMultiSwitch){ // Set mulitple switches at once
+      printf("Throw multiple switches\n");
+      #warning (ERROR, "TODO implement multiple switches");
+      // set_multiple_switches(data[1],&data[2]);
+    }
+    else if(data[0] == WSopc_SetSwitchReserved){ //Set switch reserved
+
+    }
+    else if(data[0] == WSopc_SetSwitchRoute){ //Set a route for switches
+
+    }
+  }
+  else if(data[0] & 0x10){ // General Operation
+    if(data[0] == WSopc_EmergencyStop){ //Enable Emergency Stop!!
+      WS_EmergencyStop();
+    }
+    else if(data[0] == WSopc_ClearEmergency){ //Disable Emergency Stop!!
+      WS_ClearEmergency();
+    }
+    else if(data[0] == WSopc_ClearMessage){
+
+    }
+    else if(data[0] == WSopc_ChangeBroadcast){
+      // clients[client_data->thread_id]->client_type; //current flags
+      // data[1]; //new flags
+      if(data[1] & 0x10){ //Admin flag
+        return 0; //Not allowed to set admin flag
+        printf("Changing admin flag: NOT ALLOWED\n");
+      }else if(data[1] != 0){
+        client->type = data[1];
+        printf("Changing flags\n");
+      }
+      loggerf(DEBUG,"Websocket:\t%02x - New flag for client %d\n",client->type, client->id);
+      ws_send(client->fd,(char [2]){WSopc_ChangeBroadcast,client->type},2,255);
+    }
+  }
 }
 
 int websocket_get_msg(int fd, char outbuf[], int * length_out){

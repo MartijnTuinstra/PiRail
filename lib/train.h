@@ -151,6 +151,6 @@
 
   int train_read_confs();
 
-  int link_train(int fid, int tid, int mid, char type);
+  int link_train(int fid, int tid, char type);
   int unlink_train(int fid);
 #endif

@@ -11,7 +11,7 @@ ifndef VERBOSE
 endif
 
 baan: $(BIN)/baan.o $(BIN)/logger.o $(BIN)/rail.o $(BIN)/train.o $(BIN)/system.o $(BIN)/websocket_control.o $(BIN)/websocket_msg.o $(BIN)/module.o \
-		$(BIN)/train_sim.o $(BIN)/com.o $(BIN)/algorithm.o $(BIN)/signals.o $(BIN)/switch.o $(BIN)/Z21.o $(BIN)/websocket.o
+		$(BIN)/train_sim.o $(BIN)/com.o $(BIN)/algorithm.o $(BIN)/signals.o $(BIN)/switch.o $(BIN)/Z21.o $(BIN)/websocket.o $(BIN)/encryption.o
 	@echo baan
 	$(GCC) -o baan $(wildcard $(BIN)/*.o)
 
@@ -26,12 +26,16 @@ $(BIN)/algorithm.o: $(SRC)/algorithm.c $(LIB)/algorithm.h $(LIB)/system.h \
 	@echo algorithm.o
 	$(GCC) $(SRC)/algorithm.c -c -o $(BIN)/algorithm.o
 
-$(LIB)/con.h: $(LIB)/signals.h
+$(LIB)/com.h: $(LIB)/signals.h
 $(BIN)/com.o: $(SRC)/com.c $(LIB)/com.h $(LIB)/system.h $(LIB)/rail.h \
 		$(LIB)/switch.h $(LIB)/signals.h $(LIB)/train.h $(LIB)/logger.h \
 		$(LIB)/module.h
 	@echo com.c
 	$(GCC) $(SRC)/com.c -c -o $(BIN)/com.o
+
+$(BIN)/encryption.o: $(SRC)/encryption.c $(LIB)/encryption.h
+	@echo encryption.o
+	$(GCC) $(SRC)/encryption.c -c -o $(BIN)/encryption.o
 
 $(BIN)/logger.o: $(SRC)/logger.c $(LIB)/logger.h
 	@echo logger.o
@@ -83,7 +87,7 @@ $(BIN)/websocket.o: $(SRC)/websocket.c $(LIB)/websocket.h
 
 $(LIB)/websocket_control.h: $(LIB)/websocket.h $(LIB)/websocket_msg.h
 $(BIN)/websocket_control.o: $(SRC)/websocket_control.c \
-		$(LIB)/websocket_control.h $(LIB)/logger.h
+		$(LIB)/websocket_control.h $(LIB)/logger.h $(LIB)/encryption.h
 	@echo websocket_control.o
 	$(GCC) $(SRC)/websocket_control.c -c -o $(BIN)/websocket_control.o
 

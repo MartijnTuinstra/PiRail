@@ -1,7 +1,6 @@
 #ifndef INCLUDE_WEBSOCKET_CONTROL_H 
   #define INCLUDE_WEBSOCKET_CONTROL_H
 
-  #include "websocket.h"
   #include <pthread.h>
 
   #define WEBSOCKET_PORT 9000
@@ -27,15 +26,16 @@
                       2 = stopping / ready to join thread*/
   };
 
+  #include "websocket.h"
+
   extern char * WS_password;
 
-#include "websocket_control.h"
-#include "system.h"
-#include "logger.h"
+  #include "websocket_control.h"
+  #include "system.h"
+  #include "logger.h"
 
-pthread_t websocket_threads[MAX_WEB_CLIENTS];
-struct web_client_t * websocket_clients;
-char * WS_password;
+  extern struct web_client_t * websocket_clients;
+  extern char * WS_password;
 
   int websocket_client_check(struct web_client_t * C);
 

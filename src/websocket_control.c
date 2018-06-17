@@ -1,14 +1,108 @@
 #include "system.h"
 
+#include "encryption.h"
+
 #include "websocket_control.h"
 #include "logger.h"
+
+char websocket_magic_string[] = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
 pthread_t websocket_clear_thread;
 struct web_client_t * websocket_clients;
 char * WS_password;
 
-int websocket_client_check(struct web_client_t * C){
-  loggerf(ERROR, "FIX websocket_connect");
+int websocket_client_check(struct web_client_t * client){
+  char * buf = _calloc(1024, char);
+
+  read(client->fd, buf, 1023);
+
+  char Connection[20] = "Connection: Upgrade";
+  char Connection2[35] = "Connection: keep-alive, Upgrade";
+  char UpgradeType[20] = "Upgrade: websocket";
+  char Key[25] = "Sec-WebSocket-Key: ";
+  char Protocol[20] = "Protocol: ";
+
+  char *key_s, *key_e, *protocol_s, *protocol_e;
+  char * key = _calloc(60, char);
+  char * _protocol = _calloc(5, char);
+  int protocol;
+
+  if((strstr(buf, Connection) || strstr(buf,Connection2)) &&
+        strstr(buf, UpgradeType) && strstr(buf, Key)) {
+    printf("\nIt is a HTML5 WebSocket!!\n");
+
+    //Search for the Security Key
+    key_s = strstr(buf, Key) + strlen(Key);
+    if(key_s){
+      key_e = strstr(key_s,"\r\n");
+      strncat(key, key_s, key_e - key_s);
+    }
+
+    // Append magic string
+    strcat(key, websocket_magic_string);
+
+
+    //Search for the Security Key
+    protocol_s = strstr(buf, Protocol);
+    // Check if protocol exists
+    if(protocol_s){
+      protocol_s += strlen(Protocol);
+      protocol_e = strstr(protocol_s,"\r\n");
+      strncat(_protocol, protocol_s, protocol_e - protocol_s);
+      protocol = (int)strtol(_protocol, NULL, 10) & ~(0x10); //Deselect admin properties
+    }
+    else{
+      protocol = 0xEF;
+      strcpy(_protocol, "239");
+    }
+
+    //Create response Security key by hashing it with SHA1 + base64 encryption
+    char * hash = _calloc(SHA_DIGEST_LENGTH, char);
+    SHA1(key, sizeof(key), hash);
+    char * response_key = _calloc(40, char);
+    base64_encode(hash, sizeof(hash), response_key, 40);
+    _free(hash);
+
+    //Server response to the client
+    char response[500] = "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ";
+    strcat(response, response_key);
+
+    strcat(response,"\r\nSec-WebSocket-Protocol: ");
+    strcat(response, _protocol);
+
+    strcat(response,"\r\n\r\n");
+    printf("Sending Response\n\n%s\n\n\n",response);
+    write(client->fd, response, strlen(response));
+
+    printf("Done\n");
+    client->type = protocol;
+
+    _free(buf);
+    _free(key);
+    _free(_protocol);
+    _free(response_key);
+
+    //Successfull
+    return 1;
+  }
+  else{
+    printf("It's not a HTML5-websocket\n");
+    printf(strstr(buf,Connection));
+    printf("\n");
+    printf(strstr(buf,Connection2));
+    printf("\n");
+    printf(strstr(buf,UpgradeType));
+    printf("\n");
+    printf(strstr(buf,Key));
+    printf("\n");
+
+    _free(buf);
+    _free(key);
+    _free(_protocol);
+
+    //Unsuccessfull
+    return 0;
+  }
 }
 
 void * websocket_client_connect(void * p){
@@ -149,7 +243,7 @@ void new_websocket_client(int fd){
       websocket_clients[i].fd = fd;
       websocket_clients[i].state = 1;
 
-      pthread_create(&websocket_threads[i], NULL, websocket_client_connect, (void *) &websocket_clients[i]);
+      pthread_create(&websocket_clients[i].thread, NULL, websocket_client_connect, (void *) &websocket_clients[i]);
       break;
     }
   }

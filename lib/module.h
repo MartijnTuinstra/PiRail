@@ -10,8 +10,11 @@
     void * p;
   } gpio_link;
 
-  typedef struct unit{
+  typedef struct _unit{
     char Module;
+
+    char connections_len;
+    struct _unit ** connection;
 
     uint8_t input_regs;
     uint8_t output_regs;

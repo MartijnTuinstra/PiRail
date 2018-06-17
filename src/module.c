@@ -67,9 +67,8 @@ void Create_Unit(int Module,int OUT,int IN,char points){
   struct rail_link ** A = _calloc( IN,struct rail_link);
   struct rail_link ** B = _calloc(OUT,struct rail_link);
 
-  loggerf(ERROR, "FIX CONNECT_POINTS");
-  // Z->connect_points = points;
-  // Z->Connect = _calloc(points, Unit *);
+  Z->connections_len = points;
+  Z->connection = _calloc(points, Unit *);
 
   Z->block_len = 8;
   Z->B = _calloc(Z->block_len, Block);

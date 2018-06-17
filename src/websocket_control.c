@@ -12,9 +12,9 @@ struct web_client_t * websocket_clients;
 char * WS_password;
 
 int websocket_client_check(struct web_client_t * client){
-  char * buf = _calloc(1024, char);
+  char * buf = _calloc(2048, char);
 
-  read(client->fd, buf, 1023);
+  read(client->fd, buf, 2040);
 
   char Connection[20] = "Connection: Upgrade";
   char Connection2[35] = "Connection: keep-alive, Upgrade";
@@ -23,8 +23,8 @@ int websocket_client_check(struct web_client_t * client){
   char Protocol[20] = "Protocol: ";
 
   char *key_s, *key_e, *protocol_s, *protocol_e;
-  char * key = _calloc(60, char);
-  char * _protocol = _calloc(5, char);
+  char * key = _calloc(100, char);
+  char * _protocol = _calloc(10, char);
   int protocol;
 
   if((strstr(buf, Connection) || strstr(buf,Connection2)) &&
@@ -57,11 +57,10 @@ int websocket_client_check(struct web_client_t * client){
     }
 
     //Create response Security key by hashing it with SHA1 + base64 encryption
-    char * hash = _calloc(SHA_DIGEST_LENGTH, char);
+    char hash[SHA_DIGEST_LENGTH];
     SHA1(key, sizeof(key), hash);
     char * response_key = _calloc(40, char);
     base64_encode(hash, sizeof(hash), response_key, 40);
-    _free(hash);
 
     //Server response to the client
     char response[500] = "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ";

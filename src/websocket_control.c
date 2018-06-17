@@ -121,10 +121,10 @@ void * websocket_client_connect(void * p){
   data[0] = WSopc_Service_State;
   data[1] = _SYS->_STATE >> 8;
   data[2] = _SYS->_STATE & 0xFF;
-  send_packet(client->fd, data, 3, 0xFF);
+  ws_send(client->fd, data, 3, 0xFF);
   
   if(_SYS->_STATE & STATE_Modules_Loaded && _SYS->_STATE & STATE_Modules_Coupled){
-    send_packet(client->fd,(char [6]){2,4,1,8,4,2},6,8);
+    ws_send(client->fd,(char [6]){2,4,1,8,4,2},6,8);
 
     WS_Track_Layout();
     
@@ -137,7 +137,7 @@ void * websocket_client_connect(void * p){
 
 
   printf("Send broadcast flags\n");
-  send_packet(client->fd, (char [2]){WSopc_ChangeBroadcast,client->type}, 2, 0xFF);
+  ws_send(client->fd, (char [2]){WSopc_ChangeBroadcast,client->type}, 2, 0xFF);
 
   if(_SYS->_STATE & STATE_TRAIN_LOADED){
     loggerf(INFO, "Update clients libs %i", client->id);
@@ -171,6 +171,7 @@ void * websocket_client_connect(void * p){
       }
       printf("\nData: %s\n", buf);
       if(status == -8){
+        loggerf(INFO, "Client %i disconnected", client->id);
         close(client->fd);
         _SYS->_Clients--;
         client->state = 2;

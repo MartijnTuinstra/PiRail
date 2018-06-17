@@ -989,7 +989,7 @@ void JoinModules(){
           data[k++] = j;
         }
       }
-      send_all(data,k,0x10);
+      ws_send_all(data,k,0x10);
     }
     i++;
     usleep(100000);
@@ -1103,7 +1103,7 @@ void JoinModules(){
     free(List.R_L[i]);
   }
 
-  send_all((char [6]){2,4,1,8,4,2},6,8);
+  ws_send_all((char [6]){2,4,1,8,4,2},6,8);
 
   WS_Track_Layout();
 

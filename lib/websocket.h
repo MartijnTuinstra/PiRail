@@ -7,9 +7,9 @@
 
   int websocket_get_msg(int fd_client, char outbuf[], int * L);
 
-  int send_packet(int fd_client, char data[],int length,int flag);
+  int ws_send(int fd_client, char data[],int length,int flag);
 
-  void send_all(char data[],int length,int flag);
+  void ws_send_all(char data[],int length,int flag);
 
   int recv_packet_procces(char data[1024], struct web_client_t * client);
 

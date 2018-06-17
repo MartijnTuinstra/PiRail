@@ -59,7 +59,7 @@ void WS_add_Message(uint16_t ID, char length,char data[16]){
 void WS_send_open_Messages(int Client_fd){
   for(int i = 0;i<=0x1FFF;i++){
     if(MessageList[i].type & 0x8000){
-      send_packet(Client_fd,MessageList[i].data,MessageList[i].data_length,0xFF);
+      ws_send(Client_fd,MessageList[i].data,MessageList[i].data_length,0xFF);
     }
   }
 }
@@ -69,7 +69,7 @@ void WS_clear_message(uint16_t ID){
 
   printf("Send clear message (ID: %i)\n",ID);
 
-  send_all((char [3]){WSopc_ClearMessage,(ID >> 8),ID&0xFF},3,0xFF);
+  ws_send_all((char [3]){WSopc_ClearMessage,(ID >> 8),ID&0xFF},3,0xFF);
 }
 
 
@@ -80,17 +80,17 @@ void WS_clear_message(uint16_t ID){
 
 void WS_EmergencyStop(){
   loggerf(WARNING, "EMERGENCY STOP");
-  send_all((char []){WSopc_EmergencyStop},1,0xFF); //Everyone
+  ws_send_all((char []){WSopc_EmergencyStop},1,0xFF); //Everyone
 }
 
 void WS_ShortCircuit(){
   loggerf(WARNING, "SHORT CIRCUIT");
-  send_all((char []){WSopc_ShortCircuitStop},1,0xFF); //Everyone
+  ws_send_all((char []){WSopc_ShortCircuitStop},1,0xFF); //Everyone
 }
 
 void WS_ClearEmergency(){
   loggerf(INFO, "EMERGENCY Released");
-  send_all((char []){WSopc_ClearEmergency},1,0xFF); //Everyone
+  ws_send_all((char []){WSopc_ClearEmergency},1,0xFF); //Everyone
 }
 
 
@@ -135,10 +135,10 @@ void WS_EnginesLib(int client_fd){
     }
   }
   if(client_fd <= 0){
-    send_all(data, len, WS_Flag_Trains);
+    ws_send_all(data, len, WS_Flag_Trains);
   }
   else{
-    send_packet(client_fd, data, len, WS_Flag_Trains);
+    ws_send(client_fd, data, len, WS_Flag_Trains);
   }
 }
 
@@ -183,10 +183,10 @@ void WS_CarsLib(int client_fd){
     }
   }
   if(client_fd <= 0){
-    send_all(data, len, WS_Flag_Trains);
+    ws_send_all(data, len, WS_Flag_Trains);
   }
   else{
-    send_packet(client_fd, data, len, WS_Flag_Trains);
+    ws_send(client_fd, data, len, WS_Flag_Trains);
   }
 }
 
@@ -226,10 +226,10 @@ void WS_TrainsLib(int client_fd){
     }
   }
   if(client_fd <= 0){
-    send_all(data, len, WS_Flag_Trains);
+    ws_send_all(data, len, WS_Flag_Trains);
   }
   else{
-    send_packet(client_fd, data, len, WS_Flag_Trains);
+    ws_send(client_fd, data, len, WS_Flag_Trains);
   }
 }
 
@@ -276,7 +276,7 @@ void WS_Partial_Layout(char M_A,char M_B){
 
   // if(q > 1){
   //   printf("Send %i\n",q);
-  //   send_all(data,q,WS_Flag_Admin);
+  //   ws_send_all(data,q,WS_Flag_Admin);
   // }
 
 }
@@ -309,7 +309,7 @@ void WS_Track_Layout(){
 
   if(q > 1){
     printf("Send %i\n",q);
-    send_all(data,q,WS_Flag_Track);
+    ws_send_all(data,q,WS_Flag_Track);
   }
 
 }
@@ -349,9 +349,9 @@ void WS_trackUpdate(int Client_fd){
 
   if(content == 1){
     if(Client_fd){
-      send_packet(Client_fd,data,data_len,WS_Flag_Track);
+      ws_send(Client_fd,data,data_len,WS_Flag_Track);
     }else{
-      send_all(data,data_len,WS_Flag_Track);
+      ws_send_all(data,data_len,WS_Flag_Track);
     }
   }
   pthread_mutex_unlock(&mutex_lockB);
@@ -414,10 +414,10 @@ void WS_SwitchesUpdate(int Client_fd){
   if(content == 1){
     if(Client_fd){
       printf("WS_SwitchesUpdate Custom Client");
-      send_packet(Client_fd,buf,buf_l,WS_Flag_Switches);
+      ws_send(Client_fd,buf,buf_l,WS_Flag_Switches);
     }else{
       printf("WS_SwitchesUpdate ALL");
-      send_all(buf,buf_l,WS_Flag_Switches);
+      ws_send_all(buf,buf_l,WS_Flag_Switches);
     }
   }
   */
@@ -460,9 +460,9 @@ void WS_NewClient_track_Switch_Update(int Client_fd){
 
   if(content == 1){
     if(Client_fd){
-      send_packet(Client_fd,buf,data_len,WS_Flag_Track);
+      ws_send(Client_fd,buf,data_len,WS_Flag_Track);
     }else{
-      send_all(buf,data_len,WS_Flag_Track);
+      ws_send_all(buf,data_len,WS_Flag_Track);
     }
   }
   
@@ -520,10 +520,10 @@ void WS_NewClient_track_Switch_Update(int Client_fd){
   if(content == 1){
     if(Client_fd){
       printf("WS_SwitchesUpdate Custom Client");
-      send_packet(Client_fd,buf,buf_l,WS_Flag_Switches);
+      ws_send(Client_fd,buf,buf_l,WS_Flag_Switches);
     }else{
       printf("WS_SwitchesUpdate ALL");
-      send_all(buf,buf_l,WS_Flag_Switches);
+      ws_send_all(buf,buf_l,WS_Flag_Switches);
     }
   }
   
@@ -550,7 +550,7 @@ void WS_NewClient_track_Switch_Update(int Client_fd){
   }
 
   if(data == 1){
-    send_packet(Client_fd,buf,buf_l,8);
+    ws_send(Client_fd,buf,buf_l,8);
   }
 
   memset(buf,0,4096);
@@ -581,7 +581,7 @@ void Web_Emergency_Stop(int i){
     return;
   }
   printf("Emergency_Stop (%i):[%i][%i]",i,data[0],data[1]);
-  send_all(data,2,1);
+  ws_send_all(data,2,1);
 }
 void Web_Electrical_Stop(int i){
   char data[5];
@@ -593,7 +593,7 @@ void Web_Electrical_Stop(int i){
   }else{
     return;
   }
-  send_all(data,2,1);
+  ws_send_all(data,2,1);
 }
 void Web_Train_Split(int i,char tID,char B[]){
   printf("\n\nWeb_Train_Split(%i,%i,{%i,%i});\n\n",i,tID,B[0],B[1]);
@@ -604,11 +604,11 @@ void Web_Train_Split(int i,char tID,char B[]){
     data[2] = tID;
     data[3] = B[0];
     data[4] = B[1];
-    send_all(data,5,1);
+    ws_send_all(data,5,1);
   }else if(i == RELEASE){
     data[1] = 6;
     data[2] = tID;
-    send_all(data,3,1);
+    ws_send_all(data,3,1);
   }else{
     return;
   }
@@ -626,7 +626,7 @@ void WS_NewTrain(char nr,char M,char B){
   data[3] = nr;
   data[4] = M;
   data[5] = B;
-  send_all(data,6,WS_Flag_Messages);
+  ws_send_all(data,6,WS_Flag_Messages);
   WS_add_Message(msg_ID,6,data);
 }
 
@@ -644,7 +644,7 @@ void WS_TrainSplit(char nr,char M1,char B1,char M2,char B2){
   data[5] = B1;
   data[6] = M2;
   data[7] = B2;
-  send_all(data,8,WS_Flag_Messages);
+  ws_send_all(data,8,WS_Flag_Messages);
   WS_add_Message(msg_ID,8,data);
 }
 /*
@@ -659,7 +659,7 @@ void Web_Link_Train(int type,char nr,char B[]){
     data[2] = B[0];
     data[3] = B[1];
     data[4] = nr;
-    send_all(data,5,1);
+    ws_send_all(data,5,1);
   }else if(type == RELEASE){
     data[0] = WSopc_ClearMessage;
     data[1] = (WS_add_Message(0) & 0x1F) + 0;
@@ -668,7 +668,7 @@ void Web_Link_Train(int type,char nr,char B[]){
     data[3] = B[0];
     data[4] = B[1];
     data[5] = B[2];
-    send_all(data,6,1);
+    ws_send_all(data,6,1);
   }else{
     return;
   }
@@ -693,7 +693,7 @@ void WS_reset_switches(int client_fd){
 }
 
 void WS_LinkTrain(uint8_t fID, uint8_t tID){
-  send_all((char []){WSopc_LinkTrain,fID,tID},3,0xFF);
+  ws_send_all((char []){WSopc_LinkTrain,fID,tID},3,0xFF);
 }
 
 void WS_TrainData(char data[14]){
@@ -709,7 +709,7 @@ void WS_TrainData(char data[14]){
   return;
   // s_data[1] = DCC_train[((s_data[2] << 8) + s_data[3])]->ID;
 
-  send_all(s_data,9,WS_Flag_Trains);
+  ws_send_all(s_data,9,WS_Flag_Trains);
 }
 /*
 void Web_Train_Data(char data[14]){
@@ -719,6 +719,6 @@ void Web_Train_Data(char data[14]){
   for(int i = 0;i<7;i++){
     s_data[i+1] = data[i];
   }
-  send_all(s_data,8,1);
+  ws_send_all(s_data,8,1);
 }
 */

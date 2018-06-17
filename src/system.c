@@ -42,7 +42,7 @@ void _SYS_change(int STATE,char send){
     data[0] = WSopc_Service_State;
     data[1] = _SYS->_STATE >> 8;
     data[2] = _SYS->_STATE & 0xFF;
-    send_all(data,3,WS_Flag_Admin || WS_Flag_Track);
+    ws_send_all(data,3,WS_Flag_Admin || WS_Flag_Track);
   }
 }
 

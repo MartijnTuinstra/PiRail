@@ -86,12 +86,15 @@ void Create_Unit(int module,int OUT,int IN,char points){
 
 void Unit_expand_IO(_Bool type, Unit * U){
   if(type == 0){
-    loggerf(INFO, "Expand input of Unit %i to %i", U->module, U->output_regs+1);
+    loggerf(INFO, "Expand input of Unit %i to %i", U->module, U->input_regs+1);
     U->InRegs = _realloc(U->InRegs, U->input_regs + 1, uint8_t);
     U->input_link = _realloc(U->input_link, (U->input_regs + 1)*8, gpio_link);
 
     U->InRegs[U->input_regs] = 0;
-    memset(U->input_link + (U->input_regs)*8, 0, 8);
+    for(int i = U->input_regs*8; i < (U->input_regs + 1)*8; i++){
+      U->input_link[i].type = gpio_NC;
+      U->input_link[i].p = 0;
+    }
     U->input_regs += 1;
   }
   else{
@@ -718,6 +721,7 @@ void LoadModuleFromConfig(int M){
 
 void LoadModules(int M){
   loggerf(ERROR, "Going to be depricated: use LoadModuleFromConfig");
+  loggerf(INFO, "Loading module %i", M);
 
   if(M == 0){
     return;

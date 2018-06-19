@@ -1,16 +1,5 @@
-#define _BSD_SOURCE
-// #define _GNU_SOURCE
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <unistd.h>
-#include <string.h>
-
-#include <pthread.h>
-
-#include "train_sim.h"
 #include "system.h"
+#include "train_sim.h"
 
 #include "rail.h"
 #include "train.h"
@@ -24,14 +13,13 @@ pthread_mutex_t mutex_lockA;
 
 
 void *TRAIN_SIMA(){
-  // struct Seg *B = Units[4]->B[27];
-  // struct Seg *N = Units[4]->B[27];
   Block *B = Units[20]->B[1];
   Block *N = Units[20]->B[1];
   Block *A = 0;
   int i = 0;
 
   B->state = BLOCKED;
+  B->blocked = 1;
   B->changed  = 1;
 
   while(!train_link[Units[20]->B[1]->train] && _SYS->_STATE & STATE_RUN){}

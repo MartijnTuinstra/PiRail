@@ -33,14 +33,14 @@
   };
 
   enum Rail_states {
-    BLOCKED,
-    DANGER,
-    RESTRICTED,
-    CAUTION,
-    PROCEED,
-    RESERVED,
-    RESERVED_SWITCH,
-    UNKNOWN
+    BLOCKED,          // 0
+    DANGER,           // 1
+    RESTRICTED,       // 2
+    CAUTION,          // 3
+    PROCEED,          // 4
+    RESERVED,         // 5
+    RESERVED_SWITCH,  // 6
+    UNKNOWN           // 7
   };
 
   typedef struct rail_segment {
@@ -69,6 +69,12 @@
 
     Signal * NextSignal;
     Signal * PrevSignal;
+
+    int switch_len;
+    Switch ** Sw;
+
+    int msswitch_len;
+    MSSwitch ** MSSw;
 
   } Block;
 

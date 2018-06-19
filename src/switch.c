@@ -22,6 +22,12 @@ void Create_Switch(struct switch_connect connect, char block_id, char output_len
 
   if(Units[Z->module]->B[block_id]){
     Z->Detection = Units[Z->module]->B[block_id];
+    if(Units[Z->module]->B[block_id]->switch_len == 0){
+      Units[Z->module]->B[block_id]->Sw = _calloc(2, void *);
+      Units[Z->module]->B[block_id]->switch_len = 2;
+    }
+    int id = find_free_index((void **)Units[Z->module]->B[block_id]->Sw, &Units[Z->module]->B[block_id]->switch_len);
+    Units[Z->module]->B[block_id]->Sw[id] = Z;
   }
   else{
     loggerf(ERROR, "SWITCH %i:%i has no detection block %i", connect.module, connect.id, block_id);
@@ -57,6 +63,9 @@ void Create_MSSwitch(struct msswitch_connect connect, char block_id, char output
 
   if(Units[Z->module]->B[block_id]){
     Z->Detection = Units[Z->module]->B[block_id];
+    Units[Z->module]->B[block_id]->MSSw[
+      find_free_index((void **)Units[Z->module]->B[block_id]->MSSw,
+                      &Units[Z->module]->B[block_id]->msswitch_len)] = Z;
   }
   else
     loggerf(ERROR, "MSSwitch %i:%i has no detection block %i", connect.module, connect.id, block_id);
@@ -94,7 +103,7 @@ int set_switch(Switch * S,char state){
       }
     }
   }
-  if(S->Detection && (S->Detection->state != RESERVED && !S->Detection->blocked) || !S->Detection){
+  if(S->Detection && (S->Detection->state != RESERVED && S->Detection->state != RESERVED_SWITCH && !S->Detection->blocked) || !S->Detection){
     S->state = state + 0x80;
 
     char buf[40];
@@ -125,7 +134,12 @@ int set_switch(Switch * S,char state){
     ws_send_all(buf,index,2);
     return 1;
   }else{
-    printf("Switch blocked\n");
+    if(S->Detection->state == RESERVED || S->Detection->state == RESERVED_SWITCH){
+      loggerf(INFO, "Switch reserved");
+    }
+    else{
+      loggerf(INFO, "Switch blocked");
+    }
     return 0;
   }
 }

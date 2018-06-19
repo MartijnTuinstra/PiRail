@@ -66,9 +66,9 @@ void Create_Segment(int IO_Adr, struct block_connect connect ,char max_speed, ch
   p->dir = dir;
   p->length = len;
 
-  if(IO_Adr >= (U->input_regs * 8)){
-    printf("JOLO");
-  }
+  p->blocked = 0;
+  p->state = PROCEED;
+
   while(IO_Adr >= (U->input_regs * 8)){
     Unit_expand_IO(0, U); //Expand input
   }
@@ -78,7 +78,7 @@ void Create_Segment(int IO_Adr, struct block_connect connect ,char max_speed, ch
   gpio.type = gpio_RAIL;
   gpio.p = p;
   if(Units[p->module]->input_link[IO_Adr].type != gpio_NC){
-    loggerf(WARNING, "Overwriting gpio link");
+    loggerf(WARNING, "Overwriting gpio link %i", IO_Adr);
   }
   Units[p->module]->input_link[IO_Adr] = gpio;
 

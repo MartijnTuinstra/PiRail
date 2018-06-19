@@ -21,6 +21,10 @@ void Z21_get_engine(int dcc){
   loggerf(ERROR, " Implement Z21_get_engine");
 }
 
-void Z21_SET_LOCO_DRIVE(int DCC_Adr,char steps,_Bool dir,char drive){}
+void Z21_SET_LOCO_DRIVE(int DCC_Adr,char steps,_Bool dir,char drive){
+  loggerf(ERROR, "Implement Z21_SET_LOCO_DRIVE");
+}
 
-void Z21_SET_LOCO_FUNCTION(int DCC_Adr,char function_nr,char switch_type){}
+void Z21_SET_LOCO_FUNCTION(int DCC_Adr,char function_nr,char switch_type){
+  loggerf(ERROR, "Implement Z21_SET_LOCO_Function");
+}

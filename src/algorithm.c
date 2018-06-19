@@ -73,7 +73,7 @@ void * scan_All_continiously(){
     //fprintf(data,"%d\n",t);
     //fclose(data);
 
-    usleep(1000000);
+    usleep(10000000);
   }
 }
 

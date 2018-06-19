@@ -35,7 +35,7 @@ void _SYS_change(int STATE,char send){
   }else if(!(_SYS->_STATE & STATE)){
     _SYS->_STATE |= STATE;
   }
-  loggerf(INFO, "_SYS_change %x\n", _SYS->_STATE);
+  loggerf(INFO, "_SYS_change %x", _SYS->_STATE);
 
   if(send & 0x01){
     char data[5];
@@ -66,6 +66,9 @@ int find_free_index(void ** list, int * length){
   }
 
   list = _realloc(list,*length+2, void *);
+  for(int i = *length; i < *length+2; i++){
+    list[i] = 0;
+  }
   *length += 2;
   logger("EXPANDING LIST",INFO);
   return find_free_index(list, length);

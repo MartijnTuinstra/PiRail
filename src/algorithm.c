@@ -118,25 +118,101 @@ void change_block_state(struct procces_block * A, enum Rail_states state){
 }
 
 void procces(Block * B,int debug){
-  if(B->type == 'T'){
-    if(!B->blocked){
-      B->train = 0;
-    }
-    if(debug){
-      Block *BA = B;
-      if(BA->train != 0){
-        printf("ID: %i\t%c%i:%i\n",BA->train,BA->module,BA->id);
+  printf("\n");
+  Block * next = 0;
+  Block * prev = 0;
+
+
+  int next_level = 1;
+  int prev_level = 1;
+
+  printf("Block %2i:%2i-%i", B->module, B->id, B->type);
+
+  next = Next(B, NEXT | SWITCH_CARE,1);
+  prev = Next(B, PREV | SWITCH_CARE,1);
+
+  if(next){
+    printf("next %2i:%2i", next->module, next->id);
+    if(next->type == SPECIAL)
+      next_level++;
+  }else
+    printf("          ");
+
+  if(prev){
+    printf("\tprev %2i:%2i", prev->module, prev->id);
+    if(prev->type == SPECIAL)
+      prev_level++;
+  }
+
+  //init_Algor_Blocks and clear
+  struct procces_block BPPP,BPP,BP,BN,BNN,BNNN;
+
+  //Clear pointer
+  BPPP.B[0] = NULL;BPPP.B[1] = NULL;BPPP.B[2] = NULL;BPPP.B[3] = NULL;BPPP.B[4] = NULL;
+  BPP.B[0] = NULL;BPP.B[1] = NULL;BPP.B[2] = NULL;BPP.B[3] = NULL;BPP.B[4] = NULL;
+  BP.B[0] = NULL;BP.B[1] = NULL;BP.B[2] = NULL;BP.B[3] = NULL;BP.B[4] = NULL;
+  BN.B[0] = NULL;BN.B[1] = NULL;BN.B[2] = NULL;BN.B[3] = NULL;BN.B[4] = NULL;
+  BNN.B[0] = NULL;BNN.B[1] = NULL;BNN.B[2] = NULL;BNN.B[3] = NULL;BNN.B[4] = NULL;
+  BNNN.B[0] = NULL;BNNN.B[1] = NULL;BNNN.B[2] = NULL;BNNN.B[3] = NULL;BNNN.B[4] = NULL;
+  //Clear data
+  BPPP.blocked = 0;BPP.blocked = 0;BP.blocked = 0;BN.blocked = 0;BNN.blocked = 0;BNNN.blocked = 0;
+  BPPP.blocks = 0;BPP.blocks = 0;BP.blocks = 0;BN.blocks = 0;BNN.blocks = 0;BNNN.blocks = 0;
+  BPPP.length = 0;BPP.length = 0;BP.length = 0;BN.length = 0;BNN.length = 0;BNNN.length = 0;
+
+
+
+
+
+  if(next){
+    printf("NEXT: ");
+    for(int i = 0; i < 3; i++){
+      struct procces_block * block_p;
+      if(i == 0){
+        block_p = &BN;
       }
-      //printf("\t\t          \tA  %i:%i:%i;T%iR%i",BA->Adr.M,BA->Adr.B,BA->Adr.S,BA->train,BA->dir);
-      //if(BA->blocked){
-      //  printf("B");
-      //}
-      //printf("\n");
+      else if(i == 1){
+        block_p = &BNN;
+      }
+      else if(i == 2){
+        block_p = &BNNN;
+      }
+  
+      printf("|");
+  
+      do{
+        if(i == 0 && block_p->blocks == 0){
+          block_p->B[block_p->blocks] = next;
+        }
+        else if(next->type != SPECIAL){
+          printf("_");
+          block_p->B[block_p->blocks] = Next(next, NEXT | SWITCH_CARE, next_level++);
+        }
+        else if(B->type != SPECIAL){
+          printf("_");
+          block_p->B[block_p->blocks] = Next(B, NEXT | SWITCH_CARE, next_level++);
+        }
+        else{
+          loggerf(ERROR, "No solution yet");
+        }
+  
+        if(!block_p->B[block_p->blocks]){
+          printf("Empty");
+          i = 4;
+          break;
+        }
+  
+        block_p->length += block_p->B[block_p->blocks]->length;
+        printf("\t%i:%i-%i",block_p->B[block_p->blocks]->module,block_p->B[block_p->blocks]->id, block_p->length);
+  
+        block_p->blocks += 1;
+  
+      }
+      while(block_p->length < Block_Minimum_Size && block_p->blocks < 5);
     }
   }
-  else{
-    //printf("B\n");
 
+  if(1){
+    return;
     struct procces_block BPPP,BPP,BP,BA,BN,BNN,BNNN;
     BA.B[0] = B;
     BA.blocked = B->blocked;

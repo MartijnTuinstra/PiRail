@@ -87,7 +87,7 @@ void Create_Unit(int module,int OUT,int IN,char points){
 void Unit_expand_IO(_Bool type, Unit * U){
   if(type == 0){
     loggerf(INFO, "Expand input of Unit %i to %i", U->module, U->input_regs+1);
-    U->InRegs = _realloc(U->InRegs, U->input_regs + 1, uint8_t);
+    U->InRegs =  _realloc(U->InRegs, U->input_regs + 1, uint8_t);
     U->input_link = _realloc(U->input_link, (U->input_regs + 1)*8, gpio_link);
 
     U->InRegs[U->input_regs] = 0;
@@ -837,7 +837,10 @@ void LoadModules(int M){
         struct block_connect tmp;
         tmp.module = Adr.module;
         tmp.id = Adr.id;
-        tmp.type = MAIN;
+        if(Adr.type == 'R')
+          tmp.type = MAIN;
+        else if(Adr.type == 'D')
+          tmp.type = SPECIAL;
         tmp.next = NAdr;
         tmp.prev = PAdr;
         Create_Segment(strtol(parts[1],NULL,8),tmp,atoi(parts[10]),atoi(parts[11]),atoi(parts[12]));

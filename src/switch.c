@@ -63,9 +63,12 @@ void Create_MSSwitch(struct msswitch_connect connect, char block_id, char output
 
   if(Units[Z->module]->B[block_id]){
     Z->Detection = Units[Z->module]->B[block_id];
-    Units[Z->module]->B[block_id]->MSSw[
-      find_free_index((void **)Units[Z->module]->B[block_id]->MSSw,
-                      &Units[Z->module]->B[block_id]->msswitch_len)] = Z;
+    if(Units[Z->module]->B[block_id]->msswitch_len == 0){
+      Units[Z->module]->B[block_id]->MSSw = _calloc(2, void *);
+      Units[Z->module]->B[block_id]->msswitch_len = 2;
+    }
+    int id = find_free_index((void **)Units[Z->module]->B[block_id]->MSSw, &Units[Z->module]->B[block_id]->msswitch_len);
+    Units[Z->module]->B[block_id]->MSSw[id] = Z;
   }
   else
     loggerf(ERROR, "MSSwitch %i:%i has no detection block %i", connect.module, connect.id, block_id);

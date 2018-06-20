@@ -7,6 +7,10 @@
   #include <unistd.h>
   #include <string.h>
 
+  #define NEXT 0
+  #define PREV 1
+  #define SWITCH_CARE 0x80
+
   struct _switch;
   struct _msswitch;
   struct _signal;
@@ -122,10 +126,12 @@
   int dircmp(Block *A, Block *B);
   int block_cmp(Block *A, Block *B);
 
-  Block * Next_Switch_Block(Switch * S, char type, int dir, int level);
-  Block * Next_MSSwitch_Block(MSSwitch * S, char type, int dir, int level);
-  Block * Next(Block * B, int dir, int level);
-  Block * Prev();
+  Block * Next_Switch_Block(Switch * S, char type, int flags, int level);
+  Block * Next_MSSwitch_Block(MSSwitch * S, char type, int flags, int level);
+  Block * Next_Special_Block(Block * B, int flags, int level);
+  Block * Next(Block * B, int flags, int level);
+
+  int Next_check_Switch(void * p, struct rail_link link);
 
   struct rail_link Next_link(Block * B);
   struct rail_link Prev_link(Block * B);

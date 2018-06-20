@@ -1,11 +1,14 @@
 #ifndef _INCLUDE_ALGORITHM_H
   #define _INCLUDE_ALGORITHM_H
 
+  #define Block_Minimum_Size 60
+
   #include "rail.h"
 
   struct procces_block {
     _Bool blocked;
-    char length;
+    char blocks;
+    int length;
     Block * B[5];
   };
 

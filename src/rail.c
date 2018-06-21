@@ -283,21 +283,18 @@ int Next_check_Switch(void * p, struct rail_link link){
     if(N->state == 0 && N->str.p == p || N->state == 1 && N->div.p == p){
       return 1;
     }
-    printf("SW%i:%i\t",N->module,N->id);
   }
   else if(link.type == 'M'){
     MSSwitch * N = link.p;
     if(N->sideB[N->state].p == p){
       return 1;
     }
-    printf("MSW%i:%i\t",N->module,N->id);
   }
   else if(link.type == 'm'){
     MSSwitch * N = link.p;
     if(N->sideA[N->state].p == p){
       return 1;
     }
-    printf("MSW%i:%i\t",N->module,N->id);
   }
   return 0;
 }

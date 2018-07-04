@@ -26,7 +26,7 @@ void Create_Switch(struct switch_connect connect, char block_id, char output_len
       Units[Z->module]->B[block_id]->Sw = _calloc(2, void *);
       Units[Z->module]->B[block_id]->switch_len = 2;
     }
-    int id = find_free_index((void **)Units[Z->module]->B[block_id]->Sw, &Units[Z->module]->B[block_id]->switch_len);
+    int id = find_free_index(Units[Z->module]->B[block_id]->Sw, Units[Z->module]->B[block_id]->switch_len);
     Units[Z->module]->B[block_id]->Sw[id] = Z;
   }
   else{
@@ -67,7 +67,7 @@ void Create_MSSwitch(struct msswitch_connect connect, char block_id, char output
       Units[Z->module]->B[block_id]->MSSw = _calloc(2, void *);
       Units[Z->module]->B[block_id]->msswitch_len = 2;
     }
-    int id = find_free_index((void **)Units[Z->module]->B[block_id]->MSSw, &Units[Z->module]->B[block_id]->msswitch_len);
+    int id = find_free_index(Units[Z->module]->B[block_id]->MSSw, Units[Z->module]->B[block_id]->msswitch_len);
     Units[Z->module]->B[block_id]->MSSw[id] = Z;
   }
   else
@@ -151,34 +151,40 @@ int set_msswitch(MSSwitch * S, char state){
   loggerf(ERROR, "Implement set_msswitch");
 }
 
-int set_multiple_switches(char len, char * data){
+int set_multiple_switches(char len, char * msg){
   struct switchdata {
     char module;
     char id:7;
-    char type:1;
+    _Bool type;
     char state;
   };
 
   char module = 0;
 
   for(int i = 0; i < len; i++){
-    struct switchdata * p = (void *)&data[i*sizeof(struct switchdata)];
+    char * data = (void *)&msg[i*3];
 
-    module = p->module;
+    printf("%x %x %x\t",data[0],data[1],data[2]);
 
-    printf("check %d:%d\n",p->module,p->id,0);//p->state);
+    struct switchdata p;
+    p.module = data[0];
+    p.id = data[1] & 0x7F;
+    p.type = (data[1] & 0x80) >> 7;
+    p.state = data[2];
 
-    if(!(Units[p->module] && (
-      (p->type == 0 && Units[p->module]->Sw[p->id]) || 
-      (p->type == 1 && Units[p->module]->MSSw[p->id]) )) ){
+    printf("check %d:%d\n",p.module,p.id,p.state);
+
+    if(!(Units[p.module] && (
+      (p.type == 0 && Units[p.module]->Sw[p.id]) || 
+      (p.type == 1 && Units[p.module]->MSSw[p.id]) )) ){
       printf("Switch doesnt exist\n");
       return -1;
     }
 
-    Unit * U = Units[p->module];
+    Unit * U = Units[p.module];
 
-    if((p->type == 0 && U->Sw[p->id]->Detection && U->Sw[p->id]->Detection->blocked) || 
-        (p->type == 1 && U->MSSw[p->id]->Detection && U->MSSw[p->id]->Detection->blocked)){
+    if((p.type == 0 && U->Sw[p.id]->Detection && U->Sw[p.id]->Detection->blocked) || 
+        (p.type == 1 && U->MSSw[p.id]->Detection && U->MSSw[p.id]->Detection->blocked)){
       printf("Switch is blocked\n");
       return -2;
     }
@@ -189,21 +195,32 @@ int set_multiple_switches(char len, char * data){
   int index = 1;
 
   for(int i = 0; i < len; i++){
-    struct switchdata * p = (void *)&data[i*sizeof(struct switchdata)];
+    char * data = (void *)&msg[i*3];
 
-    Unit * U = Units[p->module];
+    struct switchdata p;
+    p.module = data[0];
+    p.id = data[1] & 0x7F;
+    p.type = (data[1] & 0x80) >> 7;
+    p.state = data[2];
 
-    printf("check %d:%d\n",p->module,p->id,0);//p->state);
+    Unit * U = Units[p.module];
 
-    if(p->type == 0){
-      Switch * S = U->Sw[p->id];
+    printf("check %d:%d\n",p.module,p.id,p.state);
+
+    if(p.type == 0){
+      Switch * S = U->Sw[p.id];
+
+      printf("throw switch %i:%i to state: \t",p.module,p.id);
+      printf("%i->%i",S->state, p.state);
+
+      U->Sw[p.id]->state = p.state | 0x80;
 
       buf[index++] = S->module;
       buf[index++] = S->id;
-      buf[index++] = p->state |= 0x80;
+      buf[index++] = p.state;
     }
-    else if(p->type == 1){
-      U->MSSw[p->id];
+    else if(p.type == 1){
+      U->MSSw[p.id];
       printf("Set mulbitple switch msswitch not implemented\n");
       return -3;
     }

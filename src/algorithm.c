@@ -73,7 +73,9 @@ void * scan_All_continiously(){
     //fprintf(data,"%d\n",t);
     //fclose(data);
 
-    usleep(10000000);
+    usleep(1000000);
+
+    // printf("\n");
   }
 }
 
@@ -84,7 +86,7 @@ void scan_All(){
       for(int j = 0;j<=Units[i]->block_len;j++){
         if(Units[i]->B[j]){
           //printf("%i:%i\n",i,j);
-          procces(Units[i]->B[j],0);
+          procces(Units[i]->B[j],2);
         }
       }
     }
@@ -117,23 +119,19 @@ void change_block_state(struct procces_block * A, enum Rail_states state){
   }
 }
 
-void procces(Block * B,int debug){
-  printf("\n");
-  Block * next = 0;
-  Block * prev = 0;
+void procces(Block * B,int flags){
+  int debug = (flags & 1);
+  int force = (flags & 2);
 
+  if(!B->blocked && B->train == 0 && !force){
+    return;
+  }
+  // if(B->changed == 0){
+  //   return;
+  // }
 
-  int next_level = 1;
-  int prev_level = 1;
+  // B->changed = 0;
 
-  next = Next(B, NEXT | SWITCH_CARE,1);
-  prev = Next(B, PREV | SWITCH_CARE,1);
-
-  if(next && next->type == SPECIAL)
-    next_level++;
-
-  if(prev && prev->type == SPECIAL)
-    prev_level++;
 
   //init_Algor_Blocks and clear
   struct procces_block BPPP,BPP,BP,BN,BNN,BNNN;
@@ -149,95 +147,36 @@ void procces(Block * B,int debug){
   BPPP.blocked = 0;BPP.blocked = 0;BP.blocked = 0;BN.blocked = 0;BNN.blocked = 0;BNNN.blocked = 0;
   BPPP.blocks  = 0;BPP.blocks  = 0;BP.blocks  = 0;BN.blocks  = 0;BNN.blocks  = 0;BNNN.blocks  = 0;
   BPPP.length  = 0;BPP.length  = 0;BP.length  = 0;BN.length  = 0;BNN.length  = 0;BNNN.length  = 0;
+  // Link algor_blocks
+  struct algor_blocks AllBlocks;
+  AllBlocks.BPPP = &BPPP;
+  AllBlocks.BPP  = &BPP;
+  AllBlocks.BP   = &BP;
+  AllBlocks.B    = B;
+  AllBlocks.BN   = &BN;
+  AllBlocks.BNN  = &BNN;
+  AllBlocks.BNNN = &BNNN;
 
+  Algor_search_Blocks(&AllBlocks, debug);
 
+  
 
+  
 
+  Algor_train_following(AllBlocks, debug);
 
-  if(next){
-    for(int i = 0; i < 3; i++){
-      struct procces_block * block_p;
-      if(i == 0){
-        block_p = &BN;
-      }
-      else if(i == 1){
-        block_p = &BNN;
-      }
-      else if(i == 2){
-        block_p = &BNNN;
-      }
-  
-      do{
-        if(i == 0 && block_p->blocks == 0){
-          block_p->B[block_p->blocks] = next;
-        }
-        else if(next->type != SPECIAL){
-          block_p->B[block_p->blocks] = Next(next, NEXT | SWITCH_CARE, next_level++);
-        }
-        else if(B->type != SPECIAL){
-          block_p->B[block_p->blocks] = Next(B, NEXT | SWITCH_CARE, next_level++);
-        }
-        else{
-          loggerf(ERROR, "No solution yet");
-        }
-  
-        if(!block_p->B[block_p->blocks]){
-          i = 4;
-          break;
-        }
-  
-        block_p->length += block_p->B[block_p->blocks]->length;
-  
-        block_p->blocks += 1;
-  
-      }
-      while(block_p->length < Block_Minimum_Size && block_p->blocks < 5);
-    }
-  }
-  if(prev){
-    for(int i = 0; i < 3; i++){
-      struct procces_block * block_p;
-      if(i == 0){
-        block_p = &BP;
-      }
-      else if(i == 1){
-        block_p = &BPP;
-      }
-      else if(i == 2){
-        block_p = &BPPP;
-      }
-  
-      do{
-        if(i == 0 && block_p->blocks == 0){
-          block_p->B[block_p->blocks] = prev;
-        }
-        else if(prev->type != SPECIAL){
-          block_p->B[block_p->blocks] = Next(prev, PREV | SWITCH_CARE, prev_level++);
-        }
-        else if(B->type != SPECIAL){
-          block_p->B[block_p->blocks] = Next(B, PREV | SWITCH_CARE, prev_level++);
-        }
-        else{
-          loggerf(ERROR, "No solution yet");
-        }
-  
-        if(!block_p->B[block_p->blocks]){
-          i = 4;
-          break;
-        }
-  
-        block_p->length += block_p->B[block_p->blocks]->length;
-  
-        block_p->blocks += 1;
-  
-      }
-      while(block_p->length < Block_Minimum_Size && block_p->blocks < 5);
-    }
-  }
+  Algor_rail_state(AllBlocks, debug);
 
+  //Check Switch
+
+  // Print all found blocks to stdout
   if(!debug){
     if(BPPP.blocks > 0){
       printf("PPP%i ",BPP.blocks);
+      if(BPPP.blocked)
+        printf("B");
+      else
+        printf(" ");
       for(int i = 1;i>=0;i--){
         if(BPPP.B[i]){
           printf("%02i:%02i",BPPP.B[i]->module,BPPP.B[i]->id);
@@ -251,10 +190,14 @@ void procces(Block * B,int debug){
         }
       }
     }else{
-      printf("                     ");
+      printf("                      ");
     }
     if(BPP.blocks > 0){
       printf("PP%i ",BPP.blocks);
+      if(BPP.blocked)
+        printf("B");
+      else
+        printf(" ");
       for(int i = 1;i>=0;i--){
         if(BPP.B[i]){
           printf("%02i:%02i",BPP.B[i]->module,BPP.B[i]->id);
@@ -268,10 +211,14 @@ void procces(Block * B,int debug){
         }
       }
     }else{
-      printf("                    ");
+      printf("                     ");
     }
     if(BP.blocks > 0){
       printf("P%i ",BP.blocks);
+      if(BP.blocked)
+        printf("B");
+      else
+        printf(" ");
       for(int i = 1;i>=0;i--){
         if(BP.B[i]){
           printf("%02i:%02i",BP.B[i]->module,BP.B[i]->id);
@@ -285,7 +232,7 @@ void procces(Block * B,int debug){
         }
       }
     }else{
-      printf("                   ");
+      printf("                    ");
     }
     printf("A%3i %c%02i:%02i;T%-2iD%-2iS%-2i",B->length,B->type,B->module,B->id,B->train,B->dir,B->state);
     if(B->blocked){
@@ -294,6 +241,10 @@ void procces(Block * B,int debug){
     printf("\t");
     if(BN.blocks > 0){
       printf("N%i ",BN.blocks);
+      if(BN.blocked)
+        printf("B");
+      else
+        printf(" ");
       for(int i = 0;i<2;i++){
         if(BN.B[i]){
           printf("%02i:%02i",BN.B[i]->module,BN.B[i]->id);
@@ -309,6 +260,10 @@ void procces(Block * B,int debug){
     }
     if(BNN.blocks > 0){
       printf("NN%i ",BNN.blocks);
+      if(BNN.blocked)
+        printf("B");
+      else
+        printf(" ");
       for(int i = 0;i<2;i++){
         if(BNN.B[i]){
           printf("%02i:%02i",BNN.B[i]->module,BNN.B[i]->id);
@@ -324,6 +279,10 @@ void procces(Block * B,int debug){
     }
     if(BNNN.blocks > 0){
       printf("NNN%i ",BNNN.blocks);
+      if(BNNN.blocked)
+        printf("B");
+      else
+        printf(" ");
       for(int i = 0;i<2;i++){
         if(BNNN.B[i]){
           printf("%02i:%02i",BNNN.B[i]->module,BNNN.B[i]->id);
@@ -364,187 +323,18 @@ void procces(Block * B,int debug){
     // }
   }
 
-  if(1){
-    return;
-    struct procces_block BPPP,BPP,BP,BA,BN,BNN,BNNN;
-    BA.B[0] = B;
-    BA.blocked = B->blocked;
-    BA.length = 1;
+  Algor_signal_state(AllBlocks, debug);
 
-    Block * bl[8] = {0};
-    Block * bpl[6] = {0};
-    Block * bp,*bpp,*bppp;
-    Block * Bl;
-    bl[0] = B;
-    bpl[0] = B;
-    Bl = B;
-    int i = 0;
-    int p = 0;
-    Block * tB;
-    //Get blocks in avalable path
-    int q = 4;
+  //Train Control
 
-    //Get the 3 next blocks
-    for(i = 0;(i+1)<q;i){
-      if(bl[i]->type != 'T'){ //If block has no contact points
-        Bl = bl[i];
-      }
-      i++;
-      //printf("i%i\t%i:%i:%c\n",i-1,bl[i-1]->module,bl[i-1]->id,bl[i-1]->type);
-      struct rail_link A;
-      if(dircmp(B,Bl)){
-        A = Next_link(Bl);
-      }else{
-        A = Prev_link(Bl);
-      }
-      if(A.type == 0){
-        //printf("A.type == 0\n");
-        q = i;
-        break;
-      }else if(A.type == 's' || A.type == 'S' || A.type == 'm' || A.type == 'M'){
-        //printf("%i:%i Check_switch %i:%i\n",Bl->module,Bl->id,((Switch *)A.ptr)->module,((Switch *)A.ptr)->id);
-        if(!check_Switch(A,FALSE)){
-          //printf("WSw\n");
-          q = i;
-          break;
-        }
-      }
-      bl[i] = Next(B,0,i);
-      //printf(".%i<%i\n",i,q);
-      //printf("%i  %c%i:%i\t",i,bl[i]->type,bl[i]->module,bl[i]->id);
-      if(i > 1 && bl[i-1]->type == 'T' && bl[i]->type == 'T' && !block_cmp(bl[i-1],bl[i])){
-        //printf("Double T rail\n");
-        q++;
-      }else if(!bl[i]){
-        q = i;
-        break;
-      }
-    }
-    i--;
+  int k = 0, p = 0, i = 0;
+  Algor_Block BA;
+  BA.blocked = 0;
+  BA.blocks = 0;
+  BA.length = 0;
+  BA.B[0] = B;
 
-    char r = 4;
-    //Get the 3 previous blocks
-    for(p = 0;p<=r;){
-      if(bpl[p]->type != 'T'){ //If block has no contact points
-        Bl = bpl[p];
-      }
-      p++;
-      //printf("i%i\t%i:%i:%c\n",p-1,bpl[p-1]->module,bpl[p-1]->id,bpl[p-1]->type);
-      struct rail_link A;
-      if(dircmp(B,Bl)){
-        A = Prev_link(Bl);
-      }else{
-        A = Next_link(Bl);
-      }
-      if(A.type == 0){
-        //printf("A.type == 0\n");
-        r = p;
-        break;
-      }else if(A.type == 's' || A.type == 'S' || A.type == 'm' || A.type == 'M'){
-        //printf("Check_switch %i:%i\n",Bl->module,Bl->id);
-        if(!check_Switch(A,FALSE)){
-          //printf("WSw\n");
-          r = p;
-          break;
-        }
-      }
-      bpl[p] = Next(B,1,p);
-      
-      if(!bpl[p]){
-        r = p-1;
-        break;
-      }
-      //printf(".%i<%i\n",p,r);
-      //printf("%i  %c%i:%i\t",p,bpl[p]->type,bpl[p]->module,bpl[p]->id);
-      if(p > 1 && bpl[p-1]->type == 'T' && bpl[p]->type == 'T' && !block_cmp(bpl[p-1],bpl[p])){
-        //printf("Double T rail\n");
-        r++;
-      }
-      if(p == r && bpl[p]->type == 'T'){
-        r++;
-      }
-    }
-    p--;
-
-    i = 1;
-    p = 1;
-    int j = 0;
-    int k = -1;
-    int l = -1;
-
-    //Clear pointer
-    BPPP.B[0] = NULL;BPPP.B[1] = NULL;BPPP.B[2] = NULL;BPPP.B[3] = NULL;BPPP.B[4] = NULL;
-    BPP.B[0] = NULL;BPP.B[1] = NULL;BPP.B[2] = NULL;BPP.B[3] = NULL;BPP.B[4] = NULL;
-    BP.B[0] = NULL;BP.B[1] = NULL;BP.B[2] = NULL;BP.B[3] = NULL;BP.B[4] = NULL;
-    BN.B[0] = NULL;BN.B[1] = NULL;BN.B[2] = NULL;BN.B[3] = NULL;BN.B[4] = NULL;
-    BNN.B[0] = NULL;BNN.B[1] = NULL;BNN.B[2] = NULL;BNN.B[3] = NULL;BNN.B[4] = NULL;
-    BNNN.B[0] = NULL;BNNN.B[1] = NULL;BNNN.B[2] = NULL;BNNN.B[3] = NULL;BNNN.B[4] = NULL;
-    //Clear data
-    BPPP.blocked = 0;BPP.blocked = 0;BP.blocked = 0;BN.blocked = 0;BNN.blocked = 0;BNNN.blocked = 0;
-    BPPP.length = 0;BPP.length = 0;BP.length = 0;BN.length = 0;BNN.length = 0;BNNN.length = 0;
-
-    //Assign next pointers
-    //k == number of block ahead
-    for(i;i<q;i++){
-      if(i > 1 && bl[i-1]->type == 'T' && bl[i]->type == 'T'){
-        j++;
-      }else{
-        k++;
-        j = 0;
-      }
-
-      if(k == 0 && bl[i]){
-        BN.B[j] = bl[i];
-        BN.blocked |= BN.B[j]->blocked;
-        BN.length = j+1;
-      }else if(k == 1 && bl[i]){
-        BNN.B[j] = bl[i];
-        BNN.blocked |= BNN.B[j]->blocked;
-        BNN.length = j+1;
-      }else if(k == 2 && bl[i]){
-        BNNN.B[j] = bl[i];
-        BNNN.blocked |= BNNN.B[j]->blocked;
-        BNNN.length = j+1;
-      }
-    }
-    k++;
-    i = k;
-
-
-    //Assign prev pointers
-    //p == number of block backward
-    for(p;p<=r;p++){
-      //printf("p%i/%i: %c%i:%i\n",p,r,bpl[p]->type,bpl[p]->module,bpl[p]->id);
-      if(p > 1 && bpl[p-1]->type == 'T' && bpl[p]->type == 'T'){
-        //printf("%c%i:%i==%c%i:%i\n",bpl[p-1]->type,bpl[p-1]->module,bpl[p-1]->id,bpl[p]->type,bpl[p]->module,bpl[p]->id);
-        j++;
-      }else{
-        l++;
-        j = 0;
-      }
-
-      if(l == 0 && bpl[p]){
-        BP.B[j] = bpl[p];
-        BP.blocked |= BP.B[j]->blocked;
-        BP.length++;
-      }else if(l == 1 && bpl[p]){
-        BPP.B[j] = bpl[p];
-        BPP.blocked |= BPP.B[j]->blocked;
-        BPP.length++;
-      }else if(l == 2 && bpl[p]){
-        BPPP.B[j] = bpl[p];
-        BPPP.blocked |= BPPP.B[j]->blocked;
-        BPPP.length++;
-      }
-    }
-    l++;
-    p = l;
-    /*Debug info*/
-      if(BA.B[0]->train != 0){
-        //printf("ID: %i\t%i:%i:%i\n",BA->train,BA->Adr.M,BA->Adr.B,BA->Adr.S);
-      }
-      
-    /**/
+  if(0){
     return;
 
     //------------------------------------------------------------------------------------------ roadmap: more efficient scanning of the block. skip the blocks that are not changed/blocked and there neighbours are also not blocked
@@ -556,440 +346,747 @@ void procces(Block * B,int debug){
         return;
       }
     }*/
-
-    /*Train ID following*/
-      if(!BA.blocked && BA.B[0]->train != 0){
-        //Reset
-        BA.B[0]->train = 0;
-      }else if(BA.blocked && BA.B[0]->train != 0 && train_link[BA.B[0]->train] && !train_link[BA.B[0]->train]->Block){
-         train_link[BA.B[0]->train]->Block = BA.B[0];
-      }
-      if(k > 0 && BA.blocked && !BP.blocked && BN.blocked && BN.B[0]->train && !BA.B[0]->train){
-        //REVERSED
-        BA.B[0]->dir ^= 0b100;
-        BN.B[0]->dir ^= 0b100;
-      }
-      else if(p > 0 && k > 0 && BA.blocked && BA.B[0]->train == 0 && BN.B[0]->train == 0 && BP.B[0]->train == 0){
-        //NEW TRAIN
-        // find a new follow id
-        // loggerf(ERROR, "FOLLOW ID INCREMENT, bTrain");
-        BA.B[0]->train = find_free_index((void **)trains,&trains_len);
-
-        //Create a message for WebSocket
-        WS_NewTrain(BA.B[0]->train,BA.B[0]->module,BA.B[0]->id);
-      }
-      else if(p > 0 && k > 0 && BN.blocked && BP.blocked && BN.B[0]->train == BP.B[0]->train){
-        //A train has split
-        WS_TrainSplit(BN.B[0]->train,BP.B[0]->module,BP.B[0]->id,BN.B[0]->module,BN.B[0]->id);
-      }
-      if(p > 0 && BP.blocked && BA.blocked && BA.B[0]->train == 0 && BP.B[0]->train != 0){
-        BA.B[0]->train = BP.B[0]->train;
-        if(train_link[BA.B[0]->train])
-          train_link[BA.B[0]->train]->Block = BA.B[0];
-      }
-      if(k > 0 && BN.B[0]->type == 'T' && BN.blocked){
-        if(BN.B[0]->train == 0 && BN.B[0]->blocked && BA.blocked && BA.B[0]->train != 0){
-          BN.B[0]->train = BA.B[0]->train;
-          if(train_link[BN.B[0]->train])
-            train_link[BN.B[0]->train]->Block = BN.B[0];
-        }else if(BN.length > 1){
-          for(int a = 1;a<BN.length;a++){
-            if(BN.B[a-1]->blocked && BN.B[a]->blocked && BN.B[a]->train == 0 && BN.B[a-1]->train != 0){
-              BN.B[a]->train = BN.B[a-1]->train;
-              if(train_link[BN.B[a]->train])
-                train_link[BN.B[a]->train]->Block = BN.B[a];
-              break;
-            }
-          }
-        }
-      }
     /**/
-    /**/
-    /*Check switch*/
-      //
-      int New_Switch = 0;
-      struct rail_link NAdr,NNAdr, bTraindr;
+    // /**/
+    // /*Check switch*/
+    //   //
+    //   int New_Switch = 0;
+    //   struct rail_link NAdr,NNAdr, bTraindr;
 
-      NAdr = Next_link(BA.B[BA.length - 1]);
-      if(k > 0){
-        // NNAdr = Next_link(BN.B[BN.length - 1]);
-      }
+      
+    //   if(k > 0){
+    //     // NNAdr = Next_link(BN.B[BN.length - 1]);
+    //   }
 
-      if((NNAdr.type == 's' || NNAdr.type == 'S' || NNAdr.type == 'm' || NNAdr.type == 'M') && BA.blocked){
-        //There is a switch after the next block
-        if(BA.B[0]->train != 0 && train_link[BA.B[0]->train] && train_link[BA.B[0]->train]->route.Destination){
-          //If train has a route
-          if(check_Switch_State(NNAdr)){
-            //Switch is free to use
-            New_Switch = 2;
-            printf("Free switch ahead (OnRoute %i:%i)\n",BA.B[0]->module,BA.B[0]->id);
-            if(!free_Route_Switch(BN.B[BN.length - 1],0,train_link[BA.B[0]->train])){
-              printf("FAILED to set switch according Route\n");
-              New_Switch = 0;
-            }
-          }
-        }else{
-          //No route
-          if(check_Switch_State(NNAdr)){
-            //Switch is free to use
-            New_Switch = 2;
-            printf("Free switch ahead %i:%i\n",BA.B[0]->module,BA.B[0]->id);
-            if(!BN.B[BN.length - 1]){
-              printf("Check_switch but no block R\n");
-            }
-            if(!check_Switch(Next_link(BN.B[BN.length - 1]),TRUE)){
-              //The switch is in the wrong state / position
-              printf("Check Switch\n");
-              if(!free_Switch(BN.B[BN.length - 1],0)){
-                New_Switch = 0;
-        }}}}
-      }else if((NAdr.type == 's' || NAdr.type == 'S' || NAdr.type == 'm' || NAdr.type == 'M') && BA.blocked){
-        //There is a switch after the current block
-        if(BA.B[0]->train != 0 && train_link[BA.B[0]->train] && train_link[BA.B[0]->train]->route.Destination){
-          //If train has a route
-          if(check_Switch_State(NAdr)){
-            //Switch is free to use
-            New_Switch = 1;
-            printf("Free switch ahead (OnRoute %i:%i)\n",BA.B[0]->module,BA.B[0]->id);
-            if(!free_Route_Switch(BA.B[BA.length - 1],0,train_link[BA.B[0]->train])){
-              New_Switch = 0;
-            }
-          }
-        }else{
-          //No route
-          if(check_Switch_State(NNAdr)){
-            New_Switch = 1;
-            //Switch is free to use
-            printf("Free switch ahead %i:%i\n",BA.B[0]->module,BA.B[0]->id);
-            if(!check_Switch(Next_link(BN.B[BN.length - 1]),TRUE)){
-              //The switch is in the wrong state / position
-              printf("Check Switch\n");
-              if(!free_Switch(BN.B[BN.length - 1],0)){
-                printf("FAILED to set switch according Route\tSTOPPING TRAIN\n");
-                New_Switch = 0;
-        }}}}
-      }
+    //   if((NNAdr.type == 's' || NNAdr.type == 'S' || NNAdr.type == 'm' || NNAdr.type == 'M') && BA.blocked){
+    //     //There is a switch after the next block
+    //     if(BA.B[0]->train != 0 && train_link[BA.B[0]->train] && train_link[BA.B[0]->train]->route.Destination){
+    //       //If train has a route
+    //       if(check_Switch_State(NNAdr)){
+    //         //Switch is free to use
+    //         New_Switch = 2;
+    //         printf("Free switch ahead (OnRoute %i:%i)\n",BA.B[0]->module,BA.B[0]->id);
+    //         if(!free_Route_Switch(BN.B[BN.length - 1],0,train_link[BA.B[0]->train])){
+    //           printf("FAILED to set switch according Route\n");
+    //           New_Switch = 0;
+    //         }
+    //       }
+    //     }else{
+    //       //No route
+    //       if(check_Switch_State(NNAdr)){
+    //         //Switch is free to use
+    //         New_Switch = 2;
+    //         printf("Free switch ahead %i:%i\n",BA.B[0]->module,BA.B[0]->id);
+    //         if(!BN.B[BN.length - 1]){
+    //           printf("Check_switch but no block R\n");
+    //         }
+    //         if(!check_Switch(Next_link(BN.B[BN.length - 1]),TRUE)){
+    //           //The switch is in the wrong state / position
+    //           printf("Check Switch\n");
+    //           if(!free_Switch(BN.B[BN.length - 1],0)){
+    //             New_Switch = 0;
+    //     }}}}
+    //   }else if((NAdr.type == 's' || NAdr.type == 'S' || NAdr.type == 'm' || NAdr.type == 'M') && BA.blocked){
+    //     //There is a switch after the current block
+    //     if(BA.B[0]->train != 0 && train_link[BA.B[0]->train] && train_link[BA.B[0]->train]->route.Destination){
+    //       //If train has a route
+    //       if(check_Switch_State(NAdr)){
+    //         //Switch is free to use
+    //         New_Switch = 1;
+    //         printf("Free switch ahead (OnRoute %i:%i)\n",BA.B[0]->module,BA.B[0]->id);
+    //         if(!free_Route_Switch(BA.B[BA.length - 1],0,train_link[BA.B[0]->train])){
+    //           New_Switch = 0;
+    //         }
+    //       }
+    //     }else{
+    //       //No route
+    //       if(check_Switch_State(NNAdr)){
+    //         New_Switch = 1;
+    //         //Switch is free to use
+    //         printf("Free switch ahead %i:%i\n",BA.B[0]->module,BA.B[0]->id);
+    //         if(!check_Switch(Next_link(BN.B[BN.length - 1]),TRUE)){
+    //           //The switch is in the wrong state / position
+    //           printf("Check Switch\n");
+    //           if(!free_Switch(BN.B[BN.length - 1],0)){
+    //             printf("FAILED to set switch according Route\tSTOPPING TRAIN\n");
+    //             New_Switch = 0;
+    //     }}}}
+    //   }
 
-      //Extend if switches are thrown
-      if(New_Switch > 0){
-        printf("Switch thrown");
-        if(k < 1){
-          printf("BN  NEEDED\t");
-          BN.B[0] = Next(BA.B[0],0,1+BN.length);
-          if(BN.B[0]){
-            BN.length++;
-            BN.blocked |= BN.B[0]->blocked;
-            if(BN.B[0]->type == 'T'){
-              BN.B[1] = Next(BA.B[0],0,1+BN.length);
-              if(BN.B[1]->type == 'T'){
-                BN.length++;
-                BN.blocked |= BN.B[1]->blocked;
-              }else{
-                BN.B[1] = NULL;
-              }
-            }
-            k++;
-          }
-        }
-        if(k < 2){
-          printf("BNN  NEEDED\t");
-          BNN.B[0] = Next(BA.B[0],0,1+BN.length+BNN.length);
-          if(BNN.B[0]){
-            BNN.length++;
-            BNN.blocked |= BNN.B[0]->blocked;
-            if(BNN.B[0]->type == 'T'){
-              BNN.B[1] = Next(BA.B[0],0,1+BN.length+BNN.length);
-              if(BNN.B[1]->type == 'T'){
-                BNN.length++;
-                BNN.blocked |= BNN.B[1]->blocked;
-              }else{
-                BNN.B[1] = NULL;
-              }
-            }
-            k++;
-          }
-        }
-        if(k < 3){
-          BNNN.B[0] = Next(BA.B[0],0,1+BN.length+BNN.length+BNNN.length);
-          if(BNNN.B[0]){
-            BNNN.length++;
-            BNNN.blocked |= BNNN.B[0]->blocked;
-            if(BNNN.B[0]->type == 'T'){
-              BNNN.B[1] = Next(BA.B[0],0,1+BN.length+BNN.length+BNNN.length);
-              if(BNNN.B[1]->type == 'T'){
-                BNNN.length++;
-                BNNN.blocked |= BNNN.B[1]->blocked;
-              }else{
-                BNNN.B[1] = NULL;
-              }
-            }
-            k++;
-          }
-        }
-      }
+    //   //Extend if switches are thrown
+    //   if(New_Switch > 0){
+    //     printf("Switch thrown");
+    //     if(k < 1){
+    //       printf("BN  NEEDED\t");
+    //       BN.B[0] = Next(BA.B[0],0,1+BN.length);
+    //       if(BN.B[0]){
+    //         BN.length++;
+    //         BN.blocked |= BN.B[0]->blocked;
+    //         if(BN.B[0]->type == 'T'){
+    //           BN.B[1] = Next(BA.B[0],0,1+BN.length);
+    //           if(BN.B[1]->type == 'T'){
+    //             BN.length++;
+    //             BN.blocked |= BN.B[1]->blocked;
+    //           }else{
+    //             BN.B[1] = NULL;
+    //           }
+    //         }
+    //         k++;
+    //       }
+    //     }
+    //     if(k < 2){
+    //       printf("BNN  NEEDED\t");
+    //       BNN.B[0] = Next(BA.B[0],0,1+BN.length+BNN.length);
+    //       if(BNN.B[0]){
+    //         BNN.length++;
+    //         BNN.blocked |= BNN.B[0]->blocked;
+    //         if(BNN.B[0]->type == 'T'){
+    //           BNN.B[1] = Next(BA.B[0],0,1+BN.length+BNN.length);
+    //           if(BNN.B[1]->type == 'T'){
+    //             BNN.length++;
+    //             BNN.blocked |= BNN.B[1]->blocked;
+    //           }else{
+    //             BNN.B[1] = NULL;
+    //           }
+    //         }
+    //         k++;
+    //       }
+    //     }
+    //     if(k < 3){
+    //       BNNN.B[0] = Next(BA.B[0],0,1+BN.length+BNN.length+BNNN.length);
+    //       if(BNNN.B[0]){
+    //         BNNN.length++;
+    //         BNNN.blocked |= BNNN.B[0]->blocked;
+    //         if(BNNN.B[0]->type == 'T'){
+    //           BNNN.B[1] = Next(BA.B[0],0,1+BN.length+BNN.length+BNNN.length);
+    //           if(BNNN.B[1]->type == 'T'){
+    //             BNNN.length++;
+    //             BNNN.blocked |= BNNN.B[1]->blocked;
+    //           }else{
+    //             BNNN.B[1] = NULL;
+    //           }
+    //         }
+    //         k++;
+    //       }
+    //     }
+    //   }
 
-      if(New_Switch == 1){
-        change_block_state(&BN,RESERVED_SWITCH);
-      }else if(New_Switch == 2){
-        change_block_state(&BNN,RESERVED_SWITCH);
-      }
+    //   if(New_Switch == 1){
+    //     change_block_state(&BN,RESERVED_SWITCH);
+    //   }else if(New_Switch == 2){
+    //     change_block_state(&BNN,RESERVED_SWITCH);
+    //   }
 
-      /*
-        if((NAdr.type == 's' || NAdr.type == 'S' || NAdr.type == 'm' || NAdr.type == 'M') && BA.blocked){
-          if(((NAdr.type == 's' || NAdr.type == 'S') && NAdr.Sw->Detection && NAdr.Sw->Detection->state != RESERVED) ||
-             ((NAdr.type == 'm' || NAdr.type == 'M') &&  NAdr.M->Detection &&  NAdr.M->Detection->state != RESERVED)){
-            if(!check_Switch(BN.B[BN.length - 1],0,TRUE)){
-              //The switch is not reserved and is in the wrong position
-              printf("Check Switch\n");
-              if(free_Switch2(BN.B[BN.length - 1],0)){
-                printf("Freed");
-                printf("BNN RESERVED\n");
-                change_block_state2(&BNN,RESERVED);
-              }
-            }
-            else{
-              //If switch is in correct position but is not reserved
-              change_block_state2(&BNN,RESERVED);
-            }
-          }
-        }
-      }*/
-    /**/
-    /**/
-    /*Reverse block after one or two zero-blocks*/
-      //If the next block is reversed, and not blocked
-      if(i > 0 && BA.blocked && BN.B[0] && BN.B[0]->type != 'T' && !BN.blocked && !dircmp(BA.B[0],BN.B[0])){
-        BN.B[0]->dir ^= 0b100;
-      }
+    //   /*
+    //     if((NAdr.type == 's' || NAdr.type == 'S' || NAdr.type == 'm' || NAdr.type == 'M') && BA.blocked){
+    //       if(((NAdr.type == 's' || NAdr.type == 'S') && NAdr.Sw->Detection && NAdr.Sw->Detection->state != RESERVED) ||
+    //          ((NAdr.type == 'm' || NAdr.type == 'M') &&  NAdr.M->Detection &&  NAdr.M->Detection->state != RESERVED)){
+    //         if(!check_Switch(BN.B[BN.length - 1],0,TRUE)){
+    //           //The switch is not reserved and is in the wrong position
+    //           printf("Check Switch\n");
+    //           if(free_Switch2(BN.B[BN.length - 1],0)){
+    //             printf("Freed");
+    //             printf("BNN RESERVED\n");
+    //             change_block_state2(&BNN,RESERVED);
+    //           }
+    //         }
+    //         else{
+    //           //If switch is in correct position but is not reserved
+    //           change_block_state2(&BNN,RESERVED);
+    //         }
+    //       }
+    //     }
+    //   }*/
+    // /**/
+    // /**/
+    // /*Reverse block after one or two zero-blocks*/
+    //   //If the next block is reversed, and not blocked
+    //   if(i > 0 && BA.blocked && BN.B[0] && BN.B[0]->type != 'T' && !BN.blocked && !dircmp(BA.B[0],BN.B[0])){
+    //     BN.B[0]->dir ^= 0b100;
+    //   }
 
-      //Reverse one block in advance
-      if(i > 1 && BA.blocked && BNN.B[0] && BNN.B[0]->type != 'T' && !dircmp(BA.B[0],BNN.B[0]) &&
-              (BN.B[0]->type == 'T' || !(dircmp(BA.B[0],BN.B[0]) == dircmp(BN.B[0],BNN.B[0])))){
+    //   //Reverse one block in advance
+    //   if(i > 1 && BA.blocked && BNN.B[0] && BNN.B[0]->type != 'T' && !dircmp(BA.B[0],BNN.B[0]) &&
+    //           (BN.B[0]->type == 'T' || !(dircmp(BA.B[0],BN.B[0]) == dircmp(BN.B[0],BNN.B[0])))){
 
-        printf("Reverse in advance 1\n");
-        if(BNN.B[0]->type == 'S'){ //Reverse whole platform if it is one
-          printf("Whole platform\n");
-          for(int a = 0;a<8;a++){
-            if(BNN.B[0]->station->blocks[a]){
-              if(BNN.B[0]->station->blocks[a]->blocked){
-                break;
-              }
-              BNN.B[0]->station->blocks[a]->dir ^= 0b100;
-            }
-          }
-        }else{
-          printf("Block %x\n",BNN.B[0]);
-          BNN.B[0]->dir ^= 0b100;
-        }
-      }
-    /**/
-    /**/
-    /*State coloring*/
-      //Block behind train (blocked) becomes RED
-      //Second block behind trin becomes AMBER
-      //After that GREEN
+    //     printf("Reverse in advance 1\n");
+    //     if(BNN.B[0]->type == 'S'){ //Reverse whole platform if it is one
+    //       printf("Whole platform\n");
+    //       for(int a = 0;a<8;a++){
+    //         if(BNN.B[0]->station->blocks[a]){
+    //           if(BNN.B[0]->station->blocks[a]->blocked){
+    //             break;
+    //           }
+    //           BNN.B[0]->station->blocks[a]->dir ^= 0b100;
+    //         }
+    //       }
+    //     }else{
+    //       printf("Block %x\n",BNN.B[0]);
+    //       BNN.B[0]->dir ^= 0b100;
+    //     }
+    //   }
+    // /**/
+    // /**/
+    // /*State coloring*/
+    //   //Block behind train (blocked) becomes RED
+    //   //Second block behind trin becomes AMBER
+    //   //After that GREEN
 
-      //Double 0-block counts as one block
+    //   //Double 0-block counts as one block
 
-      //If current block is blocked and previous block is free
-      if(BA.B[0]->module == 5 && (BA.B[0]->id == 2 || BA.B[0]->id == 3)){
-        int karamba = 0;
+    //   //If current block is blocked and previous block is free
+    //   if(BA.B[0]->module == 5 && (BA.B[0]->id == 2 || BA.B[0]->id == 3)){
+    //     int karamba = 0;
+    //   }
+    //   if(p > 0 && BA.blocked && !BP.blocked){
+    //     change_block_state(&BP, DANGER);
+    //     if(p > 2)
+    //       change_block_state(&BPPP, PROCEED);
+    //     if(p > 1)
+    //       change_block_state(&BPP, CAUTION);
+    //   }
+    //   else if(i > 0 && !BA.blocked && BN.blocked && BN.B[0]->type == 'T'){
+    //     change_block_state(&BA, DANGER);
+    //     if(p > 0)
+    //       change_block_state(&BP, CAUTION);
+    //     if(p > 1)
+    //       change_block_state(&BPP, PROCEED);
+    //   }
+    //   else if(p > 1 && k > 1 && !BA.blocked && !BN.blocked && !BP.blocked && !BNN.blocked && !BPP.blocked){
+    //     change_block_state(&BA, PROCEED);
+    //     if(p > 2 && !BPPP.blocked){
+    //       change_block_state(&BP, PROCEED);
+    //     }
+    //     if(k > 2 && !BNNN.blocked){
+    //       change_block_state(&BN,PROCEED);
+    //     }
+    //   }
+    // /**/
+    // /**/
+    // /*Signals*/
+    //   //If a signal is at Next end and BN exists
+    //   if(BA.B[0]->NextSignal  && k > 0){
+    //     //Wrong Switch
+    //     //if current block is in forward and there are blocked switches
+    //     // or if the block is in the wrong direction (reverse)
+    //     if(((BA.B[0]->dir == 0 || BA.B[0]->dir == 1 || BA.B[0]->dir == 2) && !check_Switch(Next_link(BA.B[0]),TRUE)) || (BA.B[0]->dir == 4 || BA.B[0]->dir == 5 || BA.B[0]->dir == 6)){
+    //       set_signal(BA.B[0]->NextSignal, DANGER);
+    //     }
+
+    //     if(!(BA.B[0]->dir == 4 || BA.B[0]->dir == 5 || BA.B[0]->dir == 6) && check_Switch(Next_link(BA.B[0]),TRUE) && i > 0){
+    //       //Next block is RED/Blocked
+    //       if(BN.blocked || BN.B[0]->state == DANGER){
+    //         set_signal(BA.B[0]->NextSignal, DANGER);
+    //       }else if(BN.B[0]->state == RESTRICTED){
+    //         set_signal(BA.B[0]->NextSignal, RESTRICTED); //Flashing RED
+    //       }else if(BN.B[0]->state == CAUTION){  //Next block AMBER
+    //         set_signal(BA.B[0]->NextSignal, CAUTION);
+    //       }else{ // //Next block AMBER  if(BN->state == GREEN)
+    //         set_signal(BA.B[0]->NextSignal, PROCEED);
+    //       }
+    //     }
+    //   }
+    //   else if(BA.B[0]->NextSignal  && k == 0){ //If the track stops due to switches, set it to RED / DANGER
+    //     set_signal(BA.B[0]->NextSignal, DANGER);
+    //   }
+
+    //   //If a signal is at Prev side and BP exists
+    //   if(BA.B[0]->PrevSignal  && p > 0){
+    //     //printf("Signal at %i:%i\n",BA.B[0]->module,BA.B[0]->id);
+    //     //printf("check_Switch: %i\n",check_Switch(BA.B[0],0,TRUE));
+    //     //printf("Signal at %i:%i:%i\t0x%x\n",BA->Adr.M,BA->Adr.B,BA->Adr.S,BA->signals);
+    //     //if current block is in reverse and there are blocked switches
+    //     // or if the block is in the wrong direction (forward)
+    //     if(((BA.B[0]->dir == 4 || BA.B[0]->dir == 5 || BA.B[0]->dir == 6) && !check_Switch(Next_link(BA.B[0]),TRUE)) || (BA.B[0]->dir == 0 || BA.B[0]->dir == 1 || BA.B[0]->dir == 2)){
+    //       set_signal(BA.B[0]->PrevSignal, DANGER);
+    //       //printf("%i:%i:%i\tRed signal R2\n",BA->Adr.M,BA->Adr.B,BA->Adr.S);
+    //     }
+
+    //     if(!(BA.B[0]->dir == 0 || BA.B[0]->dir == 1 || BA.B[0]->dir == 2) && check_Switch(Next_link(BA.B[0]),TRUE) && i > 0){
+    //       //Next block is RED/Blocked
+    //       if(BN.blocked || BN.B[0]->state == DANGER){
+    //         set_signal(BA.B[0]->PrevSignal, DANGER);
+    //       }else if(BN.B[0]->state == RESTRICTED){
+    //         set_signal(BA.B[0]->PrevSignal, RESTRICTED); //Flashing RED
+    //       }else if(BN.B[0]->state == CAUTION){  //Next block AMBER
+    //         set_signal(BA.B[0]->PrevSignal, CAUTION);
+    //       }else{ // //Next block AMBER  if(BN->state == GREEN)
+    //         set_signal(BA.B[0]->PrevSignal, PROCEED);
+    //       }
+    //     }
+    //   }
+    //   else if(BA.B[0]->PrevSignal  && p == 0){ //If the track stops due to switches, set it to RED / DANGER
+    //     set_signal(BA.B[0]->NextSignal, DANGER);
+    //   }
+    // /**/
+    // /**/
+    // /*TRAIN control*/
+    //   //Only if track is DCC controled and NOT DC!!
+    //   if(BA.blocked && train_link[BA.B[0]->train]){
+    //     if(k == 0){
+    //       train_link[BA.B[0]->train]->halt = 1;
+    //     }else if(k > 0 && train_link[BA.B[0]->train]->halt == 1){
+    //       train_link[BA.B[0]->train]->halt = 0;
+    //     }
+    //   }
+    //   if(_SYS->_STATE & STATE_TRACK_DIGITAL){
+
+    //   /*SPEED*/
+    //     //Check if current and next block are blocked, and have different trainIDs
+    //     if(BA.blocked && BN.B[0]->blocked && BA.B[0]->train != BN.B[0]->train){
+    //       if(train_link[BA.B[0]->train]){
+    //         //Kill train
+    //         printf("COLLISION PREVENTION\n\t");
+    //         loggerf(ERROR, "FIX train_stop");
+    //         //train_stop(train_link[BA.B[0]->train]);
+    //       }else{
+    //         //No train coupled
+    //         printf("COLLISION PREVENTION\tEM_STOP\n\t");
+    //         WS_EmergencyStop(); //WebSocket Emergency Stop
+    //       }
+    //     }
+    //     //Check if next block is a RED block
+    //     if(((BA.blocked && !BN.blocked && BN.B[0]->state == DANGER) || (k == 0 && BA.blocked))){
+    //       if(train_link[BA.B[0]->train]){
+    //         if(train_link[BA.B[0]->train]->timer != 1){
+    //           //Fire stop timer
+    //           printf("NEXT SIGNAL: RED\n\tSTOP TRAIN:");
+    //           loggerf(ERROR, "FIX train_signal");
+    //           //train_signal(BA.B[0],train_link[BA.B[0]->train], DANGER);
+    //         }
+    //       }else{
+    //         //No train coupled
+    //         printf("STOP TRAIN\tEM_STOP\n\t");
+    //         WS_EmergencyStop();
+    //       }
+    //     }
+    //     else if(k > 1 && BN.blocked && !BNN.blocked && BNN.B[0]->state == DANGER){
+    //       if(train_link[BN.B[0]->train]){
+    //         if(train_link[BN.B[0]->train]->timer != 1){
+    //           //Fire stop timer
+    //           printf("NEXT SIGNAL: RED\n\tSTOP TRAIN:");
+    //           loggerf(ERROR, "FIX train_signal");
+    //           //train_signal(BN.B[0],train_link[BN.B[0]->train], DANGER);
+    //         }
+    //       }else{
+    //         //No train coupled
+    //         printf("STOP TRAIN\tEM_STOP\n\t");
+    //         WS_EmergencyStop();
+    //       }
+    //     }
+    //     //Check if next block is a AMBER block
+    //     if(((BA.blocked && !BN.blocked && BN.B[0]->state == CAUTION) || (k == 1 && BA.blocked && !BN.blocked))){
+    //       printf("Next AMBER\n");
+    //       if(train_link[BA.B[0]->train]){
+    //         if(train_link[BA.B[0]->train]->timer != 1){
+    //           //Fire slowdown timer
+    //           printf("NEXT SIGNAL: AMBER\n\tSLOWDOWN TRAIN:\t");
+    //           loggerf(ERROR, "FIX train_signal");
+    //           //train_signal(BA.B[0],train_link[BA.B[0]->train], CAUTION);
+    //         }
+    //       }
+    //     }
+
+    //     //If the next 2 blocks are free, accelerate
+    //     //If the next block has a higher speed limit than the current
+    //     if(k > 0 && !BN.blocked && BA.B[0]->train != 0 && train_link[BA.B[0]->train] && train_link[BA.B[0]->train]->timer != 2 && train_link[BA.B[0]->train]->timer != 1){
+    //       if((BN.B[0]->state == PROCEED || BN.B[0]->state == RESERVED) && train_link[BA.B[0]->train]->cur_speed < BA.B[0]->max_speed && BN.B[0]->max_speed >= BA.B[0]->max_speed){
+    //         printf("Next block has a higher speed limit (%i > %i)",BN.B[0]->max_speed,BA.B[0]->max_speed);
+    //         loggerf(ERROR, "FIX train_speed");
+    //         //train_speed(BA.B[0],train_link[BA.B[0]->train],BA.B[0]->max_speed);
+    //       }
+    //     }
+
+    //     //If the next block has a lower speed limit than the current
+    //     if(BA.B[0]->train != 0 && train_link[BA.B[0]->train] && train_link[BA.B[0]->train]->timer != 2){
+    //       if(k > 0 && (BN.B[0]->state == PROCEED || BN.B[0]->state == RESERVED) && train_link[BA.B[0]->train]->cur_speed > BN.B[0]->max_speed && BN.B[0]->type != 'T'){
+    //         printf("Next block has a lower speed limit");
+    //         loggerf(ERROR, "FIX train_speed");
+    //         ///train_speed(BN.B[0],train_link[BA.B[0]->train],BN.B[0]->max_speed);
+    //       }else if(k > 1 && BN.B[0]->type == 'T' && BNN.B[0]->type != 'T' && (BNN.B[0]->state == PROCEED || BNN.B[0]->state == RESERVED) && train_link[BA.B[0]->train]->cur_speed > BNN.B[0]->max_speed){
+    //         printf("Block after Switches has a lower speed limit");
+    //         loggerf(ERROR, "FIX train_speed");
+    //         //train_speed(BNN.B[0],train_link[BA.B[0]->train],BNN.B[0]->max_speed);
+    //       }else if(train_link[BA.B[0]->train]->cur_speed != BN.B[0]->max_speed && BN.B[0]->type != 'T'){
+    //         printf("%i <= %i\n",train_link[BA.B[0]->train]->cur_speed,BN.B[0]->max_speed && BN.B[0]->type != 'T');
+    //       }
+    //     }
+    //   //
+    //   /*Station / Route*/
+    //     //If next block is the destination
+    //     if(BA.B[0]->train != 0 && train_link[BA.B[0]->train] && !block_cmp(0,train_link[BA.B[0]->train]->route.Destination)){
+    //       if(k > 0 && block_cmp(train_link[BA.B[0]->train]->route.Destination,BN.B[0])){
+    //         printf("Destination almost reached\n");
+    //         loggerf(ERROR, "FIX train_signal");
+    //         //train_signal(BA.B[0],train_link[BA.B[0]->train], CAUTION);
+    //       }else if(block_cmp(train_link[BA.B[0]->train]->route.Destination,BA.B[0])){
+    //         printf("Destination Reached\n");
+    //         loggerf(ERROR, "FIX train_signal");
+    //         //train_signal(BA.B[0],train_link[BA.B[0]->train], DANGER);
+    //         train_link[BA.B[0]->train]->route.Destination = 0;
+    //         train_link[BA.B[0]->train]->halt = TRUE;
+    //       }
+    //     }
+
+    //   }
+    // /**/
+    // /**/
+  }
+  printf("\n");
+}
+
+void Algor_search_Blocks(struct algor_blocks * AllBlocks, int debug){
+  Block * next = 0;
+  Block * prev = 0;
+  Block * B = AllBlocks->B;
+
+  int next_level = 1;
+  int prev_level = 1;
+
+  next = Next(B, NEXT | SWITCH_CARE,1);
+  prev = Next(B, PREV | SWITCH_CARE,1);
+
+  if(next && next->type == SPECIAL)
+    next_level++;
+
+  if(prev && prev->type == SPECIAL)
+    prev_level++;
+
+  //Select all surrounding blocks
+  if(next){
+    for(int i = 0; i < 3; i++){
+      struct procces_block * block_p;
+      if(i == 0){
+        block_p = AllBlocks->BN;
       }
-      if(p > 0 && BA.blocked && !BP.blocked){
-        change_block_state(&BP, DANGER);
-        if(p > 2)
-          change_block_state(&BPPP, PROCEED);
-        if(p > 1)
-          change_block_state(&BPP, CAUTION);
+      else if(i == 1){
+        block_p = AllBlocks->BNN;
       }
-      else if(i > 0 && !BA.blocked && BN.blocked && BN.B[0]->type == 'T'){
-        change_block_state(&BA, DANGER);
-        if(p > 0)
-          change_block_state(&BP, CAUTION);
-        if(p > 1)
-          change_block_state(&BPP, PROCEED);
+      else if(i == 2){
+        block_p = AllBlocks->BNNN;
       }
-      else if(p > 1 && k > 1 && !BA.blocked && !BN.blocked && !BP.blocked && !BNN.blocked && !BPP.blocked){
-        change_block_state(&BA, PROCEED);
-        if(p > 2 && !BPPP.blocked){
-          change_block_state(&BP, PROCEED);
+  
+      do{
+        if(i == 0 && block_p->blocks == 0){
+          block_p->B[block_p->blocks] = next;
         }
-        if(k > 2 && !BNNN.blocked){
-          change_block_state(&BN,PROCEED);
+        else if(next->type != SPECIAL){
+          block_p->B[block_p->blocks] = Next(next, NEXT | SWITCH_CARE, next_level++);
         }
-      }
-    /**/
-    /**/
-    /*Signals*/
-      //If a signal is at Next end and BN exists
-      if(BA.B[0]->NextSignal  && k > 0){
-        //Wrong Switch
-        //if current block is in forward and there are blocked switches
-        // or if the block is in the wrong direction (reverse)
-        if(((BA.B[0]->dir == 0 || BA.B[0]->dir == 1 || BA.B[0]->dir == 2) && !check_Switch(Next_link(BA.B[0]),TRUE)) || (BA.B[0]->dir == 4 || BA.B[0]->dir == 5 || BA.B[0]->dir == 6)){
-          set_signal(BA.B[0]->NextSignal, DANGER);
+        else{
+          block_p->B[block_p->blocks] = Next(B, NEXT | SWITCH_CARE, next_level++);
+        }
+  
+        if(!block_p->B[block_p->blocks]){
+          i = 4;
+          break;
         }
 
-        if(!(BA.B[0]->dir == 4 || BA.B[0]->dir == 5 || BA.B[0]->dir == 6) && check_Switch(Next_link(BA.B[0]),TRUE) && i > 0){
-          //Next block is RED/Blocked
-          if(BN.blocked || BN.B[0]->state == DANGER){
-            set_signal(BA.B[0]->NextSignal, DANGER);
-          }else if(BN.B[0]->state == RESTRICTED){
-            set_signal(BA.B[0]->NextSignal, RESTRICTED); //Flashing RED
-          }else if(BN.B[0]->state == CAUTION){  //Next block AMBER
-            set_signal(BA.B[0]->NextSignal, CAUTION);
-          }else{ // //Next block AMBER  if(BN->state == GREEN)
-            set_signal(BA.B[0]->NextSignal, PROCEED);
-          }
-        }
+        if(block_p->B[block_p->blocks]->blocked)
+          block_p->blocked = 1;
+  
+        block_p->length += block_p->B[block_p->blocks]->length;
+  
+        block_p->blocks += 1;
+  
       }
-      else if(BA.B[0]->NextSignal  && k == 0){ //If the track stops due to switches, set it to RED / DANGER
-        set_signal(BA.B[0]->NextSignal, DANGER);
+      while(block_p->length < Block_Minimum_Size && block_p->blocks < 5);
+    }
+  }
+  if(prev){
+    for(int i = 0; i < 3; i++){
+      struct procces_block * block_p;
+      if(i == 0){
+        block_p = AllBlocks->BP;
       }
-
-      //If a signal is at Prev side and BP exists
-      if(BA.B[0]->PrevSignal  && p > 0){
-        //printf("Signal at %i:%i\n",BA.B[0]->module,BA.B[0]->id);
-        //printf("check_Switch: %i\n",check_Switch(BA.B[0],0,TRUE));
-        //printf("Signal at %i:%i:%i\t0x%x\n",BA->Adr.M,BA->Adr.B,BA->Adr.S,BA->signals);
-        //if current block is in reverse and there are blocked switches
-        // or if the block is in the wrong direction (forward)
-        if(((BA.B[0]->dir == 4 || BA.B[0]->dir == 5 || BA.B[0]->dir == 6) && !check_Switch(Next_link(BA.B[0]),TRUE)) || (BA.B[0]->dir == 0 || BA.B[0]->dir == 1 || BA.B[0]->dir == 2)){
-          set_signal(BA.B[0]->PrevSignal, DANGER);
-          //printf("%i:%i:%i\tRed signal R2\n",BA->Adr.M,BA->Adr.B,BA->Adr.S);
-        }
-
-        if(!(BA.B[0]->dir == 0 || BA.B[0]->dir == 1 || BA.B[0]->dir == 2) && check_Switch(Next_link(BA.B[0]),TRUE) && i > 0){
-          //Next block is RED/Blocked
-          if(BN.blocked || BN.B[0]->state == DANGER){
-            set_signal(BA.B[0]->PrevSignal, DANGER);
-          }else if(BN.B[0]->state == RESTRICTED){
-            set_signal(BA.B[0]->PrevSignal, RESTRICTED); //Flashing RED
-          }else if(BN.B[0]->state == CAUTION){  //Next block AMBER
-            set_signal(BA.B[0]->PrevSignal, CAUTION);
-          }else{ // //Next block AMBER  if(BN->state == GREEN)
-            set_signal(BA.B[0]->PrevSignal, PROCEED);
-          }
-        }
+      else if(i == 1){
+        block_p = AllBlocks->BPP;
       }
-      else if(BA.B[0]->PrevSignal  && p == 0){ //If the track stops due to switches, set it to RED / DANGER
-        set_signal(BA.B[0]->NextSignal, DANGER);
+      else if(i == 2){
+        block_p = AllBlocks->BPPP;
       }
-    /**/
-    /**/
-    /*TRAIN control*/
-      //Only if track is DCC controled and NOT DC!!
-      if(BA.blocked && train_link[BA.B[0]->train]){
-        if(k == 0){
-          train_link[BA.B[0]->train]->halt = 1;
-        }else if(k > 0 && train_link[BA.B[0]->train]->halt == 1){
-          train_link[BA.B[0]->train]->halt = 0;
+  
+      do{
+        if(i == 0 && block_p->blocks == 0){
+          block_p->B[block_p->blocks] = prev;
         }
-      }
-      if(_SYS->_STATE & STATE_TRACK_DIGITAL){
-
-      /*SPEED*/
-        //Check if current and next block are blocked, and have different trainIDs
-        if(BA.blocked && BN.B[0]->blocked && BA.B[0]->train != BN.B[0]->train){
-          if(train_link[BA.B[0]->train]){
-            //Kill train
-            printf("COLLISION PREVENTION\n\t");
-            loggerf(ERROR, "FIX train_stop");
-            //train_stop(train_link[BA.B[0]->train]);
-          }else{
-            //No train coupled
-            printf("COLLISION PREVENTION\tEM_STOP\n\t");
-            WS_EmergencyStop(); //WebSocket Emergency Stop
-          }
+        else if(prev->type != SPECIAL){
+          block_p->B[block_p->blocks] = Next(prev, PREV | SWITCH_CARE, prev_level++);
         }
-        //Check if next block is a RED block
-        if(((BA.blocked && !BN.blocked && BN.B[0]->state == DANGER) || (k == 0 && BA.blocked))){
-          if(train_link[BA.B[0]->train]){
-            if(train_link[BA.B[0]->train]->timer != 1){
-              //Fire stop timer
-              printf("NEXT SIGNAL: RED\n\tSTOP TRAIN:");
-              loggerf(ERROR, "FIX train_signal");
-              //train_signal(BA.B[0],train_link[BA.B[0]->train], DANGER);
-            }
-          }else{
-            //No train coupled
-            printf("STOP TRAIN\tEM_STOP\n\t");
-            WS_EmergencyStop();
-          }
+        else{
+          block_p->B[block_p->blocks] = Next(B, PREV | SWITCH_CARE, prev_level++);
         }
-        else if(k > 1 && BN.blocked && !BNN.blocked && BNN.B[0]->state == DANGER){
-          if(train_link[BN.B[0]->train]){
-            if(train_link[BN.B[0]->train]->timer != 1){
-              //Fire stop timer
-              printf("NEXT SIGNAL: RED\n\tSTOP TRAIN:");
-              loggerf(ERROR, "FIX train_signal");
-              //train_signal(BN.B[0],train_link[BN.B[0]->train], DANGER);
-            }
-          }else{
-            //No train coupled
-            printf("STOP TRAIN\tEM_STOP\n\t");
-            WS_EmergencyStop();
-          }
-        }
-        //Check if next block is a AMBER block
-        if(((BA.blocked && !BN.blocked && BN.B[0]->state == CAUTION) || (k == 1 && BA.blocked && !BN.blocked))){
-          printf("Next AMBER\n");
-          if(train_link[BA.B[0]->train]){
-            if(train_link[BA.B[0]->train]->timer != 1){
-              //Fire slowdown timer
-              printf("NEXT SIGNAL: AMBER\n\tSLOWDOWN TRAIN:\t");
-              loggerf(ERROR, "FIX train_signal");
-              //train_signal(BA.B[0],train_link[BA.B[0]->train], CAUTION);
-            }
-          }
+  
+        if(!block_p->B[block_p->blocks]){
+          i = 4;
+          break;
         }
 
-        //If the next 2 blocks are free, accelerate
-        //If the next block has a higher speed limit than the current
-        if(k > 0 && !BN.blocked && BA.B[0]->train != 0 && train_link[BA.B[0]->train] && train_link[BA.B[0]->train]->timer != 2 && train_link[BA.B[0]->train]->timer != 1){
-          if((BN.B[0]->state == PROCEED || BN.B[0]->state == RESERVED) && train_link[BA.B[0]->train]->cur_speed < BA.B[0]->max_speed && BN.B[0]->max_speed >= BA.B[0]->max_speed){
-            printf("Next block has a higher speed limit (%i > %i)",BN.B[0]->max_speed,BA.B[0]->max_speed);
-            loggerf(ERROR, "FIX train_speed");
-            //train_speed(BA.B[0],train_link[BA.B[0]->train],BA.B[0]->max_speed);
-          }
-        }
-
-        //If the next block has a lower speed limit than the current
-        if(BA.B[0]->train != 0 && train_link[BA.B[0]->train] && train_link[BA.B[0]->train]->timer != 2){
-          if(k > 0 && (BN.B[0]->state == PROCEED || BN.B[0]->state == RESERVED) && train_link[BA.B[0]->train]->cur_speed > BN.B[0]->max_speed && BN.B[0]->type != 'T'){
-            printf("Next block has a lower speed limit");
-            loggerf(ERROR, "FIX train_speed");
-            ///train_speed(BN.B[0],train_link[BA.B[0]->train],BN.B[0]->max_speed);
-          }else if(k > 1 && BN.B[0]->type == 'T' && BNN.B[0]->type != 'T' && (BNN.B[0]->state == PROCEED || BNN.B[0]->state == RESERVED) && train_link[BA.B[0]->train]->cur_speed > BNN.B[0]->max_speed){
-            printf("Block after Switches has a lower speed limit");
-            loggerf(ERROR, "FIX train_speed");
-            //train_speed(BNN.B[0],train_link[BA.B[0]->train],BNN.B[0]->max_speed);
-          }else if(train_link[BA.B[0]->train]->cur_speed != BN.B[0]->max_speed && BN.B[0]->type != 'T'){
-            printf("%i <= %i\n",train_link[BA.B[0]->train]->cur_speed,BN.B[0]->max_speed && BN.B[0]->type != 'T');
-          }
-        }
-      //
-      /*Station / Route*/
-        //If next block is the destination
-        if(BA.B[0]->train != 0 && train_link[BA.B[0]->train] && !block_cmp(0,train_link[BA.B[0]->train]->route.Destination)){
-          if(k > 0 && block_cmp(train_link[BA.B[0]->train]->route.Destination,BN.B[0])){
-            printf("Destination almost reached\n");
-            loggerf(ERROR, "FIX train_signal");
-            //train_signal(BA.B[0],train_link[BA.B[0]->train], CAUTION);
-          }else if(block_cmp(train_link[BA.B[0]->train]->route.Destination,BA.B[0])){
-            printf("Destination Reached\n");
-            loggerf(ERROR, "FIX train_signal");
-            //train_signal(BA.B[0],train_link[BA.B[0]->train], DANGER);
-            train_link[BA.B[0]->train]->route.Destination = 0;
-            train_link[BA.B[0]->train]->halt = TRUE;
-          }
-        }
-
+        if(block_p->B[block_p->blocks]->blocked)
+          block_p->blocked = 1;
+  
+        block_p->length += block_p->B[block_p->blocks]->length;
+  
+        block_p->blocks += 1;
+  
       }
-    /**/
-    /**/
+      while(block_p->length < Block_Minimum_Size && block_p->blocks < 5);
+    }
   }
 }
+
+void Algor_train_following(struct algor_blocks AllBlocks, int debug){
+  //Unpack AllBlocks
+  Algor_Block BPPP = *AllBlocks.BPPP;
+  Algor_Block BPP  = *AllBlocks.BPP;
+  Algor_Block BP   = *AllBlocks.BP;
+  Block * B        =  AllBlocks.B;
+  Algor_Block BN   = *AllBlocks.BN;
+  Algor_Block BNN  = *AllBlocks.BNN;
+  Algor_Block BNNN = *AllBlocks.BNNN;
+
+  if(!B->blocked && B->train != 0){
+    //Reset
+    B->train = 0;
+    if(debug) printf("RESET");
+  }
+  // else if(B->blocked && B->train != 0 && train_link[B->train] && !train_link[B->train]->Block){
+  //   // Set block of train
+  //   train_link[B->train]->Block = B;
+  //   if(debug) printf("SET_BLOCK");
+  // }
+
+  if(BP.blocks > 0 && BN.blocks > 0 && B->blocked && !BP.blocked && BN.blocked && BN.B[0]->train && !B->train){
+    //REVERSED
+    B->dir ^= 0b100;
+    printf("REVERSE %i:%i", B->module, B->id);
+  }
+  else if(BP.blocks > 0 && BN.blocks > 0 && B->blocked && B->train == 0 && BN.B[0]->train == 0 && BP.B[0]->train == 0){
+    //NEW TRAIN
+    // find a new follow id
+    // loggerf(ERROR, "FOLLOW ID INCREMENT, bTrain");
+    B->train = find_free_index(train_link, train_link_len);
+
+    //Create a message for WebSocket
+    WS_NewTrain(B->train, B->module, B->id);
+    if(debug) printf("NEW_TRAIN at %i\t", B->train);
+  }
+  else if(BN.blocks > 0 && BP.blocks > 0 && BN.blocked && BP.blocked && !B->blocked && BN.B[0]->train == BP.B[0]->train){
+    //A train has split
+    WS_TrainSplit(BN.B[0]->train, BP.B[0]->module,BP.B[0]->id,BN.B[0]->module,BN.B[0]->id);
+    if(debug) printf("SPLIT_TRAIN");
+  }
+
+  if(BP.blocks > 0 && BP.blocked && B->blocked && B->train == 0 && BP.B[0]->train != 0){
+    // Copy train id from previous block
+    B->train = BP.B[0]->train;
+    // if(train_link[B->train])
+    //   train_link[B->train]->Block = B;
+    if(debug) printf("COPY_TRAIN");
+  }
+
+  if(BN.blocks > 0 && BN.B[0]->type == 'T' && BN.blocked){
+    if(BN.B[0]->train == 0 && BN.B[0]->blocked && B->blocked && B->train != 0){
+      BN.B[0]->train = B->train;
+      if(train_link[BN.B[0]->train])
+        train_link[BN.B[0]->train]->Block = BN.B[0];
+    }else if(BN.blocks > 1){
+      for(int a = 1;a<BN.blocks;a++){
+        if(BN.B[a-1]->blocked && BN.B[a]->blocked && BN.B[a]->train == 0 && BN.B[a-1]->train != 0){
+          BN.B[a]->train = BN.B[a-1]->train;
+          if(train_link[BN.B[a]->train])
+            train_link[BN.B[a]->train]->Block = BN.B[a];
+          break;
+        }
+      }
+    }
+  }
+}
+
+void Algor_rail_state(struct algor_blocks AllBlocks, int debug){
+  //Unpack AllBlocks
+  Algor_Block BPPP = *AllBlocks.BPPP;
+  Algor_Block BPP  = *AllBlocks.BPP;
+  Algor_Block BP   = *AllBlocks.BP;
+  Block * B        =  AllBlocks.B;
+  Algor_Block BN   = *AllBlocks.BN;
+  Algor_Block BNN  = *AllBlocks.BNN;
+  Algor_Block BNNN = *AllBlocks.BNNN;
+
+  if(BN.blocks > 0 && BN.blocked && !B->blocked){
+    B->state = DANGER;
+    Algor_apply_rail_state(BP, CAUTION);
+    Algor_apply_rail_state(BPP, PROCEED);
+  }
+  else if(B->blocked && !BP.blocked && BP.blocks > 0){
+    Algor_apply_rail_state(BP, DANGER);
+    Algor_apply_rail_state(BPP, CAUTION);
+    Algor_apply_rail_state(BPPP, PROCEED);
+  }
+  else if(!B->blocked && BN.blocks == 0){
+    B->state = CAUTION;
+    printf(" End of track %i:%i ",B->module, B->id);
+  }
+}
+
+void Algor_apply_rail_state(struct procces_block b, enum Rail_states state){
+  for(int i = 0; i < b.blocks; i++){
+    b.B[i]->state = state;
+    b.B[i]->changed = TRUE;
+  }
+}
+
+void Algor_signal_state(struct algor_blocks AllBlocks, int debug){
+  //Unpack AllBlocks
+  Algor_Block BPPP = *AllBlocks.BPPP;
+  Algor_Block BPP  = *AllBlocks.BPP;
+  Algor_Block BP   = *AllBlocks.BP;
+  Block * B        =  AllBlocks.B;
+  Algor_Block BN   = *AllBlocks.BN;
+  Algor_Block BNN  = *AllBlocks.BNN;
+  Algor_Block BNNN = *AllBlocks.BNNN;
+
+  Block * CB;
+  Block * NB;
+  Block * PB;
+
+  if(B->NextSignal){
+    printf("Next Signal ");
+    if(BN.blocks > 0){
+      NB = BN.B[0];
+      set_signal(B->NextSignal, NB->state);
+    }
+    else
+      set_signal(B->NextSignal, DANGER); //No track left
+  }
+  else if(B->PrevSignal){
+    if(BP.blocks > 0){
+      PB = BP.B[0];
+      set_signal(B->PrevSignal, PB->state);
+    }
+    else
+      set_signal(B->PrevSignal, PB->state);
+  }
+
+  for(int group = 0; group < 6; group++){
+    Algor_Block * list = 0;
+    Block * nextlist = 0;
+    Block * prevlist = 0;
+    if(group == 0){
+      list = &BPPP;
+      nextlist = BPP.B[BPP.blocks - 1];
+    }
+    else if(group == 1){
+      prevlist = BPPP.B[0];
+      list = &BPP;
+      nextlist = BP.B[BP.blocks - 1];
+    }
+    else if(group == 2){
+      prevlist = BPP.B[0];
+      list = &BP;
+      nextlist = B;
+    }
+    else if(group == 3){
+      prevlist = B;
+      list = &BN;
+      nextlist = BNN.B[0];
+    }
+    else if(group == 4){
+      prevlist = BN.B[BN.blocks - 1];
+      list = &BNN;
+      nextlist = BNNN.B[0];
+    }
+    else if(group == 5){
+      prevlist = BNN.B[BNN.blocks - 1];
+      list = &BNNN;
+    }
+    else
+      break;
+
+    if(list->blocks > 0){
+      for(int i = 0; i < list->blocks; i++){
+        CB = list->B[i];
+        //Skip if block has no signals at all.
+        if(!CB->NextSignal && !CB->PrevSignal)
+          continue;
+
+        if(i == 0){
+          if(group != 0)
+            PB = prevlist;
+        }
+        else
+          PB = list->B[i-1];
+
+        if(i == list->blocks - 1){
+          if(group != 5)
+            NB = nextlist;
+        }
+        else
+          NB = list->B[i+1];
+
+        if(CB->NextSignal){
+          if(NB)
+            set_signal(CB->NextSignal, NB->state);
+          else
+            set_signal(CB->NextSignal, DANGER);
+        }
+        if(CB->PrevSignal){
+          if(PB)
+            set_signal(CB->PrevSignal, PB->state);
+          else
+            set_signal(CB->PrevSignal, DANGER);
+        }
+      }
+    }
+  }
+
+  // if(BN.blocks > 0){
+  //   for(int i = 0; i < BN.blocks; i++){
+  //     CB = BN.B[i]
+  //     if(BN.B[i]->NextSignal){
+  //       if(i == BN.blocks - 1 && BNN.blocks > 0 && (BN.B[i]->state != BNN.B[0]->state || BNN.B[0]->state != BN.B[i]->NextSignal->state)){
+  //         set_signal(BN.B[i]->NextSignal, BNN.B[0]->state);
+  //       }
+  //       else(i < BN.blocks - 1 && (BN.B[i]->state != BN.B[i+1]->state || BN.B[i+1]->state != BN.B[i]->NextSignal->state)){
+  //         set_signal(BN.B[i]->NextSignal, BN.B[i+1]->state);
+  //       }
+  //     }
+  //   }
+  //   if(BN.B[0]->NextSignal){
+  //     if(BNN.blocks > 0){
+  //       if(BNN.B[0]->state == DANGER && BN.B[0]->state != DANGER)
+  //         printf("Signal Next red %i:%i ",BN.B[0]->module, BN.B[0]->id);
+  //     }
+  //     printf("Next block Next signal ");
+  //   }
+  //   else if(BN.B[0]->PrevSignal){
+  //     if(B->state == DANGER && BN.B[0]->state != DANGER){
+  //       printf("Signal Prev red %i:%i ",BN.B[0]->module, BN.B[0]->id);
+  //     }
+  //     printf("Next block Prev signal ");
+  //   }
+  // }
+
+  // if(BP.blocks > 0){
+  //   for(int i = 0; i < BP.blocks; i++){
+  //     if(BP.B[i]->NextSignal){
+  //       if(i == 0 && (BP.B[i]->state != B->state || B->state != BP.B[i]->NextSignal->state))
+  //         set_signal(BP.B[i]->NextSignal, B->state);
+  //       else if(i > 0 && (BP.B[i]->state != BP.B[i-1]->state || BP.B[i-1]->state != BP.B[i]->NextSignal->state))
+  //         set_signal(BP.B[i]->NextSignal, BP.B[i-1]->state);
+  //     }
+  //     else if(BP.B[i]->PrevSignal){
+  //       if(i == BP.blocks - 1 && BPP.blocks > 0 && (BPP.B[0]->state != BP.B[i]->state || BPP.B[i]->state != BP.B[i]->PrevSignal->state))
+  //         set_signal(BP.B[i]->PrevSignal, BPP.B[0]->state);
+  //       else if(i < BP.blocks - 1 && (BP.B[i]->state != BP.B[i-1]->state || BP.B[i-1]->state != BP.B[i]->PrevSignal->state))
+  //         set_signal(BP.B[i]->PrevSignal, BP.B[i-1]->state);
+  //     }
+  //   }
+  // }
+  
+
+}
+
 
 void procces_accessoire(){
   for(int i = 0;i<unit_len;i++){

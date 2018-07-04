@@ -56,6 +56,7 @@ void alloc_trains(){
   trains_comp_len = 10;
   train_link = _calloc(10,Trains *);
   train_link_len = 10;
+  train_link[0] = (Trains *)1;
 }
 
 void free_trains(){
@@ -152,7 +153,7 @@ int create_train(char * name, int nr_stock, struct train_comp_ws * comps){
   Z->name = _calloc(strlen(name)+2, char);
   strcpy(Z->name,name);
 
-  int index = find_free_index((void **)trains,&trains_len);
+  int index = find_free_index(trains, trains_len);
 
   trains[index] = Z;
 
@@ -187,7 +188,7 @@ int create_engine(char * name,int DCC,char * img, char * icon, int max, char typ
   Z->type = type;
   _Bool dir = FALSE;
 
-  int index = find_free_index((void **)engines,&engines_len);
+  int index = find_free_index(engines, engines_len);
 
   engines[index] = Z;
 
@@ -211,7 +212,7 @@ int create_car(char * name,int nr,char * img, char * icon, char type, int length
   Z->type = type;
   _Bool dir = FALSE;
 
-  int index = find_free_index((void **)cars,&cars_len);
+  int index = find_free_index(cars, cars_len);
 
   cars[index] = Z;
 

@@ -131,9 +131,9 @@
   Block * Next_Special_Block(Block * B, int flags, int level);
   Block * Next(Block * B, int flags, int level);
 
-  int Next_check_Switch(void * p, struct rail_link link);
+  int Next_check_Switch(void * p, struct rail_link link, int flags);
 
-  struct rail_link Next_link(Block * B);
+  struct rail_link Next_link(Block * B, int flags);
   struct rail_link Prev_link(Block * B);
 
 #endif

@@ -47,7 +47,9 @@
 
   void sigint_func(int sig);
 
-  int find_free_index(void ** list, int * length);
+  #define find_free_index(list, length) _find_free_index((void ***)&list, &length)
+
+  int _find_free_index(void *** list, int * length);
 
   extern struct systemState * _SYS; 
 

@@ -5,20 +5,35 @@
 
   #include "rail.h"
 
-  struct procces_block {
+  typedef struct procces_block {
     _Bool blocked;
     char blocks;
     int length;
     Block * B[5];
-  };
+  } Algor_Block;
 
-  void change_block_state(struct procces_block * A, enum Rail_states state);
+  typedef struct algor_blocks {
+    struct procces_block * BPPP;
+    struct procces_block * BPP;
+    struct procces_block * BP;
+    Block * B;
+    struct procces_block * BN;
+    struct procces_block * BNN;
+    struct procces_block * BNNN;
+  } Algor_Blocks;
+
+  void change_block_state(Algor_Block * A, enum Rail_states state);
 
   void scan_All();
 
   void * scan_All_continiously();
 
   void procces(Block * B,int debug);
+  void Algor_search_Blocks(struct algor_blocks * AllBlocks, int debug);
+  void Algor_train_following(struct algor_blocks AllBlocks, int debug);
+  void Algor_rail_state(struct algor_blocks AllBlocks, int debug);
+  void Algor_apply_rail_state(struct procces_block blocks, enum Rail_states state);
+  void Algor_signal_state(struct algor_blocks AllBlocks, int debug);
 
   void procces_accessoire();
 

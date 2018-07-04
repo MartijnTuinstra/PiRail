@@ -115,15 +115,13 @@ int websocket_decode(char data[1024], struct web_client_t * client){
   else if(data[0] & 0x20){ //Track stuff
     if(data[0] == WSopc_SetSwitch){ //Toggle switch
       if(Units[data[1]] && Units[data[1]]->Sw[data[2]]){ //Check if switch exists
-        printf("throw switch %i:%i to state: \t",data[1],data[2],data[3]);
+        printf("throw switch %i:%i to state: \t",data[1],data[2]);
         printf("%i->%i",Units[data[1]]->Sw[data[2]]->state, !Units[data[1]]->Sw[data[2]]->state);
         set_switch(Units[data[1]]->Sw[data[2]],data[3]);
       }
     }
     else if(data[0] == WSopc_SetMultiSwitch){ // Set mulitple switches at once
       printf("Throw multiple switches\n");
-      #warning (ERROR, "TODO implement multiple switches");
-      loggerf(ERROR, "set_multiple_switches");
       set_multiple_switches(data[1],&data[2]);
     }
     else if(data[0] == WSopc_SetSwitchReserved){ //Set switch reserved
@@ -247,9 +245,9 @@ int ws_send(int fd, char data[], int length, int flag){
 
   pthread_mutex_lock(&m_websocket_send);
 
-  printf("WS send (%i)\t",fd);
-  for(int zi = 0;zi<(length);zi++){printf("%02X ",data[zi]);};
-  printf("\n");
+  // printf("WS send (%i)\t",fd);
+  // for(int zi = 0;zi<(length);zi++){printf("%02X ",data[zi]);};
+  // printf("\n");
 
   write(fd, outbuf, length);
 
@@ -259,15 +257,19 @@ int ws_send(int fd, char data[], int length, int flag){
 void ws_send_all(char data[],int length,int flag){
   char outbuf[4096];
 
+  if(!(_SYS->_STATE & STATE_WebSocket_FLAG)){
+    return;
+  }
+
   websocket_create_msg(data, length, outbuf, &length);
 
   pthread_mutex_lock(&m_websocket_send);
   
   for(int i = 0; i<MAX_WEB_CLIENTS; i++){
     if(websocket_clients[i].state == 1 && (websocket_clients[i].type & flag) != 0){
-      printf("WS send (%i)\t",i);
-      for(int zi = 0; zi<(length); zi++){ printf("%02X ",data[zi]); };
-      printf("\n");
+      // printf("WS send (%i)\t",i);
+      // for(int zi = 0; zi<(length); zi++){ printf("%02X ",data[zi]); };
+      // printf("\n");
 
       if(write(websocket_clients[i].fd, outbuf, length) == -1){
         if(errno == EPIPE){

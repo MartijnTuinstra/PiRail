@@ -54,22 +54,22 @@ void sigint_func(int sig){
   }
 }
 
-int find_free_index(void ** list, int * length){
-  if(!list){
+int _find_free_index(void *** list, int * length){
+  if(!(*list)){
     logger("LIST DOESNT EXIST",CRITICAL);
     return -1;
   }
   for(int i = 0;i<*length;i++){
-    if(!list[i]){
+    if(!(*list)[i]){
       return i;
     }
   }
 
-  list = _realloc(list,*length+2, void *);
+  *list = _realloc(*list,*length+2, void *);
   for(int i = *length; i < *length+2; i++){
-    list[i] = 0;
+    (*list)[i] = 0;
   }
   *length += 2;
   logger("EXPANDING LIST",INFO);
-  return find_free_index(list, length);
+  return _find_free_index(list, length);
 }

@@ -55,7 +55,7 @@ int websocket_client_check(struct web_client_t * client){
       protocol = 0xEF;
       strcpy(_protocol, "239");
     }
-    printf("Protocol: %s => %d\n", _protocol, protocol);
+    // printf("Protocol: %s => %d\n", _protocol, protocol);
 
     //Create response Security key by hashing it with SHA1 + base64 encryption
     char hash[SHA_DIGEST_LENGTH];
@@ -71,10 +71,10 @@ int websocket_client_check(struct web_client_t * client){
     strcat(response, _protocol);
 
     strcat(response,"\r\n\r\n");
-    printf("Sending Response\n\n%s\n\n\n",response);
+    // printf("Sending Response\n\n%s\n\n\n",response);
     write(client->fd, response, strlen(response));
 
-    printf("Done\n");
+    // printf("Done\n");
     client->type = protocol;
 
     _free(buf);
@@ -87,14 +87,14 @@ int websocket_client_check(struct web_client_t * client){
   }
   else{
     printf("It's not a HTML5-websocket\n");
-    printf(strstr(buf,Connection));
-    printf("\n");
-    printf(strstr(buf,Connection2));
-    printf("\n");
-    printf(strstr(buf,UpgradeType));
-    printf("\n");
-    printf(strstr(buf,Key));
-    printf("\n");
+    // printf(strstr(buf,Connection));
+    // printf("\n");
+    // printf(strstr(buf,Connection2));
+    // printf("\n");
+    // printf(strstr(buf,UpgradeType));
+    // printf("\n");
+    // printf(strstr(buf,Key));
+    // printf("\n");
 
     _free(buf);
     _free(key);
@@ -204,6 +204,7 @@ void * websocket_clear_clients(){
         loggerf(INFO, "Stopping websocket client thread");
         pthread_join(websocket_clients[i].thread, NULL);
         websocket_clients[i].fd = 0;
+        websocket_clients[i].state = 0;
       }
     }
 

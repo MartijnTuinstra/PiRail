@@ -8,7 +8,7 @@ void create_signal(Block * B, _Bool side, char length, char * addresses, char * 
   Signal * Z = _calloc(1, Signal);
 
   Z->B = B;
-  if(side)
+  if(side == NEXT)
     B->NextSignal = Z;
   else
     B->PrevSignal = Z;
@@ -21,7 +21,7 @@ void create_signal(Block * B, _Bool side, char length, char * addresses, char * 
     Z->flash[i] = flash[i];
   }
 
-  Z->id = find_free_index((void **)Units[B->module],&Units[B->module]->signal_len);
+  Z->id = find_free_index(Units[B->module], Units[B->module]->signal_len);
   Z->module = B->module;
   Units[B->module]->Sig[Z->id] = Z;
 }
@@ -40,5 +40,19 @@ void signal_create_states(char io, enum Rail_states state, char * list, ...){
 }
 
 void set_signal(Signal * Si, enum Rail_states state){
-  loggerf(ERROR, "IMPLEMENT set_signal");
+  if(Si->state != state){
+    printf("Sig%i:%i ", Si->module, Si->id);
+    if(state == BLOCKED || state == DANGER)
+      printf("DANGER ");
+    else if(state == RESTRICTED)
+      printf("RESTRICTED ");
+    else if(state == CAUTION)
+      printf("CAUTION ");
+    else if(state == PROCEED)
+      printf("PROCEED ");
+    else
+      printf("STATE %i  ", state);
+    Si->state = state;
+    loggerf(WARNING, "IMPLEMENT set_signal");
+  }
 }

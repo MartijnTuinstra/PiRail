@@ -166,15 +166,19 @@ void clear_Modules(){
       //clear Signals
       for(int j = 0;j<=Units[i]->signal_len;j++){
         printf("- Signal %i\n",j);
-        free(Units[i]->Sig[j]);
+        _free(Units[i]->Sig[j]);
         Units[i]->Sig[j] = NULL;
       }
+      _free(Units[i]->Sig);
       //clear Stations
       for(int j = 0;j<=Units[i]->station_len;j++){
-        printf("- Station %i\n",j);
-        free(Units[i]->St[j]);
-        Units[i]->St[j] = NULL;
+        if(Units[i]->Sw[j]){
+          printf("- Station %i\n",j);
+          _free(Units[i]->St[j]);
+          Units[i]->St[j] = NULL;
+        }
       }
+      _free(Units[i]->St);
 
       printf("- Unit %i\n",i);
       free(Units[i]);

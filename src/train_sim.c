@@ -13,8 +13,8 @@ pthread_mutex_t mutex_lockA;
 
 
 void *TRAIN_SIMA(){
-  Block *B = Units[20]->B[1];
-  Block *N = Units[20]->B[1];
+  Block *B = Units[20]->B[8];
+  Block *N = Units[20]->B[8];
   Block *A = 0;
   int i = 0;
 
@@ -22,7 +22,15 @@ void *TRAIN_SIMA(){
   B->blocked = 1;
   B->changed  = 1;
 
-  while(!train_link[Units[20]->B[1]->train] && _SYS->_STATE & STATE_RUN){}
+  while(1){
+    if(B->train != 0 && train_link[B->train] != 0 || B->state == RESTRICTED){
+      break;
+    }
+    else if(_SYS->_STATE & STATE_RUN == 0){
+      break;
+    }
+    usleep(100);
+  }
 
 
   while(_SYS->_STATE & STATE_RUN){
@@ -30,11 +38,12 @@ void *TRAIN_SIMA(){
 
     pthread_mutex_lock(&mutex_lockA);
 
-    N = Next(B,0,1+i);
+    N = Next(B, NEXT,1+i);
     if(i > 0){
-      A = Next(B,0,i);
+      A = Next(B, NEXT,i);
     }
     if(!N){
+      printf("No N at %i:%i\n",B->module, B->id);
       while(1){
         usleep(100000);
       }
@@ -42,20 +51,23 @@ void *TRAIN_SIMA(){
     printf(" %i:%i\n",N->module,N->id);
     N->changed = 1;
     N->state = BLOCKED;
+    N->blocked = 1;
     pthread_mutex_unlock(&mutex_lockA);
     usleep(delayA/2);
     pthread_mutex_lock(&mutex_lockA);
     if(i>0){
       A->changed = 1;
-      A->state = DANGER;
+      A->blocked = 0;
+      A->state = PROCEED;
     }else{
       B->changed = 1;
-      B->state = DANGER;
+      B->blocked = 0;
+      B->state = PROCEED;
     }
     pthread_mutex_unlock(&mutex_lockA);
     usleep(delayA/2);
     pthread_mutex_lock(&mutex_lockA);
-    if(N->type == 'T'){
+    if(N->type == SPECIAL){
       i++;
     }else{
       B = N;

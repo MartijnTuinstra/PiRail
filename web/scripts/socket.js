@@ -96,7 +96,7 @@ var websocket = {
     data[3] = ((type == "E")?0x80:0) + ((mid & 0x1F) >> 8)
 
     this.send(data);
-  }.
+  },
 
   cts_set_switch: function(d){ //Module, Switch, NewState
     // console.log("Set switch "+m+":"+s+"=>"+st);
@@ -378,29 +378,12 @@ var websocket = {
         var B = data[i+1];
 
         var D = data[i+2] >> 7;
-        var blocked = (data[i+2] & 0b00010000) >> 4;
-        var state = (data[i+2] & 0xF);
+        var state = (data[i+2] & 0x7F);
         var tID = data[i+3];
 
-        console.log("Block "+m+":"+B+"\tdir: "+D+"\tBlocked: "+blocked+"\tstate: "+state+"\tTrain: "+tID);
+        console.log("Block "+m+":"+B+"\tdir: "+D+"\tstate: "+state+"\tTrain: "+tID);
 
-        if(blocked == 1){
-          modules[m].blocks[B] = 0;
-        }else{
-          if(state == 0){ //No train / Grey
-            modules[m].blocks[B] = 5;
-          }else if(state == 1){ //SLOW
-            modules[m].blocks[B] = 2;
-          }else if(state == 2){ //Red
-            modules[m].blocks[B] = 1;
-          }else if(state == 3){ //UNKOWN
-            modules[m].blocks[B] = 6;
-          }else if(state == 4){ //GHOST
-            modules[m].blocks[B] = 3;
-          }else if(state == 5){ //RESERVED
-            modules[m].blocks[B] = 4;
-          }
-        }
+        modules[m].blocks[B] = state;
       }
 
       Canvas.update_frame();
@@ -775,9 +758,7 @@ function WebSocket_handler(adress){
     ws.onopen = function(){
       socket_tries = 0;
       ws.connected = true;
-      if(websocket.message_id >= 0){
-        Messages.remove(websocket.message_id);
-      }
+      Messages.clear();
     };
 
     ws.onmessage = function (evt){
@@ -954,7 +935,7 @@ function WebSocket_handler(adress){
         reset_blocks_in_modules();
         Canvas.update_frame();
         Messages.clear();
-        websocket.message_id = Messages.add({type:0xff,data:[socket_tries]});
+        websocket.message_id = Messages.add({type:0xff,id:1,data:[socket_tries]});
       }
       setTimeout(function(){
         console.log("Reconnecting...");

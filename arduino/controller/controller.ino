@@ -34,10 +34,10 @@ void setup(){
   //if(EEPROM.read(0) == 0){
     EEPROM.write(0,1);
 
-    EEPROM.write(1,8); //Address 8
+    EEPROM.write(1,23); //Address 8
 
-    EEPROM.write(2,2); //3 Input  Registers
-    EEPROM.write(3,6); //6 Output Register
+    EEPROM.write(2,1); //1 Input  Registers
+    EEPROM.write(3,0); //0 Output Register
 
     EEPROM.write(4,50); //Blink interval scaler
     EEPROM.write(5,20); //Pulse_interval
@@ -212,7 +212,7 @@ void loop(){
       }
     }
     
-    printRegs();
+//    printRegs();
     //Serial.println("Step");
   }
 

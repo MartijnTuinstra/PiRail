@@ -12,17 +12,24 @@ void setup(){
 
   memset(RxPacket->data,16,0);
   memset(TxPacket.data,16,0);
+
+  Serial.println("Booted");
 }
 
 RN_STATUS RN_status;
 
 void loop(){
   // Check for any received LocoNet packets
-  if( RailNet.available() && (RxPacket = RailNet.receive()) != 0)
-  {
-    uint8_t size = getRnMsgSize(RxPacket);
-    for(int i = 0;i<size;i++){
-      Serial.print(RxPacket->data[i]);
+  if( RailNet.available()){
+    RxPacket = RailNet.receive();
+
+    Serial.println("Available");
+    
+    if(RxPacket != 0){
+      uint8_t size = getRnMsgSize(RxPacket);
+      for(int i = 0;i<size;i++){
+        Serial.print(RxPacket->data[i]);
+      }
     }
   }
 

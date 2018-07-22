@@ -2152,13 +2152,21 @@
                 },
 
                 done: function(){
-                    console.log(parseInt($('#train_linker .selected .container').attr("train")))
-                    console.log(parseInt($('#train_linker .selected .container').attr("engine")));
+                    var trainID = parseInt($('#train_linker .selected .container').attr("train"));
+                    var engineID = parseInt($('#train_linker .selected .container').attr("engine"));
+                    console.log("Train_link "+Train.linker.followID);
+                    if(isNaN(trainID) && !isNaN(engineID)){
+                    	websocket.cts_link_train(Train.linker.followID, trainID, "E", Train.linker.message);
+                    }
+                    else if(!isNaN(trainID) && isNaN(engineID)){
+                    	websocket.cts_link_train(Train.linker.followID, engineID, "T", Train.linker.message);
+                    }
                     Train.linker.close();
                 },
 
                 open: function(msg){
                 	this.message = msg.id;
+                	this.followID = msg.data[0];
 					$('#train_linker .header').html("Train "+msg.data[0]+" on "+msg.data[1] + ":" + msg.data[2]);
 
                     $('#train_linker .selected .container').empty();
@@ -2552,17 +2560,44 @@
 				console.warn("add Messages.update()");
 			},
 
-			remove: function(msg_id){
-				this.open_messages.pop(this.open_messages.indexOf(msg_id));
-				$('#message_popup .messages .mID'+msg_id.id).off();
+			remove: function(msg_id, ret_code){
+				msg_index = -1;
+				for (var i = 0; i < this.open_messages.length; i++) {
+					if(this.open_messages[i].id == msg_id){
+						msg_index = i;
+						break;
+					}
+				}
 
-				$('#settings .messages .message.mID'+msg_id.id).remove();
+				if(msg_index == -1){
+					console.warn("MSG_ID not found");
+					return;
+				}
+
+				if(this.open_messages[msg_index].type == 0){ //NewTrain
+					if(ret_code == 0){
+						alert("Failed");
+						return;
+					}else if(ret_code == 2){
+						alert("Engine allready in use");
+						return;
+					}
+					else if(ret_code == 3){
+						alert("Train_link allready in use");
+						return;
+					}
+				}
+
+				this.open_messages.pop(msg_index);
+				$('#message_popup .messages .mID'+msg_id).off();
+
+				$('#settings .messages .message.mID'+msg_id).remove();
 				this.hide(msg_id);
 			},
 
 			clear: function(){
 				this.open_messages.forEach(function(element){
-					Messages.remove(element);
+					Messages.remove(element.id);
 				});
 				this.open_messages = [];
 			}

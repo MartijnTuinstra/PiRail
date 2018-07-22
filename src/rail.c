@@ -69,19 +69,12 @@ void Create_Segment(int IO_Adr, struct block_connect connect ,char max_speed, ch
   p->blocked = 0;
   p->state = PROCEED;
 
-  while(IO_Adr >= (U->input_regs * 8)){
-    Unit_expand_IO(0, U); //Expand input
-  }
-  p->ioadr = IO_Adr;
-
-  gpio_link gpio;
-  gpio.type = gpio_RAIL;
-  gpio.p = p;
-  if(Units[p->module]->input_link[IO_Adr].type != gpio_NC){
-    loggerf(WARNING, "Overwriting gpio link %i", IO_Adr);
-  }
-  Units[p->module]->input_link[IO_Adr] = gpio;
-
+  
+  #warning FIX, Rail IO Adr
+  //while(IO_Adr >= (U->input_regs * 8)){
+  //  Unit_expand_IO(0, U); //Expand input
+  //}
+  //p->ioadr = IO_Adr;
 
   // If block array is to small
   if(Units[p->module]->block_len <= p->id){

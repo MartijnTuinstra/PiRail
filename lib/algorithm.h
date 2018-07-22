@@ -29,6 +29,7 @@
   void * scan_All_continiously();
 
   void procces(Block * B,int debug);
+  void Algor_print_block_debug(struct algor_blocks AllBlocks);
   void Algor_search_Blocks(struct algor_blocks * AllBlocks, int debug);
   void Algor_train_following(struct algor_blocks AllBlocks, int debug);
   void Algor_rail_state(struct algor_blocks AllBlocks, int debug);

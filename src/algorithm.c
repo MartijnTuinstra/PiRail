@@ -54,7 +54,7 @@ void * scan_All_continiously(){
         for(int j = 0;j<=Units[i]->block_len;j++){
           if(Units[i]->B[j]){
             //printf("%i:%i\n",i,j);
-            procces(Units[i]->B[j],0);
+            // procces(Units[i]->B[j],0);
           }
         }
       }
@@ -157,171 +157,23 @@ void procces(Block * B,int flags){
   AllBlocks.BNN  = &BNN;
   AllBlocks.BNNN = &BNNN;
 
+  
+  //Find all surrounding blocks. Can be speeded up by storing this into the block. Update only if a (MS)switch changes or the direciton changes
   Algor_search_Blocks(&AllBlocks, debug);
 
   
 
   
-
+  //Follow the train arround the layout
   Algor_train_following(AllBlocks, debug);
 
+  //Apply block stating
   Algor_rail_state(AllBlocks, debug);
 
   //Check Switch
 
   // Print all found blocks to stdout
-  if(!debug){
-    if(BPPP.blocks > 0){
-      printf("PPP%i ",BPP.blocks);
-      if(BPPP.blocked)
-        printf("B");
-      else
-        printf(" ");
-      for(int i = 1;i>=0;i--){
-        if(BPPP.B[i]){
-          printf("%02i:%02i",BPPP.B[i]->module,BPPP.B[i]->id);
-          if(BPPP.B[i]->blocked){
-            printf("B  ");
-          }else{
-            printf("   ");
-          }
-        }else{
-          printf("        ");
-        }
-      }
-    }else{
-      printf("                      ");
-    }
-    if(BPP.blocks > 0){
-      printf("PP%i ",BPP.blocks);
-      if(BPP.blocked)
-        printf("B");
-      else
-        printf(" ");
-      for(int i = 1;i>=0;i--){
-        if(BPP.B[i]){
-          printf("%02i:%02i",BPP.B[i]->module,BPP.B[i]->id);
-          if(BPP.B[i]->blocked){
-            printf("B  ");
-          }else{
-            printf("   ");
-          }
-        }else{
-          printf("        ");
-        }
-      }
-    }else{
-      printf("                     ");
-    }
-    if(BP.blocks > 0){
-      printf("P%i ",BP.blocks);
-      if(BP.blocked)
-        printf("B");
-      else
-        printf(" ");
-      for(int i = 1;i>=0;i--){
-        if(BP.B[i]){
-          printf("%02i:%02i",BP.B[i]->module,BP.B[i]->id);
-          if(BP.B[i]->blocked){
-            printf("B  ");
-          }else{
-            printf("   ");
-          }
-        }else{
-          printf("        ");
-        }
-      }
-    }else{
-      printf("                    ");
-    }
-    printf("A%3i %c%02i:%02i;T%-2iD%-2iS%-2i",B->length,B->type,B->module,B->id,B->train,B->dir,B->state);
-    if(B->blocked){
-      printf("B");
-    }
-    printf("\t");
-    if(BN.blocks > 0){
-      printf("N%i ",BN.blocks);
-      if(BN.blocked)
-        printf("B");
-      else
-        printf(" ");
-      for(int i = 0;i<2;i++){
-        if(BN.B[i]){
-          printf("%02i:%02i",BN.B[i]->module,BN.B[i]->id);
-          if(BN.B[i]->blocked){
-            printf("B  ");
-          }else{
-            printf("   ");
-          }
-        }else{
-          printf("        ");
-        }
-      }
-    }
-    if(BNN.blocks > 0){
-      printf("NN%i ",BNN.blocks);
-      if(BNN.blocked)
-        printf("B");
-      else
-        printf(" ");
-      for(int i = 0;i<2;i++){
-        if(BNN.B[i]){
-          printf("%02i:%02i",BNN.B[i]->module,BNN.B[i]->id);
-          if(BNN.B[i]->blocked){
-            printf("B  ");
-          }else{
-            printf("   ");
-          }
-        }else{
-          printf("        ");
-        }
-      }
-    }
-    if(BNNN.blocks > 0){
-      printf("NNN%i ",BNNN.blocks);
-      if(BNNN.blocked)
-        printf("B");
-      else
-        printf(" ");
-      for(int i = 0;i<2;i++){
-        if(BNNN.B[i]){
-          printf("%02i:%02i",BNNN.B[i]->module,BNNN.B[i]->id);
-          if(BNNN.B[i]->blocked){
-            printf("B  ");
-          }else{
-            printf("   ");
-          }
-        }else{
-          printf("        ");
-        }
-      }
-    }
-    // //if(i == 0){
-    // printf("\n");
-    // //}
-    // if(BA.B[0]->PrevSignal || BA.B[0]->NextSignal){
-    //   if(BA.B[0]->PrevSignal){
-    //     printf("\t\t\t\t\t\t%i  ",BA.B[0]->PrevSignal->id);
-    //     uint8_t state = BA.B[0]->PrevSignal ->state & 0x7F;
-    //     if(state == DANGER  )printf("RED");
-    //     if(state == CAUTION)printf("AMBER");
-    //     if(state == PROCEED)printf("GREEN");
-    //     if(state == RESERVED)printf("RESTR");
-    //     printf("\t\t");
-    //   }else{
-    //     printf("\t\t\t\t\t\t\t\t\t");
-    //   }
-    //   if(BA.B[0]->NextSignal ){
-    //     printf("\t%i  ",BA.B[0]->NextSignal->id);
-    //     enum Rail_states state = BA.B[0]->NextSignal->state;
-    //     if(state == DANGER  )printf("RED");
-    //     if(state == CAUTION)printf("AMBER");
-    //     if(state == PROCEED)printf("GREEN");
-    //     if(state == RESERVED)printf("RESTR");
-    //   }
-    //   printf("\n\n");
-    // }
-  }
+  Algor_print_block_debug(AllBlocks);
 
   Algor_signal_state(AllBlocks, debug);
 
@@ -735,6 +587,144 @@ void procces(Block * B,int flags){
   printf("\n");
 }
 
+void Algor_print_block_debug(struct algor_blocks AllBlocks){
+
+  //Unpack AllBlocks
+  Algor_Block BPPP = *AllBlocks.BPPP;
+  Algor_Block BPP  = *AllBlocks.BPP;
+  Algor_Block BP   = *AllBlocks.BP;
+  Block * B        =  AllBlocks.B;
+  Algor_Block BN   = *AllBlocks.BN;
+  Algor_Block BNN  = *AllBlocks.BNN;
+  Algor_Block BNNN = *AllBlocks.BNNN;
+
+    if(BPPP.blocks > 0){
+      printf("PPP%i ",BPP.blocks);
+      if(BPPP.blocked)
+        printf("B");
+      else
+        printf(" ");
+      for(int i = 1;i>=0;i--){
+        if(BPPP.B[i]){
+          printf("%02i:%02i",BPPP.B[i]->module,BPPP.B[i]->id);
+          if(BPPP.B[i]->blocked){
+            printf("B  ");
+          }else{
+            printf("   ");
+          }
+        }else{
+          printf("        ");
+        }
+      }
+    }else{
+      printf("                      ");
+    }
+    if(BPP.blocks > 0){
+      printf("PP%i ",BPP.blocks);
+      if(BPP.blocked)
+        printf("B");
+      else
+        printf(" ");
+      for(int i = 1;i>=0;i--){
+        if(BPP.B[i]){
+          printf("%02i:%02i",BPP.B[i]->module,BPP.B[i]->id);
+          if(BPP.B[i]->blocked){
+            printf("B  ");
+          }else{
+            printf("   ");
+          }
+        }else{
+          printf("        ");
+        }
+      }
+    }else{
+      printf("                     ");
+    }
+    if(BP.blocks > 0){
+      printf("P%i ",BP.blocks);
+      if(BP.blocked)
+        printf("B");
+      else
+        printf(" ");
+      for(int i = 1;i>=0;i--){
+        if(BP.B[i]){
+          printf("%02i:%02i",BP.B[i]->module,BP.B[i]->id);
+          if(BP.B[i]->blocked){
+            printf("B  ");
+          }else{
+            printf("   ");
+          }
+        }else{
+          printf("        ");
+        }
+      }
+    }else{
+      printf("                    ");
+    }
+    printf("A%3i %c%02i:%02i;T%-2iD%-2iS%-2i",B->length,B->type,B->module,B->id,B->train,B->dir,B->state);
+    if(B->blocked){
+      printf("B");
+    }
+    printf("\t");
+    if(BN.blocks > 0){
+      printf("N%i ",BN.blocks);
+      if(BN.blocked)
+        printf("B");
+      else
+        printf(" ");
+      for(int i = 0;i<2;i++){
+        if(BN.B[i]){
+          printf("%02i:%02i",BN.B[i]->module,BN.B[i]->id);
+          if(BN.B[i]->blocked){
+            printf("B  ");
+          }else{
+            printf("   ");
+          }
+        }else{
+          printf("        ");
+        }
+      }
+    }
+    if(BNN.blocks > 0){
+      printf("NN%i ",BNN.blocks);
+      if(BNN.blocked)
+        printf("B");
+      else
+        printf(" ");
+      for(int i = 0;i<2;i++){
+        if(BNN.B[i]){
+          printf("%02i:%02i",BNN.B[i]->module,BNN.B[i]->id);
+          if(BNN.B[i]->blocked){
+            printf("B  ");
+          }else{
+            printf("   ");
+          }
+        }else{
+          printf("        ");
+        }
+      }
+    }
+    if(BNNN.blocks > 0){
+      printf("NNN%i ",BNNN.blocks);
+      if(BNNN.blocked)
+        printf("B");
+      else
+        printf(" ");
+      for(int i = 0;i<2;i++){
+        if(BNNN.B[i]){
+          printf("%02i:%02i",BNNN.B[i]->module,BNNN.B[i]->id);
+          if(BNNN.B[i]->blocked){
+            printf("B  ");
+          }else{
+            printf("   ");
+          }
+        }else{
+          printf("        ");
+        }
+      }
+    }
+}
+
 void Algor_search_Blocks(struct algor_blocks * AllBlocks, int debug){
   Block * next = 0;
   Block * prev = 0;
@@ -951,7 +941,6 @@ void Algor_signal_state(struct algor_blocks AllBlocks, int debug){
   Block * PB;
 
   if(B->NextSignal){
-    printf("Next Signal ");
     if(BN.blocks > 0){
       NB = BN.B[0];
       set_signal(B->NextSignal, NB->state);
@@ -1010,19 +999,34 @@ void Algor_signal_state(struct algor_blocks AllBlocks, int debug){
         if(!CB->NextSignal && !CB->PrevSignal)
           continue;
 
-        if(i == 0){
-          if(group != 0)
+        // printf("G%i-%i %i:%i ", group, i, CB->module, CB->id);
+
+        //Previous block
+        if(group != 0 && group >= 3){
+          if(i == 0)
+            PB = prevlist;
+          else
+            PB = list->B[i-1];
+        }
+        else if(group > 0){
+          if(i < list->blocks - 1)
+            PB = list->B[i+1];
+          else
             PB = prevlist;
         }
-        else
-          PB = list->B[i-1];
-
-        if(i == list->blocks - 1){
-          if(group != 5)
+        //Next block
+        if(group != 5 && group < 3){
+          if(i == 0)
+            NB = nextlist;
+          else
+            NB = list->B[i-1];
+        }
+        else if(group >= 3){
+          if(i < list->blocks - 1)
+            NB = list->B[i+1];
+          else
             NB = nextlist;
         }
-        else
-          NB = list->B[i+1];
 
         if(CB->NextSignal){
           if(NB)
@@ -1090,6 +1094,8 @@ void Algor_signal_state(struct algor_blocks AllBlocks, int debug){
 
 void procces_accessoire(){
   for(int i = 0;i<unit_len;i++){
+    #warning FIX, Output_changed into Node_changed
+    /*
     if(Units[i] && Units[i]->output_changed){
       printf("Signals of module %i changed\n",i);
       for(int j = 0;j<Units[i]->signal_len;j++){
@@ -1100,6 +1106,7 @@ void procces_accessoire(){
 
       Units[i]->output_changed = FALSE;
     }
+    */
   }
 }
 

@@ -71,7 +71,7 @@ void Create_Segment(Node_adr IO_Adr, struct block_connect connect ,char max_spee
   p->state = PROCEED;
 
   if(IO_Adr.Node < Units[p->module]->IO_Nodes && Units[p->module]->Node[IO_Adr.Node].io[IO_Adr.io]){
-    IO_Port A = Units[p->module]->Node[IO_Adr.Node].io[IO_Adr.io];
+    IO_Port * A = Units[p->module]->Node[IO_Adr.Node].io[IO_Adr.io];
     A->type = IO_Input;
     A->state = 0;
     A->id = IO_Adr.io;

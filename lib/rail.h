@@ -21,6 +21,9 @@
   typedef struct _msswitch MSSwitch;
   typedef struct _signal Signal;
 
+  typedef struct s_IO_Port IO_Port;
+  typedef struct s_node_adr Node_adr;
+
   struct rail_link {
     char type;
     void * p;
@@ -51,7 +54,7 @@
     int module;
     int id;
 
-    IO_Port IO;
+    IO_Port * IO;
 
     enum Rail_types type;
     char dir;
@@ -119,7 +122,7 @@
 
   void init_rail();
 
-  void Create_Segment(int IO_Adr, struct block_connect connect ,char max_speed, char dir,char len);
+  void Create_Segment(Node_adr IO_Adr, struct block_connect connect ,char max_speed, char dir,char len);
   void Create_Station(int module, int id, char * name, char name_len, enum Station_types type, int len, Block ** blocks);
 
   void Connect_Rail_links();

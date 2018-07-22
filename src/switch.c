@@ -5,8 +5,9 @@
 #include "websocket_msg.h"
 #include "websocket.h"
 #include "com.h"
+#include "IO.h"
 
-void Create_Switch(struct switch_connect connect, char block_id, char output_len, char * output_pins, char * output_states){
+void Create_Switch(struct switch_connect connect, char block_id, char output_len, Node_adr * output_pins, char * output_states){
   Switch * Z = _calloc(1, Switch);
 
   Z->module = connect.module;
@@ -16,9 +17,24 @@ void Create_Switch(struct switch_connect connect, char block_id, char output_len
   Z->str = connect.str;
   Z->app = connect.app;
 
-  Z->output_len = output_len;
-  Z->output_pins = output_pins;
-  Z->output_states = output_states;
+  for(int i = 0; i < output_len; i++){
+    if(output_pins[i].Node > Units[connect.module]->IO_Nodes){
+      loggerf(WARNING, "Node not initialized");
+      return;
+    }
+    if(Units[connect.module]->Node[output_pins[i].Node].io[output_pins[i].io]){
+      IO_Port * A = Units[connect.module]->Node[output_pins[i].Node].io[output_pins[i].io];
+      A->type = IO_Output;
+      A->state = 0;
+      A->id = output_pins[i].io;
+
+      Z->IO[i] = A;
+    }
+  }
+  _free(output_pins);
+
+  Z->IO_len = output_len;
+  Z->IO_states = output_states;
 
   if(Units[Z->module]->B[block_id]){
     Z->Detection = Units[Z->module]->B[block_id];
@@ -48,7 +64,7 @@ void Switch_Add_Feedback(Switch * S, char input_len, char * pins, char * state){
   S->input_states = state;
 }
 
-void Create_MSSwitch(struct msswitch_connect connect, char block_id, char output_len, char * output_pins, uint16_t * output_states){
+void Create_MSSwitch(struct msswitch_connect connect, char block_id, char output_len, Node_adr * output_pins, uint16_t * output_states){
   MSSwitch * Z = _calloc(1, MSSwitch);
 
   Z->module = connect.module;
@@ -57,8 +73,23 @@ void Create_MSSwitch(struct msswitch_connect connect, char block_id, char output
   Z->sideA = connect.sideA;
   Z->sideB = connect.sideB;
 
+  for(int i = 0; i < output_len; i++){
+    if(output_pins[i].Node > Units[connect.module]->IO_Nodes){
+      loggerf(WARNING, "Node not initialized");
+      return;
+    }
+    if(Units[connect.module]->Node[output_pins[i].Node].io[output_pins[i].io]){
+      IO_Port * A = Units[connect.module]->Node[output_pins[i].Node].io[output_pins[i].io];
+      A->type = IO_Output;
+      A->state = 0;
+      A->id = output_pins[i].io;
+
+      Z->IO[i] = A;
+    }
+  }
+  _free(output_pins);
+
   Z->output_len = output_len;
-  Z->output_pins = output_pins;
   Z->output_states = output_states;
 
   if(Units[Z->module]->B[block_id]){

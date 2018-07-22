@@ -23,13 +23,13 @@
     _Bool hold;
 
     _Bool feedback;
-    char input_len;
-    char * input_pins;
-    char * input_states;
+    char feedback_len;
+    IO_Port * feedback_pins;
+    char * feedback_states;
 
-    char output_len;
-    char * output_pins;
-    char * output_states;
+    char IO_len;
+    IO_Port * IO;
+    char * IO_states;
 
     struct rail_link div;
     struct rail_link str;

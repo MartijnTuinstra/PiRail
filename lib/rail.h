@@ -50,7 +50,8 @@
   typedef struct rail_segment {
     int module;
     int id;
-    int ioadr;
+
+    IO_Port IO;
 
     enum Rail_types type;
     char dir;

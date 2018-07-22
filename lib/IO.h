@@ -7,15 +7,25 @@
 
 typedef struct s_unit Unit;
 
+typedef struct s_node_adr {
+	uint8_t Node;
+	uint16_t io;
+} Node_adr;
+
+enum IO_type {
+	IO_Input,
+	IO_Output
+};
+
 typedef struct s_IO_Port {
 	uint8_t id;
-	uint8_t state:4;
-	uint8_t type:4;
+	uint8_t state;
+	enum IO_type type;
 } IO_Port;
 
 typedef struct s_IO_Node {
 	uint8_t id;
-	uint8_t io_ports;
+	uint16_t io_ports;
 	IO_Port ** io;
 } IO_Node;
 

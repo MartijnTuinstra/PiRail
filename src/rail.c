@@ -3,6 +3,7 @@
 #include "module.h"
 #include "switch.h"
 #include "logger.h"
+#include "IO.h"
 
 Station ** stations;
 int stations_len;
@@ -45,7 +46,7 @@ void init_rail(){
 
 }
 
-void Create_Segment(int IO_Adr, struct block_connect connect ,char max_speed, char dir,char len){
+void Create_Segment(Node_adr IO_Adr, struct block_connect connect ,char max_speed, char dir,char len){
   Block * p = _calloc(1, Block);
 
   p->module = connect.module;
@@ -69,12 +70,14 @@ void Create_Segment(int IO_Adr, struct block_connect connect ,char max_speed, ch
   p->blocked = 0;
   p->state = PROCEED;
 
-  
-  #warning FIX, Rail IO Adr
-  //while(IO_Adr >= (U->input_regs * 8)){
-  //  Unit_expand_IO(0, U); //Expand input
-  //}
-  //p->ioadr = IO_Adr;
+  if(IO_Adr.Node < Units[p->module]->IO_Nodes && Units[p->module]->Node[IO_Adr.Node].io[IO_Adr.io]){
+    IO_Port A = Units[p->module]->Node[IO_Adr.Node].io[IO_Adr.io];
+    A->type = IO_Input;
+    A->state = 0;
+    A->id = IO_Adr.io;
+
+    p->IO = A;
+  }
 
   // If block array is to small
   if(Units[p->module]->block_len <= p->id){

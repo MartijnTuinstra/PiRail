@@ -64,12 +64,11 @@ void WS_send_open_Messages(int Client_fd){
   }
 }
 
-void WS_clear_message(uint16_t ID){
-  MessageList[ID].type = 0;
+void WS_clear_message(uint16_t ID, char ret_code){
+  if(ret_code == 1)
+    MessageList[ID].type = 0;
 
-  printf("Send clear message (ID: %i)\n",ID);
-
-  ws_send_all((char [3]){WSopc_ClearMessage,(ID >> 8),ID&0xFF},3,0xFF);
+  ws_send_all((char [3]){WSopc_ClearMessage,((ID >> 8) & 0x1F) + (ret_code << 5),ID&0xFF},3,0xFF);
 }
 
 

@@ -22,7 +22,7 @@
 
   void WS_send_open_Messages(int Client_fd);
 
-  void WS_clear_message(uint16_t ID);
+  void WS_clear_message(uint16_t ID, char ret_code);
 
   void WS_EmergencyStop();
 

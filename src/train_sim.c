@@ -1,5 +1,6 @@
 #include "system.h"
 #include "train_sim.h"
+#include "algorithm.h"
 
 #include "rail.h"
 #include "train.h"
@@ -13,17 +14,18 @@ pthread_mutex_t mutex_lockA;
 
 
 void *TRAIN_SIMA(){
-  Block *B = Units[20]->B[8];
-  Block *N = Units[20]->B[8];
+  Block *B = Units[20]->B[10];
+  Block *N = Units[20]->B[10];
   Block *A = 0;
   int i = 0;
 
   B->state = BLOCKED;
   B->blocked = 1;
   B->changed  = 1;
+  procces(B, 2);
 
   while(1){
-    if(B->train != 0 && train_link[B->train] != 0 || B->state == RESTRICTED){
+    if(B->state == RESTRICTED){ //B->train != 0 && train_link[B->train] != 0 || 
       break;
     }
     else if(_SYS->_STATE & STATE_RUN == 0){
@@ -52,6 +54,7 @@ void *TRAIN_SIMA(){
     N->changed = 1;
     N->state = BLOCKED;
     N->blocked = 1;
+    procces(N, 2);
     pthread_mutex_unlock(&mutex_lockA);
     usleep(delayA/2);
     pthread_mutex_lock(&mutex_lockA);
@@ -59,10 +62,12 @@ void *TRAIN_SIMA(){
       A->changed = 1;
       A->blocked = 0;
       A->state = PROCEED;
+      procces(A, 2);
     }else{
       B->changed = 1;
       B->blocked = 0;
       B->state = PROCEED;
+      procces(B, 2);
     }
     pthread_mutex_unlock(&mutex_lockA);
     usleep(delayA/2);

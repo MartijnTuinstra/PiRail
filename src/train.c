@@ -453,11 +453,11 @@ int train_read_confs(){
 }
 
 int link_train(int fid, int tid, char type){
-  //Link = follow ID
+  //Link = follow ID / train_link id
   //train = tID
 
   // If it is only a engine -> make it a train
-  if(type > 0){
+  if(type){
     // Create train from engine
     loggerf(CRITICAL, "CREATE TRAIN FROM ENGINE, NOT IMPLEMENTED");
     return 0;
@@ -466,18 +466,16 @@ int link_train(int fid, int tid, char type){
   //Check if all engines are available
   for(int i = 0; i < trains[tid]->nr_engines; i++){
     if(trains[tid]->engines[i]->use){
-      return 0;
+      return 2; //Engine not available
     }
   }
 
   //Link train
   if(train_link[fid] == NULL){
-    printf("link is empty %i\n",train_link[fid]);
     train_link[fid] = trains[tid];
-
-    printf("Set to %i\n",train_link[fid]);
   }else{
-    return 0;
+    printf("Train_link[%i] not empty (%x)\n", fid, train_link[fid]);
+    return 3; //Train allready occupied
   }
 
   //Lock all engines

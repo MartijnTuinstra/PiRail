@@ -21,7 +21,7 @@ void create_signal(Block * B, _Bool side, char length, char * addresses, char * 
     Z->flash[i] = flash[i];
   }
 
-  Z->id = find_free_index(Units[B->module], Units[B->module]->signal_len);
+  Z->id = find_free_index(Units[B->module]->Sig, Units[B->module]->signal_len);
   Z->module = B->module;
   Units[B->module]->Sig[Z->id] = Z;
 }
@@ -53,6 +53,7 @@ void set_signal(Signal * Si, enum Rail_states state){
     else
       printf("STATE %i  ", state);
     Si->state = state;
-    loggerf(WARNING, "IMPLEMENT set_signal");
+    #warning "IMPLEMENT set_signal"
+    // loggerf(WARNING, "IMPLEMENT set_signal");
   }
 }

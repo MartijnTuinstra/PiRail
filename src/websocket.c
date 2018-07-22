@@ -12,7 +12,6 @@ int websocket_decode(char data[1024], struct web_client_t * client){
   // Train stuff flag       0x40
   // Rail stuff flag        0x20
   // General Operation flag 0x10
-  printf("recv_packet_procces\n");
 
   if(data[0] & 0x80){ //Admin settings
     printf("Admin settings: %02X\n",data[0]);
@@ -74,12 +73,18 @@ int websocket_decode(char data[1024], struct web_client_t * client){
     else if(data[0] == WSopc_LinkTrain){ //Link train
       uint8_t fID = data[1]; //follow ID
       uint8_t tID = data[2]; //TrainID
+      uint16_t mID = ((data[3] & 0x1F) << 8)+data[4];
+      char return_value;
       printf("Linking train %i with %s\n",fID,trains[tID]->name);
       #warning FIX
-      if(link_train(fID,tID,data[3] & 0x80)){
-        WS_clear_message(((data[3] & 0x1F) >> 8)+data[4]);
+      if((return_value = link_train(fID,tID,data[3] & 0x80)) == 1){
+        WS_clear_message(mID, 1);
         
         Z21_get_train(trains[tID]);
+      }
+      else{
+        printf("Failed link_train()\n");
+        WS_clear_message(mID, return_value); //Failed
       }
     }
     else if(data[0] == WSopc_TrainSpeed){ //Train speed control
@@ -172,6 +177,7 @@ int websocket_get_msg(int fd, char outbuf[], int * length_out){
     mes_length = (buf[byte++] << 8) + buf[byte++];
   }else if(mes_length == 127){
     loggerf(ERROR, "To large message");
+    _free(buf);
     return -1;
   }
 
@@ -200,11 +206,13 @@ int websocket_get_msg(int fd, char outbuf[], int * length_out){
   *length_out = mes_length;
 
   memcpy(outbuf, output, mes_length);
-  printf("WS recieved data: ");
+  
   for(int q = 0;q<mes_length;q++){
     printf("%02x ",output[q]);
   }
   printf("\n",output);
+
+  _free(buf);
 
   if(opcode == 8){
     // Connection closed by client

@@ -160,34 +160,37 @@ void * websocket_client_connect(void * p){
   while(1){
     // If threre is data recieved
     if(recv(client->fd, buf, 1024, MSG_PEEK) > 0){
-      printf("Data received\n");
-      usleep(10000);
+      usleep(1000);
       int length = 0;
       memset(buf,0,1024);
       int status = websocket_get_msg(client->fd, buf, &length);
 
-      printf("Status: %i\n", status);
       if(status == 1){
         websocket_decode(buf, client);
       }
-      printf("\nData: %s\n", buf);
-      if(status == -8){
+      else if(status == -8){
         loggerf(INFO, "Client %i disconnected", client->id);
         close(client->fd);
         _SYS->_Clients--;
         client->state = 2;
+        _free(buf);
         return 0;
       }
     }
 
     if(client->state == 2){
+      _SYS->_Clients--;
+      close(client->fd);
+      _free(buf);
       return 0;
     }
 
     if((_SYS->_STATE & STATE_RUN) == 0){
       loggerf(DEBUG, "Websocket stop client");
       close(client->fd);
+      _SYS->_Clients--;
       client->state = 2;
+      _free(buf);
       return 0;
     }
   }

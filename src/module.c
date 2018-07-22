@@ -42,7 +42,7 @@ void setup_JSON(int arr[], int arr2[], int size, int size2){
   }
 }
 
-void Create_Unit(int module,int OUT,int IN,char points){
+void Create_Unit(int module, uint8_t Nodes, char points){
   Unit * Z = _calloc(1, Unit);
 
   if(module < unit_len){
@@ -55,11 +55,11 @@ void Create_Unit(int module,int OUT,int IN,char points){
 
   Z->module = module;
 
-  struct rail_link ** A = _calloc( IN,struct rail_link);
-  struct rail_link ** B = _calloc(OUT,struct rail_link);
-
   Z->connections_len = points;
   Z->connection = _calloc(points, Unit *);
+
+  Z->IO_Nodes = Nodes;
+  Z->Node = _calloc(Z->IO_Nodes, IO_Node);
 
   Z->block_len = 8;
   Z->B = _calloc(Z->block_len, Block);
@@ -72,41 +72,11 @@ void Create_Unit(int module,int OUT,int IN,char points){
 
   Z->signal_len = 8;
   Z->Sig = _calloc(Z->signal_len, Signal);
-
-  Z->input_regs = (IN/8)+1;
-  // Z->In = A;
-  Z->output_regs = (OUT/8)+1;
-  // Z->Out = B;
-  IN--;OUT--;//To make the division round down;
-  Z->InRegs    = _calloc(Z->input_regs, char);
-  Z->OutRegs   = _calloc(Z->output_regs, char);
-  Z->BlinkMask = _calloc(Z->output_regs, char);
-  Z->input_link = _calloc(Z->input_regs * 8, gpio_link);
 }
 
 void Unit_expand_IO(_Bool type, Unit * U){
-  if(type == 0){
-    loggerf(INFO, "Expand input of Unit %i to %i", U->module, U->input_regs+1);
-    U->InRegs =  _realloc(U->InRegs, U->input_regs + 1, uint8_t);
-    U->input_link = _realloc(U->input_link, (U->input_regs + 1)*8, gpio_link);
-
-    U->InRegs[U->input_regs] = 0;
-    for(int i = U->input_regs*8; i < (U->input_regs + 1)*8; i++){
-      U->input_link[i].type = gpio_NC;
-      U->input_link[i].p = 0;
-    }
-    U->input_regs += 1;
-  }
-  else{
-    loggerf(INFO, "Expand output of Unit %i to %i", U->module, U->output_regs+1);
-    U->OutRegs = _realloc(U->OutRegs, U->output_regs + 1, uint8_t);
-    U->BlinkMask = _realloc(U->BlinkMask, U->output_regs + 1, uint8_t);
-
-    U->OutRegs[U->output_regs] = 0;
-    U->BlinkMask[U->output_regs] = 0;
-
-    U->output_regs += 1;
-  }
+  loggerf(ERROR, "Not supported");
+  return;
 }
 
 void join(struct rail_link Adr, struct rail_link link){
@@ -786,7 +756,7 @@ void LoadModules(int M){
           return;
         }
         // printf("Module ID: %i\n",ModuleID);
-        Create_Unit(ModuleID,atoi(parts[2]),atoi(parts[3]),atoi(parts[4]));
+        Create_Unit(ModuleID,atoi(parts[2]),atoi(parts[3]));
 
       }else if(strcmp(parts[0],"CB") == 0){ //Create Block
         //Create a Segment with all given data from the file
@@ -845,6 +815,12 @@ void LoadModules(int M){
           tmp.type = MAIN;
         else if(Adr.type == 'D')
           tmp.type = SPECIAL;
+        else if(Adr.type == 'S')
+          tmp.type = STATION;
+        else if(Adr.type == 's')
+          tmp.type = SIDING;
+        else if(Adr.type == 'Y')
+          tmp.type = YARD;
         tmp.next = NAdr;
         tmp.prev = PAdr;
         Create_Segment(strtol(parts[1],NULL,8),tmp,atoi(parts[10]),atoi(parts[11]),atoi(parts[12]));
@@ -957,6 +933,9 @@ void LoadModules(int M){
         Create_Switch(tmp,atoi(parts[2]), 2, A, B);
 
         //Units[ModuleID]->S[Adr.id]->Detection_Block = atoi(parts[2]);
+      }else if(strcmp(parts[0], "CN") == 0){
+          loggerf(INFO, "Create Node nr %s, IO %s, In: %s, Out: %s", parts[1], parts[2], parts[3], parts[4]);
+          Add_IO_Node(Units[ModuleID], atoi(parts[1]), atoi(parts[2]));
       }else if(strcmp(parts[0],"CSi") == 0){//Create Signal
         printf("Create Signals - Not Supported");
       }else if(strcmp(parts[0],"CSt") == 0){//Create Station

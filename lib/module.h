@@ -4,34 +4,16 @@
   #include "switch.h"
   #include "rail.h"
   #include "signals.h"
+  #include "IO.h"
 
-  enum gpio_types {
-    gpio_NC,
-    gpio_RAIL,
-    gpio_SWITCH,
-    gpio_MSSWITCH
-  };
-
-  typedef struct gpio_link {
-    enum gpio_types type;
-    void * p;
-  } gpio_link;
-
-  typedef struct _unit{
+  typedef struct s_unit {
     char module;
 
     char connections_len;
-    struct _unit ** connection;
+    struct s_unit ** connection;
 
-    uint8_t input_regs;
-    uint8_t output_regs;
-
-    uint8_t *BlinkMask;
-    uint8_t *OutRegs;
-    uint8_t  *InRegs;
-
-    _Bool output_changed;
-    gpio_link * input_link;
+    uint8_t IO_Nodes;
+    IO_Node * Node;
 
     int block_len;
     Block ** B;

@@ -73,7 +73,7 @@ void floggerf(enum logging_levels level, char * file, int line, char * text, ...
     fprintf(fp,".MEMORY.");
   }
 
-  printf(" - %15s:%4i - ", file, line);
+  printf(" - %20s:%4i - ", file, line);
   fprintf(fp," - %15s:%4i - ", file, line);
 
   vprintf(text, arglist);

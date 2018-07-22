@@ -26,3 +26,4 @@
   void floggerf(enum logging_levels level, char * file, int line, char * text, ...);
 
 #endif
+

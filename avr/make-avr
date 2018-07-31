@@ -1,0 +1,29 @@
+.PHONY: elf hex
+
+OUT_d=$(dir)/$(dev)
+,:=,
+elf:
+	@echo "            - $(OUT_d).elf"
+	@avr-gcc -g -Wall -Os -Werror -Wextra -mmcu=$(dev) $(wildcard $(OUT_d).bin.d/*.o) -o $(OUT_d).elf
+
+hex: elf
+	@echo "            - $(OUT_d).flash.hex"
+	@avr-objcopy -j .text -j .data -O ihex $(OUT_d).elf $(OUT_d).flash.hex
+	@echo "            - $(OUT_d).eeprom.hex"
+	@avr-objcopy -j .eeprom --set-section-flags=.eeprom="alloc,load" --change-section-lma .eeprom=0 -O ihex $(OUT_d).elf $(OUT_d).eeprom.hex
+	@avr-objcopy -j .fuse -O ihex $(OUT_d).elf $(OUT_d).fuses.hex --change-section-lma .fuse=0
+	@echo "            - $(OUT_d).lfuse.hex"
+	@srec_cat $(OUT_d).fuses.hex -Intel -crop 0x00 0x01 -offset  0x00 -O $(OUT_d).lfuse.hex -Intel
+	@echo "            - $(OUT_d).hfuse.hex"
+	@srec_cat $(OUT_d).fuses.hex -Intel -crop 0x01 0x02 -offset -0x01 -O $(OUT_d).hfuse.hex -Intel
+	@echo "            - $(OUT_d).efuse.hex"
+	@srec_cat $(OUT_d).fuses.hex -Intel -crop 0x02 0x03 -offset -0x02 -O $(OUT_d).efuse.hex -Intel
+	@echo ""
+	@echo "            - Size Used   \tProgram\t\t\tEEPROM\t\t\tData"
+	@avr-size $(OUT_d).elf -C --mcu=atmega328 | grep Program | awk ' {printf "                             \t%s %s %s %s\t",$$2$(,)$$3$(,)$$4$(,)$$5} '
+	@avr-size $(OUT_d).elf -C --mcu=atmega328 | grep EEPROM  | awk ' {printf "%s %s %s %s\t",$$2$(,)$$3$(,)$$4$(,)$$5} '
+	@avr-size $(OUT_d).elf -C --mcu=atmega328 | grep Data    | awk ' {printf "%s %s %s %s\n",$$2$(,)$$3$(,)$$4$(,)$$5} '
+
+flash: hex
+	@echo "  [FLASH]   $(OUT_d)"
+	@avrdude -p$(dev) -c$(prog) -P$(prot) -b$(baud) -v -U flash:w:$(OUT_d).flash.hex

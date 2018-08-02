@@ -472,11 +472,10 @@ void WS_NewClient_track_Switch_Update(int Client_fd){
   /*Switches*/
 
     buf[0] = WSopc_BroadSwitch;
-    int buf_l  = 0;
+    int buf_len = 0;
     content   = 0;
 
-    q = 1;
-    //printf("\n\n3");
+    q = 1; // Counter for switches
 
     for(int i = 0;i<unit_len;i++){
       if(Units[i]){
@@ -494,12 +493,10 @@ void WS_NewClient_track_Switch_Update(int Client_fd){
       }
     }
 
-    buf_l = (q-1)*3+1;
+    buf_len = (q-1)*3+1;
 
   /*MSSwitches
-    //buf[0] = 5;
-    //buf_l = 0;
-    q = 1;
+    q = 1; // reset counter for MSSwitchs
     for(int i = 0;i<MAX_Modules;i++){
       if(Units[i]){
         content = 1;
@@ -515,41 +512,41 @@ void WS_NewClient_track_Switch_Update(int Client_fd){
         }
       }
     }*/
-  buf_l += (q-1)*4+1;
+  //buf_len += (q-1)*4+1;
+
   if(content == 1){
     if(Client_fd){
       printf("WS_SwitchesUpdate Custom Client");
-      ws_send(Client_fd,buf,buf_l,WS_Flag_Switches);
+      ws_send(Client_fd,buf,buf_len,WS_Flag_Switches);
     }else{
       printf("WS_SwitchesUpdate ALL");
-      ws_send_all(buf,buf_l,WS_Flag_Switches);
+      ws_send_all(buf,buf_len,WS_Flag_Switches);
     }
   }
   
   memset(buf,0,4096);
-  buf_l = 0;
   /*Stations*/
 
   buf[0] = 6;
-  buf_l = 1;
+  buf_len = 1;
     _Bool data = 0;
 
   if(stations_len>0){
     data = 1;
   }
   for(int i = 0; i<stations_len;i++){
-    printf("entry %i\tStation %i:%i\t%s\tbuf_l: %i\n",i,stations[i]->module,stations[i]->id,stations[i]->name,buf_l);
+    printf("entry %i\tStation %i:%i\t%s\tbuf_l: %i\n",i,stations[i]->module,stations[i]->id,stations[i]->name,buf_len);
 
-    buf[buf_l]   = stations[i]->module;
-    buf[buf_l+1] = stations[i]->id;
-    buf[buf_l+2] = strlen(stations[i]->name);
-    strcpy(&buf[buf_l+3],stations[i]->name);
+    buf[buf_len]   = stations[i]->module;
+    buf[buf_len+1] = stations[i]->id;
+    buf[buf_len+2] = strlen(stations[i]->name);
+    strcpy(&buf[buf_len+3],stations[i]->name);
 
-    buf_l+=3+strlen(stations[i]->name);
+    buf_len+=3+strlen(stations[i]->name);
   }
 
   if(data == 1){
-    ws_send(Client_fd,buf,buf_l,8);
+    ws_send(Client_fd,buf,buf_len,8);
   }
 
   memset(buf,0,4096);
@@ -618,6 +615,8 @@ void WS_NewTrain(char nr,char M,char B){
   //M,B:  module nr and block nr
   uint16_t msg_ID = WS_init_Message(0);
 
+  loggerf(INFO, "WS_NewTrain");
+
   char data[6];
   data[0] = WSopc_NewMessage;
   data[1] = ((msg_ID >> 8) & 0x1F) + 0; //type = 0
@@ -633,6 +632,8 @@ void WS_TrainSplit(char nr,char M1,char B1,char M2,char B2){
   //Nr:   follow id of train
   //M,B:  module nr and block nr
   uint16_t msg_ID = WS_init_Message(1);
+
+  loggerf(INFO, "WS_TrainSplit");
 
   char data[8];
   data[0] = WSopc_NewMessage;

@@ -27,6 +27,8 @@ int websocket_client_check(struct web_client_t * client){
   char * _protocol = _calloc(10, char);
   int protocol;
 
+  loggerf(INFO, "Web Client check");
+
   if((strstr(buf, Connection) || strstr(buf,Connection2)) &&
         strstr(buf, UpgradeType) && strstr(buf, Key)) {
     printf("\nIt is a HTML5 WebSocket!!\n");

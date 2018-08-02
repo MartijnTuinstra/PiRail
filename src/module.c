@@ -755,11 +755,13 @@ void LoadModules(int M){
           printf("MODULE ID in file is not consistent with FolderNr\n");
           return;
         }
+        loggerf(DEBUG, "Create Unit %i", atoi(parts[1]));
         // printf("Module ID: %i\n",ModuleID);
         Create_Unit(ModuleID,atoi(parts[2]),atoi(parts[3]));
-
-      }else if(strcmp(parts[0],"CB") == 0){ //Create Block
+      }
+      else if(strcmp(parts[0],"CB") == 0){ //Create Block
         //Create a Segment with all given data from the file
+        loggerf(DEBUG, "Create Block");
 
         struct rail_link Adr,NAdr,PAdr;
         Adr.module = ModuleID;
@@ -815,15 +817,17 @@ void LoadModules(int M){
           tmp.type = MAIN;
         else if(Adr.type == 'D')
           tmp.type = SPECIAL;
-        else if(Adr.type == 'S')
+        else if(Adr.type == 'S' || Adr.type == 'Y')
           tmp.type = STATION;
         else if(Adr.type == 's')
           tmp.type = SIDING;
-        else if(Adr.type == 'Y')
-          tmp.type = YARD;
         tmp.next = NAdr;
         tmp.prev = PAdr;
-        Create_Segment(strtol(parts[1],NULL,8),tmp,atoi(parts[10]),atoi(parts[11]),atoi(parts[12]));
+
+        Node_adr IO_Adr;
+        IO_Adr.Node = 0;
+        IO_Adr.io = strtol(parts[1], NULL, 10);
+        Create_Segment(IO_Adr, tmp, atoi(parts[10]), atoi(parts[11]), atoi(parts[12]));
         //Set oneway
         if(parts[13][0] == 'Y'){
           Units[ModuleID]->B[Adr.id]->oneWay = TRUE;
@@ -899,7 +903,7 @@ void LoadModules(int M){
         int IOAddress[20];
         char * q;
         i = 0;
-        q = strtok(parts[12], " ");
+        q = strtok(parts[13], " ");
 
         while(q != NULL){
           IOAddress[i++] = atoi(q);
@@ -908,7 +912,7 @@ void LoadModules(int M){
 
         int StateSpeed[20];
         i = 0;
-        q = strtok(parts[13], " ");
+        q = strtok(parts[14], " ");
 
         while(q != NULL){
           StateSpeed[i++] = atoi(q);
@@ -922,15 +926,17 @@ void LoadModules(int M){
         tmp.div = DAdr;
         tmp.str = SAdr;
 
-        char * A = _calloc(2, char);
-        A[0] = 03;
-        A[1] = 04;
+        Node_adr * A = _calloc(2, Node_adr *);
+        A[0].io = IOAddress[0];
+        A[1].io = IOAddress[1];
 
         char * B = _calloc(2, _Bool *);
         B[0] = 1 + (0 << 1); //State 0 - Address 0 hight, address 1 low
         B[1] = 0 + (1 << 1); //State 1 - Address 1 hight, address 0 low
 
         Create_Switch(tmp,atoi(parts[2]), 2, A, B);
+
+        _free(A);
 
         //Units[ModuleID]->S[Adr.id]->Detection_Block = atoi(parts[2]);
       }else if(strcmp(parts[0], "CN") == 0){
@@ -963,13 +969,30 @@ void LoadModules(int M){
           blocks[j] = Units[ModuleID]->B[Blocks[j]];
         }
 
-        Create_Station(ModuleID, 0, name, strlen(name)+2, PERSON, 100, blocks);
+        Create_Station(ModuleID, 0, name, strlen(name)+2, STATION_PERSON, 100, blocks);
       }
     }
     else if(parts[0][0] == 'S'){
       if(strcmp(parts[0],"Sdet") == 0){ //Switch detection block
         Units[ModuleID]->Sw[atoi(parts[1])]->Detection = Units[ModuleID]->B[atoi(parts[2])];
       }
+    }
+    else if(strcmp(parts[0], "MS") == 0){ //Setup Blocks
+      loggerf(DEBUG, "Setup Unit %i", ModuleID);
+      Units[ModuleID]->block_len = atoi(parts[1]);
+      Units[ModuleID]->B = _calloc(atoi(parts[1]), Block *);
+
+      Units[ModuleID]->switch_len = atoi(parts[2]);
+      Units[ModuleID]->Sw = _calloc(atoi(parts[2]), Switch *);
+
+      Units[ModuleID]->msswitch_len = atoi(parts[3]);
+      Units[ModuleID]->MSSw = _calloc(atoi(parts[3]), MSSwitch *);
+
+      Units[ModuleID]->signal_len = atoi(parts[4]);
+      Units[ModuleID]->Sig = _calloc(atoi(parts[4]), Signal *);
+
+      Units[ModuleID]->station_len = atoi(parts[5]);
+      Units[ModuleID]->St = _calloc(atoi(parts[5]), Station *);
     }
   }
 

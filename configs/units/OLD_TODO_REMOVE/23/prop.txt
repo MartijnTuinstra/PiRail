@@ -1,6 +1,9 @@
 'U turn (8)
 'Create Module
-CU	23	8	8	2
+CU	23	1	2
+MS	8	8	0	0	0
+'
+CN	0	8	8	0
 '
 'Create block
 'Wat	IOadr	id	type	NxM	NxID	NxType	PxM	PxID	PxType	Max_sp	dir	len	OneWay

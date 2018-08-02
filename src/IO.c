@@ -21,6 +21,6 @@ void Add_IO_Node(Unit * U, int Node_nr, int IO){
   }
 
   U->Node[Node_nr] = Z;
-  printf("Node %i, IO %i\n", Node_nr, IO);
+  loggerf(INFO, "Node %i, IO %i\n", Node_nr, IO);
   return;
 }

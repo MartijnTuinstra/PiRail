@@ -55,6 +55,9 @@ void *TRAIN_SIMA(){
     N->state = BLOCKED;
     N->blocked = 1;
     procces(N, 2);
+    WS_trackUpdate(0);
+    WS_SwitchesUpdate(0);
+
     pthread_mutex_unlock(&mutex_lockA);
     usleep(delayA/2);
     pthread_mutex_lock(&mutex_lockA);
@@ -69,6 +72,10 @@ void *TRAIN_SIMA(){
       B->state = PROCEED;
       procces(B, 2);
     }
+
+    WS_trackUpdate(0);
+    WS_SwitchesUpdate(0);
+    
     pthread_mutex_unlock(&mutex_lockA);
     usleep(delayA/2);
     pthread_mutex_lock(&mutex_lockA);

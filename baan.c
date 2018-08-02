@@ -99,9 +99,12 @@ int main(){
 
     Connect_Rail_links();
 
+  // Allow web clients
+  _SYS_change(STATE_Client_Accept,1);
+
   //#############################################################
   //Init done
-
+  
   //scan_All();
   printf("Next 1\n");
   Block *B = Next(Units[20]->B[3],0,1);
@@ -137,11 +140,13 @@ int main(){
 
   pthread_t pt_scan_All, pt_train_timers, pt_train_simA;
 
-  pthread_create(&pt_scan_All, NULL, scan_All_continiously, NULL);
+  //pthread_create(&pt_scan_All, NULL, scan_All_continiously, NULL);
   // pthread_create(&pt_train_timers, NULL, clear_train_timers, NULL);
   pthread_create(&pt_train_simA, NULL, TRAIN_SIMA, NULL);
 
   usleep(10000000);
+
+  Units[20]->B[10]->state = RESTRICTED;
 
   WS_ShortCircuit();
 

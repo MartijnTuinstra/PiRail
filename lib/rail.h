@@ -54,10 +54,12 @@
     int module;
     int id;
 
-    IO_Port * IO;
+    //Input
+    IO_Port * In;
 
     enum Rail_types type;
     char dir;
+    IO_Port * dir_Out;
     int length;
 
     struct rail_link next;
@@ -96,9 +98,11 @@
   };
 
   enum Station_types {
-    PERSON,
-    CARGO,
-    YARD
+    STATION_PERSON,
+    STATION_CARGO,
+    STATION_PERSON_YARD,//Yard for Person only
+    STATION_CARGO_YARD, //Yard for Cargo only
+    STATION_YARD        //Yard for both Person and Cargo trains
   };
 
   typedef struct _station {

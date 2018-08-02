@@ -72,11 +72,16 @@ void Create_Segment(Node_adr IO_Adr, struct block_connect connect ,char max_spee
 
   if(IO_Adr.Node < Units[p->module]->IO_Nodes && Units[p->module]->Node[IO_Adr.Node].io[IO_Adr.io]){
     IO_Port * A = Units[p->module]->Node[IO_Adr.Node].io[IO_Adr.io];
+
+    if(A->type != IO_Undefined){
+      loggerf(WARNING, "IO %i:%i already in use", IO_Adr.Node, IO_Adr.io);
+    }
+
     A->type = IO_Input;
     A->state = 0;
     A->id = IO_Adr.io;
 
-    p->IO = A;
+    loggerf(DEBUG, "IO %i:%i", IO_Adr.Node, IO_Adr.io);
   }
 
   // If block array is to small
@@ -329,7 +334,6 @@ Block * Next_Switch_Block(Switch * S, char type, int flags, int level){
   if(next.type == 'R'){
     if(!block_cmp(S->Detection, next.p)){
       level--;
-      // printf("DET\t");
     }
     if(level <= 0){
       // printf("RET BLOCK %i:%i\n",((Block *)next.p)->module, ((Block *)next.p)->id);
@@ -354,7 +358,6 @@ Block * Next_Switch_Block(Switch * S, char type, int flags, int level){
     Switch * N = next.p;
     if(N->Detection && !block_cmp(S->Detection, N->Detection)){
       level--;
-      // printf("DET\t");
       if(level == 0){
         // printf("RET DET\n");
         return N->Detection;

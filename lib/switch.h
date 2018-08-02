@@ -22,13 +22,13 @@
 
     _Bool hold;
 
-    _Bool feedback;
+    _Bool feedback_en;
     char feedback_len;
-    IO_Port * feedback_pins;
+    IO_Port ** feedback;
     char * feedback_states;
 
     char IO_len;
-    IO_Port * IO;
+    IO_Port ** IO;
     char * IO_states;
 
     struct rail_link div;
@@ -53,14 +53,14 @@
 
     _Bool hold;
 
-    _Bool feedback;
-    char input_len;
-    char * input_pins;
-    uint16_t * input_states;
+    _Bool feedback_en;
+    char feedback_len;
+    IO_Port ** feedback;
+    char * feedback_states;
 
-    char output_len;
-    char * output_pins;
-    uint16_t * output_states;
+    char IO_len;
+    IO_Port ** IO;
+    uint16_t * IO_states;
 
     struct rail_link * sideA;
     struct rail_link * sideB;
@@ -109,8 +109,8 @@
 
   int set_multiple_switches(char len, char * data);
 
-  void Create_Switch(struct switch_connect connect, char block_id, char output_len, char * output_pins, char * output_states);
-  void Create_MSSwitch(struct msswitch_connect connect, char block_id, char output_len, char * output_pins, uint16_t * output_states);
+  void Create_Switch(struct switch_connect connect, char block_id, char output_len, Node_adr * output_pins, char * output_states);
+  void Create_MSSwitch(struct msswitch_connect connect, char block_id, char output_len, Node_adr * output_pins, uint16_t * output_states);
 
   int check_Switch(struct rail_link link, _Bool pref);
   int check_Switch_State(struct rail_link adr);

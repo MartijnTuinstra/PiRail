@@ -17,6 +17,88 @@ void Create_Switch(struct switch_connect connect, char block_id, char output_len
   Z->str = connect.str;
   Z->app = connect.app;
 
+  Z->IO = _calloc(output_len, IO_Port *);
+
+  for(int i = 0; i < output_len; i++){
+    if(output_pins[i].Node > Units[connect.module]->IO_Nodes){
+      loggerf(WARNING, "Node not initialized");
+      return;
+    }
+    if(Units[connect.module]->Node[output_pins[i].Node].io[output_pins[i].io]){
+      IO_Port * A = Units[connect.module]->Node[output_pins[i].Node].io[output_pins[i].io];
+
+      if(A->type != IO_Undefined){
+        loggerf(WARNING, "IO %i:%i already in use", output_pins[i].Node, output_pins[i].io);
+      }
+
+      A->type = IO_Output;
+      A->state = 0;
+      A->id = output_pins[i].io;
+
+      loggerf(DEBUG, "IO %i:%i", output_pins[i].Node, output_pins[i].io);
+    }
+  }
+
+  Z->IO_len = output_len;
+  Z->IO_states = output_states;
+
+  if(Units[Z->module]->B[block_id]){
+    Z->Detection = Units[Z->module]->B[block_id];
+    if(Units[Z->module]->B[block_id]->switch_len == 0){
+      Units[Z->module]->B[block_id]->Sw = _calloc(2, void *);
+      Units[Z->module]->B[block_id]->switch_len = 2;
+    }
+    loggerf(DEBUG, "Block linked switches find index");
+    int id = find_free_index(Units[Z->module]->B[block_id]->Sw, Units[Z->module]->B[block_id]->switch_len);
+    Units[Z->module]->B[block_id]->Sw[id] = Z;
+  }
+  else{
+    loggerf(ERROR, "SWITCH %i:%i has no detection block %i", connect.module, connect.id, block_id);
+  }
+
+
+  if(Units[connect.module]->Sw[connect.id]){
+    loggerf(INFO, "Duplicate switch %i, overwriting ...", connect.id);
+    _free(Units[connect.module]->Sw[connect.id]);
+  }
+  Units[connect.module]->Sw[connect.id] = Z;
+}
+
+void Switch_Add_Feedback(Switch * S, char len, Node_adr * pins, char * state){
+  //Enable feedback pins
+  S->feedback_en = 1;
+
+  for(int i = 0; i < len; i++){
+    if(pins[i].Node > Units[S->module]->IO_Nodes){
+      loggerf(WARNING, "Node not initialized");
+      return;
+    }
+    if(Units[S->module]->Node[pins[i].Node].io[pins[i].io]){
+      IO_Port * A = Units[S->module]->Node[pins[i].Node].io[pins[i].io];
+      A->type = IO_Input;
+      A->state = 0;
+      A->id = pins[i].io;
+
+      S->feedback[i] = A;
+    }
+  }
+  _free(pins);
+
+  S->feedback_len = len;
+  S->feedback_states = state;
+}
+
+void Create_MSSwitch(struct msswitch_connect connect, char block_id, char output_len, Node_adr * output_pins, uint16_t * output_states){
+  MSSwitch * Z = _calloc(1, MSSwitch);
+
+  Z->module = connect.module;
+  Z->id = connect.id;
+
+  Z->sideA = connect.sideA;
+  Z->sideB = connect.sideB;
+
+  Z->IO = _calloc(output_len, IO_Port *);
+
   for(int i = 0; i < output_len; i++){
     if(output_pins[i].Node > Units[connect.module]->IO_Nodes){
       loggerf(WARNING, "Node not initialized");
@@ -35,62 +117,6 @@ void Create_Switch(struct switch_connect connect, char block_id, char output_len
 
   Z->IO_len = output_len;
   Z->IO_states = output_states;
-
-  if(Units[Z->module]->B[block_id]){
-    Z->Detection = Units[Z->module]->B[block_id];
-    if(Units[Z->module]->B[block_id]->switch_len == 0){
-      Units[Z->module]->B[block_id]->Sw = _calloc(2, void *);
-      Units[Z->module]->B[block_id]->switch_len = 2;
-    }
-    int id = find_free_index(Units[Z->module]->B[block_id]->Sw, Units[Z->module]->B[block_id]->switch_len);
-    Units[Z->module]->B[block_id]->Sw[id] = Z;
-  }
-  else{
-    loggerf(ERROR, "SWITCH %i:%i has no detection block %i", connect.module, connect.id, block_id);
-  }
-
-
-  if(Units[connect.module]->Sw[connect.id]){
-    loggerf(INFO, "Duplicate switch %i, overwriting ...", connect.id);
-    _free(Units[connect.module]->Sw[connect.id]);
-  }
-  Units[connect.module]->Sw[connect.id] = Z;
-}
-
-void Switch_Add_Feedback(Switch * S, char input_len, char * pins, char * state){
-  S->feedback = 1;
-  S->input_len = input_len;
-  S->input_pins = pins;
-  S->input_states = state;
-}
-
-void Create_MSSwitch(struct msswitch_connect connect, char block_id, char output_len, Node_adr * output_pins, uint16_t * output_states){
-  MSSwitch * Z = _calloc(1, MSSwitch);
-
-  Z->module = connect.module;
-  Z->id = connect.id;
-
-  Z->sideA = connect.sideA;
-  Z->sideB = connect.sideB;
-
-  for(int i = 0; i < output_len; i++){
-    if(output_pins[i].Node > Units[connect.module]->IO_Nodes){
-      loggerf(WARNING, "Node not initialized");
-      return;
-    }
-    if(Units[connect.module]->Node[output_pins[i].Node].io[output_pins[i].io]){
-      IO_Port * A = Units[connect.module]->Node[output_pins[i].Node].io[output_pins[i].io];
-      A->type = IO_Output;
-      A->state = 0;
-      A->id = output_pins[i].io;
-
-      Z->IO[i] = A;
-    }
-  }
-  _free(output_pins);
-
-  Z->output_len = output_len;
-  Z->output_states = output_states;
 
   if(Units[Z->module]->B[block_id]){
     Z->Detection = Units[Z->module]->B[block_id];

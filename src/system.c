@@ -14,10 +14,10 @@ void * my_calloc(int elements, int size, char * file, int line){
   return p;
 }
 
-void * my_realloc(void * p, int size, char * file, int line){
+void * my_realloc(void * p, int type_size, int elements, char * file, int line){
   void * old_p = p;
-  p = realloc(p, size);
-  floggerf(MEMORY, file, line, "realloc\told_pointer: %08x\tnew_size: %i\tnew_pointer: %08x", old_p, size, p);
+  p = realloc(p, type_size * elements);
+  floggerf(MEMORY, file, line, "realloc\told_pointer: %08x\tnew_size: %i*%i\tnew_pointer: %08x", old_p, type_size, elements, p);
   return p;
 }
 
@@ -59,17 +59,18 @@ int _find_free_index(void *** list, int * length){
     logger("LIST DOESNT EXIST",CRITICAL);
     return -1;
   }
-  for(int i = 0;i<*length;i++){
+  for(int i = 0;i<(*length);i++){
     if(!(*list)[i]){
       return i;
     }
   }
 
-  *list = _realloc(*list,*length+2, void *);
-  for(int i = *length; i < *length+2; i++){
+  loggerf(INFO, "LIST EXPANDING %x", *list);
+  *list = _realloc(*list, (*length)+2, void *);
+  loggerf(INFO, "LIST EXPANDED %x", *list);
+  for(int i = *length; i < (*length)+2; i++){
     (*list)[i] = 0;
   }
   *length += 2;
-  logger("EXPANDING LIST",INFO);
   return _find_free_index(list, length);
 }

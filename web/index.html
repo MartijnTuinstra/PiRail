@@ -1076,6 +1076,56 @@
 			margin-bottom: 3px;
 		}
 
+		#engine_car_creator .row_container.speed_steps_box .box,
+		#engine_car_creator .row_container.speed_steps_box .add_box {
+			float:left;
+			width:80px;
+			height:58px;
+			padding:5px;
+			margin-right:5px;
+			border-radius:5px;
+			background: lightgrey;
+		}
+
+		#engine_car_creator .row_container.speed_steps_box .box:hover,
+		#engine_car_creator .row_container.speed_steps_box .add_box:hover {
+			background: grey;
+		}
+
+		#engine_car_creator .row_container {
+			float: left;
+			width: calc(100% - 20px);
+			background: #eee;
+			border-radius: 3px;
+			margin: 5px;
+			padding: 5px;
+			overflow: hidden;
+			height: 68px;
+		}
+
+		#engine_car_creator .row_container span {
+			font-weight: bold;
+			display: block;
+		}
+
+		#engine_car_creator .row_container input {
+			width: calc(100% - 10px);
+			border: 1px solid grey;
+			padding: 5px;
+			margin-top: 2px;
+			border-radius: 5px;
+		}
+
+		#engine_car_creator .row_container input:not(:first) {
+			margin-bottom: 3px;
+		}
+
+		#engine_car_creator .row_container .scroller {
+			height: 150%;
+			overflow-x:scroll;
+			max-width:100%;
+		}
+
 		#engine_car_creator .radio_container {
 			width: 100%;
 		}
@@ -1454,17 +1504,21 @@
 		<div class="engines selector"></div>
 	</div>
 
-	<div id="engine_car_creator" style="display:none">
+	<div id="engine_car_creator" style="display:block">
 		<div class="header">Some Title</div>
 		<div style="width: 100%; float: left; display: flex; flex-wrap: wrap;">
 			<div class="field_container" style="width: 100%;">
 				<span>Images</span>
-				<div style="width: 140px;height: 100px;margin: auto;border-top-left-radius: 5px;border-bottom-left-radius: 5px;overflow: hidden;background-size: cover;background-position: center;background-image: url(./../trains/6.png);"></div>
-				<input type="file" id="icon"/>
-				<div style="margin: auto; height: 50px; max-width: 100%;">
-					<img src="./../trains/cars/traxx.png" style="height: 100%;">
+				<div style="width:49%;float:left; position: relative; height:130px">
+					<div style="width: 140px;height: 100px;margin: auto;border-top-left-radius: 5px;border-bottom-left-radius: 5px;overflow: hidden;background-size: cover;background-position: center;background-image: url(./../trains/6.png);"></div>
+					<input style="bottom: 0px; position: absolute;" type="file" id="icon" onchange="Train.engine_car_creator.upload('#icon');"/>
 				</div>
-				<input type="file" id="img"/>
+				<div style="width:49%;float:right; position: relative; height:130px">
+					<div style="margin: auto; height: 50px; width: 100%; text-align: center; top: calc(40% - 25px); position: absolute;">
+						<img src="./../trains/cars/traxx.png" style="height: 100%;">
+					</div>
+					<input style="bottom: 0px; position: absolute;" type="file" id="img" onchange="Train.engine_car_creator.upload('#img');"/>
+				</div>
 			</div>
 			<div class="field_container name">
 				<span>Name</span>
@@ -1484,14 +1538,42 @@
 			</div>
 			<div class="field_container speed">
 				<span>Max speed</span>
-				<input type="number" placeholder="max speed in km/h"/>
+				<input type="number" name="speed" style="width: calc(50% - 20px);" placeholder="m/s"/>
+				<input type="number" name="steps" style="width: calc(50% - 20px); float: right;" placeholder="speed steps"/>
 			</div>
 			<div class="field_container type">
 				<span>Type</span>
 				<div class="radio_container">
-					<div class="radio_button"><input name="car_type" type="radio"/>Passenger</div>
-					<div class="radio_button"><input name="car_type" type="radio"/>Both</div>
-					<div class="radio_button"><input name="car_type" type="radio"/>Cargo</div>
+					<div class="radio_button"><input value="p" name="car_type" type="radio"/>Passenger</div>
+					<div class="radio_button"><input value="b" name="car_type" type="radio"/>Both</div>
+					<div class="radio_button"><input value="c" name="car_type" type="radio"/>Cargo</div>
+				</div>
+			</div>
+			<div class="field_container functions" style="width: calc(25% - 20px);position: relative;cursor: pointer" onclick="$('#engine_car_creator .speed_steps_box').hide();$('#engine_car_creator .functions_box').show()">
+				<span>Functions</span>
+				<div style="position: absolute;right:10px;top:5px;width:18px;height:18px;">
+					<img src="img/arrow_down.png" width="18px"/>
+				</div>
+			</div>
+			<div class="field_container speed_steps" style="width: calc(25% - 20px);position: relative;cursor: pointer" onclick="$('#engine_car_creator .speed_steps_box').show();$('#engine_car_creator .functions_box').hide()">
+				<span>Speed</span>
+				<div style="position: absolute;right:10px;top:5px;width:18px;height:18px;">
+					<img src="img/arrow_down.png" width="18px"/>
+				</div>
+			</div>
+			<div class="row_container functions_box" style="display: none;">
+			</div>
+			<div class="row_container speed_steps_box" style="display: none;">
+				<div class="scroller">
+					<div style="width:190px;height:10px;">
+						<div class="box">
+							<input type="text" name="speed" placeholder="speed" style="text-align:center;"/>
+							<input type="text" name="step"  placeholder="step"  style="text-align:center;"/>
+						</div>
+						<div class="add_box" style="cursor:pointer;position: relative;">
+							<img src="img/plus_h.png" style="position:absolute;top:calc(50% - 16px);left:calc(50% - 16px);"/>
+						</div>
+					</div>
 				</div>
 			</div>
 		</div>
@@ -2184,24 +2266,59 @@
                     $('#engine_car_creator .btn.save').on("click", this.done);
                     $('#engine_car_creator .btn.save_new').on("click", this.done_n);
                     $('#engine_car_creator .btn.close').on("click", this.close);
+                    $('#engine_car_creator .speed_steps_box .add_box').on("click", this.create_speed_step);
 				},
 
-				upload: function(){
-					var file = $("#file1").get(0).files[0];
+				upload: function(field){
+					var file = $(field, '#engine_car_creator').get(0).files[0];
 					var formdata = new FormData();
 					formdata.append("file1", file);
-					formdata.append("name", name);
+
+					if (field == "#icon"){
+						formdata.append("name", "tmp_icon");
+					}
+					else{
+						formdata.append("name", "tmp_img");
+					}
 					var ajax = new XMLHttpRequest();
-					ajax.addEventListener("load", function(){}, false);
-					ajax.addEventListener("error", function(){}, false);
-					ajax.addEventListener("abort", function(){}, false);
-					ajax.open("POST", "./train_img_upload.php");
+					ajax.addEventListener("load", function(){console.log(this.responseText);}, false);
+					ajax.addEventListener("error", function(){alert("error")}, false);
+					ajax.addEventListener("abort", function(){alert("abort")}, false);
+					ajax.open("POST", "./img_upload.php");
 					ajax.send(formdata);
 				},
 
-				done: function(close = true){
+				create_speed_step: function(evt){
+					$('#engine_car_creator .speed_steps_box .add_box').before('<div class="box"><input type="text" name="speed" placeholder="speed" style="text-align:center;"/><input type="text" name="step"  placeholder="step" style="text-align:center;"/></div>');
+					$('#engine_car_creator .speed_steps_box .scroller > div').width($('#engine_car_creator .speed_steps_box .scroller > div').width() + 95);
+				},
 
-					
+				add_speed_step: function(speed, step){
+					$('#engine_car_creator .speed_steps_box .add_box').before('<div class="box"><input type="text" name="speed" placeholder="speed" style="text-align:center;"/><input type="text" name="step"  placeholder="step" style="text-align:center;"/></div>');
+					$('#engine_car_creator .speed_steps_box .scroller > div').width($('#engine_car_creator .speed_steps_box .scroller > div').width() + 95);
+					$('input[name="speed"]', '#engine_car_creator .speed_steps_box .box:last').val(speed);
+					$('input[name="step"]', '#engine_car_creator .speed_steps_box .box:last').val(step);
+				},
+
+				done: function(close = true){
+					data = {}
+
+					data['name'] = $('#engine_car_creator .name input').val();
+					data['dcc'] = $('#engine_car_creator .dcc input').val();
+					data['nr'] = $('#engine_car_creator .nr input').val();
+					data['length'] = $('#engine_car_creator .length input').val();
+					data['type'] = $('#engine_car_creator .type input:checked').val();
+
+					listA = $('#engine_car_creator .speed_steps_box input[name="speed"]');
+					listB = $('#engine_car_creator .speed_steps_box input[name="step"]');
+
+					data['speed_steps'] = {};
+
+					for (var i = listA.length - 1; i >= 0; i--) {
+						data['speed_steps'][listB[i].value] = listA[i].value;
+					}
+
+					console.log(data);
 					if(close && close.target == undefined){
 						this.close();
 					}
@@ -2219,11 +2336,26 @@
 					if(type == "E"){
 						$('#engine_car_creator .field_container.nr').hide();
 						$('#engine_car_creator .field_container.dcc').show();
+
+						$('#engine_car_creator .field_container.speed_steps').show();
+						$('#engine_car_creator .field_container.functions').css("width", "calc(25% - 20px)");
+
+						$('#engine_car_creator .field_container.speed input[name="speed"]').css("width","calc(50% - 20px)");
+						$('#engine_car_creator .field_container.speed input[name="steps"]').show();
 					}
 					else{
 						$('#engine_car_creator .field_container.nr').show();
 						$('#engine_car_creator .field_container.dcc').hide();
+
+						$('#engine_car_creator .field_container.speed_steps').hide();
+						$('#engine_car_creator .field_container.functions').css("width", "calc(50% - 20px)");
+
+						$('#engine_car_creator .field_container.speed input[name="speed"]').css("width","calc(100% - 10px)");
+						$('#engine_car_creator .field_container.speed input[name="steps"]').hide();
 					}
+
+					$('#engine_car_creator .speed_steps_box .box:not(:first)').remove();
+					$('#engine_car_creator .speed_steps_box .box input').val("");
 
 				}
 			},

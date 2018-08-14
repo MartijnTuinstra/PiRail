@@ -1,3 +1,5 @@
 *.tmp
 bin/
 sublime.sublime-project
+web/trains_img/*
+!web/trains_img/.gitkeep

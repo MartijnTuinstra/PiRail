@@ -11,7 +11,7 @@ if (!$fileTmpLoc) { // if file not chosen
 }
 $ext = pathinfo($fileName, PATHINFO_EXTENSION);
 
-$dst_loc = __DIR__."/../trains/".$_POST['name'].".".end(explode(".",$_FILES["file1"]["name"]));
+$dst_loc = __DIR__."/".$_POST['name'].".".end(explode(".",$_FILES["file1"]["name"]));
 
 if(move_uploaded_file($fileTmpLoc, $dst_loc)){
     echo $dst_loc." upload is complete\n";

@@ -99,7 +99,7 @@ var websocket = {
     console.log(data);
 
     this.send(data);
-  }.
+  },
 
   cts_set_switch: function(d){ //Module, Switch, NewState
     // console.log("Set switch "+m+":"+s+"=>"+st);

@@ -1,10 +1,10 @@
 #include "system.h"
 #include "train_sim.h"
 #include "algorithm.h"
-
+#include "websocket_msg.h"
 #include "rail.h"
 #include "train.h"
-
+#include "logger.h"
 #include "module.h"
 
 pthread_mutex_t mutex_lockA;
@@ -16,13 +16,14 @@ pthread_mutex_t mutex_lockA;
 void *TRAIN_SIMA(){
   Block *B = Units[20]->B[10];
   Block *N = Units[20]->B[10];
-  Block *A = 0;
   int i = 0;
 
   B->state = BLOCKED;
   B->blocked = 1;
   B->changed  = 1;
-  procces(B, 2);
+  process(B, 2);
+  WS_trackUpdate(0);
+  WS_SwitchesUpdate(0);
 
   while(1){
     if(B->state == RESTRICTED){ //B->train != 0 && train_link[B->train] != 0 || 
@@ -36,42 +37,35 @@ void *TRAIN_SIMA(){
 
 
   while(_SYS->_STATE & STATE_RUN){
-    printf("Train Sim Step (id:%i)\n",pthread_self());
+    loggerf(MEMORY, "Train Sim Step (id:%i)\n",pthread_self());
 
     pthread_mutex_lock(&mutex_lockA);
 
-    N = Next(B, NEXT,1+i);
-    if(i > 0){
-      A = Next(B, NEXT,i);
-    }
+    N = Next(B, NEXT, 1);
     if(!N){
-      printf("No N at %i:%i\n",B->module, B->id);
+      loggerf(WARNING, "Sim A reached end of the line");
       while(1){
         usleep(100000);
       }
     }
-    printf(" %i:%i\n",N->module,N->id);
-    N->changed = 1;
+    loggerf(TRACE, "Sim A step to %i:%i",N->module,N->id);
+    N->changed |= IO_Changed;
     N->state = BLOCKED;
     N->blocked = 1;
-    procces(N, 2);
+    process(N, 2);
+    if(N->changed & IO_Changed){
+      process(N, 2);
+    }
     WS_trackUpdate(0);
     WS_SwitchesUpdate(0);
 
     pthread_mutex_unlock(&mutex_lockA);
     usleep(delayA/2);
     pthread_mutex_lock(&mutex_lockA);
-    if(i>0){
-      A->changed = 1;
-      A->blocked = 0;
-      A->state = PROCEED;
-      procces(A, 2);
-    }else{
-      B->changed = 1;
-      B->blocked = 0;
-      B->state = PROCEED;
-      procces(B, 2);
-    }
+    N->changed |= IO_Changed;
+    B->blocked = 0;
+    B->state = PROCEED;
+    process(B, 2);
 
     WS_trackUpdate(0);
     WS_SwitchesUpdate(0);
@@ -79,12 +73,7 @@ void *TRAIN_SIMA(){
     pthread_mutex_unlock(&mutex_lockA);
     usleep(delayA/2);
     pthread_mutex_lock(&mutex_lockA);
-    if(N->type == SPECIAL){
-      i++;
-    }else{
-      B = N;
-      i = 0;
-    }
+    B = N;
     pthread_mutex_unlock(&mutex_lockA);
   }
 }

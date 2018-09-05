@@ -6,6 +6,16 @@
 
 #include "logger.h"
 
+#define LOG_TO_STDOUT
+#ifdef LOG_TO_STDOUT
+#define log_print(fp, ...) printf(__VA_ARGS__);\
+                          fprintf(fp, __VA_ARGS__);
+#define vlog_print(fp, ...) vprintf(__VA_ARGS__);\
+                           vfprintf(fp, __VA_ARGS__);
+#else
+#define vlog_print(fp, ...) vfprintf(fp, __VA_ARGS__);
+#endif
+
 char * logger_file;
 
 void init_logger(char * file_location){
@@ -49,38 +59,32 @@ void floggerf(enum logging_levels level, char * file, int line, char * text, ...
   fprintf(fp,"%s - ",c_time);
 
   if(level == CRITICAL){
-    printf("CRITICAL");
-    fprintf(fp,"CRITICAL");
+    log_print(fp,"CRITICAL");
   }
   else if(level == ERROR){
-    printf("..ERROR.");
-    fprintf(fp,"..ERROR.");
+    log_print(fp,"..ERROR.");
   }
   else if(level == WARNING){
-    printf(".WARNING");
-    fprintf(fp,".WARNING");
+    log_print(fp,".WARNING");
   }
   else if(level == INFO){
-    printf("..INFO..");
-    fprintf(fp,"..INFO..");
+    log_print(fp,"..INFO..");
   }
   else if(level == DEBUG){
-    printf("..DEBUG.");
-    fprintf(fp,"..DEBUG.");
+    log_print(fp,"..DEBUG.");
+  }
+  else if(level == TRACE){
+    log_print(fp,"..TRACE.");
   }
   else if(level == MEMORY){
-    printf(".MEMORY.");
-    fprintf(fp,".MEMORY.");
+    log_print(fp,".MEMORY.");
   }
 
-  printf(" - %20s:%4i - ", file, line);
-  fprintf(fp," - %15s:%4i - ", file, line);
+  log_print(fp," - %20s:%4i - ", file, line);
 
-  vprintf(text, arglist);
-  vfprintf(fp, text, arglist);
+  vlog_print(fp, text, arglist);
 
-  printf("\n");
-  fprintf(fp,"\n");
+  log_print(fp,"\n");
 
   fclose(fp);
   va_end( arglist );

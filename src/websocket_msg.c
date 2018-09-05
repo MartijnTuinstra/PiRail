@@ -329,7 +329,7 @@ void WS_trackUpdate(int Client_fd){
     if(Units[i]){
       for(int j = 0;j<=Units[i]->block_len;j++){
         Block * B = Units[i]->B[j];
-        if(B && B->changed){
+        if(B && (B->changed & State_Changed)){
           content = 1;
 
           data[(q-1)*4+1] = B->module;

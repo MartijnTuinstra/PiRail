@@ -54,7 +54,7 @@ void * scan_All_continiously(){
         for(int j = 0;j<=Units[i]->block_len;j++){
           if(Units[i]->B[j]){
             //printf("%i:%i\n",i,j);
-            // procces(Units[i]->B[j],0);
+            // process(Units[i]->B[j],0);
           }
         }
       }
@@ -86,7 +86,7 @@ void scan_All(){
       for(int j = 0;j<=Units[i]->block_len;j++){
         if(Units[i]->B[j]){
           //printf("%i:%i\n",i,j);
-          procces(Units[i]->B[j],2);
+          process(Units[i]->B[j],2);
         }
       }
     }
@@ -96,7 +96,7 @@ void scan_All(){
   pthread_mutex_unlock(&mutex_lockA);
 }
 
-void change_block_state(struct procces_block * A, enum Rail_states state){
+void change_block_state(Algor_Block * A, enum Rail_states state){
   if(!A->blocked){
     for(int i = 0;i<A->length;i++){
       if(A->B[i]->state > state){
@@ -119,7 +119,7 @@ void change_block_state(struct procces_block * A, enum Rail_states state){
   }
 }
 
-void procces(Block * B,int flags){
+void process(Block * B,int flags){
   int debug = (flags & 1);
   int force = (flags & 2);
 
@@ -130,11 +130,12 @@ void procces(Block * B,int flags){
   //   return;
   // }
 
-  // B->changed = 0;
+  B->changed &= ~(IO_Changed);
+  B->changed |= State_Changed;
 
 
   //init_Algor_Blocks and clear
-  struct procces_block BPPP,BPP,BP,BN,BNN,BNNN;
+  Algor_Block BPPP,BPP,BP,BN,BNN,BNNN;
 
   //Clear pointer
   BPPP.B[0] = NULL;BPPP.B[1] = NULL;BPPP.B[2] = NULL;BPPP.B[3] = NULL;BPPP.B[4] = NULL;
@@ -161,7 +162,7 @@ void procces(Block * B,int flags){
   //Find all surrounding blocks. Can be speeded up by storing this into the block. Update only if a (MS)switch changes or the direciton changes
   Algor_search_Blocks(&AllBlocks, debug);
 
-  
+  Algor_print_block_debug(AllBlocks);
 
   
   //Follow the train arround the layout
@@ -584,7 +585,6 @@ void procces(Block * B,int flags){
     // /**/
     // /**/
   }
-  printf("\n");
 }
 
 void Algor_print_block_debug(struct algor_blocks AllBlocks){
@@ -598,134 +598,139 @@ void Algor_print_block_debug(struct algor_blocks AllBlocks){
   Algor_Block BNN  = *AllBlocks.BNN;
   Algor_Block BNNN = *AllBlocks.BNNN;
 
+  char output[200] = "";
+
     if(BPPP.blocks > 0){
-      printf("PPP%i ",BPP.blocks);
+      sprintf(output, "%sPPP%i ", output, BPP.blocks);
       if(BPPP.blocked)
-        printf("B");
+        sprintf(output, "%sB", output);
       else
-        printf(" ");
+        sprintf(output, "%s ", output);
       for(int i = 1;i>=0;i--){
         if(BPPP.B[i]){
-          printf("%02i:%02i",BPPP.B[i]->module,BPPP.B[i]->id);
+          sprintf(output, "%s%02i:%02i", output,BPPP.B[i]->module,BPPP.B[i]->id);
           if(BPPP.B[i]->blocked){
-            printf("B  ");
+            sprintf(output, "%sB  ", output);
           }else{
-            printf("   ");
+            sprintf(output, "%s   ", output);
           }
         }else{
-          printf("        ");
+          sprintf(output, "%s        ", output);
         }
       }
     }else{
-      printf("                      ");
+      sprintf(output, "%s                      ", output);
     }
     if(BPP.blocks > 0){
-      printf("PP%i ",BPP.blocks);
+      sprintf(output, "%sPP%i ", output,BPP.blocks);
       if(BPP.blocked)
-        printf("B");
+        sprintf(output, "%sB", output);
       else
-        printf(" ");
+        sprintf(output, "%s ", output);
       for(int i = 1;i>=0;i--){
         if(BPP.B[i]){
-          printf("%02i:%02i",BPP.B[i]->module,BPP.B[i]->id);
+          sprintf(output, "%s%02i:%02i", output,BPP.B[i]->module,BPP.B[i]->id);
           if(BPP.B[i]->blocked){
-            printf("B  ");
+            sprintf(output, "%sB  ", output);
           }else{
-            printf("   ");
+            sprintf(output, "%s   ", output);
           }
         }else{
-          printf("        ");
+          sprintf(output, "%s        ", output);
         }
       }
     }else{
-      printf("                     ");
+      sprintf(output, "%s                     ", output);
     }
     if(BP.blocks > 0){
-      printf("P%i ",BP.blocks);
+      sprintf(output, "%sP%i ", output,BP.blocks);
       if(BP.blocked)
-        printf("B");
+        sprintf(output, "%sB", output);
       else
-        printf(" ");
+        sprintf(output, "%s ", output);
       for(int i = 1;i>=0;i--){
         if(BP.B[i]){
-          printf("%02i:%02i",BP.B[i]->module,BP.B[i]->id);
+          sprintf(output, "%s%02i:%02i", output,BP.B[i]->module,BP.B[i]->id);
           if(BP.B[i]->blocked){
-            printf("B  ");
+            sprintf(output, "%sB  ", output);
           }else{
-            printf("   ");
+            sprintf(output, "%s   ", output);
           }
         }else{
-          printf("        ");
+          sprintf(output, "%s        ", output);
         }
       }
     }else{
-      printf("                    ");
+      sprintf(output, "%s                    ", output);
     }
-    printf("A%3i %c%02i:%02i;T%-2iD%-2iS%-2i",B->length,B->type,B->module,B->id,B->train,B->dir,B->state);
+    sprintf(output, "%sA%3i %2x%02i:%02i;T%-2iD%-2iS%-2i", output,B->length,B->type,B->module,B->id,B->train,B->dir,B->state);
     if(B->blocked){
-      printf("B");
+      sprintf(output, "%sB", output);
     }
-    printf("\t");
+    sprintf(output, "%s\t", output);
     if(BN.blocks > 0){
-      printf("N%i ",BN.blocks);
+      sprintf(output, "%sN%i ", output,BN.blocks);
       if(BN.blocked)
-        printf("B");
+        sprintf(output, "%sB", output);
       else
-        printf(" ");
+        sprintf(output, "%s ", output);
       for(int i = 0;i<2;i++){
         if(BN.B[i]){
-          printf("%02i:%02i",BN.B[i]->module,BN.B[i]->id);
+          sprintf(output, "%s%02i:%02i", output,BN.B[i]->module,BN.B[i]->id);
           if(BN.B[i]->blocked){
-            printf("B  ");
+            sprintf(output, "%sB  ", output);
           }else{
-            printf("   ");
+            sprintf(output, "%s   ", output);
           }
         }else{
-          printf("        ");
+          sprintf(output, "%s        ", output);
         }
       }
     }
     if(BNN.blocks > 0){
-      printf("NN%i ",BNN.blocks);
+      sprintf(output, "%sNN%i ", output,BNN.blocks);
       if(BNN.blocked)
-        printf("B");
+        sprintf(output, "%sB", output);
       else
-        printf(" ");
+        sprintf(output, "%s ", output);
       for(int i = 0;i<2;i++){
         if(BNN.B[i]){
-          printf("%02i:%02i",BNN.B[i]->module,BNN.B[i]->id);
+          sprintf(output, "%s%02i:%02i", output,BNN.B[i]->module,BNN.B[i]->id);
           if(BNN.B[i]->blocked){
-            printf("B  ");
+            sprintf(output, "%sB  ", output);
           }else{
-            printf("   ");
+            sprintf(output, "%s   ", output);
           }
         }else{
-          printf("        ");
+          sprintf(output, "%s        ", output);
         }
       }
     }
     if(BNNN.blocks > 0){
-      printf("NNN%i ",BNNN.blocks);
+      sprintf(output, "%sNNN%i ", output,BNNN.blocks);
       if(BNNN.blocked)
-        printf("B");
+        sprintf(output, "%sB", output);
       else
-        printf(" ");
+        sprintf(output, "%s ", output);
       for(int i = 0;i<2;i++){
         if(BNNN.B[i]){
-          printf("%02i:%02i",BNNN.B[i]->module,BNNN.B[i]->id);
+          sprintf(output, "%s%02i:%02i", output,BNNN.B[i]->module,BNNN.B[i]->id);
           if(BNNN.B[i]->blocked){
-            printf("B  ");
+            sprintf(output, "%sB  ", output);
           }else{
-            printf("   ");
+            sprintf(output, "%s   ", output);
           }
         }else{
-          printf("        ");
+          sprintf(output, "%s        ", output);
         }
       }
     }
+
+  loggerf(DEBUG, "%s", output);
 }
 
 void Algor_search_Blocks(struct algor_blocks * AllBlocks, int debug){
+  loggerf(TRACE, "Algor_search_Blocks");
   Block * next = 0;
   Block * prev = 0;
   Block * B = AllBlocks->B;
@@ -744,8 +749,9 @@ void Algor_search_Blocks(struct algor_blocks * AllBlocks, int debug){
 
   //Select all surrounding blocks
   if(next){
+    loggerf(TRACE, "Search Next");
     for(int i = 0; i < 3; i++){
-      struct procces_block * block_p;
+      Algor_Block * block_p;
       if(i == 0){
         block_p = AllBlocks->BN;
       }
@@ -784,8 +790,9 @@ void Algor_search_Blocks(struct algor_blocks * AllBlocks, int debug){
     }
   }
   if(prev){
+    loggerf(TRACE, "Search Prev");
     for(int i = 0; i < 3; i++){
-      struct procces_block * block_p;
+      Algor_Block * block_p;
       if(i == 0){
         block_p = AllBlocks->BP;
       }
@@ -826,6 +833,7 @@ void Algor_search_Blocks(struct algor_blocks * AllBlocks, int debug){
 }
 
 void Algor_train_following(struct algor_blocks AllBlocks, int debug){
+  loggerf(TRACE, "Algor_train_following");
   //Unpack AllBlocks
   Algor_Block BPPP = *AllBlocks.BPPP;
   Algor_Block BPP  = *AllBlocks.BPP;
@@ -849,7 +857,9 @@ void Algor_train_following(struct algor_blocks AllBlocks, int debug){
   if(BP.blocks > 0 && BN.blocks > 0 && B->blocked && !BP.blocked && BN.blocked && BN.B[0]->train && !B->train){
     //REVERSED
     B->dir ^= 0b100;
-    printf("REVERSE %i:%i", B->module, B->id);
+    loggerf(TRACE, "REVERSE BLOCK %i:%i", B->module, B->id);
+    B->changed |= IO_Changed;
+    return;
   }
   else if(BP.blocks > 0 && BN.blocks > 0 && B->blocked && B->train == 0 && BN.B[0]->train == 0 && BP.B[0]->train == 0){
     //NEW TRAIN
@@ -894,6 +904,7 @@ void Algor_train_following(struct algor_blocks AllBlocks, int debug){
 }
 
 void Algor_rail_state(struct algor_blocks AllBlocks, int debug){
+  loggerf(TRACE, "Algor_rail_state");
   //Unpack AllBlocks
   Algor_Block BPPP = *AllBlocks.BPPP;
   Algor_Block BPP  = *AllBlocks.BPP;
@@ -919,14 +930,16 @@ void Algor_rail_state(struct algor_blocks AllBlocks, int debug){
   }
 }
 
-void Algor_apply_rail_state(struct procces_block b, enum Rail_states state){
+void Algor_apply_rail_state(Algor_Block b, enum Rail_states state){
+  loggerf(TRACE, "Algor_apply_rail_state");
   for(int i = 0; i < b.blocks; i++){
     b.B[i]->state = state;
-    b.B[i]->changed = TRUE;
+    b.B[i]->changed |= State_Changed;
   }
 }
 
 void Algor_signal_state(struct algor_blocks AllBlocks, int debug){
+  loggerf(TRACE, "Algor_signal_state");
   //Unpack AllBlocks
   Algor_Block BPPP = *AllBlocks.BPPP;
   Algor_Block BPP  = *AllBlocks.BPP;

@@ -50,6 +50,9 @@
     UNKNOWN           // 7
   };
 
+  #define IO_Changed 0x1
+  #define State_Changed 0x2
+
   typedef struct rail_segment {
     int module;
     int id;
@@ -73,7 +76,7 @@
     _Bool blocked;
 
     char train; //Follow id
-    _Bool changed;
+    char changed; // 0x1 = IO changed, 0x2 = state changed
     _Bool reversed;
     _Bool oneWay;
 

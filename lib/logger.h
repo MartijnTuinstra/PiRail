@@ -10,6 +10,7 @@
     WARNING,
     INFO,
     DEBUG,
+    TRACE,
     MEMORY
   };
 

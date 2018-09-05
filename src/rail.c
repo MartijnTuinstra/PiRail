@@ -195,6 +195,7 @@ void Connect_Rail_links(){
 }
 
 Block * Next(Block * B, int flags, int level){
+  loggerf(TRACE, "Next(%8x, %2x, %2x)", B, flags, level);
   // Find next (detection) block in direction dir. Could be used recurse for x-levels
   int dir = flags & 0x0F;
   // dir: 0 next, 1 prev
@@ -436,6 +437,9 @@ Block * Next_Special_Block(Block * Bl, int flags, int level){
     Block * prev;
     Block * next;
   };
+
+  int dir = flags & 0x0F;
+
   int pairs = 0;
   struct next_prev_Block * np_blocks = _calloc(Bl->switch_len + Bl->msswitch_len, struct next_prev_Block);
   level++;
@@ -519,28 +523,44 @@ Block * Next_Special_Block(Block * Bl, int flags, int level){
 
   Block * tmp = 0;
   if(pairs == 1){
-    // printf("1 pair\n");
-    if((flags & 0x0F) == 0)
-      tmp = np_blocks[0].next;
+    loggerf(TRACE, "1 pair [%i:%i <p=n> %i:%i]", np_blocks[0].prev->module, np_blocks[0].prev->id, np_blocks[0].next->module, np_blocks[0].next->id);
+    if(dir)
+      loggerf(TRACE, "Prev %i", Bl->dir);
     else
+      loggerf(TRACE, "Next %i", Bl->dir);
+    if((dir == 0 && (Bl->dir == 4 || Bl->dir == 6)) || 
+      (dir == 1 && (Bl->dir == 2 || Bl->dir == 5))){
+      // If next + reversed direction / flipped normal / flipped switching
+      // Or prev + normal direction / switching direction (normal) / flipped reversed direction
+      tmp = np_blocks[0].prev;
+    }
+    else if((dir == 0 && (Bl->dir == 2 || Bl->dir == 5)) || 
+      (dir == 1 && (Bl->dir == 4 || Bl->dir == 6))){
+      // If next + normal direction / switching direction (normal) / flipped reversed
+      // or prev + reversed direction / flipped normal / flipped switching
+      tmp = np_blocks[0].next;
+    }
+    else if(dir == 0)
+      tmp = np_blocks[0].next;
+    else if(dir == 1)
       tmp = np_blocks[0].prev;
   }
   else if(pairs >= 2){
     _Bool same = TRUE;
-    // printf("2 pairs\n");
+    loggerf(MEMORY, "2 pair");
     for(int i = 0; i < pairs - 1; i++){
-      // printf(" prev %2i:%2i   %2i:%2i next <==> prev %2i:%2i   %2i:%2i next\n",np_blocks[i].prev->module,np_blocks[i].prev->id, np_blocks[i].next->module, np_blocks[i].next->id,np_blocks[i+1].prev->module,np_blocks[i+1].prev->id, np_blocks[i+1].next->module, np_blocks[i+1].next->id);
+      loggerf(MEMORY, " prev %2i:%2i   %2i:%2i next <==> prev %2i:%2i   %2i:%2i next\n",np_blocks[i].prev->module,np_blocks[i].prev->id, np_blocks[i].next->module, np_blocks[i].next->id,np_blocks[i+1].prev->module,np_blocks[i+1].prev->id, np_blocks[i+1].next->module, np_blocks[i+1].next->id);
       if(np_blocks[i].next != np_blocks[i+1].next && np_blocks[i].prev != np_blocks[i+1].prev){
         same = FALSE;
       }
     }
     if(same){
-      if((flags & 0x0F) == NEXT){
-        // printf("N_E_X_T");
+      if(dir == NEXT){
+        loggerf(MEMORY, "N_E_X_T");
         tmp = np_blocks[0].next;
       }
       else{
-        // printf("P_R_E_V");
+        loggerf(MEMORY, "P_R_E_V");
         tmp = np_blocks[0].prev;
       }
     }

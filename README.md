@@ -19,6 +19,10 @@ This package contains
 - 100MB min RAM size
 - 1GHz 2core ARM or better adviced
 
+- Z21 Command Unit
+- A Railway
+- DCC trains
+
 ## Software
 
 - PHP5
@@ -29,8 +33,8 @@ This package contains
 
 To install and launch the Engine:
 ```
-gcc baan.c -std=c99 -lssl -lcrypto -lpthread -lm -lwiringPi -g -o PiRail.out
-./PiRail.out
+make
+./baan
 ```
 
 To install and launch the Emulator:
@@ -44,7 +48,7 @@ gcc emulator.c -std=c99 -lpthread -g -o Z21.out
 
 Make sure to drop the 'web' folder into your webserver. This package has no php webserver.
 
-Browse to the baan.php. This is the main interface.
+Browse to the index.php. This is the main interface.
 From here you can:
 - add/change train and so called Modules
 - Control trains

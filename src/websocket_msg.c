@@ -323,7 +323,7 @@ void WS_trackUpdate(int Client_fd){
 
   int q = 1;
 
-  loggerf(DEBUG, "WS_trackUpdate");
+  loggerf(TRACE, "WS_trackUpdate");
 
   for(int i = 0;i<unit_len;i++){
     if(Units[i]){

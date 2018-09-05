@@ -279,6 +279,7 @@ Block * Next(Block * B, int flags, int level){
 }
 
 int Next_check_Switch(void * p, struct rail_link link, int flags){
+  loggerf(TRACE, "Next_check_Switch (%x, %x, %i)", (unsigned int)p, (unsigned int)&link, flags);
   if((flags & 0x80) == 0){
     //No SWITCH_CARE
     return 1;
@@ -288,7 +289,8 @@ int Next_check_Switch(void * p, struct rail_link link, int flags){
   }
   else if(link.type == 's'){
     Switch * N = link.p;
-    if((N->state == 0 && N->str.p == p) || (N->state == 1 && N->div.p == p)){
+    loggerf(TRACE, "check s (state: %i, str.p: %x, div.p: %x)", (N->state & 0x7F), (unsigned int)N->str.p, (unsigned int)N->div.p);
+    if(((N->state & 0x7F) == 0 && N->str.p == p) || ((N->state & 0x7F) == 1 && N->div.p == p)){
       return 1;
     }
     // else
@@ -644,4 +646,8 @@ struct rail_link Prev_link(Block * B){
   }
   return link;
   loggerf(ERROR, "FIX Prev_link");
+}
+
+int Block_Reverse_To_Next_Switch(Block * B){
+  return 0;
 }

@@ -53,6 +53,7 @@ void *TRAIN_SIMA(){
     N->blocked = 1;
     process(N, 2);
     if(N->changed & IO_Changed){
+      loggerf(INFO, "ReProcess");
       process(N, 2);
     }
     WS_trackUpdate(0);
@@ -61,10 +62,14 @@ void *TRAIN_SIMA(){
     pthread_mutex_unlock(&mutex_lockA);
     usleep(delayA/2);
     pthread_mutex_lock(&mutex_lockA);
-    N->changed |= IO_Changed;
+    B->changed |= IO_Changed;
     B->blocked = 0;
     B->state = PROCEED;
     process(B, 2);
+    if(B->changed & IO_Changed){
+      loggerf(INFO, "ReProcess");
+      process(B, 2);
+    }
 
     WS_trackUpdate(0);
     WS_SwitchesUpdate(0);

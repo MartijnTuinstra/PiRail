@@ -167,6 +167,13 @@ void process(Block * B,int flags){
   
   //Follow the train arround the layout
   Algor_train_following(AllBlocks, debug);
+  if (B->changed & IO_Changed)
+    return;
+
+  //Set oncomming switch to correct state
+  Algor_Switch_Checker(AllBlocks, debug);
+  if (B->changed & IO_Changed)
+    return;
 
   //Apply block stating
   Algor_rail_state(AllBlocks, debug);
@@ -722,6 +729,46 @@ void Algor_print_block_debug(struct algor_blocks AllBlocks){
   loggerf(DEBUG, "%s", output);
 }
 
+void Algor_Switch_Checker(struct algor_blocks AllBlocks, int debug){
+  //Unpack AllBlocks
+  //Algor_Block BPPP = *AllBlocks.BPPP;
+  //Algor_Block BPP  = *AllBlocks.BPP;
+  //Algor_Block BP   = *AllBlocks.BP;
+  Block * B        =  AllBlocks.B;
+  Algor_Block BN   = *AllBlocks.BN;
+  //Algor_Block BNN  = *AllBlocks.BNN;
+  //Algor_Block BNNN = *AllBlocks.BNNN;
+
+  //Check Next 1
+  if(B->blocked && BN.blocks > 0 && !BN.B[0]->blocked){
+    struct rail_link link = Next_link(BN.B[BN.blocks - 1], NEXT);
+    if(link.type == 's' || link.type == 'm' || link.type == 'M'){
+      if(!Next_check_Switch(BN.B[BN.blocks - 1], link, NEXT | SWITCH_CARE)){
+        if(link.type == 's'){
+          loggerf(DEBUG, "Toggled %i:%i", ((Switch *)link.p)->module, ((Switch *)link.p)->id);
+          set_switch(link.p, !(((Switch *)link.p)->state & 0x7F));
+          B->changed |= IO_Changed;
+          return;
+        }
+        else if(link.type == 'm'){
+          loggerf(WARNING, "Next is msswitch !! %i:%i->%i:%i",
+                  BN.B[BN.blocks - 1]->module,
+                  BN.B[BN.blocks - 1]->id,
+                  ((MSSwitch *)link.p)->module,
+                  ((MSSwitch *)link.p)->id);
+        }
+        else if(link.type == 'M'){
+          loggerf(WARNING, "Next is MSswitch !! %i:%i->%i:%i",
+                  BN.B[BN.blocks - 1]->module,
+                  BN.B[BN.blocks - 1]->id,
+                  ((MSSwitch *)link.p)->module,
+                  ((MSSwitch *)link.p)->id);
+        }
+      }
+    }
+  }
+}
+
 void Algor_search_Blocks(struct algor_blocks * AllBlocks, int debug){
   loggerf(TRACE, "Algor_search_Blocks");
   Block * next = 0;
@@ -852,6 +899,7 @@ void Algor_train_following(struct algor_blocks AllBlocks, int debug){
     B->dir ^= 0b100;
     loggerf(TRACE, "REVERSE BLOCK %i:%i", B->module, B->id);
     B->changed |= IO_Changed;
+    Block_Reverse_To_Next_Switch(B);
     return;
   }
   else if(BP.blocks > 0 && BN.blocks > 0 && B->blocked && B->train == 0 && BN.B[0]->train == 0 && BP.B[0]->train == 0){

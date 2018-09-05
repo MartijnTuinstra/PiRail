@@ -147,4 +147,6 @@
   struct rail_link Next_link(Block * B, int flags);
   struct rail_link Prev_link(Block * B);
 
+  int Block_Reverse_To_Next_Switch(Block * B);
+
 #endif

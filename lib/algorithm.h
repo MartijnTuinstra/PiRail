@@ -31,6 +31,7 @@
   void process(Block * B,int debug);
   void Algor_print_block_debug(struct algor_blocks AllBlocks);
   void Algor_search_Blocks(struct algor_blocks * AllBlocks, int debug);
+  void Algor_Switch_Checker(struct algor_blocks AllBlocks, int debug);
   void Algor_train_following(struct algor_blocks AllBlocks, int debug);
   void Algor_rail_state(struct algor_blocks AllBlocks, int debug);
   void Algor_apply_rail_state(Algor_Block blocks, enum Rail_states state);

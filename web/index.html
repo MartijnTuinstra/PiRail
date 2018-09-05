@@ -2947,7 +2947,36 @@
 						}
 						nr = v.r - module_v.r;
 
-						if(v.type == "swr" || v.type == "swl"){ // Switch Right
+						if(v.type == "line"){
+							tmp_this.setStrokeColor(module_v.blocks[v.block], 1);
+							if(v.if != undefined){
+								counter = 0;
+								for (var i = v.if.length - 1; i >= 0; i--) {
+									if(module_v.switches[v.if[i].sw] == v.if[i].st)
+										counter++;
+								}
+								if(counter == v.if.length){
+									return true; // Print on foreground
+								}
+							}
+							c.moveTo(nx, ny);
+							c.lineTo(rvX*v.x2+rvY_*v.y2+ofX,rvY*v.y2+rvX_*v.x2+ofY);
+						}
+						else if(v.type == "arc"){
+							tmp_this.setStrokeColor(module_v.blocks[v.block], 1);
+							if(v.if != undefined){
+								counter = 0;
+								for (var i = v.if.length - 1; i >= 0; i--) {
+									if(module_v.switches[v.if[i].sw] == v.if[i].st)
+										counter++;
+								}
+								if(counter == v.if.length){
+									 return true//Print on foreground
+								}
+							}
+							c.arc(rvX*v.cx+rvY_*v.cy+ofX,rvY*v.cy+rvX_*v.cx+ofY,v.r,Math.PI*(-module_v.r+v.start),Math.PI*(-module_v.r+v.end),v.CW);
+						}
+						else if(v.type == "swr" || v.type == "swl"){ // Switch Right
 							if(v.if != undefined){
 								var j = 0;
 								for (var i = v.if.length - 1; i >= 0; i--) {
@@ -3051,11 +3080,25 @@
 
 						if(v.type == "line"){
 							tmp_this.setStrokeColor(module_v.blocks[v.block]);
+							if(v.if != undefined){
+								where = "F";
+								for (var i = v.if.length - 1; i >= 0; i--) {
+									if(module_v.switches[v.if[i].sw] != v.if[i].st)
+										return true; // Print on background
+								}
+							}
 							c.moveTo(nx, ny);
 							c.lineTo(rvX*v.x2+rvY_*v.y2+ofX,rvY*v.y2+rvX_*v.x2+ofY);
 						}
 						else if(v.type == "arc"){
 							tmp_this.setStrokeColor(module_v.blocks[v.block]);
+							if(v.if != undefined){
+								where = "F";
+								for (var i = v.if.length - 1; i >= 0; i--) {
+									if(module_v.switches[v.if[i].sw] != v.if[i].st)
+										return true //Print on background
+								}
+							}
 							c.arc(rvX*v.cx+rvY_*v.cy+ofX,rvY*v.cy+rvX_*v.cx+ofY,v.r,Math.PI*(-module_v.r+v.start),Math.PI*(-module_v.r+v.end),v.CW);
 						}
 						else if(v.type == "swr" || v.type == "swl"){ // Switch Right
@@ -3446,7 +3489,7 @@
 					{type:"ds"  ,block:6, x:5+ro[0].x,y:20+ro[0].y,r:0,switchA:1,switchB:2},
 
 					{type:"swl" ,block:6, x:5+ds+2*ro[0].x,y:20+3*ro[0].y,switch:3,r:0.25,if:[{sw:2,st:1}]},
-					{type:"arc" ,block:6,cx:5+2*ds+4*ro[0].x,cy:20+6*ro[0].y-radia[0],r:radia[0],start:0.75,end:0.5,CW:true},
+					{type:"arc" ,block:6,cx:5+2*ds+4*ro[0].x,cy:20+6*ro[0].y-radia[0],r:radia[0],start:0.75,end:0.5,CW:true,if:[{sw:2,st:1},{sw:3,st:0}]},
 
 					{type:"line",block:1,   x:5+ro[0].x,y:20,x2:250,y2:20},
 					{type:"line",block:7,   x:5+2*ro[0].x,y:20+2*ro[0].y,x2:250,y2:20+2*ro[0].y},

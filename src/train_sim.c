@@ -91,7 +91,10 @@ void *TRAIN_SIMA(){
         B = N2;
       }
       else{
-        loggerf(CRITICAL, "Two short blocks smaller than train A");
+        loggerf(WARNING, "Two short blocks smaller than train A");
+        change_Block(N, PROCEED);
+        usleep(OneSec);
+        B = N2;
       }
     }
     else{
@@ -165,7 +168,10 @@ void *TRAIN_SIMB(){
         B = N2;
       }
       else{
-        loggerf(CRITICAL, "Two short blocks smaller than train B");
+        loggerf(WARNING, "Two short blocks smaller than train B");
+        change_Block(N, PROCEED);
+        usleep(OneSec);
+        B = N2;
       }
     }
     else{

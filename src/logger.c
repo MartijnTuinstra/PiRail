@@ -16,6 +16,11 @@
 #define vlog_print(fp, ...) vfprintf(fp, __VA_ARGS__);
 #endif
 
+#define LOGGER_RED    "\x1b[31m"
+#define LOGGER_RESET  "\x1b[0m"
+#define LOGGER_YELLOW "\x1b[33m"
+#define LOGGER_GREEN  "\x1b[32m"
+
 char * logger_file;
 
 void init_logger(char * file_location){
@@ -59,25 +64,25 @@ void floggerf(enum logging_levels level, char * file, int line, char * text, ...
   fprintf(fp,"%s - ",c_time);
 
   if(level == CRITICAL){
-    log_print(fp,"CRITICAL");
+    log_print(fp,LOGGER_RED "CRITICAL" LOGGER_RESET);
   }
   else if(level == ERROR){
-    log_print(fp,"..ERROR.");
+    log_print(fp,LOGGER_RED "  ERROR " LOGGER_RESET);
   }
   else if(level == WARNING){
-    log_print(fp,".WARNING");
+    log_print(fp,LOGGER_YELLOW " WARNING" LOGGER_RESET);
   }
   else if(level == INFO){
-    log_print(fp,"..INFO..");
+    log_print(fp,LOGGER_GREEN "  INFO  " LOGGER_RESET);
   }
   else if(level == DEBUG){
-    log_print(fp,"..DEBUG.");
+    log_print(fp,"  DEBUG ");
   }
   else if(level == TRACE){
-    log_print(fp,"..TRACE.");
+    log_print(fp,"  TRACE ");
   }
   else if(level == MEMORY){
-    log_print(fp,".MEMORY.");
+    log_print(fp," MEMORY ");
   }
 
   log_print(fp," - %20s:%4i - ", file, line);

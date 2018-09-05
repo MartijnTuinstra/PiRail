@@ -766,6 +766,23 @@ void Algor_Switch_Checker(struct algor_blocks AllBlocks, int debug){
         }
       }
     }
+
+    if(link.type == 'S' || link.type == 's'){
+      if(((Switch *)link.p)->Detection->state != BLOCKED &&
+         ((Switch *)link.p)->Detection->state != RESERVED &&
+         ((Switch *)link.p)->Detection->state != RESERVED_SWITCH){
+          ((Switch *)link.p)->Detection->state = RESERVED_SWITCH;
+          ((Switch *)link.p)->Detection->changed = State_Changed;
+      }
+    }
+    else if(link.type == 'M' || link.type == 'm'){
+      if(((MSSwitch *)link.p)->Detection->state != BLOCKED &&
+         ((MSSwitch *)link.p)->Detection->state != RESERVED &&
+         ((MSSwitch *)link.p)->Detection->state != RESERVED_SWITCH){
+          ((MSSwitch *)link.p)->Detection->state = RESERVED_SWITCH;
+          ((MSSwitch *)link.p)->Detection->changed = State_Changed;
+      }
+    }
   }
 }
 

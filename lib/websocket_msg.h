@@ -34,7 +34,7 @@
   void WS_CarsLib(int client_fd);
   void WS_TrainsLib(int client_fd);
 
-  void WS_Partial_Layout(char M_A,char M_B);
+  void WS_Partial_Layout(uint8_t M_A,uint8_t M_B);
 
   void WS_Track_Layout();
 

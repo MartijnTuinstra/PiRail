@@ -20,13 +20,11 @@
 
   void * UART();
 
-  char * COM_Send(struct COM_t DATA);
+  void COM_Send(struct COM_t DATA);
 
   int COM_Recv(char * OUT_Data);
 
   void COM_Parse(char * Data);
-
-  char * COM_SaR(char * buf[60]);
 
   void COM_change_Output(int M);
 

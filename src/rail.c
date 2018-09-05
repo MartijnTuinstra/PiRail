@@ -39,6 +39,7 @@ int block_cmp(Block *A, Block *B){
       return 0;
     }
   }
+  return 0;
 }
 
 
@@ -53,7 +54,7 @@ void Create_Segment(Node_adr IO_Adr, struct block_connect connect ,char max_spee
   p->id = connect.id;
   p->type = connect.type;
 
-  Unit * U = Units[p->module];
+  //Unit * U = Units[p->module]; Never used
 
   p->next.type = connect.next.type;
   p->next.module = connect.next.module;
@@ -90,7 +91,7 @@ void Create_Segment(Node_adr IO_Adr, struct block_connect connect ,char max_spee
     Units[p->module]->B = _realloc(Units[p->module]->B, (Units[p->module]->block_len + 8), Block *);
 
     int i = Units[p->module]->block_len;
-    for(0; i < Units[p->module]->block_len+8; i++){
+    for(; i < Units[p->module]->block_len+8; i++){
       Units[p->module]->B[i] = 0;
     }
     Units[p->module]->block_len += 8;
@@ -119,7 +120,7 @@ void Create_Station(int module, int id, char * name, char name_len, enum Station
     Units[Z->module]->St = _realloc(Units[Z->module]->St, (Units[Z->module]->station_len + 8), Station *);
 
     int i = Units[Z->module]->station_len;
-    for(0; i < Units[Z->module]->station_len+8; i++){
+    for(; i < Units[Z->module]->station_len+8; i++){
       Units[Z->module]->St[i] = 0;
     }
     Units[Z->module]->station_len += 8;
@@ -287,7 +288,7 @@ int Next_check_Switch(void * p, struct rail_link link, int flags){
   }
   else if(link.type == 's'){
     Switch * N = link.p;
-    if(N->state == 0 && N->str.p == p || N->state == 1 && N->div.p == p){
+    if((N->state == 0 && N->str.p == p) || (N->state == 1 && N->div.p == p)){
       return 1;
     }
     // else
@@ -501,7 +502,7 @@ Block * Next_Special_Block(Block * Bl, int flags, int level){
       }
     }
     else if(A && _B && A==_B){
-      if(B->dir == Bl->dir || B->dir == Bl->dir ^ 0x4 || B->dir ^ 0x4 == Bl->dir){
+      if(B->dir == Bl->dir || (B->dir == (Bl->dir ^ 0x4)) || ((B->dir ^ 0x4) == Bl->dir)){
         if(Next(B, NEXT | SWITCH_CARE, level) == Bl){
           // printf("\tB\t%i:%i Next %i == %i:%i\n", B->module, B->id, level, Bl->module, Bl->id);
           np_blocks[pairs].next = A;

@@ -107,7 +107,7 @@ void free_trains(){
   trains_comp_len = 0;
 }
 
-int create_train(char * name, int nr_stock, struct train_comp_ws * comps){
+void create_train(char * name, int nr_stock, struct train_comp_ws * comps){
   Trains * Z = _calloc(1, Trains);
 
   Z->nr_stock = nr_stock;
@@ -160,9 +160,11 @@ int create_train(char * name, int nr_stock, struct train_comp_ws * comps){
   loggerf(INFO, "Train created at %i",index);
 }
 
-int create_train_from_comp(){}
+void create_train_from_comp(){
+  loggerf(CRITICAL, "NOT IMPLEMENTED");
+}
 
-int create_engine(char * name,int DCC,char * img, char * icon, int max, char type, int length){
+void create_engine(char * name,int DCC,char * img, char * icon, int max, char type, int length){
   //DCC cant be used twice
   for(int i = 0;i<engines_len;i++){
     if(engines[i] && engines[i]->DCC_ID == DCC){
@@ -186,7 +188,6 @@ int create_engine(char * name,int DCC,char * img, char * icon, int max, char typ
   Z->cur_speed_step = 0;
 
   Z->type = type;
-  _Bool dir = FALSE;
 
   int index = find_free_index(engines, engines_len);
 
@@ -195,7 +196,7 @@ int create_engine(char * name,int DCC,char * img, char * icon, int max, char typ
   loggerf(INFO, "Engine \"%s\" created at %i\t%s, %s", name, index, img, icon);
 }
 
-int create_car(char * name,int nr,char * img, char * icon, char type, int length){
+void create_car(char * name,int nr,char * img, char * icon, char type, int length){
   Cars * Z = _calloc(1, Cars);
 
   Z->name = _calloc(strlen(name)+2, char);
@@ -210,7 +211,6 @@ int create_car(char * name,int nr,char * img, char * icon, char type, int length
   strcpy(Z->icon_path,icon);
 
   Z->type = type;
-  _Bool dir = FALSE;
 
   int index = find_free_index(cars, cars_len);
 
@@ -221,8 +221,6 @@ int create_car(char * name,int nr,char * img, char * icon, char type, int length
 
 int train_read_confs(){
   char * header = _calloc(2, char);
-
-  memset(header,2,0);
 
   FILE *f;
   f = fopen(ENGINES_CONF,"rb");
@@ -300,7 +298,7 @@ int train_read_confs(){
 
   fclose(f);
 
-  memset(header,2,0);
+  memset(header,0,2);
 
   f = fopen(CARS_CONF,"rb");
 
@@ -377,7 +375,7 @@ int train_read_confs(){
 
   fclose(f);
 
-  memset(header,2,0);
+  memset(header,0,2);
 
   f = fopen(TRAIN_COMPS_CONF,"r");
 
@@ -474,7 +472,7 @@ int link_train(int fid, int tid, char type){
   if(train_link[fid] == NULL){
     train_link[fid] = trains[tid];
   }else{
-    printf("Train_link[%i] not empty (%x)\n", fid, train_link[fid]);
+    printf("Train_link[%i] not empty (%x)\n", fid, (unsigned int)train_link[fid]);
     return 3; //Train allready occupied
   }
 
@@ -485,7 +483,7 @@ int link_train(int fid, int tid, char type){
   return 1;
 }
 
-int unlink_train(int fid){
+void unlink_train(int fid){
   //Unlock all engines
   for(int i = 0; i < train_link[fid]->nr_engines; i++){
     train_link[fid]->engines[i]->use = 0;
@@ -495,27 +493,27 @@ int unlink_train(int fid){
 }
 
 void train_speed(Block * B, Trains * T, char speed){
-  loggerf(ERROR, "TODO: implement train_speed");
+  loggerf(ERROR, "TODO: implement train_speed (%x, %x, %x)", (uint32_t)B, (uint32_t)T, speed);
 }
 
 void train_set_speed(Trains *T, char speed){
-  loggerf(ERROR, "TODO: implement train_set_speed");
+  loggerf(ERROR, "TODO: implement train_set_speed (%x, %i)", (uint32_t)T, speed);
 }
 
 void train_set_dir(Trains *T, char dir){
-  loggerf(ERROR, "TODO: implement train_set_dir");
+  loggerf(ERROR, "TODO: implement train_set_dir (%x, %i)", (uint32_t)T, dir);
 }
 
 void train_set_route(Trains *T, Station * S){
-  loggerf(ERROR, "TODO: implement train_set_route");
+  loggerf(ERROR, "TODO: implement train_set_route (%x, %x)", (uint32_t)T, (uint32_t)S);
 }
 
 void train_stop(Trains * T){
-  loggerf(ERROR, "TODO: implement train_stop");
+  loggerf(ERROR, "TODO: implement train_stop (%x)", (uint32_t *)T);
 }
 
 void train_signal(Block * B, Trains * T, int type){
-  loggerf(ERROR, "TODO: implement train_signal");
+  loggerf(ERROR, "TODO: implement train_signal (%x, %x, %i)", (uint32_t)B, (uint32_t)T, type);
 }
 
 void train_block_timer();

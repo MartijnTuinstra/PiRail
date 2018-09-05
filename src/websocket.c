@@ -7,7 +7,7 @@
 
 pthread_mutex_t m_websocket_send;
 
-int websocket_decode(char data[1024], struct web_client_t * client){
+int websocket_decode(uint8_t data[1024], struct web_client_t * client){
   // Flag Admin Settings    0x80
   // Train stuff flag       0x40
   // Rail stuff flag        0x20
@@ -17,7 +17,7 @@ int websocket_decode(char data[1024], struct web_client_t * client){
     printf("Admin settings: %02X\n",data[0]);
     if(data[0] == 0xFF){ //Admin login
       printf("\nAdmin Login\n\n");
-      if(strcmp(&data[1],WS_password) == 1){
+      if(strcmp((char *)&data[1],WS_password) == 1){
         printf("\n\n\n\n\nSUCCESSFULL LOGIN\n\n");
         //0xc3,0xbf,0x35,0x66,0x34,0x64,0x63,0x63,0x33,0x62,0x35,0x61,0x61,0x37,0x36,0x35,0x64,0x36,0x31,0x64,0x38,0x33,0x32,0x37,0x64,0x65,0x62,0x38,0x38,0x32,0x63,0x66,0x39,0x39
         client->type |= 0x10;
@@ -90,8 +90,8 @@ int websocket_decode(char data[1024], struct web_client_t * client){
     else if(data[0] == WSopc_TrainSpeed){ //Train speed control
       printf("Train speed control\n");
       loggerf(ERROR,"RE-IMPLEMENT WSopc_TrainSpeed");
-      char tID = data[1];
-      char speed = data[2];
+      uint8_t tID = data[1];
+      uint8_t speed = data[2];
       trains[tID]->cur_speed = speed & 0x7F;
       trains[tID]->dir       = speed >> 7;
 
@@ -127,7 +127,7 @@ int websocket_decode(char data[1024], struct web_client_t * client){
     }
     else if(data[0] == WSopc_SetMultiSwitch){ // Set mulitple switches at once
       printf("Throw multiple switches\n");
-      set_multiple_switches(data[1],&data[2]);
+      set_multiple_switches(data[1],(char *)&data[2]);
     }
     else if(data[0] == WSopc_SetSwitchReserved){ //Set switch reserved
 
@@ -160,6 +160,7 @@ int websocket_decode(char data[1024], struct web_client_t * client){
       ws_send(client->fd,(char [2]){WSopc_ChangeBroadcast,client->type},2,255);
     }
   }
+  return 0;
 }
 
 int websocket_get_msg(int fd, char outbuf[], int * length_out){
@@ -167,50 +168,55 @@ int websocket_get_msg(int fd, char outbuf[], int * length_out){
   usleep(10000);
   recv(fd,buf,1024,0);
 
-  int byte = 0;
+  uint16_t byte = 0;
   
   //Websocket opcode
   int opcode = buf[byte++] & 0b00001111;
   
-  unsigned int mes_length = buf[byte++] & 0b01111111;
+  uint16_t mes_length = buf[byte++] & 0b01111111;
   if(mes_length == 126){
-    mes_length = (buf[byte++] << 8) + buf[byte++];
+    mes_length  = (buf[byte++] << 8);
+    mes_length += buf[byte++];
   }else if(mes_length == 127){
     loggerf(ERROR, "To large message");
     _free(buf);
     return -1;
   }
 
-  int masking_index = byte;
-  unsigned int masking_key = (buf[byte++] << 24) + (buf[byte++] << 16) + (buf[byte++] << 8) + (buf[byte++]);
+  unsigned int masking_key = (buf[byte++] << 24);
+  masking_key += (buf[byte++] << 16);
+  masking_key += (buf[byte++] << 8);
+  masking_key += (buf[byte++]);
 
   char output[mes_length+2];
   memset(output,0,mes_length+2);
 
-  for(int i = 0;i<mes_length;0){
-    unsigned int test;
-    unsigned int text;
-    test = (buf[byte++] << 24) + (buf[byte++] << 16) + (buf[byte++] << 8) + (buf[byte++]);
-    text = test ^ masking_key;
-      output[i++] = (text & 0xFF000000) >> 24;
+  for(uint16_t i = 0;i<mes_length;){
+    uint32_t data, masked;
+    masked =  (buf[byte++] << 24);
+    masked += (buf[byte++] << 16);
+    masked += (buf[byte++] << 8);
+    masked += (buf[byte++]);
+    data = masked ^ masking_key;
+      output[i++] = (data & 0xFF000000) >> 24;
       if(i<mes_length){
-        output[i++] = (text & 0xFF0000) >> 16;
+        output[i++] = (data & 0xFF0000) >> 16;
       }
       if(i<mes_length){
-        output[i++] = (text & 0xFF00) >> 8;
+        output[i++] = (data & 0xFF00) >> 8;
       }
       if(i<mes_length){
-        output[i++] = text & 0xFF;
+        output[i++] = data & 0xFF;
       }
   }
   *length_out = mes_length;
 
   memcpy(outbuf, output, mes_length);
   
-  for(int q = 0;q<mes_length;q++){
+  for(uint16_t q = 0;q<mes_length;q++){
     printf("%02x ",output[q]);
   }
-  printf("\n",output);
+  printf(" %s\n",output);
 
   _free(buf);
 
@@ -246,7 +252,7 @@ void websocket_create_msg(char * input, int length_in, char * output, int * leng
   *length_out = header_len + length_in;
 }
 
-int ws_send(int fd, char data[], int length, int flag){
+void ws_send(int fd, char data[], int length, int flag){
   char outbuf[4096];
 
   websocket_create_msg(data, length, outbuf, &length);

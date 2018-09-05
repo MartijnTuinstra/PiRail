@@ -66,11 +66,13 @@ void * UART(){
 
   //----- CLOSE THE UART -----
   close(uart0_filestream);
+  return 0;
 }
 
-char * COM_Send(struct COM_t DATA){
+void COM_Send(struct COM_t DATA){
   if (uart0_filestream == -1){
-    return "No UART";
+    loggerf(ERROR, "No UART");
+    return;
   }
 
   tcflush(uart0_filestream, TCIFLUSH);
@@ -133,9 +135,10 @@ int COM_Recv(char * OUT_Data){
   for(int i = 0;i<index;i++){
     OUT_Data[i] = data_buffer[i];
   }
+  return index;
 }
 
-char COM_Packet_Length(char * Data){
+uint8_t COM_Packet_Length(char * Data){
   uint8_t Opcode = Data[0];
   if(Opcode == COMopc_EmergencyEn ||
       Opcode == COMopc_EmergencyDis ||
@@ -163,7 +166,7 @@ char COM_Packet_Length(char * Data){
 }
 
 void COM_Parse(char * Data){
-  char length = COM_Packet_Length(Data);
+  uint8_t length = COM_Packet_Length(Data);
 
   //Check Checksum
   uint8_t Check = 0xFF;
@@ -213,10 +216,6 @@ void COM_Parse(char * Data){
   }
 }
 
-char * COM_SaR(char * buf[60]){
-
-}
-
 void COM_change_A_signal(int M){
   COM_change_Output(M);
 }
@@ -230,7 +229,7 @@ void COM_DevReset(){
 }
 
 void COM_set_Output(int M){
-  loggerf(ERROR, "FIX COM_set_Output");
+  loggerf(ERROR, "FIX COM_set_Output (%i)", M);
 
   // uint8_t * OutRegs   = (uint8_t *)malloc(((Units[M]->Out_length-1)/8)+1);
   // uint8_t * BlinkMask = (uint8_t *)malloc(((Units[M]->Out_length-1)/8)+1);
@@ -314,7 +313,7 @@ void COM_set_Output(int M){
 }
 
 void COM_change_Output(int M){
-  loggerf(ERROR, "FIX COM_change_Output");
+  loggerf(ERROR, "FIX COM_change_Output (%i)", M);
 
   // uint8_t * OutRegs   = (uint8_t *)malloc(((Units[M]->Out_length-1)/8)+1);
   // uint8_t * BlinkMask = (uint8_t *)malloc(((Units[M]->Out_length-1)/8)+1);
@@ -455,7 +454,7 @@ void COM_change_Output(int M){
 
 void COM_change_signal(Signal * Si){
   if (uart0_filestream != -1){
-    loggerf(ERROR, "FIX Signal");
+    loggerf(ERROR, "FIX Signal (%x)", (unsigned int)Si);
 
     // COM_change_A_signal(Si->MAdr);
     /*
@@ -531,8 +530,7 @@ void COM_change_switch(int M){
     printf("ch\n");
     uint8_t * PulseAdr = (uint8_t *)malloc(1);
     uint8_t * ToggleAdr = (uint8_t *)malloc(1);
-    char Pulse = 0, Toggle = 0;
-    uint8_t byte,offset;  
+    char Pulse = 0;
 
     for(int i = 0;i<Units[M]->switch_len;i++){
       if(!Units[M]->Sw[i]){
@@ -576,7 +574,7 @@ void COM_change_switch(int M){
     }
     printf("\n\n");
     //Send via UART and get send bytes back
-    int count = write(uart0_filestream, TxPacket.data, TxPacket.data[1]-1);
+    write(uart0_filestream, TxPacket.data, TxPacket.data[1]-1);
     //Check if all bytes were send
 
     free(ToggleAdr);

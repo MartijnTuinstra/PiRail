@@ -7,80 +7,80 @@
   struct switch_link {
     char type;
     void * p;
-    char states_len;
-    int * states;
+    uint8_t states_len;
+    uint8_t * states;
   };
 
   struct switch_preference {
     char type;
-    char state;
+    uint8_t state;
   };
 
   typedef struct _switch {
-    int module;
-    int id;
+    uint8_t  module;
+    uint16_t id;
 
     _Bool hold;
 
     _Bool feedback_en;
-    char feedback_len;
+    uint8_t feedback_len;
     IO_Port ** feedback;
     char * feedback_states;
 
-    char IO_len;
+    uint8_t IO_len;
     IO_Port ** IO;
-    char * IO_states;
+    uint8_t * IO_states;
 
     struct rail_link div;
     struct rail_link str;
     struct rail_link app;
 
-    char state;
-    char default_state;
+    uint8_t state;
+    uint8_t default_state;
 
     Block * Detection;
 
-    char links_len;
+    uint8_t links_len;
     struct switch_link * links;
 
-    char pref_len;
+    uint8_t pref_len;
     struct switch_preference * preferences;
   } Switch;
 
   typedef struct _msswitch {
-    int module;
-    int id;
+    uint8_t  module;
+    uint16_t id;
 
     _Bool hold;
 
     _Bool feedback_en;
-    char feedback_len;
+    uint8_t feedback_len;
     IO_Port ** feedback;
     char * feedback_states;
 
-    char IO_len;
+    uint8_t IO_len;
     IO_Port ** IO;
     uint16_t * IO_states;
 
     struct rail_link * sideA;
     struct rail_link * sideB;
 
-    char state_len;
-    char default_state;
-    char state;
+    uint8_t state_len;
+    uint8_t default_state;
+    uint8_t state;
 
     Block * Detection;
 
-    char links_len;
+    uint8_t links_len;
     struct switch_link * link;
 
-    char pref_len;
+    uint8_t pref_len;
     struct switch_preference * preferences;
   } MSSwitch;
 
   struct switch_connect {
-    int module;
-    int id;
+    uint8_t  module;
+    uint16_t id;
 
     struct rail_link app;
     struct rail_link str;
@@ -88,15 +88,15 @@
   };
 
   struct msswitch_connect {
-    int module;
-    int id;
+    uint8_t  module;
+    uint16_t id;
 
     struct rail_link * sideA;
     struct rail_link * sideB;
   };
 
   struct switch_list {
-    char len;
+    uint8_t len;
     char * type;
     void ** p;
   };
@@ -104,13 +104,13 @@
   int throw_switch(Switch * S);
   int throw_msswitch(MSSwitch * S);
 
-  int set_switch(Switch * S, char state);
-  int set_msswitch(MSSwitch * S, char state);
+  int set_switch(Switch * S, uint8_t state);
+  int set_msswitch(MSSwitch * S, uint8_t state);
 
-  int set_multiple_switches(char len, char * data);
+  int set_multiple_switches(uint8_t len, char * data);
 
-  void Create_Switch(struct switch_connect connect, char block_id, char output_len, Node_adr * output_pins, char * output_states);
-  void Create_MSSwitch(struct msswitch_connect connect, char block_id, char output_len, Node_adr * output_pins, uint16_t * output_states);
+  void Create_Switch(struct switch_connect connect, uint8_t block_id, uint8_t output_len, Node_adr * output_pins, uint8_t * output_states);
+  void Create_MSSwitch(struct msswitch_connect connect, uint8_t block_id, uint8_t output_len, Node_adr * output_pins, uint16_t * output_states);
 
   int check_Switch(struct rail_link link, _Bool pref);
   int check_Switch_State(struct rail_link adr);

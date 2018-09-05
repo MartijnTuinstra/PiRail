@@ -27,7 +27,7 @@
   struct rail_link {
     char type;
     void * p;
-    char module;
+    uint8_t  module;
     uint16_t id;
   };
 
@@ -54,14 +54,14 @@
   #define State_Changed 0x2
 
   typedef struct rail_segment {
-    int module;
-    int id;
+    uint8_t  module;
+    uint16_t id;
 
     //Input
     IO_Port * In;
 
     enum Rail_types type;
-    char dir;
+    uint8_t dir;
     IO_Port * dir_Out;
     int length;
 
@@ -70,13 +70,13 @@
 
     Station * station;
 
-    char max_speed;
+    uint8_t max_speed;
 
     enum Rail_states state;
     _Bool blocked;
 
-    char train; //Follow id
-    char changed; // 0x1 = IO changed, 0x2 = state changed
+    uint8_t train; //Follow id
+    uint8_t changed; // 0x1 = IO changed, 0x2 = state changed
     _Bool reversed;
     _Bool oneWay;
 

@@ -7,11 +7,11 @@
 
   int websocket_get_msg(int fd_client, char outbuf[], int * L);
 
-  int ws_send(int fd_client, char data[],int length,int flag);
+  void ws_send(int fd_client, char data[],int length,int flag);
 
   void ws_send_all(char data[],int length,int flag);
 
-  int websocket_decode(char data[1024], struct web_client_t * client);
+  int websocket_decode(uint8_t data[1024], struct web_client_t * client);
 
   #define WEBSOCKET_CLIENT_TIMEOUT 5
 

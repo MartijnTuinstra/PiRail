@@ -16,7 +16,6 @@ pthread_mutex_t mutex_lockA;
 void *TRAIN_SIMA(){
   Block *B = Units[20]->B[10];
   Block *N = Units[20]->B[10];
-  int i = 0;
 
   B->state = BLOCKED;
   B->blocked = 1;
@@ -29,7 +28,7 @@ void *TRAIN_SIMA(){
     if(B->state == RESTRICTED){ //B->train != 0 && train_link[B->train] != 0 || 
       break;
     }
-    else if(_SYS->_STATE & STATE_RUN == 0){
+    else if((_SYS->_STATE & STATE_RUN) == 0){
       break;
     }
     usleep(100);
@@ -76,6 +75,8 @@ void *TRAIN_SIMA(){
     B = N;
     pthread_mutex_unlock(&mutex_lockA);
   }
+
+  return 0;
 }
 
 void *TRAIN_SIMB(){
@@ -139,6 +140,8 @@ void *TRAIN_SIMB(){
     }
     pthread_mutex_unlock(&mutex_lockA);
   }
+
+  return 0;
 }
 /*
 void *TRAIN_SIMC(){

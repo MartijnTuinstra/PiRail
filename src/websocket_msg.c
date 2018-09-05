@@ -29,7 +29,7 @@
 pthread_mutex_t mutex_lockB;
 
 struct WS_Message MessageList[0x1FFF];
-char MessageCounter = 0;
+uint16_t MessageCounter = 0;
 
 void WS_init_Message_List(){
   memset(MessageList,0,64);
@@ -234,7 +234,7 @@ void WS_TrainsLib(int client_fd){
 
 
 
-void WS_Partial_Layout(char M_A,char M_B){
+void WS_Partial_Layout(uint8_t M_A,uint8_t M_B){
 
   char data[20];
   int q = 1;
@@ -409,6 +409,7 @@ void WS_SwitchesUpdate(int Client_fd){
         }
       }
     }
+  */
   buf_l += (q-1)*4+1;
   if(content == 1){
     if(Client_fd){
@@ -419,7 +420,7 @@ void WS_SwitchesUpdate(int Client_fd){
       ws_send_all(buf,buf_l,WS_Flag_Switches);
     }
   }
-  */
+  
   pthread_mutex_unlock(&mutex_lockB);
 }
 
@@ -688,7 +689,7 @@ void WS_reset_switches(int client_fd){
     }
 
     //Send all switch updates
-    WS_SwitchesUpdate(0);
+    WS_SwitchesUpdate(client_fd);
   }
 }
 

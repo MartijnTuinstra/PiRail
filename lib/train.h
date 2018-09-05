@@ -145,12 +145,12 @@
   void alloc_trains();
   void free_trains();
 
-  int create_train(char * name, int nr_stock, struct train_comp_ws * comps);
-  int create_engine(char * name,int DCC,char * img, char * icon, int max, char type, int length);
-  int create_car(char * name,int nr,char * img, char * icon, char type, int length);
+  void create_train(char * name, int nr_stock, struct train_comp_ws * comps);
+  void create_engine(char * name,int DCC,char * img, char * icon, int max, char type, int length);
+  void create_car(char * name,int nr,char * img, char * icon, char type, int length);
 
   int train_read_confs();
 
   int link_train(int fid, int tid, char type);
-  int unlink_train(int fid);
+  void unlink_train(int fid);
 #endif

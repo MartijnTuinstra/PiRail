@@ -7,7 +7,7 @@
 
   typedef struct proces_block {
     _Bool blocked;
-    char blocks;
+    uint8_t blocks;
     int length;
     Block * B[5];
   } Algor_Block;

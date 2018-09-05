@@ -23,7 +23,7 @@ int main(){
   _SYS->_COM_fd = -1;
 
   init_logger("log.txt");
-  set_level(MEMORY);
+  set_level(DEBUG);
 
   if (signal(SIGINT, sigint_func) == SIG_ERR){
     logger("Cannot catch SIGINT",CRITICAL);
@@ -35,7 +35,9 @@ int main(){
   signal(SIGPIPE, SIG_IGN);
   srand(time(NULL));
 
-  pthread_t th_web_server, th_UART, th_Z21;
+  pthread_t th_web_server;
+  //pthread_t th_UART;
+  //pthread_t th_Z21;
 
   /* Wiring PI */
     wiringPiSetup();
@@ -127,7 +129,7 @@ int main(){
 
   delay(5);
 
-  return 1;
+  //return 1;
 
   if(_SYS->_Clients == 0){
     printf("                   Waiting until for a client connects\n");
@@ -138,10 +140,11 @@ int main(){
 
   usleep(400000);
 
-  pthread_t pt_scan_All, pt_train_timers, pt_train_simA;
-
+  //pthread_t pt_scan_All;
   //pthread_create(&pt_scan_All, NULL, scan_All_continiously, NULL);
+  // pthread_t pt_train_timers;
   // pthread_create(&pt_train_timers, NULL, clear_train_timers, NULL);
+  pthread_t pt_train_simA;
   pthread_create(&pt_train_simA, NULL, TRAIN_SIMA, NULL);
 
   usleep(10000000);
@@ -155,7 +158,7 @@ int main(){
   }
 
   logger("Stopping Argor",INFO);
-  pthread_join(pt_scan_All,NULL);
+  //pthread_join(pt_scan_All,NULL);
 
   logger("Free memory",INFO);
   logger("FREE MEMORY",CRITICAL);
@@ -171,7 +174,7 @@ int main(){
   //printf("SimB JOINED\n");
 
   logger("Stopping UART control",INFO);
-  pthread_join(th_UART,NULL);
+  //pthread_join(th_UART,NULL);
 
   logger("Stopping Websocket server",INFO);
   pthread_join(th_web_server,NULL);

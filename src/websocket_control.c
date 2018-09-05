@@ -61,9 +61,9 @@ int websocket_client_check(struct web_client_t * client){
 
     //Create response Security key by hashing it with SHA1 + base64 encryption
     char hash[SHA_DIGEST_LENGTH];
-    SHA1(key, strlen(key), hash);
+    SHA1((unsigned char *)key, strlen(key), (unsigned char *)hash);
     char * response_key = _calloc(40, char);
-    base64_encode(hash, sizeof(hash), response_key, 40);
+    base64_encode((unsigned char *)hash, sizeof(hash), response_key, 40);
 
     //Server response to the client
     char response[500] = "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ";
@@ -216,6 +216,8 @@ void * websocket_clear_clients(){
     // reduce cpu load
     usleep(1000000);
   }
+
+  return 0;
 }
 
 void read_password(){
@@ -268,7 +270,6 @@ void * websocket_server(){
   socklen_t sin_len = sizeof(client_addr);
 
   int server, fd_client;
-  int fdimg;
   int on = 1;
 
   read_password();
@@ -316,7 +317,7 @@ void * websocket_server(){
 
     fd_client = accept(server, (struct sockaddr *)&client_addr, &sin_len);
 
-    if(_SYS->_STATE & STATE_Client_Accept == 0){
+    if((_SYS->_STATE & STATE_Client_Accept) == 0){
       loggerf(WARNING, "Client_Accept has been disabled");
       break;
     }
@@ -338,4 +339,6 @@ void * websocket_server(){
   _SYS_change(STATE_WebSocket_FLAG, 2);
 
   _free(WS_password);
+
+  return 0;
 }

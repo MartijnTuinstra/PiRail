@@ -48,7 +48,6 @@ void * scan_All_continiously(){
     }
     printf("\n");
     #endif
-    _Bool debug;
     for(int i = 0;i<unit_len;i++){
       if(Units[i]){
         for(int j = 0;j<=Units[i]->block_len;j++){
@@ -77,6 +76,7 @@ void * scan_All_continiously(){
 
     // printf("\n");
   }
+  return 0;
 }
 
 void scan_All(){
@@ -179,13 +179,6 @@ void process(Block * B,int flags){
   Algor_signal_state(AllBlocks, debug);
 
   //Train Control
-
-  int k = 0, p = 0, i = 0;
-  Algor_Block BA;
-  BA.blocked = 0;
-  BA.blocks = 0;
-  BA.length = 0;
-  BA.B[0] = B;
 
   if(0){
     return;
@@ -835,13 +828,13 @@ void Algor_search_Blocks(struct algor_blocks * AllBlocks, int debug){
 void Algor_train_following(struct algor_blocks AllBlocks, int debug){
   loggerf(TRACE, "Algor_train_following");
   //Unpack AllBlocks
-  Algor_Block BPPP = *AllBlocks.BPPP;
-  Algor_Block BPP  = *AllBlocks.BPP;
+  // Algor_Block BPPP = *AllBlocks.BPPP;
+  // Algor_Block BPP  = *AllBlocks.BPP;
   Algor_Block BP   = *AllBlocks.BP;
   Block * B        =  AllBlocks.B;
   Algor_Block BN   = *AllBlocks.BN;
-  Algor_Block BNN  = *AllBlocks.BNN;
-  Algor_Block BNNN = *AllBlocks.BNNN;
+  // Algor_Block BNN  = *AllBlocks.BNN;
+  // Algor_Block BNNN = *AllBlocks.BNNN;
 
   if(!B->blocked && B->train != 0){
     //Reset
@@ -911,8 +904,8 @@ void Algor_rail_state(struct algor_blocks AllBlocks, int debug){
   Algor_Block BP   = *AllBlocks.BP;
   Block * B        =  AllBlocks.B;
   Algor_Block BN   = *AllBlocks.BN;
-  Algor_Block BNN  = *AllBlocks.BNN;
-  Algor_Block BNNN = *AllBlocks.BNNN;
+  // Algor_Block BNN  = *AllBlocks.BNN;
+  // Algor_Block BNNN = *AllBlocks.BNNN;
 
   if(BN.blocks > 0 && BN.blocked && !B->blocked){
     B->state = DANGER;
@@ -966,8 +959,8 @@ void Algor_signal_state(struct algor_blocks AllBlocks, int debug){
       PB = BP.B[0];
       set_signal(B->PrevSignal, PB->state);
     }
-    else
-      set_signal(B->PrevSignal, PB->state);
+    // else
+    //   set_signal(B->PrevSignal, PB->state);
   }
 
   for(int group = 0; group < 6; group++){
@@ -1178,7 +1171,7 @@ int init_connect_Algor(struct ConnectList * List){
   return return_value;
 }
 
-_Bool find_and_connect(char ModuleA, char anchor_A, char ModuleB, char anchor_B){
+_Bool find_and_connect(uint8_t ModuleA, char anchor_A, uint8_t ModuleB, char anchor_B){
   //Node shouldn't be connected to the same Module
   if(ModuleA == ModuleB){return FALSE;}
 
@@ -1441,8 +1434,6 @@ _Bool find_and_connect(char ModuleA, char anchor_A, char ModuleB, char anchor_B)
 int connect_Algor(struct ConnectList * List){
   struct rail_link * R = 0;
 
-  char Anchor_A,Rail_A,Anchor_B,Rail_B;
-
   int value = 0;
 
   for(int i = 0;i<List->length;i++){
@@ -1508,7 +1499,7 @@ int connect_Algor(struct ConnectList * List){
 
           if(connected){
             WS_Partial_Layout(ModuleA,ModuleB);
-            _Bool connected = FALSE;
+            connected = FALSE;
           }
         }
       }
@@ -1536,7 +1527,6 @@ int connect_Algor(struct ConnectList * List){
       }
     }
   }
-  int i = List->length - 1;
   
   if(value == total){
     _SYS_change(STATE_Modules_Coupled, 1);

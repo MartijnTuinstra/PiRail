@@ -7,7 +7,7 @@
 #include "com.h"
 #include "IO.h"
 
-void Create_Switch(struct switch_connect connect, char block_id, char output_len, Node_adr * output_pins, char * output_states){
+void Create_Switch(struct switch_connect connect, uint8_t block_id, uint8_t output_len, Node_adr * output_pins, uint8_t * output_states){
   Switch * Z = _calloc(1, Switch);
 
   Z->module = connect.module;
@@ -88,7 +88,7 @@ void Switch_Add_Feedback(Switch * S, char len, Node_adr * pins, char * state){
   S->feedback_states = state;
 }
 
-void Create_MSSwitch(struct msswitch_connect connect, char block_id, char output_len, Node_adr * output_pins, uint16_t * output_states){
+void Create_MSSwitch(struct msswitch_connect connect, uint8_t block_id, uint8_t output_len, Node_adr * output_pins, uint16_t * output_states){
   MSSwitch * Z = _calloc(1, MSSwitch);
 
   Z->module = connect.module;
@@ -138,15 +138,17 @@ void Create_MSSwitch(struct msswitch_connect connect, char block_id, char output
 }
 
 int throw_switch(Switch * S){
-  loggerf(ERROR, "Implement throw_switch");
+  loggerf(ERROR, "Implement throw_switch (%x)", (unsigned int)S);
+  return -1;
 }
 
 int throw_msswitch(MSSwitch * S){
-  loggerf(ERROR, "Implement throw_msswitch");
+  loggerf(ERROR, "Implement throw_msswitch (%x)", (unsigned int)S);
+  return -1;
 }
 
 
-int set_switch(Switch * S,char state){
+int set_switch(Switch * S, uint8_t state){
   int linked = 0;
   for(int i = 0;i<S->links_len;i++){
     if(S->links[i].p){
@@ -163,7 +165,7 @@ int set_switch(Switch * S,char state){
       }
     }
   }
-  if(S->Detection && (S->Detection->state != RESERVED && S->Detection->state != RESERVED_SWITCH && !S->Detection->blocked) || !S->Detection){
+  if((S->Detection && (S->Detection->state != RESERVED && S->Detection->state != RESERVED_SWITCH && !S->Detection->blocked)) || !S->Detection){
     S->state = state + 0x80;
 
     char buf[40];
@@ -202,16 +204,18 @@ int set_switch(Switch * S,char state){
     }
     return 0;
   }
+  return linked;
 }
 
-int set_msswitch(MSSwitch * S, char state){
-  loggerf(ERROR, "Implement set_msswitch");
+int set_msswitch(MSSwitch * S, uint8_t state){
+  loggerf(ERROR, "Implement set_msswitch (%x, %i)", (unsigned int)S, state);
+  return -1;
 }
 
-int set_multiple_switches(char len, char * msg){
+int set_multiple_switches(uint8_t len, char * msg){
   struct switchdata {
-    char module;
-    char id:7;
+    uint8_t module;
+    uint8_t id:7;
     _Bool type;
     char state;
   };
@@ -229,7 +233,7 @@ int set_multiple_switches(char len, char * msg){
     p.type = (data[1] & 0x80) >> 7;
     p.state = data[2];
 
-    printf("check %d:%d\n",p.module,p.id,p.state);
+    printf("check %d:%d S%i\n",p.module,p.id,p.state);
 
     if(!(Units[p.module] && (
       (p.type == 0 && Units[p.module]->Sw[p.id]) || 
@@ -262,7 +266,7 @@ int set_multiple_switches(char len, char * msg){
 
     Unit * U = Units[p.module];
 
-    printf("check %d:%d\n",p.module,p.id,p.state);
+    printf("check %d:%d S%i\n",p.module,p.id,p.state);
 
     if(p.type == 0){
       Switch * S = U->Sw[p.id];
@@ -277,7 +281,7 @@ int set_multiple_switches(char len, char * msg){
       buf[index++] = p.state;
     }
     else if(p.type == 1){
-      U->MSSw[p.id];
+      //U->MSSw[p.id];
       printf("Set mulbitple switch msswitch not implemented\n");
       return -3;
     }
@@ -359,18 +363,19 @@ int check_Switch(struct rail_link link, _Bool pref){
     }
   }
 
-
-  loggerf(ERROR, "Implement check_Switch");
-
+  return 0;
 }
 int check_Switch_State(struct rail_link adr){
   loggerf(ERROR, "Implement check_Switch_State");
+  return -1;
 }
 
 int free_Switch(Block * B, int dir){
   loggerf(ERROR, "Implement free_Switch");
+  return -1;
 }
 
 int free_Route_Switch(Block * B, int dir, Trains * T){
   loggerf(ERROR, "Implement free_Route_Switch");
+  return -1;
 }

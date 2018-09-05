@@ -7,9 +7,9 @@
   #include "IO.h"
 
   typedef struct s_unit {
-    char module;
+    uint8_t module;
 
-    char connections_len;
+    uint8_t connections_len;
     struct s_unit ** connection;
 
     uint8_t IO_Nodes;
@@ -32,9 +32,9 @@
   } Unit;
 
   struct s_unit_conf {
-    char module;
-    char connections;
-    char IO_Nodes;
+    uint8_t module;
+    uint8_t connections;
+    uint8_t IO_Nodes;
     uint16_t Blcoks;
     uint16_t Switches;
     uint16_t MSSwitches;
@@ -49,34 +49,34 @@
   };
 
   struct s_IO_port_conf {
-    char Node;
-    char Adr;
+    uint8_t Node;
+    uint8_t Adr;
   };
 
   struct s_block_conf {
-    char id;
+    uint8_t id;
     enum Rail_types type;
     struct s_link_conf next;
     struct s_link_conf prev;
     struct s_IO_port_conf IO;
-    char speed;
+    uint8_t speed;
     uint16_t length;
-    char fl; //FLAGS, 0x1 = OneWay, 0x6 = dir
+    uint8_t fl; //FLAGS, 0x1 = OneWay, 0x6 = dir
   };
 
   struct s_switch_conf {
-    char id;
-    char det_block;
+    uint8_t id;
+    uint8_t det_block;
     struct s_link_conf App;
     struct s_link_conf Str;
     struct s_link_conf Div;
   };
 
   struct s_switch_state_conf {
-    char Node;
-    char Adr;
+    uint8_t Node;
+    uint8_t Adr;
     enum IO_event on_state_set;
-    char speed;
+    uint8_t speed;
   };
 
   struct rail_link CAdr(int module, int id, char type);

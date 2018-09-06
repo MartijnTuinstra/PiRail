@@ -2,7 +2,7 @@ BIN=./bin
 SRC=./src
 LIB=./lib
 INCLUDE = -I $(LIB) -I $(SRC)
-ARGS=-std=c99 -lpthread -lssl -lcrypto -lwiringPi -lm -g $(INCLUDE)
+ARGS=-std=c99 -lpthread -lssl -lcrypto -lwiringPi -lm -g $(INCLUDE) -Wall -W -Werror=unused-variable
 
 GCC = gcc $(ARGS)
 

@@ -584,12 +584,11 @@ Block * Next_Special_Block(Block * Bl, int flags, int level){
     }
   }
   else{
-    printf("Multiple pairs: ");
-    for(int i = i; i < pairs; i++){
+    loggerf(DEBUG, "SPECIAL-BLOCK %i:%i: Multiple pairs:", Bl->module, Bl->id);
+    for(int i = 0; i < pairs; i++){
       if(np_blocks[i].next && np_blocks[i].prev)
-        printf("%i:%i<>%i:%i\t",np_blocks[i].next->module,np_blocks[i].next->id,np_blocks[i].prev->module,np_blocks[i].prev->id);
+        loggerf(DEBUG, " - %i:%i<>%i:%i",np_blocks[i].next->module,np_blocks[i].next->id,np_blocks[i].prev->module,np_blocks[i].prev->id);
     }
-    printf("\n");
   }
 
   _free(np_blocks);
@@ -597,7 +596,7 @@ Block * Next_Special_Block(Block * Bl, int flags, int level){
     return tmp;
   }
   else{
-    loggerf(ERROR, "FIX");
+    loggerf(ERROR, "FIX, NO BLOCK FOUND");
     return Bl;
   }
 }

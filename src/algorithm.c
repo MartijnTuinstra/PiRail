@@ -749,6 +749,9 @@ void Algor_Switch_Checker(struct algor_blocks AllBlocks, int debug){
       else{
         tmp = BN.B[i - 1];
       }
+      if (tmp->type == SPECIAL){
+        continue;
+      }
       struct rail_link link = Next_link(tmp, NEXT);
       if(link.type == 's' || link.type == 'm' || link.type == 'M'){
         if(!Next_check_Switch(tmp, link, NEXT | SWITCH_CARE)){
@@ -775,7 +778,7 @@ void Algor_Switch_Checker(struct algor_blocks AllBlocks, int debug){
         }
       }
 
-      if(link.type == 'S' || link.type == 's'){
+      if((link.type == 'S' || link.type == 's') && link.p){
         if(((Switch *)link.p)->Detection->state != BLOCKED &&
            ((Switch *)link.p)->Detection->state != RESERVED &&
            ((Switch *)link.p)->Detection->state != RESERVED_SWITCH){
@@ -784,7 +787,7 @@ void Algor_Switch_Checker(struct algor_blocks AllBlocks, int debug){
             ((Switch *)link.p)->Detection->changed = State_Changed;
         }
       }
-      else if(link.type == 'M' || link.type == 'm'){
+      else if((link.type == 'M' || link.type == 'm') && link.p){
         if(((MSSwitch *)link.p)->Detection->state != BLOCKED &&
            ((MSSwitch *)link.p)->Detection->state != RESERVED &&
            ((MSSwitch *)link.p)->Detection->state != RESERVED_SWITCH){
@@ -922,6 +925,7 @@ void Algor_train_following(struct algor_blocks AllBlocks, int debug){
   //   if(debug) printf("SET_BLOCK");
   // }
 
+  //If only current and next blocks are occupied
   if(BP.blocks > 0 && BN.blocks > 0 && B->blocked && !BP.blocked && BN.blocked && BN.B[0]->train && !B->train){
     //REVERSED
     B->dir ^= 0b100;
@@ -930,6 +934,7 @@ void Algor_train_following(struct algor_blocks AllBlocks, int debug){
     Block_Reverse_To_Next_Switch(B);
     return;
   }
+  //If no surrounding blocks are occupied
   else if(BP.blocks > 0 && BN.blocks > 0 && B->blocked && B->train == 0 && BN.B[0]->train == 0 && BP.B[0]->train == 0){
     //NEW TRAIN
     // find a new follow id
@@ -940,11 +945,23 @@ void Algor_train_following(struct algor_blocks AllBlocks, int debug){
     WS_NewTrain(B->train, B->module, B->id);
     if(debug) printf("NEW_TRAIN at %i\t", B->train);
   }
+  //If current block is unoccupied and surrounding are occupied and have the same train pointer
   else if(BN.blocks > 0 && BP.blocks > 0 && BN.blocked && BP.blocked && !B->blocked && BN.B[0]->train == BP.B[0]->train){
     //A train has split
     WS_TrainSplit(BN.B[0]->train, BP.B[0]->module,BP.B[0]->id,BN.B[0]->module,BN.B[0]->id);
     if(debug) printf("SPLIT_TRAIN");
   }
+
+  //If only current and prev blocks are occupied
+  // and if next block is reversed
+  // if(BP.blocks > 0 && BN.blocks > 0 && B->blocked && BP.blocked && !BN.blocked && !dircmp(B, BN.B[0])){
+  //   //Reversed ahead
+  //   loggerf(WARNING, "%i:%i Reversed ahead", B->module, B->id);
+  //   BN.B[0]->dir ^= 0b100;
+  //   BN.B[0]->changed |= IO_Changed;
+  //   Block_Reverse_To_Next_Switch(BN.B[0]);
+  //   return;
+  // }
 
   if(BP.blocks > 0 && BP.blocked && B->blocked && B->train == 0 && BP.B[0]->train != 0){
     // Copy train id from previous block

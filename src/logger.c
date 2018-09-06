@@ -64,16 +64,20 @@ void floggerf(enum logging_levels level, char * file, int line, char * text, ...
   fprintf(fp,"%s - ",c_time);
 
   if(level == CRITICAL){
-    log_print(fp,LOGGER_RED "CRITICAL" LOGGER_RESET);
+    printf(LOGGER_RED);
+    log_print(fp,"CRITICAL");
   }
   else if(level == ERROR){
-    log_print(fp,LOGGER_RED "  ERROR " LOGGER_RESET);
+    printf(LOGGER_RED);
+    log_print(fp,"  ERROR ");
   }
   else if(level == WARNING){
-    log_print(fp,LOGGER_YELLOW " WARNING" LOGGER_RESET);
+    printf(LOGGER_YELLOW);
+    log_print(fp," WARNING");
   }
   else if(level == INFO){
-    log_print(fp,LOGGER_GREEN "  INFO  " LOGGER_RESET);
+    printf(LOGGER_GREEN);
+    log_print(fp,"  INFO  ");
   }
   else if(level == DEBUG){
     log_print(fp,"  DEBUG ");
@@ -89,6 +93,8 @@ void floggerf(enum logging_levels level, char * file, int line, char * text, ...
 
   vlog_print(fp, text, arglist);
 
+
+  printf(LOGGER_RESET);
   log_print(fp,"\n");
 
   fclose(fp);

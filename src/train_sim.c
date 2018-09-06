@@ -13,7 +13,7 @@ pthread_mutex_t mutex_lockA;
 #define delayB 5000000
 #define OneSec 1000000
 
-#define TRAIN_A_LEN   30 //cm
+#define TRAIN_A_LEN   5 //cm
 #define TRAIN_A_SPEED 10 //cm/s
 
 

@@ -90,10 +90,13 @@ var websocket = {
   },
 
   cts_link_train: function(fid, rid, type, mid){
+    data = [];
     data[0] = this.opc.LinkTrain;
     data[1] = fid;
     data[2] = rid;
     data[3] = ((type == "E")?0x80:0) + ((mid & 0x1F) >> 8)
+
+    console.log(data);
 
     this.send(data);
   },
@@ -401,7 +404,12 @@ var websocket = {
 
           i += 4;
         }else{ //Switch
-          modules[M].switches[data[i+1]] = data[i+2] & 0x7F;
+          try{
+            modules[M].switches[data[i+1]] = data[i+2] & 0x7F;
+          }
+          catch(e){
+            console.error(e);
+          }
 
           i += 3;
         }
@@ -488,9 +496,9 @@ var websocket = {
       Messages.update({id: msgID,type: (data[1] & 0xE0),data: data.slice(3,data.length)});
     },
     // Message Clear
-    stc_clearmessage: function(data){
+    stc_clear_message: function(data){
       var msgID = data[2] + ((data[1] & 0x1F) << 8);
-      Messages.remove(msgID);
+      Messages.remove(msgID, data[1] >> 5);
     },
 
     // Broadcast flags

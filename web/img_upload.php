@@ -10,10 +10,24 @@ if (!$fileTmpLoc) { // if file not chosen
     exit();
 }
 $ext = pathinfo($fileName, PATHINFO_EXTENSION);
-echo $fileType;
+
+$dst_loc = __DIR__."/".$_POST['name'].".".end(explode(".",$_FILES["file1"]["name"]));
+
+if(move_uploaded_file($fileTmpLoc, $dst_loc)){
+    echo $dst_loc." upload is complete\n";
+    echo "name: ".$_POST['name']."\n";
+}else {
+    //phpinfo();
+    echo "Error nr $fileErrorMsg\n";
+    echo "Failed to move a file from $fileTmpLoc to $dst_loc\n";
+    http_response_code(404);
+    exit();
+}
+
 $resize = false;
 if($fileType == "image/jpeg" || $fileType == "image/png"){
-  list($width,$height) = getimagesize($fileTmpLoc);
+  echo "resize\n";
+  list($width,$height) = getimagesize($dst_loc);
   $ratio = $height / $width;
   if($height > 500){
     $resize = true;
@@ -23,18 +37,10 @@ if($fileType == "image/jpeg" || $fileType == "image/png"){
   if($resize){
     //Resize image
     $thumb = imagecreatetruecolor($rwidth, $rheight);
-    $source = imagecreatefromjpeg($fileTmpLoc);
+    $source = imagecreatefromjpeg($dst_loc);
     imagecopyresized($thumb, $source, 0, 0, 0, 0, $rwidth, $rheight, $width, $height);
     //Save image
-    imagejpeg($thumb, $fileTmpLoc);
+    imagejpeg($thumb, $dst_loc);
   }
-}
-if(move_uploaded_file($fileTmpLoc, "./../trains/tmp/".$_POST['name'])){
-    echo "./../trains/".$_POST['name']." upload is complete";
-    //echo $_POST['name'];
-} else {
-		//phpinfo();
-		echo "Error nr $fileErrorMsg";
-		echo "Failed to move a file from $fileTmpLoc to ./../trains/tmp/$fileName";
 }
 ?>

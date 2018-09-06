@@ -741,46 +741,57 @@ void Algor_Switch_Checker(struct algor_blocks AllBlocks, int debug){
 
   //Check Next 1
   if(B->blocked && BN.blocks > 0 && !BN.B[0]->blocked){
-    struct rail_link link = Next_link(BN.B[BN.blocks - 1], NEXT);
-    if(link.type == 's' || link.type == 'm' || link.type == 'M'){
-      if(!Next_check_Switch(BN.B[BN.blocks - 1], link, NEXT | SWITCH_CARE)){
-        if(link.type == 's'){
-          loggerf(DEBUG, "Toggled %i:%i", ((Switch *)link.p)->module, ((Switch *)link.p)->id);
-          set_switch(link.p, !(((Switch *)link.p)->state & 0x7F));
-          B->changed |= IO_Changed;
-          return;
-        }
-        else if(link.type == 'm'){
-          loggerf(WARNING, "Next is msswitch !! %i:%i->%i:%i",
-                  BN.B[BN.blocks - 1]->module,
-                  BN.B[BN.blocks - 1]->id,
-                  ((MSSwitch *)link.p)->module,
-                  ((MSSwitch *)link.p)->id);
-        }
-        else if(link.type == 'M'){
-          loggerf(WARNING, "Next is MSswitch !! %i:%i->%i:%i",
-                  BN.B[BN.blocks - 1]->module,
-                  BN.B[BN.blocks - 1]->id,
-                  ((MSSwitch *)link.p)->module,
-                  ((MSSwitch *)link.p)->id);
+    Block * tmp;
+    for(int i = 0; i < BN.blocks; i++){
+      if(i == 0){
+        tmp = B;
+      }
+      else{
+        tmp = BN.B[i - 1]
+      }
+      struct rail_link link = Next_link(tmp, NEXT);
+      if(link.type == 's' || link.type == 'm' || link.type == 'M'){
+        if(!Next_check_Switch(tmp, link, NEXT | SWITCH_CARE)){
+          if(link.type == 's'){
+            loggerf(DEBUG, "Toggled %i:%i", ((Switch *)link.p)->module, ((Switch *)link.p)->id);
+            set_switch(link.p, !(((Switch *)link.p)->state & 0x7F));
+            B->changed |= IO_Changed;
+            return;
+          }
+          else if(link.type == 'm'){
+            loggerf(WARNING, "Next is msswitch !! %i:%i->%i:%i",
+                    tmp->module,
+                    tmp->id,
+                    ((MSSwitch *)link.p)->module,
+                    ((MSSwitch *)link.p)->id);
+          }
+          else if(link.type == 'M'){
+            loggerf(WARNING, "Next is MSswitch !! %i:%i->%i:%i",
+                    tmp->module,
+                    tmp->id,
+                    ((MSSwitch *)link.p)->module,
+                    ((MSSwitch *)link.p)->id);
+          }
         }
       }
-    }
 
-    if(link.type == 'S' || link.type == 's'){
-      if(((Switch *)link.p)->Detection->state != BLOCKED &&
-         ((Switch *)link.p)->Detection->state != RESERVED &&
-         ((Switch *)link.p)->Detection->state != RESERVED_SWITCH){
-          ((Switch *)link.p)->Detection->state = RESERVED_SWITCH;
-          ((Switch *)link.p)->Detection->changed = State_Changed;
+      if(link.type == 'S' || link.type == 's'){
+        if(((Switch *)link.p)->Detection->state != BLOCKED &&
+           ((Switch *)link.p)->Detection->state != RESERVED &&
+           ((Switch *)link.p)->Detection->state != RESERVED_SWITCH){
+
+            ((Switch *)link.p)->Detection->state = RESERVED_SWITCH;
+            ((Switch *)link.p)->Detection->changed = State_Changed;
+        }
       }
-    }
-    else if(link.type == 'M' || link.type == 'm'){
-      if(((MSSwitch *)link.p)->Detection->state != BLOCKED &&
-         ((MSSwitch *)link.p)->Detection->state != RESERVED &&
-         ((MSSwitch *)link.p)->Detection->state != RESERVED_SWITCH){
-          ((MSSwitch *)link.p)->Detection->state = RESERVED_SWITCH;
-          ((MSSwitch *)link.p)->Detection->changed = State_Changed;
+      else if(link.type == 'M' || link.type == 'm'){
+        if(((MSSwitch *)link.p)->Detection->state != BLOCKED &&
+           ((MSSwitch *)link.p)->Detection->state != RESERVED &&
+           ((MSSwitch *)link.p)->Detection->state != RESERVED_SWITCH){
+
+            ((MSSwitch *)link.p)->Detection->state = RESERVED_SWITCH;
+            ((MSSwitch *)link.p)->Detection->changed = State_Changed;
+        }
       }
     }
   }

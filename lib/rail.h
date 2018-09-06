@@ -1,132 +1,152 @@
-#define MAX_Segments 8
-#define MAX_Blocks 16
-#define MAX_Modules 26
+#ifndef INCLUDE_RAIL_H
+  #define INCLUDE_RAIL_H
 
-//Block Speed (Cat. A)
-#define speed_A 250
-//Block Speed (Cat. B)
-#define speed_B 140
-//Block Speed (Cat. C)
-#define speed_C 90
-//Block Speed (Cat. D)
-#define speed_D 60
+  #include <stdio.h>
+  #include <stdlib.h>
+  #include <stdint.h>
+  #include <unistd.h>
+  #include <string.h>
 
-extern struct Station * stations[MAX_Modules*MAX_Blocks];
-extern int St_list_i;
+  #define NEXT 0
+  #define PREV 1
+  #define SWITCH_CARE 0x80
 
-struct Swi;
+  struct _switch;
+  struct _msswitch;
+  struct _signal;
+  struct _station;
 
-struct signal;
+  typedef struct _station Station;
+  typedef struct _switch Switch;
+  typedef struct _msswitch MSSwitch;
+  typedef struct _signal Signal;
 
-struct Rail_link {
-  char type;
-  void * ptr;
-    // struct Seg * B;
-    // struct Swi * Sw;
-    // struct Mod * M;
-    // struct signal * Si;
-};
+  typedef struct s_IO_Port IO_Port;
+  typedef struct s_node_adr Node_adr;
 
-struct Station_link{
-  struct Station * St;
-  char type;
-};
+  struct rail_link {
+    char type;
+    void * p;
+    uint8_t  module;
+    uint16_t id;
+  };
 
-struct SegC {
-  long Adr;
-  char Module;
-  char type;
-};
+  enum Rail_types {
+    MAIN,
+    STATION,
+    SHUNTING,
+    SIDING,
+    SPECIAL
+  };
 
-typedef struct Seg{
-  int Module;
-  int id;
-  char type:4;
-  char dir:4;
+  enum Rail_states {
+    BLOCKED,          // 0
+    DANGER,           // 1
+    RESTRICTED,       // 2
+    CAUTION,          // 3
+    PROCEED,          // 4
+    RESERVED,         // 5
+    RESERVED_SWITCH,  // 6
+    UNKNOWN           // 7
+  };
 
-  struct Rail_link Next;
-  struct Rail_link Prev;
+  #define IO_Changed 0x1
+  #define State_Changed 0x2
 
-  struct SegC NextC;
-  struct SegC PrevC;
+  typedef struct rail_segment {
+    uint8_t  module;
+    uint16_t id;
 
-  struct Station * Station;
+    //Input
+    IO_Port * In;
 
-	char max_speed;		// 5 times the speed (25 => 125km/h )
-	char state;
-	char length;
-	char train;		 //0x00 <-> 0xFF
-	_Bool blocked;
-	_Bool change; //If block changed state;
-	_Bool oneWay;
+    enum Rail_types type;
+    uint8_t dir;
+    IO_Port * dir_Out;
+    int length;
 
-	//Rules
-	//Speed Rules
-	//Train Type preference
+    struct rail_link next;
+    struct rail_link prev;
 
-	//Signals
-	struct signal * NSi; // Signal in Next block direction
-	struct signal * PSi; // Signal in Prev block direction
-	//char signals; // AAAA BBBB, A = Prev Signal, B = Next Signal
-} block;
+    Station * station;
 
-struct Switch_state_link{
-  char type;
-  char state;
-  struct Swi * Sw;
-  struct Mod * MSw;
-};
+    uint8_t max_speed;
 
-struct Station{
-  int Module; //Module
-  int id;   //Module ID
-  int UnID; //Universal id
-  char Name[20];
-	struct Seg * Blocks[8];
-	char type;//type of stop (0 == All, 1 == Passenger-only, 2 == Cargo-only)
+    enum Rail_states state;
+    _Bool blocked;
 
-  char Switches;
-  struct Switch_state_link ** Sw;
-};
+    uint8_t train; //Follow id
+    uint8_t changed; // 0x1 = IO changed, 0x2 = state changed
+    _Bool reversed;
+    _Bool oneWay;
 
-struct link{
-	struct SegC Adr1;
-	struct SegC Adr2;
-	struct SegC Adr3;
-	struct SegC Adr4;
-};
+    Signal * NextSignal;
+    Signal * PrevSignal;
 
-char DeviceList[20];
+    int switch_len;
+    Switch ** Sw;
 
-struct SegC EMPTY_BL();
+    int msswitch_len;
+    MSSwitch ** MSSw;
 
-int dir_Comp(struct Seg *A,struct Seg *B);
+  } Block;
 
-int Adr_Comp2(struct SegC A,struct SegC B);
+  struct block_connect {
+    int module;
+    int id;
+    enum Rail_types type;
 
-struct SegC CAdr(int M,int B,char type);
+    struct rail_link next;
+    struct rail_link prev;
+  };
 
-void Create_Segment(int IO_Adr,struct SegC Adr ,struct SegC Next, struct SegC Prev,char max_speed,char state,char dir,char len);
+  enum Station_types {
+    STATION_PERSON,
+    STATION_CARGO,
+    STATION_PERSON_YARD,//Yard for Person only
+    STATION_CARGO_YARD, //Yard for Cargo only
+    STATION_YARD        //Yard for both Person and Cargo trains
+  };
 
-void Create_Segment2(int IO_Adr,char M,int ID,char Type,struct SegC Next, struct SegC Prev,char max_speed,char state,char dir,char len);
+  typedef struct _station {
+    int module;
+    int id;
+    int uid;
+    char * name;
 
-int Block_cmp(struct Seg * A,struct Seg * B);
+    Block ** blocks;
+    int blocks_len;
 
-int Link_cmp(struct Rail_link A, struct Rail_link B);
+    enum Station_types type;
 
-void Connect_Segments();
-
-int Create_Station(char Module,char * Name,char type,char nr,int Blocks[]);
-
-void Station_Add_Switch(struct Station * St,struct Swi * Sw,char state);
-
-void Station_Add_MSwitch(struct Station * St,struct Mod * MSw, char state);
+    char switches_len;
+    struct switch_link ** switch_link;
+  } Station;
 
 
-struct Seg * Next2(struct Seg * B,int i);
+  extern Station ** stations;
+  extern int stations_len;
 
-struct Seg * Prev2(struct Seg * B,int i);
+  void init_rail();
 
-struct Rail_link NADR2(struct Seg * B);
+  void Create_Segment(Node_adr IO_Adr, struct block_connect connect ,char max_speed, char dir,char len);
+  void Create_Station(int module, int id, char * name, char name_len, enum Station_types type, int len, Block ** blocks);
 
-struct Rail_link PADR2(struct Seg * B);
+  void Connect_Rail_links();
+
+  int dircmp(Block *A, Block *B);
+  int block_cmp(Block *A, Block *B);
+
+  Block * Next_Switch_Block(Switch * S, char type, int flags, int level);
+  Block * Next_MSSwitch_Block(MSSwitch * S, char type, int flags, int level);
+  Block * Next_Special_Block(Block * B, int flags, int level);
+  Block * Next(Block * B, int flags, int level);
+
+  int Next_check_Switch(void * p, struct rail_link link, int flags);
+
+  struct rail_link Next_link(Block * B, int flags);
+  struct rail_link Prev_link(Block * B);
+
+  int Block_Reverse_To_Next_Switch(Block * B);
+
+#endif

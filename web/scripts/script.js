@@ -509,7 +509,7 @@ function message_update(response){
     console.log("Adding train t"+train_ID+" (#"+DCC_T+"=f"+follow_ID+") to active trains");
     //active_trains[active_trains.length] = [response[2], train_ID];
     active_trains[DCC_T] = {"f":follow_ID,"t":train_ID};
-    //$('#CTrain').append("<div id=\"T  "+response[2]+"\" class=\"trainbox\"><img src=\"./../trains/"+train_ID+".jpg\" style=\"max-width:100%\"/>"+train_ID+"|"+train_ID+"</div>");
+    //$('#CTrain').append("<div id=\"T  "+response[2]+"\" class=\"trainbox\"><img src=\"./trains_img/"+train_ID+".jpg\" style=\"max-width:100%\"/>"+train_ID+"|"+train_ID+"</div>");
 
   }
 
@@ -589,7 +589,7 @@ function train_data_update(data){
       text += '<div id="T'+DCC_ID+'" class="trainbox">';
       text += '<div style="width:calc(100% - 60px);height:250px;float:left;">';
       text += '<div class="image_box">';
-      text += '<img src="./../trains/'+train_list[train_list_c[active_trains[DCC_ID]['t']]][0]+'.jpg">';
+      text += '<img src="./trains_img/'+train_list[train_list_c[active_trains[DCC_ID]['t']]][0]+'.jpg">';
       text += '</div>';
       text += '<div class="name_tag">';
       text += '<span class="title">'+train_list[train_list_c[active_trains[DCC_ID]['t']]][1]+'</span>';
@@ -858,7 +858,7 @@ function LoadImgManageTrains(){
       classes = classes.split(/\s+/);
       n = parseInt(classes[1].substring(4,classes[1].length));
 
-      var img = $("<img />").attr('src', './../trains/'+(train_list[n][0])+'.jpg').on('load', function() {
+      var img = $("<img />").attr('src', './trains_img/'+(train_list[n][0])+'.jpg').on('load', function() {
           if (!this.complete || typeof this.naturalWidth == "undefined" || this.naturalWidth == 0) {
               alert('broken image!');
           } else {

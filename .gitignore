@@ -1,3 +1,5 @@
 *.tmp
 bin/
+log.txt
+baan
 sublime.sublime-project

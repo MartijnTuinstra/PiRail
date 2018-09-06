@@ -1,25 +1,51 @@
-struct procces_block {
-	_Bool blocked;
-	char length;
-	struct Seg * B[5];
-};
+#ifndef _INCLUDE_ALGORITHM_H
+  #define _INCLUDE_ALGORITHM_H
 
-void change_block_state2(struct procces_block * A,int State);
+  #define Block_Minimum_Size 60
 
-void scan_All();
+  #include "rail.h"
 
-void * scan_All_continiously();
+  typedef struct proces_block {
+    _Bool blocked;
+    uint8_t blocks;
+    int length;
+    Block * B[5];
+  } Algor_Block;
 
-void procces(struct Seg * B,int debug);
+  typedef struct algor_blocks {
+    Algor_Block * BPPP;
+    Algor_Block * BPP;
+    Algor_Block * BP;
+    Block * B;
+    Algor_Block * BN;
+    Algor_Block * BNN;
+    Algor_Block * BNNN;
+  } Algor_Blocks;
 
-void procces_accessoire();
+  void change_block_state(Algor_Block * A, enum Rail_states state);
 
-struct ConnectList {
-  int length;
-  int list_index;
-  struct Rail_link ** R_L;
-};
+  void scan_All();
 
-int init_connect_Algor(struct ConnectList * List);
+  void * scan_All_continiously();
 
-int connect_Algor(struct ConnectList * List);
+  void process(Block * B,int debug);
+  void Algor_print_block_debug(struct algor_blocks AllBlocks);
+  void Algor_search_Blocks(struct algor_blocks * AllBlocks, int debug);
+  void Algor_Switch_Checker(struct algor_blocks AllBlocks, int debug);
+  void Algor_train_following(struct algor_blocks AllBlocks, int debug);
+  void Algor_rail_state(struct algor_blocks AllBlocks, int debug);
+  void Algor_apply_rail_state(Algor_Block blocks, enum Rail_states state);
+  void Algor_signal_state(struct algor_blocks AllBlocks, int debug);
+
+  void procces_accessoire();
+
+  struct ConnectList {
+    int length;
+    int list_index;
+    struct rail_link ** R_L;
+  };
+
+  int init_connect_Algor(struct ConnectList * List);
+
+  int connect_Algor(struct ConnectList * List);
+#endif

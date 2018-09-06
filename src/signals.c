@@ -1,126 +1,59 @@
-#define _BSD_SOURCE
-// #define _GNU_SOURCE
+#include "system.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <unistd.h>
-#include <string.h>
+#include "module.h"
+#include "signals.h"
+#include "logger.h"
 
-#include "./../lib/system.h"
+void create_signal(Block * B, _Bool side, char length, char * addresses, char * states, char * flash){
+  Signal * Z = _calloc(1, Signal);
 
-#include "./../lib/signals.h"
+  Z->B = B;
+  if(side == NEXT)
+    B->NextSignal = Z;
+  else
+    B->PrevSignal = Z;
 
-#include "./../lib/rail.h"
+  Z->io = length;
 
-#include "./../lib/modules.h"
-#include "./../lib/com.h"
-
-/*
-void create_signal(int Unit_Adr,struct Seg * B,int type, int side){ //Side = 0 => NSi, 1 => PSi
-  struct signal *Z = (struct signal*)malloc(sizeof(struct signal));
-
-  Z->state = 0;
-  Z->id = Unit_Adr;
-  Z->MAdr = B->Adr.M;
-  Z->type = type;
-
-  printf("Signal #%i\n",Si_list_i);
-
-  signals[Si_list_i] = Z;
-
-  if(side == 0){
-    B->NSi = Z;
-  }else if(side == 1){
-    B->PSi = Z;
-  }
-
-  if(Units[B->Adr.M]->Signals[Unit_Adr] == NULL){
-    Units[B->Adr.M]->Signals[Unit_Adr] = Z;
-    Z->UAdr = Unit_Adr;
-    if(Unit_Adr > Units[B->Adr.M]->Si_L){
-      Units[B->Adr.M]->Si_L = Unit_Adr;
-    };
-  }else{
-    printf("Double signal adress %i in Module %i\n",Unit_Adr,B->Adr.M);
-  }
-
-
-  Si_list_i++;
-}
-*/
-
-void create_signal2(struct Seg * B,char adr_nr, uint8_t addresses[adr_nr], char state[BLOCK_STATES], char flash[BLOCK_STATES], char side){
-  /*Block*/
-  /*Number of output pins/addresses*/
-  /*State output relation*/
-  /*Side*/
-
-  struct signal *Z = (struct signal*)malloc(sizeof(struct signal));
-
-  Z->state = 0;
-
-  Z->id = Units[B->Module]->Signal_nr;
-  long Unit_Adr = Units[B->Module]->Signal_nr++;
-
-  Z->MAdr = B->Module;
-  Z->type = 1;
-  Z->length = adr_nr;
-
-  for(char i = 0;i<adr_nr;i++){
-    if(Units[Z->MAdr]->OutRegisters*8 < addresses[i]){
-      printf("Expansion needed\t");
-      printf("Address %i doesn't fit\n",addresses[i]);
-
-      //Expand range
-      Units[Z->MAdr]->OutRegisters++;
-
-      printf("Expanded to: %i bytes\n",Units[Z->MAdr]->OutRegisters);
-
-      //Realloc Input array, lenght: Inregisters * sizeof()
-      Units[Z->MAdr]->Out = (struct Rail_link **)realloc(Units[Z->MAdr]->Out,8*Units[Z->MAdr]->OutRegisters*sizeof(struct Rail_link *));
-
-      //Clear new spaces
-      for(int i = 8*Units[Z->MAdr]->OutRegisters-8;i<8*Units[Z->MAdr]->OutRegisters;i++){
-        Units[Z->MAdr]->Out[i] = 0;
-      }
-    }
+  for(int i = 0; i<Z->io; i++){
     Z->adr[i] = addresses[i];
+    Z->states[i] = states[i];
+    Z->flash[i] = flash[i];
   }
 
-  memcpy(Z->states,state,BLOCK_STATES);
-  memcpy(Z->flash,flash,BLOCK_STATES);
-
-  if(side == 0){
-    B->NSi = Z;
-  }else if(side == 1){
-    B->PSi = Z;
-  }
-
-  if(!Units[B->Module]->Signals[Unit_Adr]){
-    Units[B->Module]->Signals[Unit_Adr] = Z;
-    Z->UAdr = Unit_Adr;
-    if(Unit_Adr > (Units[B->Module]->Si_L-1)){
-      Units[B->Module]->Si_L = Unit_Adr + 1;
-    }
-  }else{
-    printf("Double signal adress %i in Module %i\n",Unit_Adr,B->Module);
-  }
+  Z->id = find_free_index(Units[B->module]->Sig, Units[B->module]->signal_len);
+  Z->module = B->module;
+  Units[B->module]->Sig[Z->id] = Z;
 }
 
-void set_signal(struct signal *Si,int state){
-  if(!(Si->state == state || Si->state == (0x80 + state))){
-    /*printf("Module %i Signal #%i change from %x to ",Si->MAdr,Si->id,Si->state);
+void signal_create_states(char io, enum Rail_states state, char * list, ...){
+  va_list args;
+  va_start(args, list);
 
-    if(state == SIG_RED){
-      printf("SIG_RED");
-    }else if(state == SIG_AMBER){
-      printf("SIG_AMBER");
-    }else if(state == SIG_GREEN){
-      printf("SIG_GREEN");
-    }
+  printf("signal_create_states for state: %i\n", state);
 
-    printf("  (%x)\n",state);*/
-    Si->state = 0x80 + state;
+  for(int i = 0; i<io; i++){
+    list[state] |= (va_arg(args, int) & 1) << i;
+  }
+
+  va_end(args);
+}
+
+void set_signal(Signal * Si, enum Rail_states state){
+  if(Si->state != state){
+    printf("Sig%i:%i ", Si->module, Si->id);
+    if(state == BLOCKED || state == DANGER)
+      printf("DANGER ");
+    else if(state == RESTRICTED)
+      printf("RESTRICTED ");
+    else if(state == CAUTION)
+      printf("CAUTION ");
+    else if(state == PROCEED)
+      printf("PROCEED ");
+    else
+      printf("STATE %i  ", state);
+    Si->state = state;
+    #warning "IMPLEMENT set_signal"
+    // loggerf(WARNING, "IMPLEMENT set_signal");
   }
 }

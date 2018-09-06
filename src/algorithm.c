@@ -747,16 +747,16 @@ void Algor_Switch_Checker(struct algor_blocks AllBlocks, int debug){
         tmp = B;
       }
       else{
-        tmp = BN.B[i - 1]
+        tmp = BN.B[i - 1];
       }
       struct rail_link link = Next_link(tmp, NEXT);
       if(link.type == 's' || link.type == 'm' || link.type == 'M'){
         if(!Next_check_Switch(tmp, link, NEXT | SWITCH_CARE)){
           if(link.type == 's'){
-            loggerf(DEBUG, "Toggled %i:%i", ((Switch *)link.p)->module, ((Switch *)link.p)->id);
-            set_switch(link.p, !(((Switch *)link.p)->state & 0x7F));
-            B->changed |= IO_Changed;
-            return;
+            if(set_switch(link.p, !(((Switch *)link.p)->state & 0x7F))){
+              B->changed |= IO_Changed;
+              return;
+            }
           }
           else if(link.type == 'm'){
             loggerf(WARNING, "Next is msswitch !! %i:%i->%i:%i",

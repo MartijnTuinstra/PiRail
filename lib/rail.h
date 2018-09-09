@@ -143,6 +143,7 @@
   Block * Next(Block * B, int flags, int level);
 
   int Next_check_Switch(void * p, struct rail_link link, int flags);
+  int Next_check_Switch_Path(void * p, struct rail_link link, int flags);
 
   struct rail_link Next_link(Block * B, int flags);
   struct rail_link Prev_link(Block * B);

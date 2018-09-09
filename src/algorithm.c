@@ -11,7 +11,7 @@
 #include "algorithm.h"
 #include "logger.h"
 
-#include "rail.h"
+#include "switch.h"
 #include "train.h"
 #include "switch.h"
 #include "signals.h"
@@ -740,24 +740,25 @@ void Algor_Switch_Checker(struct algor_blocks AllBlocks, int debug){
   //Algor_Block BNNN = *AllBlocks.BNNN;
 
   //Check Next 1
-  if(B->blocked && BN.blocks > 0 && !BN.B[0]->blocked){
+  if(B->blocked && BN.blocks > 0 && !BN.blocked){
     Block * tmp;
-    for(int i = 0; i < BN.blocks; i++){
+    for(int i = 0; i <= BN.blocks; i++){
       if(i == 0){
         tmp = B;
       }
       else{
         tmp = BN.B[i - 1];
       }
-      if (tmp->type == SPECIAL){
+      if (tmp->type == SPECIAL) {
         continue;
       }
+      loggerf(DEBUG, "Switch_Checker scan block (%i,%i)", tmp->module, tmp->id);
       struct rail_link link = Next_link(tmp, NEXT);
-      if(link.type == 's' || link.type == 'm' || link.type == 'M'){
-        if(!Next_check_Switch(tmp, link, NEXT | SWITCH_CARE)){
-          if(link.type == 's'){
-            if(set_switch(link.p, !(((Switch *)link.p)->state & 0x7F))){
-              B->changed |= IO_Changed;
+      if (link.type == 's' || link.type == 'm' || link.type == 'M') {
+        if (!Next_check_Switch_Path(tmp, link, NEXT | SWITCH_CARE)) {
+          if (link.type == 's') {
+            if (set_switch_path(tmp, link, NEXT | SWITCH_CARE)) {
+              B->changed |= IO_Changed; // Recalculate
               return;
             }
           }
@@ -929,11 +930,12 @@ void Algor_train_following(struct algor_blocks AllBlocks, int debug){
   if(BP.blocks > 0 && BN.blocks > 0 && B->blocked && !BP.blocked && BN.blocked && BN.B[0]->train && !B->train){
     //REVERSED
     B->dir ^= 0b100;
-    loggerf(TRACE, "REVERSE BLOCK %i:%i", B->module, B->id);
+    loggerf(DEBUG, "REVERSE BLOCK %i:%i", B->module, B->id);
     B->changed |= IO_Changed;
     Block_Reverse_To_Next_Switch(B);
     return;
   }
+
   //If no surrounding blocks are occupied
   else if(BP.blocks > 0 && BN.blocks > 0 && B->blocked && B->train == 0 && BN.B[0]->train == 0 && BP.B[0]->train == 0){
     //NEW TRAIN
@@ -945,6 +947,7 @@ void Algor_train_following(struct algor_blocks AllBlocks, int debug){
     WS_NewTrain(B->train, B->module, B->id);
     if(debug) printf("NEW_TRAIN at %i\t", B->train);
   }
+
   //If current block is unoccupied and surrounding are occupied and have the same train pointer
   else if(BN.blocks > 0 && BP.blocks > 0 && BN.blocked && BP.blocked && !B->blocked && BN.B[0]->train == BP.B[0]->train){
     //A train has split
@@ -952,16 +955,14 @@ void Algor_train_following(struct algor_blocks AllBlocks, int debug){
     if(debug) printf("SPLIT_TRAIN");
   }
 
-  //If only current and prev blocks are occupied
+  // If only current and prev blocks are occupied
   // and if next block is reversed
-  // if(BP.blocks > 0 && BN.blocks > 0 && B->blocked && BP.blocked && !BN.blocked && !dircmp(B, BN.B[0])){
-  //   //Reversed ahead
-  //   loggerf(WARNING, "%i:%i Reversed ahead", B->module, B->id);
-  //   BN.B[0]->dir ^= 0b100;
-  //   BN.B[0]->changed |= IO_Changed;
-  //   Block_Reverse_To_Next_Switch(BN.B[0]);
-  //   return;
-  // }
+  if(BP.blocks > 0 && BN.blocks > 0 && B->blocked && BP.blocked && !BN.B[0]->blocked && !dircmp(B, BN.B[0])){
+    //Reversed ahead
+    loggerf(INFO, "%i:%i Reversed ahead (%i, %i)", B->module, B->id, BN.B[0]->module, BN.B[0]->id);
+    BN.B[0]->dir ^= 0b100;
+    // Block_Reverse_To_Next_Switch(BN.B[0]);
+  }
 
   if(BP.blocks > 0 && BP.blocked && B->blocked && B->train == 0 && BP.B[0]->train != 0){
     // Copy train id from previous block

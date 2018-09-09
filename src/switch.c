@@ -147,7 +147,6 @@ int throw_msswitch(MSSwitch * S){
   return -1;
 }
 
-
 int set_switch(Switch * S, uint8_t state){
   int linked = 0;
   for(int i = 0;i<S->links_len;i++){
@@ -206,6 +205,66 @@ int set_switch(Switch * S, uint8_t state){
   }
   return linked;
 }
+
+int set_switch_path(void * p, struct rail_link link, int flags){
+  loggerf(TRACE, "set_switch_path (%x, %x, %i)", (unsigned int)p, (unsigned int)&link, flags);
+  if((flags & 0x80) == 0){
+    //No SWITCH_CARE
+    return 1;
+  }
+  if (link.type == 'S' || link.type == 's') {
+    if(((Switch *)link.p)->Detection && ((Switch *)link.p)->Detection->state == RESERVED_SWITCH)
+      return 0;
+  }
+  else if (link.type == 'M' || link.type == 'm') {
+    if(((MSSwitch *)link.p)->Detection && ((Switch *)link.p)->Detection->state == RESERVED_SWITCH)
+      return 0;
+  }
+
+  if(link.type == 'S'){
+    Switch * Sw = link.p;
+    if((Sw->state & 0x7F) == 0 && Sw->str.type != 'R' && Sw->str.type != 'D'){
+      return Next_check_Switch_Path(Sw, Sw->str, flags);
+    }
+    else if((Sw->state & 0x7F) == 1 && Sw->div.type != 'R' && Sw->div.type != 'D'){
+      return Next_check_Switch_Path(Sw, Sw->div, flags);
+    }
+  }
+  else if(link.type == 's'){
+    Switch * N = link.p;
+    loggerf(TRACE, "set s (state: %i, str.p: %x, div.p: %x)", (N->state & 0x7F), (unsigned int)N->str.p, (unsigned int)N->div.p);
+    if((N->state & 0x7F) == 0){
+      if(N->str.p != p)
+        set_switch(N, 1);
+      return Next_check_Switch_Path(N, N->app, flags);
+    }
+    else if((N->state & 0x7F) == 1){
+      if(N->div.p != p)
+        set_switch(N, 0);
+      return Next_check_Switch_Path(N, N->app, flags);
+    }
+  }
+  else if(link.type == 'M'){
+    loggerf(WARNING, "IMPLEMENT");
+    MSSwitch * N = link.p;
+    if(N->sideB[N->state].p == p){
+      return 1;
+    }
+  }
+  else if(link.type == 'm'){
+    loggerf(WARNING, "IMPLEMENT");
+    MSSwitch * N = link.p;
+    if(N->sideA[N->state].p == p){
+      return 1;
+    }
+  }
+
+  else if (link.type == 'R' || link.type == 'D'){
+    return 1;
+  }
+  return 0;
+}
+
 
 int set_msswitch(MSSwitch * S, uint8_t state){
   loggerf(ERROR, "Implement set_msswitch (%x, %i)", (unsigned int)S, state);

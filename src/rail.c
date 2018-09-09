@@ -311,6 +311,53 @@ int Next_check_Switch(void * p, struct rail_link link, int flags){
   return 0;
 }
 
+int Next_check_Switch_Path(void * p, struct rail_link link, int flags){
+  loggerf(TRACE, "Next_check_Switch_Path (%x, %x, %i)", (unsigned int)p, (unsigned int)&link, flags);
+  if((flags & 0x80) == 0){
+    //No SWITCH_CARE
+    return 1;
+  }
+  else if(link.type == 'S'){
+    Switch * Sw = link.p;
+    if((Sw->state & 0x7F) == 0 && Sw->str.type != 'R' && Sw->str.type != 'D'){
+      return Next_check_Switch_Path(Sw, Sw->str, flags);
+    }
+    else if((Sw->state & 0x7F) == 1 && Sw->div.type != 'R' && Sw->div.type != 'D'){
+      return Next_check_Switch_Path(Sw, Sw->div, flags);
+    }
+  }
+  else if(link.type == 's'){
+    Switch * N = link.p;
+    loggerf(TRACE, "check s (state: %i, str.p: %x, div.p: %x)", (N->state & 0x7F), (unsigned int)N->str.p, (unsigned int)N->div.p);
+    if((N->state & 0x7F) == 0 && N->str.p == p){
+      return Next_check_Switch_Path(N, N->app, flags);
+    }
+    else if((N->state & 0x7F) == 1 && N->div.p == p){
+      return Next_check_Switch_Path(N, N->app, flags);
+    }
+    loggerf(TRACE, "wrong State");
+  }
+  else if(link.type == 'M'){
+    loggerf(WARNING, "IMPLEMENT");
+    MSSwitch * N = link.p;
+    if(N->sideB[N->state].p == p){
+      return 1;
+    }
+  }
+  else if(link.type == 'm'){
+    loggerf(WARNING, "IMPLEMENT");
+    MSSwitch * N = link.p;
+    if(N->sideA[N->state].p == p){
+      return 1;
+    }
+  }
+
+  else if (link.type == 'R' || link.type == 'D'){
+    return 1;
+  }
+  return 0;
+}
+
 Block * Next_Switch_Block(Switch * S, char type, int flags, int level){
   struct rail_link next;
 
@@ -454,9 +501,15 @@ Block * Next_Special_Block(Block * Bl, int flags, int level){
     Switch * S = Bl->Sw[i];
     Block * A = Next_Switch_Block(S, 's', NEXT | SWITCH_CARE, level);
     Block * B = Next_Switch_Block(S, 'S', NEXT | SWITCH_CARE, level);
-    Block * _A = 0;
-    Block * _B = 0;
+    Block * _A = 0; //Mirror to other side
+    Block * _B = 0; //Mirror to other side
+    int prioA = 0;
+    int prioB = 0;
+
     if(A && A->type != SPECIAL){
+      if(A->blocked)
+        prioA++;
+
       if(Next(A, NEXT | SWITCH_CARE, level) == Bl)
         _A = Next(A, NEXT | SWITCH_CARE, 2*level);
       else
@@ -464,59 +517,61 @@ Block * Next_Special_Block(Block * Bl, int flags, int level){
     }
 
     if(B && B->type != SPECIAL){
+      if(B->blocked)
+        prioB++;
+
       if(Next(B, NEXT | SWITCH_CARE, level) == Bl)
         _B = Next(B, NEXT | SWITCH_CARE, 2*level);
       else
         _B = Next(B, PREV | SWITCH_CARE, 2*level);
     }
-    // printf("%i ", level);
+
+    // printf("\t\t%i-%i ", level,Bl->dir);
     // if(A)
-    //   printf("\t%2i:%2i<>",A->module,A->id);
+    //   printf("\t%2i:%2i-%i<>",A->module,A->id,A->dir);
     // else
     //   printf("\t     <>");
     // if(_A)
-    //   printf("%2i:%2i", _A->module,_A->id);
+    //   printf("%2i:%2i-%i", _A->module,_A->id,_A->dir);
     // else
     //   printf("     ");
     // if(B)
-    //   printf("\t%2i:%2i",B->module,B->id);
+    //   printf("\t%2i:%2i-%i",B->module,B->id,B->dir);
     // else
     //   printf("\t     ");
     // if(_B)
-    //   printf("<>%2i:%2i\n",_B->module,_B->id);
+    //   printf("<>%2i:%2i-%i\n",_B->module,_B->id,_B->dir);
     // else
     //   printf("<>\n");
     
 
-    if(B && _A && B==_A){
-      if(A->dir == Bl->dir || A->dir == (Bl->dir | 0x4) || (A->dir | 0x4) == Bl->dir){
-        if(Next(A, NEXT | SWITCH_CARE, level) == Bl){
-          // printf("\tA\t%i:%i Next %i == %i:%i\n", A->module, A->id, level, Bl->module, Bl->id);
-          np_blocks[pairs].next = B;
-          np_blocks[pairs].prev = A;
-        }
-        else{
-          // printf("\tA\t%i:%i Prev %i == %i:%i\n", A->module, A->id, level, Bl->module, Bl->id);
-          np_blocks[pairs].next = A;
-          np_blocks[pairs].prev = B;
-        }
-        pairs++;
+    if(B && _A && B == _A && A->dir == Bl->dir){ //  || A->dir == (Bl->dir | 0x4) || (A->dir | 0x4) == Bl->dir
+      loggerf(TRACE, "A Is the same");
+      if(Next(A, NEXT | SWITCH_CARE, level) == Bl){
+        loggerf(TRACE,"A\t%i:%i Next %i == %i:%i\n", A->module, A->id, level, Bl->module, Bl->id);
+        np_blocks[pairs].next = B;
+        np_blocks[pairs].prev = A;
       }
+      else{
+        loggerf(TRACE,"A\t%i:%i Next %i == %i:%i\n", A->module, A->id, level, Bl->module, Bl->id);
+        np_blocks[pairs].next = A;
+        np_blocks[pairs].prev = B;
+      }
+      pairs++;
     }
-    else if(A && _B && A==_B){
-      if(B->dir == Bl->dir || (B->dir == (Bl->dir ^ 0x4)) || ((B->dir ^ 0x4) == Bl->dir)){
-        if(Next(B, NEXT | SWITCH_CARE, level) == Bl){
-          // printf("\tB\t%i:%i Next %i == %i:%i\n", B->module, B->id, level, Bl->module, Bl->id);
-          np_blocks[pairs].next = A;
-          np_blocks[pairs].prev = B;
-        }
-        else{
-          // printf("\tB\t%i:%i Prev %i == %i:%i\n", B->module, B->id, level, Bl->module, Bl->id);
-          np_blocks[pairs].next = B;
-          np_blocks[pairs].prev = A;
-        }
-        pairs++;
+    else if(A && _B && A==_B && B->dir == Bl->dir){ //  || (B->dir == (Bl->dir ^ 0x4)) || ((B->dir ^ 0x4) == Bl->dir)
+      loggerf(TRACE, "B Is the same");
+      if(Next(B, NEXT | SWITCH_CARE, level) == Bl){
+        loggerf(TRACE, "B\t%i:%i Next %i == %i:%i\n", B->module, B->id, level, Bl->module, Bl->id);
+        np_blocks[pairs].next = A;
+        np_blocks[pairs].prev = B;
       }
+      else{
+        loggerf(TRACE, "B\t%i:%i Prev %i == %i:%i\n", B->module, B->id, level, Bl->module, Bl->id);
+        np_blocks[pairs].next = B;
+        np_blocks[pairs].prev = A;
+      }
+      pairs++;
     }
   }
 
@@ -531,19 +586,19 @@ Block * Next_Special_Block(Block * Bl, int flags, int level){
       loggerf(TRACE, "Prev %i", Bl->dir);
     else
       loggerf(TRACE, "Next %i", Bl->dir);
-    if((dir == 0 && (Bl->dir == 4 || Bl->dir == 6)) || 
-      (dir == 1 && (Bl->dir == 2 || Bl->dir == 5))){
-      // If next + reversed direction / flipped normal / flipped switching
-      // Or prev + normal direction / switching direction (normal) / flipped reversed direction
-      tmp = np_blocks[0].prev;
-    }
-    else if((dir == 0 && (Bl->dir == 2 || Bl->dir == 5)) || 
-      (dir == 1 && (Bl->dir == 4 || Bl->dir == 6))){
-      // If next + normal direction / switching direction (normal) / flipped reversed
-      // or prev + reversed direction / flipped normal / flipped switching
-      tmp = np_blocks[0].next;
-    }
-    else if(dir == 0)
+    // if((dir == 0 && (Bl->dir == 4 || Bl->dir == 6)) || 
+    //   (dir == 1 && (Bl->dir == 2 || Bl->dir == 5))){
+    //   // If next + reversed direction / flipped normal / flipped switching
+    //   // Or prev + normal direction / switching direction (normal) / flipped reversed direction
+    //   tmp = np_blocks[0].prev;
+    // }
+    // else if((dir == 0 && (Bl->dir == 2 || Bl->dir == 5)) || 
+    //   (dir == 1 && (Bl->dir == 4 || Bl->dir == 6))){
+    //   // If next + normal direction / switching direction (normal) / flipped reversed
+    //   // or prev + reversed direction / flipped normal / flipped switching
+    //   tmp = np_blocks[0].next;
+    // }
+    if(dir == 0)
       tmp = np_blocks[0].next;
     else if(dir == 1)
       tmp = np_blocks[0].prev;

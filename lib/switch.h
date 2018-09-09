@@ -109,6 +109,8 @@
 
   int set_multiple_switches(uint8_t len, char * data);
 
+  int set_switch_path(void * p, struct rail_link link, int flags);
+
   void Create_Switch(struct switch_connect connect, uint8_t block_id, uint8_t output_len, Node_adr * output_pins, uint8_t * output_states);
   void Create_MSSwitch(struct msswitch_connect connect, uint8_t block_id, uint8_t output_len, Node_adr * output_pins, uint16_t * output_states);
 

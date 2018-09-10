@@ -68,7 +68,7 @@ var Train = {
 
       var train = this.trains[this.selected[0]];
 
-      $('#train_hover .specs .img').css('background-image',"url('./../trains/"+train.img+"'");
+      $('#train_hover .specs .img').css('background-image',"url('./trains_img/"+train.img+"'");
       $('#train_hover .specs .name').text(train.name);
       $('#train_hover .control .type').text(((train.control & 0xC0) == 0)?"M":(((train.control & 0xC0) == 0x40)?"SA":"FA"));
       $('#train_hover .control .route').text((train.route.S >= 0)?(train.route.S + ":" + train.route.P):"No Route");
@@ -119,7 +119,7 @@ var Train = {
       $('#train_compositor .engines.selector, #train_compositor .cars.selector').empty();
       $.each(Train.engines, function(i,v){
         text =  '<div index="'+i+'" class="list_box">';
-        text += '<div  class="img" style="background-image: url(\'./../trains/'+v.img+'\');"></div>'
+        text += '<div  class="img" style="background-image: url(\'./trains_img/'+v.img+'\');"></div>'
         text += '<div class="name">'+v.name+'</div>';
         text += '<div class="id">'+v.dcc+'</div>';
         text += '</div>';
@@ -129,7 +129,7 @@ var Train = {
 
       $.each(Train.cars, function(i,v){
         text =  '<div index="'+i+'" class="list_box">';
-        text += '<div  class="img" style="background-image: url(\'./../trains/'+v.img+'\');"></div>'
+        text += '<div  class="img" style="background-image: url(\'./trains_img/'+v.img+'\');"></div>'
         text += '<div class="name">'+v.name+'</div>';
         text += '<div class="id">'+v.nr+'</div>';
         text += '</div>';
@@ -164,7 +164,7 @@ var Train = {
       if($(evt.currentTarget).parent().hasClass("engines")){
         console.log("Add engine");
         text = '<div class="box new b'+Train.comp.index+'">' +
-             '<img src="./../trains/'+Train.engines[index].icon+'"/>' +
+             '<img src="./trains_img/'+Train.engines[index].icon+'"/>' +
              '<div class="name">'+Train.engines[index].name+' - '+Train.engines[index].dcc+'</div>' +
              '<div class="control">' +
              '<div class="cbtn l">&lt;</div>' +
@@ -176,7 +176,7 @@ var Train = {
       else{
         console.log("Add car");
         text = '<div class="box new b'+Train.comp.index+'">' +
-             '<img src="./../trains/'+Train.cars[index].icon+'"/>' +
+             '<img src="./trains_img/'+Train.cars[index].icon+'"/>' +
              '<div class="name">'+Train.cars[index].name+'</div>' +
              '<div class="control">' +
              '<div class="cbtn l">&lt;</div>' +
@@ -250,9 +250,9 @@ var Train = {
 
         e.link.forEach(function(e2,i2){
           if((String.fromCharCode(e2[0]) == "E" || String.fromCharCode(e2[0]) == "e") && Train.engines[e2[1]] != undefined){
-            text += '<img src="./../trains/'+Train.engines[e2[1]].icon+'"/>';
+            text += '<img src="./trains_img/'+Train.engines[e2[1]].icon+'"/>';
           }else if(Train.cars[e2[1]] != undefined){
-            text += '<img src="./../trains/'+Train.cars[e2[1]].icon+'"/>';
+            text += '<img src="./trains_img/'+Train.cars[e2[1]].icon+'"/>';
           }
         })
             
@@ -266,7 +266,7 @@ var Train = {
       Train.engines.forEach(function(e,i){
         text = '<div engine="'+i+'">' +
           '<div class="imgbox"><div class="scroller"><div style="white-space: nowrap;">'+
-            '<img src="./../trains/'+e.icon+'"/>'+
+            '<img src="./trains_img/'+e.icon+'"/>'+
           '</div></div></div>'+
           '<div class="textbox"><span class="name">&nbsp;&nbsp;&nbsp;'+e.name+'</span><span class="dcc">'+e.dcc+'</span></div>'+
         '</div>'
@@ -483,7 +483,7 @@ var Train = {
         return true;
       }
       content += '<div id="Tr'+i+'" class="train_list_box">' +
-            '<div  class="img" style="background-image: url(\'./../trains/'+v.img+'\');"></div>' +
+            '<div  class="img" style="background-image: url(\'./trains_img/'+v.img+'\');"></div>' +
             '<span class="id">'+v.dcc+'</span>' +
             '<span class="name">'+v.name+'</span>' +
              '</div>';

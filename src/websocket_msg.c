@@ -327,7 +327,7 @@ void WS_trackUpdate(int Client_fd){
 
   for(int i = 0;i<unit_len;i++){
     if(Units[i]){
-      for(int j = 0;j<=Units[i]->block_len;j++){
+      for(int j = 0;j<Units[i]->block_len;j++){
         Block * B = Units[i]->B[j];
         if(B && (B->changed & State_Changed)){
           content = 1;
@@ -357,8 +357,10 @@ void WS_trackUpdate(int Client_fd){
 }
 
 void WS_SwitchesUpdate(int Client_fd){
+  loggerf(DEBUG, "WS_SwitchesUpdate (%i)", Client_fd);
   pthread_mutex_lock(&mutex_lockB);
   char buf[4096];
+  memset(buf, 0, 4096);
   /*Switches*/
 
     buf[0] = WSopc_BroadSwitch;
@@ -370,7 +372,7 @@ void WS_SwitchesUpdate(int Client_fd){
 
     for(int i = 0;i<unit_len;i++){
       if(Units[i]){
-        for(int j = 0;j<=Units[i]->switch_len;j++){
+        for(int j = 0;j<Units[i]->switch_len;j++){
           Switch * S = Units[i]->Sw[j];
           if(S){
             if((S->state & 0x80) != 0x80){
@@ -381,7 +383,7 @@ void WS_SwitchesUpdate(int Client_fd){
             buf[(q-1)*3+2] = S->id & 0x7F;
             buf[(q-1)*3+3] = S->state & 0x7F;
             S->state ^= 0x80;
-           // printf(",%i,%i,%i",S->Module,S->id,S->state);
+            loggerf(DEBUG, "%i,%i,%i",S->module,S->id,S->state);
             q++;
           }
         }
@@ -410,7 +412,7 @@ void WS_SwitchesUpdate(int Client_fd){
       }
     }
   */
-  buf_l += (q-1)*4+1;
+  //buf_l += (q-1)*4+1;
   if(content == 1){
     if(Client_fd){
       printf("WS_SwitchesUpdate Custom Client");

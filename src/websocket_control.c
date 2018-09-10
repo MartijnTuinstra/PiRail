@@ -89,14 +89,9 @@ int websocket_client_check(struct web_client_t * client){
   }
   else{
     printf("It's not a HTML5-websocket\n");
-    // printf(strstr(buf,Connection));
-    // printf("\n");
-    // printf(strstr(buf,Connection2));
-    // printf("\n");
-    // printf(strstr(buf,UpgradeType));
-    // printf("\n");
-    // printf(strstr(buf,Key));
-    // printf("\n");
+    //Server response to the client
+    char response[100] = "HTTP/1.1 400 OK\r\n\r\n";
+    write(client->fd, response, strlen(response));
 
     _free(buf);
     _free(key);

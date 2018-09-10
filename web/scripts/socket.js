@@ -754,7 +754,6 @@ function change_admin(){
 }
 
 var ws;
-var socket_tries = 0;
 
 function WebSocket_handler(adress){
     // Let us open a web socket
@@ -764,7 +763,6 @@ function WebSocket_handler(adress){
     ws.connected = false;
 
     ws.onopen = function(){
-      socket_tries = 0;
       ws.connected = true;
       Messages.clear();
     };
@@ -936,20 +934,17 @@ function WebSocket_handler(adress){
     };
 
     ws.onclose = function(event){
-      ws.connected = false;
-
       // websocket is closed.
-      if(socket_tries == 0){
+      if(ws.connected == true){
         reset_blocks_in_modules();
         Canvas.update_frame();
         Messages.clear();
         websocket.message_id = Messages.add({type:0xff,id:1,data:[socket_tries]});
       }
+      ws.connected = false;
       setTimeout(function(){
-        console.log("Reconnecting...");
-        socket_tries++;
         WebSocket_handler(adress);
-      }, 5000);
+      }, 1000);
     };
 
 }
@@ -958,7 +953,7 @@ $(document).ready(function(){
   //Open websocket or fail on unsupported browsers
   if ("WebSocket" in window){
   try{
-      setTimeout(WebSocket_handler(window.location.host+':9000'),5000);
+      WebSocket_handler(window.location.host+':9000');
   }
   catch(e){
     console.error(e);

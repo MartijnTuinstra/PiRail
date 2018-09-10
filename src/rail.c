@@ -526,7 +526,7 @@ Block * Next_Special_Block(Block * Bl, int flags, int level){
         _B = Next(B, PREV | SWITCH_CARE, 2*level);
     }
 
-    // printf("\t\t%i-%i ", level,Bl->dir);
+    // printf("\t\t%i:%i-%i-%i ", Bl->module, Bl->id, level,Bl->dir);
     // if(A)
     //   printf("\t%2i:%2i-%i<>",A->module,A->id,A->dir);
     // else
@@ -543,33 +543,65 @@ Block * Next_Special_Block(Block * Bl, int flags, int level){
     //   printf("<>%2i:%2i-%i\n",_B->module,_B->id,_B->dir);
     // else
     //   printf("<>\n");
-    
+   
 
-    if(B && _A && B == _A && A->dir == Bl->dir){ //  || A->dir == (Bl->dir | 0x4) || (A->dir | 0x4) == Bl->dir
-      loggerf(TRACE, "A Is the same");
-      if(Next(A, NEXT | SWITCH_CARE, level) == Bl){
-        loggerf(TRACE,"A\t%i:%i Next %i == %i:%i\n", A->module, A->id, level, Bl->module, Bl->id);
-        np_blocks[pairs].next = B;
-        np_blocks[pairs].prev = A;
+    if(A && B && _A && B == _A){
+      loggerf(DEBUG, "A Is the same");
+      if(A->dir == Bl->dir || 
+        ((A->dir == 0 || A->dir == 2) && Bl->dir == 0b101) || 
+        (A->dir == 1 && (Bl->dir == 0b100 || Bl->dir == 0b110))){
+        if(Next(A, NEXT | SWITCH_CARE, level) == Bl){
+          loggerf(DEBUG, "A (%i)\t%i:%i <p %i:%i n> %i:%i\n", level, A->module, A->id, Bl->module, Bl->id, B->module, B->id);
+          np_blocks[pairs].next = B;
+          np_blocks[pairs].prev = A;
+        }
+        else{
+          loggerf(DEBUG, "A (%i)\t%i:%i <p %i:%i n> %i:%i\n", level, B->module, B->id, Bl->module, Bl->id, A->module, A->id);
+          np_blocks[pairs].next = A;
+          np_blocks[pairs].prev = B;
+        }
       }
       else{
-        loggerf(TRACE,"A\t%i:%i Next %i == %i:%i\n", A->module, A->id, level, Bl->module, Bl->id);
-        np_blocks[pairs].next = A;
-        np_blocks[pairs].prev = B;
+        if(Next(B, NEXT | SWITCH_CARE, level) == Bl){
+          loggerf(DEBUG, "Ar (%i)\t%i:%i <p %i:%i n> %i:%i\n", level, B->module, B->id, Bl->module, Bl->id, A->module, A->id);
+          np_blocks[pairs].next = A;
+          np_blocks[pairs].prev = B;
+        }
+        else{
+          loggerf(DEBUG, "Ar (%i)\t%i:%i <p %i:%i n> %i:%i\n", level, A->module, A->id, Bl->module, Bl->id, B->module, B->id);
+          np_blocks[pairs].next = B;
+          np_blocks[pairs].prev = A;
+        }
       }
       pairs++;
     }
-    else if(A && _B && A==_B && B->dir == Bl->dir){ //  || (B->dir == (Bl->dir ^ 0x4)) || ((B->dir ^ 0x4) == Bl->dir)
-      loggerf(TRACE, "B Is the same");
-      if(Next(B, NEXT | SWITCH_CARE, level) == Bl){
-        loggerf(TRACE, "B\t%i:%i Next %i == %i:%i\n", B->module, B->id, level, Bl->module, Bl->id);
-        np_blocks[pairs].next = A;
-        np_blocks[pairs].prev = B;
+    else if(A && B && _B && A == _B){
+      loggerf(DEBUG, "B Is the same");
+      if(B->dir == Bl->dir || 
+        ((B->dir == 0 || B->dir == 2) && Bl->dir == 0b101) || 
+        (B->dir == 1 && (Bl->dir == 0b100 || Bl->dir == 0b110))){
+        if(Next(B, NEXT | SWITCH_CARE, level) == Bl){
+          loggerf(DEBUG, "B (%i)\t%i:%i <p %i:%i n> %i:%i\n", level, B->module, B->id, Bl->module, Bl->id, A->module, A->id);
+          np_blocks[pairs].next = A;
+          np_blocks[pairs].prev = B;
+        }
+        else{
+          loggerf(DEBUG, "B (%i)\t%i:%i <p %i:%i n> %i:%i\n", level, A->module, A->id, Bl->module, Bl->id, B->module, B->id);
+          np_blocks[pairs].next = B;
+          np_blocks[pairs].prev = A;
+        }
       }
       else{
-        loggerf(TRACE, "B\t%i:%i Prev %i == %i:%i\n", B->module, B->id, level, Bl->module, Bl->id);
-        np_blocks[pairs].next = B;
-        np_blocks[pairs].prev = A;
+        if(Next(A, NEXT | SWITCH_CARE, level) == Bl){
+          loggerf(DEBUG, "Br (%i)\t%i:%i <p %i:%i n> %i:%i\n", level, A->module, A->id, Bl->module, Bl->id, B->module, B->id);
+          np_blocks[pairs].next = B;
+          np_blocks[pairs].prev = A;
+        }
+        else{
+          loggerf(DEBUG, "Br (%i)\t%i:%i <p %i:%i n> %i:%i\n", level, B->module, B->id, Bl->module, Bl->id, A->module, A->id);
+          np_blocks[pairs].next = A;
+          np_blocks[pairs].prev = B;
+        }
       }
       pairs++;
     }
@@ -581,11 +613,11 @@ Block * Next_Special_Block(Block * Bl, int flags, int level){
 
   Block * tmp = 0;
   if(pairs == 1){
-    loggerf(TRACE, "1 pair [%i:%i <p=n> %i:%i]", np_blocks[0].prev->module, np_blocks[0].prev->id, np_blocks[0].next->module, np_blocks[0].next->id);
+    loggerf(DEBUG, "1 pair [%i:%i <p=n> %i:%i]", np_blocks[0].prev->module, np_blocks[0].prev->id, np_blocks[0].next->module, np_blocks[0].next->id);
     if(dir)
-      loggerf(TRACE, "Prev %i", Bl->dir);
+      loggerf(DEBUG, "Prev %i", Bl->dir);
     else
-      loggerf(TRACE, "Next %i", Bl->dir);
+      loggerf(DEBUG, "Next %i", Bl->dir);
     // if((dir == 0 && (Bl->dir == 4 || Bl->dir == 6)) || 
     //   (dir == 1 && (Bl->dir == 2 || Bl->dir == 5))){
     //   // If next + reversed direction / flipped normal / flipped switching
@@ -605,20 +637,20 @@ Block * Next_Special_Block(Block * Bl, int flags, int level){
   }
   else if(pairs >= 2){
     _Bool same = TRUE;
-    loggerf(MEMORY, "2 pair");
+    loggerf(DEBUG, "2 pair");
     for(int i = 0; i < pairs - 1; i++){
-      loggerf(MEMORY, " prev %2i:%2i   %2i:%2i next <==> prev %2i:%2i   %2i:%2i next\n",np_blocks[i].prev->module,np_blocks[i].prev->id, np_blocks[i].next->module, np_blocks[i].next->id,np_blocks[i+1].prev->module,np_blocks[i+1].prev->id, np_blocks[i+1].next->module, np_blocks[i+1].next->id);
+      loggerf(DEBUG, " prev %2i:%2i   %2i:%2i next <==> prev %2i:%2i   %2i:%2i next\n",np_blocks[i].prev->module,np_blocks[i].prev->id, np_blocks[i].next->module, np_blocks[i].next->id,np_blocks[i+1].prev->module,np_blocks[i+1].prev->id, np_blocks[i+1].next->module, np_blocks[i+1].next->id);
       if(np_blocks[i].next != np_blocks[i+1].next && np_blocks[i].prev != np_blocks[i+1].prev){
         same = FALSE;
       }
     }
     if(same){
       if(dir == NEXT){
-        loggerf(MEMORY, "N_E_X_T");
+        loggerf(DEBUG, "N_E_X_T");
         tmp = np_blocks[0].next;
       }
       else{
-        loggerf(MEMORY, "P_R_E_V");
+        loggerf(DEBUG, "P_R_E_V");
         tmp = np_blocks[0].prev;
       }
     }

@@ -525,7 +525,7 @@ void COM_change_signal(Signal * Si){
 }
 
 void COM_change_switch(int M){
-  printf("COM_change_swit");
+  loggerf(DEBUG, "COM_change_switch (%i)", M);
   if (uart0_filestream != -1){
     printf("ch\n");
     uint8_t * PulseAdr = (uint8_t *)malloc(1);

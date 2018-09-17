@@ -5,15 +5,32 @@ INCLUDE = -I $(LIB) -I $(SRC)
 ARGS=-std=c99 -lpthread -lssl -lcrypto -lwiringPi -lm -g $(INCLUDE) -Wall -W -Werror=unused-variable
 
 GCC = gcc $(ARGS)
+GCC_SIMPLE = gcc -g -Wall -W -Werror=unused-variable $(INCLUDE) -std=c99
 
 ifndef VERBOSE
 .SILENT:
 endif
+.PHONY: all
+
+all: config_reader baan
+
+config_reader: $(BIN)/config_reader.o $(BIN)/config.o $(BIN)/logger.o
+	@echo config_reader
+	@$(GCC_SIMPLE) -o $@ $(BIN)/config_reader.o $(BIN)/config.o $(BIN)/logger.o
+
+$(BIN)/config_reader.o: $(SRC)/config_reader.c $(LIB)/config.h $(LIB)/logger.h
+	@echo config_reader.o
+	@$(GCC_SIMPLE) -c -o $@ $(SRC)/config_reader.c 
+
+$(BIN)/config.o: $(SRC)/config.c $(LIB)/config.h $(LIB)/logger.h
+	@echo config.c
+	$(GCC) $(SRC)/config.c -c -o $@
 
 baan: $(BIN)/baan.o $(BIN)/logger.o $(BIN)/rail.o $(BIN)/train.o $(BIN)/system.o $(BIN)/websocket_control.o $(BIN)/websocket_msg.o $(BIN)/module.o \
-		$(BIN)/train_sim.o $(BIN)/com.o $(BIN)/algorithm.o $(BIN)/signals.o $(BIN)/switch.o $(BIN)/Z21.o $(BIN)/websocket.o $(BIN)/encryption.o $(BIN)/IO.o
+		$(BIN)/train_sim.o $(BIN)/com.o $(BIN)/algorithm.o $(BIN)/signals.o $(BIN)/switch.o $(BIN)/Z21.o $(BIN)/websocket.o $(BIN)/encryption.o $(BIN)/IO.o $(BIN)/config.o
 	@echo baan
-	$(GCC) -o baan $(wildcard $(BIN)/*.o)
+	$(GCC) -o baan $(BIN)/baan.o $(BIN)/logger.o $(BIN)/rail.o $(BIN)/train.o $(BIN)/system.o $(BIN)/websocket_control.o $(BIN)/websocket_msg.o $(BIN)/module.o \
+	$(BIN)/train_sim.o $(BIN)/com.o $(BIN)/algorithm.o $(BIN)/signals.o $(BIN)/switch.o $(BIN)/Z21.o $(BIN)/websocket.o $(BIN)/encryption.o $(BIN)/IO.o $(BIN)/config.o
 
 $(BIN)/baan.o: baan.c $(LIB)/logger.h $(LIB)/train.h $(LIB)/rail.h $(LIB)/switch.h $(LIB)/com.h $(LIB)/websocket_control.h $(LIB)/system.h
 	@echo baan.o

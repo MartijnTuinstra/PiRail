@@ -187,6 +187,7 @@ int main(){
 
   _free(DeviceList);
 
-  printf("STOPPED");
+  loggerf(INFO, "STOPPED");
+  exit_logger(); //Close logger
   //pthread_exit(NULL);
 }

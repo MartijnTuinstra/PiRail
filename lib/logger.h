@@ -21,6 +21,7 @@
   #define logger(text, level) floggerf(level, __FILENAME__, __LINE__, text)
 
   void init_logger(char * file_location);
+  void exit_logger();
 
   void set_level(enum logging_levels);
 

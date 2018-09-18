@@ -24,12 +24,16 @@
 char * logger_file;
 
 void init_logger(char * file_location){
-  // Clear log
+  // Clear log / create log
   FILE * fp = fopen(file_location,"w");
   fclose(fp);
 
   logger_file = (char *)malloc(sizeof(char)*strlen(file_location));
   strcpy(logger_file,file_location);
+}
+
+void exit_logger(){
+  free(logger_file);
 }
 
 enum logging_levels logger_set_lvl;

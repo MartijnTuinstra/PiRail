@@ -96,8 +96,6 @@ var websocket = {
     data[2] = rid;
     data[3] = ((type == "E")?0x80:0) + ((mid & 0x1F) >> 8)
 
-    console.log(data);
-
     this.send(data);
   },
 
@@ -112,8 +110,6 @@ var websocket = {
       data[3] = d[0][2];
 
       this.send(data);
-      console.log("Throw switch: ");
-      console.log(data);
     }
     else{
       var di = 2; // Dataindex
@@ -125,8 +121,6 @@ var websocket = {
         data[di++] = d[i][2]
       }
       this.send(data);
-      console.log("Throw switches: ")
-      console.log(data)
     }
   },
 
@@ -154,7 +148,6 @@ var websocket = {
       }
     }
 
-    console.log("New broadcast flag: "+broadcastFlags);
     websocket.send([websocket.opc.ChangeBroadcast,broadcastFlags]);
   },
 
@@ -166,8 +159,6 @@ var websocket = {
       data[1] = 1;
 
       ws.send(new Int8Array(data));
-    }else{
-      console.log("No Admin");
     }
   },
 
@@ -267,7 +258,6 @@ var websocket = {
 
     // Engines Lib 0x51
     stc_engines_lib: function(data){
-      console.log("Engines lib");
       Train.engines = [];
       for(var i = 0;i<data.length;i++){
         var dcc_id = (data[i] + (data[i+1] << 8));
@@ -300,7 +290,6 @@ var websocket = {
 
     // Cars Lib 0x53
     stc_cars_lib: function(data){
-      console.log("Cars lib");
       Train.cars = [];
       for(var i = 0;i<data.length;i++){
         var nr_id = (data[i] + (data[i+1] << 8));
@@ -333,7 +322,6 @@ var websocket = {
 
     //Trains 0x55
     stc_trains_lib: function(data){
-      console.log("Trains lib");
       Train.trains = [];
       for(var i = 0;i<data.length;i++){
         var max_spd = (data[i] + (data[i+1] << 8));
@@ -349,8 +337,6 @@ var websocket = {
 
         var name = IntArrayToString(data.slice(i+2, i+2+data[i]));
         var data_len = data[i++];
-
-        console.log("Namelen: "+data_len);
 
         var links = data.slice(i+1+data_len, i+1+data_len+3*data[i]);
         data_len += data[i++]*3;
@@ -383,8 +369,6 @@ var websocket = {
         var D = data[i+2] >> 7;
         var state = (data[i+2] & 0x7F);
         var tID = data[i+3];
-
-        console.log("Block "+m+":"+B+"\tdir: "+D+"\tstate: "+state+"\tTrain: "+tID);
 
         modules[m].blocks[B] = state;
       }
@@ -543,8 +527,7 @@ var websocket = {
     // Server state
     stc_service_state: function(data){
       state = (data[1] << 8) + data[2];
-      console.log("service State: "+state);
-
+      
       $('#status_flags .green').toggleClass("red");
       $('#status_flags .green').toggleClass("green");
 
@@ -628,6 +611,7 @@ var websocket = {
 }
 
 function track_layout(module,prev){
+  console.warn("Track_Layout depricated");
   console.log("At "+module+" from "+prev);
 
   //Check if the recursive function hasn't allready passed this node.
@@ -644,7 +628,6 @@ function track_layout(module,prev){
   //Add Module to the HTML page
   $('#Modules').append("<div class=\"M"+module+" Module M"+module+"b\"></div>");
   blocks_load++;
-  console.log("Load: "+'./../modules/'+module+'/layout.svg');
   $('.M'+module+'b').load('./../modules/'+module+'/layout.svg',function (evt){
     blocks_load--;
     if(blocks_load == 0){ //Done loading all modules?
@@ -939,7 +922,7 @@ function WebSocket_handler(adress){
         reset_blocks_in_modules();
         Canvas.update_frame();
         Messages.clear();
-        websocket.message_id = Messages.add({type:0xff,id:1,data:[socket_tries]});
+        websocket.message_id = Messages.add({type:0xff,id:1});
       }
       ws.connected = false;
       setTimeout(function(){

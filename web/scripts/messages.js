@@ -104,7 +104,7 @@ var Messages = {
 	remove: function(msg_id, ret_code){
 		msg_index = -1;
 		for (var i = 0; i < this.open_messages.length; i++) {
-			if(this.open_messages[i].id == msg_id){
+			if(this.open_messages[i] != undefined && this.open_messages[i].id == msg_id){
 				msg_index = i;
 				break;
 			}
@@ -137,7 +137,9 @@ var Messages = {
 	},
 
 	clear: function(){
+		console.log("Clearing messages");
 		this.open_messages.forEach(function(element){
+			console.log('Msg', element.id);
 			Messages.remove(element.id);
 		});
 		this.open_messages = [];

@@ -1,6 +1,7 @@
 #include "switch.h"
 #include "logger.h"
 #include "system.h"
+#include "mem.h"
 #include "module.h"
 #include "websocket_msg.h"
 #include "websocket.h"
@@ -37,6 +38,8 @@ void Create_Switch(struct switch_connect connect, uint8_t block_id, uint8_t outp
 
       loggerf(DEBUG, "IO %i:%i", output_pins[i].Node, output_pins[i].io);
     }
+
+    Z->IO[i] = Units[connect.module]->Node[output_pins[i].Node].io[output_pins[i].io];
   }
 
   Z->IO_len = output_len;
@@ -153,13 +156,13 @@ int set_switch(Switch * S, uint8_t state){
     if(S->links[i].p){
       linked = 1;
 
-      if(S->links[i].type == 'S' || S->links[i].type == 's'){
+      if(S->links[i].type == RAIL_LINK_S || S->links[i].type == RAIL_LINK_s){
         if(((Switch *)S->links[i].p)->Detection && (((Switch *)S->links[i].p)->Detection->state == RESERVED || 
               ((Switch *)S->links[i].p)->Detection->blocked)){
             printf("Linked switches blocked\n");
           return 0;
         }
-      }else if(S->links[i].type == 'M' || S->links[i].type == 'm'){
+      }else if(S->links[i].type == RAIL_LINK_M || S->links[i].type == RAIL_LINK_m){
         loggerf(ERROR, "set_switch linked MSSwitch implement");
       }
     }
@@ -212,25 +215,25 @@ int set_switch_path(void * p, struct rail_link link, int flags){
     //No SWITCH_CARE
     return 1;
   }
-  if (link.type == 'S' || link.type == 's') {
+  if (link.type == RAIL_LINK_S || link.type == RAIL_LINK_s) {
     if(((Switch *)link.p)->Detection && ((Switch *)link.p)->Detection->state == RESERVED_SWITCH)
       return 0;
   }
-  else if (link.type == 'M' || link.type == 'm') {
+  else if (link.type == RAIL_LINK_M || link.type == RAIL_LINK_m) {
     if(((MSSwitch *)link.p)->Detection && ((Switch *)link.p)->Detection->state == RESERVED_SWITCH)
       return 0;
   }
 
-  if(link.type == 'S'){
+  if(link.type == RAIL_LINK_S){
     Switch * Sw = link.p;
-    if((Sw->state & 0x7F) == 0 && Sw->str.type != 'R' && Sw->str.type != 'D'){
+    if((Sw->state & 0x7F) == 0 && Sw->str.type != RAIL_LINK_R && Sw->str.type != 'D'){
       return Next_check_Switch_Path(Sw, Sw->str, flags);
     }
-    else if((Sw->state & 0x7F) == 1 && Sw->div.type != 'R' && Sw->div.type != 'D'){
+    else if((Sw->state & 0x7F) == 1 && Sw->div.type != RAIL_LINK_R && Sw->div.type != 'D'){
       return Next_check_Switch_Path(Sw, Sw->div, flags);
     }
   }
-  else if(link.type == 's'){
+  else if(link.type == RAIL_LINK_s){
     Switch * N = link.p;
     loggerf(TRACE, "set s (state: %i, str.p: %x, div.p: %x)", (N->state & 0x7F), (unsigned int)N->str.p, (unsigned int)N->div.p);
     if((N->state & 0x7F) == 0){
@@ -244,14 +247,14 @@ int set_switch_path(void * p, struct rail_link link, int flags){
       return Next_check_Switch_Path(N, N->app, flags);
     }
   }
-  else if(link.type == 'M'){
+  else if(link.type == RAIL_LINK_M){
     loggerf(WARNING, "IMPLEMENT");
     MSSwitch * N = link.p;
     if(N->sideB[N->state].p == p){
       return 1;
     }
   }
-  else if(link.type == 'm'){
+  else if(link.type == RAIL_LINK_m){
     loggerf(WARNING, "IMPLEMENT");
     MSSwitch * N = link.p;
     if(N->sideA[N->state].p == p){
@@ -259,7 +262,7 @@ int set_switch_path(void * p, struct rail_link link, int flags){
     }
   }
 
-  else if (link.type == 'R' || link.type == 'D'){
+  else if (link.type == RAIL_LINK_R || link.type == 'D'){
     return 1;
   }
   return 0;

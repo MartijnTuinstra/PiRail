@@ -1,5 +1,6 @@
 #include "rail.h"
 #include "system.h"
+#include "mem.h"
 #include "module.h"
 #include "switch.h"
 #include "logger.h"
@@ -56,13 +57,8 @@ void Create_Segment(Node_adr IO_Adr, struct block_connect connect ,char max_spee
 
   //Unit * U = Units[p->module]; Never used
 
-  p->next.type = connect.next.type;
-  p->next.module = connect.next.module;
-  p->next.id = connect.next.id;
-
-  p->prev.type = connect.prev.type;
-  p->prev.module = connect.prev.module;
-  p->prev.id = connect.prev.id;
+  p->next = connect.next;
+  p->prev = connect.prev;
 
   p->max_speed = max_speed;
   p->dir = dir;
@@ -136,13 +132,13 @@ void Create_Station(int module, int id, char * name, char name_len, enum Station
 }
 
 void * rail_link_pointer(struct rail_link link){
-  if(link.type == 'R'){
+  if(link.type == RAIL_LINK_R){
     return Units[link.module]->B[link.id];
   }
-  else if(link.type == 'S' || link.type == 's'){
+  else if(link.type == RAIL_LINK_S || link.type == RAIL_LINK_s){
     return Units[link.module]->Sw[link.id];
   }
-  else if(link.type == 'M' || link.type == 'm'){
+  else if(link.type == RAIL_LINK_M || link.type == RAIL_LINK_m){
     return Units[link.module]->MSSw[link.id];
   }
   return 0;
@@ -154,6 +150,8 @@ void Connect_Rail_links(){
     if(!Units[m]){
       continue;
     }
+
+    printf("LINKING UNIT %i\n", m);
 
     Unit * tU = Units[m];
 
@@ -237,12 +235,12 @@ Block * Next(Block * B, int flags, int level){
 
   // printf("Next     : dir:%i\t%i:%i => %i:%i:%c\t%i\n", dir, B->module, B->id, next.module, next.id, next.type, level);
 
-  if(!next.p && next.type != 'e'){
+  if(!next.p && next.type != RAIL_LINK_E){
     loggerf(ERROR, "NO POINTERS %i:%i", B->module, B->id);
     return 0;
   }
 
-  if(next.type == 'R'){
+  if(next.type == RAIL_LINK_R){
     if(level <= 0){
       return (Block *)next.p;
     }
@@ -250,7 +248,7 @@ Block * Next(Block * B, int flags, int level){
       return Next((Block *)next.p, dir, level);
     }
   }
-  else if(next.type == 'S' || next.type == 's'){
+  else if(next.type == RAIL_LINK_S || next.type == RAIL_LINK_s){
     if(Next_check_Switch(B, next, flags)){
       if(level <= 0 && !block_cmp( ((Switch *)next.p)->Detection, B)){
         return ((Switch *)next.p)->Detection;
@@ -260,7 +258,7 @@ Block * Next(Block * B, int flags, int level){
       }
     }
   }
-  else if(next.type == 'M' || next.type == 'm'){
+  else if(next.type == RAIL_LINK_M || next.type == RAIL_LINK_m){
     if(Next_check_Switch(B, next, flags)){
       if(level <= 0 && !block_cmp( ((MSSwitch *)next.p)->Detection, B)){
         // printf("Detection block\n");
@@ -271,7 +269,7 @@ Block * Next(Block * B, int flags, int level){
       }
     }
   }
-  else if(next.type == 'e' && next.module == 0 && next.id == 0){
+  else if(next.type == RAIL_LINK_E && next.module == 0 && next.id == 0){
     return 0;
   }
 
@@ -284,10 +282,10 @@ int Next_check_Switch(void * p, struct rail_link link, int flags){
     //No SWITCH_CARE
     return 1;
   }
-  else if(link.type == 'S'){
+  else if(link.type == RAIL_LINK_S){
     return 1;
   }
-  else if(link.type == 's'){
+  else if(link.type == RAIL_LINK_s){
     Switch * N = link.p;
     loggerf(TRACE, "check s (state: %i, str.p: %x, div.p: %x)", (N->state & 0x7F), (unsigned int)N->str.p, (unsigned int)N->div.p);
     if(((N->state & 0x7F) == 0 && N->str.p == p) || ((N->state & 0x7F) == 1 && N->div.p == p)){
@@ -296,13 +294,13 @@ int Next_check_Switch(void * p, struct rail_link link, int flags){
     // else
       // printf("str: %i  %x==%x\tdiv: %i  %x==%x\t",N->state, N->str.p, p, N->state, N->div.p, p);
   }
-  else if(link.type == 'M'){
+  else if(link.type == RAIL_LINK_M){
     MSSwitch * N = link.p;
     if(N->sideB[N->state].p == p){
       return 1;
     }
   }
-  else if(link.type == 'm'){
+  else if(link.type == RAIL_LINK_m){
     MSSwitch * N = link.p;
     if(N->sideA[N->state].p == p){
       return 1;
@@ -317,16 +315,16 @@ int Next_check_Switch_Path(void * p, struct rail_link link, int flags){
     //No SWITCH_CARE
     return 1;
   }
-  else if(link.type == 'S'){
+  else if(link.type == RAIL_LINK_S){
     Switch * Sw = link.p;
-    if((Sw->state & 0x7F) == 0 && Sw->str.type != 'R' && Sw->str.type != 'D'){
+    if((Sw->state & 0x7F) == 0 && Sw->str.type != RAIL_LINK_R && Sw->str.type != 'D'){
       return Next_check_Switch_Path(Sw, Sw->str, flags);
     }
-    else if((Sw->state & 0x7F) == 1 && Sw->div.type != 'R' && Sw->div.type != 'D'){
+    else if((Sw->state & 0x7F) == 1 && Sw->div.type != RAIL_LINK_R && Sw->div.type != 'D'){
       return Next_check_Switch_Path(Sw, Sw->div, flags);
     }
   }
-  else if(link.type == 's'){
+  else if(link.type == RAIL_LINK_s){
     Switch * N = link.p;
     loggerf(TRACE, "check s (state: %i, str.p: %x, div.p: %x)", (N->state & 0x7F), (unsigned int)N->str.p, (unsigned int)N->div.p);
     if((N->state & 0x7F) == 0 && N->str.p == p){
@@ -337,14 +335,14 @@ int Next_check_Switch_Path(void * p, struct rail_link link, int flags){
     }
     loggerf(TRACE, "wrong State");
   }
-  else if(link.type == 'M'){
+  else if(link.type == RAIL_LINK_M){
     loggerf(WARNING, "IMPLEMENT");
     MSSwitch * N = link.p;
     if(N->sideB[N->state].p == p){
       return 1;
     }
   }
-  else if(link.type == 'm'){
+  else if(link.type == RAIL_LINK_m){
     loggerf(WARNING, "IMPLEMENT");
     MSSwitch * N = link.p;
     if(N->sideA[N->state].p == p){
@@ -352,7 +350,7 @@ int Next_check_Switch_Path(void * p, struct rail_link link, int flags){
     }
   }
 
-  else if (link.type == 'R' || link.type == 'D'){
+  else if (link.type == RAIL_LINK_R || link.type == 'D'){
     return 1;
   }
   return 0;
@@ -363,7 +361,7 @@ Block * Next_Switch_Block(Switch * S, char type, int flags, int level){
 
   // printf("%i:%i\t",S->module,S->id);
 
-  if(type == 's'){
+  if(type == RAIL_LINK_s){
     next = S->app;
   }
   else{
@@ -382,7 +380,7 @@ Block * Next_Switch_Block(Switch * S, char type, int flags, int level){
     return 0;
   }
 
-  if(next.type == 'R'){
+  if(next.type == RAIL_LINK_R){
     if(!block_cmp(S->Detection, next.p)){
       level--;
     }
@@ -405,7 +403,7 @@ Block * Next_Switch_Block(Switch * S, char type, int flags, int level){
       return Next((Block *)next.p, flags, level);
     }
   }
-  else if(next.type == 'S' || next.type == 's'){
+  else if(next.type == RAIL_LINK_S || next.type == RAIL_LINK_s){
     Switch * N = next.p;
     if(N->Detection && !block_cmp(S->Detection, N->Detection)){
       level--;
@@ -418,7 +416,7 @@ Block * Next_Switch_Block(Switch * S, char type, int flags, int level){
       return Next_Switch_Block(N, next.type, flags, level);
     }
   }
-  else if(next.type == 'M' || next.type == 'm'){
+  else if(next.type == RAIL_LINK_M || next.type == RAIL_LINK_m){
     // printf("RET MSSw\n");
     MSSwitch * N = next.p;
     if(N->Detection && !block_cmp(S->Detection, N->Detection) && level == 1){
@@ -428,7 +426,7 @@ Block * Next_Switch_Block(Switch * S, char type, int flags, int level){
       return Next_MSSwitch_Block(N, next.type, flags, level);
     }
   }
-  else if(next.type == 'e'){
+  else if(next.type == RAIL_LINK_E){
     return 0;
   }
   // printf("RET END\n");
@@ -442,7 +440,7 @@ Block * Next_MSSwitch_Block(MSSwitch * S, char type, int flags, int level){
     loggerf(CRITICAL, "Fix next_msswitch_block switch state care");
   }
 
-  if(type == 'M'){
+  if(type == RAIL_LINK_M){
     next = S->sideB[S->state];
   }
   else{
@@ -454,7 +452,7 @@ Block * Next_MSSwitch_Block(MSSwitch * S, char type, int flags, int level){
     return 0;
   }
 
-  if(next.type == 'R'){
+  if(next.type == RAIL_LINK_R){
     if(!block_cmp(S->Detection, next.p)){
       level--;
     }
@@ -465,17 +463,17 @@ Block * Next_MSSwitch_Block(MSSwitch * S, char type, int flags, int level){
       return Next((Block *)next.p, flags, level);
     }
   }
-  else if(next.type == 'S' || next.type == 's'){
+  else if(next.type == RAIL_LINK_S || next.type == RAIL_LINK_s){
     if(Next_check_Switch(S, next, flags)){
       return Next_Switch_Block((Switch *)next.p, next.type, flags, level);
     }
   }
-  else if(next.type == 'M' || next.type == 'm'){
+  else if(next.type == RAIL_LINK_M || next.type == RAIL_LINK_m){
     if(Next_check_Switch(S, next, flags)){
       return Next_MSSwitch_Block((MSSwitch *)next.p, next.type, flags, level);
     }
   }
-  else if(next.type == 'e'){
+  else if(next.type == RAIL_LINK_E){
     return 0;
   }
 
@@ -499,8 +497,8 @@ Block * Next_Special_Block(Block * Bl, int flags, int level){
       continue;
     }
     Switch * S = Bl->Sw[i];
-    Block * A = Next_Switch_Block(S, 's', NEXT | SWITCH_CARE, level);
-    Block * B = Next_Switch_Block(S, 'S', NEXT | SWITCH_CARE, level);
+    Block * A = Next_Switch_Block(S, RAIL_LINK_s, NEXT | SWITCH_CARE, level);
+    Block * B = Next_Switch_Block(S, RAIL_LINK_S, NEXT | SWITCH_CARE, level);
     Block * _A = 0; //Mirror to other side
     Block * _B = 0; //Mirror to other side
     int prioA = 0;

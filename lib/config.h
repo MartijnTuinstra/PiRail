@@ -26,14 +26,22 @@ struct __attribute__((__packed__)) s_IO_port_conf {
   uint8_t Adr;
 };
 
-enum Connection_Types {
-  RAIL_CONF_R,
-  RAIL_CONF_S,
-  RAIL_CONF_s,
-  RAIL_CONF_M,
-  RAIL_CONF_m,
-  RAIL_CONF_C = 0xfe,
-  RAIL_CONF_E = 0xff
+#ifndef RAIL_LINK_TYPES
+#define RAIL_LINK_TYPES 
+enum link_types {
+  RAIL_LINK_R,
+  RAIL_LINK_S,
+  RAIL_LINK_s,
+  RAIL_LINK_M,
+  RAIL_LINK_m,
+  RAIL_LINK_C = 0xfe,
+  RAIL_LINK_E = 0xff
+};
+#endif
+
+struct __attribute__((__packed__)) s_node_conf {
+  uint8_t Node;
+  uint8_t size;
 };
 
 struct __attribute__((__packed__)) s_block_conf {
@@ -74,7 +82,7 @@ struct switch_conf {
   struct s_link_conf Str;
   struct s_link_conf Div;
 
-  uint8_t IO;
+  uint8_t IO;        // 0xf0 type, 0x0f length
   uint8_t speed_Str;
   uint8_t speed_Div;
 
@@ -127,6 +135,8 @@ struct station_conf {
 struct config {
   struct s_unit_conf header;
 
+  struct s_node_conf * Nodes;
+
   struct s_block_conf * Blocks;
   struct switch_conf * Switches;
   struct ms_switch_conf * MSSwitches;
@@ -143,6 +153,8 @@ void print_hex(char * data, int size);
 void write_from_conf(struct config * config, char * filename);
 
 int check_Spacing(uint8_t ** p);
+
+struct s_node_conf read_s_node_conf(uint8_t ** p);
 
 struct s_unit_conf read_s_unit_conf(uint8_t ** p);
 

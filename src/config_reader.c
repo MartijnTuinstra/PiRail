@@ -1,29 +1,36 @@
 #include <stdint.h>
 #include "logger.h"
 #include "config.h"
+#include "mem.h"
 
 void print_link(char * debug, struct s_link_conf link){
-  if(link.type == RAIL_CONF_C){
+  if(link.type == RAIL_LINK_C){
     sprintf(debug, "%sC %2i:%2i  \t", debug, link.module, link.id);
   }
-  else if(link.type == RAIL_CONF_E){
+  else if(link.type == RAIL_LINK_E){
     sprintf(debug, "%sE        \t", debug);
   }
   else{
     sprintf(debug, "%s%2i:%2i:", debug, link.module, link.id);
-    if(link.type == RAIL_CONF_R)
+    if(link.type == RAIL_LINK_R)
       sprintf(debug, "%s%c  \t", debug, 'R');
-    else if(link.type == RAIL_CONF_S)
+    else if(link.type == RAIL_LINK_S)
       sprintf(debug, "%s%c  \t", debug, 'S');
-    else if(link.type == RAIL_CONF_s)
+    else if(link.type == RAIL_LINK_s)
       sprintf(debug, "%s%c  \t", debug, 's');
-    else if(link.type == RAIL_CONF_M)
+    else if(link.type == RAIL_LINK_M)
       sprintf(debug, "%s%c  \t", debug, 'M');
-    else if(link.type == RAIL_CONF_m)
+    else if(link.type == RAIL_LINK_m)
       sprintf(debug, "%s%c  \t", debug, 'm');
     else
       sprintf(debug, "%s%i  \t", debug, link.type);
   }
+}
+
+void print_Node(struct s_node_conf node){
+  printf("%i\t%i\n",
+                node.Node,
+                node.size);
 }
 
 void print_Block(struct s_block_conf block){
@@ -116,6 +123,12 @@ void print_config(struct config * config){
   printf( "Signals:     %i\n", config->header.Signals);
   printf( "Stations:    %i\n", config->header.Stations);
   
+  printf( "IO Nodes\n");
+  printf( "id\tSize\n");
+  for(int i = 0; i < config->header.IO_Nodes; i++){
+    print_Node(config->Nodes[i]);
+  }
+
   printf( "Block\n");
   printf( "id\ttype\tNext    \tPrev    \tMax_sp\tdir\tlen\tOneWay\tOut en\tIO_in\tIO_out\n");
   for(int i = 0; i < config->header.Blocks; i++){
@@ -144,7 +157,7 @@ void print_config(struct config * config){
 void read_config(struct config * config, FILE * fp){
 
 
-  char * header = calloc(2, sizeof(char));
+  char * header = _calloc(2, char);
 
   fread(header, 1, 1, fp);
 
@@ -152,7 +165,8 @@ void read_config(struct config * config, FILE * fp){
   long fsize = ftell(fp);
   fseek(fp, 0, SEEK_SET);
 
-  char *buffer = calloc(fsize, sizeof(char));
+  char * buffer = _calloc(fsize, char);
+  char * buffer_start = &buffer[0];
   fread(buffer, fsize, 1, fp);
 
   print_hex(buffer, fsize);
@@ -163,26 +177,38 @@ void read_config(struct config * config, FILE * fp){
 
   config->header = read_s_unit_conf(buf_ptr);
 
-  config->Blocks = calloc(config->header.Blocks, sizeof(struct s_block_conf));
+  if (header[0] != 1) {
+    loggerf(WARNING, "Module %i not correct version", config->header.module);
+    config->header.IO_Nodes = 0;
+    loggerf(WARNING, "Please re-save to update", config->header.module);
+  }
+
+  config->Nodes = _calloc(config->header.IO_Nodes, struct s_node_conf);
+  
+  for(int i = 0; i < config->header.IO_Nodes; i++){
+    config->Nodes[i]  = read_s_node_conf(buf_ptr);
+  }
+
+  config->Blocks = _calloc(config->header.Blocks, struct s_block_conf);
 
   
   for(int i = 0; i < config->header.Blocks; i++){
     config->Blocks[i]  = read_s_block_conf(buf_ptr);
   }
 
-  config->Switches = calloc(config->header.Switches, sizeof(struct switch_conf));
+  config->Switches = _calloc(config->header.Switches, struct switch_conf);
 
   for(int i = 0; i < config->header.Switches; i++){
     config->Switches[i]  = read_s_switch_conf(buf_ptr);
   }
 
-  config->MSSwitches = calloc(config->header.MSSwitches, sizeof(struct ms_switch_conf));
+  config->MSSwitches = _calloc(config->header.MSSwitches, struct ms_switch_conf);
 
   for(int i = 0; i < config->header.MSSwitches; i++){
     config->MSSwitches[i]  = read_s_ms_switch_conf(buf_ptr);
   }
 
-  config->Stations = calloc(config->header.Stations, sizeof(struct station_conf));
+  config->Stations = _calloc(config->header.Stations, struct station_conf);
 
   for(int i = 0; i < config->header.Stations; i++){
     config->Stations[i]  = read_s_station_conf(buf_ptr);
@@ -190,9 +216,80 @@ void read_config(struct config * config, FILE * fp){
 
   printf( "buf_ptr %x\n", (unsigned int)*buf_ptr);
 
-  free(header);
+  _free(header);
+  _free(buffer_start);
 }
 
+void modify_Node(struct config * config, char cmd){
+  int id;
+  char _cmd[20];
+  int tmp;
+  if(cmd == 'e'){
+    printf("Node ID: ");
+    fgets(_cmd, 20, stdin);
+    fgets(_cmd, 20, stdin);
+    if(sscanf(_cmd, "%i", &id) < 1)
+      return;
+    printf("Editing Node %i\n", id);
+    // print_Block(config->Blocks[id]);
+  }
+  else if(cmd == 'a'){
+    printf("Node ID: (%i)\n", config->header.IO_Nodes);
+    fgets(_cmd, 20, stdin); // Clear stdin
+
+    if(config->header.IO_Nodes == 0){
+      printf("Calloc");
+      config->Nodes = _calloc(1, struct s_node_conf);
+    }
+    else{
+      printf("Realloc");
+      config->Nodes = _realloc(config->Nodes, config->header.IO_Nodes+1, struct s_node_conf);
+    }
+    memset(&config->Nodes[config->header.IO_Nodes], 0, sizeof(struct s_node_conf));
+    config->Nodes[config->header.IO_Nodes].Node = config->header.IO_Nodes;
+    id = config->header.IO_Nodes++;
+  }
+  else if(cmd == 'r'){
+    printf("Remove Node ID: ");
+    fgets(_cmd, 20, stdin);
+    fgets(_cmd, 20, stdin);
+    if(sscanf(_cmd, "%i", &id) < 1)
+      return;
+
+    if(id == (config->header.IO_Nodes - 1) && id >= 0){
+      memset(&config->Nodes[config->header.IO_Nodes - 1], 0, sizeof(struct s_node_conf));
+      config->Nodes = _realloc(config->Nodes, --config->header.IO_Nodes, struct s_node_conf);
+    }
+    else{
+      printf("Only last block can be removed\n");
+    }
+  }
+
+
+  if(cmd == 'e' || cmd == 'a'){
+    printf("Node Size      (%i)         | ", config->Nodes[id].size);
+    fgets(_cmd, 20, stdin);
+    if(sscanf(_cmd, "%i", &tmp) > 0)
+      config->Nodes[id].size = tmp;
+
+    printf("New:      \t");
+    print_Node(config->Nodes[id]);
+    // struct s_block_conf tmp;
+    // int dir, oneway, Out_en;
+    // scanf("%i\t%i\t%2i:%2i:%c\t\t%2i:%2i:%c\t\t%i\t%i\t%i\t%i\t%i\t%i:%i\t%i:%i",
+    //   &tmp.id, &tmp.type,
+    //   &tmp.next.module, &tmp.next.id, &tmp.next.type,
+    //   &tmp.prev.module, &tmp.prev.id, &tmp.prev.type,
+    //   &tmp.speed,
+    //   &dir,
+    //   &tmp.length,
+    //   &oneway,
+    //   &Out_en,
+    //   &tmp.IO_In.Node, &tmp.IO_In.Adr,
+    //   &tmp.IO_Out.Node, &tmp.IO_Out.Adr);
+
+  }
+}
 
 void modify_Block(struct config * config, char cmd){
   int id;
@@ -214,11 +311,11 @@ void modify_Block(struct config * config, char cmd){
 
     if(config->header.Blocks == 0){
       printf("Calloc");
-      config->Blocks = calloc(1, sizeof(struct s_block_conf));
+      config->Blocks = _calloc(1, struct s_block_conf);
     }
     else{
       printf("Realloc");
-      config->Blocks = realloc(config->Blocks, (config->header.Blocks+1)*sizeof(struct s_block_conf));
+      config->Blocks = _realloc(config->Blocks, config->header.Blocks+1, struct s_block_conf);
     }
     memset(&config->Blocks[config->header.Blocks], 0, sizeof(struct s_block_conf));
     config->Blocks[config->header.Blocks].id = config->header.Blocks;
@@ -233,7 +330,7 @@ void modify_Block(struct config * config, char cmd){
 
     if(id == (config->header.Blocks - 1) && id >= 0){
       memset(&config->Blocks[config->header.Blocks - 1], 0, sizeof(struct s_block_conf));
-      config->Blocks = realloc(config->Blocks, --config->header.Blocks);
+      config->Blocks = _realloc(config->Blocks, --config->header.Blocks, struct s_block_conf);
     }
     else{
       printf("Only last block can be removed\n");
@@ -357,11 +454,11 @@ void modify_Switch(struct config * config, char cmd){
 
     if(config->header.Switches == 0){
       printf("Calloc");
-      config->Switches = calloc(1, sizeof(struct switch_conf));
+      config->Switches = _calloc(1, struct switch_conf);
     }
     else{
       printf("Realloc");
-      config->Switches = realloc(config->Switches, (config->header.Switches+1)*sizeof(struct switch_conf));
+      config->Switches = _realloc(config->Switches, config->header.Switches+1, struct switch_conf);
     }
     memset(&config->Switches[config->header.Switches], 0, sizeof(struct switch_conf));
     config->Switches[config->header.Switches].id = config->header.Switches;
@@ -376,7 +473,7 @@ void modify_Switch(struct config * config, char cmd){
 
     if(id == (config->header.Switches - 1) && id >= 0){
       memset(&config->Switches[config->header.Switches - 1], 0, sizeof(struct switch_conf));
-      config->Switches = realloc(config->Switches, --config->header.Switches);
+      config->Switches = _realloc(config->Switches, --config->header.Switches, struct switch_conf);
     }
     else{
       printf("Only last block can be removed\n");
@@ -472,20 +569,20 @@ void modify_MSSwitch(struct config * config, char cmd){
 
     if(config->header.MSSwitches == 0){
       printf("Calloc");
-      config->MSSwitches = calloc(1, sizeof(struct ms_switch_conf));
+      config->MSSwitches = _calloc(1, struct ms_switch_conf);
     }
     else{
       printf("Realloc");
-      config->MSSwitches = realloc(config->MSSwitches, (config->header.MSSwitches+1)*sizeof(struct ms_switch_conf));
+      config->MSSwitches = _realloc(config->MSSwitches, config->header.MSSwitches+1, struct ms_switch_conf);
     }
     memset(&config->MSSwitches[config->header.MSSwitches], 0, sizeof(struct ms_switch_conf));
     id = config->header.MSSwitches++;
 
     //Set child pointers
     config->MSSwitches[id].nr_states = 1;
-    config->MSSwitches[id].states = calloc(1, sizeof(struct s_ms_switch_state_conf));
+    config->MSSwitches[id].states = _calloc(1, struct s_ms_switch_state_conf);
     config->MSSwitches[id].IO = 1;
-    config->MSSwitches[id].IO_Ports = calloc(1, sizeof(struct s_IO_port_conf));
+    config->MSSwitches[id].IO_Ports = _calloc(1, struct s_IO_port_conf);
   }
   else if(cmd == 'r'){
     printf("Remove Switch ID: ");
@@ -496,7 +593,7 @@ void modify_MSSwitch(struct config * config, char cmd){
 
     if(id == (config->header.MSSwitches - 1) && id >= 0){
       memset(&config->MSSwitches[config->header.MSSwitches - 1], 0, sizeof(struct ms_switch_conf));
-      config->MSSwitches = realloc(config->MSSwitches, --config->header.MSSwitches);
+      config->MSSwitches = _realloc(config->MSSwitches, --config->header.MSSwitches, struct ms_switch_conf);
     }
     else{
       printf("Only last block can be removed\n");
@@ -514,7 +611,7 @@ void modify_MSSwitch(struct config * config, char cmd){
     fgets(_cmd, 20, stdin);
     if(sscanf(_cmd, "%i", &tmp) > 0){
       config->MSSwitches[id].nr_states = tmp;
-      config->MSSwitches[id].states = realloc(config->MSSwitches[id].states, sizeof(struct s_ms_switch_state_conf) * tmp);
+      config->MSSwitches[id].states = _realloc(config->MSSwitches[id].states, tmp, struct s_ms_switch_state_conf);
     }
 
     printf("MSSwitch nr IO Ports  (%2i)    | ", config->MSSwitches[id].IO);
@@ -522,7 +619,7 @@ void modify_MSSwitch(struct config * config, char cmd){
     if(sscanf(_cmd, "%i", &tmp) > 0){
       if(tmp <= 16){
         config->MSSwitches[id].IO = tmp;
-        config->MSSwitches[id].IO_Ports = realloc(config->MSSwitches[id].IO_Ports, sizeof(struct s_IO_port_conf) * tmp);
+        config->MSSwitches[id].IO_Ports = _realloc(config->MSSwitches[id].IO_Ports, tmp, struct s_IO_port_conf);
       }
       else{
         printf("Invalid length\n");
@@ -623,20 +720,20 @@ void modify_Station(struct config * config, char cmd){
 
     if(config->header.Stations == 0){
       printf("Calloc");
-      config->Stations = calloc(1, sizeof(struct station_conf));
+      config->Stations = _calloc(1, struct station_conf);
     }
     else{
       printf("Realloc");
-      config->Stations = realloc(config->Stations, (config->header.Stations+1)*sizeof(struct station_conf));
+      config->Stations = _realloc(config->Stations, config->header.Stations+1, struct station_conf);
     }
     memset(&config->Stations[config->header.Stations], 0, sizeof(struct station_conf));
     id = config->header.Stations++;
 
     //Set child pointers
     config->Stations[id].name_len = 1;
-    config->Stations[id].name = calloc(1, sizeof(char));
+    config->Stations[id].name = _calloc(1, char);
     config->Stations[id].nr_blocks = 1;
-    config->Stations[id].blocks = calloc(1, sizeof(uint8_t));
+    config->Stations[id].blocks = _calloc(1, uint8_t);
   }
   else if(cmd == 'r'){
     printf("Remove Station ID: ");
@@ -647,7 +744,7 @@ void modify_Station(struct config * config, char cmd){
 
     if(id == (config->header.Stations - 1) && id >= 0){
       memset(&config->Stations[config->header.Stations - 1], 0, sizeof(struct station_conf));
-      config->Stations = realloc(config->Stations, --config->header.Stations);
+      config->Stations = _realloc(config->Stations, --config->header.Stations, struct station_conf);
     }
     else{
       printf("Only last block can be removed\n");
@@ -665,7 +762,7 @@ void modify_Station(struct config * config, char cmd){
     fgets(_cmd, 20, stdin);
     if(sscanf(_cmd, "%s", _cmd) > 0){
       tmp = strlen(_cmd);
-      config->Stations[id].name = realloc(config->Stations[id].name, tmp);
+      config->Stations[id].name = _realloc(config->Stations[id].name, tmp, char);
       memcpy(config->Stations[id].name, _cmd, tmp);
       config->Stations[id].name_len = tmp;
     }
@@ -674,6 +771,7 @@ void modify_Station(struct config * config, char cmd){
     fgets(_cmd, 20, stdin);
     if(sscanf(_cmd, "%i", &tmp) > 0){
       config->Stations[id].nr_blocks = tmp;
+      config->Stations[id].blocks = _realloc(config->Stations[id].blocks, tmp, uint8_t);
     }
 
     for(int i = 0; i < config->Stations[id].nr_blocks; i++){
@@ -705,7 +803,7 @@ void modify_Station(struct config * config, char cmd){
 
 int main(){
   init_logger("log_config.txt");
-  set_level(DEBUG);
+  set_level(MEMORY);
 
   char filename[40] = "configs/units/";
   int file;
@@ -777,6 +875,9 @@ int main(){
       else if(strcmp(cmd, "St") == 0){
         modify_Station(&config, cmd1);
       }
+      else if(strcmp(cmd, "N") == 0){
+        modify_Node(&config, cmd1);
+      }
     }
     else if(strcmp(cmd, "s") == 0){
       int size = calc_write_size(&config);
@@ -789,6 +890,31 @@ int main(){
     else
       printf("Not a command\n");
   }
+
+  //free switches
+  for(int i = 0; i < config.header.Switches; i++){
+    _free(config.Switches[i].IO_Ports);
+  }
+
+  //free msswitches
+  for(int i = 0; i < config.header.MSSwitches; i++){
+    _free(config.MSSwitches[i].states);
+    _free(config.MSSwitches[i].IO_Ports);
+  }
+
+  //free station
+  for(int i = 0; i < config.header.Stations; i++){
+    _free(config.Stations[i].name);
+    _free(config.Stations[i].blocks);
+  }
+
+  _free(config.Nodes);
+  _free(config.Blocks);
+  _free(config.Switches);
+  _free(config.MSSwitches);
+  _free(config.Stations);
+
+  exit_logger();
 
   printf("Done\n");
   return 1;

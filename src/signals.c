@@ -1,4 +1,5 @@
 #include "system.h"
+#include "mem.h"
 
 #include "module.h"
 #include "signals.h"

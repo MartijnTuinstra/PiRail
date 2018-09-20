@@ -8,24 +8,7 @@
 #include "websocket_control.h"
 #include "logger.h"
 
-void * my_calloc(int elements, int size, char * file, int line){
-  void * p = calloc(elements, size);
-  floggerf(MEMORY, file, line, "calloc\tsize: %i\tpointer: %08x", elements * size, p);
-  return p;
-}
-
-void * my_realloc(void * p, int type_size, int elements, char * file, int line){
-  void * old_p = p;
-  p = realloc(p, type_size * elements);
-  floggerf(MEMORY, file, line, "realloc\told_pointer: %08x\tnew_size: %i*%i\tnew_pointer: %08x", old_p, type_size, elements, p);
-  return p;
-}
-
-void * my_free(void * p, char * file, int line){
-  free(p);
-  floggerf(MEMORY, file, line, "free\tpointer: %08x", p);
-  return 0;
-}
+#include "mem.h"
 
 void _SYS_change(int STATE,char send){
   printf("_SYS_change %x\n",_SYS->_STATE);

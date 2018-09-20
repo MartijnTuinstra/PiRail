@@ -79,7 +79,7 @@
     char type:3;
     char control:2;
     char dir:1;
-    char halt:1;
+    char halt:2;
     int max_speed;
 
     char funcs_len;

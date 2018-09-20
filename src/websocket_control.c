@@ -1,4 +1,5 @@
 #include "system.h"
+#include "mem.h"
 
 #include "encryption.h"
 
@@ -285,6 +286,7 @@ void * websocket_server(){
   if(bind(server, (struct sockaddr *) &server_addr, sizeof(server_addr)) == -1){
     loggerf(CRITICAL, "BIND ERROR");
     close(server);
+    _free(websocket_clients);
     _SYS_change(STATE_RUN, 2);
     return 0;
   }
@@ -292,6 +294,7 @@ void * websocket_server(){
   if(listen(server, MAX_WEB_CLIENTS) == -1){
     loggerf(CRITICAL, "LISTEN ERROR");
     close(server);
+    _free(websocket_clients);
     _SYS_change(STATE_RUN, 2);
     return 0;
   }
@@ -333,6 +336,7 @@ void * websocket_server(){
 
   _SYS_change(STATE_WebSocket_FLAG, 2);
 
+  _free(websocket_clients);
   _free(WS_password);
 
   return 0;

@@ -9,6 +9,7 @@
 #include <pthread.h>
 
 #include "system.h"
+#include "mem.h"
 
 #include "train.h"
 #include "switch.h"
@@ -65,6 +66,7 @@ void free_trains(){
   for(int i = 0;i<trains_len;i++){
     if(trains[i]){
       trains[i]->name = _free(trains[i]->name);
+      trains[i]->engines = _free(trains[i]->engines);
       trains[i]->composition = _free(trains[i]->composition);
       trains[i] = _free(trains[i]);
     }
@@ -75,6 +77,7 @@ void free_trains(){
       engines[i]->name = _free(engines[i]->name);
       engines[i]->img_path = _free(engines[i]->img_path);
       engines[i]->icon_path = _free(engines[i]->icon_path);
+      engines[i]->funcs = _free(engines[i]->funcs);
       engines[i] = _free(engines[i]);
     }
   }
@@ -84,6 +87,7 @@ void free_trains(){
       cars[i]->name = _free(cars[i]->name);
       cars[i]->img_path = _free(cars[i]->img_path);
       cars[i]->icon_path = _free(cars[i]->icon_path);
+      cars[i]->funcs = _free(cars[i]->funcs);
       cars[i] = _free(cars[i]);
     }
   }
@@ -100,6 +104,7 @@ void free_trains(){
   engines = _free(engines);
   cars = _free(cars);
   trains_comp = _free(trains_comp);
+  train_link = _free(train_link);
 
   trains_len = 0;
   engines_len = 0;
@@ -220,13 +225,14 @@ void create_car(char * name,int nr,char * img, char * icon, char type, int lengt
 }
 
 int train_read_confs(){
-  char * header = _calloc(2, char);
+  char * header = _calloc(5, char);
 
   FILE *f;
   f = fopen(ENGINES_CONF,"rb");
 
   if(!f){
     loggerf(CRITICAL, "ENGINES COMPS CONFIG FILE NOT FOUND");
+    _free(header);
     raise(SIGTERM);
     return 0;
   }
@@ -293,17 +299,19 @@ int train_read_confs(){
   }
   else{
     loggerf(ERROR,"ENGINES_CONF has wrong format (%i) and is not compatible",header[0]);
+    _free(header);
     return 0;
   }
 
   fclose(f);
 
-  memset(header,0,2);
+  memset(header,0,5);
 
   f = fopen(CARS_CONF,"rb");
 
   if(!f){
     loggerf(CRITICAL, "CARS COMPS CONFIG FILE NOT FOUND");
+    _free(header);
     raise(SIGTERM);
     return 0;
   }
@@ -370,17 +378,19 @@ int train_read_confs(){
   }
   else{
     loggerf(ERROR,"CARS_CONF has wrong format (%i) and is not compatible",header[0]);
+    _free(header);
     return 0;
   }
 
   fclose(f);
 
-  memset(header,0,2);
+  memset(header,0,5);
 
   f = fopen(TRAIN_COMPS_CONF,"r");
 
   if(!f){
     loggerf(CRITICAL, "TRAINS COMPS CONFIG FILE NOT FOUND");
+    _free(header);
     raise(SIGTERM);
     return 0;
   }
@@ -441,9 +451,11 @@ int train_read_confs(){
   }
   else{
     loggerf(ERROR,"TRAIN_COMPS_CONF has wrong format (%i) and is not compatible",header[0]);
+    _free(header);
     return 0;
   }
 
+  _free(header);
   fclose(f);
 
   _SYS_change(STATE_TRAIN_LOADED, 1);

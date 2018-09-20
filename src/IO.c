@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include "logger.h"
 #include "system.h"
+#include "mem.h"
 #include "IO.h"
 
 void Add_IO_Node(Unit * U, int Node_nr, int IO){

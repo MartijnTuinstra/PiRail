@@ -50,6 +50,21 @@
     UNKNOWN           // 7
   };
 
+  
+
+#ifndef RAIL_LINK_TYPES
+#define RAIL_LINK_TYPES 
+enum link_types {
+  RAIL_LINK_R,
+  RAIL_LINK_S,
+  RAIL_LINK_s,
+  RAIL_LINK_M,
+  RAIL_LINK_m,
+  RAIL_LINK_C = 0xfe,
+  RAIL_LINK_E = 0xff
+};
+#endif
+
   #define IO_Changed 0x1
   #define State_Changed 0x2
 
@@ -77,7 +92,6 @@
 
     uint8_t train; //Follow id
     uint8_t changed; // 0x1 = IO changed, 0x2 = state changed
-    _Bool reversed;
     _Bool oneWay;
 
     Signal * NextSignal;

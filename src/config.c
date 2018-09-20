@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include "config.h"
 #include "logger.h"
+#include "mem.h"
 
 uint8_t read_byte_conf(uint8_t ** p){
   uint8_t byte = **p;
@@ -11,6 +12,9 @@ uint8_t read_byte_conf(uint8_t ** p){
 int calc_write_size(struct config * config){
   int size = 1; //header
   size += sizeof(struct s_unit_conf) + 1;
+
+  //Nodes
+  size += (sizeof(struct s_node_conf) + 1) * config->header.IO_Nodes;
 
   //Blocks
   size += (sizeof(struct s_block_conf) + 1) * config->header.Blocks;
@@ -41,11 +45,12 @@ int calc_write_size(struct config * config){
 
 void print_hex(char * data, int size){
   printf("print_hex:\n");
-  for(int i = 0; i < size; i += 16){
-    printf("%02x %02x %02x %02x %02x %02x %02x %02x  %02x %02x %02x %02x %02x %02x %02x %02x\n",
-      data[i], data[i+1], data[i+2], data[i+3], data[i+4], data[i+5], data[i+6], data[i+7],
-      data[i+8], data[i+9], data[i+10], data[i+11], data[i+12], data[i+13], data[i+14], data[i+15]);
+  for(int i = 0; i < size; i++){
+    printf("%02x ", data[i]);
+    if((i % 16) == 15)
+      printf("\n");
   }
+  printf("\n");
 }
 
 void write_from_conf(struct config * config, char * filename){
@@ -54,12 +59,20 @@ void write_from_conf(struct config * config, char * filename){
 
   char * data = calloc(size, 1);
 
+  data[0] = 0x01;
 
   char * p = &data[1];
   //Copy header
   memcpy(p, &config->header, sizeof(struct s_unit_conf));
 
   p += sizeof(struct s_unit_conf) + 1;
+
+  //Copy Nodes
+  for(int i = 0; i < config->header.IO_Nodes; i++){
+    memcpy(p, &config->Nodes[i], sizeof(struct s_node_conf));
+
+    p += sizeof(struct s_node_conf) + 1;
+  }
 
   //Copy blocks
   for(int i = 0; i < config->header.Blocks; i++){
@@ -138,6 +151,17 @@ int check_Spacing(uint8_t ** p){
   return 1;
 }
 
+struct s_node_conf read_s_node_conf(uint8_t ** p){
+  struct s_node_conf n;
+  memcpy(&n, *p, sizeof(struct s_node_conf));
+
+  *p += sizeof(struct s_node_conf);
+  
+  check_Spacing(p);
+
+  return n;
+}
+
 struct s_unit_conf read_s_unit_conf(uint8_t ** p){
   struct s_unit_conf s;
   memcpy(&s, *p, sizeof(struct s_unit_conf));
@@ -170,7 +194,7 @@ struct switch_conf read_s_switch_conf(uint8_t ** p){
   if(!check_Spacing(p))
     return s;
 
-  s.IO_Ports = calloc(s.IO & 0x0f, sizeof(struct s_IO_port_conf));
+  s.IO_Ports = _calloc(s.IO & 0x0f, struct s_IO_port_conf);
 
   for(int i = 0; i < (s.IO & 0x0f); i++){
     memcpy(&s.IO_Ports[i], *p, 2);
@@ -194,7 +218,7 @@ struct ms_switch_conf read_s_ms_switch_conf(uint8_t ** p){
   if(!check_Spacing(p))
     return s;
 
-  s.states = calloc(s.nr_states, sizeof(struct s_ms_switch_state_conf));
+  s.states = _calloc(s.nr_states, struct s_ms_switch_state_conf);
 
   for(int i = 0; i < s.nr_states; i++){
     memcpy(&s.states[i], *p, sizeof(struct s_ms_switch_state_conf));
@@ -204,7 +228,7 @@ struct ms_switch_conf read_s_ms_switch_conf(uint8_t ** p){
   if(!check_Spacing(p))
     return s;
 
-  s.IO_Ports = calloc(s.IO, sizeof(struct s_IO_port_conf));
+  s.IO_Ports = _calloc(s.IO, struct s_IO_port_conf);
 
   for(int i = 0; i < s.IO; i++){
     memcpy(&s.IO_Ports[i], *p, 2);
@@ -223,8 +247,8 @@ struct station_conf read_s_station_conf(uint8_t ** p){
 
   *p += sizeof(struct s_station_conf);
 
-  s.name = calloc(s.name_len, sizeof(char));
-  s.blocks = calloc(s.nr_blocks, sizeof(uint8_t));
+  s.name = _calloc(s.name_len, char);
+  s.blocks = _calloc(s.nr_blocks, uint8_t);
 
   if(!check_Spacing(p))
     return s;

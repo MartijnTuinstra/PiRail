@@ -1,3 +1,0 @@
-'Rangeer station / Opstelplaats
-'Create Module
-U	7	24	8

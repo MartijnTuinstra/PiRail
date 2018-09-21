@@ -10,13 +10,14 @@ GCC_SIMPLE = gcc -g -Wall -W -Werror=unused-variable $(INCLUDE) -std=c99
 ifndef VERBOSE
 .SILENT:
 endif
+
 .PHONY: all
 
 all: config_reader baan
 
-config_reader: $(BIN)/config_reader.o $(BIN)/config.o $(BIN)/logger.o
+config_reader: $(BIN)/config_reader.o $(BIN)/config.o $(BIN)/logger.o $(BIN)/mem.o
 	@echo config_reader
-	@$(GCC_SIMPLE) -o $@ $(BIN)/config_reader.o $(BIN)/config.o $(BIN)/logger.o
+	@$(GCC_SIMPLE) -o $@ $(BIN)/config_reader.o $(BIN)/config.o $(BIN)/logger.o $(BIN)/mem.o
 
 $(BIN)/config_reader.o: $(SRC)/config_reader.c $(LIB)/config.h $(LIB)/logger.h
 	@echo config_reader.o
@@ -27,14 +28,20 @@ $(BIN)/config.o: $(SRC)/config.c $(LIB)/config.h $(LIB)/logger.h
 	$(GCC) $(SRC)/config.c -c -o $@
 
 baan: $(BIN)/baan.o $(BIN)/logger.o $(BIN)/rail.o $(BIN)/train.o $(BIN)/system.o $(BIN)/websocket_control.o $(BIN)/websocket_msg.o $(BIN)/module.o \
-		$(BIN)/train_sim.o $(BIN)/com.o $(BIN)/algorithm.o $(BIN)/signals.o $(BIN)/switch.o $(BIN)/Z21.o $(BIN)/websocket.o $(BIN)/encryption.o $(BIN)/IO.o $(BIN)/config.o
+		$(BIN)/train_sim.o $(BIN)/com.o $(BIN)/algorithm.o $(BIN)/signals.o $(BIN)/switch.o $(BIN)/Z21.o $(BIN)/websocket.o $(BIN)/encryption.o $(BIN)/IO.o \
+		$(BIN)/config.o $(BIN)/mem.o
 	@echo baan
 	$(GCC) -o baan $(BIN)/baan.o $(BIN)/logger.o $(BIN)/rail.o $(BIN)/train.o $(BIN)/system.o $(BIN)/websocket_control.o $(BIN)/websocket_msg.o $(BIN)/module.o \
-	$(BIN)/train_sim.o $(BIN)/com.o $(BIN)/algorithm.o $(BIN)/signals.o $(BIN)/switch.o $(BIN)/Z21.o $(BIN)/websocket.o $(BIN)/encryption.o $(BIN)/IO.o $(BIN)/config.o
+	$(BIN)/train_sim.o $(BIN)/com.o $(BIN)/algorithm.o $(BIN)/signals.o $(BIN)/switch.o $(BIN)/Z21.o $(BIN)/websocket.o $(BIN)/encryption.o $(BIN)/IO.o \
+	$(BIN)/config.o $(BIN)/mem.o
 
-$(BIN)/baan.o: baan.c $(LIB)/logger.h $(LIB)/train.h $(LIB)/rail.h $(LIB)/switch.h $(LIB)/com.h $(LIB)/websocket_control.h $(LIB)/system.h
+$(BIN)/baan.o: baan.c $(LIB)/logger.h $(LIB)/train.h $(LIB)/rail.h $(LIB)/switch.h $(LIB)/com.h $(LIB)/websocket_control.h $(LIB)/system.h $(LIB)/mem.h
 	@echo baan.o
 	$(GCC) baan.c -c -o $(BIN)/baan.o
+
+$(BIN)/mem.o: $(LIB)/mem.h $(SRC)/mem.c $(LIB)/logger.h
+	@echo mem.o
+	@$(GCC) $(SRC)/mem.c -c -o $@
 
 $(LIB)/algorithm.h: $(LIB)/rail.h
 $(BIN)/algorithm.o: $(SRC)/algorithm.c $(LIB)/algorithm.h $(LIB)/system.h \

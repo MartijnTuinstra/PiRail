@@ -1,4 +1,5 @@
 #include "system.h"
+#include "mem.h"
 
 #include "logger.h"
 #include "rail.h"
@@ -21,6 +22,8 @@ int main(){
   _SYS->_STATE = STATE_RUN;
   _SYS->_Clients = 0;
   _SYS->_COM_fd = -1;
+
+  init_allocs();
 
   init_logger("log.txt");
   set_level(DEBUG);
@@ -87,7 +90,7 @@ int main(){
 
     for(uint8_t i = 0;i<10;i++){
       if(DeviceList[i]){
-        LoadModules(DeviceList[i]);
+        LoadModuleFromConfig(DeviceList[i]);
       }
     }
     
@@ -100,6 +103,7 @@ int main(){
     setup_JSON((int [4]){20,21,22,23},(int *)0,4,0);
 
     Connect_Rail_links();
+
 
   // Allow web clients
   _SYS_change(STATE_Client_Accept,1);
@@ -134,9 +138,10 @@ int main(){
   if(_SYS->_Clients == 0){
     printf("                   Waiting until for a client connects\n");
   }
-  while(_SYS->_Clients == 0){
+  while(_SYS->_Clients == 0 && (_SYS->_STATE & STATE_RUN)){
     usleep(1000000);
   }
+  printf("Continue\n");
 
   usleep(400000);
 
@@ -189,5 +194,7 @@ int main(){
 
   loggerf(INFO, "STOPPED");
   exit_logger(); //Close logger
+
+  print_allocs();
   //pthread_exit(NULL);
 }

@@ -24,7 +24,7 @@
   typedef struct s_IO_Port IO_Port;
   typedef struct s_node_adr Node_adr;
 
-  #define U_B(U,B) Units[U]->B[B]
+  #define U_B(U, A) Units[U]->B[A]
 
   struct rail_link {
     char type;

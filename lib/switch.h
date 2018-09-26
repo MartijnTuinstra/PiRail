@@ -4,8 +4,8 @@
   #include "rail.h"
   #include "train.h"
 
-  #define U_Sw(U,S) Units[U]->Sw[S]
-  #define U_MSSw(U,S) Units[U]->MSSw[S]
+  #define U_Sw(U, A) Units[U]->Sw[A]
+  #define U_MSSw(U, A) Units[U]->MSSw[A]
 
   struct switch_link {
     char type;

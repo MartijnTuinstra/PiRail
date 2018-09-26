@@ -138,31 +138,9 @@ void process(Block * B,int flags){
   B->changed &= ~(IO_Changed);
   B->changed |= State_Changed;
 
-
-  //init_Algor_Blocks and clear
-  Algor_Block BPPP,BPP,BP,BN,BNN,BNNN;
-
-  //Clear pointer
-  BPPP.B[0] = NULL;BPPP.B[1] = NULL;BPPP.B[2] = NULL;BPPP.B[3] = NULL;BPPP.B[4] = NULL;
-  BPP.B[0]  = NULL;BPP.B[1]  = NULL;BPP.B[2]  = NULL;BPP.B[3]  = NULL;BPP.B[4]  = NULL;
-  BP.B[0]   = NULL;BP.B[1]   = NULL;BP.B[2]   = NULL;BP.B[3]   = NULL;BP.B[4]   = NULL;
-  BN.B[0]   = NULL;BN.B[1]   = NULL;BN.B[2]   = NULL;BN.B[3]   = NULL;BN.B[4]   = NULL;
-  BNN.B[0]  = NULL;BNN.B[1]  = NULL;BNN.B[2]  = NULL;BNN.B[3]  = NULL;BNN.B[4]  = NULL;
-  BNNN.B[0] = NULL;BNNN.B[1] = NULL;BNNN.B[2] = NULL;BNNN.B[3] = NULL;BNNN.B[4] = NULL;
-  //Clear data
-  BPPP.blocked = 0;BPP.blocked = 0;BP.blocked = 0;BN.blocked = 0;BNN.blocked = 0;BNNN.blocked = 0;
-  BPPP.blocks  = 0;BPP.blocks  = 0;BP.blocks  = 0;BN.blocks  = 0;BNN.blocks  = 0;BNNN.blocks  = 0;
-  BPPP.length  = 0;BPP.length  = 0;BP.length  = 0;BN.length  = 0;BNN.length  = 0;BNNN.length  = 0;
-  // Link algor_blocks
   struct algor_blocks AllBlocks;
-  AllBlocks.BPPP = &BPPP;
-  AllBlocks.BPP  = &BPP;
-  AllBlocks.BP   = &BP;
-  AllBlocks.B    = B;
-  AllBlocks.BN   = &BN;
-  AllBlocks.BNN  = &BNN;
-  AllBlocks.BNNN = &BNNN;
 
+  Algor_init_Blocks(&AllBlocks, B);
   
   //Find all surrounding blocks. Can be speeded up by storing this into the block. Update only if a (MS)switch changes or the direciton changes
   Algor_search_Blocks(&AllBlocks, debug);
@@ -172,13 +150,17 @@ void process(Block * B,int flags){
   
   //Follow the train arround the layout
   Algor_train_following(AllBlocks, debug);
-  if (B->changed & IO_Changed)
+  if (B->changed & IO_Changed){
+    Algor_clear_Blocks(&AllBlocks);
     return;
+  }
 
   //Set oncomming switch to correct state
   Algor_Switch_Checker(AllBlocks, debug);
-  if (B->changed & IO_Changed)
+  if (B->changed & IO_Changed){
+    Algor_clear_Blocks(&AllBlocks);
     return;
+  }
 
   //Apply block stating
   Algor_rail_state(AllBlocks, debug);
@@ -191,6 +173,9 @@ void process(Block * B,int flags){
   Algor_signal_state(AllBlocks, debug);
 
   //Train Control
+
+
+  Algor_clear_Blocks(&AllBlocks);
 
   if(0){
     return;
@@ -592,6 +577,46 @@ void process(Block * B,int flags){
   }
 
   pthread_mutex_unlock(&algor_mutex);
+}
+
+
+void Algor_init_Blocks(struct algor_blocks * AllBlocks, Block * B){
+  //init_Algor_Blocks and clear
+  Algor_Block * BPPP = _calloc(1, Algor_Block);
+  Algor_Block * BPP  = _calloc(1, Algor_Block);
+  Algor_Block * BP   = _calloc(1, Algor_Block);
+  Algor_Block * BN   = _calloc(1, Algor_Block);
+  Algor_Block * BNN  = _calloc(1, Algor_Block);
+  Algor_Block * BNNN = _calloc(1, Algor_Block);
+
+  //Clear pointer
+  BPPP->B[0] = NULL;BPPP->B[1] = NULL;BPPP->B[2] = NULL;BPPP->B[3] = NULL;BPPP->B[4] = NULL;
+  BPP->B[0]  = NULL;BPP->B[1]  = NULL;BPP->B[2]  = NULL;BPP->B[3]  = NULL;BPP->B[4]  = NULL;
+  BP->B[0]   = NULL;BP->B[1]   = NULL;BP->B[2]   = NULL;BP->B[3]   = NULL;BP->B[4]   = NULL;
+  BN->B[0]   = NULL;BN->B[1]   = NULL;BN->B[2]   = NULL;BN->B[3]   = NULL;BN->B[4]   = NULL;
+  BNN->B[0]  = NULL;BNN->B[1]  = NULL;BNN->B[2]  = NULL;BNN->B[3]  = NULL;BNN->B[4]  = NULL;
+  BNNN->B[0] = NULL;BNNN->B[1] = NULL;BNNN->B[2] = NULL;BNNN->B[3] = NULL;BNNN->B[4] = NULL;
+  //Clear data
+  BPPP->blocked = 0;BPP->blocked = 0;BP->blocked = 0;BN->blocked = 0;BNN->blocked = 0;BNNN->blocked = 0;
+  BPPP->blocks  = 0;BPP->blocks  = 0;BP->blocks  = 0;BN->blocks  = 0;BNN->blocks  = 0;BNNN->blocks  = 0;
+  BPPP->length  = 0;BPP->length  = 0;BP->length  = 0;BN->length  = 0;BNN->length  = 0;BNNN->length  = 0;
+  // Link algor_blocks
+  AllBlocks->BPPP = BPPP;
+  AllBlocks->BPP  = BPP;
+  AllBlocks->BP   = BP;
+  AllBlocks->B    = B;
+  AllBlocks->BN   = BN;
+  AllBlocks->BNN  = BNN;
+  AllBlocks->BNNN = BNNN;
+}
+
+void Algor_clear_Blocks(struct algor_blocks * AllBlocks){
+  _free(AllBlocks->BPPP);
+  _free(AllBlocks->BPP);
+  _free(AllBlocks->BP);
+  _free(AllBlocks->BN);
+  _free(AllBlocks->BNN);
+  _free(AllBlocks->BNNN);
 }
 
 void Algor_print_block_debug(struct algor_blocks AllBlocks){

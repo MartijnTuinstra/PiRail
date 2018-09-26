@@ -32,6 +32,8 @@
   void * scan_All_continiously();
 
   void process(Block * B,int debug);
+  void Algor_init_Blocks(struct algor_blocks * AllBlocks, Block * B);
+  void Algor_clear_Blocks(struct algor_blocks * AllBlocks);
   void Algor_print_block_debug(struct algor_blocks AllBlocks);
   void Algor_search_Blocks(struct algor_blocks * AllBlocks, int debug);
   void Algor_Switch_Checker(struct algor_blocks AllBlocks, int debug);

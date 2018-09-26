@@ -582,6 +582,15 @@ void COM_change_switch(int M){
   }
 }
 
+void COM_update_switch(int M){
+  if(M == 0)
+    loggerf(INFO, "COM update ALL switches");
+  else
+    loggerf(INFO, "COM update switches of module %i", M);
+
+  loggerf(ERROR, "IMPLEMENT");
+}
+
 void COM_set_train_speed(struct train * T,char speed){
   //printf("");
 }

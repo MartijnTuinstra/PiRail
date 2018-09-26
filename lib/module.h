@@ -29,6 +29,11 @@
 
     int station_len;
     Station ** St;
+
+    uint8_t block_state_changed:1;
+    uint8_t switch_state_changed:1;
+    uint8_t msswitch_state_changed:1;
+    uint8_t signal_state_changed:1;
   } Unit;
 
   struct rail_link CAdr(int module, int id, char type);

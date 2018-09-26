@@ -113,27 +113,27 @@ int main(){
   
   //scan_All();
   printf("Next 1\n");
-  Block *B = Next(Units[20]->B[3],0,1);
+  Block *B = Next(Units[20]->B[3], NEXT, 1);
   if(B){printf("Block %i:%i\n",B->module, B->id);}
   printf("Next 2\n");
-  B = Next(Units[20]->B[3],0,2);
+  B = Next(Units[20]->B[3], NEXT, 2);
   if(B){printf("Block %i:%i\n",B->module, B->id);}
   printf("Next 3\n");
-  B = Next(Units[20]->B[3],0,3);
+  B = Next(Units[20]->B[3], NEXT, 3);
   if(B){printf("Block %i:%i\n",B->module, B->id);}
-  printf("\nPrev 1\n");
-  B = Next(Units[20]->B[3],1,1);
+  printf("Next 4\n");
+  B = Next(Units[20]->B[3], NEXT, 4);
   if(B){printf("Block %i:%i\n",B->module, B->id);}
-  printf("Prev 2\n");
-  B = Next(Units[20]->B[3],1,2);
+  printf("Next 5\n");
+  B = Next(Units[20]->B[3], NEXT, 5);
   if(B){printf("Block %i:%i\n",B->module, B->id);}
-  printf("Prev 3\n");
-  B = Next(Units[20]->B[3],1,3);
+  printf("Next 6\n");
+  B = Next(Units[20]->B[3], NEXT, 6);
   if(B){printf("Block %i:%i\n",B->module, B->id);}
 
   delay(5);
 
-  //return 1;
+  // return 1;
 
   if(_SYS->_Clients == 0){
     printf("                   Waiting until for a client connects\n");
@@ -151,15 +151,27 @@ int main(){
   // pthread_create(&pt_train_timers, NULL, clear_train_timers, NULL);
   pthread_t pt_train_simA;
   pthread_create(&pt_train_simA, NULL, TRAIN_SIMA, NULL);
+  // pthread_t pt_train_simB;
+  // pthread_create(&pt_train_simB, NULL, TRAIN_SIMB, NULL);
 
   usleep(10000000);
 
-  Units[20]->B[10]->state = RESTRICTED;
+  Units[20]->B[8]->state = RESTRICTED;
+  Units[20]->B[4]->state = RESTRICTED;
 
   WS_ShortCircuit();
 
+  loggerf(WARNING, "SYS-State: %x", _SYS->_STATE);
+
   while(_SYS->_STATE & STATE_RUN){
-    usleep(100000);
+    pthread_mutex_lock(&algor_mutex);
+    //Notify clients
+    WS_trackUpdate(0);
+    WS_SwitchesUpdate(0);
+
+    pthread_mutex_unlock(&algor_mutex);
+
+    usleep(10000);
   }
 
   logger("Stopping Argor",INFO);
@@ -198,3 +210,4 @@ int main(){
   print_allocs();
   //pthread_exit(NULL);
 }
+

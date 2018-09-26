@@ -9,6 +9,7 @@
 #include "IO.h"
 
 void Create_Switch(struct switch_connect connect, uint8_t block_id, uint8_t output_len, Node_adr * output_pins, uint8_t * output_states){
+  loggerf(DEBUG, "Create Sw %i:%i", connect.module, connect.id);
   Switch * Z = _calloc(1, Switch);
 
   Z->module = connect.module;
@@ -21,23 +22,7 @@ void Create_Switch(struct switch_connect connect, uint8_t block_id, uint8_t outp
   Z->IO = _calloc(output_len, IO_Port *);
 
   for(int i = 0; i < output_len; i++){
-    if(output_pins[i].Node > Units[connect.module]->IO_Nodes){
-      loggerf(WARNING, "Node not initialized");
-      return;
-    }
-    if(Units[connect.module]->Node[output_pins[i].Node].io[output_pins[i].io]){
-      IO_Port * A = Units[connect.module]->Node[output_pins[i].Node].io[output_pins[i].io];
-
-      if(A->type != IO_Undefined){
-        loggerf(WARNING, "IO %i:%i already in use", output_pins[i].Node, output_pins[i].io);
-      }
-
-      A->type = IO_Output;
-      A->state = 0;
-      A->id = output_pins[i].io;
-
-      loggerf(DEBUG, "IO %i:%i", output_pins[i].Node, output_pins[i].io);
-    }
+    Init_IO(Units[connect.module], output_pins[i], IO_Output);
 
     Z->IO[i] = Units[connect.module]->Node[output_pins[i].Node].io[output_pins[i].io];
   }
@@ -48,8 +33,8 @@ void Create_Switch(struct switch_connect connect, uint8_t block_id, uint8_t outp
   if(Units[Z->module]->B[block_id]){
     Z->Detection = Units[Z->module]->B[block_id];
     if(Units[Z->module]->B[block_id]->switch_len == 0){
-      Units[Z->module]->B[block_id]->Sw = _calloc(2, void *);
-      Units[Z->module]->B[block_id]->switch_len = 2;
+      Units[Z->module]->B[block_id]->Sw = _calloc(1, void *);
+      Units[Z->module]->B[block_id]->switch_len = 1;
     }
     loggerf(DEBUG, "Block linked switches find index");
     int id = find_free_index(Units[Z->module]->B[block_id]->Sw, Units[Z->module]->B[block_id]->switch_len);
@@ -72,18 +57,9 @@ void Switch_Add_Feedback(Switch * S, char len, Node_adr * pins, char * state){
   S->feedback_en = 1;
 
   for(int i = 0; i < len; i++){
-    if(pins[i].Node > Units[S->module]->IO_Nodes){
-      loggerf(WARNING, "Node not initialized");
-      return;
-    }
-    if(Units[S->module]->Node[pins[i].Node].io[pins[i].io]){
-      IO_Port * A = Units[S->module]->Node[pins[i].Node].io[pins[i].io];
-      A->type = IO_Input;
-      A->state = 0;
-      A->id = pins[i].io;
+    Init_IO(Units[S->module], pins[i], IO_Input);
 
-      S->feedback[i] = A;
-    }
+    S->feedback[i] = Units[S->module]->Node[pins[i].Node].io[pins[i].io];
   }
   _free(pins);
 
@@ -92,6 +68,7 @@ void Switch_Add_Feedback(Switch * S, char len, Node_adr * pins, char * state){
 }
 
 void Create_MSSwitch(struct msswitch_connect connect, uint8_t block_id, uint8_t output_len, Node_adr * output_pins, uint16_t * output_states){
+  loggerf(DEBUG, "Create MSSw %i:%i", connect.module, connect.id);
   MSSwitch * Z = _calloc(1, MSSwitch);
 
   Z->module = connect.module;
@@ -103,101 +80,104 @@ void Create_MSSwitch(struct msswitch_connect connect, uint8_t block_id, uint8_t 
   Z->IO = _calloc(output_len, IO_Port *);
 
   for(int i = 0; i < output_len; i++){
-    if(output_pins[i].Node > Units[connect.module]->IO_Nodes){
-      loggerf(WARNING, "Node not initialized");
-      return;
-    }
-    if(Units[connect.module]->Node[output_pins[i].Node].io[output_pins[i].io]){
-      IO_Port * A = Units[connect.module]->Node[output_pins[i].Node].io[output_pins[i].io];
-      A->type = IO_Output;
-      A->state = 0;
-      A->id = output_pins[i].io;
+    Init_IO(Units[connect.module], output_pins[i], IO_Output);
 
-      Z->IO[i] = A;
-    }
+    Z->IO[i] = Units[connect.module]->Node[output_pins[i].Node].io[output_pins[i].io];
   }
   _free(output_pins);
 
   Z->IO_len = output_len;
   Z->IO_states = output_states;
 
-  if(Units[Z->module]->B[block_id]){
+  if(U_B(Z->module, block_id)){
     Z->Detection = Units[Z->module]->B[block_id];
-    if(Units[Z->module]->B[block_id]->msswitch_len == 0){
-      Units[Z->module]->B[block_id]->MSSw = _calloc(2, void *);
-      Units[Z->module]->B[block_id]->msswitch_len = 2;
+    if(U_B(Z->module, block_id)->msswitch_len == 0){
+      U_B(Z->module, block_id)->MSSw = _calloc(2, void *);
+      U_B(Z->module, block_id)->msswitch_len = 2;
     }
-    int id = find_free_index(Units[Z->module]->B[block_id]->MSSw, Units[Z->module]->B[block_id]->msswitch_len);
-    Units[Z->module]->B[block_id]->MSSw[id] = Z;
+    int id = find_free_index(U_B(Z->module, block_id)->MSSw, U_B(Z->module, block_id)->msswitch_len);
+    U_B(Z->module, block_id)->MSSw[id] = Z;
   }
   else
     loggerf(ERROR, "MSSwitch %i:%i has no detection block %i", connect.module, connect.id, block_id);
 
-  if(Units[connect.module]->MSSw[connect.id]){
+  if(U_MSSW(connect.module, connect.id)){
     loggerf(INFO, "Duplicate switch, overwriting ...");
-    _free(Units[connect.module]->MSSw[connect.id]);
+    _free(U_MSSW(connect.module, connect.id));
   }
-  Units[connect.module]->MSSw[connect.id] = Z;
+  U_MSSW(connect.module, connect.id) = Z;
 }
 
-int throw_switch(Switch * S){
-  loggerf(ERROR, "Implement throw_switch (%x)", (unsigned int)S);
-  return -1;
+int check_linked_switches(Switch * S){
+  for(int i = 0;i<S->links_len;i++){
+    if(!S->links[i].p)
+      continue;
+
+    if(S->links[i].type == RAIL_LINK_S || S->links[i].type == RAIL_LINK_s){
+      if(((Switch *)S->links[i].p)->Detection && 
+         ( ((Switch *)S->links[i].p)->Detection->state == RESERVED || 
+           ((Switch *)S->links[i].p)->Detection->state == RESERVED_SWITCH || 
+           ((Switch *)S->links[i].p)->Detection->blocked )){
+        return 0;
+      }
+    }else if(S->links[i].type == RAIL_LINK_M || S->links[i].type == RAIL_LINK_m){
+      if(((MSSwitch *)S->links[i].p)->Detection && 
+         ( ((MSSwitch *)S->links[i].p)->Detection->state == RESERVED || 
+           ((MSSwitch *)S->links[i].p)->Detection->state == RESERVED_SWITCH || 
+           ((MSSwitch *)S->links[i].p)->Detection->blocked )){
+        return 0;
+      }
+    }
+  }
+  return 1;
 }
 
-int throw_msswitch(MSSwitch * S){
-  loggerf(ERROR, "Implement throw_msswitch (%x)", (unsigned int)S);
-  return -1;
+int check_linked_msswitches(MSSwitch * S){
+  for(int i = 0;i<S->links_len;i++){
+    if(!S->links[i].p)
+      continue;
+
+    if(S->links[i].type == RAIL_LINK_S || S->links[i].type == RAIL_LINK_s){
+      if(((Switch *)S->links[i].p)->Detection && 
+         ( ((Switch *)S->links[i].p)->Detection->state == RESERVED || 
+           ((Switch *)S->links[i].p)->Detection->state == RESERVED_SWITCH || 
+           ((Switch *)S->links[i].p)->Detection->blocked )){
+        return 0;
+      }
+    }else if(S->links[i].type == RAIL_LINK_M || S->links[i].type == RAIL_LINK_m){
+      if(((MSSwitch *)S->links[i].p)->Detection && 
+         ( ((MSSwitch *)S->links[i].p)->Detection->state == RESERVED || 
+           ((MSSwitch *)S->links[i].p)->Detection->state == RESERVED_SWITCH || 
+           ((MSSwitch *)S->links[i].p)->Detection->blocked )){
+        return 0;
+      }
+    }
+  }
+  return 1;
+}
+
+void throw_switch(Switch * S, uint8_t state){
+  S->state = (state & 0x0f) | 0x80;
+
+  Units[S->module]->switch_state_changed |= 1;
+}
+
+void throw_msswitch(MSSwitch * S, uint8_t state){
+  S->state = (state & 0x0f) | 0x80;
+
+  Units[S->module]->msswitch_state_changed |= 1;
 }
 
 int set_switch(Switch * S, uint8_t state){
-  int linked = 0;
-  for(int i = 0;i<S->links_len;i++){
-    if(S->links[i].p){
-      linked = 1;
 
-      if(S->links[i].type == RAIL_LINK_S || S->links[i].type == RAIL_LINK_s){
-        if(((Switch *)S->links[i].p)->Detection && (((Switch *)S->links[i].p)->Detection->state == RESERVED || 
-              ((Switch *)S->links[i].p)->Detection->blocked)){
-            printf("Linked switches blocked\n");
-          return 0;
-        }
-      }else if(S->links[i].type == RAIL_LINK_M || S->links[i].type == RAIL_LINK_m){
-        loggerf(ERROR, "set_switch linked MSSwitch implement");
-      }
-    }
+  //Check if linked switches are blocked or reserved
+  if(!check_linked_switches(S)){
+    loggerf(INFO, "Linked Switches Blocked");
+    return 0;
   }
-  if((S->Detection && (S->Detection->state != RESERVED && S->Detection->state != RESERVED_SWITCH && !S->Detection->blocked)) || !S->Detection){
-    S->state = state + 0x80;
 
-    char buf[40];
-    buf[0] = WSopc_BroadSwitch;
-    int index = 1;
-
-    buf[index++] = S->module;
-    buf[index++] = S->id;
-    buf[index++] = S->state;
-
-    for(int i = 0;i<S->links_len;i++){
-      if(S->links[i].p){
-        if(S->links[i].type == 'S' || S->links[i].type == 's'){
-          Switch * LSw = S->links[i].p;
-          LSw->state = S->links[i].states[S->state];
-
-          buf[index++] = LSw->module;
-          buf[index++] = LSw->id;
-          buf[index++] = LSw->state;
-        }
-        else if(S->links[i].type == 'M' || S->links[i].type == 'm'){
-
-        }
-      }
-    }
-    printf("Throw Switch %s\n\n",buf);
-    COM_change_switch(S->module);
-    ws_send_all(buf,index,2);
-    return 1;
-  }else{
+  //Check if switch is blocked or reserved
+  if(S->Detection && (S->Detection->state == RESERVED || S->Detection->state == RESERVED_SWITCH || S->Detection->blocked)){
     if(S->Detection->state == RESERVED || S->Detection->state == RESERVED_SWITCH){
       loggerf(INFO, "Switch reserved");
     }
@@ -206,7 +186,24 @@ int set_switch(Switch * S, uint8_t state){
     }
     return 0;
   }
-  return linked;
+
+  throw_switch(S, state);
+
+  for(int i = 0; i<S->links_len; i++){
+    if(!S->links[i].p)
+      continue;
+
+    if(S->links[i].type == RAIL_LINK_S || S->links[i].type == RAIL_LINK_s){
+      throw_switch(S->links[i].p, S->links[i].states[S->state & 0x7f]);
+    }
+    else if(S->links[i].type == RAIL_LINK_M || S->links[i].type == RAIL_LINK_m){
+      throw_msswitch(S->links[i].p, S->links[i].states[S->state & 0x7f]);
+    }
+  }
+
+  loggerf(INFO, "Throw Switch %i:%i\n");
+  COM_update_switch(S->module);
+  return 1;
 }
 
 int set_switch_path(void * p, struct rail_link link, int flags){
@@ -215,6 +212,8 @@ int set_switch_path(void * p, struct rail_link link, int flags){
     //No SWITCH_CARE
     return 1;
   }
+
+  //Check if switch is occupied
   if (link.type == RAIL_LINK_S || link.type == RAIL_LINK_s) {
     if(((Switch *)link.p)->Detection && ((Switch *)link.p)->Detection->state == RESERVED_SWITCH)
       return 0;
@@ -224,7 +223,9 @@ int set_switch_path(void * p, struct rail_link link, int flags){
       return 0;
   }
 
+
   if(link.type == RAIL_LINK_S){
+    // Go to next switch
     Switch * Sw = link.p;
     if((Sw->state & 0x7F) == 0 && Sw->str.type != RAIL_LINK_R && Sw->str.type != 'D'){
       return Next_check_Switch_Path(Sw, Sw->str, flags);
@@ -234,28 +235,32 @@ int set_switch_path(void * p, struct rail_link link, int flags){
     }
   }
   else if(link.type == RAIL_LINK_s){
+    // Check if switch is in correct state
+    // and continue to next switch
     Switch * N = link.p;
     loggerf(TRACE, "set s (state: %i, str.p: %x, div.p: %x)", (N->state & 0x7F), (unsigned int)N->str.p, (unsigned int)N->div.p);
     if((N->state & 0x7F) == 0){
       if(N->str.p != p)
         set_switch(N, 1);
+
       return Next_check_Switch_Path(N, N->app, flags);
     }
     else if((N->state & 0x7F) == 1){
       if(N->div.p != p)
         set_switch(N, 0);
+
       return Next_check_Switch_Path(N, N->app, flags);
     }
   }
   else if(link.type == RAIL_LINK_M){
-    loggerf(WARNING, "IMPLEMENT");
+    loggerf(ERROR, "IMPLEMENT");
     MSSwitch * N = link.p;
     if(N->sideB[N->state].p == p){
       return 1;
     }
   }
   else if(link.type == RAIL_LINK_m){
-    loggerf(WARNING, "IMPLEMENT");
+    loggerf(ERROR, "IMPLEMENT");
     MSSwitch * N = link.p;
     if(N->sideA[N->state].p == p){
       return 1;
@@ -270,11 +275,44 @@ int set_switch_path(void * p, struct rail_link link, int flags){
 
 
 int set_msswitch(MSSwitch * S, uint8_t state){
-  loggerf(ERROR, "Implement set_msswitch (%x, %i)", (unsigned int)S, state);
-  return -1;
+
+  //Check if linked switches are blocked or reserved
+  if(!check_linked_msswitches(S)){
+    loggerf(INFO, "Linked Switches Blocked");
+    return 0;
+  }
+
+  //Check if switch is blocked or reserved
+  if(S->Detection && (S->Detection->state == RESERVED || S->Detection->state == RESERVED_SWITCH || S->Detection->blocked)){
+    if(S->Detection->state == RESERVED || S->Detection->state == RESERVED_SWITCH){
+      loggerf(INFO, "Switch reserved");
+    }
+    else{
+      loggerf(INFO, "Switch blocked");
+    }
+    return 0;
+  }
+
+  throw_msswitch(S, state);
+
+  for(int i = 0; i<S->links_len; i++){
+    if(!S->links[i].p)
+      continue;
+
+    if(S->links[i].type == RAIL_LINK_S || S->links[i].type == RAIL_LINK_s){
+      throw_switch(S->links[i].p, S->links[i].states[S->state & 0x7f]);
+    }
+    else if(S->links[i].type == RAIL_LINK_M || S->links[i].type == RAIL_LINK_m){
+      throw_msswitch(S->links[i].p, S->links[i].states[S->state & 0x7f]);
+    }
+  }
+
+  loggerf(INFO, "Throw MSSwitch %i:%i\n");
+  COM_update_switch(S->module);
+  return 1;
 }
 
-int set_multiple_switches(uint8_t len, char * msg){
+int throw_multiple_switches(uint8_t len, char * msg){
   struct switchdata {
     uint8_t module;
     uint8_t id:7;
@@ -282,12 +320,9 @@ int set_multiple_switches(uint8_t len, char * msg){
     char state;
   };
 
-  char module = 0;
-
+  // Check if all switches are non-blocked
   for(int i = 0; i < len; i++){
     char * data = (void *)&msg[i*3];
-
-    printf("%x %x %x\t",data[0],data[1],data[2]);
 
     struct switchdata p;
     p.module = data[0];
@@ -295,28 +330,25 @@ int set_multiple_switches(uint8_t len, char * msg){
     p.type = (data[1] & 0x80) >> 7;
     p.state = data[2];
 
-    printf("check %d:%d S%i\n",p.module,p.id,p.state);
-
     if(!(Units[p.module] && (
-      (p.type == 0 && Units[p.module]->Sw[p.id]) || 
-      (p.type == 1 && Units[p.module]->MSSw[p.id]) )) ){
-      printf("Switch doesnt exist\n");
+      (p.type == 0 && U_Sw(p.module, p.id)) || 
+      (p.type == 1 && U_MSSw(p.module, p.id)) )) ){
+      loggerf(ERROR, "Switch doesnt exist");
       return -1;
     }
 
-    Unit * U = Units[p.module];
-
-    if((p.type == 0 && U->Sw[p.id]->Detection && U->Sw[p.id]->Detection->blocked) || 
-        (p.type == 1 && U->MSSw[p.id]->Detection && U->MSSw[p.id]->Detection->blocked)){
-      printf("Switch is blocked\n");
+    if((p.type == 0 && U_Sw(p.module, p.id)->Detection && (U_Sw(p.module, p.id)->Detection->blocked || 
+                                                           U_Sw(p.module, p.id)->Detection->state != RESERVED_SWITCH || 
+                                                           U_Sw(p.module, p.id)->Detection->state != RESERVED)) || 
+       (p.type == 1 && U_MSSw(p.module, p.id)->Detection && (U_MSSw(p.module, p.id)->Detection->blocked || 
+                                                             U_MSSw(p.module, p.id)->Detection->state != RESERVED_SWITCH || 
+                                                             U_MSSw(p.module, p.id)->Detection->state != RESERVED))){
+      loggerf(INFO, "Switch is blocked");
       return -2;
     }
   }
 
-  char buf[40];
-  buf[0] = WSopc_BroadSwitch;
-  int index = 1;
-
+  //Throw all switches
   for(int i = 0; i < len; i++){
     char * data = (void *)&msg[i*3];
 
@@ -326,31 +358,15 @@ int set_multiple_switches(uint8_t len, char * msg){
     p.type = (data[1] & 0x80) >> 7;
     p.state = data[2];
 
-    Unit * U = Units[p.module];
-
-    printf("check %d:%d S%i\n",p.module,p.id,p.state);
-
     if(p.type == 0){
-      Switch * S = U->Sw[p.id];
-
-      printf("throw switch %i:%i to state: \t",p.module,p.id);
-      printf("%i->%i",S->state, p.state);
-
-      U->Sw[p.id]->state = p.state | 0x80;
-
-      buf[index++] = S->module;
-      buf[index++] = S->id;
-      buf[index++] = p.state;
+      throw_switch(U_Sw(p.module, p.id), p.state);
     }
     else if(p.type == 1){
-      //U->MSSw[p.id];
-      printf("Set mulbitple switch msswitch not implemented\n");
-      return -3;
+      throw_msswitch(U_MSSw(p.module, p.id), p.state);
     }
   }
 
-  COM_change_switch(module);
-  ws_send_all(buf,index,2);
+  COM_change_switch(0);
   return 1;
 }
 

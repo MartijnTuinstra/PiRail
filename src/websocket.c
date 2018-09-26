@@ -120,15 +120,15 @@ int websocket_decode(uint8_t data[1024], struct web_client_t * client){
   }
   else if(data[0] & 0x20){ //Track stuff
     if(data[0] == WSopc_SetSwitch){ //Toggle switch
-      if(Units[data[1]] && Units[data[1]]->Sw[data[2]]){ //Check if switch exists
-        printf("throw switch %i:%i to state: \t",data[1],data[2]);
-        printf("%i->%i",Units[data[1]]->Sw[data[2]]->state, !Units[data[1]]->Sw[data[2]]->state);
-        set_switch(Units[data[1]]->Sw[data[2]],data[3]);
+      if(Units[data[1]] && U_Sw(data[1], data[2])){ //Check if switch exists
+        printf("throw switch %i:%i to state: \t", data[1], data[2]);
+        printf("%i->%i", U_Sw(data[1], data[2])->state, !U_Sw(data[1], data[2])->state);
+        throw_switch(U_Sw(data[1], data[2]), data[3]);
       }
     }
     else if(data[0] == WSopc_SetMultiSwitch){ // Set mulitple switches at once
       printf("Throw multiple switches\n");
-      set_multiple_switches(data[1],(char *)&data[2]);
+      throw_multiple_switches(data[1], (char *)&data[2]);
     }
     else if(data[0] == WSopc_SetSwitchReserved){ //Set switch reserved
 

@@ -4,6 +4,9 @@
   #include "rail.h"
   #include "train.h"
 
+  #define U_Sw(U,S) Units[U]->Sw[S]
+  #define U_MSSw(U,S) Units[U]->MSSw[S]
+
   struct switch_link {
     char type;
     void * p;
@@ -72,7 +75,7 @@
     Block * Detection;
 
     uint8_t links_len;
-    struct switch_link * link;
+    struct switch_link * links;
 
     uint8_t pref_len;
     struct switch_preference * preferences;
@@ -101,13 +104,13 @@
     void ** p;
   };
 
-  int throw_switch(Switch * S);
-  int throw_msswitch(MSSwitch * S);
+  void throw_switch(Switch * S, uint8_t state);
+  void throw_msswitch(MSSwitch * S, uint8_t state);
 
   int set_switch(Switch * S, uint8_t state);
   int set_msswitch(MSSwitch * S, uint8_t state);
 
-  int set_multiple_switches(uint8_t len, char * data);
+  int throw_multiple_switches(uint8_t len, char * data);
 
   int set_switch_path(void * p, struct rail_link link, int flags);
 

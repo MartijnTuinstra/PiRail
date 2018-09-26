@@ -24,6 +24,8 @@
   typedef struct s_IO_Port IO_Port;
   typedef struct s_node_adr Node_adr;
 
+  #define U_B(U,B) Units[U]->B[B]
+
   struct rail_link {
     char type;
     void * p;
@@ -154,7 +156,9 @@ enum link_types {
   Block * Next_Switch_Block(Switch * S, char type, int flags, int level);
   Block * Next_MSSwitch_Block(MSSwitch * S, char type, int flags, int level);
   Block * Next_Special_Block(Block * B, int flags, int level);
-  Block * Next(Block * B, int flags, int level);
+
+  #define Next(B, f, l) _Next(B, f | 0b1110, l)
+  Block * _Next(Block * B, int flags, int level);
 
   int Next_check_Switch(void * p, struct rail_link link, int flags);
   int Next_check_Switch_Path(void * p, struct rail_link link, int flags);

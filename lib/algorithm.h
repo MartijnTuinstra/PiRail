@@ -3,7 +3,10 @@
 
   #define Block_Minimum_Size 60
 
+  #include <pthread.h>
   #include "rail.h"
+
+  extern pthread_mutex_t algor_mutex;
 
   typedef struct proces_block {
     _Bool blocked;

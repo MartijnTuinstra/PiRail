@@ -6,6 +6,8 @@
 #include "logger.h"
 #include "IO.h"
 
+#include <signal.h>
+
 Station ** stations;
 int stations_len;
 
@@ -67,19 +69,7 @@ void Create_Segment(Node_adr IO_Adr, struct block_connect connect ,char max_spee
   p->blocked = 0;
   p->state = PROCEED;
 
-  if(IO_Adr.Node < Units[p->module]->IO_Nodes && Units[p->module]->Node[IO_Adr.Node].io[IO_Adr.io]){
-    IO_Port * A = Units[p->module]->Node[IO_Adr.Node].io[IO_Adr.io];
-
-    if(A->type != IO_Undefined){
-      loggerf(WARNING, "IO %i:%i already in use", IO_Adr.Node, IO_Adr.io);
-    }
-
-    A->type = IO_Input;
-    A->state = 0;
-    A->id = IO_Adr.io;
-
-    loggerf(DEBUG, "IO %i:%i", IO_Adr.Node, IO_Adr.io);
-  }
+  Init_IO(Units[p->module], IO_Adr, IO_Input);
 
   // If block array is to small
   if(Units[p->module]->block_len <= p->id){
@@ -193,7 +183,7 @@ void Connect_Rail_links(){
   }
 }
 
-Block * Next(Block * B, int flags, int level){
+Block * _Next(Block * B, int flags, int level){
   loggerf(TRACE, "Next(%8x, %2x, %2x)", B, flags, level);
   // Find next (detection) block in direction dir. Could be used recurse for x-levels
   int dir = flags & 0x0F;
@@ -211,29 +201,46 @@ Block * Next(Block * B, int flags, int level){
 
   struct rail_link next;
 
-  if((dir == 0 && (B->dir == 1 || B->dir == 4 || B->dir == 6)) || 
-    (dir == 1 && (B->dir == 0 || B->dir == 2 || B->dir == 5))){
+  uint8_t pdir = (dir >> 1);
+
+  if(pdir != 0b111){
+    if((pdir ^ 0b100) == B->dir){
+      dir ^= 0b1;
+    }
+    else if((pdir == 1 && B->dir == 2) || (pdir == 2 && B->dir ==1)){
+      dir ^= 0b1;
+    }
+    else if(pdir == 1 && (B->dir == 0)){
+      dir ^= 0b1;
+    }
+  }
+
+  // printf("dir: %i:%i-%x\t%i\n", B->module, B->id, B->dir, pdir);
+  //NEXT == 0
+  //PREV == 1
+
+  if(((dir & 1) == NEXT && (B->dir == 1 || B->dir == 4 || B->dir == 6)) || 
+     ((dir & 1) == PREV && (B->dir == 0 || B->dir == 2 || B->dir == 5))){
     // If next + reversed direction / flipped normal / flipped switching
     // Or prev + normal direction / switching direction (normal) / flipped reversed direction
+    // printf("Prev\n");
     next = B->prev;
   }
-  else if((dir == 0 && (B->dir == 0 || B->dir == 2 || B->dir == 5)) || 
-    (dir == 1 && (B->dir == 1 || B->dir == 4 || B->dir == 6))){
+  else if(((dir & 1) == NEXT && (B->dir == 0 || B->dir == 2 || B->dir == 5)) || 
+          ((dir & 1) == PREV && (B->dir == 1 || B->dir == 4 || B->dir == 6))){
     // If next + normal direction / switching direction (normal) / flipped reversed
     // or prev + reversed direction / flipped normal / flipped switching
+    // printf("Next\n");
     next = B->next;
   }
   else
     loggerf(WARNING, "No dir found");
 
-
-  if(B->dir == 2){
-    dir = !dir;
-  }
+  dir = (dir & 1) + (B->dir << 1);
 
   flags = (flags & 0xF0) + (dir & 0x0F);
 
-  // printf("Next     : dir:%i\t%i:%i => %i:%i:%c\t%i\n", dir, B->module, B->id, next.module, next.id, next.type, level);
+  // printf("Next     : dir:%i/%x\t%i:%i => %i:%i:%i\t%i\n", B->dir, dir, B->module, B->id, next.module, next.id, next.type, level);
 
   if(!next.p && next.type != RAIL_LINK_E){
     loggerf(ERROR, "NO POINTERS %i:%i", B->module, B->id);
@@ -245,7 +252,7 @@ Block * Next(Block * B, int flags, int level){
       return (Block *)next.p;
     }
     else{
-      return Next((Block *)next.p, dir, level);
+      return _Next((Block *)next.p, dir, level);
     }
   }
   else if(next.type == RAIL_LINK_S || next.type == RAIL_LINK_s){
@@ -400,7 +407,7 @@ Block * Next_Switch_Block(Switch * S, char type, int flags, int level){
           flags = (flags & 0xf0) | NEXT;
       }
       // printf("NB %i:%i\t",((Block *)next.p)->module,((Block *)next.p)->id);
-      return Next((Block *)next.p, flags, level);
+      return _Next((Block *)next.p, flags, level);
     }
   }
   else if(next.type == RAIL_LINK_S || next.type == RAIL_LINK_s){
@@ -460,7 +467,7 @@ Block * Next_MSSwitch_Block(MSSwitch * S, char type, int flags, int level){
       return (Block *)next.p;
     }
     else{
-      return Next((Block *)next.p, flags, level);
+      return _Next((Block *)next.p, flags, level);
     }
   }
   else if(next.type == RAIL_LINK_S || next.type == RAIL_LINK_s){
@@ -481,12 +488,13 @@ Block * Next_MSSwitch_Block(MSSwitch * S, char type, int flags, int level){
 }
 
 Block * Next_Special_Block(Block * Bl, int flags, int level){
+  loggerf(DEBUG, "Next_Special_Block");
   struct next_prev_Block {
     Block * prev;
     Block * next;
   };
 
-  int dir = flags & 0x0F;
+  int dir = flags & 0x01;
 
   int pairs = 0;
   struct next_prev_Block * np_blocks = _calloc(Bl->switch_len + Bl->msswitch_len, struct next_prev_Block);
@@ -544,7 +552,7 @@ Block * Next_Special_Block(Block * Bl, int flags, int level){
    
 
     if(A && B && _A && B == _A){
-      loggerf(DEBUG, "A Is the same");
+      loggerf(DEBUG, "A Is the same %i", i);
       if(A->dir == Bl->dir || 
         ((A->dir == 0 || A->dir == 2) && Bl->dir == 0b101) || 
         (A->dir == 1 && (Bl->dir == 0b100 || Bl->dir == 0b110))){
@@ -574,7 +582,7 @@ Block * Next_Special_Block(Block * Bl, int flags, int level){
       pairs++;
     }
     else if(A && B && _B && A == _B){
-      loggerf(DEBUG, "B Is the same");
+      loggerf(DEBUG, "B Is the same %i", i);
       if(B->dir == Bl->dir || 
         ((B->dir == 0 || B->dir == 2) && Bl->dir == 0b101) || 
         (B->dir == 1 && (Bl->dir == 0b100 || Bl->dir == 0b110))){
@@ -606,7 +614,8 @@ Block * Next_Special_Block(Block * Bl, int flags, int level){
   }
 
   for(int i = 0; i < Bl->msswitch_len; i++){
-    loggerf(ERROR, "Implement msswitch in Next_Special_Block");
+    loggerf(ERROR, "Implement msswitch in Next_Special_Block (%i:%i)", Bl->module, Bl->id);
+    return 0;
   }
 
   Block * tmp = 0;

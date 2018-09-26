@@ -25,3 +25,23 @@ void Add_IO_Node(Unit * U, int Node_nr, int IO){
   loggerf(INFO, "Node %i, IO %i\n", Node_nr, IO);
   return;
 }
+
+void Init_IO(Unit * U, Node_adr adr, enum IO_type type){
+  if((adr.Node < U->IO_Nodes) && 
+     (adr.io < U->Node[adr.Node].io_ports) &&
+     U->Node[adr.Node].io[adr.io]){
+
+    IO_Port * A = U->Node[adr.Node].io[adr.io];
+
+    if(A->type != IO_Undefined)
+      loggerf(WARNING, "IO %i:%i:%i already in use", U->module, adr.Node, adr.io);
+
+    A->type = type;
+    A->id = adr.io;
+
+    loggerf(DEBUG, "IO %i:%i", adr.Node, adr.io);
+  }
+  else{
+    loggerf(ERROR, "Init_IO Error");
+  }
+}

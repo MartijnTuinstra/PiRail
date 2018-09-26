@@ -8,26 +8,27 @@
 typedef struct s_unit Unit;
 
 typedef struct s_node_adr {
-	uint8_t Node;
-	uint16_t io;
+  uint8_t Node;
+  uint16_t io;
 } Node_adr;
 
 enum IO_type {
-	IO_Undefined,
-	IO_Input,
-	IO_Output
+  IO_Undefined,
+  IO_Input,
+  IO_Output
 };
 
 typedef struct s_IO_Port {
-	uint8_t id;
-	uint8_t state;
-	enum IO_type type;
+  uint8_t id;
+  uint8_t w_state;
+  uint8_t r_state;
+  enum IO_type type;
 } IO_Port;
 
 typedef struct s_IO_Node {
-	uint8_t id;
-	uint16_t io_ports;
-	IO_Port ** io;
+  uint8_t id;
+  uint16_t io_ports;
+  IO_Port ** io;
 } IO_Node;
 
 enum IO_event {
@@ -48,5 +49,7 @@ enum IO_event {
 };
 
 void Add_IO_Node(Unit * U, int Node_nr, int IO);
+
+void Init_IO(Unit * U, Node_adr adr, enum IO_type type);
 
 #endif

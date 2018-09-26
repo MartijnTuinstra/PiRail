@@ -29,21 +29,17 @@ void change_Block(Block * B, enum Rail_states state){
     loggerf(INFO, "ReProcess");
     process(B, 2);
   }
-  WS_trackUpdate(0);
-  WS_SwitchesUpdate(0);
 }
 
 void *TRAIN_SIMA(){
-  Block *B = Units[20]->B[10];
-  Block *N = Units[20]->B[10];
+  Block *B = Units[20]->B[8];
+  Block *N = Units[20]->B[8];
   Block *N2 = 0;
 
   B->state = BLOCKED;
   B->blocked = 1;
   B->changed  = 1;
   process(B, 2);
-  WS_trackUpdate(0);
-  WS_SwitchesUpdate(0);
 
   while(1){
     if(B->state == RESTRICTED){ //B->train != 0 && train_link[B->train] != 0 || 
@@ -65,7 +61,7 @@ void *TRAIN_SIMA(){
         usleep(100000);
       }
     }
-    loggerf(DEBUG, "Sim B step %i:%i", N->module, N->id);
+    loggerf(INFO, "Sim A step %i:%i", N->module, N->id);
     change_Block(N, BLOCKED);
 
     // IF len(N) < len(TRAIN)
@@ -111,16 +107,14 @@ void *TRAIN_SIMA(){
 
 
 void *TRAIN_SIMB(){
-  Block *B = Units[20]->B[5];
-  Block *N = Units[20]->B[5];
+  Block *B = Units[20]->B[4];
+  Block *N = Units[20]->B[4];
   Block *N2 = 0;
 
   B->state = BLOCKED;
   B->blocked = 1;
   B->changed  = 1;
   process(B, 2);
-  WS_trackUpdate(0);
-  WS_SwitchesUpdate(0);
 
   while(1){
     if(B->state == RESTRICTED){ //B->train != 0 && train_link[B->train] != 0 || 
@@ -142,7 +136,7 @@ void *TRAIN_SIMB(){
         usleep(100000);
       }
     }
-    loggerf(DEBUG, "Sim B step %i:%i", N->module, N->id);
+    loggerf(INFO, "Sim B step %i:%i", N->module, N->id);
     change_Block(N, BLOCKED);
 
     // IF len(N) < len(TRAIN)

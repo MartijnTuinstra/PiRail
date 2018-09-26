@@ -22,6 +22,7 @@
 #include "websocket_msg.h"
 
 pthread_mutex_t mutex_lockA;
+pthread_mutex_t algor_mutex;
 
 void * scan_All_continiously(){
   while(_SYS->_STATE & STATE_RUN){
@@ -121,6 +122,9 @@ void change_block_state(Algor_Block * A, enum Rail_states state){
 }
 
 void process(Block * B,int flags){
+
+  pthread_mutex_lock(&algor_mutex);
+    
   int debug = (flags & 1);
   int force = (flags & 2);
 
@@ -586,6 +590,8 @@ void process(Block * B,int flags){
     // /**/
     // /**/
   }
+
+  pthread_mutex_unlock(&algor_mutex);
 }
 
 void Algor_print_block_debug(struct algor_blocks AllBlocks){
@@ -806,15 +812,8 @@ void Algor_search_Blocks(struct algor_blocks * AllBlocks, int debug){
   next = Next(B, NEXT | SWITCH_CARE,1);
   prev = Next(B, PREV | SWITCH_CARE,1);
 
-  if(next && next->type == SPECIAL)
-    next_level++;
-
-  if(prev && prev->type == SPECIAL)
-    prev_level++;
-
   //Select all surrounding blocks
   if(next){
-    loggerf(TRACE, "Search Next");
     for(int i = 0; i < 3; i++){
       Algor_Block * block_p;
       if(i == 0){
@@ -830,9 +829,7 @@ void Algor_search_Blocks(struct algor_blocks * AllBlocks, int debug){
       do{
         if(i == 0 && block_p->blocks == 0){
           block_p->B[block_p->blocks] = next;
-        }
-        else if(next->type != SPECIAL){
-          block_p->B[block_p->blocks] = Next(next, NEXT | SWITCH_CARE, next_level++);
+          next_level++;
         }
         else{
           block_p->B[block_p->blocks] = Next(B, NEXT | SWITCH_CARE, next_level++);
@@ -855,7 +852,6 @@ void Algor_search_Blocks(struct algor_blocks * AllBlocks, int debug){
     }
   }
   if(prev){
-    loggerf(TRACE, "Search Prev");
     for(int i = 0; i < 3; i++){
       Algor_Block * block_p;
       if(i == 0){
@@ -871,9 +867,7 @@ void Algor_search_Blocks(struct algor_blocks * AllBlocks, int debug){
       do{
         if(i == 0 && block_p->blocks == 0){
           block_p->B[block_p->blocks] = prev;
-        }
-        else if(prev->type != SPECIAL){
-          block_p->B[block_p->blocks] = Next(prev, PREV | SWITCH_CARE, prev_level++);
+          prev_level++;
         }
         else{
           block_p->B[block_p->blocks] = Next(B, PREV | SWITCH_CARE, prev_level++);
@@ -912,6 +906,11 @@ void Algor_train_following(struct algor_blocks AllBlocks, int debug){
     //Reset
     B->train = 0;
     if(debug) printf("RESET");
+
+    Units[B->module]->block_state_changed |= 1;
+  }
+  else if(B->blocked && B->train == 0){
+    Units[B->module]->block_state_changed |= 1;
   }
   // else if(B->blocked && B->train != 0 && train_link[B->train] && !train_link[B->train]->Block){
   //   // Set block of train
@@ -1015,6 +1014,7 @@ void Algor_apply_rail_state(Algor_Block b, enum Rail_states state){
   for(int i = 0; i < b.blocks; i++){
     b.B[i]->state = state;
     b.B[i]->changed |= State_Changed;
+    Units[b.B[i]->module]->block_state_changed |= 1;
   }
 }
 

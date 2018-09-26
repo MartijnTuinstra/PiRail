@@ -33,6 +33,7 @@
   void COM_change_signal(Signal * Si);
 
   void COM_change_switch(int M);
+  void COM_update_switch(int M);
 
   void COM_DevReset();
 

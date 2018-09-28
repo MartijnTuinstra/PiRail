@@ -89,40 +89,79 @@ var websocket = {
     console.warn("WEBSOCKET: RELOAD_PREVIOUS, not implemented, entry: "+entry);
   },
 
-  cts_link_train: function(fid, rid, type, mid){
-    data = [];
-    data[0] = this.opc.LinkTrain;
-    data[1] = fid;
-    data[2] = rid;
-    data[3] = ((type == "E")?0x80:0) + ((mid & 0x1F) >> 8)
-
-    this.send(data);
-  },
-
-  cts_set_switch: function(d){ //Module, Switch, NewState
-    // console.log("Set switch "+m+":"+s+"=>"+st);
-    var data = [];
-
-    if(d.length == 1){
-      data[0] = this.opc.SetSwitch;
-      data[1] = d[0][0];
-      data[2] = d[0][1];
-      data[3] = d[0][2];
+  /*Trains*/
+    cts_link_train: function(fid, rid, type, mid){
+      data = [];
+      data[0] = this.opc.LinkTrain;
+      data[1] = fid;
+      data[2] = rid;
+      data[3] = ((type == "E")?0x80:0) + ((mid & 0x1F) >> 8)
 
       this.send(data);
-    }
-    else{
-      var di = 2; // Dataindex
-      data[0] = this.opc.SetMultiSwitch
-      data[1] = d.length;
-      for (var i = 0; i < d.length; i++) {
-        data[di++] = d[i][0]
-        data[di++] = d[i][1]
-        data[di++] = d[i][2]
+    },
+
+    cts_add_engine: function(data){
+      msg = [];
+      msg[0] = this.opc.AddNewEnginetolib;
+      msg[1] = (data.dcc & 0xff00) >> 8;
+      msg[2] = (data.dcc & 0x00ff);
+      msg[3] = (data.speed & 0xff00) >> 8;
+      msg[4] = (data.speed & 0x00ff);
+      msg[5] = (data.length & 0xff00) >> 8;
+      msg[6] = (data.length & 0x00ff);
+      msg[7] = data.type | (data.speedsteps << 4);
+      msg[8] = data.name.length;
+      if(data.img_ext.includes('jpg')){
+        msg[9] |= 0x10;
       }
-      this.send(data);
-    }
-  },
+      if(data.icon_ext.includes('jpg')){
+        msg[9] |= 0x1;
+      }
+      msg[10] = data.speed_steps.length;
+
+      for (var i = 0; i < data.name.length; i++) {
+        msg.push(data.name.charCodeAt(i));
+      }
+
+      for (var i = 0; i < data.speed_steps.length; i++){
+        msg.push(data.speed_steps[i].step);
+        msg.push(data.speed_steps[i].speed);
+      }
+
+      this.send(msg);
+    },
+
+    cts_train_speed: function(tid, direction, speed_step){
+      var data = ((direction)?0x80:0) | (speed_step & 0x7F);
+      this.send([this.opc.TrainSpeed, tid, data]);
+    },
+
+
+  /*Track / Switches*/
+    cts_set_switch: function(d){ //Module, Switch, NewState
+      // console.log("Set switch "+m+":"+s+"=>"+st);
+      var data = [];
+
+      if(d.length == 1){
+        data[0] = this.opc.SetSwitch;
+        data[1] = d[0][0];
+        data[2] = d[0][1];
+        data[3] = d[0][2];
+
+        this.send(data);
+      }
+      else{
+        var di = 2; // Dataindex
+        data[0] = this.opc.SetMultiSwitch
+        data[1] = d.length;
+        for (var i = 0; i < d.length; i++) {
+          data[di++] = d[i][0]
+          data[di++] = d[i][1]
+          data[di++] = d[i][2]
+        }
+        this.send(data);
+      }
+    },
 
   cts_release_Emergency: function(evt){
     this.send([this.opc.ClearEmergency]);
@@ -161,12 +200,6 @@ var websocket = {
       ws.send(new Int8Array(data));
     }
   },
-
-  cts_train_speed: function(tid, direction, speed_step){
-    var data = ((direction)?0x80:0) | (speed_step & 0x7F);
-    this.send([this.opc.TrainSpeed, tid, data]);
-  },
-
   cts_login: function(passphrase){
     var data = [];
     data[0] = this.opc.AdminLogin;
@@ -285,7 +318,17 @@ var websocket = {
 
     // Add new train to library
     stc_newengine_tolib: function(data){
-      console.warn("implement");
+      if(data[3] == 1){
+        if(Train.engine_car_creator.save_cb != undefined){
+          Train.engine_car_creator.save_cb();
+        }
+      }
+      else if(data[3] == 0){
+        alert("Failed with no reason");
+      }
+      else if(data[3] == -1){
+        alert("DCC address is allready in use");
+      }
     },
 
     // Cars Lib 0x53
@@ -317,7 +360,17 @@ var websocket = {
 
     // Add new train to library
     stc_newcar_tolib: function(data){
-      console.warn("implement");
+      if(data[3] == 1){
+        if(Train.engine_car_creator.save_cb != undefined){
+          Train.engine_car_creator.save_cb();
+        }
+      }
+      else if(data[3] == 0){
+        alert("Failed with no reason");
+      }
+      else if(data[3] == -1){
+        alert("DCC address is allready in use");
+      }
     },
 
     //Trains 0x55

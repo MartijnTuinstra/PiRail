@@ -100,6 +100,7 @@ var Train = {
   },
 
   comp:{
+    save_cb: undefined,
     index: 0,
     list: [],
     init: function(){
@@ -221,6 +222,7 @@ var Train = {
       $('#train_compositor').hide();
     },
     close: function(evt){
+      Train.comp.save_cb = undefined;
       $('#train_compositor').hide();
     }
   },
@@ -320,9 +322,12 @@ var Train = {
   },
 
   engine_car_creator:{
+    open_type: '',
+    save_cb: undefined,
+
     init: function(){
-      $('#engine_car_creator .btn.save').on("click", this.done);
-      $('#engine_car_creator .btn.save_new').on("click", this.done_n);
+      $('#engine_car_creator .btn.save').on("click", {close: true}, this.done);
+      $('#engine_car_creator .btn.save_new').on("click", {close: false}, this.done);
       $('#engine_car_creator .btn.close').on("click", this.close);
       $('#engine_car_creator .speed_steps_box .add_box').on("click", this.create_speed_step);
     },
@@ -376,40 +381,74 @@ var Train = {
       $('input[name="step"]', '#engine_car_creator .speed_steps_box .box:last').val(step);
     },
 
-    done: function(close = true){
-      data = {}
+    send: function(data){
 
-      data['name'] = $('#engine_car_creator .name input').val();
-      data['dcc'] = $('#engine_car_creator .dcc input').val();
-      data['nr'] = $('#engine_car_creator .nr input').val();
-      data['length'] = $('#engine_car_creator .length input').val();
-      data['type'] = $('#engine_car_creator .type input:checked').val();
-
-      listA = $('#engine_car_creator .speed_steps_box input[name="speed"]');
-      listB = $('#engine_car_creator .speed_steps_box input[name="step"]');
-
-      data['speed_steps'] = {};
-
-      for (var i = listA.length - 1; i >= 0; i--) {
-        data['speed_steps'][listB[i].value] = listA[i].value;
-      }
-
-      console.log(data);
-      if(close && close.target == undefined){
-        this.close();
-      }
     },
 
-    done_n: function(){ // Done and new
-      this.done(false);
-      this.clear();
+    done: function(event){
+      data = {}
+
+      data.name = $('#engine_car_creator .name input').val();
+
+      if(Train.engine_car_creator.open_type == 'E'){
+        data.dcc = parseInt($('#engine_car_creator .dcc input').val());
+      }
+      else{
+        data.nr = parseInt($('#engine_car_creator .nr input').val());
+      }
+
+      data.length = parseInt($('#engine_car_creator .length input').val());
+      data.speed = parseInt($('#engine_car_creator .speed input[name="speed"]').val());
+      data.speedsteps = parseInt($('#engine_car_creator .speed input[name="steps"]').val());
+
+      data.type = parseInt($('#engine_car_creator .type input:checked').val());
+
+
+      if(Train.engine_car_creator.open_type == 'E'){
+        listA = $('#engine_car_creator .speed_steps_box input[name="speed"]');
+        listB = $('#engine_car_creator .speed_steps_box input[name="step"]');
+
+        data.speed_steps = [];
+
+        for (var i = listA.length - 1; i >= 0; i--) {
+          data.speed_steps[i] = {step: parseInt(listB[i].value), speed: parseInt(listA[i].value)};
+        }
+      }
+
+      data.img_ext  = $('#engine_car_creator input.img').val().split('.').pop().toLowerCase();
+      data.icon_ext = $('#engine_car_creator input.icon').val().split('.').pop().toLowerCase();
+
+      console.log(Train.engine_car_creator);
+      console.log(data);
+
+      if(data['name'] == "" || data['length'] == "" || data['type'] == undefined){
+        alert("Not all field are complete.");
+      }
+
+      if(Train.engine_car_creator.open_type == 'E'){
+        websocket.cts_add_engine(data);
+      }
+      else{
+        websocket.cts_add_car(data);
+      }
+
+      if(event.data.close){
+        Train.engine_car_creator.save_cb = Train.engine_car_creator.close;
+      }
+      else{
+        Train.engine_car_creator.save_cb = Train.engine_car_creator.clear;
+      }
     },
 
     close: function(){
+      Train.engine_car_creator.save_cb = undefined;
+
       $('#engine_car_creator').hide();
     },
 
     clear: function(){
+      Train.engine_car_creator.save_cb = undefined;
+
       var C = $('#engine_car_creator');
       $('.field_container input', C).val("");
       $('.field_container input:checked', C).prop("checked", false);
@@ -427,25 +466,31 @@ var Train = {
       $('#engine_car_creator').show();
 
       if(type == "E"){
+        $('#engine_car_creator .header').text("Engine Creator");
         $('#engine_car_creator .field_container.nr').hide();
         $('#engine_car_creator .field_container.dcc').show();
 
         $('#engine_car_creator .field_container.speed_steps').show();
         $('#engine_car_creator .field_container.functions').css("width", "calc(25% - 20px)");
 
-        $('#engine_car_creator .field_container.speed input[name="speed"]').css("width","calc(50% - 20px)");
-        $('#engine_car_creator .field_container.speed input[name="steps"]').show();
+        $('#engine_car_creator .field_container.speed span').text("Speedsteps");
+        $('#engine_car_creator .field_container.speed input[name="speed"]').hide();
+        $('#engine_car_creator .field_container.speed .radio_container').show();
       }
       else{
+        $('#engine_car_creator .header').text("Car Creator");
         $('#engine_car_creator .field_container.nr').show();
         $('#engine_car_creator .field_container.dcc').hide();
 
         $('#engine_car_creator .field_container.speed_steps').hide();
         $('#engine_car_creator .field_container.functions').css("width", "calc(50% - 20px)");
 
-        $('#engine_car_creator .field_container.speed input[name="speed"]').css("width","calc(100% - 10px)");
-        $('#engine_car_creator .field_container.speed input[name="steps"]').hide();
+        $('#engine_car_creator .field_container.speed span').text("Max Speed");
+        $('#engine_car_creator .field_container.speed input[name="speed"]').show();
+        $('#engine_car_creator .field_container.speed .radio_container').hide();
       }
+
+      this.open_type = type;
     }
   },
 

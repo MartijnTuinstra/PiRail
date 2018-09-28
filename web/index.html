@@ -1538,16 +1538,20 @@
 				<input type="number" step="0.1" placeholder="length in cm"/>
 			</div>
 			<div class="field_container speed">
-				<span>Max speed</span>
-				<input type="number" name="speed" style="width: calc(50% - 20px);" placeholder="m/s"/>
-				<input type="number" name="steps" style="width: calc(50% - 20px); float: right;" placeholder="speed steps"/>
+				<span>Speedsteps</span>
+				<input type="number" name="speed" placeholder="m/s"/>
+				<div class="radio_container">
+					<div class="radio_button"><input value="0" name="speedstep" type="radio"/>14</div>
+					<div class="radio_button"><input value="2" name="speedstep" type="radio"/>28</div>
+					<div class="radio_button"><input value="1" name="speedstep" type="radio"/>128</div>
+				</div>
 			</div>
 			<div class="field_container type">
 				<span>Type</span>
 				<div class="radio_container">
-					<div class="radio_button"><input value="p" name="car_type" type="radio"/>Passenger</div>
-					<div class="radio_button"><input value="b" name="car_type" type="radio"/>Both</div>
-					<div class="radio_button"><input value="c" name="car_type" type="radio"/>Cargo</div>
+					<div class="radio_button"><input value="0" name="car_type" type="radio"/>Passenger</div>
+					<div class="radio_button"><input value="2" name="car_type" type="radio"/>Both</div>
+					<div class="radio_button"><input value="1" name="car_type" type="radio"/>Cargo</div>
 				</div>
 			</div>
 			<div class="field_container functions" style="width: calc(25% - 20px);position: relative;cursor: pointer" onclick="$('#engine_car_creator .speed_steps_box').hide();$('#engine_car_creator .functions_box').show()">

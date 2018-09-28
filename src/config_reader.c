@@ -821,8 +821,10 @@ int main(){
   if(!fp){
     loggerf(ERROR, "Failed to open file");
 
-    if(file <= 0 || file > 254)
+    if(file <= 0 || file > 254){
       loggerf(ERROR, "Only module numbers between 1-254 supportede");
+      return -1;
+    }
 
     loggerf(INFO,  "Creating New File");
     

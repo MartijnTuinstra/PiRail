@@ -22,22 +22,11 @@
     uint16_t id; //number in list
   };
 
-  struct __attribute__((__packed__)) train_comp_ws {
-    char type;
-    uint16_t ID;
-  };
-
   struct train_composition {
     char * name;
 
     char nr_stock;
     struct train_comp * composition;
-  };
-
-  struct __attribute__((__packed__)) train_comp_conf {
-    char name_len;
-    char nr_stock;
-    char check;
   };
 
   typedef struct engine {
@@ -63,17 +52,6 @@
     char * icon_path;
   } Engines;
 
-  struct __attribute__((__packed__)) engine_conf {
-    uint16_t DCC_ID;
-    uint16_t max_spd;
-    uint16_t length;
-    uint8_t type;   //in mm   
-    uint8_t name_len;
-    uint8_t img_path_len;
-    uint8_t icon_path_len;
-    uint8_t check;
-  };
-
   typedef struct car {
     int nr;
     char type:3;
@@ -91,15 +69,7 @@
     char * icon_path;
   } Cars;
 
-  struct __attribute__((__packed__)) car_conf {
-    uint16_t nr;
-    uint16_t length;
-    uint8_t type;   //in mm   
-    uint8_t name_len;
-    uint8_t img_path_len;
-    uint8_t icon_path_len;
-    uint8_t check;
-  };
+  struct train_comp_ws;
 
   typedef struct trains {
     char * name;

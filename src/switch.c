@@ -7,6 +7,7 @@
 #include "websocket.h"
 #include "com.h"
 #include "IO.h"
+#include "algorithm.h"
 
 void Create_Switch(struct switch_connect connect, uint8_t block_id, uint8_t output_len, Node_adr * output_pins, uint8_t * output_states){
   loggerf(DEBUG, "Create Sw %i:%i", connect.module, connect.id);
@@ -101,11 +102,11 @@ void Create_MSSwitch(struct msswitch_connect connect, uint8_t block_id, uint8_t 
   else
     loggerf(ERROR, "MSSwitch %i:%i has no detection block %i", connect.module, connect.id, block_id);
 
-  if(U_MSSW(connect.module, connect.id)){
+  if(U_MSSw(connect.module, connect.id)){
     loggerf(INFO, "Duplicate switch, overwriting ...");
-    _free(U_MSSW(connect.module, connect.id));
+    _free(U_MSSw(connect.module, connect.id));
   }
-  U_MSSW(connect.module, connect.id) = Z;
+  U_MSSw(connect.module, connect.id) = Z;
 }
 
 int check_linked_switches(Switch * S){
@@ -157,9 +158,24 @@ int check_linked_msswitches(MSSwitch * S){
 }
 
 void throw_switch(Switch * S, uint8_t state){
+  struct algor_blocks Blocks_before;
+  struct algor_blocks Blocks_after;
+
+  Algor_init_Blocks(&Blocks_before, S->Detection);
+  Algor_init_Blocks(&Blocks_after, S->Detection);
+  Algor_search_Blocks(&Blocks_before, 0);
+
   S->state = (state & 0x0f) | 0x80;
 
   Units[S->module]->switch_state_changed |= 1;
+
+  Algor_search_Blocks(&Blocks_after, 0);
+
+  Algor_rail_state(Blocks_after, 0);
+  Algor_rail_state(Blocks_before, 0);
+
+  Algor_clear_Blocks(&Blocks_before);
+  Algor_clear_Blocks(&Blocks_after);
 }
 
 void throw_msswitch(MSSwitch * S, uint8_t state){
@@ -338,11 +354,11 @@ int throw_multiple_switches(uint8_t len, char * msg){
     }
 
     if((p.type == 0 && U_Sw(p.module, p.id)->Detection && (U_Sw(p.module, p.id)->Detection->blocked || 
-                                                           U_Sw(p.module, p.id)->Detection->state != RESERVED_SWITCH || 
-                                                           U_Sw(p.module, p.id)->Detection->state != RESERVED)) || 
+                                                           U_Sw(p.module, p.id)->Detection->state == RESERVED_SWITCH || 
+                                                           U_Sw(p.module, p.id)->Detection->state == RESERVED)) || 
        (p.type == 1 && U_MSSw(p.module, p.id)->Detection && (U_MSSw(p.module, p.id)->Detection->blocked || 
-                                                             U_MSSw(p.module, p.id)->Detection->state != RESERVED_SWITCH || 
-                                                             U_MSSw(p.module, p.id)->Detection->state != RESERVED))){
+                                                             U_MSSw(p.module, p.id)->Detection->state == RESERVED_SWITCH || 
+                                                             U_MSSw(p.module, p.id)->Detection->state == RESERVED))){
       loggerf(INFO, "Switch is blocked");
       return -2;
     }

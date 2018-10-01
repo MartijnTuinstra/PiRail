@@ -15,6 +15,7 @@
 #include "switch.h"
 
 #include "logger.h"
+#include "config.h"
 
 // #include "./../lib/pathfinding.h"
 // #include "./../lib/com.h"
@@ -122,36 +123,36 @@ void create_train(char * name, int nr_stock, struct train_comp_ws * comps){
   Z->length = 0;
 
   for(int i = 0;i<nr_stock;i++){
-    loggerf(DEBUG, "create_train: stock %c %i", comps[i].type, comps[i].ID);
     Z->composition[i].type = comps[i].type;
-    Z->composition[i].id = comps[i].ID;
-    if(comps[i].type == 'E' || comps[i].type == 'e'){
-      if(comps[i].ID < engines_len && engines[comps[i].ID]){
-        Z->length += engines[comps[i].ID]->length;
-        if(Z->max_speed > engines[comps[i].ID]->max_speed){
-          Z->max_speed = engines[comps[i].ID]->max_speed;
-        }
+    Z->composition[i].id = comps[i].id;
 
-        Z->composition[i].p = engines[comps[i].ID];
-        loggerf(DEBUG, "Engine (%i) found", comps[i].ID);
+    if(comps[i].type == 0){
+      //Engine
+      if(comps[i].id >= engines_len || engines[comps[i].id] == 0){
+        loggerf(ERROR, "Engine (%i) doesn't exist", comps[i].id);
+        continue;
       }
-      else{
-        loggerf(ERROR, "Engine (%i) doesn't exist", comps[i].ID);
+
+      Z->length += engines[comps[i].id]->length;
+      if(Z->max_speed > engines[comps[i].id]->max_speed){
+        Z->max_speed = engines[comps[i].id]->max_speed;
       }
+
+      Z->composition[i].p = engines[comps[i].id];
     }
-    else{ //Car
-      if(comps[i].ID < cars_len && cars[comps[i].ID]){
-        Z->length += cars[comps[i].ID]->length;
-        if(Z->max_speed > cars[comps[i].ID]->max_speed){
-          Z->max_speed = cars[comps[i].ID]->max_speed;
-        }
+    else{
+      //Car
+      if(comps[i].id >= cars_len || cars[comps[i].id] == 0){
+        loggerf(ERROR, "Car (%i) doesn't exist", comps[i].id);
+        continue;
+      }
+      
+      Z->length += cars[comps[i].id]->length;
+      if(Z->max_speed > cars[comps[i].id]->max_speed){
+        Z->max_speed = cars[comps[i].id]->max_speed;
+      }
 
-        loggerf(DEBUG, "Car (%i) found", comps[i].ID);
-        Z->composition[i].p = cars[comps[i].ID];
-      }
-      else{
-        loggerf(ERROR, "Car (%i) doesn't exist", comps[i].ID);
-      }
+      Z->composition[i].p = cars[comps[i].id];
     }
   }
 
@@ -225,238 +226,54 @@ void create_car(char * name,int nr,char * img, char * icon, char type, int lengt
 }
 
 int train_read_confs(){
-  char * header = _calloc(5, char);
+  FILE * fp = fopen("configs/stock.bin", "rb");
 
-  FILE *f;
-  f = fopen(ENGINES_CONF,"rb");
+  char * header = _calloc(2, char);
 
-  if(!f){
-    loggerf(CRITICAL, "ENGINES COMPS CONFIG FILE NOT FOUND");
-    _free(header);
-    raise(SIGTERM);
-    return 0;
+  fread(header, 1, 1, fp);
+
+  fseek(fp, 0, SEEK_END);
+  long fsize = ftell(fp);
+  fseek(fp, 0, SEEK_SET);
+
+  char * buffer = _calloc(fsize, char);
+  char * buffer_start = &buffer[0];
+  fread(buffer, fsize, 1, fp);
+
+  print_hex(buffer, fsize);
+
+  uint8_t ** buf_ptr = (uint8_t **)&buffer;
+
+  *buf_ptr += 1;
+
+  struct s_train_header_conf h = read_s_train_header_conf(buf_ptr);
+
+  if (header[0] != TRAIN_CONF_VERSION) {
+    loggerf(ERROR, "Not correct version");
+    return -1;
   }
+  
+  for(int i = 0; i < h.Engines; i++){
+    struct engines_conf e = read_engines_conf(buf_ptr);
 
-  fread(header, 2, 2, f);
-
-  fseek(f, 0, SEEK_END);
-  long fsize = ftell(f);
-  fseek(f, 2, SEEK_SET);  //same as rewind(f);
-
-  if(header[0] == CONF_VERSION){
-    // Compatible Read further
-    int engines_nr = header[1];
-    if(engines_nr > 0){
-      char *buffer = _calloc(fsize - 1, char);
-      fread(buffer, fsize, 1, f);
-
-      long index = 0;
-
-      for(int i = 0;i < engines_nr;i++){
-        struct engine_conf * engine = (void *)&buffer[index];
-        
-        if(engine->check != 0){
-          loggerf(ERROR,"Enignes config file wrong format in engine number %i",i+1);
-          break;
-        }
-
-        char * name = _calloc(engine->name_len+2, char);
-        char * img = _calloc(engine->img_path_len+2, char);
-        char * icon = _calloc(engine->icon_path_len+2, char);
-
-        index += sizeof(struct engine_conf);
-
-        memset(name,0,engine->name_len+2);
-        memset(img,0,engine->img_path_len+2);
-        memset(icon,0,engine->icon_path_len+2);
-
-        strncpy(name,&buffer[index],engine->name_len);
-        index += engine->name_len;
-
-        strncpy(img,&buffer[index],engine->img_path_len);
-        index += engine->img_path_len;
-
-        strncpy(icon,&buffer[index],engine->icon_path_len);
-        index += engine->icon_path_len;
-
-        if(buffer[index] != 0){
-          loggerf(ERROR, "%s, %s, %s", name, img, icon);
-          loggerf(ERROR, "Engines config file wrong format / padding after engine number %i",i+1);
-          break;
-        }
-        create_engine(name, engine->DCC_ID, img, icon, engine->max_spd, engine->type, engine->length);
-
-        _free(name);
-        _free(img);
-        _free(icon);
-        index += 1;
-      }
-
-      _free(buffer);
-
-      // struct engine_conf;
-    }
+    create_engine(e.name, e.DCC_ID, e.img_path, e.icon_path, e.type, e.type, e.length);
   }
-  else{
-    loggerf(ERROR,"ENGINES_CONF has wrong format (%i) and is not compatible",header[0]);
-    _free(header);
-    return 0;
+  
+  for(int i = 0; i < h.Cars; i++){
+    struct cars_conf c = read_cars_conf(buf_ptr);
+
+    create_car(c.name, c.nr, c.img_path, c.icon_path, c.type, c.length);
   }
+  
+  for(int i = 0; i < h.Trains; i++){
+    struct trains_conf t = read_trains_conf(buf_ptr);
 
-  fclose(f);
-
-  memset(header,0,5);
-
-  f = fopen(CARS_CONF,"rb");
-
-  if(!f){
-    loggerf(CRITICAL, "CARS COMPS CONFIG FILE NOT FOUND");
-    _free(header);
-    raise(SIGTERM);
-    return 0;
-  }
-
-  fread(header, 2, 2, f);
-
-  fseek(f, 0, SEEK_END);
-  fsize = ftell(f);
-  fseek(f, 2, SEEK_SET);  //same as rewind(f);
-
-  if(header[0] == CONF_VERSION){
-    // Compatible Read further
-    int cars_nr = header[1];
-    if(cars_nr > 0){
-      char *buffer = _calloc(fsize - 1, char);
-      fread(buffer, fsize, 1, f);
-
-      long index = 0;
-
-      for(int i = 0;i < cars_nr;i++){
-        struct car_conf * car = (void *)&buffer[index];
-        
-        if(car->check != 0){
-          loggerf(ERROR,"Cars config file wrong format in car number %i",i+1);
-          break;
-        }
-
-        char * name = _calloc(car->name_len+2, char);
-        char * img = _calloc(car->img_path_len+2, char);
-        char * icon = _calloc(car->icon_path_len+2, char);
-
-        index += sizeof(struct car_conf);
-
-        memset(name,0,car->name_len+2);
-        memset(img,0,car->img_path_len+2);
-        memset(icon,0,car->icon_path_len+2);
-
-        strncpy(name,&buffer[index],car->name_len);
-
-        index += car->name_len;
-        strncpy(img,&buffer[index],car->img_path_len);
-
-        index += car->img_path_len;
-        strncpy(icon,&buffer[index],car->icon_path_len);
-
-        index += car->icon_path_len;
-
-        if(buffer[index] != 0){
-          loggerf(ERROR,"Cars config file wrong format / padding after car number %i",i+1);
-          break;
-        }
-        create_car(name, car->nr, img, icon, car->type, car->length);
-
-        _free(name);
-        _free(img);
-        _free(icon);
-        index += 1;
-      }
-
-      _free(buffer);
-
-      // struct engine_conf;
-    }
-  }
-  else{
-    loggerf(ERROR,"CARS_CONF has wrong format (%i) and is not compatible",header[0]);
-    _free(header);
-    return 0;
-  }
-
-  fclose(f);
-
-  memset(header,0,5);
-
-  f = fopen(TRAIN_COMPS_CONF,"r");
-
-  if(!f){
-    loggerf(CRITICAL, "TRAINS COMPS CONFIG FILE NOT FOUND");
-    _free(header);
-    raise(SIGTERM);
-    return 0;
-  }
-
-  fread(header, 2, 2, f);
-
-  fseek(f, 0, SEEK_END);
-  fsize = ftell(f);
-  fseek(f, 2, SEEK_SET);  //same as rewind(f);
-
-  if(header[0] == CONF_VERSION){
-    // Compatible Read further
-    int trains_nr = header[1];
-    if(trains_nr > 0){
-      char *buffer = _calloc(fsize - 1, char);
-      fread(buffer, fsize, 1, f);
-
-      long index = 0;
-
-      for(int i = 0;i < trains_nr;i++){
-        struct train_comp_conf * train = (void *)&buffer[index];
-        
-        if(train->check != 0){
-          loggerf(ERROR,"Trains config file wrong format in train number %i",i+1);
-          break;
-        }
-
-        char * name = _calloc(train->name_len+2, char);
-        memset(name,0,train->name_len+2);
-
-        index += sizeof(struct train_comp_conf);
-
-        strncpy(name,&buffer[index],train->name_len);
-
-        index += train->name_len;
-
-        struct train_comp_ws * comp = (struct train_comp_ws *)calloc(train->nr_stock,sizeof(struct train_comp_ws));
-
-        memcpy(comp,&buffer[index],train->nr_stock*sizeof(struct train_comp_ws));
-
-        index += train->nr_stock * sizeof(struct train_comp_ws);
-
-        if(buffer[index] != 0){
-          loggerf(ERROR,"Trains config file wrong format / padding after train number %i",i+1);
-          break;
-        }
-        create_train(name, train->nr_stock, comp);
-
-        _free(name);
-
-        index += 1;
-      }
-
-      _free(buffer);
-
-      // struct engine_conf;
-    }
-  }
-  else{
-    loggerf(ERROR,"TRAIN_COMPS_CONF has wrong format (%i) and is not compatible",header[0]);
-    _free(header);
-    return 0;
+    create_train(t.name, t.nr_stock, t.composition);
   }
 
   _free(header);
-  fclose(f);
+  _free(buffer_start);
+  fclose(fp);
 
   _SYS_change(STATE_TRAIN_LOADED, 1);
   return 1;

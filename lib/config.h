@@ -4,6 +4,9 @@
 #include "rail.h"
 #include "IO.h"
 
+#define MODULE_CONF_VERSION 1
+#define TRAIN_CONF_VERSION 1
+
 struct __attribute__((__packed__)) s_unit_conf {
   uint8_t module;
   uint8_t connections;
@@ -132,7 +135,7 @@ struct station_conf {
 };
 
 
-struct config {
+struct module_config {
   struct s_unit_conf header;
 
   struct s_node_conf * Nodes;
@@ -143,14 +146,99 @@ struct config {
   struct station_conf * Stations;
 };
 
+struct __attribute__((__packed__)) s_train_header_conf {
+  uint16_t Engines;
+  uint16_t Cars;
+  uint16_t Trains;
+};
+
+struct __attribute__((__packed__)) s_engine_conf {
+  uint16_t DCC_ID;
+  uint16_t length;
+  uint8_t type;   //in mm
+  uint8_t config_steps;
+  uint8_t name_len;
+  uint8_t img_path_len;
+  uint8_t icon_path_len;
+};
+
+struct __attribute__((__packed__)) engine_speed_steps {
+  uint16_t speed;
+  uint8_t step;
+};
+
+struct engines_conf {
+  uint16_t DCC_ID;
+  uint16_t length;
+  uint8_t type;   //in mm
+  uint8_t config_steps;
+  uint8_t name_len;
+  uint8_t img_path_len;
+  uint8_t icon_path_len;
+  char * name;
+  char * img_path;
+  char * icon_path;
+  struct engine_speed_steps * speed_steps;
+};
+
+struct __attribute__((__packed__)) s_car_conf {
+  uint16_t nr;
+  uint16_t length;
+  uint8_t type;   //in mm   
+  uint8_t name_len;
+  uint8_t img_path_len;
+  uint8_t icon_path_len;
+};
+
+struct cars_conf {
+  uint16_t nr;
+  uint16_t length;
+  uint8_t type;   //in mm   
+  uint8_t name_len;
+  uint8_t img_path_len;
+  uint8_t icon_path_len;
+  char * name;
+  char * img_path;
+  char * icon_path;
+};
+
+struct __attribute__((__packed__)) train_comp_ws {
+  uint8_t type;
+  uint16_t id;
+};
+
+struct __attribute__((__packed__)) s_train_conf {
+  uint8_t name_len;
+  uint8_t nr_stock;
+};
+
+struct trains_conf {
+  uint8_t name_len;
+  uint8_t nr_stock;
+  char * name;
+  struct train_comp_ws * composition;
+};
+
+struct train_config {
+  struct s_train_header_conf header;
+
+  struct engines_conf * Engines;
+  struct cars_conf * Cars;
+  struct trains_conf * Trains;
+};
+
 uint8_t read_byte_conf(uint8_t ** p);
 
-int calc_write_size(struct config * config);
+int calc_module_write_size(struct module_config * config);
+
+int calc_train_write_size(struct train_config * config);
 
 
 void print_hex(char * data, int size);
 
-void write_from_conf(struct config * config, char * filename);
+void write_module_from_conf(struct module_config * config, char * filename);
+
+void write_train_from_conf(struct train_config * config, char * filename);
 
 int check_Spacing(uint8_t ** p);
 
@@ -165,5 +253,10 @@ struct switch_conf read_s_switch_conf(uint8_t ** p);
 struct ms_switch_conf read_s_ms_switch_conf(uint8_t ** p);
 
 struct station_conf read_s_station_conf(uint8_t ** p);
+
+struct s_train_header_conf read_s_train_header_conf(uint8_t ** p);
+struct cars_conf read_cars_conf(uint8_t ** p);
+struct engines_conf read_engines_conf(uint8_t ** p);
+struct trains_conf read_trains_conf(uint8_t ** p);
 
 #endif

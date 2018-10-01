@@ -250,7 +250,7 @@ void LoadModuleFromConfig(int M){
 
   FILE * fp = fopen(filename,"rb");
 
-  struct config * config = calloc(1, sizeof(struct config));
+  struct module_config * config = calloc(1, sizeof(struct module_config));
 
   char * header = calloc(2, sizeof(char));
 

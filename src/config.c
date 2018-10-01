@@ -9,7 +9,7 @@ uint8_t read_byte_conf(uint8_t ** p){
   return byte;
 }
 
-int calc_write_size(struct config * config){
+int calc_write_module_size(struct module_config * config){
   int size = 1; //header
   size += sizeof(struct s_unit_conf) + 1;
 
@@ -43,6 +43,50 @@ int calc_write_size(struct config * config){
   return size;
 }
 
+int calc_write_train_size(struct train_config * config){
+  int size = 1; //header
+  size += sizeof(struct s_train_header_conf) + 1;
+  int subsize = 0;
+  //Engines
+  for(int i = 0; i < config->header.Engines; i++){
+    subsize = sizeof(struct s_engine_conf) + 1;
+    subsize += config->Engines[i].name_len + config->Engines[i].img_path_len + 2;
+    subsize += config->Engines[i].icon_path_len + 1;
+    subsize += config->Engines[i].config_steps * sizeof(struct engine_speed_steps) + 1;
+
+    loggerf(INFO, "Engines %i bytes\n", subsize);
+
+    size += subsize;
+  }
+
+  loggerf(INFO, "Size Engines: %i\n", size);
+
+  //Cars
+  for(int i = 0; i < config->header.Cars; i++){
+    subsize = sizeof(struct s_car_conf) + config->Cars[i].name_len + 2;
+    subsize += config->Cars[i].img_path_len + config->Cars[i].icon_path_len + 2;
+
+    loggerf(INFO, "Car %i bytes\n", subsize);
+
+    size += subsize;
+  }
+
+  loggerf(INFO, "Size Cars: %i\n", size);
+
+  //Trains
+  for(int i = 0; i < config->header.Trains; i++){
+    subsize = sizeof(struct s_train_conf) + 1;
+    subsize += config->Trains[i].name_len + 1;
+    subsize += sizeof(struct train_comp_ws) * config->Trains[i].nr_stock + 1;
+
+    loggerf(INFO, "Train %i bytes\n", subsize);
+
+    size += subsize;
+  }
+
+  return size;
+}
+
 void print_hex(char * data, int size){
   printf("print_hex:\n");
   for(int i = 0; i < size; i++){
@@ -53,9 +97,11 @@ void print_hex(char * data, int size){
   printf("\n");
 }
 
-void write_from_conf(struct config * config, char * filename){
+void write_module_from_conf(struct module_config * config, char * filename){
   printf("write_from_conf\n");
-  int size = calc_write_size(config);
+  int size = calc_write_module_size(config);
+
+  loggerf(INFO, "Writing %i bytes", size);
 
   char * data = calloc(size, 1);
 
@@ -128,6 +174,87 @@ void write_from_conf(struct config * config, char * filename){
     memcpy(p, config->Stations[i].name, config->Stations[i].name_len);
     p += config->Stations[i].name_len + 1;
   }
+
+  //Print output
+  print_hex(data, size);
+
+  FILE * fp = fopen(filename, "wb");
+
+  fwrite(data, size, 1, fp);
+
+  fclose(fp);
+
+  free(data);
+}
+
+void write_train_from_conf(struct train_config * config, char * filename){
+  printf("write_from_conf\n");
+  int size = calc_write_train_size(config);
+
+  loggerf(INFO, "Writing %i bytes", size);
+
+  char * data = calloc(size, 1);
+
+  data[0] = 0x01;
+
+  char * p = &data[1];
+  //Copy header
+  memcpy(p, &config->header, sizeof(struct s_train_header_conf));
+
+  printf("ptr: %x\n", p);
+
+  p += sizeof(struct s_train_header_conf) + 1;
+
+  //Copy Engine
+  for(int i = 0; i < config->header.Engines; i++){
+    memcpy(p, &config->Engines[i], sizeof(struct s_engine_conf));
+    p += sizeof(struct s_engine_conf) + 1;
+
+    memcpy(p, config->Engines[i].name, config->Engines[i].name_len);
+    p += config->Engines[i].name_len + 1;
+
+    memcpy(p, config->Engines[i].img_path, config->Engines[i].img_path_len);
+    p += config->Engines[i].img_path_len + 1;
+
+    memcpy(p, config->Engines[i].icon_path, config->Engines[i].icon_path_len);
+    p += config->Engines[i].icon_path_len + 1;
+
+    memcpy(p, config->Engines[i].speed_steps, config->Engines[i].config_steps * sizeof(struct engine_speed_steps));
+    p += config->Engines[i].config_steps * sizeof(struct engine_speed_steps) + 1;
+  }
+
+  printf("ptr: %x\n", p);
+
+  //Copy Cars
+  for(int i = 0; i < config->header.Cars; i++){
+    memcpy(p, &config->Cars[i], sizeof(struct s_car_conf));
+    p += sizeof(struct s_car_conf) + 1;
+
+    memcpy(p, config->Cars[i].name, config->Cars[i].name_len);
+    p += config->Cars[i].name_len + 1;
+
+    memcpy(p, config->Cars[i].img_path, config->Cars[i].img_path_len);
+    p += config->Cars[i].img_path_len + 1;
+
+    memcpy(p, config->Cars[i].icon_path, config->Cars[i].icon_path_len);
+    p += config->Cars[i].icon_path_len + 1;
+  }
+
+  printf("ptr: %x\n", p);
+
+  //Copy trains
+  for(int i =0; i < config->header.Trains; i++){
+    memcpy(p, &config->Trains[i], sizeof(struct s_train_conf));
+    p += sizeof(struct s_train_conf) + 1;
+
+    memcpy(p, config->Trains[i].name, config->Trains[i].name_len);
+    p += config->Trains[i].name_len + 1;
+
+    memcpy(p, config->Trains[i].composition, sizeof(struct train_comp_ws) * config->Trains[i].nr_stock);
+    p += sizeof(struct train_comp_ws) * config->Trains[i].nr_stock + 1;
+  }
+
+  printf("ptr: %x\n", p);
 
   //Print output
   print_hex(data, size);
@@ -265,4 +392,110 @@ struct station_conf read_s_station_conf(uint8_t ** p){
   check_Spacing(p);
 
   return s;
+}
+
+
+struct s_train_header_conf read_s_train_header_conf(uint8_t ** p){
+  struct s_train_header_conf s;
+  memcpy(&s, *p, sizeof(struct s_train_header_conf));
+
+  *p += sizeof(struct s_train_header_conf);
+  
+  check_Spacing(p);
+
+  return s;
+}
+
+
+struct cars_conf read_cars_conf(uint8_t ** p){
+  struct cars_conf c;
+
+  memcpy(&c, *p, sizeof(struct s_car_conf));
+
+  *p += sizeof(struct s_car_conf);
+
+  if(!check_Spacing(p))
+    return c;
+
+  c.name = _calloc(c.name_len+1, char);
+  memcpy(c.name, *p, sizeof(char) * c.name_len);
+  *p += c.name_len;
+  if(!check_Spacing(p))
+    return c;
+
+  c.img_path = _calloc(c.img_path_len+1, char);
+  memcpy(c.img_path, *p, sizeof(char) * c.img_path_len);
+  *p += c.img_path_len;
+  if(!check_Spacing(p))
+    return c;
+
+  c.icon_path = _calloc(c.icon_path_len+1, char);
+  memcpy(c.icon_path, *p, sizeof(char) * c.icon_path_len);
+  *p += c.icon_path_len;
+
+  check_Spacing(p);
+
+  return c;
+}
+
+struct engines_conf read_engines_conf(uint8_t ** p){
+  struct engines_conf e;
+
+  memcpy(&e, *p, sizeof(struct s_engine_conf));
+
+  *p += sizeof(struct s_engine_conf);
+
+  if(!check_Spacing(p))
+    return e;
+
+  e.name = _calloc(e.name_len+1, char);
+  memcpy(e.name, *p, sizeof(char) * e.name_len);
+  *p += e.name_len;
+  if(!check_Spacing(p))
+    return e;
+
+  e.img_path = _calloc(e.img_path_len+1, char);
+  memcpy(e.img_path, *p, sizeof(char) * e.img_path_len);
+  *p += e.img_path_len;
+  if(!check_Spacing(p))
+    return e;
+
+  e.icon_path = _calloc(e.icon_path_len+1, char);
+  memcpy(e.icon_path, *p, sizeof(char) * e.icon_path_len);
+  *p += e.icon_path_len;
+  if(!check_Spacing(p))
+    return e;
+
+  e.speed_steps = _calloc(e.config_steps, sizeof(struct engine_speed_steps));
+  memcpy(e.speed_steps, *p, sizeof(struct engine_speed_steps) * e.config_steps);
+  *p += e.config_steps * sizeof(struct engine_speed_steps);
+
+  check_Spacing(p);
+
+  return e;
+}
+
+struct trains_conf read_trains_conf(uint8_t ** p){
+  struct trains_conf t;
+
+  memcpy(&t, *p, sizeof(struct s_train_conf));
+
+  *p += sizeof(struct s_train_conf);
+
+  if(!check_Spacing(p))
+    return t;
+
+  t.name = _calloc(t.name_len+1, char);
+  memcpy(t.name, *p, sizeof(char) * t.name_len);
+  *p += t.name_len;
+  if(!check_Spacing(p))
+    return t;
+
+  t.composition = _calloc(t.nr_stock+1, char);
+  memcpy(t.composition, *p, sizeof(struct train_comp_ws) * t.nr_stock);
+  *p += sizeof(struct train_comp_ws) * t.nr_stock;
+
+  check_Spacing(p);
+
+  return t;
 }

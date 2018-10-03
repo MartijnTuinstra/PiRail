@@ -7,6 +7,8 @@
 #define MODULE_CONF_VERSION 1
 #define TRAIN_CONF_VERSION 1
 
+#define TRAIN_CONF_PATH "configs/stock.bin"
+
 struct __attribute__((__packed__)) s_unit_conf {
   uint8_t module;
   uint8_t connections;

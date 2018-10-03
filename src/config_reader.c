@@ -1416,11 +1416,9 @@ int edit_module(){
 }
 
 int edit_rolling_stock(){
-  char filename[40] = "configs/stock.bin";
-
   printf("Reading file");
 
-  FILE * fp = fopen(filename,"rb");
+  FILE * fp = fopen(TRAIN_CONF_PATH,"rb");
 
   struct train_config config;
 
@@ -1465,7 +1463,7 @@ int edit_rolling_stock(){
       }
     }
     else if(strcmp(cmd, "s") == 0){
-      write_train_from_conf(&config, filename);
+      write_train_from_conf(&config, TRAIN_CONF_PATH);
     }
     else if(strcmp(cmd, "p") == 0){
       print_train_config(&config);

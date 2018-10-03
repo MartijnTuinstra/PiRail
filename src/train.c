@@ -39,7 +39,7 @@ int trains_comp_len = 0;
 Trains ** train_link;
 int train_link_len;
 
-Trains * DCC_train[9999];
+Engines * DCC_train[9999];
 
 void init_trains(){
   loggerf(INFO, "Initializing cars/engines/trains");
@@ -127,6 +127,7 @@ void create_train(char * name, int nr_stock, struct train_comp_ws * comps){
     Z->composition[i].id = comps[i].id;
 
     if(comps[i].type == 0){
+      loggerf(DEBUG, "Add enginge %i", comps[i].id);
       //Engine
       if(comps[i].id >= engines_len || engines[comps[i].id] == 0){
         loggerf(ERROR, "Engine (%i) doesn't exist", comps[i].id);
@@ -141,6 +142,7 @@ void create_train(char * name, int nr_stock, struct train_comp_ws * comps){
       Z->composition[i].p = engines[comps[i].id];
     }
     else{
+      loggerf(DEBUG, "Add car %i", comps[i].id);
       //Car
       if(comps[i].id >= cars_len || cars[comps[i].id] == 0){
         loggerf(ERROR, "Car (%i) doesn't exist", comps[i].id);
@@ -170,7 +172,7 @@ void create_train_from_comp(){
   loggerf(CRITICAL, "NOT IMPLEMENTED");
 }
 
-void create_engine(char * name,int DCC,char * img, char * icon, int max, char type, int length){
+void create_engine(char * name,int DCC,char * img, char * icon, char type, int length, int steps_len, struct engine_speed_steps * steps){
   //DCC cant be used twice
   for(int i = 0;i<engines_len;i++){
     if(engines[i] && engines[i]->DCC_ID == DCC){
@@ -188,18 +190,22 @@ void create_engine(char * name,int DCC,char * img, char * icon, int max, char ty
   strcpy(Z->icon_path,icon);
 
   Z->DCC_ID = DCC;
+  DCC_train[DCC] = Z;
 
   Z->length = length;
-  Z->max_speed = max;
   Z->cur_speed_step = 0;
 
-  Z->type = type;
+  Z->max_step = type >> 4;
+  Z->type = 0x0f & type;
+
+  Z->steps_len = steps_len;
+  Z->steps = steps;
 
   int index = find_free_index(engines, engines_len);
 
   engines[index] = Z;
 
-  loggerf(INFO, "Engine \"%s\" created at %i\t%s, %s", name, index, img, icon);
+  loggerf(INFO, "Engine \"%s\" %x->%x created at %i\t%s, %s", name, type, Z->type, index, img, icon);
 }
 
 void create_car(char * name,int nr,char * img, char * icon, char type, int length){
@@ -256,19 +262,19 @@ int train_read_confs(){
   for(int i = 0; i < h.Engines; i++){
     struct engines_conf e = read_engines_conf(buf_ptr);
 
-    create_engine(e.name, e.DCC_ID, e.img_path, e.icon_path, e.type, e.type, e.length);
+    create_engine_from_conf(e);
   }
   
   for(int i = 0; i < h.Cars; i++){
     struct cars_conf c = read_cars_conf(buf_ptr);
 
-    create_car(c.name, c.nr, c.img_path, c.icon_path, c.type, c.length);
+    create_car_from_conf(c);
   }
   
   for(int i = 0; i < h.Trains; i++){
     struct trains_conf t = read_trains_conf(buf_ptr);
 
-    create_train(t.name, t.nr_stock, t.composition);
+    create_train_from_conf(t);
   }
 
   _free(header);
@@ -277,6 +283,168 @@ int train_read_confs(){
 
   _SYS_change(STATE_TRAIN_LOADED, 1);
   return 1;
+}
+
+void train_write_confs(){
+  //Calculate size
+  int size = 1; //header
+  size += sizeof(struct s_train_header_conf) + 1;
+  int subsize = 0;
+
+  int tr = 0;
+  int en = 0;
+  int ca = 0;
+  //Engines
+  for(int i = 0; i < engines_len; i++){
+    if(!engines[i])
+      continue;
+
+    subsize = sizeof(struct s_engine_conf) + 1;
+    subsize += strlen(engines[i]->name) + strlen(engines[i]->img_path) + 2;
+    subsize += strlen(engines[i]->icon_path) + 1;
+    subsize += engines[i]->steps_len * sizeof(struct engine_speed_steps) + 1;
+
+    en++;
+
+    size += subsize;
+  }
+
+  //Cars
+  for(int i = 0; i < cars_len; i++){
+    if(!cars[i])
+      continue;
+
+    subsize = sizeof(struct s_car_conf) + strlen(cars[i]->name) + 2;
+    subsize += strlen(cars[i]->img_path) + strlen(cars[i]->icon_path) + 2;
+
+    ca++;
+
+    size += subsize;
+  }
+
+  //Trains
+  for(int i = 0; i < trains_len; i++){
+    if(!trains[i])
+      continue;
+
+    subsize = sizeof(struct s_train_conf) + 1;
+    subsize += strlen(trains[i]->name) + 1;
+    subsize += sizeof(struct train_comp_ws) * trains[i]->nr_stock + 1;
+
+    tr++;
+
+    size += subsize;
+  }
+
+
+  //Write contents
+
+  loggerf(INFO, "Writing %i bytes", size);
+
+  char * data = calloc(size, 1);
+
+  data[0] = TRAIN_CONF_VERSION;
+
+  char * p = &data[1];
+
+  //Copy header
+  struct s_train_header_conf header;
+  header.Trains = tr;
+  header.Engines = en;
+  header.Cars = ca;
+
+  memcpy(p, &header, sizeof(struct s_train_header_conf));
+
+  p += sizeof(struct s_train_header_conf) + 1;
+
+  //Copy Engine
+  for(int i = 0; i < engines_len; i++){
+    if(!engines[i])
+      continue;
+
+    struct s_engine_conf e;
+    e.DCC_ID = engines[i]->DCC_ID;
+    e.length = engines[i]->length;
+    e.type = engines[i]->type | (engines[i]->max_step << 4);
+    e.config_steps = engines[i]->steps_len;
+    e.name_len = strlen(engines[i]->name);
+    e.img_path_len = strlen(engines[i]->img_path);
+    e.icon_path_len = strlen(engines[i]->icon_path);
+
+    memcpy(p, &e, sizeof(struct s_engine_conf));
+    p += sizeof(struct s_engine_conf) + 1;
+
+    memcpy(p, engines[i]->name, e.name_len);
+    p += e.name_len + 1;
+
+    memcpy(p, engines[i]->img_path, e.img_path_len);
+    p += e.img_path_len + 1;
+
+    memcpy(p, engines[i]->icon_path, e.icon_path_len);
+    p += e.icon_path_len + 1;
+
+    memcpy(p, engines[i]->steps, e.config_steps * sizeof(struct engine_speed_steps));
+    p += e.config_steps * sizeof(struct engine_speed_steps) + 1;
+  }
+
+  // Copy Cars
+  for(int i = 0; i < cars_len; i++){
+    if(!cars[i])
+      continue;
+
+    struct s_car_conf c;
+    c.nr = cars[i]->nr;
+    c.length = cars[i]->length;
+    c.type = cars[i]->type;
+    c.name_len = strlen(cars[i]->name);
+    c.img_path_len = strlen(cars[i]->img_path);
+    c.icon_path_len = strlen(cars[i]->icon_path);
+
+    memcpy(p, &c, sizeof(struct s_car_conf));
+    p += sizeof(struct s_car_conf) + 1;
+
+    memcpy(p, cars[i]->name, c.name_len);
+    p += c.name_len + 1;
+
+    memcpy(p, cars[i]->img_path, c.img_path_len);
+    p += c.img_path_len + 1;
+
+    memcpy(p, cars[i]->icon_path, c.icon_path_len);
+    p += c.icon_path_len + 1;
+  }
+
+  //Copy trains
+  for(int i =0; i < trains_len; i++){
+    if(!trains[i])
+      continue;
+
+    struct s_train_conf t;
+    t.name_len = strlen(trains[i]->name);
+    t.nr_stock = trains[i]->nr_stock;
+
+    memcpy(p, &t, sizeof(struct s_train_conf));
+    p += sizeof(struct s_train_conf) + 1;
+
+    memcpy(p, trains[i]->name, t.name_len);
+    p += t.name_len + 1;
+
+    for(int j=0; j<t.nr_stock; j++){
+      memcpy(p, &trains[i]->composition[j], sizeof(struct train_comp_ws));
+      p += sizeof(struct train_comp_ws);
+    }
+    p++;
+  }
+
+  //Print output
+  print_hex(data, size);
+
+  FILE * fp = fopen(TRAIN_CONF_PATH, "wb");
+
+  fwrite(data, size, 1, fp);
+
+  fclose(fp);
+
+  free(data);
 }
 
 int link_train(int fid, int tid, char type){

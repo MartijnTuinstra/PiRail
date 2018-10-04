@@ -255,12 +255,6 @@ void LoadModuleFromConfig(int M){
   char * header = calloc(2, sizeof(char));
 
   fread(header, 1, 1, fp);
-
-  if (header[0] != 1) {
-    loggerf(ERROR, "Module %i not correct version, please update using the config_reader", config->header.module);
-    return;
-  }
-
   fseek(fp, 0, SEEK_END);
   long fsize = ftell(fp);
   fseek(fp, 0, SEEK_SET);
@@ -277,6 +271,12 @@ void LoadModuleFromConfig(int M){
 
   config->header = read_s_unit_conf(buf_ptr);
 
+  if (header[0] != MODULE_CONF_VERSION) {
+    loggerf(ERROR, "Module %i not correct version, please update using the config_reader", config->header.module);
+    return;
+  }
+
+
   Create_Unit(M, config->header.IO_Nodes, config->header.connections);
 
   for(int i = 0; i < config->header.IO_Nodes; i++){
@@ -287,20 +287,7 @@ void LoadModuleFromConfig(int M){
   
   for(int i = 0; i < config->header.Blocks; i++){
     struct s_block_conf block = read_s_block_conf(buf_ptr);
-    struct block_connect connect;
-    Node_adr IO_In;
-
-    IO_In.Node = block.IO_In.Node; IO_In.io = block.IO_In.Adr;
-
-    connect.module = M;
-    connect.id = block.id;
-    connect.type = block.type;
-    connect.next.module = block.next.module; connect.next.id = block.next.id; connect.next.type = block.next.type;
-    connect.prev.module = block.prev.module; connect.prev.id = block.prev.id; connect.prev.type = block.prev.type;
-
-    Create_Segment(IO_In, connect, block.speed, (block.fl & 0x6) >> 1, block.length);
-
-    loggerf(WARNING, "Add IO_Out, improve");
+    create_block(M, block);
   }
 
   for(int i = 0; i < config->header.Switches; i++){
@@ -344,321 +331,9 @@ void LoadModuleFromConfig(int M){
     _free(st.blocks);
   }
 
-  printf( "buf_ptr %x\n", (unsigned int)*buf_ptr);
-
   free(header);
   free(buf_start);
   fclose(fp);
-}
-
-void LoadModules(int M){
-  loggerf(ERROR, "Going to be depricated: use LoadModuleFromConfig");
-  loggerf(INFO, "Loading module %i", M);
-
-  if(M == 0){
-    return;
-  }
-
-  // printf("Load module %i\n",M);
-
-  if(M != 4 && M != 8 && M != 1 && M != 2 && M != 5 && M != 6 && M != 10 && M != 11 && M != 20 && M != 21 && M != 22 && M != 23){
-    loggerf(WARNING, "Module not ready\n");
-    return; //Function is not ready
-  }
-
-  //Try to open file
-  FILE * fp;
-  char * line = NULL;
-  size_t len = 0;
-  ssize_t read;
-
-  char folder[]   = "./configs/units/OLD_TODO_REMOVE/";
-  char filename[] = "/prop.txt";
-  char file[50] = "";
-
-  sprintf(file, "%s%d%s", folder, M, filename);
-
-  fp = fopen(file, "r");
-  if (fp == NULL){
-    loggerf(CRITICAL, "Failed to open File: %s\n",file);
-    return;
-  }
-
-  //return; //STOP
-
-  int ModuleID;
-
-  while ((read = getline(&line, &len, fp)) != -1) {
-    if(line[0] == '\'')
-      continue;
-
-          //printf("\nRetrieved line of length %02zu : ", read);
-
-    char * p = strtok(line,"\t\r\n");
-    char * parts[20];
-    uint8_t i = 0;
-
-    while(p != NULL){
-      // printf("%s  ",p);
-      parts[i++] = p;
-      p = strtok(NULL, "\t\r\n");
-    }
-    // printf("\n");
-
-    if(parts[0][0] == 'C'){
-      if(strcmp(parts[0],"CU") == 0){ //Create Unit
-        //Set Module ID for this file and Create Module
-        ModuleID = atoi(parts[1]);
-        if(ModuleID != M){
-          printf("MODULE ID in file is not consistent with FolderNr\n");
-          return;
-        }
-        loggerf(DEBUG, "Create Unit %i", atoi(parts[1]));
-        // printf("Module ID: %i\n",ModuleID);
-        Create_Unit(ModuleID,atoi(parts[2]),atoi(parts[3]));
-      }
-      else if(strcmp(parts[0],"CB") == 0){ //Create Block
-        //Create a Segment with all given data from the file
-        loggerf(DEBUG, "Create Block");
-
-        struct rail_link Adr,NAdr,PAdr;
-        Adr.module = ModuleID;
-        Adr.id = atoi(parts[2]);
-        Adr.type = parts[3][0];
-        // printf("New block in module %i",ModuleID);
-        //Next Block
-        if(parts[4][0] == 'E'){ //End of line / Empty
-          NAdr.module = 0;
-          NAdr.id = 0;
-          NAdr.type = 'e';
-        }
-        else{
-          if(parts[4][0] == 'C'){
-            NAdr.type = 'C';
-            NAdr.module = atoi(parts[5]);
-            NAdr.id = atoi(parts[6]);
-          }else if(parts[4][0] == 'X'){
-            NAdr.type = parts[6][0];
-            NAdr.module = ModuleID;
-            NAdr.id = atoi(parts[5]);
-          }else {
-            NAdr.type = parts[6][0];
-            NAdr.module = atoi(parts[4]);
-            NAdr.id = atoi(parts[5]);
-          }
-        }
-
-        //Prev Block
-        if(parts[7][0] == 'E'){
-          PAdr = EMPTY_BL();
-        }
-        else{
-          if(parts[7][0] == 'C'){
-            PAdr.type = 'C';
-            PAdr.module = atoi(parts[8]);
-            PAdr.id = atoi(parts[9]);
-          }else if(parts[7][0] == 'X'){
-            PAdr.type = parts[9][0];
-            PAdr.module = ModuleID;
-            PAdr.id = atoi(parts[8]);
-          }else {
-            PAdr.type = parts[9][0];
-            PAdr.module = atoi(parts[7]);
-            PAdr.id = atoi(parts[8]);
-          }
-        }
-        //Create_Segment(IO_Adr        ,Adr,Next,Prev,mspd,           state,dir,            len);
-        struct block_connect tmp;
-        tmp.module = Adr.module;
-        tmp.id = Adr.id;
-        if(Adr.type == 'R')
-          tmp.type = MAIN;
-        else if(Adr.type == 'D')
-          tmp.type = SPECIAL;
-        else if(Adr.type == 'S' || Adr.type == 'Y')
-          tmp.type = STATION;
-        else if(Adr.type == 's')
-          tmp.type = SIDING;
-        tmp.next = NAdr;
-        tmp.prev = PAdr;
-
-        Node_adr IO_Adr;
-        IO_Adr.Node = 0;
-        IO_Adr.io = strtol(parts[1], NULL, 10);
-        Create_Segment(IO_Adr, tmp, atoi(parts[10]), atoi(parts[11]), atoi(parts[12]));
-        //Set oneway
-        if(parts[13][0] == 'Y'){
-          Units[ModuleID]->B[Adr.id]->oneWay = TRUE;
-        }
-      }else if(strcmp(parts[0],"CSw") == 0){//Create Switch
-        //Create a Switch with all given data from the file
-
-        struct rail_link Adr,AAdr,SAdr,DAdr;
-        Adr.module = ModuleID;
-        Adr.id = atoi(parts[1]);
-        Adr.type = atoi(parts[12]); //IO length
-
-        //Approach Block
-        if(parts[3][0] == 'E'){
-          AAdr = EMPTY_BL();
-        }
-        else{
-          if(parts[3][0] == 'C'){
-            AAdr.type = 'C';
-            AAdr.module = atoi(parts[4]);
-            AAdr.id = atoi(parts[5]);
-          }else if(parts[3][0] == 'X'){
-            AAdr.type = parts[5][0];
-            AAdr.module = ModuleID;
-            AAdr.id = atoi(parts[4]);
-          }else {
-            AAdr.type = parts[5][0];
-            AAdr.module = atoi(parts[3]);
-            AAdr.id = atoi(parts[4]);
-          }
-        }
-
-        //Diverging Block 9+
-        if(parts[9][0] == 'E'){
-          DAdr = EMPTY_BL();
-        }
-        else{
-          if(parts[9][0] == 'C'){
-            DAdr.type = 'C';
-            DAdr.module = atoi(parts[10]);
-            DAdr.id = atoi(parts[11]);
-          }else if(parts[9][0] == 'X'){
-            DAdr.type = parts[11][0];
-            DAdr.module = ModuleID;
-            DAdr.id = atoi(parts[10]);
-          }else {
-            DAdr.type = parts[11][0];
-            DAdr.module = atoi(parts[9]);
-            DAdr.id = atoi(parts[10]);
-          }
-        }
-
-        //Straigth Block 6
-        if(parts[6][0] == 'E'){
-          SAdr = EMPTY_BL();
-        }
-        else{
-          if(parts[6][0] == 'C'){
-            SAdr.type = 'C';
-            SAdr.module = atoi(parts[7]);
-            SAdr.id = atoi(parts[8]);
-          }else if(parts[6][0] == 'X'){
-            SAdr.type = parts[8][0];
-            SAdr.module = ModuleID;
-            SAdr.id = atoi(parts[7]);
-          }else {
-            SAdr.type = parts[8][0];
-            SAdr.module = atoi(parts[6]);
-            SAdr.id = atoi(parts[7]);
-          }
-        }
-
-        int IOAddress[20];
-        char * q;
-        i = 0;
-        q = strtok(parts[13], " ");
-
-        while(q != NULL){
-          IOAddress[i++] = atoi(q);
-          q = strtok(NULL, " ");
-        }
-
-        int StateSpeed[20];
-        i = 0;
-        q = strtok(parts[14], " ");
-
-        while(q != NULL){
-          StateSpeed[i++] = atoi(q);
-          q = strtok(NULL, " ");
-        }
-
-        struct switch_connect tmp;
-        tmp.module = ModuleID;
-        tmp.id = Adr.id;
-        tmp.app = AAdr;
-        tmp.div = DAdr;
-        tmp.str = SAdr;
-
-        Node_adr * A = _calloc(2, Node_adr *);
-        A[0].io = IOAddress[0];
-        A[1].io = IOAddress[1];
-
-        uint8_t * B = _calloc(2, _Bool *);
-        B[0] = 1 + (0 << 1); //State 0 - Address 0 hight, address 1 low
-        B[1] = 0 + (1 << 1); //State 1 - Address 1 hight, address 0 low
-
-        Create_Switch(tmp,atoi(parts[2]), 2, A, B);
-        printf("StateSPeed %x\n", (unsigned int)StateSpeed);
-
-        _free(A);
-
-        //Units[ModuleID]->S[Adr.id]->Detection_Block = atoi(parts[2]);
-      }else if(strcmp(parts[0], "CN") == 0){
-          loggerf(INFO, "Create Node nr %s, IO %s, In: %s, Out: %s", parts[1], parts[2], parts[3], parts[4]);
-          Add_IO_Node(Units[ModuleID], atoi(parts[1]), atoi(parts[2]));
-      }else if(strcmp(parts[0],"CSi") == 0){//Create Signal
-        printf("Create Signals - Not Supported");
-      }else if(strcmp(parts[0],"CSt") == 0){//Create Station
-        // printf("Create Station/Stop");
-
-        char name[30];
-        strcpy(name,parts[1]);
-
-        char type = atoi(parts[2]);
-        char NrBlocks = atoi(parts[3]);
-
-        int Blocks[10];
-        char * q;
-        i = 0;
-        q = strtok(parts[4], " ");
-
-        while(q != NULL){
-          Blocks[i++] = atoi(q);
-          q = strtok(NULL, " ");
-        }
-
-        Block ** blocks = _calloc(i, Block *);
-
-        for(uint8_t j = 0; j < i; j++){
-          blocks[j] = Units[ModuleID]->B[Blocks[j]];
-        }
-
-        Create_Station(ModuleID, 0, name, strlen(name)+2, STATION_PERSON, 100, blocks);
-        printf("NrBlocks %x type: %x\n", NrBlocks, type);
-      }
-    }
-    else if(parts[0][0] == 'S'){
-      if(strcmp(parts[0],"Sdet") == 0){ //Switch detection block
-        Units[ModuleID]->Sw[atoi(parts[1])]->Detection = Units[ModuleID]->B[atoi(parts[2])];
-      }
-    }
-    else if(strcmp(parts[0], "MS") == 0){ //Setup Blocks
-      loggerf(DEBUG, "Setup Unit %i", ModuleID);
-      Units[ModuleID]->block_len = atoi(parts[1]);
-      Units[ModuleID]->B = _calloc(atoi(parts[1]), Block *);
-
-      Units[ModuleID]->switch_len = atoi(parts[2]);
-      Units[ModuleID]->Sw = _calloc(atoi(parts[2]), Switch *);
-
-      Units[ModuleID]->msswitch_len = atoi(parts[3]);
-      Units[ModuleID]->MSSw = _calloc(atoi(parts[3]), MSSwitch *);
-
-      Units[ModuleID]->signal_len = atoi(parts[4]);
-      Units[ModuleID]->Sig = _calloc(atoi(parts[4]), Signal *);
-
-      Units[ModuleID]->station_len = atoi(parts[5]);
-      Units[ModuleID]->St = _calloc(atoi(parts[5]), Station *);
-    }
-  }
-
-  fclose(fp);
-  if (line)
-    free(line);
 }
 
 void JoinModules(){

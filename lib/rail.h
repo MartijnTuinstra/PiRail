@@ -6,6 +6,7 @@
   #include <stdint.h>
   #include <unistd.h>
   #include <string.h>
+  #include "config_data.h"
 
   #define NEXT 0
   #define PREV 1
@@ -27,10 +28,10 @@
   #define U_B(U, A) Units[U]->B[A]
 
   struct rail_link {
-    char type;
-    void * p;
     uint8_t  module;
     uint16_t id;
+    uint8_t type;
+    void * p;
   };
 
   enum Rail_types {
@@ -145,7 +146,8 @@ enum link_types {
 
   void init_rail();
 
-  void Create_Segment(Node_adr IO_Adr, struct block_connect connect ,char max_speed, char dir,char len);
+  void create_block(uint8_t module, struct s_block_conf block);
+  // void Create_Segment(Node_adr IO_Adr, struct block_connect connect ,char max_speed, char dir,char len);
   void Create_Station(int module, int id, char * name, char name_len, enum Station_types type, int len, Block ** blocks);
 
   void Connect_Rail_links();

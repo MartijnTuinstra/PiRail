@@ -50,26 +50,42 @@ void init_rail(){
 
 }
 
-void Create_Segment(Node_adr IO_Adr, struct block_connect connect ,char max_speed, char dir,char len){
+void create_block(uint8_t module, struct s_block_conf block){
   Block * p = _calloc(1, Block);
 
-  p->module = connect.module;
-  p->id = connect.id;
-  p->type = connect.type;
+  p->module = module;
+  p->id = block.id;
+  p->type = block.type;
 
   //Unit * U = Units[p->module]; Never used
 
-  p->next = connect.next;
-  p->prev = connect.prev;
+  p->next.module = block.next.module;
+  p->next.id = block.next.id;
+  p->next.type = block.next.type;
+  p->prev.module = block.prev.module;
+  p->prev.id = block.prev.id;
+  p->prev.type = block.prev.type;
 
-  p->max_speed = max_speed;
-  p->dir = dir;
-  p->length = len;
+  p->max_speed = block.speed;
+  p->dir = (block.fl & 0x6) >> 1;
+  p->length = block.length;
 
   p->blocked = 0;
   p->state = PROCEED;
 
-  Init_IO(Units[p->module], IO_Adr, IO_Input);
+  struct s_node_adr in;
+  in.Node = block.IO_In.Node;
+  in.io = block.IO_In.Adr;
+
+  Init_IO(Units[p->module], in, IO_Input);
+
+  if(block.fl & 0x8){
+    struct s_node_adr out;
+    out.Node = block.IO_Out.Node;
+    out.io = block.IO_Out.Adr;
+
+    Init_IO(Units[p->module], out, IO_Output);
+  }
 
   // If block array is to small
   if(Units[p->module]->block_len <= p->id){

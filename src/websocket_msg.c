@@ -11,8 +11,11 @@
 
 //Websocket opcodes
 #include "websocket_control.h"
+#include "websocket_msg.h"
+#include "websocket.h"
 
 #include "system.h"
+#include "mem.h"
 
 #include "rail.h"
 #include "switch.h"
@@ -729,3 +732,130 @@ void Web_Train_Data(char data[14]){
   ws_send_all(s_data,8,1);
 }
 */
+
+
+
+
+// Client to server
+void WS_cts_AddCartoLib(struct s_opc_AddNewCartolib * data, struct web_client_t * client){
+  loggerf(DEBUG, "WS_cts_AddCartoLib");
+  struct s_WS_Data * rdata = _calloc(1, sizeof(struct s_WS_Data));
+
+  rdata->opcode = WSopc_AddNewCartolib;
+  rdata->data.opc_AddNewCartolib_res.nr = data->nr;
+
+  char * name = _calloc(data->name_len, 1);
+  char * img = _calloc(data->name_len + 8 + 3 + 20, 1);
+  char * icon = _calloc(data->name_len + 8 + 3 + 20, 1);
+  char * simg = _calloc(20 + 3, 1);
+  char * sicon = _calloc(20 + 3, 1);
+  char * filetype = _calloc(4, 1);
+
+  memcpy(name, &data->strings, data->name_len);
+
+  if((data->filetype & 0xf0) == 0){
+    sprintf(img, "%s_%i.%s", name, data->nr, "png");
+    sprintf(simg, "%s.%s", "web/tmp_img", "png");
+  }
+  else{
+    sprintf(img, "%s_%i.%s", name, data->nr, "jpg");
+    sprintf(simg, "%s.%s", "web/tmp_img", "jpg");
+  }
+
+  if((data->filetype & 0x0f) == 0){
+    sprintf(icon, "%s_%i.%s", name, data->nr, "png");
+    sprintf(sicon, "%s.%s", "web/tmp_icon", "png");
+  }
+  else{
+    sprintf(icon, "%s_%i.%s", name, data->nr, "jpg");
+    sprintf(sicon, "%s.%s", "web/tmp_icon", "jpg");
+  }
+
+  create_car(name, data->nr, img, icon, data->type, data->length, data->max_speed);
+
+  char * dimg = _calloc(strlen(img)+10, 1);
+  char * dicon = _calloc(strlen(icon)+10, 1);
+
+  sprintf(dimg, "%s%s", "web/trains_img/", img);
+  sprintf(dicon, "%s%s", "web/trains_img/", icon);
+
+  move_file(simg,  dimg);
+  move_file(sicon, dicon);
+
+  train_write_confs();
+
+  rdata->data.opc_AddNewCartolib_res.response = 1;
+  ws_send(client->fd, (char *)rdata, WSopc_AddNewCartolib_res_len, 0xff);
+
+  _free(dimg);
+  _free(dicon);
+  _free(simg);
+  _free(sicon);
+  _free(filetype);
+}
+
+void WS_cts_AddEnginetoLib(struct s_opc_AddNewEnginetolib * data, struct web_client_t * client){
+  loggerf(DEBUG, "WS_cts_AddEnginetoLib");
+  struct s_WS_Data * rdata = _calloc(1, sizeof(struct s_WS_Data));
+
+  rdata->opcode = WSopc_AddNewEnginetolib;
+  rdata->data.opc_AddNewEnginetolib_res.DCC_ID = data->DCC_ID;
+
+  if (DCC_train[data->DCC_ID]){
+    loggerf(ERROR, "DCC allready in use");
+    rdata->data.opc_AddNewEnginetolib_res.response = 255;
+    ws_send(client->fd, (char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
+    return;
+  }
+
+  char * name = _calloc(data->name_len, 1);
+  char * steps = _calloc(data->steps, 3);
+  char * img = _calloc(data->name_len + 8 + 3 + 20, 1);
+  char * icon = _calloc(data->name_len + 8 + 3 + 20, 1);
+  char * simg = _calloc(20 + 3, 1);
+  char * sicon = _calloc(20 + 3, 1);
+  char * filetype = _calloc(4, 1);
+
+  memcpy(name, &data->strings, data->name_len);
+  memcpy(steps, &data->strings + data->name_len, data->steps);
+
+  if((data->filetype & 0xf0) == 0){
+    sprintf(img, "%i_%s.%s", data->DCC_ID, name, "png");
+    sprintf(simg, "%s.%s", "web/tmp_img", "png");
+  }
+  else{
+    sprintf(img, "%i_%s.%s", data->DCC_ID, name, "jpg");
+    sprintf(simg, "%s.%s", "web/tmp_img", "jpg");
+  }
+
+  if((data->filetype & 0x0f) == 0){
+    sprintf(icon, "%i_%s.%s", data->DCC_ID, name, "png");
+    sprintf(sicon, "%s.%s", "web/tmp_icon", "png");
+  }
+  else{
+    sprintf(icon, "%i_%s.%s", data->DCC_ID, name, "jpg");
+    sprintf(sicon, "%s.%s", "web/tmp_icon", "jpg");
+  }
+
+  create_engine(name, data->DCC_ID, img, icon, data->fl, data->length, data->steps, (struct engine_speed_steps *)steps);
+
+  char * dimg = _calloc(strlen(img)+10, 1);
+  char * dicon = _calloc(strlen(icon)+10, 1);
+
+  sprintf(dimg, "%s%s", "web/trains_img/", img);
+  sprintf(dicon, "%s%s", "web/trains_img/", icon);
+
+  move_file(simg,  dimg);
+  move_file(sicon, dicon);
+
+  train_write_confs();
+
+  rdata->data.opc_AddNewEnginetolib_res.response = 1;
+  ws_send(client->fd, (char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
+
+  _free(dimg);
+  _free(dicon);
+  _free(simg);
+  _free(sicon);
+  _free(filetype);
+}

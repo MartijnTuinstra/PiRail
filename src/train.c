@@ -208,7 +208,7 @@ void create_engine(char * name,int DCC,char * img, char * icon, char type, int l
   loggerf(INFO, "Engine \"%s\" %x->%x created at %i\t%s, %s", name, type, Z->type, index, img, icon);
 }
 
-void create_car(char * name,int nr,char * img, char * icon, char type, int length){
+void create_car(char * name,int nr,char * img, char * icon, char type, uint16_t length, uint16_t speed){
   Cars * Z = _calloc(1, Cars);
 
   Z->name = _calloc(strlen(name)+2, char);
@@ -217,6 +217,7 @@ void create_car(char * name,int nr,char * img, char * icon, char type, int lengt
 
   Z->nr = nr;
   Z->length = length;
+  Z->max_speed = speed;
 
   strcpy(Z->name,name);
   strcpy(Z->img_path,img);

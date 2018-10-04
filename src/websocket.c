@@ -1,4 +1,5 @@
 #include "system.h"
+#include "config.h"
 #include "mem.h"
 #include "train.h"
 #include "module.h"
@@ -13,6 +14,8 @@ int websocket_decode(uint8_t data[1024], struct web_client_t * client){
   // Train stuff flag       0x40
   // Rail stuff flag        0x20
   // General Operation flag 0x10
+
+  struct s_WS_Data * d = data;
 
   if(data[0] & 0x80){ //Admin settings
     printf("Admin settings: %02X\n",data[0]);
@@ -109,10 +112,10 @@ int websocket_decode(uint8_t data[1024], struct web_client_t * client){
     }
 
     else if(data[0] == WSopc_AddNewCartolib){
-      logger("WSopc_AddNewCartolib TODO",WARNING);
+      WS_cts_AddCartoLib(&d->data.opc_AddNewCartolib, client);
     }
     else if(data[0] == WSopc_AddNewEnginetolib){
-      logger("WSopc_AddNewEnginetolib TODO",WARNING);
+      WS_cts_AddEnginetoLib(&d->data.opc_AddNewEnginetolib, client);
     }
     else if(data[0] == WSopc_AddNewTraintolib){
       logger("WSopc_AddNewTraintolib TODO",WARNING);

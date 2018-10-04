@@ -395,10 +395,10 @@ var Train = {
       }
       else{
         data.nr = parseInt($('#engine_car_creator .nr input').val());
+        data.max_speed = parseInt($('#engine_car_creator .speed input[name="speed"]').val());
       }
 
       data.length = parseInt($('#engine_car_creator .length input').val());
-      data.speed = parseInt($('#engine_car_creator .speed input[name="speed"]').val());
       data.speedsteps = parseInt($('#engine_car_creator .speed input[name="steps"]').val());
 
       data.type = parseInt($('#engine_car_creator .type input:checked').val());
@@ -450,7 +450,7 @@ var Train = {
       Train.engine_car_creator.save_cb = undefined;
 
       var C = $('#engine_car_creator');
-      $('.field_container input', C).val("");
+      $('.field_container input[type!="radio"]', C).val("");
       $('.field_container input:checked', C).prop("checked", false);
 
       $('.img_icon', C).css("background-image", "");

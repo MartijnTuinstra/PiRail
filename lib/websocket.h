@@ -3,6 +3,49 @@
 
   #include "websocket_control.h"
 
+
+  struct __attribute__((__packed__)) s_opc_AddNewCartolib {
+    uint16_t nr;
+    uint16_t max_speed;
+    uint16_t length;
+    uint8_t type;
+    uint8_t filetype;
+    uint8_t name_len;
+    char strings;
+  };
+
+  #define WSopc_AddNewCartolib_res_len 4
+  struct __attribute__((__packed__)) s_opc_AddNewCartolib_res {
+    uint16_t nr;
+    uint8_t response;
+  };
+
+  struct __attribute__((__packed__)) s_opc_AddNewEnginetolib {
+    uint16_t DCC_ID;
+    uint16_t length;
+    uint8_t fl;
+    uint8_t name_len;
+    uint8_t filetype;
+    uint8_t steps;
+    char strings;
+  };
+
+  #define WSopc_AddNewEnginetolib_res_len 4
+  struct __attribute__((__packed__)) s_opc_AddNewEnginetolib_res {
+    uint16_t DCC_ID;
+    uint8_t response;
+  };
+
+  struct s_WS_Data {
+    uint8_t opcode;
+    union {
+      struct s_opc_AddNewCartolib opc_AddNewCartolib;
+      struct s_opc_AddNewCartolib_res opc_AddNewCartolib_res;
+      struct s_opc_AddNewEnginetolib opc_AddNewEnginetolib;
+      struct s_opc_AddNewEnginetolib_res opc_AddNewEnginetolib_res;
+    } data;
+  };
+
   struct websocket_client_thread_args;
 
   int websocket_get_msg(int fd_client, char outbuf[], int * L);
@@ -38,12 +81,12 @@
   #define WSopc_Z21TrainData       0x45
   #define WSopc_TrainAddRoute      0x46
 
-  #define WSopc_AddNewCartolib     0x50
-  #define WSopc_CarsLibrary         0x51
-  #define WSopc_AddNewEnginetolib  0x52
-  #define WSopc_EnginesLibrary      0x53
+  #define WSopc_AddNewEnginetolib  0x50
+  #define WSopc_EnginesLibrary     0x51
+  #define WSopc_AddNewCartolib     0x52
+  #define WSopc_CarsLibrary        0x53
   #define WSopc_AddNewTraintolib   0x54
-  #define WSopc_TrainsLibrary       0x55
+  #define WSopc_TrainsLibrary      0x55
 
   #define WSopc_SetSwitch          0x20
   #define WSopc_SetMultiSwitch     0x21

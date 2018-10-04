@@ -1,9 +1,10 @@
-#ifndef _INCLUDE_STATUS_H
-  #define _INCLUDE_STATUS_H
+#ifndef _INCLUDE_WEBSOCKET_MSG_H
+  #define _INCLUDE_WEBSOCKET_MSG_H
   #define ACTIVATE 0
   #define RELEASE  1
 
   #include <stdint.h>
+  #include "websocket.h"
 
   struct WS_Message {
     uint16_t type;
@@ -53,4 +54,7 @@
   void WS_LinkTrain(uint8_t fID, uint8_t tID);
 
   void WS_TrainData(char data[14]);
+
+  void WS_cts_AddCartoLib(struct s_opc_AddNewCartolib * data, struct web_client_t * client);
+  void WS_cts_AddEnginetoLib(struct s_opc_AddNewEnginetolib * data, struct web_client_t * client);
 #endif

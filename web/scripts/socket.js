@@ -34,10 +34,10 @@ var websocket = {
     Z21TrainData:         0x45,
     TrainAddRoute:        0x46,
 
-    AddNewCartolib:    0x50,
-    CarsLibrary:       0x51,
-    AddNewEnginetolib: 0x52,
-    EnginesLibrary:    0x53,
+    AddNewEnginetolib: 0x50,
+    EnginesLibrary:    0x51,
+    AddNewCartolib:    0x52,
+    CarsLibrary:       0x53,
     AddNewTraintolib:  0x54,
     TrainsLibrary:     0x55,
 
@@ -100,24 +100,47 @@ var websocket = {
       this.send(data);
     },
 
+    cts_add_car: function(data){
+      msg = [];
+      msg[0] = this.opc.AddNewCartolib;
+      msg[1] = (data.nr & 0x00ff);
+      msg[2] = (data.nr & 0xff00) >> 8;
+      msg[3] = (data.max_speed & 0x00ff);
+      msg[4] = (data.max_speed & 0xff00) >> 8;
+      msg[5] = (data.length & 0x00ff);
+      msg[6] = (data.length & 0xff00) >> 8;
+      msg[7] = data.type & 0xf;
+      if(data.img_ext.includes('jpg')){
+        msg[8] |= 0x10;
+      }
+      if(data.icon_ext.includes('jpg')){
+        msg[8] |= 0x1;
+      }
+      msg[9] = data.name.length;
+
+      for (var i = 0; i < data.name.length; i++) {
+        msg.push(data.name.charCodeAt(i));
+      }
+
+      this.send(msg);
+    },
+
     cts_add_engine: function(data){
       msg = [];
       msg[0] = this.opc.AddNewEnginetolib;
-      msg[1] = (data.dcc & 0xff00) >> 8;
-      msg[2] = (data.dcc & 0x00ff);
-      msg[3] = (data.speed & 0xff00) >> 8;
-      msg[4] = (data.speed & 0x00ff);
-      msg[5] = (data.length & 0xff00) >> 8;
-      msg[6] = (data.length & 0x00ff);
-      msg[7] = data.type | (data.speedsteps << 4);
-      msg[8] = data.name.length;
+      msg[1] = (data.dcc & 0x00ff);
+      msg[2] = (data.dcc & 0xff00) >> 8;
+      msg[3] = (data.length & 0x00ff);
+      msg[4] = (data.length & 0xff00) >> 8;
+      msg[5] = (data.type & 0xf) | (data.speedsteps << 4);
+      msg[6] = data.name.length;
       if(data.img_ext.includes('jpg')){
-        msg[9] |= 0x10;
+        msg[7] |= 0x10;
       }
       if(data.icon_ext.includes('jpg')){
-        msg[9] |= 0x1;
+        msg[7] |= 0x1;
       }
-      msg[10] = data.speed_steps.length;
+      msg[8] = data.speed_steps.length;
 
       for (var i = 0; i < data.name.length; i++) {
         msg.push(data.name.charCodeAt(i));
@@ -326,8 +349,8 @@ var websocket = {
       else if(data[3] == 0){
         alert("Failed with no reason");
       }
-      else if(data[3] == -1){
-        alert("DCC address is allready in use");
+      else if(data[3] == 255){
+        alert("DCC address is allready in use\nEngine not uploaded");
       }
     },
 
@@ -841,7 +864,7 @@ function WebSocket_handler(adress){
           websocket.stc_engines_lib(data.slice(1));
         }
 
-        else if(data[0] == websocket.opc.AddNewEnginetoLibrary){
+        else if(data[0] == websocket.opc.AddNewEnginetolib){
           console.log("AddNewEnginetoLibrary");
           websocket.stc_newengine_tolib(data);
         }
@@ -850,7 +873,7 @@ function WebSocket_handler(adress){
           websocket.stc_cars_lib(data.slice(1));
         }
 
-        else if(data[0] == websocket.opc.AddNewCartoLibrary){
+        else if(data[0] == websocket.opc.AddNewCartolib){
           console.log("AddNewCartoLibrary");
           websocket.stc_newcar_tolib(data);
         }
@@ -859,7 +882,7 @@ function WebSocket_handler(adress){
           websocket.stc_trains_lib(data.slice(1));
         }
 
-        else if(data[0] == websocket.opc.AddNewTraintoLibrary){
+        else if(data[0] == websocket.opc.AddNewTraintolib){
           console.log("AddNewTraintoLibrary");
           websocket.stc_newtrain_tolib(data);
         }

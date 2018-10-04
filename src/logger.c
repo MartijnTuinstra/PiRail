@@ -44,6 +44,10 @@ void set_level(enum logging_levels level){
   logger_set_lvl = level;
 }
 
+enum logging_levels read_level(){
+  return logger_set_lvl;
+}
+
 void floggerf(enum logging_levels level, char * file, int line, char * text, ...){
   if(level > logger_set_lvl)
     return;

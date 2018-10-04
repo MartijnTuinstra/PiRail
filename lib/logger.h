@@ -24,6 +24,7 @@
   void exit_logger();
 
   void set_level(enum logging_levels);
+  enum logging_levels read_level();
 
   void floggerf(enum logging_levels level, char * file, int line, char * text, ...);
 

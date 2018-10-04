@@ -12,8 +12,8 @@
   #include "rail.h"
 
   typedef struct _signal{
-    char id;
-    char module;
+    uint16_t id;
+    uint8_t module;
     Block * B;
     enum Rail_states state;
     char io; // 0 = 2-state / 1 = 4-state / 2 = 8-state

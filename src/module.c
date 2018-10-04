@@ -588,7 +588,7 @@ void LoadModules(int M){
         A[0].io = IOAddress[0];
         A[1].io = IOAddress[1];
 
-        uint16_t * B = _calloc(2, _Bool *);
+        uint8_t * B = _calloc(2, _Bool *);
         B[0] = 1 + (0 << 1); //State 0 - Address 0 hight, address 1 low
         B[1] = 0 + (1 << 1); //State 1 - Address 1 hight, address 0 low
 

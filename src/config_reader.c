@@ -116,9 +116,10 @@ void print_Stations(struct station_conf stations){
 void print_Cars(struct cars_conf car){
   char debug[200];
 
-  sprintf(debug, "%i\t%x\t%i\t%-20s\t%-20s\t%-20s",
+  sprintf(debug, "%i\t%x\t%i\t%i\t%-20s\t%-20s\t%-20s",
                 car.nr,
                 car.type & 0x0f,
+                car.max_speed,
                 car.length,
                 car.name,
                 car.img_path,
@@ -203,7 +204,7 @@ void print_train_config(struct train_config * config){
   printf( "Trains:  %i\n", config->header.Trains);
 
   printf( "Cars\n");
-  printf( "id\tNr\tType\tLength\tName\t\t\tImg_path\t\tIcon_path\n");
+  printf( "id\tNr\tType\tSpeed\tLength\tName\t\t\tImg_path\t\tIcon_path\n");
   for(int i = 0; i < config->header.Cars; i++){
     printf("%i\t", i);
     print_Cars(config->Cars[i]);
@@ -999,6 +1000,11 @@ void modify_Car(struct train_config * config, char cmd){
     if(sscanf(_cmd, "%i", &tmp) > 0){
       config->Cars[id].type = (tmp & 0x0f) | (config->Cars[id].type & 0xf0);
     }
+
+    printf("Maximum speed    (%i)         | ", config->Cars[id].max_speed);
+    fgets(_cmd, 20, stdin);
+    if(sscanf(_cmd, "%i", &tmp) > 0)
+      config->Cars[id].max_speed = tmp;
 
     printf("Name      (%s) | ", config->Cars[id].name);
     fgets(_cmd, 20, stdin);

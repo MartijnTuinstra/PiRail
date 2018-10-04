@@ -5,7 +5,7 @@
 #include "IO.h"
 
 #define MODULE_CONF_VERSION 1
-#define TRAIN_CONF_VERSION 1
+#define TRAIN_CONF_VERSION 2
 
 #define TRAIN_CONF_PATH "configs/stock.bin"
 
@@ -183,8 +183,18 @@ struct engines_conf {
   struct engine_speed_steps * speed_steps;
 };
 
+struct __attribute__((__packed__)) s_r_car_conf {
+  uint16_t nr;
+  uint16_t length;
+  uint8_t type;   //in mm   
+  uint8_t name_len;
+  uint8_t img_path_len;
+  uint8_t icon_path_len;
+};
+
 struct __attribute__((__packed__)) s_car_conf {
   uint16_t nr;
+  uint16_t max_speed;
   uint16_t length;
   uint8_t type;   //in mm   
   uint8_t name_len;
@@ -194,6 +204,7 @@ struct __attribute__((__packed__)) s_car_conf {
 
 struct cars_conf {
   uint16_t nr;
+  uint16_t max_speed;
   uint16_t length;
   uint8_t type;   //in mm   
   uint8_t name_len;

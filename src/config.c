@@ -105,7 +105,7 @@ void write_module_from_conf(struct module_config * config, char * filename){
 
   char * data = calloc(size, 1);
 
-  data[0] = 0x01;
+  data[0] = MODULE_CONF_VERSION;
 
   char * p = &data[1];
   //Copy header
@@ -195,7 +195,7 @@ void write_train_from_conf(struct train_config * config, char * filename){
 
   char * data = calloc(size, 1);
 
-  data[0] = 0x01;
+  data[0] = TRAIN_CONF_VERSION;
 
   char * p = &data[1];
   //Copy header

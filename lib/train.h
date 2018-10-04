@@ -63,12 +63,12 @@
     char control:2;
     char dir:1;
     char halt:2;
-    int max_speed;
+    uint16_t max_speed;
 
     char funcs_len;
     struct train_funcs ** funcs;
 
-    int length;   //in mm
+    uint16_t length;   //in mm
     char * name;
     char * img_path;
     char * icon_path;
@@ -85,10 +85,10 @@
     char nr_stock;
     struct train_comp * composition; //One block memory for all nr_stocks
 
-    int length; //in mm
+    uint16_t length; //in mm
 
-    int max_speed;
-    int cur_speed;
+    uint16_t max_speed;
+    uint16_t cur_speed;
 
     char type:2;
     char in_use:1;
@@ -121,12 +121,12 @@
   void free_trains();
 
   #define create_engine_from_conf(e) create_engine(e.name, e.DCC_ID, e.img_path, e.icon_path, e.type, e.length, e.config_steps, e.speed_steps)
-  #define create_car_from_conf(c) create_car(c.name, c.nr, c.img_path, c.icon_path, c.type, c.length)
+  #define create_car_from_conf(c) create_car(c.name, c.nr, c.img_path, c.icon_path, c.type, c.length, c.max_speed)
   #define create_train_from_conf(t) create_train(t.name, t.nr_stock, t.composition)
 
   void create_train(char * name, int nr_stock, struct train_comp_ws * comps);
   void create_engine(char * name,int DCC,char * img, char * icon, char type, int length, int steps_len, struct engine_speed_steps * steps);
-  void create_car(char * name,int nr,char * img, char * icon, char type, int length);
+  void create_car(char * name,int nr,char * img, char * icon, char type, uint16_t length, uint16_t speed);
 
   int train_read_confs();
   void train_write_confs();

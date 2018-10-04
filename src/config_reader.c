@@ -271,10 +271,9 @@ int read_module_config(struct module_config * config, FILE * fp){
 
   config->header = read_s_unit_conf(buf_ptr);
 
-  if (header[0] != 1) {
+  if (header[0] != MODULE_CONF_VERSION) {
     loggerf(WARNING, "Module %i not correct version", config->header.module);
-    config->header.IO_Nodes = 0;
-    loggerf(WARNING, "Please re-save to update", config->header.module);
+    return -1;
   }
 
   config->Nodes = _calloc(config->header.IO_Nodes, struct s_node_conf);
@@ -307,8 +306,6 @@ int read_module_config(struct module_config * config, FILE * fp){
   for(int i = 0; i < config->header.Stations; i++){
     config->Stations[i]  = read_s_station_conf(buf_ptr);
   }
-
-  printf( "buf_ptr %x\n", (unsigned int)*buf_ptr);
 
   _free(header);
   _free(buffer_start);
@@ -369,8 +366,6 @@ int read_train_config(struct train_config * config, FILE * fp){
   for(int i = 0; i < config->header.Trains; i++){
     config->Trains[i]  = read_trains_conf(buf_ptr);
   }
-
-  printf( "buf_ptr %x\n", (unsigned int)*buf_ptr);
 
   _free(header);
   _free(buffer_start);

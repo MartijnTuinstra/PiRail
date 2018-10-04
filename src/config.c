@@ -99,13 +99,15 @@ int calc_write_train_size(struct train_config * config){
 }
 
 void print_hex(char * data, int size){
-  printf("print_hex:\n");
-  for(int i = 0; i < size; i++){
-    printf("%02x ", data[i]);
-    if((i % 16) == 15)
-      printf("\n");
+  if(read_level() >= TRACE){
+    printf("print_hex:\n");
+    for(int i = 0; i < size; i++){
+      printf("%02x ", data[i]);
+      if((i % 16) == 15)
+        printf("\n");
+    }
+    printf("\n");
   }
-  printf("\n");
 }
 
 void write_module_from_conf(struct module_config * config, char * filename){
@@ -344,7 +346,7 @@ struct switch_conf read_s_switch_conf(uint8_t ** p){
 
   for(int i = 0; i < (s.IO & 0x0f); i++){
     memcpy(&s.IO_Ports[i], *p, 2);
-    *p += 2;
+    *p += sizeof(struct s_IO_port_conf);
   }
 
   check_Spacing(p);
@@ -378,7 +380,7 @@ struct ms_switch_conf read_s_ms_switch_conf(uint8_t ** p){
 
   for(int i = 0; i < s.IO; i++){
     memcpy(&s.IO_Ports[i], *p, 2);
-    *p += 2;
+    *p += sizeof(struct s_IO_port_conf);
   }
 
   check_Spacing(p);

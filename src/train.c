@@ -211,7 +211,7 @@ void create_engine(char * name,int DCC,char * img, char * icon, char type, int l
 
   engines[index] = Z;
 
-  loggerf(INFO, "Engine \"%s\" %x->%x created at %i\t%s, %s", name, type, Z->type, index, img, icon);
+  loggerf(DEBUG, "Engine \"%s\" created", name);
 }
 
 void create_car(char * name,int nr,char * img, char * icon, char type, uint16_t length, uint16_t speed){
@@ -235,7 +235,7 @@ void create_car(char * name,int nr,char * img, char * icon, char type, uint16_t 
 
   cars[index] = Z;
 
-  loggerf(INFO, "Car \"%s\" created at %i",name,index);
+  loggerf(INFO, "Car \"%s\" created",name);
 }
 
 int train_read_confs(){

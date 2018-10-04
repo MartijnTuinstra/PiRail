@@ -164,7 +164,7 @@ void * websocket_client_connect(void * p){
       int status = websocket_get_msg(client->fd, buf, &length);
 
       if(status == 1){
-        websocket_decode(buf, client);
+        websocket_decode((uint8_t *)buf, client);
       }
       else if(status == -8){
         loggerf(INFO, "Client %i disconnected", client->id);

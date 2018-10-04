@@ -149,6 +149,8 @@ struct module_config {
 };
 
 struct __attribute__((__packed__)) s_train_header_conf {
+  uint8_t P_Catagories;
+  uint8_t C_Catagories;
   uint16_t Engines;
   uint16_t Cars;
   uint16_t Trains;
@@ -223,17 +225,31 @@ struct __attribute__((__packed__)) train_comp_ws {
 struct __attribute__((__packed__)) s_train_conf {
   uint8_t name_len;
   uint8_t nr_stock;
+  uint8_t catagory;
 };
 
 struct trains_conf {
   uint8_t name_len;
   uint8_t nr_stock;
+  uint8_t catagory;
   char * name;
   struct train_comp_ws * composition;
 };
 
+struct __attribute__((__packed__)) s_cat_conf {
+  uint8_t name_len;
+};
+
+struct cat_conf {
+  uint8_t name_len;
+  char * name;
+};
+
 struct train_config {
   struct s_train_header_conf header;
+
+  struct cat_conf * P_Cat;
+  struct cat_conf * C_Cat;
 
   struct engines_conf * Engines;
   struct cars_conf * Cars;
@@ -271,5 +287,6 @@ struct s_train_header_conf read_s_train_header_conf(uint8_t ** p);
 struct cars_conf read_cars_conf(uint8_t ** p);
 struct engines_conf read_engines_conf(uint8_t ** p);
 struct trains_conf read_trains_conf(uint8_t ** p);
+struct cat_conf read_cat_conf(uint8_t ** p);
 
 #endif

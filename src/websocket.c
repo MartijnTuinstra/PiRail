@@ -15,7 +15,7 @@ int websocket_decode(uint8_t data[1024], struct web_client_t * client){
   // Rail stuff flag        0x20
   // General Operation flag 0x10
 
-  struct s_WS_Data * d = data;
+  struct s_WS_Data * d = (struct s_WS_Data *)data;
 
   if(data[0] & 0x80){ //Admin settings
     printf("Admin settings: %02X\n",data[0]);
@@ -71,10 +71,7 @@ int websocket_decode(uint8_t data[1024], struct web_client_t * client){
     }
   }
   else if(data[0] & 0x40){ //Train stuff
-    if(data[0] == WSopc_AddNewTraintolib){ //New train
-
-    }
-    else if(data[0] == WSopc_LinkTrain){ //Link train
+    if(data[0] == WSopc_LinkTrain){ //Link train
       uint8_t fID = data[1]; //follow ID
       uint8_t tID = data[2]; //TrainID
       uint16_t mID = ((data[3] & 0x1F) << 8)+data[4];
@@ -112,13 +109,17 @@ int websocket_decode(uint8_t data[1024], struct web_client_t * client){
     }
 
     else if(data[0] == WSopc_AddNewCartolib){
-      WS_cts_AddCartoLib(&d->data.opc_AddNewCartolib, client);
+      WS_cts_AddCartoLib((void *)&d->data, client);
     }
     else if(data[0] == WSopc_AddNewEnginetolib){
-      WS_cts_AddEnginetoLib(&d->data.opc_AddNewEnginetolib, client);
+      WS_cts_AddEnginetoLib((void *)&d->data, client);
     }
     else if(data[0] == WSopc_AddNewTraintolib){
-      logger("WSopc_AddNewTraintolib TODO",WARNING);
+      loggerf(WARNING, "Opcode %x found", data[0]);
+      WS_cts_AddTraintoLib((void *)&d->data, client);
+    }
+    else{
+      loggerf(WARNING, "Opcode %x not found", data[0]);
     }
   }
   else if(data[0] & 0x20){ //Track stuff

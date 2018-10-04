@@ -154,6 +154,26 @@ var websocket = {
       this.send(msg);
     },
 
+    cts_add_train: function(data){
+      msg = [];
+      msg[0] = this.opc.AddNewTraintolib;
+      msg[1] = data.name.length;
+      msg[2] = data.list.length & 0x7f;
+      msg[3] = data.type;
+
+      for (var i = 0; i < data.name.length; i++) {
+        msg.push(data.name.charCodeAt(i));
+      }
+
+      for (var i = 0; i < data.list.length; i++){
+        msg.push(data.list[i].t);
+        msg.push((data.list[i].i & 0x00ff));
+        msg.push((data.list[i].i & 0xff00) >> 8);
+      }
+
+      this.send(msg);
+    },
+
     cts_train_speed: function(tid, direction, speed_step){
       var data = ((direction)?0x80:0) | (speed_step & 0x7F);
       this.send([this.opc.TrainSpeed, tid, data]);
@@ -401,15 +421,11 @@ var websocket = {
       Train.trains = [];
       for(var i = 0;i<data.length;i++){
         var max_spd = (data[i] + (data[i+1] << 8));
-        i += 2;
-        var length = (data[i] + (data[i+1] << 8));
-        i += 2;
-        var type = data[i] & 0b111;
-        var use;
-        if((data[i++] & 0b1000) == 0)
-          use = false
-        else
-          use = true
+        var length = (data[i+2] + (data[i+3] << 8));
+        i += 4;
+        var type = data[i++];
+
+        var use = data[i++] & 0b1;
 
         var name = IntArrayToString(data.slice(i+2, i+2+data[i]));
         var data_len = data[i++];

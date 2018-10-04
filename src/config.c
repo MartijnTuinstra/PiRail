@@ -47,6 +47,17 @@ int calc_write_train_size(struct train_config * config){
   int size = 1; //header
   size += sizeof(struct s_train_header_conf) + 1;
   int subsize = 0;
+
+  //Catagories
+  for(int i = 0; i < config->header.P_Catagories; i++){
+    size += sizeof(struct s_cat_conf) + 1;
+    size += config->P_Cat[i].name_len + 1;
+  }
+  for(int i = 0; i < config->header.C_Catagories; i++){
+    size += sizeof(struct s_cat_conf) + 1;
+    size += config->C_Cat[i].name_len + 1;
+  }
+
   //Engines
   for(int i = 0; i < config->header.Engines; i++){
     subsize = sizeof(struct s_engine_conf) + 1;
@@ -201,9 +212,23 @@ void write_train_from_conf(struct train_config * config, char * filename){
   //Copy header
   memcpy(p, &config->header, sizeof(struct s_train_header_conf));
 
-  printf("ptr: %x\n", p);
-
   p += sizeof(struct s_train_header_conf) + 1;
+
+  //Copy Catagories
+  for(int i = 0; i < config->header.P_Catagories; i++){
+    memcpy(p, &config->P_Cat[i], sizeof(struct s_cat_conf));
+    p += sizeof(struct s_cat_conf) + 1;
+
+    memcpy(p, config->P_Cat[i].name, config->P_Cat[i].name_len);
+    p += config->P_Cat[i].name_len + 1;
+  }
+  for(int i = 0; i < config->header.C_Catagories; i++){
+    memcpy(p, &config->C_Cat[i], sizeof(struct s_cat_conf));
+    p += sizeof(struct s_cat_conf) + 1;
+
+    memcpy(p, config->C_Cat[i].name, config->C_Cat[i].name_len);
+    p += config->C_Cat[i].name_len + 1;
+  }
 
   //Copy Engine
   for(int i = 0; i < config->header.Engines; i++){
@@ -223,8 +248,6 @@ void write_train_from_conf(struct train_config * config, char * filename){
     p += config->Engines[i].config_steps * sizeof(struct engine_speed_steps) + 1;
   }
 
-  printf("ptr: %x\n", p);
-
   //Copy Cars
   for(int i = 0; i < config->header.Cars; i++){
     memcpy(p, &config->Cars[i], sizeof(struct s_car_conf));
@@ -240,8 +263,6 @@ void write_train_from_conf(struct train_config * config, char * filename){
     p += config->Cars[i].icon_path_len + 1;
   }
 
-  printf("ptr: %x\n", p);
-
   //Copy trains
   for(int i =0; i < config->header.Trains; i++){
     memcpy(p, &config->Trains[i], sizeof(struct s_train_conf));
@@ -253,8 +274,6 @@ void write_train_from_conf(struct train_config * config, char * filename){
     memcpy(p, config->Trains[i].composition, sizeof(struct train_comp_ws) * config->Trains[i].nr_stock);
     p += sizeof(struct train_comp_ws) * config->Trains[i].nr_stock + 1;
   }
-
-  printf("ptr: %x\n", p);
 
   //Print output
   print_hex(data, size);
@@ -498,4 +517,23 @@ struct trains_conf read_trains_conf(uint8_t ** p){
   check_Spacing(p);
 
   return t;
+}
+
+struct cat_conf read_cat_conf(uint8_t ** p){
+  struct cat_conf c;
+
+  memcpy(&c, *p, sizeof(struct s_cat_conf));
+
+  *p += sizeof(struct s_cat_conf);
+
+  if(!check_Spacing(p))
+    return c;
+
+  c.name = _calloc(c.name_len+1, char);
+  memcpy(c.name, *p, sizeof(char) * c.name_len);
+  *p += c.name_len;
+
+  check_Spacing(p);
+
+  return c;
 }

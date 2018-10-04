@@ -157,6 +157,25 @@ void print_Trains(struct trains_conf train){
   printf( "%s\n", debug);
 }
 
+void print_Catagories(struct train_config * config){
+  uint8_t max_cats = config->header.P_Catagories;
+  if (config->header.C_Catagories > max_cats)
+    max_cats = config->header.C_Catagories;
+
+  printf("\tPerson\t\t\t\tCargo\n");
+  for(int i = 0; i < max_cats; i++){
+    if(i < config->header.P_Catagories)
+      printf("%3i\t%-20s\t", i, config->P_Cat[i].name);
+    else
+      printf("   \t                                        ");
+
+    if(i < config->header.C_Catagories)
+      printf("%3i\t%-20s\n", i + 0x80, config->C_Cat[i].name);
+    else
+      printf("\n");
+  }
+}
+
 void print_module_config(struct module_config * config){
   printf( "Modules:     %i\n", config->header.module);
   printf( "Connections: %i\n", config->header.connections);
@@ -202,6 +221,10 @@ void print_train_config(struct train_config * config){
   printf( "Cars:    %i\n", config->header.Cars);
   printf( "Engines: %i\n", config->header.Engines);
   printf( "Trains:  %i\n", config->header.Trains);
+
+  printf("\nCatagories\n");
+  print_Catagories(config);
+  printf("\n\n");
 
   printf( "Cars\n");
   printf( "id\tNr\tType\tSpeed\tLength\tName\t\t\tImg_path\t\tIcon_path\n");
@@ -321,9 +344,19 @@ int read_train_config(struct train_config * config, FILE * fp){
     // loggerf(WARNING, "Please re-save to update", config->header.module);
   }
 
+  config->P_Cat = _calloc(config->header.P_Catagories, struct cat_conf);
+  config->C_Cat = _calloc(config->header.C_Catagories, struct cat_conf);
   config->Engines = _calloc(config->header.Engines, struct engines_conf);
   config->Cars = _calloc(config->header.Cars, struct cars_conf);
   config->Trains = _calloc(config->header.Trains, struct trains_conf);
+  
+  for(int i = 0; i < config->header.P_Catagories; i++){
+    config->P_Cat[i]  = read_cat_conf(buf_ptr);
+  }
+  
+  for(int i = 0; i < config->header.C_Catagories; i++){
+    config->C_Cat[i]  = read_cat_conf(buf_ptr);
+  }
   
   for(int i = 0; i < config->header.Engines; i++){
     config->Engines[i]  = read_engines_conf(buf_ptr);
@@ -928,19 +961,19 @@ void modify_Station(struct module_config * config, char cmd){
 
 void modify_Car(struct train_config * config, char cmd){
   int id;
-  char _cmd[20];
+  char _cmd[80];
   int tmp;//, tmp1, tmp2;
   if(cmd == 'e'){
     printf("Car ID: ");
-    fgets(_cmd, 20, stdin);
-    fgets(_cmd, 20, stdin);
+    fgets(_cmd, 80, stdin);
+    fgets(_cmd, 80, stdin);
     if(sscanf(_cmd, "%i", &id) < 1)
       return;
     printf("Editing Car %i\n", id);
   }
   else if(cmd == 'a'){
     printf("Car ID: (%i)\n", config->header.Cars);
-    fgets(_cmd, 20, stdin); // Clear stdin
+    fgets(_cmd, 80, stdin); // Clear stdin
 
     if(config->header.Cars == 0){
       printf("Calloc");
@@ -963,8 +996,8 @@ void modify_Car(struct train_config * config, char cmd){
   }
   else if(cmd == 'r'){
     printf("Remove Station ID: ");
-    fgets(_cmd, 20, stdin);
-    fgets(_cmd, 20, stdin);
+    fgets(_cmd, 80, stdin);
+    fgets(_cmd, 80, stdin);
     if(sscanf(_cmd, "%i", &id) < 1)
       return;
 
@@ -984,30 +1017,30 @@ void modify_Car(struct train_config * config, char cmd){
 
   if(cmd == 'e' || cmd == 'a'){
     printf("Reference Number (%i)         | ", config->Cars[id].nr);
-    fgets(_cmd, 20, stdin);
+    fgets(_cmd, 80, stdin);
     if(sscanf(_cmd, "%i", &tmp) > 0)
       config->Cars[id].nr = tmp;
 
     printf("Speedsteps  (%x)   | ", config->Cars[id].type >> 4);
-    fgets(_cmd, 20, stdin);
+    fgets(_cmd, 80, stdin);
     if(sscanf(_cmd, "%i", &tmp) > 0){
       printf("(%i << 4) & (%i & 0x0f)\n", tmp & 0x0f, config->Cars[id].type);
       config->Cars[id].type = ((tmp & 0x0f) << 4) | (config->Cars[id].type & 0x0f);
     }
 
     printf("Type  (%x)   | ", config->Cars[id].type & 0x0f);
-    fgets(_cmd, 20, stdin);
+    fgets(_cmd, 80, stdin);
     if(sscanf(_cmd, "%i", &tmp) > 0){
       config->Cars[id].type = (tmp & 0x0f) | (config->Cars[id].type & 0xf0);
     }
 
     printf("Maximum speed    (%i)         | ", config->Cars[id].max_speed);
-    fgets(_cmd, 20, stdin);
+    fgets(_cmd, 80, stdin);
     if(sscanf(_cmd, "%i", &tmp) > 0)
       config->Cars[id].max_speed = tmp;
 
     printf("Name      (%s) | ", config->Cars[id].name);
-    fgets(_cmd, 20, stdin);
+    fgets(_cmd, 80, stdin);
     if(sscanf(_cmd, "%s", _cmd) > 0){
       tmp = strlen(_cmd);
       config->Cars[id].name = _realloc(config->Cars[id].name, tmp, char);
@@ -1016,7 +1049,7 @@ void modify_Car(struct train_config * config, char cmd){
     }
 
     printf("Image path (%s) | ", config->Cars[id].img_path);
-    fgets(_cmd, 20, stdin);
+    fgets(_cmd, 80, stdin);
     if(sscanf(_cmd, "%s", _cmd) > 0){
       tmp = strlen(_cmd);
       config->Cars[id].img_path = _realloc(config->Cars[id].img_path, tmp, char);
@@ -1025,7 +1058,7 @@ void modify_Car(struct train_config * config, char cmd){
     }
 
     printf("Icon path (%s) | ", config->Cars[id].icon_path);
-    fgets(_cmd, 20, stdin);
+    fgets(_cmd, 80, stdin);
     if(sscanf(_cmd, "%s", _cmd) > 0){
       tmp = strlen(_cmd);
       config->Cars[id].icon_path = _realloc(config->Cars[id].icon_path, tmp, char);
@@ -1034,7 +1067,7 @@ void modify_Car(struct train_config * config, char cmd){
     }
 
     printf("Length  (%2i)   | ", config->Cars[id].length);
-    fgets(_cmd, 20, stdin);
+    fgets(_cmd, 80, stdin);
     if(sscanf(_cmd, "%i", &tmp) > 0){
       config->Cars[id].length = tmp;
     }
@@ -1060,19 +1093,19 @@ void modify_Car(struct train_config * config, char cmd){
 
 void modify_Engine(struct train_config * config, char cmd){
   int id;
-  char _cmd[20];
+  char _cmd[80];
   int tmp, tmp1;//, tmp2;
   if(cmd == 'e'){
     printf("Engine ID: ");
-    fgets(_cmd, 20, stdin);
-    fgets(_cmd, 20, stdin);
+    fgets(_cmd, 80, stdin);
+    fgets(_cmd, 80, stdin);
     if(sscanf(_cmd, "%i", &id) < 1)
       return;
     printf("Editing Engine %i\n", id);
   }
   else if(cmd == 'a'){
     printf("Engine ID: (%i)\n", config->header.Engines);
-    fgets(_cmd, 20, stdin); // Clear stdin
+    fgets(_cmd, 80, stdin); // Clear stdin
 
     if(config->header.Engines == 0){
       printf("Calloc");
@@ -1097,8 +1130,8 @@ void modify_Engine(struct train_config * config, char cmd){
   }
   else if(cmd == 'r'){
     printf("Remove Car ID: ");
-    fgets(_cmd, 20, stdin);
-    fgets(_cmd, 20, stdin);
+    fgets(_cmd, 80, stdin);
+    fgets(_cmd, 80, stdin);
     if(sscanf(_cmd, "%i", &id) < 1)
       return;
 
@@ -1119,31 +1152,31 @@ void modify_Engine(struct train_config * config, char cmd){
 
   if(cmd == 'e' || cmd == 'a'){
     printf("DCC Address (%i)         | ", config->Engines[id].DCC_ID);
-    fgets(_cmd, 20, stdin);
+    fgets(_cmd, 80, stdin);
     if(sscanf(_cmd, "%i", &tmp) > 0)
       config->Engines[id].DCC_ID = tmp;
 
     printf("Speedsteps  (%x)   | ", config->Engines[id].type >> 4);
-    fgets(_cmd, 20, stdin);
+    fgets(_cmd, 80, stdin);
     if(sscanf(_cmd, "%i", &tmp) > 0){
       printf("(%i << 4) & (%i & 0x0f)\n", tmp & 0x0f, config->Engines[id].type);
       config->Engines[id].type = ((tmp & 0x0f) << 4) | (config->Engines[id].type & 0x0f);
     }
 
     printf("Type  (%x)   | ", config->Engines[id].type & 0x0f);
-    fgets(_cmd, 20, stdin);
+    fgets(_cmd, 80, stdin);
     if(sscanf(_cmd, "%i", &tmp) > 0){
       config->Engines[id].type = (tmp & 0x0f) | (config->Engines[id].type & 0xf0);
     }
 
     printf("Length  (%2i)   | ", config->Engines[id].length);
-    fgets(_cmd, 20, stdin);
+    fgets(_cmd, 80, stdin);
     if(sscanf(_cmd, "%i", &tmp) > 0){
       config->Engines[id].length = tmp;
     }
 
     printf("Calibrated Steps  (%2i)   | ", config->Engines[id].config_steps);
-    fgets(_cmd, 20, stdin);
+    fgets(_cmd, 80, stdin);
     if(sscanf(_cmd, "%i", &tmp) > 0){
       config->Engines[id].config_steps = tmp;
       _realloc(config->Engines[id].speed_steps, tmp, sizeof(struct engine_speed_steps));
@@ -1151,7 +1184,7 @@ void modify_Engine(struct train_config * config, char cmd){
 
     for(int i = 0; i < config->Engines[id].config_steps; i++){
       printf(" - Step %i   (%03i, %03i) | ", i, config->Engines[id].speed_steps[i].step, config->Engines[id].speed_steps[i].speed);
-      fgets(_cmd, 20, stdin);
+      fgets(_cmd, 80, stdin);
       if(sscanf(_cmd, "%i %i", &tmp, &tmp1) > 1){
         config->Engines[id].speed_steps[i].step = tmp;
         config->Engines[id].speed_steps[i].speed = tmp1;
@@ -1159,7 +1192,7 @@ void modify_Engine(struct train_config * config, char cmd){
     }
 
     printf("Name      (%s) | ", config->Engines[id].name);
-    fgets(_cmd, 20, stdin);
+    fgets(_cmd, 80, stdin);
     if(sscanf(_cmd, "%s", _cmd) > 0){
       tmp = strlen(_cmd);
       config->Engines[id].name = _realloc(config->Engines[id].name, tmp, char);
@@ -1168,7 +1201,7 @@ void modify_Engine(struct train_config * config, char cmd){
     }
 
     printf("Image path (%s) | ", config->Engines[id].img_path);
-    fgets(_cmd, 20, stdin);
+    fgets(_cmd, 80, stdin);
     if(sscanf(_cmd, "%s", _cmd) > 0){
       tmp = strlen(_cmd);
       config->Engines[id].img_path = _realloc(config->Engines[id].img_path, tmp, char);
@@ -1177,7 +1210,7 @@ void modify_Engine(struct train_config * config, char cmd){
     }
 
     printf("Icon path (%s) | ", config->Engines[id].icon_path);
-    fgets(_cmd, 20, stdin);
+    fgets(_cmd, 80, stdin);
     if(sscanf(_cmd, "%s", _cmd) > 0){
       tmp = strlen(_cmd);
       config->Engines[id].icon_path = _realloc(config->Engines[id].icon_path, tmp, char);
@@ -1273,6 +1306,11 @@ void modify_Train(struct train_config * config, char cmd){
       config->Trains[id].name_len = tmp;
     }
 
+    printf("Catagory  (%i) | ", config->Trains[id].catagory);
+    fgets(_cmd, 20, stdin);
+    if(sscanf(_cmd, "%i", &tmp) > 0)
+      config->Trains[id].catagory = tmp;
+
     for(int i = 0; i < config->Trains[id].nr_stock; i++){
       printf(" - Step %i   (%02i, %04i) | ", i, config->Trains[id].composition[i].type, config->Trains[id].composition[i].id);
       fgets(_cmd, 20, stdin);
@@ -1298,6 +1336,87 @@ void modify_Train(struct train_config * config, char cmd){
   //   //   &tmp.IO_In.Node, &tmp.IO_In.Adr,
   //   //   &tmp.IO_Out.Node, &tmp.IO_Out.Adr);
 
+  }
+}
+
+void modify_Catagory(struct train_config * config, char type, char cmd){
+  int id;
+  char _cmd[20];
+  int tmp;//, tmp2;
+
+  uint8_t * _header;
+  struct cat_conf ** _cat;
+  if(type == 'P'){
+    _header = &config->header.P_Catagories;
+    _cat = &config->P_Cat;
+  }
+  else{
+    _header = &config->header.C_Catagories;
+    _cat = &config->C_Cat;
+  }
+
+
+
+  if(cmd == 'e'){
+    printf("Catagory ID: ");
+    fgets(_cmd, 20, stdin);
+    fgets(_cmd, 20, stdin);
+    if(sscanf(_cmd, "%i", &id) < 1)
+      return;
+    printf("Editing Catagory %i\n", id);
+
+    if (type == 'C' && id > 0x80)
+      id -= 0x80;
+  }
+  else if(cmd == 'a'){
+    printf("Catagory ID: (%i)\n", *_header);
+
+    fgets(_cmd, 20, stdin); // Clear stdin
+
+    if(*_header == 0){
+      printf("Calloc");
+      *_cat = _calloc(1, struct cat_conf);
+    }
+    else{
+      printf("Realloc");
+      *_cat = _realloc(*_cat, (*_header)+1, struct cat_conf);
+    }
+    memset(&(*_cat)[*_header], 0, sizeof(struct cat_conf));
+    id = *_header;
+    *_header += 1;
+
+    //Set child pointers
+    (*_cat)[id].name_len = 1;
+    (*_cat)[id].name = _calloc(1, char);
+  }
+  else if(cmd == 'r'){
+    printf("Remove Train ID: ");
+    fgets(_cmd, 20, stdin);
+    fgets(_cmd, 20, stdin);
+    if(sscanf(_cmd, "%i", &id) < 1)
+      return;
+
+    if(id == (*_header - 1) && id >= 0){
+      _free((*_cat)[*_header - 1].name);
+
+      memset(&(*_cat)[*_header - 1], 0, sizeof(struct cat_conf));
+      *_cat = _realloc(*_cat, --(*_header), struct cat_conf);
+    }
+    else{
+      printf("Only last engine can be removed\n");
+    }
+  }
+
+
+  if(cmd == 'e' || cmd == 'a'){
+    printf("Name      (%s) | ", (*_cat)[id].name);
+    fgets(_cmd, 20, stdin);
+    if(sscanf(_cmd, "%s", _cmd) > 0){
+      tmp = strlen(_cmd);
+      (*_cat)[id].name = _realloc((*_cat)[id].name, tmp, char);
+      memcpy((*_cat)[id].name, _cmd, tmp);
+      (*_cat)[id].name_len = tmp;
+    }
   }
 }
 
@@ -1456,7 +1575,7 @@ int edit_rolling_stock(){
       else if(cmd1 == 'r')
         printf("Remove");
 
-      printf(" (C(ar)/E(ngine)/T(rain))? ");
+      printf(" (C(ar)/E(ngine)/T(rain)/(P/C)_Cat)? ");
       scanf("%s", cmd);
       if(strcmp(cmd, "C") == 0){
         modify_Car(&config, cmd1);
@@ -1466,6 +1585,12 @@ int edit_rolling_stock(){
       }
       else if(strcmp(cmd, "T") == 0){
         modify_Train(&config, cmd1);
+      }
+      else if(strcmp(cmd, "P_Cat") == 0){
+        modify_Catagory(&config, 'P', cmd1);
+      }
+      else if(strcmp(cmd, "C_Cat") == 0){
+        modify_Catagory(&config, 'C', cmd1);
       }
     }
     else if(strcmp(cmd, "s") == 0){

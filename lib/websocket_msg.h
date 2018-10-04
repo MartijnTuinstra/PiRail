@@ -55,6 +55,11 @@
 
   void WS_TrainData(char data[14]);
 
+  struct s_opc_AddNewCartolib;
+  struct s_opc_AddNewEnginetolib;
+  struct s_opc_AddNewTraintolib;
+
   void WS_cts_AddCartoLib(struct s_opc_AddNewCartolib * data, struct web_client_t * client);
   void WS_cts_AddEnginetoLib(struct s_opc_AddNewEnginetolib * data, struct web_client_t * client);
+  void WS_cts_AddTraintoLib(struct s_opc_AddNewTraintolib * data, struct web_client_t * client);
 #endif

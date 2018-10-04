@@ -36,13 +36,28 @@
     uint8_t response;
   };
 
+  struct __attribute__((__packed__)) s_opc_AddNewTraintolib {
+    uint8_t name_len;
+    uint8_t nr_stock:7;
+    uint8_t save:1;
+    uint8_t catagory;
+    char strings;
+  };
+
+  #define WSopc_AddNewTraintolib_res_len 2
+  struct __attribute__((__packed__)) s_opc_AddNewTraintolib_res {
+    uint8_t response;
+  };
+
   struct s_WS_Data {
     uint8_t opcode;
     union {
-      struct s_opc_AddNewCartolib opc_AddNewCartolib;
-      struct s_opc_AddNewCartolib_res opc_AddNewCartolib_res;
-      struct s_opc_AddNewEnginetolib opc_AddNewEnginetolib;
+      struct s_opc_AddNewCartolib        opc_AddNewCartolib;
+      struct s_opc_AddNewCartolib_res    opc_AddNewCartolib_res;
+      struct s_opc_AddNewEnginetolib     opc_AddNewEnginetolib;
       struct s_opc_AddNewEnginetolib_res opc_AddNewEnginetolib_res;
+      struct s_opc_AddNewTraintolib      opc_AddNewTraintolib;
+      struct s_opc_AddNewTraintolib_res  opc_AddNewTraintolib_res;
     } data;
   };
 

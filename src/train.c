@@ -38,6 +38,10 @@ struct train_composition ** trains_comp;
 int trains_comp_len = 0;
 Trains ** train_link;
 int train_link_len;
+struct cat_conf * train_P_cat;
+int train_P_cat_len = 0;
+struct cat_conf * train_C_cat;
+int train_C_cat_len = 0;
 
 Engines * DCC_train[9999];
 
@@ -113,7 +117,7 @@ void free_trains(){
   trains_comp_len = 0;
 }
 
-void create_train(char * name, int nr_stock, struct train_comp_ws * comps){
+void create_train(char * name, int nr_stock, struct train_comp_ws * comps, uint8_t catagory, uint8_t save){
   Trains * Z = _calloc(1, Trains);
 
   Z->nr_stock = nr_stock;
@@ -121,6 +125,8 @@ void create_train(char * name, int nr_stock, struct train_comp_ws * comps){
 
   Z->max_speed = 0xFFFF;
   Z->length = 0;
+  Z->type = catagory;
+  Z->save = save;
 
   for(int i = 0;i<nr_stock;i++){
     Z->composition[i].type = comps[i].type;
@@ -259,6 +265,20 @@ int train_read_confs(){
     loggerf(ERROR, "Not correct version");
     return -1;
   }
+
+
+  train_P_cat = _calloc(h.P_Catagories, struct cat_conf);
+  train_P_cat_len = h.P_Catagories;
+  train_C_cat = _calloc(h.C_Catagories, struct cat_conf);
+  train_C_cat_len = h.C_Catagories;
+
+  for(int i = 0; i < h.P_Catagories; i++){
+    train_P_cat[i] = read_cat_conf(buf_ptr);
+  }
+  
+  for(int i = 0; i < h.C_Catagories; i++){
+    train_C_cat[i] = read_cat_conf(buf_ptr);
+  }
   
   for(int i = 0; i < h.Engines; i++){
     struct engines_conf e = read_engines_conf(buf_ptr);
@@ -295,6 +315,16 @@ void train_write_confs(){
   int tr = 0;
   int en = 0;
   int ca = 0;
+  //Catagories
+  for(int i = 0; i < train_P_cat_len; i++){
+    size += sizeof(struct s_cat_conf) + 1;
+    size += train_P_cat[i].name_len + 1;
+  }
+  for(int i = 0; i < train_C_cat_len; i++){
+    size += sizeof(struct s_cat_conf) + 1;
+    size += train_C_cat[i].name_len + 1;
+  }
+
   //Engines
   for(int i = 0; i < engines_len; i++){
     if(!engines[i])
@@ -325,7 +355,7 @@ void train_write_confs(){
 
   //Trains
   for(int i = 0; i < trains_len; i++){
-    if(!trains[i])
+    if(!trains[i] || !trains[i]->save)
       continue;
 
     subsize = sizeof(struct s_train_conf) + 1;
@@ -353,10 +383,28 @@ void train_write_confs(){
   header.Trains = tr;
   header.Engines = en;
   header.Cars = ca;
+  header.P_Catagories = train_P_cat_len;
+  header.C_Catagories = train_C_cat_len;
 
   memcpy(p, &header, sizeof(struct s_train_header_conf));
 
   p += sizeof(struct s_train_header_conf) + 1;
+
+  //Copy Catagories
+  for(int i = 0; i < train_P_cat_len; i++){
+    memcpy(p, &train_P_cat[i], sizeof(struct s_cat_conf));
+    p += sizeof(struct s_cat_conf) + 1;
+
+    memcpy(p, train_P_cat[i].name, train_P_cat[i].name_len);
+    p += train_P_cat[i].name_len + 1;
+  }
+  for(int i = 0; i < train_C_cat_len; i++){
+    memcpy(p, &train_C_cat[i], sizeof(struct s_cat_conf));
+    p += sizeof(struct s_cat_conf) + 1;
+
+    memcpy(p, train_C_cat[i].name, train_C_cat[i].name_len);
+    p += train_C_cat[i].name_len + 1;
+  }
 
   //Copy Engine
   for(int i = 0; i < engines_len; i++){
@@ -416,7 +464,7 @@ void train_write_confs(){
 
   //Copy trains
   for(int i =0; i < trains_len; i++){
-    if(!trains[i])
+    if(!trains[i] || !trains[i]->save)
       continue;
 
     struct s_train_conf t;

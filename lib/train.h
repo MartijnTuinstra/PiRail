@@ -79,10 +79,10 @@
   typedef struct trains {
     char * name;
 
-    char nr_engines;
+    uint8_t nr_engines;
     Engines ** engines;
 
-    char nr_stock;
+    uint8_t nr_stock;
     struct train_comp * composition; //One block memory for all nr_stocks
 
     uint16_t length; //in mm
@@ -90,11 +90,13 @@
     uint16_t max_speed;
     uint16_t cur_speed;
 
-    char type:2;
-    char in_use:1;
-    char control:2;
-    char dir:1;
-    char halt:2;
+    uint8_t type;
+
+    uint8_t in_use:1;
+    uint8_t control:2;
+    uint8_t dir:1;
+    uint8_t halt:2;
+    uint8_t save:1;
 
     Route route;
 
@@ -122,9 +124,9 @@
 
   #define create_engine_from_conf(e) create_engine(e.name, e.DCC_ID, e.img_path, e.icon_path, e.type, e.length, e.config_steps, e.speed_steps)
   #define create_car_from_conf(c) create_car(c.name, c.nr, c.img_path, c.icon_path, c.type, c.length, c.max_speed)
-  #define create_train_from_conf(t) create_train(t.name, t.nr_stock, t.composition)
+  #define create_train_from_conf(t) create_train(t.name, t.nr_stock, t.composition, t.catagory, 1)
 
-  void create_train(char * name, int nr_stock, struct train_comp_ws * comps);
+  void create_train(char * name, int nr_stock, struct train_comp_ws * comps, uint8_t catagory, uint8_t save);
   void create_engine(char * name,int DCC,char * img, char * icon, char type, int length, int steps_len, struct engine_speed_steps * steps);
   void create_car(char * name,int nr,char * img, char * icon, char type, uint16_t length, uint16_t speed);
 

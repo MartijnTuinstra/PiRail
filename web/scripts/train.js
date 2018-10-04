@@ -102,7 +102,7 @@ var Train = {
   comp:{
     save_cb: undefined,
     index: 0,
-    list: [],
+    comp: {name: undefined, list: []},
     init: function(){
       $('#train_compositor .selector').hide();
 
@@ -172,7 +172,7 @@ var Train = {
              '<div class="cbtn b">b</div>' +
              '<div class="cbtn r">&gt;</div>' +
              '</div></div>';
-        Train.comp.list.push({t:"E",i:Train.comp.index});
+        Train.comp.comp.list.push({t: 0, i: index});
       }
       else{
         console.log("Add car");
@@ -184,7 +184,7 @@ var Train = {
              '<div class="cbtn b">b</div>' +
              '<div class="cbtn r">&gt;</div>' +
              '</div></div>';
-        Train.comp.list.push({t:"C",i:Train.comp.index});
+        Train.comp.comp.list.push({t: 1, i: index});
       }
       Train.comp.index++;
       $('#train_compositor .compositor .scroller > div').append(text);
@@ -219,7 +219,11 @@ var Train = {
     },
     save: function(evt){
       console.warn("Implement Train compositor save");
-      $('#train_compositor').hide();
+      Train.comp.comp.name= "TestTrain";
+      Train.comp.comp.type=2; //Regional train
+      console.log(Train.comp.comp);
+
+      websocket.cts_add_train(Train.comp.comp, 0);
     },
     close: function(evt){
       Train.comp.save_cb = undefined;

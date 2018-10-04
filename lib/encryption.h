@@ -43,7 +43,7 @@
    * @param result the decoded data
    * @return lenth of the result (1, 2 or 3), 0 on failure
    */
-  int _base64_decode_triple(char quadruple[4], unsigned char *result);
+  unsigned int _base64_decode_triple(char quadruple[4], unsigned char *result);
 
   /**
    * decode base64 encoded data

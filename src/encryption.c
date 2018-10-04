@@ -136,7 +136,7 @@ int _base64_char_value(char base64char)
  * @param result the decoded data
  * @return lenth of the result (1, 2 or 3), 0 on failure
  */
-int _base64_decode_triple(char quadruple[4], unsigned char *result)
+unsigned int _base64_decode_triple(char quadruple[4], unsigned char *result)
  {
   int i, triple_value, bytes_to_decode = 3, only_equals_yet = 1;
   int char_value[4];
@@ -200,7 +200,8 @@ size_t base64_decode(char *source, unsigned char *target, size_t targetlen)
  {
   char *src, *tmpptr;
   char quadruple[4], tmpresult[3];
-  int i, tmplen = 3;
+  int i;
+  unsigned int tmplen = 3;
   size_t converted = 0;
 
   /* concatinate '===' to the source to handle unpadded base64 data */
@@ -225,7 +226,7 @@ size_t base64_decode(char *source, unsigned char *target, size_t targetlen)
  }
 
  /* convert the characters */
- tmplen = _base64_decode_triple(quadruple, tmpresult);
+ tmplen = _base64_decode_triple(quadruple, (unsigned char *)tmpresult);
 
  /* check if the fit in the result buffer */
  if (targetlen < tmplen)

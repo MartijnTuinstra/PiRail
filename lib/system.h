@@ -43,6 +43,8 @@
 
   int _find_free_index(void *** list, int * length);
 
+  void move_file(char * src, char * dest);
+
   extern struct systemState * _SYS; 
 
   #ifndef TRUE

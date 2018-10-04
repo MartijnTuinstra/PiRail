@@ -57,3 +57,33 @@ int _find_free_index(void *** list, int * length){
   *length += 1;
   return _find_free_index(list, length);
 }
+
+void move_file(char * src, char * dest){
+  int ch;
+  FILE *source, *target;
+
+  source = fopen(src, "r");
+
+  if (source == NULL){
+    loggerf(ERROR, "Could not open source file (%s)", src);
+    exit(EXIT_FAILURE);
+  }
+
+  target = fopen(dest, "w");
+
+  if (target == NULL){
+    fclose(source);
+    loggerf(ERROR, "Could not create destination file (%s)", dest);
+    exit(EXIT_FAILURE);
+  }
+
+  printf("Start Copying\n");
+
+  while ((ch = fgetc(source)) != EOF)
+    fputc((char)ch, target);
+
+  printf("Stop Copying\n");
+
+  fclose(source);
+  fclose(target);
+}

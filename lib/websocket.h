@@ -20,6 +20,15 @@
     uint8_t response;
   };
 
+  struct __attribute__((__packed__)) s_opc_EditCarlib {
+    uint8_t id_h:7;
+    uint8_t remove:1;
+    uint8_t id_l;
+    struct s_opc_AddNewCartolib data;
+  };
+
+
+
   struct __attribute__((__packed__)) s_opc_AddNewEnginetolib {
     uint16_t DCC_ID;
     uint16_t length;
@@ -36,6 +45,15 @@
     uint8_t response;
   };
 
+  struct __attribute__((__packed__)) s_opc_EditEnginelib {
+    uint8_t id_h:7;
+    uint8_t remove:1;
+    uint8_t id_l;
+    struct s_opc_AddNewEnginetolib data;
+  };
+
+
+
   struct __attribute__((__packed__)) s_opc_AddNewTraintolib {
     uint8_t name_len;
     uint8_t nr_stock:7;
@@ -49,15 +67,32 @@
     uint8_t response;
   };
 
+  struct __attribute__((__packed__)) s_opc_EditTrainlib {
+    uint8_t id_h:7;
+    uint8_t remove:1;
+    uint8_t id_l;
+    struct s_opc_AddNewTraintolib data;
+  };
+
+
+
+
+
+
   struct s_WS_Data {
     uint8_t opcode;
     union {
       struct s_opc_AddNewCartolib        opc_AddNewCartolib;
       struct s_opc_AddNewCartolib_res    opc_AddNewCartolib_res;
+      struct s_opc_EditCarlib            opc_EditCarlib;
+
       struct s_opc_AddNewEnginetolib     opc_AddNewEnginetolib;
       struct s_opc_AddNewEnginetolib_res opc_AddNewEnginetolib_res;
+      struct s_opc_EditEnginelib         opc_EditEnginelib;
+
       struct s_opc_AddNewTraintolib      opc_AddNewTraintolib;
       struct s_opc_AddNewTraintolib_res  opc_AddNewTraintolib_res;
+      struct s_opc_EditTrainlib          opc_EditTrainlib;
     } data;
   };
 
@@ -97,11 +132,14 @@
   #define WSopc_TrainAddRoute      0x46
 
   #define WSopc_AddNewEnginetolib  0x50
-  #define WSopc_EnginesLibrary     0x51
-  #define WSopc_AddNewCartolib     0x52
-  #define WSopc_CarsLibrary        0x53
-  #define WSopc_AddNewTraintolib   0x54
-  #define WSopc_TrainsLibrary      0x55
+  #define WSopc_EditEnginelib      0x51
+  #define WSopc_EnginesLibrary     0x52
+  #define WSopc_AddNewCartolib     0x53
+  #define WSopc_EditCarlib         0x54
+  #define WSopc_CarsLibrary        0x55
+  #define WSopc_AddNewTraintolib   0x56
+  #define WSopc_EditTrainlib       0x57
+  #define WSopc_TrainsLibrary      0x58
 
   #define WSopc_SetSwitch          0x20
   #define WSopc_SetMultiSwitch     0x21

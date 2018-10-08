@@ -54,8 +54,8 @@ void * my_realloc(void * p, int type_size, int elements, char * file, int line){
 void * my_free(void * p, char * file, int line){
   if(!p)
     return 0;
-  free(p);
   floggerf(MEMORY, file, line, "free \tpointer: %08x", p);
+  free(p);
 
   pthread_mutex_lock(&mem_lock);
   for(unsigned int i = 0; i < allocs; i++){

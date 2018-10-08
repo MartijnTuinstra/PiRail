@@ -43,13 +43,10 @@
 
   void init_modules();
 
-  void free_modules();
-
-  void clear_modules();
+  void clear_Modules();
 
   void Unit_expand_IO(_Bool type, Unit * U);
-
-  void LoadModules(int M);
+  
   void LoadModuleFromConfig(int M);
 
   void JoinModules();

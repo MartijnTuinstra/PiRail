@@ -207,42 +207,6 @@ void clear_Modules(){
   _free(stations);
 }
 
-void Modules(int m){
-  loggerf(CRITICAL, "DEPRICATED (%i)", m);
-  return;
-}
-
-// Binary structured files
-// #define MAXBUFLEN 1000000
-// struct test_struct {
-//  char a;
-//  char b;
-//  char c;
-//  char d;
-//  char e;
-//  char f;
-// };
-
-// char source[MAXBUFLEN + 1];
-// memset(source,0,MAXBUFLEN+1);
-
-// FILE *fp = fopen("test_bin.bin", "r");
-// if (fp != NULL) {
-//     size_t newLen = fread(source, sizeof(char), MAXBUFLEN, fp);
-//     if ( ferror( fp ) != 0 ) {
-//         fputs("Error reading file", stderr);
-//     }
-
-//     fclose(fp);
-// }
-
-//  struct test_struct * test = &source[0];
-
-void free_modules(){
-  logger("FREE_MODULES IMPLEMENT",CRITICAL);
-  clear_Modules();
-}
-
 void LoadModuleFromConfig(int M){
   char filename[40] = "configs/units/";
 
@@ -250,16 +214,16 @@ void LoadModuleFromConfig(int M){
 
   FILE * fp = fopen(filename,"rb");
 
-  struct module_config * config = calloc(1, sizeof(struct module_config));
+  struct module_config * config = _calloc(1, struct module_config);
 
-  char * header = calloc(2, sizeof(char));
+  char * header = _calloc(2, char);
 
   fread(header, 1, 1, fp);
   fseek(fp, 0, SEEK_END);
   long fsize = ftell(fp);
   fseek(fp, 0, SEEK_SET);
 
-  char * buffer = calloc(fsize, sizeof(char));
+  char * buffer = _calloc(fsize, char);
   char * buf_start = &buffer[0];
   fread(buffer, fsize, 1, fp);
 
@@ -300,7 +264,7 @@ void LoadModuleFromConfig(int M){
     connect.str.module = s.Str.module; connect.str.id = s.Str.id; connect.str.type = s.Str.type;
     connect.div.module = s.Div.module; connect.div.id = s.Div.id; connect.div.type = s.Div.type;
 
-    Node_adr * Adrs = _calloc(s.IO & 0x0f, sizeof(Node_adr));
+    Node_adr * Adrs = _calloc(s.IO & 0x0f, Node_adr);
 
     for(int i = 0; i < (s.IO & 0x0f); i++){
       Adrs[i].Node = s.IO_Ports[i].Node;
@@ -316,13 +280,9 @@ void LoadModuleFromConfig(int M){
     _free(Adrs);
   }
 
-  config->MSSwitches = calloc(config->header.MSSwitches, sizeof(struct ms_switch_conf));
-
   for(int i = 0; i < config->header.MSSwitches; i++){
     config->MSSwitches[i]  = read_s_ms_switch_conf(buf_ptr);
   }
-
-  config->Stations = calloc(config->header.Stations, sizeof(struct station_conf));
 
   for(int i = 0; i < config->header.Stations; i++){
     struct station_conf st = read_s_station_conf(buf_ptr);
@@ -331,8 +291,9 @@ void LoadModuleFromConfig(int M){
     _free(st.blocks);
   }
 
-  free(header);
-  free(buf_start);
+  _free(header);
+  _free(config);
+  _free(buf_start);
   fclose(fp);
 }
 

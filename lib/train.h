@@ -127,8 +127,11 @@
   #define create_train_from_conf(t) create_train(t.name, t.nr_stock, t.composition, t.catagory, 1)
 
   void create_train(char * name, int nr_stock, struct train_comp_ws * comps, uint8_t catagory, uint8_t save);
+  void clear_train(Trains ** E);
   void create_engine(char * name,int DCC,char * img, char * icon, char type, int length, int steps_len, struct engine_speed_steps * steps);
+  void clear_engine(Engines ** E);
   void create_car(char * name,int nr,char * img, char * icon, char type, uint16_t length, uint16_t speed);
+  void clear_car(Cars ** E);
 
   int train_read_confs();
   void train_write_confs();

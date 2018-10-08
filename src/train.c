@@ -69,32 +69,24 @@ void free_trains(){
   logger("Clearing trains memory",INFO);
 
   for(int i = 0;i<trains_len;i++){
-    if(trains[i]){
-      trains[i]->name = _free(trains[i]->name);
-      trains[i]->engines = _free(trains[i]->engines);
-      trains[i]->composition = _free(trains[i]->composition);
-      trains[i] = _free(trains[i]);
-    }
+    if(!trains[i])
+      continue;
+
+    clear_train(&trains[i]);
   }
 
   for(int i = 0;i<engines_len;i++){
-    if(engines[i]){
-      engines[i]->name = _free(engines[i]->name);
-      engines[i]->img_path = _free(engines[i]->img_path);
-      engines[i]->icon_path = _free(engines[i]->icon_path);
-      engines[i]->funcs = _free(engines[i]->funcs);
-      engines[i] = _free(engines[i]);
-    }
+    if(!engines[i])
+      continue;
+
+    clear_engine(&engines[i]);
   }
 
   for(int i = 0;i<cars_len;i++){
-    if(cars[i]){
-      cars[i]->name = _free(cars[i]->name);
-      cars[i]->img_path = _free(cars[i]->img_path);
-      cars[i]->icon_path = _free(cars[i]->icon_path);
-      cars[i]->funcs = _free(cars[i]->funcs);
-      cars[i] = _free(cars[i]);
-    }
+    if(!cars[i])
+      continue;
+
+    clear_car(&cars[i]);
   }
 
   for(int i = 0;i<trains_comp_len;i++){
@@ -110,6 +102,16 @@ void free_trains(){
   cars = _free(cars);
   trains_comp = _free(trains_comp);
   train_link = _free(train_link);
+
+  for(int i = 0; i < train_P_cat_len; i++){
+    _free(train_P_cat[i].name);
+  }
+  for(int i = 0; i < train_C_cat_len; i++){
+    _free(train_C_cat[i].name);
+  }
+
+  _free(train_P_cat);
+  _free(train_C_cat);
 
   trains_len = 0;
   engines_len = 0;
@@ -164,14 +166,22 @@ void create_train(char * name, int nr_stock, struct train_comp_ws * comps, uint8
     }
   }
 
-  Z->name = _calloc(strlen(name)+2, char);
-  strcpy(Z->name,name);
+  Z->name = name;
+  _free(comps);
 
   int index = find_free_index(trains, trains_len);
 
   trains[index] = Z;
 
   loggerf(INFO, "Train created at %i",index);
+}
+
+void clear_train(Trains ** T){
+  _free((*T)->name);
+  _free((*T)->engines);
+  _free((*T)->composition);
+  _free((*T));
+  *T = 0;
 }
 
 void create_train_from_comp(){
@@ -187,13 +197,9 @@ void create_engine(char * name,int DCC,char * img, char * icon, char type, int l
   }
   Engines * Z = _calloc(1, Engines);
 
-  Z->name = _calloc(strlen(name)+2, char);
-  Z->img_path = _calloc(strlen(img)+2, char);
-  Z->icon_path = _calloc(strlen(icon)+2, char);
-
-  strcpy(Z->name,name);
-  strcpy(Z->img_path,img);
-  strcpy(Z->icon_path,icon);
+  Z->name = name;
+  Z->img_path = img;
+  Z->icon_path = icon;
 
   Z->DCC_ID = DCC;
   DCC_train[DCC] = Z;
@@ -214,20 +220,26 @@ void create_engine(char * name,int DCC,char * img, char * icon, char type, int l
   loggerf(DEBUG, "Engine \"%s\" created", name);
 }
 
+void clear_engine(Engines ** E){
+  _free((*E)->name);
+  _free((*E)->img_path);
+  _free((*E)->icon_path);
+  _free((*E)->steps);
+  _free((*E)->funcs);
+  _free((*E));
+  *E = 0;
+}
+
 void create_car(char * name,int nr,char * img, char * icon, char type, uint16_t length, uint16_t speed){
   Cars * Z = _calloc(1, Cars);
 
-  Z->name = _calloc(strlen(name)+2, char);
-  Z->img_path = _calloc(strlen(img)+2, char);
-  Z->icon_path = _calloc(strlen(icon)+2, char);
+  Z->name = name;
+  Z->img_path = img;
+  Z->icon_path = icon;
 
   Z->nr = nr;
   Z->length = length;
   Z->max_speed = speed;
-
-  strcpy(Z->name,name);
-  strcpy(Z->img_path,img);
-  strcpy(Z->icon_path,icon);
 
   Z->type = type;
 
@@ -236,6 +248,14 @@ void create_car(char * name,int nr,char * img, char * icon, char type, uint16_t 
   cars[index] = Z;
 
   loggerf(INFO, "Car \"%s\" created",name);
+}
+
+void clear_car(Cars ** C){
+  _free((*C)->name);
+  _free((*C)->img_path);
+  _free((*C)->icon_path);
+  _free((*C)->funcs);
+  *C = _free((*C));
 }
 
 int train_read_confs(){
@@ -372,7 +392,7 @@ void train_write_confs(){
 
   loggerf(INFO, "Writing %i bytes", size);
 
-  char * data = calloc(size, 1);
+  char * data = _calloc(size, 1);
 
   data[0] = TRAIN_CONF_VERSION;
 

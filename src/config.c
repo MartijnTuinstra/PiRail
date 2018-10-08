@@ -116,7 +116,7 @@ void write_module_from_conf(struct module_config * config, char * filename){
 
   loggerf(INFO, "Writing %i bytes", size);
 
-  char * data = calloc(size, 1);
+  char * data = _calloc(size, 1);
 
   data[0] = MODULE_CONF_VERSION;
 
@@ -206,7 +206,7 @@ void write_train_from_conf(struct train_config * config, char * filename){
 
   loggerf(INFO, "Writing %i bytes", size);
 
-  char * data = calloc(size, 1);
+  char * data = _calloc(size, 1);
 
   data[0] = TRAIN_CONF_VERSION;
 

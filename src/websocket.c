@@ -111,13 +111,46 @@ int websocket_decode(uint8_t data[1024], struct web_client_t * client){
     else if(data[0] == WSopc_AddNewCartolib){
       WS_cts_AddCartoLib((void *)&d->data, client);
     }
+    else if(d->opcode == WSopc_EditCarlib){
+      uint16_t id = d->data.opc_EditCarlib.id_l + (d->data.opc_EditCarlib.id_h << 8);
+      if(d->data.opc_EditCarlib.remove){
+        clear_car(&cars[id]);
+      }
+      else{
+        loggerf(ERROR, "Implement Car Edit id:%i", id);
+      }
+      WS_CarsLib(0);
+    }
+
     else if(data[0] == WSopc_AddNewEnginetolib){
       WS_cts_AddEnginetoLib((void *)&d->data, client);
     }
+    else if(data[0] == WSopc_EditEnginelib){ //Edit / Remove Engine
+      uint16_t id = d->data.opc_EditEnginelib.id_l + (d->data.opc_EditEnginelib.id_h << 8);
+      if(d->data.opc_EditEnginelib.remove){
+        clear_engine(&engines[id]);
+      }
+      else{
+        loggerf(ERROR, "Implement Engine Edit id:%i", id);
+      }
+      WS_EnginesLib(0);
+    }
+
     else if(data[0] == WSopc_AddNewTraintolib){
       loggerf(WARNING, "Opcode %x found", data[0]);
       WS_cts_AddTraintoLib((void *)&d->data, client);
     }
+    else if(d->opcode == WSopc_EditTrainlib){
+      uint16_t id = d->data.opc_EditTrainlib.id_l + (d->data.opc_EditTrainlib.id_h << 8);
+      if(d->data.opc_EditTrainlib.remove){
+        clear_train(&trains[id]);
+      }
+      else{
+        loggerf(ERROR, "Implement Train Edit id:%i", id);
+      }
+      WS_TrainsLib(0);
+    }
+
     else{
       loggerf(WARNING, "Opcode %x not found", data[0]);
     }
@@ -264,9 +297,9 @@ void ws_send(int fd, char data[], int length, int flag){
 
   pthread_mutex_lock(&m_websocket_send);
 
-  // printf("WS send (%i)\t",fd);
-  // for(int zi = 0;zi<(length);zi++){printf("%02X ",data[zi]);};
-  // printf("\n");
+  printf("WS send (%i)\t",fd);
+  for(int zi = 0;zi<(length);zi++){printf("%02X ",data[zi]);};
+  printf("\n");
 
   write(fd, outbuf, length);
 

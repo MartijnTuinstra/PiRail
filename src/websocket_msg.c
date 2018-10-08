@@ -100,7 +100,7 @@ void WS_ClearEmergency(){
 void WS_EnginesLib(int client_fd){
   int buffer_size = 1024;
 
-  char * data = (char *)calloc(buffer_size, 1);
+  char * data = _calloc(buffer_size, 1);
 
   int len = 0;
 
@@ -109,31 +109,42 @@ void WS_EnginesLib(int client_fd){
   for(int i = 0;i<engines_len;i++){
     if(buffer_size < (len + 100)){
       buffer_size += 1024;
-      data = realloc(data, buffer_size);
+      data = _realloc(data, buffer_size, 1);
     }
-    if(engines[i]){
-      data[len++] = engines[i]->DCC_ID & 0xFF;
-      data[len++] = engines[i]->DCC_ID >> 8;
-      data[len++] = engines[i]->max_speed & 0xFF;
-      data[len++] = engines[i]->max_speed >> 8;
-      data[len++] = engines[i]->length & 0xFF;
-      data[len++] = engines[i]->length >> 8;
-      data[len++] = engines[i]->type;
-      data[len++] = strlen(engines[i]->name);
-      data[len++] = strlen(engines[i]->img_path);
-      data[len++] = strlen(engines[i]->icon_path);
+    if(!engines[i]){
+      continue;
+    }
+    loggerf(WARNING, "Exporting engine %i, %s", i, engines[i]->name);
 
-      int l = strlen(engines[i]->name);
-      memcpy(&data[len], engines[i]->name, l);
-      len += l;
+    data[len++] = engines[i]->DCC_ID & 0xFF;
+    data[len++] = engines[i]->DCC_ID >> 8;
+    data[len++] = engines[i]->max_speed & 0xFF;
+    data[len++] = engines[i]->max_speed >> 8;
+    data[len++] = engines[i]->length & 0xFF;
+    data[len++] = engines[i]->length >> 8;
+    data[len++] = engines[i]->type;
+    data[len++] = engines[i]->steps_len;
+    data[len++] = strlen(engines[i]->name);
+    data[len++] = strlen(engines[i]->img_path);
+    data[len++] = strlen(engines[i]->icon_path);
 
-      l = strlen(engines[i]->img_path);
-      memcpy(&data[len], engines[i]->img_path, l);
-      len += l;
+    int l = strlen(engines[i]->name);
+    memcpy(&data[len], engines[i]->name, l);
+    len += l;
 
-      l = strlen(engines[i]->icon_path);
-      memcpy(&data[len], engines[i]->icon_path, l);
-      len += l;
+    l = strlen(engines[i]->img_path);
+    memcpy(&data[len], engines[i]->img_path, l);
+    len += l;
+
+    l = strlen(engines[i]->icon_path);
+    memcpy(&data[len], engines[i]->icon_path, l);
+    len += l;
+
+    for(int j = 0; j < engines[i]->steps_len; j++){
+      data[len++] = engines[i]->steps[j].speed & 0xFF;
+      data[len++] = engines[i]->steps[j].speed >> 8;
+      data[len++] = engines[i]->steps[j].step;
+      printf("engine data: %4x %2x -> %2x %2x %2x\n", engines[i]->steps[j].speed, engines[i]->steps[j].step, data[len-3], data[len-2], data[len-1]);
     }
   }
   if(client_fd <= 0){
@@ -142,13 +153,15 @@ void WS_EnginesLib(int client_fd){
   else{
     ws_send(client_fd, data, len, WS_Flag_Trains);
   }
+
+  _free(data);
 }
 
 void WS_CarsLib(int client_fd){
   loggerf(INFO, "CarsLib for client %i", client_fd);
   int buffer_size = 1024;
 
-  char * data = (char *)calloc(buffer_size, 1);
+  char * data = _calloc(buffer_size, 1);
 
   int len = 0;
 
@@ -157,7 +170,7 @@ void WS_CarsLib(int client_fd){
   for(int i = 0;i<cars_len;i++){
     if(buffer_size < (len + 100)){
       buffer_size += 1024;
-      data = realloc(data, buffer_size);
+      data = _realloc(data, buffer_size, 1);
     }
     if(cars[i]){
       data[len++] = cars[i]->nr & 0xFF;
@@ -190,13 +203,15 @@ void WS_CarsLib(int client_fd){
   else{
     ws_send(client_fd, data, len, WS_Flag_Trains);
   }
+
+  _free(data);
 }
 
 void WS_TrainsLib(int client_fd){
   loggerf(INFO, "TrainsLib for client %i", client_fd);
   int buffer_size = 1024;
 
-  char * data = (char *)calloc(buffer_size, 1);
+  char * data = _calloc(buffer_size, 1);
 
   int len = 0;
 
@@ -205,7 +220,7 @@ void WS_TrainsLib(int client_fd){
   for(int i = 0;i<trains_len;i++){
     if(buffer_size < (len + 100)){
       buffer_size += 1024;
-      data = realloc(data, buffer_size);
+      data = _realloc(data, buffer_size, 1);
     }
     if(trains[i]){
       data[len++] = trains[i]->max_speed & 0xFF;
@@ -234,6 +249,8 @@ void WS_TrainsLib(int client_fd){
   else{
     ws_send(client_fd, data, len, WS_Flag_Trains);
   }
+
+  _free(data);
 }
 
 

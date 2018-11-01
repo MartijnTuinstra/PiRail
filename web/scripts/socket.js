@@ -35,11 +35,14 @@ var websocket = {
     TrainAddRoute:        0x46,
 
     AddNewEnginetolib: 0x50,
-    EnginesLibrary:    0x51,
-    AddNewCartolib:    0x52,
-    CarsLibrary:       0x53,
-    AddNewTraintolib:  0x54,
-    TrainsLibrary:     0x55,
+    EditEnginelib:     0x51,
+    EnginesLibrary:    0x52,
+    AddNewCartolib:    0x53,
+    EditCarlib:        0x54,
+    CarsLibrary:       0x55,
+    AddNewTraintolib:  0x56,
+    EditTrainlib:      0x57,
+    TrainsLibrary:     0x58,
 
     SetSwitch:            0x20,
     SetMultiSwitch:       0x21,
@@ -125,6 +128,39 @@ var websocket = {
       this.send(msg);
     },
 
+    cts_edit_car: function(data, id, edit=true){
+      msg = [];
+      msg[0] = this.opc.EditCarlib;
+      msg[1] = ((!edit) << 7) | (id & 0x7f00) >> 8;
+      msg[2] = id & 0x7fff;
+
+      if(!edit){ //Remove
+        this.send(msg);
+        return;
+      }
+
+      msg[3] = (data.nr & 0x00ff);
+      msg[4] = (data.nr & 0xff00) >> 8;
+      msg[5] = (data.max_speed & 0x00ff);
+      msg[6] = (data.max_speed & 0xff00) >> 8;
+      msg[7] = (data.length & 0x00ff);
+      msg[8] = (data.length & 0xff00) >> 8;
+      msg[9] = data.type & 0xf;
+      if(data.img_ext.includes('jpg')){
+        msg[10] |= 0x10;
+      }
+      if(data.icon_ext.includes('jpg')){
+        msg[10] |= 0x1;
+      }
+      msg[11] = data.name.length;
+
+      for (var i = 0; i < data.name.length; i++) {
+        msg.push(data.name.charCodeAt(i));
+      }
+
+      this.send(msg);
+    },
+
     cts_add_engine: function(data){
       msg = [];
       msg[0] = this.opc.AddNewEnginetolib;
@@ -141,6 +177,43 @@ var websocket = {
         msg[7] |= 0x1;
       }
       msg[8] = data.speed_steps.length;
+
+      for (var i = 0; i < data.name.length; i++) {
+        msg.push(data.name.charCodeAt(i));
+      }
+
+      for (var i = 0; i < data.speed_steps.length; i++){
+        msg.push(data.speed_steps[i].step);
+        msg.push(data.speed_steps[i].speed);
+      }
+
+      this.send(msg);
+    },
+
+    cts_edit_engine: function(data, id, edit=true){
+      msg = [];
+      msg[0] = this.opc.EditEnginelib;
+      msg[1] = ((!edit) << 7) | (id & 0x7f00) >> 8;
+      msg[2] = id & 0x7fff;
+
+      if(!edit){ //Remove
+        this.send(msg);
+        return;
+      }
+
+      msg[3] = (data.dcc & 0x00ff);
+      msg[4] = (data.dcc & 0xff00) >> 8;
+      msg[5] = (data.length & 0x00ff);
+      msg[6] = (data.length & 0xff00) >> 8;
+      msg[7] = (data.type & 0xf) | (data.speedsteps << 4);
+      msg[8] = data.name.length;
+      if(data.img_ext.includes('jpg')){
+        msg[9] |= 0x10;
+      }
+      if(data.icon_ext.includes('jpg')){
+        msg[10] |= 0x1;
+      }
+      msg[11] = data.speed_steps.length;
 
       for (var i = 0; i < data.name.length; i++) {
         msg.push(data.name.charCodeAt(i));
@@ -171,6 +244,33 @@ var websocket = {
         msg.push((data.list[i].i & 0xff00) >> 8);
       }
 
+      this.send(msg);
+    },
+
+    cts_edit_train: function(data, id, edit=true){
+      msg = [];
+      msg[0] = this.opc.EditTrainlib;
+      msg[1] = ((!edit) << 7) | (id & 0x7f00) >> 8;
+      msg[2] = id & 0x7fff;
+
+      if(!edit){ //Remove
+        this.send(msg);
+        return;
+      }
+
+      msg[3] = data.name.length;
+      msg[4] = data.list.length & 0x7f;
+      msg[5] = data.type;
+
+      for (var i = 0; i < data.name.length; i++) {
+        msg.push(data.name.charCodeAt(i));
+      }
+
+      for (var i = 0; i < data.list.length; i++){
+        msg.push(data.list[i].t);
+        msg.push((data.list[i].i & 0x00ff));
+        msg.push((data.list[i].i & 0xff00) >> 8);
+      }
       this.send(msg);
     },
 
@@ -335,7 +435,7 @@ var websocket = {
     // Engines Lib 0x51
     stc_engines_lib: function(data){
       Train.engines = [];
-      for(var i = 0;i<data.length;i++){
+      for(var i = 0;i<data.length;){
         var dcc_id = (data[i] + (data[i+1] << 8));
         i += 2;
         var max_spd = (data[i] + (data[i+1] << 8));
@@ -343,6 +443,7 @@ var websocket = {
         var length = (data[i] + (data[i+1] << 8));
         i += 2;
         type = data[i++];
+        steps_len = data[i++];
 
         var name = IntArrayToString(data.slice(i+3, i+3+data[i]));
         var text_length = data[i++];
@@ -353,8 +454,17 @@ var websocket = {
         var icon = IntArrayToString(data.slice(i+1+text_length, i+1+text_length+data[i]));
         text_length += data[i];
 
-        Train.engines.push({name: name, dcc: dcc_id, img: img, icon: icon, max_speed: max_spd, length: length, type: type});
-        i += text_length;
+        i += text_length + 1;
+
+        steps = [];
+        for(var j = 0; j < steps_len; j++){
+          steps[j] = {}
+          steps[j].speed = (data[i] + (data[i+1] << 8));
+          i+=2;
+          steps[j].step = data[i++];
+        }
+        console.log("Add engine", {name: name, dcc: dcc_id, img: img, icon: icon, max_speed: max_spd, length: length, type: type, steps: steps});
+        Train.engines.push({name: name, dcc: dcc_id, img: img, icon: icon, max_speed: max_spd, length: length, type: type, steps: steps});
       }
       Train.comp.update_list();
     },

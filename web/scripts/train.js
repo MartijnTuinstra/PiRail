@@ -83,6 +83,7 @@ var Train = {
     this.comp.init();
     this.linker.init();
     this.engine_car_creator.init();
+    this.edit_selector.init();
 
     this.update_list();
   },
@@ -255,7 +256,7 @@ var Train = {
              '<div class="imgbox"><div class="scroller"><div style="white-space: nowrap;">';
 
         e.link.forEach(function(e2,i2){
-          if((String.fromCharCode(e2[0]) == "E" || String.fromCharCode(e2[0]) == "e") && Train.engines[e2[1]] != undefined){
+          if(e2[0] == 0 && Train.engines[e2[1]] != undefined){
             text += '<img src="./trains_img/'+Train.engines[e2[1]].icon+'"/>';
           }else if(Train.cars[e2[1]] != undefined){
             text += '<img src="./trains_img/'+Train.cars[e2[1]].icon+'"/>';
@@ -328,6 +329,7 @@ var Train = {
   engine_car_creator:{
     open_type: '',
     save_cb: undefined,
+    edit: false,
 
     init: function(){
       $('#engine_car_creator .btn.save').on("click", {close: true}, this.done);
@@ -385,10 +387,6 @@ var Train = {
       $('input[name="step"]', '#engine_car_creator .speed_steps_box .box:last').val(step);
     },
 
-    send: function(data){
-
-    },
-
     done: function(event){
       data = {}
 
@@ -429,18 +427,28 @@ var Train = {
         alert("Not all field are complete.");
       }
 
-      if(Train.engine_car_creator.open_type == 'E'){
-        websocket.cts_add_engine(data);
-      }
-      else{
-        websocket.cts_add_car(data);
-      }
+      if(Train.engine_car_creator.edit == false){
+        if(Train.engine_car_creator.open_type == 'E'){
+          websocket.cts_add_engine(data);
+        }
+        else{
+          websocket.cts_add_car(data);
+        }
 
-      if(event.data.close){
-        Train.engine_car_creator.save_cb = Train.engine_car_creator.close;
+        if(event.data.close){
+          Train.engine_car_creator.save_cb = Train.engine_car_creator.close;
+        }
+        else{
+          Train.engine_car_creator.save_cb = Train.engine_car_creator.clear;
+        }
       }
       else{
-        Train.engine_car_creator.save_cb = Train.engine_car_creator.clear;
+        if(Train.engine_car_creator.open_type == 'E'){
+          websocket.cts_edit_engine(data, Train.edit_selector.open_id);
+        }
+        else{
+          websocket.cts_edit_car(data, Train.edit_selector.open_id);
+        }
       }
     },
 
@@ -464,8 +472,9 @@ var Train = {
       $('#engine_car_creator .speed_steps_box .box input').val("");
     },
 
-    open: function(type){
+    open: function(type, edit=false){
       this.clear();
+      this.edit = edit;
 
       $('#engine_car_creator').show();
 
@@ -480,6 +489,31 @@ var Train = {
         $('#engine_car_creator .field_container.speed span').text("Speedsteps");
         $('#engine_car_creator .field_container.speed input[name="speed"]').hide();
         $('#engine_car_creator .field_container.speed .radio_container').show();
+
+        if(edit){
+          var E = Train.engines[Train.edit_selector.open_id];
+          var C = $('#engine_car_creator');
+          $('.img_icon', C).css("background-image", "url('./trains_img/" + E.img+"')");
+          $('.img_train', C).attr("src", "./trains_img/" + E.icon);
+          $('.name input', C).val(E.name);
+          $('.dcc input', C).val(E.dcc);
+          $('.length input', C).val(E.length);
+
+          $('.speed .radio_button input[value="'+E.steps+'"]', C).prop("checked", true);
+          $('.type .radio_button input[value="'+E.type+'"]', C).prop("checked", true);
+
+          $('input[name="speed"]', '.speed_steps_box .box:last', C).val(E.steps[0].speed);
+          $('input[name="step"]', '.speed_steps_box .box:last', C).val(E.steps[0].step);
+
+          if(E.steps.length > 1){
+            for(var i = 1; i < E.steps.length; i++){
+              $('.speed_steps_box .add_box', C).before('<div class="box"><input type="text" name="speed" placeholder="speed" style="text-align:center;"/><input type="text" name="step"  placeholder="step" style="text-align:center;"/></div>');
+              $('.speed_steps_box .scroller > div', C).width($('.speed_steps_box .scroller > div', C).width() + 95);
+              $('input[name="speed"]', '.speed_steps_box .box:last', C).val(E.steps[i].speed);
+              $('input[name="step"]', '.speed_steps_box .box:last', C).val(E.steps[i].step);
+            }
+          }
+        }
       }
       else{
         $('#engine_car_creator .header').text("Car Creator");
@@ -492,9 +526,164 @@ var Train = {
         $('#engine_car_creator .field_container.speed span').text("Max Speed");
         $('#engine_car_creator .field_container.speed input[name="speed"]').show();
         $('#engine_car_creator .field_container.speed .radio_container').hide();
+
+        if(edit){
+          var E = Train.cars[Train.edit_selector.open_id];
+          var C = $('#engine_car_creator');
+          $('.img_icon', C).css("background-image", "url('./trains_img/" + E.img+"')");
+          $('.img_train', C).attr("src", "./trains_img/" + E.icon);
+          $('.name input', C).val(E.name);
+          $('.nr input', C).val(E.dcc);
+          $('.length input', C).val(E.length);
+          $('.speed input', C).val(E.speed);
+
+          $('.type .radio_button input[value="'+E.type+'"]', C).prop("checked", true);
+        }
       }
 
       this.open_type = type;
+    }
+  },
+
+  edit_selector:{
+    open_type: undefined,
+    open_id: undefined,
+
+    init: function(){
+      $('#edit_selector .selected .container').on("click",function(){
+        $('#edit_selector .selected .selector').toggleClass("active");
+      });
+    },
+
+    open: function(type){
+      $('#edit_selector .btn.edit').on("click", this.edit);
+      $('#edit_selector .btn.remove').on("click", this.remove);
+      $('#edit_selector .btn.close').on("click", this.close);
+
+      $('#edit_selector').show();
+
+      this.update_list(type)
+    },
+
+    update_list: function(type){
+      this.open_type = type;
+
+      $('#edit_selector .selected .selector').empty();
+
+      if(type == 'T'){
+        Train.trains.forEach(function(e,i){
+          text = '<div train="'+i+'">' +
+               '<div class="imgbox"><div class="scroller"><div style="white-space: nowrap;">';
+
+          e.link.forEach(function(e2,i2){
+            if(e2[0] == 0 && Train.engines[e2[1]] != undefined){
+              text += '<img src="./trains_img/'+Train.engines[e2[1]].icon+'"/>';
+            }else if(Train.cars[e2[1]] != undefined){
+              text += '<img src="./trains_img/'+Train.cars[e2[1]].icon+'"/>';
+            }
+          })
+              
+          text += '</div></div></div>'+
+              '<div class="textbox"><span class="name">'+e.name+'</span><span class="dcc">'+e.dcc+'</span></div>'+
+              '</div>'
+
+          $('#edit_selector .selected .selector').append(text);
+        });
+      }
+
+      else if(type == 'E'){
+        Train.engines.forEach(function(e,i){
+          text = '<div engine="'+i+'">' +
+            '<div class="imgbox"><div class="scroller"><div style="white-space: nowrap;">'+
+              '<img src="./trains_img/'+e.icon+'"/>'+
+            '</div></div></div>'+
+            '<div class="textbox"><span class="name">&nbsp;&nbsp;&nbsp;'+e.name+'</span><span class="dcc">'+e.dcc+'</span></div>'+
+          '</div>'
+
+          $('#edit_selector .selected .selector').append(text);
+        });
+      }
+
+      else if(type == 'C'){
+        Train.cars.forEach(function(e,i){
+          text = '<div car="'+i+'">' +
+            '<div class="imgbox"><div class="scroller"><div style="white-space: nowrap;">'+
+              '<img src="./trains_img/'+e.icon+'"/>'+
+            '</div></div></div>'+
+            '<div class="textbox"><span class="name">&nbsp;&nbsp;&nbsp;'+e.name+'</span><span class="dcc">'+e.nr+'</span></div>'+
+          '</div>'
+
+          $('#edit_selector .selected .selector').append(text);
+        });
+      }
+
+      $('#edit_selector .selected .selector > div').on("click", this.select);
+
+    },
+
+    select: function(evt) {
+      train = $(evt.currentTarget).clone();
+      $('#edit_selector .selected .container').off();
+      $('#edit_selector .selected .container').remove();
+      $('#edit_selector .selected').prepend(train);
+      $('#edit_selector .selected > div:first-child').toggleClass("container");
+      $('#edit_selector .selected .selector').toggleClass("active");
+
+      $('#edit_selector .selected .container').on("click",function(){
+        $('#edit_selector .selected .selector').toggleClass("active");
+      });
+    },
+
+    edit: function(evt){
+      var type = Train.edit_selector.open_type;
+      if(type == 'T'){
+        Train.edit_selector.open_id = parseInt($('#edit_selector .selected .container').attr("train"));
+      }
+      else if(type == 'E'){
+        Train.edit_selector.open_id = parseInt($('#edit_selector .selected .container').attr("engine"));
+        Train.engine_car_creator.open('E', true);
+      }
+      else if(type == 'C'){
+        Train.edit_selector.open_id = parseInt($('#edit_selector .selected .container').attr("car"));
+        Train.engine_car_creator.open('C', true);
+      }
+      Train.edit_selector.close();
+    },
+
+    remove: function(evt){
+      var type = Train.edit_selector.open_type;
+      if(type == 'T'){
+        Train.edit_selector.open_id = parseInt($('#edit_selector .selected .container').attr("train"));
+        websocket.cts_edit_train(undefined, Train.edit_selector.open_id, false);
+      }
+      else if(type == 'E'){
+        Train.edit_selector.open_id = parseInt($('#edit_selector .selected .container').attr("engine"));
+        websocket.cts_edit_engine(undefined, Train.edit_selector.open_id, false);
+      }
+      else if(type == 'C'){
+        Train.edit_selector.open_id = parseInt($('#edit_selector .selected .container').attr("car"));
+        websocket.cts_edit_car(undefined, Train.edit_selector.open_id, false);
+      }
+      Train.edit_selector.close();
+    },
+
+    close: function(evt){
+      $('#edit_selector').hide();
+
+      $('#edit_selector .selected .container').off();
+      $('#edit_selector .selected .container').remove();
+      $('#edit_selector .selected').prepend('<div><div data="10"><div class="imgbox"></div></div></div>');
+      $('#edit_selector .selected > div:first-child').toggleClass("container");
+      $('#edit_selector .selected .selector.active').toggleClass("active");
+
+      $('#edit_selector .selected .container').on("click",function(){
+        $('#edit_selector .selected .selector').toggleClass("active");
+      });
+
+      $('#edit_selector .btn.edit').off();
+      $('#edit_selector .btn.remove').off();
+      $('#edit_selector .btn.close').off();
+      
     }
   },
 

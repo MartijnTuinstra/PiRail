@@ -1175,6 +1175,162 @@
 			}
 		}
 
+
+
+
+		#edit_selector {
+		    width: calc(100% - 80px);
+		    max-height: calc(100% - 80px);
+		    max-width: 600px;
+		    padding: 10px;
+		    margin: 30px;
+		    border: 2px solid #1565C0;
+		    border-radius: 10px;
+		    background: white;
+		    position: fixed;
+		    top: 0px;
+		    left: 50%;
+		    box-shadow: 0px 0px 10px 5px lightgrey;
+		    -webkit-transform: translate(calc(-50% - 30px), 0);
+		    transform: translate(calc(-50% - 30px),0);
+		    min-height: 200px;
+		}
+
+		#edit_selector .header {
+			width: calc(100% + 20px);
+			padding: 10px 0px;
+			padding-top: 10px;
+			margin-top: -10px;
+			margin-left: -10px;
+			background: #1565C0;
+			text-align: center;
+			font-weight: bold;
+			margin-bottom: 10px;
+			color: white;
+		}
+
+		#edit_selector .selected {
+			width: calc(100% - 20px);
+			border: 1px solid grey;
+			margin: 20px auto;
+			position: relative;
+			height: 60px;
+		}
+
+		#edit_selector .selected .container {
+			width: 100%;
+			height: 60px;
+			cursor: pointer;
+		}
+
+		#edit_selector .selected .selector{
+			width: calc(100% - 2px);
+			border: 2px solid grey;
+			position: absolute;
+			top: 100%;
+			left: -1px;
+			max-height: 290px;
+			background: white;
+			display: none;
+			overflow-y: scroll;
+			overflow-x: hidden;
+		}
+
+		#edit_selector .selected .selector.active{
+			display: block;
+		}
+
+		#edit_selector .selector > div {
+			width: 100%;
+			height: 60px;
+			position: relative;
+			overflow: hidden;
+			cursor: pointer;
+		}
+
+		#edit_selector .selector > div:not(:last-child) {
+			border-bottom: 1px solid grey;
+		}
+
+		#edit_selector .selector > div:hover {
+			background: #ddd;
+		}
+
+		#edit_selector .selector .imgbox, #edit_selector .selected .container .imgbox {
+			width: calc(100% - 12px);
+			height: 30px;
+			border:1px solid lightgrey;
+			top:5px;
+			left:5px;
+			position: absolute;
+			overflow: hidden;
+		}
+
+		#edit_selector .selector .imgbox .scroller, #edit_selector .selected .container .imgbox .scroller {
+			height: 60px;
+			width: 100%;
+			overflow-x: scroll;
+			overflow-y: hidden;
+		}
+
+		#edit_selector .selector .imgbox img, #edit_selector .selected .container .imgbox img{
+			height: 30px;
+		}
+
+		#edit_selector .selector .textbox, #edit_selector .selected .container .textbox {
+			position: absolute;
+			bottom: 0.25em;
+			left: 0.5em;
+			height: 1em;
+			font-weight: bold;
+			width: calc(100% - 0.5em);
+		}
+
+		#edit_selector .name {
+			position: absolute;
+			left: 0px;
+		}
+
+		#edit_selector .dcc {
+			position: absolute;
+			right: 20%;
+			bottom: 0px;
+			white-space: nowrap;
+			font-size: x-small;
+			vertical-align: text-bottom;
+		}
+
+		#edit_selector .btn {
+			width: calc(33% - 20px);
+			margin: 5px;
+			padding: 5px;
+			float:left;
+			background: lightgrey;
+			text-align: center;
+			border-radius: 2px;
+            cursor: pointer;
+		}
+
+		#edit_selector .btn_container {
+			width: calc(100% - 40px);
+			max-width:550px;
+			margin:20px auto;
+			height:38px;
+		}
+
+		@media only screen and (max-width: 550px){
+			#edit_selector .btn {
+				width: calc(100% - 20px);
+			}
+
+			#edit_selector .btn_container {
+				width: 100%;
+			}
+		}
+
+
+
+
 		#message_popup {
 			top: -1px;
 			position: fixed;
@@ -1415,19 +1571,19 @@
 					<div class="buttonbox" onclick="Train.comp.open()">
 						Add a Train
 					</div>
-					<div class="buttonbox">
+					<div class="buttonbox" onclick="Train.edit_selector.open('T')">
 						Update / Remove a Train
 					</div>
 					<div class="buttonbox" onclick="Train.engine_car_creator.open('E')">
 						Add an Engine
 					</div>
-					<div class="buttonbox">
+					<div class="buttonbox" onclick="Train.edit_selector.open('E')">
 						Update / Remove an Engine
 					</div>
 					<div class="buttonbox" onclick="Train.engine_car_creator.open('C')">
 						Add an Car
 					</div>
-					<div class="buttonbox">
+					<div class="buttonbox" onclick="Train.edit_selector.open('C')">
 						Update / Remove an Car
 					</div>
 				</div>
@@ -1592,6 +1748,24 @@
 
 	<div id="message_popup">
 		<div class="messages"></div>
+	</div>
+
+	<div id="edit_selector" style="display:none">
+		<div class="header">Train / Car / Engine / Module Selector</div>
+
+		<div class="selected">
+			<div class="container">
+				<div data="10">
+					<div class="imgbox"></div>
+				</div>
+			</div>
+			<div class="selector"></div>
+		</div>
+		<div class="btn_container">
+			<div class="btn edit">Edit</div>
+			<div class="btn remove">Remove</div>
+			<div class="btn close">Discard</div>
+		</div>
 	</div>
 
 	<div style="position: absolute;right: 0px;bottom: 0px;height: 50px;width: 50px;background: red" onClick='window.location.replace("");'></div> <!-- TODO remove -->

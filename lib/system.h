@@ -45,6 +45,9 @@
 
   void move_file(char * src, char * dest);
 
+  void mutex_lock(pthread_mutex_t * m, char * mutex_name);
+  void mutex_unlock(pthread_mutex_t * m, char * mutex_name);
+
   extern struct systemState * _SYS; 
 
   #ifndef TRUE

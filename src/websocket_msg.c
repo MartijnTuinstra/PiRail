@@ -334,7 +334,8 @@ void WS_Track_Layout(){
 
 
 void WS_trackUpdate(int Client_fd){
-  pthread_mutex_lock(&mutex_lockB);
+  loggerf(TRACE, "WS_trackUpdate");
+  mutex_lock(&mutex_lockB, "Lock Mutex B");
   char data[4096];
 
   data[0] = WSopc_BroadTrack; //Opcode
@@ -347,11 +348,10 @@ void WS_trackUpdate(int Client_fd){
   loggerf(TRACE, "WS_trackUpdate");
 
   for(int i = 0;i<unit_len;i++){
-    if(!Units[i] || !Units[i]->block_state_changed)
+    if(!Units[i])// || (Units[i]->changed & Unit_Blocks_changed) == 0)
       continue;
 
-    loggerf(INFO, "WS_Block Update module %i", i);
-    Units[i]->block_state_changed = 0;
+    Units[i]->changed &= ~Unit_Blocks_changed;
 
     for(int j = 0;j<Units[i]->block_len;j++){
       Block * B = Units[i]->B[j];
@@ -364,7 +364,7 @@ void WS_trackUpdate(int Client_fd){
         data[(q-1)*4+4] = B->train;
         q++;
 
-        B->changed = 0;
+        B->changed &= ~(State_Changed);
       }
     }
   }
@@ -378,12 +378,12 @@ void WS_trackUpdate(int Client_fd){
       ws_send_all(data,data_len,WS_Flag_Track);
     }
   }
-  pthread_mutex_unlock(&mutex_lockB);
+  mutex_unlock(&mutex_lockB, "UnLock Mutex B");
 }
 
 void WS_SwitchesUpdate(int Client_fd){
   loggerf(TRACE, "WS_SwitchesUpdate (%i)", Client_fd);
-  pthread_mutex_lock(&mutex_lockB);
+  mutex_lock(&mutex_lockB, "Lock Mutex B");
   char buf[4096];
   memset(buf, 0, 4096);
   /*Switches*/
@@ -396,24 +396,30 @@ void WS_SwitchesUpdate(int Client_fd){
     //printf("\n\n3");
 
     for(int i = 0;i<unit_len;i++){
-      if(!Units[i] || !Units[i]->switch_state_changed)
+      if(!Units[i])// || !Units[i]->switch_state_changed)
         continue;
-      Units[i]->switch_state_changed = 0;
+      // Units[i]->switch_state_changed = 0;
 
       for(int j = 0;j<Units[i]->switch_len;j++){
         Switch * S = Units[i]->Sw[j];
-        if(S){
-          if((S->state & 0x80) != 0x80){
-            continue;
-          }
-          content = 1;
-          buf[(q-1)*3+1] = S->module;
-          buf[(q-1)*3+2] = S->id & 0x7F;
-          buf[(q-1)*3+3] = S->state & 0x7F;
-          S->state ^= 0x80;
-          loggerf(DEBUG, "%i,%i,%i",S->module,S->id,S->state);
-          q++;
+        if(!S)
+          continue;
+
+        if((S->state & 0x80) != 0x80){
+          loggerf(TRACE, "%i:%i no new state", S->module, S->id);
+          continue;
         }
+
+        content = 1;
+
+        buf[(q-1)*3+1] = S->module;
+        buf[(q-1)*3+2] = S->id & 0x7F;
+        buf[(q-1)*3+3] = S->state & 0x7F;
+
+        S->state &= ~0x80;
+
+        loggerf(DEBUG, "%i,%i,%i", S->module, S->id, S->state);
+        q++;
       }
     }
 
@@ -442,17 +448,21 @@ void WS_SwitchesUpdate(int Client_fd){
   //buf_l += (q-1)*4+1;
   if(content == 1){
     if(Client_fd){
-      ws_send(Client_fd,buf,buf_l,WS_Flag_Switches);
+      printf("ws_send client");
+      ws_send(Client_fd, buf, buf_l, WS_Flag_Switches);
     }else{
-      ws_send_all(buf,buf_l,WS_Flag_Switches);
+      printf("ws_send all");
+      ws_send_all(buf, buf_l, WS_Flag_Switches);
     }
   }
-  
-  pthread_mutex_unlock(&mutex_lockB);
+  else
+    loggerf(DEBUG, "WS Switches no content");
+
+  mutex_unlock(&mutex_lockB, "UnLock Mutex B");
 }
 
 void WS_NewClient_track_Switch_Update(int Client_fd){
-  pthread_mutex_lock(&mutex_lockB);
+  mutex_lock(&mutex_lockB, "Lock Mutex B");
 
   //Track
   char buf[4096];
@@ -477,7 +487,7 @@ void WS_NewClient_track_Switch_Update(int Client_fd){
           buf[(q-1)*4+4] = B->train;
           q++;
 
-          B->changed = 0;
+          B->changed &= ~(State_Changed);
         }
       }
     }
@@ -492,7 +502,7 @@ void WS_NewClient_track_Switch_Update(int Client_fd){
       ws_send_all(buf,data_len,WS_Flag_Track);
     }
   }
-  
+
 
   /*Switches*/
 
@@ -551,7 +561,7 @@ void WS_NewClient_track_Switch_Update(int Client_fd){
       ws_send_all(buf,buf_len,WS_Flag_Switches);
     }
   }
-  
+
   memset(buf,0,4096);
   /*Stations*/
 
@@ -589,7 +599,7 @@ void WS_NewClient_track_Switch_Update(int Client_fd){
     }
   }
 
-  pthread_mutex_unlock(&mutex_lockB);
+  mutex_unlock(&mutex_lockB, "UnLock Mutex B");
 }
 
 

@@ -2,7 +2,7 @@ BIN=./bin
 SRC=./src
 LIB=./lib
 INCLUDE = -I $(LIB) -I $(SRC)
-ARGS=-std=c99 -lpthread -lssl -lcrypto -lwiringPi -lm -g $(INCLUDE) -Wall -W -Werror=unused-variable
+ARGS=-std=c99 -lpthread -lssl -lcrypto -lwiringPi -lm -g3 $(INCLUDE) -Wall -W -Werror=unused-variable -Wno-packed-bitfield-compat -Wno-unused-parameter
 
 GCC = gcc $(ARGS)
 GCC_SIMPLE = gcc -g -Wall -W -Werror=unused-variable $(INCLUDE) -std=c99
@@ -23,6 +23,7 @@ $(BIN)/config_reader.o: $(SRC)/config_reader.c $(LIB)/config.h $(LIB)/logger.h
 	@echo config_reader.o
 	@$(GCC_SIMPLE) -c -o $@ $(SRC)/config_reader.c 
 
+$(LIB)/config.h: $(LIB)/rail.h $(LIB)/IO.h $(LIB)/config_data.h
 $(BIN)/config.o: $(SRC)/config.c $(LIB)/config.h $(LIB)/logger.h
 	@echo config.c
 	$(GCC) $(SRC)/config.c -c -o $@
@@ -72,8 +73,9 @@ $(BIN)/module.o: $(SRC)/module.c $(LIB)/module.h $(LIB)/system.h \
 	@echo module.c
 	$(GCC) $(SRC)/module.c -c -o $(BIN)/module.o
 
+$(LIB)/rail.h: $(LIB)/config_data.h
 $(BIN)/rail.o: $(SRC)/rail.c $(LIB)/rail.h $(LIB)/system.h $(LIB)/module.h \
-		$(LIB)/switch.h $(LIB)/logger.h
+		$(LIB)/switch.h $(LIB)/logger.h $(LIB)/algorithm.h
 	@echo rail.o
 	$(GCC) $(SRC)/rail.c -c -o $(BIN)/rail.o
 
@@ -90,7 +92,7 @@ $(BIN)/switch.o: $(SRC)/switch.c $(LIB)/switch.h $(LIB)/logger.h
 	$(GCC) $(SRC)/switch.c -c -o $(BIN)/switch.o
 
 $(BIN)/system.o: $(SRC)/system.c $(LIB)/system.h $(LIB)/websocket_control.h \
-		$(LIB)/logger.h
+		$(LIB)/logger.h $(LIB)/algorithm.h
 	@echo system.o
 	$(GCC) $(SRC)/system.c -c -o $(BIN)/system.o
 
@@ -115,6 +117,7 @@ $(BIN)/websocket_control.o: $(SRC)/websocket_control.c \
 	@echo websocket_control.o
 	$(GCC) $(SRC)/websocket_control.c -c -o $(BIN)/websocket_control.o
 
+$(LIB)/websocket_msg.h: $(LIB)/websocket.h
 $(BIN)/websocket_msg.o: $(SRC)/websocket_msg.c $(LIB)/websocket_msg.h \
 		$(LIB)/system.h $(LIB)/rail.h $(LIB)/switch.h $(LIB)/train.h \
 		$(LIB)/logger.h $(LIB)/module.h $(LIB)/Z21.h
@@ -125,10 +128,10 @@ $(BIN)/Z21.o: $(SRC)/Z21.c $(LIB)/Z21.h $(LIB)/logger.h
 	@echo Z21.o
 	$(GCC) $(SRC)/Z21.c -c -o $(BIN)/Z21.o
 
+$(LIB)/IO.h: $(LIB)/module.h
 $(BIN)/IO.o: $(SRC)/IO.c $(LIB)/IO.h
 	@echo IO.o
 	$(GCC) $(SRC)/IO.c -c -o $(BIN)/IO.o
-
 .PHONY: clean
 
 clean:

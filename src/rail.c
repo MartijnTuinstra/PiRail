@@ -5,6 +5,7 @@
 #include "switch.h"
 #include "logger.h"
 #include "IO.h"
+#include "algorithm.h"
 
 #include <signal.h>
 
@@ -70,7 +71,10 @@ void create_block(uint8_t module, struct s_block_conf block){
   p->dir = (block.fl & 0x6) >> 1;
   p->length = block.length;
 
-  p->blocked = 0;
+  Algor_init_Blocks(&p->Alg, p);
+
+  p->changed = IO_Changed | Block_Algor_Changed;
+
   p->state = PROCEED;
 
   struct s_node_adr in;
@@ -89,7 +93,7 @@ void create_block(uint8_t module, struct s_block_conf block){
 
   // If block array is to small
   if(Units[p->module]->block_len <= p->id){
-    loggerf(INFO, "Expand block len %i", Units[p->module]->block_len+8); 
+    loggerf(INFO, "Expand block len %i", Units[p->module]->block_len+8);
     Units[p->module]->B = _realloc(Units[p->module]->B, (Units[p->module]->block_len + 8), Block *);
 
     int i = Units[p->module]->block_len;
@@ -107,6 +111,17 @@ void create_block(uint8_t module, struct s_block_conf block){
   Units[p->module]->B[p->id] = p;
 }
 
+void * clear_Block(Block * B){
+  Algor_free_Blocks(&B->Alg);
+
+  _free(B->Sw);
+  _free(B->MSSw);
+
+  _free(B);
+
+  return 0;
+}
+
 void Create_Station(int module, int id, char * name, char name_len, enum Station_types type, int len, Block ** blocks){
   Station * Z = _calloc(1, Station);
   Z->module = module;
@@ -118,7 +133,7 @@ void Create_Station(int module, int id, char * name, char name_len, enum Station
 
   // If block array is to small
   if(Units[Z->module]->station_len <= Z->id){
-    loggerf(INFO, "Expand station len %i", Units[Z->module]->station_len+8); 
+    loggerf(INFO, "Expand station len %i", Units[Z->module]->station_len+8);
     Units[Z->module]->St = _realloc(Units[Z->module]->St, (Units[Z->module]->station_len + 8), Station *);
 
     int i = Units[Z->module]->station_len;
@@ -131,7 +146,7 @@ void Create_Station(int module, int id, char * name, char name_len, enum Station
   for(int i = 0; i < len; i++){
     Z->blocks[find_free_index(Z->blocks, Z->blocks_len)] = blocks[i];
   }
-  
+
   Z->uid = find_free_index(stations, stations_len);
 
   stations[Z->uid] = Z;
@@ -235,14 +250,14 @@ Block * _Next(Block * B, int flags, int level){
   //NEXT == 0
   //PREV == 1
 
-  if(((dir & 1) == NEXT && (B->dir == 1 || B->dir == 4 || B->dir == 6)) || 
+  if(((dir & 1) == NEXT && (B->dir == 1 || B->dir == 4 || B->dir == 6)) ||
      ((dir & 1) == PREV && (B->dir == 0 || B->dir == 2 || B->dir == 5))){
     // If next + reversed direction / flipped normal / flipped switching
     // Or prev + normal direction / switching direction (normal) / flipped reversed direction
     // printf("Prev\n");
     next = B->prev;
   }
-  else if(((dir & 1) == NEXT && (B->dir == 0 || B->dir == 2 || B->dir == 5)) || 
+  else if(((dir & 1) == NEXT && (B->dir == 0 || B->dir == 2 || B->dir == 5)) ||
           ((dir & 1) == PREV && (B->dir == 1 || B->dir == 4 || B->dir == 6))){
     // If next + normal direction / switching direction (normal) / flipped reversed
     // or prev + reversed direction / flipped normal / flipped switching
@@ -268,7 +283,7 @@ Block * _Next(Block * B, int flags, int level){
       return (Block *)next.p;
     }
     else{
-      return _Next((Block *)next.p, dir, level);
+      return _Next((Block *)next.p, flags, level);
     }
   }
   else if(next.type == RAIL_LINK_S || next.type == RAIL_LINK_s){
@@ -315,7 +330,7 @@ int Next_check_Switch(void * p, struct rail_link link, int flags){
       return 1;
     }
     // else
-      // printf("str: %i  %x==%x\tdiv: %i  %x==%x\t",N->state, N->str.p, p, N->state, N->div.p, p);
+    //   printf("str: %i  %x==%x\tdiv: %i  %x==%x\t",N->state, N->str.p, p, N->state, N->div.p, p);
   }
   else if(link.type == RAIL_LINK_M){
     MSSwitch * N = link.p;
@@ -379,6 +394,64 @@ int Next_check_Switch_Path(void * p, struct rail_link link, int flags){
   return 0;
 }
 
+int Next_check_Switch_Path_one_block(Block * B, void * p, struct rail_link link, int flags){
+  loggerf(TRACE, "Next_check_Switch_Path_one_block (%x, %x, %i)", (unsigned int)p, (unsigned int)&link, flags);
+  if(((link.type == RAIL_LINK_S || link.type == RAIL_LINK_s) && ((Switch *)link.p)->Detection != B) ||
+     ((link.type == RAIL_LINK_M || link.type == RAIL_LINK_m) && ((MSSwitch *)link.p)->Detection != B)){
+    return 1;
+  }
+  if((flags & 0x80) == 0){
+    //No SWITCH_CARE
+    return 1;
+  }
+  else if(link.type == RAIL_LINK_S){
+    Switch * Sw = link.p;
+    if((Sw->state & 0x7F) == 0){
+      if(Sw->str.type != RAIL_LINK_R)
+        return Next_check_Switch_Path_one_block(B, Sw, Sw->str, flags);
+      else if (Sw->str.p != B)
+        return 1;
+    }
+    else if((Sw->state & 0x7F) == 1){
+      if(Sw->div.type != RAIL_LINK_R)
+        return Next_check_Switch_Path_one_block(B, Sw, Sw->div, flags);
+      else if (Sw->str.p != B)
+        return 1;
+    }
+    loggerf(TRACE, "S wrong State %x", Sw->state & 0x7F);
+  }
+  else if(link.type == RAIL_LINK_s){
+    Switch * N = link.p;
+    loggerf(TRACE, "check s (state: %i, str.p: %x, div.p: %x)", (N->state & 0x7F), (unsigned int)N->str.p, (unsigned int)N->div.p);
+    if((N->state & 0x7F) == 0 && N->str.p == p){
+      return Next_check_Switch_Path_one_block(B, N, N->app, flags);
+    }
+    else if((N->state & 0x7F) == 1 && N->div.p == p){
+      return Next_check_Switch_Path_one_block(B, N, N->app, flags);
+    }
+    loggerf(TRACE, "wrong State");
+  }
+  else if(link.type == RAIL_LINK_M){
+    loggerf(WARNING, "IMPLEMENT");
+    MSSwitch * N = link.p;
+    if(N->sideB[N->state].p == p){
+      return 1;
+    }
+  }
+  else if(link.type == RAIL_LINK_m){
+    loggerf(WARNING, "IMPLEMENT");
+    MSSwitch * N = link.p;
+    if(N->sideA[N->state].p == p){
+      return 1;
+    }
+  }
+
+  else if (link.type == RAIL_LINK_R){
+    return 1;
+  }
+  return 0;
+}
+
 Block * Next_Switch_Block(Switch * S, char type, int flags, int level){
   struct rail_link next;
 
@@ -427,15 +500,16 @@ Block * Next_Switch_Block(Switch * S, char type, int flags, int level){
     }
   }
   else if(next.type == RAIL_LINK_S || next.type == RAIL_LINK_s){
-    Switch * N = next.p;
-    if(N->Detection && !block_cmp(S->Detection, N->Detection)){
-      level--;
-      if(level == 0){
-        // printf("RET DET\n");
-        return N->Detection;
-      }
-    }
     if(Next_check_Switch(S, next, flags)){
+      Switch * N = next.p;
+      if(N->Detection && !block_cmp(S->Detection, N->Detection)){
+        level--;
+        if(level == 0){
+          // printf("RET DET\n");
+          return N->Detection;
+        }
+      }
+
       return Next_Switch_Block(N, next.type, flags, level);
     }
   }
@@ -521,8 +595,8 @@ Block * Next_Special_Block(Block * Bl, int flags, int level){
       continue;
     }
     Switch * S = Bl->Sw[i];
-    Block * A = Next_Switch_Block(S, RAIL_LINK_s, NEXT | SWITCH_CARE, level);
-    Block * B = Next_Switch_Block(S, RAIL_LINK_S, NEXT | SWITCH_CARE, level);
+    Block * A = Next_Switch_Block(S, RAIL_LINK_s, NEXT, level);
+    Block * B = Next_Switch_Block(S, RAIL_LINK_S, NEXT, level);
     Block * _A = 0; //Mirror to other side
     Block * _B = 0; //Mirror to other side
     int prioA = 0;
@@ -532,100 +606,138 @@ Block * Next_Special_Block(Block * Bl, int flags, int level){
       if(A->blocked)
         prioA++;
 
-      if(Next(A, NEXT | SWITCH_CARE, level) == Bl)
-        _A = Next(A, NEXT | SWITCH_CARE, 2*level);
+      if(Next(A, NEXT, level) == Bl)
+        _A = Next(A, NEXT, 2*level);
       else
-        _A = Next(A, PREV | SWITCH_CARE, 2*level);
+        _A = Next(A, PREV, 2*level);
     }
 
     if(B && B->type != SPECIAL){
       if(B->blocked)
         prioB++;
 
-      if(Next(B, NEXT | SWITCH_CARE, level) == Bl)
-        _B = Next(B, NEXT | SWITCH_CARE, 2*level);
+      if(Next(B, NEXT, level) == Bl)
+        _B = Next(B, NEXT, 2*level);
       else
-        _B = Next(B, PREV | SWITCH_CARE, 2*level);
+        _B = Next(B, PREV, 2*level);
     }
 
-    // printf("\t\t%i:%i-%i-%i ", Bl->module, Bl->id, level,Bl->dir);
-    // if(A)
-    //   printf("\t%2i:%2i-%i<>",A->module,A->id,A->dir);
-    // else
-    //   printf("\t     <>");
-    // if(_A)
-    //   printf("%2i:%2i-%i", _A->module,_A->id,_A->dir);
-    // else
-    //   printf("     ");
-    // if(B)
-    //   printf("\t%2i:%2i-%i",B->module,B->id,B->dir);
-    // else
-    //   printf("\t     ");
-    // if(_B)
-    //   printf("<>%2i:%2i-%i\n",_B->module,_B->id,_B->dir);
-    // else
-    //   printf("<>\n");
-   
+    printf("\t\t%i:%i-%i-%i ", Bl->module, Bl->id, level,Bl->dir);
+    if(A)
+      printf("\t%2i:%2i-%i<>",A->module,A->id,A->dir);
+    else
+      printf("\t     <>");
+    if(_A)
+      printf("%2i:%2i-%i", _A->module,_A->id,_A->dir);
+    else
+      printf("     ");
+    if(B)
+      printf("\t%2i:%2i-%i",B->module,B->id,B->dir);
+    else
+      printf("\t     ");
+    if(_B)
+      printf("<>%2i:%2i-%i\n",_B->module,_B->id,_B->dir);
+    else
+      printf("<>\n");
+
+    loggerf(ERROR, "B==_A, %i", B == _A);
+    loggerf(ERROR, "A==_B, %i", B == _A);
 
     if(A && B && _A && B == _A){
-      loggerf(DEBUG, "A Is the same %i", i);
-      if(A->dir == Bl->dir || 
-        ((A->dir == 0 || A->dir == 2) && Bl->dir == 0b101) || 
+      loggerf(ERROR, "A Is the same %i", i);
+      if(A->dir == Bl->dir ||
+        ((A->dir == 0 || A->dir == 2) && Bl->dir == 0b101) ||
         (A->dir == 1 && (Bl->dir == 0b100 || Bl->dir == 0b110))){
-        if(Next(A, NEXT | SWITCH_CARE, level) == Bl){
-          loggerf(DEBUG, "A (%i)\t%i:%i <p %i:%i n> %i:%i\n", level, A->module, A->id, Bl->module, Bl->id, B->module, B->id);
+        if(Next(A, NEXT, level) == Bl){
+          // A = Next_Switch_Block(S, RAIL_LINK_s, NEXT | SWITCH_CARE, level);
+          // B = Next_Switch_Block(S, RAIL_LINK_S, NEXT | SWITCH_CARE, level);
+          loggerf(DEBUG, "A N(%i)\t%x <p %i:%i n> %x\n", level, A, Bl->module, Bl->id, B);
           np_blocks[pairs].next = B;
           np_blocks[pairs].prev = A;
+          pairs++;
         }
-        else{
-          loggerf(DEBUG, "A (%i)\t%i:%i <p %i:%i n> %i:%i\n", level, B->module, B->id, Bl->module, Bl->id, A->module, A->id);
+        else if(Next(A, PREV, level) == Bl){
+          // A = Next_Switch_Block(S, RAIL_LINK_s, NEXT | SWITCH_CARE, level);
+          // B = Next_Switch_Block(S, RAIL_LINK_S, NEXT | SWITCH_CARE, level);
+          loggerf(DEBUG, "A P(%i)\t%x <p %i:%i n> %x\n", level, B, Bl->module, Bl->id, A);
           np_blocks[pairs].next = A;
           np_blocks[pairs].prev = B;
+          pairs++;
+        }
+        else{
+          loggerf(ERROR, "Some weird pair");
         }
       }
       else{
-        if(Next(B, NEXT | SWITCH_CARE, level) == Bl){
-          loggerf(DEBUG, "Ar (%i)\t%i:%i <p %i:%i n> %i:%i\n", level, B->module, B->id, Bl->module, Bl->id, A->module, A->id);
+        if(Next(B, NEXT, level) == Bl){
+          // A = Next_Switch_Block(S, RAIL_LINK_s, NEXT | SWITCH_CARE, level);
+          // B = Next_Switch_Block(S, RAIL_LINK_S, NEXT | SWITCH_CARE, level);
+          loggerf(DEBUG, "Ar N(%i)\t%x <p %i:%i n> %x\n", level, B, Bl->module, Bl->id, A);
           np_blocks[pairs].next = A;
           np_blocks[pairs].prev = B;
+          pairs++;
         }
-        else{
-          loggerf(DEBUG, "Ar (%i)\t%i:%i <p %i:%i n> %i:%i\n", level, A->module, A->id, Bl->module, Bl->id, B->module, B->id);
+        else if(Next(A, PREV, level) == Bl){
+          // A = Next_Switch_Block(S, RAIL_LINK_s, NEXT | SWITCH_CARE, level);
+          // B = Next_Switch_Block(S, RAIL_LINK_S, NEXT | SWITCH_CARE, level);
+          loggerf(DEBUG, "Ar P(%i)\t%x <p %i:%i n> %x\n", level, A, Bl->module, Bl->id, B);
           np_blocks[pairs].next = B;
           np_blocks[pairs].prev = A;
+          pairs++;
         }
       }
-      pairs++;
     }
     else if(A && B && _B && A == _B){
       loggerf(DEBUG, "B Is the same %i", i);
-      if(B->dir == Bl->dir || 
-        ((B->dir == 0 || B->dir == 2) && Bl->dir == 0b101) || 
+      if(B->dir == Bl->dir ||
+        ((B->dir == 0 || B->dir == 2) && Bl->dir == 0b101) ||
         (B->dir == 1 && (Bl->dir == 0b100 || Bl->dir == 0b110))){
-        if(Next(B, NEXT | SWITCH_CARE, level) == Bl){
-          loggerf(DEBUG, "B (%i)\t%i:%i <p %i:%i n> %i:%i\n", level, B->module, B->id, Bl->module, Bl->id, A->module, A->id);
+        if(Next(B, NEXT, level) == Bl){
+          // A = Next_Switch_Block(S, RAIL_LINK_s, NEXT | SWITCH_CARE, level);
+          // B = Next_Switch_Block(S, RAIL_LINK_S, NEXT | SWITCH_CARE, level);
+          loggerf(DEBUG, "B N(%i)\t%x <p %i:%i n> %x\n", level, B, Bl->module, Bl->id, A);
           np_blocks[pairs].next = A;
           np_blocks[pairs].prev = B;
+          pairs++;
         }
         else{
-          loggerf(DEBUG, "B (%i)\t%i:%i <p %i:%i n> %i:%i\n", level, A->module, A->id, Bl->module, Bl->id, B->module, B->id);
+          // A = Next_Switch_Block(S, RAIL_LINK_s, NEXT | SWITCH_CARE, level);
+          // B = Next_Switch_Block(S, RAIL_LINK_S, NEXT | SWITCH_CARE, level);
+          loggerf(DEBUG, "B P(%i)\t%x <p %i:%i n> %x\n", level, A, Bl->module, Bl->id, B);
           np_blocks[pairs].next = B;
           np_blocks[pairs].prev = A;
+          pairs++;
         }
       }
       else{
-        if(Next(A, NEXT | SWITCH_CARE, level) == Bl){
-          loggerf(DEBUG, "Br (%i)\t%i:%i <p %i:%i n> %i:%i\n", level, A->module, A->id, Bl->module, Bl->id, B->module, B->id);
+        if(Next(A, NEXT, level) == Bl){
+          // A = Next_Switch_Block(S, RAIL_LINK_s, NEXT | SWITCH_CARE, level);
+          // B = Next_Switch_Block(S, RAIL_LINK_S, NEXT | SWITCH_CARE, level);
+          loggerf(DEBUG, "Br N(%i)\t%x <p %i:%i n> %x\n", level, A, Bl->module, Bl->id, B);
           np_blocks[pairs].next = B;
           np_blocks[pairs].prev = A;
+          pairs++;
         }
         else{
-          loggerf(DEBUG, "Br (%i)\t%i:%i <p %i:%i n> %i:%i\n", level, B->module, B->id, Bl->module, Bl->id, A->module, A->id);
+          // A = Next_Switch_Block(S, RAIL_LINK_s, NEXT | SWITCH_CARE, level);
+          // B = Next_Switch_Block(S, RAIL_LINK_S, NEXT | SWITCH_CARE, level);
+          loggerf(DEBUG, "Br P(%i)\t%x <p %i:%i n> %x\n", level, B, Bl->module, Bl->id, A);
           np_blocks[pairs].next = A;
           np_blocks[pairs].prev = B;
+          pairs++;
         }
       }
-      pairs++;
+    }
+    else if(level == 1){
+      printf("Weird pairs");
+      if(np_blocks[pairs].next){
+        printf("N%i\t", Next_check_Switch_Path_one_block(Bl, np_blocks[pairs].next, np_blocks[pairs].next->next, SWITCH_CARE));
+        printf(" %i\t", Next_check_Switch_Path_one_block(Bl, np_blocks[pairs].next, np_blocks[pairs].next->prev, SWITCH_CARE));
+      }
+      if(np_blocks[pairs].prev){
+        printf("P%i\t", Next_check_Switch_Path_one_block(Bl, np_blocks[pairs].prev, np_blocks[pairs].prev->next, SWITCH_CARE));
+        printf(" %i\t", Next_check_Switch_Path_one_block(Bl, np_blocks[pairs].prev, np_blocks[pairs].prev->prev, SWITCH_CARE));
+      }
     }
   }
 
@@ -641,13 +753,13 @@ Block * Next_Special_Block(Block * Bl, int flags, int level){
       loggerf(DEBUG, "Prev %i", Bl->dir);
     else
       loggerf(DEBUG, "Next %i", Bl->dir);
-    // if((dir == 0 && (Bl->dir == 4 || Bl->dir == 6)) || 
+    // if((dir == 0 && (Bl->dir == 4 || Bl->dir == 6)) ||
     //   (dir == 1 && (Bl->dir == 2 || Bl->dir == 5))){
     //   // If next + reversed direction / flipped normal / flipped switching
     //   // Or prev + normal direction / switching direction (normal) / flipped reversed direction
     //   tmp = np_blocks[0].prev;
     // }
-    // else if((dir == 0 && (Bl->dir == 2 || Bl->dir == 5)) || 
+    // else if((dir == 0 && (Bl->dir == 2 || Bl->dir == 5)) ||
     //   (dir == 1 && (Bl->dir == 4 || Bl->dir == 6))){
     //   // If next + normal direction / switching direction (normal) / flipped reversed
     //   // or prev + reversed direction / flipped normal / flipped switching
@@ -662,7 +774,7 @@ Block * Next_Special_Block(Block * Bl, int flags, int level){
     _Bool same = TRUE;
     loggerf(DEBUG, "2 pair");
     for(int i = 0; i < pairs - 1; i++){
-      loggerf(DEBUG, " prev %2i:%2i   %2i:%2i next <==> prev %2i:%2i   %2i:%2i next\n",np_blocks[i].prev->module,np_blocks[i].prev->id, np_blocks[i].next->module, np_blocks[i].next->id,np_blocks[i+1].prev->module,np_blocks[i+1].prev->id, np_blocks[i+1].next->module, np_blocks[i+1].next->id);
+      // loggerf(DEBUG, " prev %2i:%2i   %2i:%2i next <==> prev %2i:%2i   %2i:%2i next\n",np_blocks[i].prev->module,np_blocks[i].prev->id, np_blocks[i].next->module, np_blocks[i].next->id,np_blocks[i+1].prev->module,np_blocks[i+1].prev->id, np_blocks[i+1].next->module, np_blocks[i+1].next->id);
       if(np_blocks[i].next != np_blocks[i+1].next && np_blocks[i].prev != np_blocks[i+1].prev){
         same = FALSE;
       }
@@ -707,8 +819,60 @@ Block * Next_Special_Block(Block * Bl, int flags, int level){
   }
   else{
     loggerf(ERROR, "FIX, NO BLOCK FOUND");
-    return Bl;
+    return 0;
   }
+}
+
+int Switch_to_rail(Block ** B, void * Sw, char type, uint8_t counter){
+  struct rail_link next;
+
+  // if(type == RAIL_LINK_S || type == RAIL_LINK_s){
+  //   printf("Sw %i:%i\t%x\n", ((Switch *)Sw)->module, ((Switch *)Sw)->id, type);
+  // }
+
+  if(type == RAIL_LINK_S){
+    if(( ((Switch *)Sw)->state & 0x7f) == 0)
+      next = ((Switch *)Sw)->str;
+    else
+      next = ((Switch *)Sw)->div;
+  }
+  else if(type == RAIL_LINK_s){
+    next = ((Switch *)Sw)->app;
+  }
+
+  if(next.type == RAIL_LINK_S){
+    Switch * NSw = (Switch *)next.p;
+    if(NSw->Detection && NSw->Detection != *B){
+      counter++;
+      *B = NSw->Detection;
+    }
+    return Switch_to_rail(B, (Switch *)next.p, RAIL_LINK_S, counter);
+  }
+  else if(next.type == RAIL_LINK_s){
+    Switch * NSw = (Switch *)next.p;
+    if(NSw->Detection && NSw->Detection != *B){
+      counter++;
+      *B = NSw->Detection;
+    }
+    if((NSw->state & 0x7f) == 0 && NSw->str.p == Sw){
+      return Switch_to_rail(B, NSw, RAIL_LINK_s, counter);
+    }
+    else if((NSw->state & 0x7f) == 1 && NSw->div.p == Sw){
+      return Switch_to_rail(B, NSw, RAIL_LINK_s, counter);
+    }
+    else{
+      return counter;
+    }
+  }
+  else if(next.type == RAIL_LINK_R){
+    Block * tmp_B = (Block *)next.p;
+    if(tmp_B != *B){
+      counter++;
+      *B = tmp_B;
+      return counter;
+    }
+  }
+  return 0;
 }
 
 struct rail_link Next_link(Block * B, int flags){

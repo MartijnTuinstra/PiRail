@@ -7,6 +7,7 @@
 #include "system.h"
 #include "websocket_control.h"
 #include "logger.h"
+#include "algorithm.h"
 
 #include "mem.h"
 
@@ -34,6 +35,8 @@ void sigint_func(int sig){
     printf("-- SIGINT -- STOPPING");
     logger("-- SIGINT -- STOPPING",INFO);
     _SYS_change(STATE_RUN | STATE_Client_Accept, 3);
+
+    sem_post(&AlgorQueueNoEmpty);
   }
 }
 
@@ -86,4 +89,14 @@ void move_file(char * src, char * dest){
 
   fclose(source);
   fclose(target);
+}
+
+void mutex_lock(pthread_mutex_t * m, char * mutex_name){
+  loggerf(DEBUG, "Lock mutex %s", mutex_name);
+  pthread_mutex_lock(m);
+}
+
+void mutex_unlock(pthread_mutex_t * m, char * mutex_name){
+  loggerf(DEBUG, "UNLock mutex %s", mutex_name);
+  pthread_mutex_unlock(m);
 }

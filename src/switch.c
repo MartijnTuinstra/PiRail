@@ -115,16 +115,16 @@ int check_linked_switches(Switch * S){
       continue;
 
     if(S->links[i].type == RAIL_LINK_S || S->links[i].type == RAIL_LINK_s){
-      if(((Switch *)S->links[i].p)->Detection && 
-         ( ((Switch *)S->links[i].p)->Detection->state == RESERVED || 
-           ((Switch *)S->links[i].p)->Detection->state == RESERVED_SWITCH || 
+      if(((Switch *)S->links[i].p)->Detection &&
+         ( ((Switch *)S->links[i].p)->Detection->state == RESERVED ||
+           ((Switch *)S->links[i].p)->Detection->state == RESERVED_SWITCH ||
            ((Switch *)S->links[i].p)->Detection->blocked )){
         return 0;
       }
     }else if(S->links[i].type == RAIL_LINK_M || S->links[i].type == RAIL_LINK_m){
-      if(((MSSwitch *)S->links[i].p)->Detection && 
-         ( ((MSSwitch *)S->links[i].p)->Detection->state == RESERVED || 
-           ((MSSwitch *)S->links[i].p)->Detection->state == RESERVED_SWITCH || 
+      if(((MSSwitch *)S->links[i].p)->Detection &&
+         ( ((MSSwitch *)S->links[i].p)->Detection->state == RESERVED ||
+           ((MSSwitch *)S->links[i].p)->Detection->state == RESERVED_SWITCH ||
            ((MSSwitch *)S->links[i].p)->Detection->blocked )){
         return 0;
       }
@@ -139,16 +139,16 @@ int check_linked_msswitches(MSSwitch * S){
       continue;
 
     if(S->links[i].type == RAIL_LINK_S || S->links[i].type == RAIL_LINK_s){
-      if(((Switch *)S->links[i].p)->Detection && 
-         ( ((Switch *)S->links[i].p)->Detection->state == RESERVED || 
-           ((Switch *)S->links[i].p)->Detection->state == RESERVED_SWITCH || 
+      if(((Switch *)S->links[i].p)->Detection &&
+         ( ((Switch *)S->links[i].p)->Detection->state == RESERVED ||
+           ((Switch *)S->links[i].p)->Detection->state == RESERVED_SWITCH ||
            ((Switch *)S->links[i].p)->Detection->blocked )){
         return 0;
       }
     }else if(S->links[i].type == RAIL_LINK_M || S->links[i].type == RAIL_LINK_m){
-      if(((MSSwitch *)S->links[i].p)->Detection && 
-         ( ((MSSwitch *)S->links[i].p)->Detection->state == RESERVED || 
-           ((MSSwitch *)S->links[i].p)->Detection->state == RESERVED_SWITCH || 
+      if(((MSSwitch *)S->links[i].p)->Detection &&
+         ( ((MSSwitch *)S->links[i].p)->Detection->state == RESERVED ||
+           ((MSSwitch *)S->links[i].p)->Detection->state == RESERVED_SWITCH ||
            ((MSSwitch *)S->links[i].p)->Detection->blocked )){
         return 0;
       }
@@ -158,30 +158,39 @@ int check_linked_msswitches(MSSwitch * S){
 }
 
 void throw_switch(Switch * S, uint8_t state){
-  struct algor_blocks Blocks_before;
-  struct algor_blocks Blocks_after;
+  loggerf(TRACE, "throw_switch");
 
-  Algor_init_Blocks(&Blocks_before, S->Detection);
-  Algor_init_Blocks(&Blocks_after, S->Detection);
-  Algor_search_Blocks(&Blocks_before, 0);
+  Algor_Set_Changed(&S->Detection->Alg);
+  putList_AlgorQueue(S->Detection->Alg, 0);
 
   S->state = (state & 0x0f) | 0x80;
 
   Units[S->module]->switch_state_changed |= 1;
 
-  Algor_search_Blocks(&Blocks_after, 0);
+  process(S->Detection, 3);
 
-  Algor_rail_state(Blocks_after, 0);
-  Algor_rail_state(Blocks_before, 0);
+  Algor_Set_Changed(&S->Detection->Alg);
+  putList_AlgorQueue(S->Detection->Alg, 0);
 
-  Algor_clear_Blocks(&Blocks_before);
-  Algor_clear_Blocks(&Blocks_after);
+  putAlgorQueue(S->Detection, 1);
 }
 
 void throw_msswitch(MSSwitch * S, uint8_t state){
+  loggerf(TRACE, "throw_msswitch");
+
+  Algor_Set_Changed(&S->Detection->Alg);
+  putList_AlgorQueue(S->Detection->Alg, 0);
+
   S->state = (state & 0x0f) | 0x80;
 
   Units[S->module]->msswitch_state_changed |= 1;
+
+  process(S->Detection, 3);
+
+  Algor_Set_Changed(&S->Detection->Alg);
+  putList_AlgorQueue(S->Detection->Alg, 0);
+
+  putAlgorQueue(S->Detection, 1);
 }
 
 int set_switch(Switch * S, uint8_t state){
@@ -244,10 +253,10 @@ int set_switch_path(void * p, struct rail_link link, int flags){
     // Go to next switch
     Switch * Sw = link.p;
     if((Sw->state & 0x7F) == 0 && Sw->str.type != RAIL_LINK_R && Sw->str.type != 'D'){
-      return Next_check_Switch_Path(Sw, Sw->str, flags);
+      return set_switch_path(Sw, Sw->str, flags);
     }
     else if((Sw->state & 0x7F) == 1 && Sw->div.type != RAIL_LINK_R && Sw->div.type != 'D'){
-      return Next_check_Switch_Path(Sw, Sw->div, flags);
+      return set_switch_path(Sw, Sw->div, flags);
     }
   }
   else if(link.type == RAIL_LINK_s){
@@ -259,13 +268,13 @@ int set_switch_path(void * p, struct rail_link link, int flags){
       if(N->str.p != p)
         set_switch(N, 1);
 
-      return Next_check_Switch_Path(N, N->app, flags);
+      return set_switch_path(N, N->app, flags);
     }
     else if((N->state & 0x7F) == 1){
       if(N->div.p != p)
         set_switch(N, 0);
 
-      return Next_check_Switch_Path(N, N->app, flags);
+      return set_switch_path(N, N->app, flags);
     }
   }
   else if(link.type == RAIL_LINK_M){
@@ -347,17 +356,17 @@ int throw_multiple_switches(uint8_t len, char * msg){
     p.state = data[2];
 
     if(!(Units[p.module] && (
-      (p.type == 0 && U_Sw(p.module, p.id)) || 
+      (p.type == 0 && U_Sw(p.module, p.id)) ||
       (p.type == 1 && U_MSSw(p.module, p.id)) )) ){
       loggerf(ERROR, "Switch doesnt exist");
       return -1;
     }
 
-    if((p.type == 0 && U_Sw(p.module, p.id)->Detection && (U_Sw(p.module, p.id)->Detection->blocked || 
-                                                           U_Sw(p.module, p.id)->Detection->state == RESERVED_SWITCH || 
-                                                           U_Sw(p.module, p.id)->Detection->state == RESERVED)) || 
-       (p.type == 1 && U_MSSw(p.module, p.id)->Detection && (U_MSSw(p.module, p.id)->Detection->blocked || 
-                                                             U_MSSw(p.module, p.id)->Detection->state == RESERVED_SWITCH || 
+    if((p.type == 0 && U_Sw(p.module, p.id)->Detection && (U_Sw(p.module, p.id)->Detection->blocked ||
+                                                           U_Sw(p.module, p.id)->Detection->state == RESERVED_SWITCH ||
+                                                           U_Sw(p.module, p.id)->Detection->state == RESERVED)) ||
+       (p.type == 1 && U_MSSw(p.module, p.id)->Detection && (U_MSSw(p.module, p.id)->Detection->blocked ||
+                                                             U_MSSw(p.module, p.id)->Detection->state == RESERVED_SWITCH ||
                                                              U_MSSw(p.module, p.id)->Detection->state == RESERVED))){
       loggerf(INFO, "Switch is blocked");
       return -2;

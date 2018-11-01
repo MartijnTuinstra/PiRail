@@ -127,11 +127,7 @@ void clear_Modules(){
         if(!Units[i]->B[j])
           continue;
         printf("- Block %i\n",j);
-        _free(Units[i]->B[j]->Sw);
-        _free(Units[i]->B[j]->MSSw);
-
-        _free(Units[i]->B[j]);
-        Units[i]->B[j] = NULL;
+        Units[i]->B[j] = clear_Block(U_B(i, j));;
       }
       _free(Units[i]->B);
 

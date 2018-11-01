@@ -36,7 +36,7 @@ int websocket_decode(uint8_t data[1024], struct web_client_t * client){
       printf("Not an Admin client");
       return 0;
     }
-    
+
 
     if(data[0] == WSopc_Track_Scan){
       if(data[1] == 1){
@@ -80,7 +80,7 @@ int websocket_decode(uint8_t data[1024], struct web_client_t * client){
       #warning FIX
       if((return_value = link_train(fID,tID,data[3] & 0x80)) == 1){
         WS_clear_message(mID, 1);
-        
+
         Z21_get_train(trains[tID]);
       }
       else{
@@ -158,13 +158,13 @@ int websocket_decode(uint8_t data[1024], struct web_client_t * client){
   else if(data[0] & 0x20){ //Track stuff
     if(data[0] == WSopc_SetSwitch){ //Toggle switch
       if(Units[data[1]] && U_Sw(data[1], data[2])){ //Check if switch exists
-        printf("throw switch %i:%i to state: \t", data[1], data[2]);
-        printf("%i->%i", U_Sw(data[1], data[2])->state, !U_Sw(data[1], data[2])->state);
+        loggerf(INFO, "throw switch %i:%i to state: \t%i->%i",
+                data[1], data[2], U_Sw(data[1], data[2])->state, !U_Sw(data[1], data[2])->state);
         throw_switch(U_Sw(data[1], data[2]), data[3]);
       }
     }
     else if(data[0] == WSopc_SetMultiSwitch){ // Set mulitple switches at once
-      printf("Throw multiple switches\n");
+      loggerf(INFO, "Throw multiple switches\n");
       throw_multiple_switches(data[1], (char *)&data[2]);
     }
     else if(data[0] == WSopc_SetSwitchReserved){ //Set switch reserved
@@ -207,10 +207,10 @@ int websocket_get_msg(int fd, char outbuf[], int * length_out){
   recv(fd,buf,1024,0);
 
   uint16_t byte = 0;
-  
+
   //Websocket opcode
   int opcode = buf[byte++] & 0b00001111;
-  
+
   uint16_t mes_length = buf[byte++] & 0b01111111;
   if(mes_length == 126){
     mes_length  = (buf[byte++] << 8);
@@ -250,7 +250,7 @@ int websocket_get_msg(int fd, char outbuf[], int * length_out){
   *length_out = mes_length;
 
   memcpy(outbuf, output, mes_length);
-  
+
   for(uint16_t q = 0;q<mes_length;q++){
     printf("%02x ",output[q]);
   }
@@ -316,7 +316,7 @@ void ws_send_all(char data[],int length,int flag){
   websocket_create_msg(data, length, outbuf, &length);
 
   pthread_mutex_lock(&m_websocket_send);
-  
+
   for(int i = 0; i<MAX_WEB_CLIENTS; i++){
     if(websocket_clients[i].state == 1 && (websocket_clients[i].type & flag) != 0){
       // printf("WS send (%i)\t",i);

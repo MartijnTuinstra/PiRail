@@ -14,7 +14,7 @@ pthread_mutex_t mutex_lockA;
 #define OneSec 1000000
 
 #define TRAIN_A_LEN   5 //cm
-#define TRAIN_A_SPEED 10 //cm/s
+#define TRAIN_A_SPEED 5 //cm/s
 
 
 void change_Block(Block * B, enum Rail_states state){
@@ -24,11 +24,9 @@ void change_Block(Block * B, enum Rail_states state){
     B->blocked = 1;
   else
     B->blocked = 0;
-  process(B, 2);
-  if(B->changed & IO_Changed){
-    loggerf(INFO, "ReProcess");
-    process(B, 2);
-  }
+
+  putAlgorQueue(B, 1);
+  // process(B, 3);
 }
 
 void *TRAIN_SIMA(){
@@ -38,11 +36,12 @@ void *TRAIN_SIMA(){
 
   B->state = BLOCKED;
   B->blocked = 1;
-  B->changed  = 1;
-  process(B, 2);
+  B->changed |= IO_Changed;
+
+  putAlgorQueue(B, 1);
 
   while(1){
-    if(B->state == RESTRICTED){ //B->train != 0 && train_link[B->train] != 0 || 
+    if(B->state == RESTRICTED){ //B->train != 0 && train_link[B->train] != 0 ||
       break;
     }
     else if((_SYS->_STATE & STATE_RUN) == 0){
@@ -113,11 +112,12 @@ void *TRAIN_SIMB(){
 
   B->state = BLOCKED;
   B->blocked = 1;
-  B->changed  = 1;
-  process(B, 2);
+  B->changed |= IO_Changed;
+
+  putAlgorQueue(B, 1);
 
   while(1){
-    if(B->state == RESTRICTED){ //B->train != 0 && train_link[B->train] != 0 || 
+    if(B->state == RESTRICTED){ //B->train != 0 && train_link[B->train] != 0 ||
       break;
     }
     else if((_SYS->_STATE & STATE_RUN) == 0){

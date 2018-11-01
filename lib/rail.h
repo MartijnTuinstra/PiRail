@@ -16,6 +16,9 @@
   struct _msswitch;
   struct _signal;
   struct _station;
+  struct rail_segment;
+
+  typedef struct rail_segment Block;
 
   typedef struct _station Station;
   typedef struct _switch Switch;
@@ -24,6 +27,23 @@
 
   typedef struct s_IO_Port IO_Port;
   typedef struct s_node_adr Node_adr;
+
+  typedef struct proces_block {
+    _Bool blocked;
+    uint8_t blocks;
+    int length;
+    Block * B[5];
+  } Algor_Block;
+
+  typedef struct algor_blocks {
+    Algor_Block * BPPP;
+    Algor_Block * BPP;
+    Algor_Block * BP;
+    Block * B;
+    Algor_Block * BN;
+    Algor_Block * BNN;
+    Algor_Block * BNNN;
+  } Algor_Blocks;
 
   #define U_B(U, A) Units[U]->B[A]
 
@@ -53,10 +73,10 @@
     UNKNOWN           // 7
   };
 
-  
+
 
 #ifndef RAIL_LINK_TYPES
-#define RAIL_LINK_TYPES 
+#define RAIL_LINK_TYPES
 enum link_types {
   RAIL_LINK_R,
   RAIL_LINK_S,
@@ -70,6 +90,7 @@ enum link_types {
 
   #define IO_Changed 0x1
   #define State_Changed 0x2
+  #define Block_Algor_Changed 0x4
 
   typedef struct rail_segment {
     uint8_t  module;
@@ -94,7 +115,7 @@ enum link_types {
     _Bool blocked;
 
     uint8_t train; //Follow id
-    uint8_t changed; // 0x1 = IO changed, 0x2 = state changed
+    uint8_t changed; // 0x1 = IO changed, 0x2 = state changed, 0x4 = Algor blocks changed
     _Bool oneWay;
 
     Signal * NextSignal;
@@ -105,6 +126,9 @@ enum link_types {
 
     int msswitch_len;
     MSSwitch ** MSSw;
+
+    //Algorithm selected blocks
+    struct algor_blocks Alg;
 
   } Block;
 
@@ -147,6 +171,7 @@ enum link_types {
   void init_rail();
 
   void create_block(uint8_t module, struct s_block_conf block);
+  void * clear_Block(Block * B);
   // void Create_Segment(Node_adr IO_Adr, struct block_connect connect ,char max_speed, char dir,char len);
   void Create_Station(int module, int id, char * name, char name_len, enum Station_types type, int len, Block ** blocks);
 
@@ -159,11 +184,13 @@ enum link_types {
   Block * Next_MSSwitch_Block(MSSwitch * S, char type, int flags, int level);
   Block * Next_Special_Block(Block * B, int flags, int level);
 
-  #define Next(B, f, l) _Next(B, f | 0b1110, l)
+  #define Next(B, f, l) _Next(B, (f) | 0b1110, l)
   Block * _Next(Block * B, int flags, int level);
 
   int Next_check_Switch(void * p, struct rail_link link, int flags);
   int Next_check_Switch_Path(void * p, struct rail_link link, int flags);
+  int Next_check_Switch_Path_one_block(Block * B, void * p, struct rail_link link, int flags);
+  int Switch_to_rail(Block ** B, void * Sw, char type, uint8_t counter);
 
   struct rail_link Next_link(Block * B, int flags);
   struct rail_link Prev_link(Block * B);

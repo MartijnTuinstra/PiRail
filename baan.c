@@ -26,15 +26,15 @@ int main(){
   init_allocs();
 
   init_logger("log.txt");
-  set_level(DEBUG);
+  set_level(INFO);
 
   if (signal(SIGINT, sigint_func) == SIG_ERR){
-    logger("Cannot catch SIGINT",CRITICAL);
+    logger("Cannot catch SIGINT", CRITICAL);
     return 0;
   }
 
   setbuf(stdout,NULL);
-  setbuf(stderr,NULL);
+  setbuf(stderr, NULL);
   signal(SIGPIPE, SIG_IGN);
   srand(time(NULL));
 
@@ -93,7 +93,7 @@ int main(){
         LoadModuleFromConfig(DeviceList[i]);
       }
     }
-    
+
 
     _SYS_change(STATE_Modules_Loaded,1);
 
@@ -110,28 +110,60 @@ int main(){
 
   //#############################################################
   //Init done
-  
-  //scan_All();
-  printf("Next 1\n");
-  Block *B = Next(Units[20]->B[3], NEXT, 1);
-  if(B){printf("Block %i:%i\n",B->module, B->id);}
-  printf("Next 2\n");
-  B = Next(Units[20]->B[3], NEXT, 2);
-  if(B){printf("Block %i:%i\n",B->module, B->id);}
-  printf("Next 3\n");
-  B = Next(Units[20]->B[3], NEXT, 3);
-  if(B){printf("Block %i:%i\n",B->module, B->id);}
-  printf("Next 4\n");
-  B = Next(Units[20]->B[3], NEXT, 4);
-  if(B){printf("Block %i:%i\n",B->module, B->id);}
-  printf("Next 5\n");
-  B = Next(Units[20]->B[3], NEXT, 5);
-  if(B){printf("Block %i:%i\n",B->module, B->id);}
-  printf("Next 6\n");
-  B = Next(Units[20]->B[3], NEXT, 6);
-  if(B){printf("Block %i:%i\n",B->module, B->id);}
+
+  // scan_All();
+  // printf("Next 1\n");
+  // Block *B = Next(Units[20]->B[3], NEXT, 1);
+  // if(B){printf("Block %i:%i\n",B->module, B->id);}
+  // printf("Next 2\n");
+  // B = Next(Units[20]->B[3], NEXT, 2);
+  // if(B){printf("Block %i:%i\n",B->module, B->id);}
+  // printf("Next 3\n");
+  // B = Next(Units[20]->B[3], NEXT, 3);
+  // if(B){printf("Block %i:%i\n",B->module, B->id);}
+  // printf("Next 4\n");
+  // B = Next(Units[20]->B[3], NEXT, 4);
+  // if(B){printf("Block %i:%i\n",B->module, B->id);}
+  // printf("Next 5\n");
+  // B = Next(Units[20]->B[3], NEXT, 5);
+  // if(B){printf("Block %i:%i\n",B->module, B->id);}
+  // printf("Next 6\n");
+  // B = Next(Units[20]->B[3], NEXT, 6);
+  // if(B){printf("Block %i:%i\n",B->module, B->id);}
+
+  set_level(DEBUG);
+
+  U_Sw(20, 1)->state = 1;
+  U_Sw(20, 0)->state = 1;
+
+  process(U_B(20, 6), 3);
+
+  set_level(DEBUG);
+
+  printf("Baan.c block debug\n");
+  Algor_print_block_debug(U_B(20, 6)->Alg);
 
   delay(5);
+
+  set_level(INFO);
+
+  return;
+
+  for(int i = 0; i < unit_len;i++){
+    if(!Units[i])
+      continue;
+
+    for(int j = 0; j < Units[i]->block_len; j++){
+      if(!U_B(i,j))
+        continue;
+
+      U_B(i,j)->changed |= Block_Algor_Changed;
+    }
+  }
+
+  scan_All();
+
+  set_level(INFO);
 
   // return 1;
 
@@ -143,18 +175,22 @@ int main(){
   }
   printf("Continue\n");
 
-  usleep(400000);
+  usleep(40000);
 
   //pthread_t pt_scan_All;
   //pthread_create(&pt_scan_All, NULL, scan_All_continiously, NULL);
   // pthread_t pt_train_timers;
   // pthread_create(&pt_train_timers, NULL, clear_train_timers, NULL);
-  pthread_t pt_train_simA;
-  pthread_create(&pt_train_simA, NULL, TRAIN_SIMA, NULL);
-  // pthread_t pt_train_simB;
-  // pthread_create(&pt_train_simB, NULL, TRAIN_SIMB, NULL);
+  // pthread_t pt_train_simA;
+  // pthread_create(&pt_train_simA, NULL, TRAIN_SIMA, NULL);
+  pthread_t pt_train_simB;
+  pthread_create(&pt_train_simB, NULL, TRAIN_SIMB, NULL);
+  usleep(100);
 
-  usleep(10000000);
+  sem_wait(&AlgorQueueNoEmpty);
+  processAlgorQueue();
+
+  usleep(1000000);
 
   Units[20]->B[8]->state = RESTRICTED;
   Units[20]->B[4]->state = RESTRICTED;
@@ -163,15 +199,20 @@ int main(){
 
   loggerf(WARNING, "SYS-State: %x", _SYS->_STATE);
 
+  sem_init(&AlgorQueueNoEmpty, 1, 0);
+
   while(_SYS->_STATE & STATE_RUN){
-    pthread_mutex_lock(&algor_mutex);
+    sem_wait(&AlgorQueueNoEmpty);
+    processAlgorQueue();
+
+    mutex_lock(&algor_mutex, "Algor Mutex");
     //Notify clients
     WS_trackUpdate(0);
     WS_SwitchesUpdate(0);
 
-    pthread_mutex_unlock(&algor_mutex);
+    mutex_unlock(&algor_mutex, "Algor Mutex");
 
-    usleep(10000);
+    usleep(1000);
   }
 
   logger("Stopping Argor",INFO);
@@ -179,14 +220,15 @@ int main(){
 
   logger("Free memory",INFO);
   logger("FREE MEMORY",CRITICAL);
-  free_modules();
+  clear_Modules();
   free_trains();
   //pthread_join(tid[1],NULL);
   //printf("STOP JOINED\n");
   //pthread_join(tid[2],NULL);
   //printf("Timer JOINED\n");
   logger("Stopping Train Sim",INFO);
-  pthread_join(pt_train_simA,NULL);
+  // pthread_join(pt_train_simA,NULL);
+  pthread_join(pt_train_simB,NULL);
   //pthread_join(tid[4],NULL);
   //printf("SimB JOINED\n");
 
@@ -210,4 +252,3 @@ int main(){
   print_allocs();
   //pthread_exit(NULL);
 }
-

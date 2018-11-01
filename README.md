@@ -29,15 +29,20 @@ This package contains
 - wiringPi
 - openssl
 
-# Installation
+# Installation and Configuration
 
-To install and launch the Engine:
+To build all the binaries and launch the Engine:
 ```
 make
 ./baan
 ```
 
-To install and launch the Emulator:
+Use the config\_reader to edit or create modules
+```
+./config\_reader
+```
+
+To build and launch the Emulator:
 ```
 cd Z21_Emulator
 gcc emulator.c -std=c99 -lpthread -g -o Z21.out

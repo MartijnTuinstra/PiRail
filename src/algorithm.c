@@ -610,6 +610,8 @@ void Algor_special_search_Blocks(struct algor_blocks * Blocks, int flags){
     lengthA += Aside[pairs[0].next_l - 1]->length;
     for(int i = pairs[0].next_l + 1; i<15; i++){
       Aside[i-1] = Next(pairs[0].next, a_dir, i - pairs[0].next_l);
+      if(!Aside[i-1])
+        break;
       lengthA += Aside[i-1]->length;
       if(lengthA > 400){
         break;
@@ -628,6 +630,8 @@ void Algor_special_search_Blocks(struct algor_blocks * Blocks, int flags){
     lengthB += Bside[pairs[0].prev_l - 1]->length;
     for(int i = pairs[0].prev_l + 1; i<15; i++){
       Bside[i-1] = Next(pairs[0].prev, b_dir, i - pairs[0].prev_l);
+      if(!Bside[i-1])
+        break;
       lengthB += Bside[i-1]->length;
       if(lengthB > 400){
         break;
@@ -650,6 +654,8 @@ void Algor_special_search_Blocks(struct algor_blocks * Blocks, int flags){
         else if(p == 2)
           C_Blocks_P = Blocks->BNNN;
         do{
+          if(!Bside[i])
+            break;
           C_Blocks_P->B[C_Blocks_P->blocks] = Bside[i++];
           C_Blocks_P->length += C_Blocks_P->B[C_Blocks_P->blocks]->length;
           C_Blocks_P->blocks++;
@@ -666,6 +672,8 @@ void Algor_special_search_Blocks(struct algor_blocks * Blocks, int flags){
         else if(n == 2)
           C_Blocks_P = Blocks->BPPP;
         do{
+          if(!Aside[i])
+            break;
           C_Blocks_P->B[C_Blocks_P->blocks] = Aside[i++];
           C_Blocks_P->length += C_Blocks_P->B[C_Blocks_P->blocks]->length;
           C_Blocks_P->blocks++;

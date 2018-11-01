@@ -147,7 +147,7 @@ int main(){
 
   set_level(INFO);
 
-  return;
+  // return;
 
   for(int i = 0; i < unit_len;i++){
     if(!Units[i])

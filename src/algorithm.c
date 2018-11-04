@@ -239,6 +239,15 @@ void process(Block * B,int flags){
   B->changed &= ~(IO_Changed);
   B->changed |= State_Changed;
 
+  if(B->train && !B->blocked){
+    if(B->Alg.BN->blocks > 0 && B->Alg.BN->B[0]->blocked){
+      putAlgorQueue(B->Alg.BN->B[0], 1);
+    }
+    else if(B->Alg.BP->blocks > 0 && B->Alg.BP->B[0]->blocked){
+      putAlgorQueue(B->Alg.BP->B[0], 1);
+    }
+  }
+
   // Algor_init_Blocks(&AllBlocks, B);
 
   //Find all surrounding blocks. Can be speeded up by storing this into the block. Update only if a (MS)switch changes or the direciton changes
@@ -249,7 +258,6 @@ void process(Block * B,int flags){
 
   Algor_GetBlocked_Blocks(B->Alg);
 
-  printf("Algor Debug\n");
   Algor_print_block_debug(B->Alg);
 
 
@@ -319,6 +327,12 @@ void Algor_clear_Blocks(struct algor_blocks * AllBlocks){
   AllBlocks->BN->blocks = 0;
   AllBlocks->BNN->blocks = 0;
   AllBlocks->BNNN->blocks = 0;
+  AllBlocks->BPPP->length = 0;
+  AllBlocks->BPP->length = 0;
+  AllBlocks->BP->length = 0;
+  AllBlocks->BN->length = 0;
+  AllBlocks->BNN->length = 0;
+  AllBlocks->BNNN->length = 0;
 }
 
 void Algor_free_Blocks(struct algor_blocks * AllBlocks){
@@ -562,6 +576,8 @@ void Algor_special_search_Blocks(struct algor_blocks * Blocks, int flags){
       continue;
     }
 
+    // printf("%i:%i == %i:%i\n", BlA->module, BlA->id, BlB->module, BlB->id);
+
     for(int j =0; j<10; j++){
       if((pairs[j].next == BlA && pairs[j].prev == BlB) ||
          (pairs[j].prev == BlA && pairs[j].next == BlB)){
@@ -606,9 +622,10 @@ void Algor_special_search_Blocks(struct algor_blocks * Blocks, int flags){
         lengthA += Aside[i-1]->length;
       }
     }
-    Aside[pairs[0].next_l - 1] = pairs[0].next;
-    lengthA += Aside[pairs[0].next_l - 1]->length;
-    for(int i = pairs[0].next_l + 1; i<15; i++){
+    if(pairs[0].next){
+      Aside[pairs[0].next_l - 1] = pairs[0].next;
+      lengthA += Aside[pairs[0].next_l - 1]->length;
+      for(int i = pairs[0].next_l + 1; i<15; i++){
       Aside[i-1] = Next(pairs[0].next, a_dir, i - pairs[0].next_l);
       if(!Aside[i-1])
         break;
@@ -616,6 +633,7 @@ void Algor_special_search_Blocks(struct algor_blocks * Blocks, int flags){
       if(lengthA > 400){
         break;
       }
+    }
     }
 
     uint16_t lengthB = 0;
@@ -626,9 +644,10 @@ void Algor_special_search_Blocks(struct algor_blocks * Blocks, int flags){
         lengthB += Bside[i-1]->length;
       }
     }
-    Bside[pairs[0].prev_l - 1] = pairs[0].prev;
-    lengthB += Bside[pairs[0].prev_l - 1]->length;
-    for(int i = pairs[0].prev_l + 1; i<15; i++){
+    if(pairs[0].prev){
+      Bside[pairs[0].prev_l - 1] = pairs[0].prev;
+      lengthB += Bside[pairs[0].prev_l - 1]->length;
+      for(int i = pairs[0].prev_l + 1; i<15; i++){
       Bside[i-1] = Next(pairs[0].prev, b_dir, i - pairs[0].prev_l);
       if(!Bside[i-1])
         break;
@@ -637,49 +656,88 @@ void Algor_special_search_Blocks(struct algor_blocks * Blocks, int flags){
         break;
       }
     }
+    }
+
+    for(int ab = 0; ab < 15; ab++){
+      if(Aside[ab])
+        printf("%i:%i\t", Aside[ab]->module, Aside[ab]->id);
+    }
+    printf("\n");
+    for(int ab = 0; ab < 15; ab++){
+      if(Bside[ab])
+        printf("%i:%i\t", Bside[ab]->module, Bside[ab]->id);
+    }
+    printf("\n");
 
     // Putt all blocks into Algor blocks
-    if(Aside[0]->dir == Blocks->B->dir){
-      printf("A\n");
-    }
-    else if(Bside[0]->dir == Blocks->B->dir){
-      int i = 0;
-      printf("B\n");
-      for(int p = 0; p < 3; p++){
-        Algor_Block * C_Blocks_P;
+    int i = 0;
+    for(int p = 0; p < 3; p++){
+      if(!Bside[0])
+        break;
+      Algor_Block * C_Blocks_P = 0;
+      // TODO: adds support for edge cases: 2 == 0, 5 == 0 ....
+      if(Bside[0]->dir == Blocks->B->dir && (b_dir & 1) == NEXT){
         if(p == 0)
           C_Blocks_P = Blocks->BN;
         else if(p == 1)
           C_Blocks_P = Blocks->BNN;
         else if(p == 2)
           C_Blocks_P = Blocks->BNNN;
-        do{
-          if(!Bside[i])
-            break;
-          C_Blocks_P->B[C_Blocks_P->blocks] = Bside[i++];
-          C_Blocks_P->length += C_Blocks_P->B[C_Blocks_P->blocks]->length;
-          C_Blocks_P->blocks++;
-        }
-        while(C_Blocks_P->length < Block_Minimum_Size && C_Blocks_P->blocks < 5);
       }
-      i = 0;
-      for(int n = 0; n < 3; n++){
-        Algor_Block * C_Blocks_P;
+      else if(Bside[0]->dir == Blocks->B->dir && (b_dir & 1) == PREV){
+        if(p == 0)
+          C_Blocks_P = Blocks->BP;
+        else if(p == 1)
+          C_Blocks_P = Blocks->BPP;
+        else if(p == 2)
+          C_Blocks_P = Blocks->BPPP;
+      }
+      else{
+        loggerf(ERROR, "Unkown Direction B %x  %x", Bside[0]->dir, Blocks->B->dir);
+      }
+      do{
+        if(!Bside[i] || !C_Blocks_P)
+          break;
+        C_Blocks_P->B[C_Blocks_P->blocks] = Bside[i++];
+        C_Blocks_P->length += C_Blocks_P->B[C_Blocks_P->blocks]->length;
+        C_Blocks_P->blocks++;
+        printf("length: %i\n", C_Blocks_P->B[C_Blocks_P->blocks - 1]->length);
+      }
+      while(C_Blocks_P->length < Block_Minimum_Size && C_Blocks_P->blocks < 5);
+    }
+    i = 0;
+    for(int n = 0; n < 3; n++){
+      if(!Aside[0])
+        break;
+      Algor_Block * C_Blocks_P = 0;
+      // TODO: adds support for edge cases: 2 == 0, 5 == 0 ....
+      if(Aside[0]->dir == Blocks->B->dir && (a_dir & 1) == PREV){
         if(n == 0)
           C_Blocks_P = Blocks->BP;
         else if(n == 1)
           C_Blocks_P = Blocks->BPP;
         else if(n == 2)
           C_Blocks_P = Blocks->BPPP;
-        do{
-          if(!Aside[i])
-            break;
-          C_Blocks_P->B[C_Blocks_P->blocks] = Aside[i++];
-          C_Blocks_P->length += C_Blocks_P->B[C_Blocks_P->blocks]->length;
-          C_Blocks_P->blocks++;
-        }
-        while(C_Blocks_P->length < Block_Minimum_Size && C_Blocks_P->blocks < 5);
       }
+      else if((a_dir & 1) == NEXT && (Aside[0]->dir == Blocks->B->dir)){
+        if(n == 0)
+          C_Blocks_P = Blocks->BN;
+        else if(n == 1)
+          C_Blocks_P = Blocks->BNN;
+        else if(n == 2)
+          C_Blocks_P = Blocks->BNNN;
+      }
+      else{
+        loggerf(ERROR, "Unkown Direction A%x  %x", Aside[0]->dir, Blocks->B->dir);
+      }
+      do{
+        if(!Aside[i] || !C_Blocks_P)
+          break;
+        C_Blocks_P->B[C_Blocks_P->blocks] = Aside[i++];
+        C_Blocks_P->length += C_Blocks_P->B[C_Blocks_P->blocks]->length;
+        C_Blocks_P->blocks++;
+      }
+      while(C_Blocks_P->length < Block_Minimum_Size && C_Blocks_P->blocks < 5);
     }
   }
   else{
@@ -857,7 +915,7 @@ void Algor_train_following(struct algor_blocks AllBlocks, int debug){
     B->train = BP.B[0]->train;
     // if(train_link[B->train])
     //   train_link[B->train]->Block = B;
-    loggerf(DEBUG, "COPY_TRAIN from %i:%i to %i:%i", BP.B[0]->module, BP.B[0]->id, B->module, B->id);
+    loggerf(INFO, "COPY_TRAIN from %i:%i to %i:%i", BP.B[0]->module, BP.B[0]->id, B->module, B->id);
   }
 
   if(BN.blocks > 0 && BN.B[0]->type == 'T' && BN.blocked){
@@ -905,42 +963,42 @@ void Algor_rail_state(struct algor_blocks AllBlocks, int debug){
   Algor_Block BNN  = *AllBlocks.BNN;
   // Algor_Block BNNN = *AllBlocks.BNNN;
 
-  if(BN.blocks > 0 && BN.blocked && !B->blocked){
-    B->state = DANGER;
-    B->changed |= State_Changed;
-    Algor_apply_rail_state(BP, CAUTION);
-    Algor_apply_rail_state(BPP, PROCEED);
-  }
-  else if(B->blocked && !BP.blocked && BP.blocks > 0){
+  if(B->blocked && !BP.blocked && BP.blocks > 0){
     Algor_apply_rail_state(BP, DANGER);
     Algor_apply_rail_state(BPP, CAUTION);
     Algor_apply_rail_state(BPPP, PROCEED);
   }
-  else if(!B->blocked && BN.blocks == 0 && B->type != SPECIAL){
-    B->state = CAUTION;
-    B->changed |= State_Changed;
-    // printf(" End of track %i:%i ",B->module, B->id);
-    if(!BP.blocked && BP.blocks > 0){
-      Algor_apply_rail_state(BP, PROCEED);
+  else if(!B->blocked && BN.blocks == 0){
+    if(B->type != SPECIAL){
+      B->state = CAUTION;
+      B->changed |= State_Changed;
+      // printf(" End of track %i:%i ",B->module, B->id);
+      if(!BP.blocked && BP.blocks > 0){
+        Algor_apply_rail_state(BP, PROCEED);
 
-      if(!BPP.blocked && BPP.blocks > 0){
-        Algor_apply_rail_state(BPP, PROCEED);
+        if(!BPP.blocked && BPP.blocks > 0){
+          Algor_apply_rail_state(BPP, PROCEED);
+        }
+      }
+    }
+    //B->type == SPECIAL
+    else{
+      B->state = DANGER;
+      B->changed |= State_Changed;
+
+      for(int i = 0; i < BP.blocks; i++){
+        if(BP.B[i]->type != SPECIAL){
+          BP.B[i]->state = CAUTION;
+          BP.B[i]->changed |= State_Changed;
+          break;
+        }
+
+        BP.B[i]->state = DANGER;
+        BP.B[i]->changed |= State_Changed;
       }
     }
   }
-  else if(!B->blocked && BN.blocks == 0 && B->type == SPECIAL){
-    B->state = DANGER;
-    B->changed |= State_Changed;
-    // printf(" End of track %i:%i ",B->module, B->id);
-    if(!BP.blocked && BP.blocks > 0){
-      Algor_apply_rail_state(BP, CAUTION);
-
-      if(!BPP.blocked && BPP.blocks > 0){
-        Algor_apply_rail_state(BPP, PROCEED);
-      }
-    }
-  }
-  else if(!B->blocked && !BN.blocked && !BNN.blocked){
+  else if(!B->blocked && !BN.blocked && !BNN.blocked && !BP.blocked && !BPP.blocked){
     B->state = PROCEED;
     B->changed |= State_Changed;
   }

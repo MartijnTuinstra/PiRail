@@ -578,7 +578,7 @@ Block * Next_MSSwitch_Block(MSSwitch * S, char type, int flags, int level){
 }
 
 Block * Next_Special_Block(Block * Bl, int flags, int level){
-  loggerf(DEBUG, "Next_Special_Block");
+  loggerf(DEBUG, "Next_Special_Block %i:%i", Bl->module, Bl->id);
   struct next_prev_Block {
     Block * prev;
     Block * next;
@@ -826,9 +826,9 @@ Block * Next_Special_Block(Block * Bl, int flags, int level){
 int Switch_to_rail(Block ** B, void * Sw, char type, uint8_t counter){
   struct rail_link next;
 
-  // if(type == RAIL_LINK_S || type == RAIL_LINK_s){
-  //   printf("Sw %i:%i\t%x\n", ((Switch *)Sw)->module, ((Switch *)Sw)->id, type);
-  // }
+  //if(type == RAIL_LINK_S || type == RAIL_LINK_s){
+  //  printf("Sw %i:%i\t%x\n", ((Switch *)Sw)->module, ((Switch *)Sw)->id, type);
+  //}
 
   if(type == RAIL_LINK_S){
     if(( ((Switch *)Sw)->state & 0x7f) == 0)
@@ -853,6 +853,7 @@ int Switch_to_rail(Block ** B, void * Sw, char type, uint8_t counter){
     if(NSw->Detection && NSw->Detection != *B){
       counter++;
       *B = NSw->Detection;
+      //printf("-%i:%i\n", (*B)->module, (*B)->id);
     }
     if((NSw->state & 0x7f) == 0 && NSw->str.p == Sw){
       return Switch_to_rail(B, NSw, RAIL_LINK_s, counter);
@@ -861,6 +862,7 @@ int Switch_to_rail(Block ** B, void * Sw, char type, uint8_t counter){
       return Switch_to_rail(B, NSw, RAIL_LINK_s, counter);
     }
     else{
+      *B = 0;
       return counter;
     }
   }

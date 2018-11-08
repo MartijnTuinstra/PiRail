@@ -1,5 +1,6 @@
 
 var c;
+var hit_radius = 8;
 
 var Canvas = {
 
@@ -84,71 +85,18 @@ var Canvas = {
 				var coords = [];
 				var block_list = [];
 				var switch_list = [];
-				if(v.type == "line"){
-					coords.push({x:v.x,y:v.y});
-					coords.push({x:v.x2,y:v.y2});
-					block_list.push(v.block);
-				}
-				else if(v.type == "arc"){
-					coords.push({x:v.cx+Math.cos(v.start*Math.PI)*v.r,y:v.cy+Math.sin(v.start*Math.PI)*v.r});
-					coords.push({x:v.cx+Math.cos(v.end*Math.PI)*v.r,y:v.cy+Math.sin(v.end*Math.PI)*v.r});
-					block_list.push(v.block);
-				}
-				else if(v.type == "swl"){
-					coords.push({x:v.x,y:v.y});
-					if(v.r == 0.25){
-						coords.push({x:v.x+ro[0].x+ds,y:v.y+2*ro[0].y});
-						coords.push({x:v.x+ro[0].x,y:v.y+ro[0].y});
-					}else if(v.r == -0.25){
-						coords.push({x:v.x+ro[0].x+ds,y:v.y-2*ro[0].y});
-						coords.push({x:v.x+ro[0].y,y:v.y-ro[0].x});
+				if(v.type == "line" || v.type == "arc" || v.type == "swr" || v.type == "swl" || v.type == "ds" || v.type == "dsf"){
+					data = v.dotmatrix()
+					coords.push(...data[0]);
+					block_list.push(data[1]);
+					if(data[2] != undefined){
+						if(data[2].isArray != undefined && data[2].isArray()){
+							switch_list.push(...data[2]);
+						}
+						else{
+							switch_list.push(data[2]);
+						}
 					}
-					else if(v.r == 0){
-						coords.push({x:v.x+ro[0].x,y:v.y});
-						coords.push({x:v.x+ro[0].x,y:v.y-ro[0].y});
-					}
-					else if(v.r == 1 || v.r == -1){
-						coords.push({x:v.x-ro[0].x,y:v.y});
-						coords.push({x:v.x-ro[0].x,y:v.y+ro[0].y});
-					}
-					block_list.push(v.block);
-					switch_list.push(v.switch);
-				}
-				else if(v.type == "swr"){
-					coords.push({x:v.x,y:v.y});
-					if(v.r == 0.25){
-						coords.push({x:v.x+ro[0].x+ds,y:v.y+2*ro[0].y});
-						coords.push({x:v.x+ro[0].y,y:v.y+ro[0].x});
-					}else if(v.r == -0.25){
-						coords.push({x:v.x+ro[0].x+ds,y:v.y-2*ro[0].y});
-						coords.push({x:v.x+ro[0].y,y:v.y-ro[0].x});
-					}
-					else if(v.r == 0){
-						coords.push({x:v.x+ro[0].x,y:v.y});
-						coords.push({x:v.x+ro[0].x,y:v.y+ro[0].y});
-					}
-					else if(v.r == -1 || v.r == 1){
-						coords.push({x:v.x-ro[0].x,y:v.y});
-						coords.push({x:v.x-ro[0].x,y:v.y-ro[0].y});
-					}
-					block_list.push(v.block);
-					switch_list.push(v.switch);
-				}
-				else if(v.type == "ds"){
-					if(v.xtl != undefined && v.ytl != undefined){
-						coords.push({x:v.xtl,y:v.ytl});
-						coords.push({x:v.xtl+ds,y:v.ytl+ro[0].y});
-						coords.push({x:v.xtl+ro[0].x,y:v.ytl+ro[0].y});
-						coords.push({x:v.xtl+ro[0].x+ds,y:v.ytl+2*ro[0].y});
-					}else{
-						coords.push({x:v.xtr,y:v.ytr});
-						coords.push({x:v.xtr-ds,y:v.ytr+ro[0].y});
-						coords.push({x:v.xtr-ro[0].x,y:v.ytr+ro[0].y});
-						coords.push({x:v.xtr-ro[0].x-ds,y:v.ytr+2*ro[0].y});
-					}
-					block_list.push(v.block);
-					switch_list.push(v.switchA);
-					switch_list.push(v.switchB);
 				}
 				else if(v.type == "dc"){
 					block_list.push(v.blockA);
@@ -230,6 +178,7 @@ var Canvas = {
 	draw_background: function(){
 		c.lineWidth = 6;
 		var tmp_this = this;
+		var obj = this;
 		//Draw background lines
 		$.each(modules,function(module,module_v){
 			if (module_v.visible == false){
@@ -257,59 +206,8 @@ var Canvas = {
 				}
 				nr = v.r - module_v.r;
 
-				if(v.type == "line"){
-					tmp_this.setStrokeColor(module_v.blocks[v.block], 1);
-					if(v.if != undefined){
-						counter = 0;
-						for (var i = v.if.length - 1; i >= 0; i--) {
-							if(module_v.switches[v.if[i].sw] == v.if[i].st)
-								counter++;
-						}
-						if(counter == v.if.length){
-							return true; // Print on foreground
-						}
-					}
-					c.moveTo(nx, ny);
-					c.lineTo(rvX*v.x2+rvY_*v.y2+ofX,rvY*v.y2+rvX_*v.x2+ofY);
-				}
-				else if(v.type == "arc"){
-					tmp_this.setStrokeColor(module_v.blocks[v.block], 1);
-					if(v.if != undefined){
-						counter = 0;
-						for (var i = v.if.length - 1; i >= 0; i--) {
-							if(module_v.switches[v.if[i].sw] == v.if[i].st)
-								counter++;
-						}
-						if(counter == v.if.length){
-							 return true//Print on foreground
-						}
-					}
-					c.arc(rvX*v.cx+rvY_*v.cy+ofX,rvY*v.cy+rvX_*v.cx+ofY,v.r,Math.PI*(-module_v.r+v.start),Math.PI*(-module_v.r+v.end),v.CW);
-				}
-				else if(v.type == "swr" || v.type == "swl"){ // Switch Right
-					if(v.if != undefined){
-						var j = 0;
-						for (var i = v.if.length - 1; i >= 0; i--) {
-							if(module_v.switches[v.if[i].sw] != v.if[i].st){
-								j++;
-							}
-						}
-						if(j != v.if.length){
-							Draw.switch(nx, ny, nr, v.type, "B",module_v.blocks[v.block],module_v.switches[v.switch]);
-							c.stroke();
-							return true
-						}
-						Draw.switch(nx, ny, nr, v.type, "G",module_v.blocks[v.block],module_v.switches[v.switch]);
-					}
-					else{
-						Draw.switch(nx, ny, nr, v.type, "B",module_v.blocks[v.block],module_v.switches[v.switch]);
-					}
-				}
-				else if(v.type == "ds"){ //Double slip
-					Draw.double_slip(nx, ny, nr, "B",module_v.blocks[v.block],module_v.switches[v.switchA], module_v.switches[v.switchB]);
-				}
-				else if(v.type == "dsf"){ //Double slip flipped
-					Draw.double_slip_mirrored(nx, ny, nr, "B",module_v.blocks[v.block],module_v.switches[v.switchA], module_v.switches[v.switchB]);
+				if(v.type == "line" || v.type == "arc" || v.type == "swr" || v.type == "swl" || v.type == "ds" || v.type == "dsf"){
+					v.draw_back(obj, 1, {X: rvX, X_:rvX_, Y:rvY, Y_:rvY_}, {X: ofX, Y: ofY});
 				}
 				else if(v.type == "dc"){ //Double crossover
 					if(v.xtl != undefined && v.ytl != undefined){
@@ -360,6 +258,7 @@ var Canvas = {
 
 	draw_foreground: function(){
 		var tmp_this = this;
+		var obj = this;
 		//Draw lines
 		c.lineWidth = 6;
 		$.each(modules,function(module,module_v){
@@ -372,6 +271,9 @@ var Canvas = {
 			var rvX_ = Math.cos((module_v.r+0.5)*Math.PI);
 			var rvY = Math.sin((module_v.r+0.5)*Math.PI);
 			var rvY_ = Math.sin((module_v.r)*Math.PI);
+			var _rotation = {X: rvX, X_:rvX_, Y:rvY, Y_:rvY_};
+			var _offset = {X: ofX, Y: ofY};
+
 			$.each(module_v.data,function(i,v){
 				c.beginPath();
 				c.strokeStyle = v.stroke;
@@ -388,44 +290,8 @@ var Canvas = {
 				}
 				nr = v.r - module_v.r
 
-				if(v.type == "line"){
-					tmp_this.setStrokeColor(module_v.blocks[v.block]);
-					if(v.if != undefined){
-						where = "F";
-						for (var i = v.if.length - 1; i >= 0; i--) {
-							if(module_v.switches[v.if[i].sw] != v.if[i].st)
-								return true; // Print on background
-						}
-					}
-					c.moveTo(nx, ny);
-					c.lineTo(rvX*v.x2+rvY_*v.y2+ofX,rvY*v.y2+rvX_*v.x2+ofY);
-				}
-				else if(v.type == "arc"){
-					tmp_this.setStrokeColor(module_v.blocks[v.block]);
-					if(v.if != undefined){
-						where = "F";
-						for (var i = v.if.length - 1; i >= 0; i--) {
-							if(module_v.switches[v.if[i].sw] != v.if[i].st)
-								return true //Print on background
-						}
-					}
-					c.arc(rvX*v.cx+rvY_*v.cy+ofX,rvY*v.cy+rvX_*v.cx+ofY,v.r,Math.PI*(-module_v.r+v.start),Math.PI*(-module_v.r+v.end),v.CW);
-				}
-				else if(v.type == "swr" || v.type == "swl"){ // Switch Right
-					if(v.if != undefined){
-						where = "F";
-						for (var i = v.if.length - 1; i >= 0; i--) {
-							if(module_v.switches[v.if[i].sw] != v.if[i].st)
-								return true;
-						}
-					}
-					Draw.switch(nx, ny, nr, v.type, "F",module_v.blocks[v.block],module_v.switches[v.switch]);
-				}
-				else if(v.type == "ds"){ //Double slip
-					Draw.double_slip(nx, ny, nr, "F",module_v.blocks[v.block],module_v.switches[v.switchA], module_v.switches[v.switchB]);
-				}
-				else if(v.type == "dsf"){ //Double slip flipped
-					Draw.double_slip_mirrored(nx, ny, nr, "F",module_v.blocks[v.block],module_v.switches[v.switchA], module_v.switches[v.switchB]);
+				if(v.type == "line" || v.type == "arc" || v.type == "swr" || v.type == "swl" || v.type == "ds" || v.type == "dsf"){
+					v.draw_fore(obj, _rotation, _offset);
 				}
 				else if(v.type == "dc"){
 					if(v.xtl != undefined && v.ytl != undefined){
@@ -636,42 +502,42 @@ var Canvas = {
 		var update = false;
 		var tmp_this = this;
 		$.each(modules,function(module,module_v){
+			if(!module_v.visible){
+				console.log("Module "+module+" not visible");
+				return true;
+			}
+
 			var ofX = module_v.OffsetX;
 			var ofY = module_v.OffsetY;
+
 			var rvX = Math.cos(module_v.r*Math.PI);
 			var rvX_ = Math.cos((module_v.r+0.5)*Math.PI);
 			var rvY = Math.sin((module_v.r+0.5)*Math.PI);
 			var rvY_ = Math.sin((module_v.r)*Math.PI);
 			_x = x/tmp_this.dimensions.scale - ofX - tmp_this.dimensions.ofX;
 			_y = y/tmp_this.dimensions.scale - ofY - tmp_this.dimensions.ofY;
+
 			_l = Math.sqrt(Math.pow(_x,2)+Math.pow(_y,2));
-			_r = Math.atan(_y/_x);
-			(_x<0&&_y<0)?_r=-(Math.PI-_r):1;
+			_r = Math.atan2(_y, _x);
 			_r -= module_v.r*Math.PI;
 			_x = _l*Math.cos(_r);
 			_y = _l*Math.sin(_r);
-			console.log(_x,_y);
-			$.each(module_v.hitboxes,function(i,box){
-				if(eval(box.eval_code) == 1){
-					console.log("Clicked something");
-					if(box.action == "tSw"){ // Throw switch
-						throw_Switch(module,box.switch);
-					}
-					else if(box.action == "tDS"){
-						throw_doubleSlib(module,box.switch);
-					}
-					else if(box.action == "tDC"){
-						throw_doubleCrossover(module,box.switch);
-					}
-					else{
-						alert("Hit " + box.name + "\n with no action");
-					}
-					update = true
+
+			if(_x < 0 || _y < 0 || _x > module_v.width || _y > module_v.height){
+				console.log("Outside module "+module);
+				return true;
+			}
+			console.log("Hit module" + module);
+			for(var i = 0; i < module_v.hitboxes.length; i++){
+				if(module_v.hitboxes[i] && {}.toString.call(module_v.hitboxes[i]) === '[object Function]'){
+					console.log("Hit switch");
+					module_v.hitboxes[i](_x, _y);
 				}
-			});
+				console.log(module_v.hitboxes[i])
+			}
 		});
-		if(update)
-			this.update_frame();
+		//if(update)
+		//	this.update_frame();
 	},
 
 	moved: function(){
@@ -788,103 +654,330 @@ ro = Canvas.ro;
 ds = Canvas.ds;
 radia = Canvas.radia;
 
-
-var modules = {
-	20:{Name: "Straight",visible: true, OffsetX:250,OffsetY:20,width:800,height:160,r:0,blocks:[5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5],switches:[],dotmatrix:[],
-		data:[
-			{type:"line",block:0, x:0,y:20,          x2:5,y2:20},
-			{type:"swr" ,block:0, x:5,y:20,          x2:5,y2:20,r:0,switch:0},
-			{type:"line",block:6, x:0,y:20+2*ro[0].y,x2:5+ro[0].x+ds,y2:20+2*ro[0].y},
-
-			{type:"ds"  ,block:6, x:5+ro[0].x,y:20+ro[0].y,r:0,switchA:1,switchB:2},
-
-			{type:"swl" ,block:6, x:5+ds+2*ro[0].x,y:20+3*ro[0].y,switch:3,r:0.25,if:[{sw:2,st:1}]},
-			{type:"arc" ,block:6,cx:5+2*ds+4*ro[0].x,cy:20+6*ro[0].y-radia[0],r:radia[0],start:0.75,end:0.5,CW:true,if:[{sw:2,st:1},{sw:3,st:0}]},
-
-			{type:"line",block:1,   x:5+ro[0].x,y:20,x2:250,y2:20},
-			{type:"line",block:7,   x:5+2*ro[0].x,y:20+2*ro[0].y,x2:250,y2:20+2*ro[0].y},
-			
-			{type:"line",block:2,   x:250,y:20,                       x2:400,y2:20},
-			{type:"line",block:8,   x:250,y:20+2*ro[0].y,             x2:400,y2:20+2*ro[0].y},
-			{type:"line",block:12,  x:5+3*ro[0].x+ds  ,y:20+4*ro[0].y,x2:400,y2:20+4*ro[0].y},
-			{type:"line",block:15,  x:5+4*ro[0].x+2*ds,y:20+6*ro[0].y,x2:400,y2:20+6*ro[0].y},
-
-			{type:"line",block:3,   x:400,y:20,          x2:550,y2:20},
-			{type:"line",block:9,   x:400,y:20+2*ro[0].y,x2:550,y2:20+2*ro[0].y},
-			{type:"line",block:13,  x:400,y:20+4*ro[0].y,x2:550,y2:20+4*ro[0].y},
-			{type:"line",block:16,  x:400,y:20+6*ro[0].y,x2:550,y2:20+6*ro[0].y},
-
-			{type:"line",block:4,   x:550,y:20,x2:795-ro[0].x,y2:20},
-			{type:"line",block:10,  x:550,y:20+2*ro[0].y,x2:795-2*ro[0].x,y2:20+2*ro[0].y},
-			{type:"line",block:14,  x:550,y:20+4*ro[0].y,x2:795-3*ro[0].x-ds,y2:20+4*ro[0].y},
-			{type:"arc" ,block:14,  cx:795-3*ro[0].x-ds,cy:20+4*ro[0].y-radia[0],r:radia[0],start:0.5,end:0.25,CW:true},
-			{type:"line",block:17,  x:550,y:20+6*ro[0].y,x2:800-3*ro[0].x-ds,y2:20+6*ro[0].y},
-			{type:"line",block:18,  x:800-3*ro[0].x-ds,y:20+6*ro[0].y,x2:700,y2:20+6*ro[0].y},
-
-
-			{type:"swl" ,block:5,  x:795,y:20,r:1,switch:6},
-			{type:"line",block:5,  x:800,y:20,x2:795,y2:20},
-			{type:"line",block:11, x:800,y:20+2*ro[0].y,x2:795-ro[0].x-ds,y2:20+2*ro[0].y},
-
-			{type:"dsf"  ,block:11, x:795-ro[0].x,y:20+ro[0].y,r:0,switchA:5,switchB:4},
-		],
-		hitboxes:[
-			{eval_code:"(_x > 2.5 && _x < 52.5 && _y > 15 && _y < 40)?1:0;",name:"Switch 1",action:"tSw",switch:0},
-			{eval_code:"(_x > 42.5 && _x < 97.5 && _y > 40 && _y < 80)?1:0;",name:"Switch 2&3",action:"tDS",switch:[1,2]},
-			{eval_code:"(_x > 90 && _x < 150 && _y > 80 && _y < 120)?1:0;",name:"Switch 4",action:"tSw",switch:3},
-			{eval_code:"(_x > 702.5 && _x < 757.5 && _y > 40 && _y < 80)?1:0;",name:"Switch 5&6",action:"tDS",switch:[4,5]},
-			{eval_code:"(_x > 748.5 && _x < 797.5 && _y > 15 && _y < 40)?1:0;",name:"Switch 6",action:"tSw",switch:6},
-		]
-	},
-	21:{Name: "Straight",visible: true, OffsetX:1050,OffsetY:460,width:800,height:160,r:1,blocks:[5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5],switches:[],dotmatrix:[],
-		data:[
-		{type:"line",block:0,   x:0,y:20,          x2:200,y2:20},
-		{type:"line",block:1,   x:200,y:20,        x2:400,y2:20},
-		{type:"line",block:2,   x:400,y:20,        x2:600,y2:20},
-		{type:"line",block:3,   x:600,y:20,        x2:800,y2:20},
-
-		{type:"line",block:4,   x:0,y:20+2*ro[0].y,x2:5,y2:20+2*ro[0].y},
-		{type:"swr" ,block:4,   x:5,y:20+2*ro[0].y,r:0,switch:0},
-
-		{type:"line",block:5,   x:5+ro[0].x,y:20+2*ro[0].y,x2:200,y2:20+2*ro[0].y},
-		{type:"line",block:6,   x:200,y:20+2*ro[0].y,x2:400,y2:20+2*ro[0].y},
-		{type:"line",block:7,   x:400,y:20+2*ro[0].y,x2:600,y2:20+2*ro[0].y},
-		{type:"line",block:8,   x:795-ro[0].x,y:20+2*ro[0].y,x2:600,y2:20+2*ro[0].y},
-
-		{type:"swl" ,block:9,   x:795,y:20+2*ro[0].y,r:0,r:-1,switch:1},
-		{type:"line",block:9,   x:800,y:20+2*ro[0].y,x2:795,y2:20+2*ro[0].y},
-		
-		{type:"arc" ,block:10, cx:5+2*ro[0].x,cy:20+4*ro[0].y-radia[0],r:radia[0],start:0.75,end:0.5,CW:true},
-		{type:"line",block:10,  x:5+2*ro[0].x,y:20+4*ro[0].y,x2:200,y2:20+4*ro[0].y},
-		{type:"line",block:11,  x:200,y:20+4*ro[0].y,x2:400,y2:20+4*ro[0].y},
-		{type:"line",block:12,  x:400,y:20+4*ro[0].y,x2:600,y2:20+4*ro[0].y},
-		{type:"line",block:13,  x:795-2*ro[0].x,y:20+4*ro[0].y,x2:600,y2:20+4*ro[0].y},
-		{type:"arc" ,block:13, cx:795-2*ro[0].x,cy:20+4*ro[0].y-radia[0],r:radia[0],start:0.5,end:0.25,CW:true},
-		],hitboxes:[
-			{eval_code:"(_x > 2.5 && _x < 52.5 && _y > 45 && _y < 70)?1:0;",name:"Switch 1",action:"tSw",switch:0},
-			{eval_code:"(_x > 748.5 && _x < 797.5 && _y > 45 && _y < 70)?1:0;",name:"Switch 2",action:"tSw",switch:1},
-		]
-	},
-	22:{Name: "Bocht",visible: true, OffsetX:1050,OffsetY:20,width:250,height:440,r:0,blocks:[5,5,5,5],switches:[],dotmatrix:[],
-		data:[
-		{type:"arc",block:0,cx:0,cy:220,r:200,start:-0.5,end:0,CW:false},
-		{type:"arc",block:2,cx:0,cy:220,r:200-2*ro[0].y,start:-0.5,end:0,CW:false},
-		{type:"arc",block:1,cx:0,cy:220,r:200,start:0,end:0.5,CW:false},
-		{type:"arc",block:3,cx:0,cy:220,r:200-2*ro[0].y,start:0,end:0.5,CW:false}
-		]
-	},
-	23:{Name: "Bocht",visible: true, OffsetX:250,OffsetY:460,width:250,height:440,r:1,blocks:[5,5,5,5],switches:[],dotmatrix:[],
-		data:[
-		{type:"arc",block:0,cx:0,cy:220,r:200,start:-0.5,end:0,CW:false},
-		{type:"arc",block:2,cx:0,cy:220,r:200-2*ro[0].y,start:-0.5,end:0,CW:false},
-		{type:"arc",block:1,cx:0,cy:220,r:200,start:0,end:0.5,CW:false},
-		{type:"arc",block:3,cx:0,cy:220,r:200-2*ro[0].y,start:0,end:0.5,CW:false}
-		]
-	},
+function equation_tester(equation, values) {
+	result = 0;
+	if(values.x != undefined){
+		for(var i = 1; i <= equation.x.length; i++){
+			result += equation.x[i-1] * Math.pow(values.x, i);
+		}
+	}
+	if(values.y != undefined){
+		for(var i = 1; i <= equation.y.length; i++){
+			result += equation.y[i-1] * Math.pow(values.y, i);
+		}
+	}
+	if(equation.v != undefined && equation.op!= undefined ){
+		if(equation.op == "lt"){
+			return (result < equation.v);
+		}
+		else{
+			return (result > equation.v);
+		}
+	}
+	else{
+		return result;
+	}
 }
 
-var Draw = {
-	switch: function(x,y,r,lr,type,bl,sw){
+class canvas_line {
+	constructor(module_id, block, x1, y1, x2, y2, options){
+		this.type = "line";
+		this.module_id = module_id;
+		this.m = undefined;
+		this.b = block;
+		this.x1 = x1;
+		this.y1 = y1;
+		this.x2 = x2;
+		this.y2 = y2;
+
+		if (options == undefined) { options = {}; }
+
+		if (options.if != undefined){
+			this.if = options.if;
+		}
+	}
+
+	init(){
+		this.m = modules[this.module_id]
+	}
+
+	dotmatrix(){
+		var coords = [{x: this.x1, y: this.y1}, {x: this.x2, y: this.y2}];
+		return [coords, this.b]
+	}
+
+	draw_fore(obj, rotation, offset){
+		if(this.m == undefined){
+			this.update_module();
+		}
+		obj.setStrokeColor(this.m.blocks[this.b]);
+		if(this.if != undefined){
+			var where = "F";
+			for (var i = this.if.length - 1; i >= 0; i--) {
+				if(this.m.switches[this.if[i].sw] != this.if[i].st)
+					return true; // Print on background
+			}
+		}
+
+		var x1 = rotation.X*this.x1 + rotation.Y_*this.y1 + offset.X;
+		var y1 = rotation.Y*this.y1 + rotation.X_*this.x1 + offset.Y;
+
+		var x2 = rotation.X*this.x2 + rotation.Y_*this.y2 + offset.X;
+		var y2 = rotation.Y*this.y2 + rotation.X_*this.x2 + offset.Y;
+
+		c.moveTo(x1, y1);
+		c.lineTo(x2, y2);
+	}
+
+	draw_back(obj, color, rotation, offset){
+		if(this.m == undefined){
+			this.update_module();
+		}
+		obj.setStrokeColor(this.m.blocks[this.b], color);
+
+		if(this.if != undefined){
+			var counter = 0;
+			for (var i = this.if.length - 1; i >= 0; i--) {
+				if(this.m.switches[this.if[i].sw] == this.if[i].st)
+					counter++;
+			}
+			if(counter == this.if.length){
+				return true; // Print on foreground
+			}
+		}
+
+		var x1 = rotation.X*this.x1 + rotation.Y_*this.y1 + offset.X;
+		var y1 = rotation.Y*this.y1 + rotation.X_*this.x1 + offset.Y;
+
+		var x2 = rotation.X*this.x2 + rotation.Y_*this.y2 + offset.X;
+		var y2 = rotation.Y*this.y2 + rotation.X_*this.x2 + offset.Y;
+
+		c.moveTo(x1, y1);
+		c.lineTo(x2, y2);
+	}
+}
+
+class canvas_arc {
+	constructor(module_id, block, cx, cy, r, arc, options){
+		this.type = "arc";
+		this.module_id = module_id;
+		this.m = undefined;
+		this.b = block;
+		this.cx = cx;
+		this.cy = cy;
+		this.r = r;
+		this.start = arc[0];
+		this.end = arc[1];
+		this.cw = arc[2];
+
+		if (options == undefined) { options = {}; }
+
+		if (options.if != undefined){
+			this.if = options.if;
+		}
+	}
+
+	init(){
+		this.m = modules[this.module_id]
+	}
+
+	dotmatrix(){
+		var coords = [{x: this.cx+Math.cos(this.start*Math.PI)*this.r, y: this.cy+Math.sin(this.start*Math.PI)*this.r}, 
+					  {x: this.cx+Math.cos(this.end * Math.PI)*this.r, y: this.cy+Math.sin(this.end * Math.PI)*this.r}];
+		return [coords, this.b]
+	}
+
+	draw_back(obj, color, rotation, offset){
+		obj.setStrokeColor(this.m.blocks[this.b], color);
+		if(this.if != undefined){
+			var counter = 0;
+			for (var i = this.if.length - 1; i >= 0; i--) {
+				if(this.m.switches[this.if[i].sw] == this.if[i].st)
+					counter++;
+			}
+			if(counter == this.if.length){
+				 return true//Print on foreground
+			}
+		}
+		c.arc(rotation.X*this.cx+rotation.Y_*this.cy+offset.X,
+			  rotation.Y*this.cy+rotation.X_*this.cx+offset.Y,
+			  this.r,
+			  Math.PI*(-this.m.r+this.start),
+			  Math.PI*(-this.m.r+this.end),
+			  this.cw);
+	}
+
+	draw_fore(obj, rotation, offset){
+		obj.setStrokeColor(this.m.blocks[this.b]);
+		if(this.if != undefined){
+			var where = "F";
+			for (var i = this.if.length - 1; i >= 0; i--) {
+				if(this.m.switches[this.if[i].sw] != this.if[i].st)
+					return true //Print on background
+			}
+		}
+		c.arc(rotation.X*this.cx+rotation.Y_*this.cy+offset.X,
+			  rotation.Y*this.cy+rotation.X_*this.cx+offset.Y,
+			  this.r,
+			  Math.PI*(-this.m.r+this.start),
+			  Math.PI*(-this.m.r+this.end),
+			  this.cw);
+	}
+}
+
+class canvas_switch {
+	constructor(module_id, block, side, sw, x, y, r, options){
+		if(side == "l"){
+			Object.setPrototypeOf(this, new canvas_switch_l);
+		}
+		else if(side == "r"){
+			Object.setPrototypeOf(this, new canvas_switch_r);
+		}
+
+		this.type = "sw"+side;
+		this.module_id = module_id;
+		this.m = undefined;
+		this.b = block;
+		this.s = sw;
+		this.x = x;
+		this.y = y;
+		this.r = r % 2;
+
+		if (options == undefined) { options = {}; }
+
+		if (options.if != undefined){
+			this.if = options.if;
+		}
+	}
+
+	init(){
+		this.m = modules[this.module_id];
+
+		this.m.add_hitbox(this.hit.bind(this));
+
+		this.hit_eqn = [];
+
+		//Calculate hitboxes
+		//arc hit box
+		// (x-a)^2+(y-b)^2 = r^2
+		// x^2-2ax+a^2+y^2-2b^2+b^2 = r^2
+		// x^2 - 2ax + y^2 - 2b^2 = r^2 - a^2 - b^2
+		this.hit_eqn.push({x:[1], y:[], op:"gt", v:0});
+		if((this.r % 0.5) == 0){
+			this.hit_eqn.push({x:[1], y:[], op:"lt", v:ro[0].x});
+		}
+		else{
+			this.hit_eqn.push({x:[1], y:[], op:"lt", v:(ro[0].x+ds)/Math.cos(Math.PI/4)})
+		}
+		var a = 0;
+		if(this.type == "swr"){
+			this.hit_eqn.push({x:[], y:[1], op:"gt", v:-hit_radius});
+			this.hit_eqn.push({x:[1], y:[1], op:"lt", v:(ro[0].x+ro[0].y)});
+			var b = radia[0];
+		}
+		else{
+			this.hit_eqn.push({x:[], y:[1], op:"lt", v:hit_radius});
+			this.hit_eqn.push({x:[1], y:[-1], op:"lt", v:(ro[0].x+ro[0].y)});
+			var b = -radia[0];
+		}
+		this.hit_eqn.push({x:[-2*a, 1], y:[-2*b, 1], v:(Math.pow(radia[0]-hit_radius, 2)-(a*a)-(b*b)), op:"gt"})
+	}
+
+	hit_eval(x, y){
+		if(this.hit_eqn.length == 0){
+			return false;
+		}
+
+		var _l = Math.sqrt(Math.pow(x-this.x, 2)+Math.pow(y-this.y, 2));
+		var _r = Math.atan2((y-this.y), (x-this.x));
+		_r -= this.r*Math.PI;
+		x = _l*Math.cos(_r);
+		y = _l*Math.sin(_r);
+
+		for(var i = 0; i < this.hit_eqn.length; i++){
+			if(!equation_tester(this.hit_eqn[i], {x:x, y:y})){
+				return false;
+			}
+		}
+		return true;
+	}
+
+	hit(x, y){
+		// {eval_code:"(_x > 2.5 && _x < 52.5 && _y > 15 && _y < 40)?1:0;",name:"Switch 1",action:"tSw",switch:0},
+		console.log("Check hit switch "+this.s);
+		if(this.hit_eval(x,y)){
+			console.log("Throw switch "+this.module_id+":"+this.s);
+			throw_Switch(this.module_id,this.s);
+		}
+	}
+
+	draw_back(obj, color, rotation, offset){
+		var x = rotation.X*this.x + rotation.Y_*this.y + offset.X;
+		var y = rotation.Y*this.y + rotation.X_*this.x + offset.Y;
+		var r = this.r - this.m.r
+
+		if(this.if != undefined){
+			var j = 0;
+			for (var i = this.if.length - 1; i >= 0; i--) {
+				if(this.m.switches[this.if[i].sw] != this.if[i].st){
+					j++;
+				}
+			}
+			if(j != this.if.length){
+				this.draw(x, y, r, this.type, "B",this.m.blocks[this.b],this.m.switches[this.s]);
+				c.stroke();
+				return true
+			}
+			this.draw(x, y, r, this.type, "G",this.m.blocks[this.b],this.m.switches[this.s]);
+		}
+		else{
+			this.draw(x, y, r, this.type, "B",this.m.blocks[this.b],this.m.switches[this.s]);
+		}
+	}
+
+	draw_fore(obj, rotation, offset){
+		if(this.if != undefined){
+			var where = "F";
+			for (var i = this.if.length - 1; i >= 0; i--) {
+				if(this.m.switches[this.if[i].sw] != this.if[i].st)
+					return true;
+			}
+		}
+
+		var x = rotation.X*this.x + rotation.Y_*this.y + offset.X;
+		var y = rotation.Y*this.y + rotation.X_*this.x + offset.Y;
+		var r = this.r - this.m.r
+
+		this.draw(x, y, r, this.type, "F",
+			        this.m.blocks[this.b],
+			        this.m.switches[this.s]);
+	}
+}
+
+class canvas_switch_l extends canvas_switch{
+	dotmatrix(){
+		var coords = [];
+
+		var rvX = Math.cos(this.r*Math.PI);
+		var rvX_ = Math.cos((this.r+0.5)*Math.PI);
+		var rvY = Math.sin((this.r+0.5)*Math.PI);
+		var rvY_ = Math.sin((this.r)*Math.PI);
+
+		coords.push({x:this.x,y:this.y});
+		if((this.r + 0.25) % 0.5 == 0){
+			coords.push({x: this.x+rvX*(ro[0].x-ds), y: this.y+rvY_*(ro[0].x-ds)});
+		}else if(this.r % 0.5 == 0){
+			coords.push({x: this.x+rvX*ro[0].x, y: this.y+rvY_*ro[0].x});
+		}
+
+		var tx = this.x + rvX * ro[0].x - rvX_ * ro[0].y;
+		var ty = this.y + rvY_* ro[0].x - rvY * ro[0].y;
+		coords.push({x: tx, y: ty});
+
+		return [coords, this.b, this.s];
+	}
+
+	draw(x,y,r,lr,type,bl,sw){
 		if(r >  1){r -= 2;}
 		if(r < -1){r += 2;}
 
@@ -894,70 +987,256 @@ var Draw = {
 		var rvY_ = Math.sin((r)*Math.PI);
 		if((sw == 0 && type == "F") || (sw == 1 && type == "B") || type == "G"){
 			(type == "F")?Canvas.setStrokeColor(bl,0):Canvas.setStrokeColor(bl,1);
-			if(r == 0.25 || r == 0.75 || r == 1.25 || r == 1.75 || r == -0.25 || r == -0.75 || r == -1.25 || r == -1.75){
-				c.moveTo(x,y);
-				if(r == -0.25 || r == 1.75){
-					c.lineTo(x+ro[0].x+ds,y-2*ro[0].y);
-				}else if(r == -0.75 || r == 1.25){
-					c.lineTo(x-ro[0].x-ds,y-2*ro[0].y);
-				}else if(r == -1.25 || r == 0.75){
-					c.lineTo(x-ro[0].x-ds,y+2*ro[0].y);
-				}else if(r == -1.75 || r == 0.25){
-					c.lineTo(x+ro[0].x+ds,y+2*ro[0].y);
-				}
-			}else if(r == 0 || r == 0.5 || r == 1 || r == 1.5 || r == 2 || r == -0.5 || r == -1 || r == -1.5 || r == -2){
-				c.moveTo(x,y);
+
+			c.moveTo(x,y);
+			if((r + 0.25) % 0.5 == 0){
+				c.lineTo(x+rvX*(ro[0].x-ds),y+rvY_*(ro[0].x-ds));
+			}else if(r % 0.5 == 0){
 				c.lineTo(x+rvX*ro[0].x,y+rvY_*ro[0].x);
 			}
 		}
 		if((sw == 1 && type == "F") || (sw == 0 && type == "B") || type == "G"){
 			(type == "F")?Canvas.setStrokeColor(bl,0):Canvas.setStrokeColor(bl,1);
-			if(lr == "swr"){
-				if(r == 0.25 || r == -1.75){
-					c.arc(x-rvX*radia[0],y+rvY*radia[0],radia[0],Math.PI*(r-0.25),Math.PI*(r-0.5),true);
-				}else if(r == -0.25 || r == 1.75){
-					c.arc(x+rvX*radia[0],y+rvY*radia[0],radia[0],Math.PI*(r-0.25),Math.PI*(r-0.5),true);
-				}else if(r == 0.75 || r == -1.25){
-					c.arc(x+rvX*radia[0],y+rvY*radia[0],radia[0],Math.PI*(r-0.25),Math.PI*(r-0.5),true);
-				}else if(r == -0.75 || r == 1.25){
-					c.arc(x-rvX*radia[0],y+rvY*radia[0],radia[0],Math.PI*(r-0.25),Math.PI*(r-0.5),true);
-				}else if(r == 0){
-					c.arc(x,y+radia[0],radia[0],Math.PI*(r-0.25),Math.PI*(r-0.5),true);
-				}else if(r == -1 || r == 1){
-					c.arc(x,y-radia[0],radia[0],Math.PI*(r-0.25),Math.PI*(r-0.5),true);
-				}
-				else if(r == -0.5){
-					c.arc(x+radia[0],y,radia[0],Math.PI*(r-0.25),Math.PI*(r-0.5),true);
-				}
-				else if(r == 0.5){
-					c.arc(x-radia[0],y,radia[0],Math.PI*(r-0.25),Math.PI*(r-0.5),true);
-				}
-			}
-			else{
-				if(r == 0.25 || r == -1.75){
-					c.arc(x+rvX*radia[0],y-rvY*radia[0],radia[0],Math.PI*(r+0.5),Math.PI*(r+0.25),true);//
-				}else if(r == -0.25 || r == 1.75){
-					c.arc(x-rvX*radia[0],y-rvY*radia[0],radia[0],Math.PI*(r+0.5),Math.PI*(r+0.25),true);//
-				}else if(r == 0.75 || r == -1.25){
-					c.arc(x-rvX*radia[0],y-rvY*radia[0],radia[0],Math.PI*(r+0.5),Math.PI*(r+0.25),true);//
-				}else if(r == -0.75 || r == 1.25){
-					c.arc(x+rvX*radia[0],y-rvY*radia[0],radia[0],Math.PI*(r+0.5),Math.PI*(r+0.25),true);
-				}else if(r == 0){
-					c.arc(x,y-radia[0],radia[0],Math.PI*(r+0.5),Math.PI*(r+0.25),true);
-				}else if(r == -1 || r == 1){
-					c.arc(x,y+radia[0],radia[0],Math.PI*(r+0.5),Math.PI*(r+0.25),true);
-				}
-				else if(r == -0.5){
-					c.arc(x+radia[0],y,radia[0],Math.PI*(r+0.5),Math.PI*(r+0.25),true);
-				}
-				else if(r == 0.5){
-					c.arc(x+radia[0],y,radia[0], Math.PI*(r+0.5), Math.PI*(r+0.25), true)
-				}
+
+			var tx = x - rvX_ * radia[0];
+			var ty = y - rvY * radia[0];
+			c.arc(tx, ty, radia[0],Math.PI*(r+0.5),Math.PI*(r+0.25),true);
+		}
+	}
+}
+
+class canvas_switch_r extends canvas_switch{
+	dotmatrix(){
+		var coords = [];
+		
+		var rvX = Math.cos(this.r*Math.PI);
+		var rvX_ = Math.cos((this.r+0.5)*Math.PI);
+		var rvY = Math.sin((this.r+0.5)*Math.PI);
+		var rvY_ = Math.sin((this.r)*Math.PI);
+
+		coords.push({x:this.x,y:this.y});
+		if((this.r + 0.25) % 0.5 == 0){
+			coords.push({x: this.x+rvX*(ro[0].x-ds), y: this.y+rvY_*(ro[0].x-ds)});
+		}else if(this.r % 0.5 == 0){
+			coords.push({x: this.x+rvX*ro[0].x, y: this.y+rvY_*ro[0].x});
+		}
+
+		var tx = this.x + rvX * ro[0].x + rvX_ * ro[0].y;
+		var ty = this.y + rvY_* ro[0].x + rvY * ro[0].y;
+		coords.push({x: tx, y: ty});
+
+		return [coords, this.b, this.s];
+	}
+
+	draw(x,y,r,lr,type,bl,sw){
+		if(r >  1){r -= 2;}
+		if(r < -1){r += 2;}
+
+		var rvX = Math.cos(r*Math.PI);
+		var rvX_ = Math.cos((r+0.5)*Math.PI);
+		var rvY = Math.sin((r+0.5)*Math.PI);
+		var rvY_ = Math.sin((r)*Math.PI);
+		if((sw == 0 && type == "F") || (sw == 1 && type == "B") || type == "G"){
+			(type == "F")?Canvas.setStrokeColor(bl,0):Canvas.setStrokeColor(bl,1);
+
+			c.moveTo(x,y);
+			if((r + 0.25) % 0.5 == 0){
+				c.lineTo(x+rvX*(ro[0].x-ds),y+rvY_*(ro[0].x-ds));
+			}else if(r % 0.5 == 0){
+				c.lineTo(x+rvX*ro[0].x,y+rvY_*ro[0].x);
 			}
 		}
-	},
+		if((sw == 1 && type == "F") || (sw == 0 && type == "B") || type == "G"){
+			(type == "F")?Canvas.setStrokeColor(bl,0):Canvas.setStrokeColor(bl,1);
 
-	double_slip: function(x,y,r,type,bl,swA,swB){
+			var tx = x + rvX_ * radia[0];
+			var ty = y + rvY * radia[0];
+			c.arc(tx, ty, radia[0],Math.PI*(r-0.25),Math.PI*(r-0.5),true);
+		}
+	}
+}
+
+class canvas_double_slip {
+	constructor(module_id, block, side, sw, x, y, r, options){
+		if(side == ""){
+			Object.setPrototypeOf(this, new canvas_dslip);
+		}
+		else if(side == "f"){
+			Object.setPrototypeOf(this, new canvas_fl_dslip);
+		}
+
+		this.type = "ds"+side;
+		this.module_id = module_id;
+		this.m = undefined;
+		this.b = block;
+		if(sw == undefined){
+			this.sA = undefined; this.sB = undefined;
+		}
+		else{
+			this.sA = sw[0];
+			this.sB = sw[1];
+		}
+		this.x = x;
+		this.y = y;
+		this.r = r;
+
+		if (options == undefined) { options = {}; }
+
+		if (options.if != undefined){
+			this.if = options.if;
+		}
+	}
+
+	init(){
+		this.m = modules[this.module_id]
+
+		this.m.add_hitbox(this.hit.bind(this));
+
+		this.hit_eqn = []
+
+		//Calculate hitboxes
+		//arc hit box
+		// (x-a)^2+(y-b)^2 = r^2
+		// x^2-2ax+a^2+y^2-2b^2+b^2 = r^2
+		// x^2 - 2ax + y^2 - 2b^2 = r^2 - a^2 - b^2
+		console.log("r: "+this.r%0.5, this.type)
+		if(this.type == "ds"){
+			this.hit_eqn.push({x:[1], y:[], op:"gt", v:ds});
+			this.hit_eqn.push({x:[1], y:[], op:"lt", v:ro[0].x});
+			var a = ds;
+			var b = radia[0];
+			this.hit_eqn.push({x:[-2*a, 1], y:[-2*b, 1], v:(Math.pow(radia[0]-hit_radius, 2)-(a*a)-(b*b)), op:"gt"})
+			this.hit_eqn.push({x:[1], y:[1], op:"gt", v:(-ro[0].y)});
+			var a = ro[0].x;
+			var b = -radia[0];
+			this.hit_eqn.push({x:[-2*a, 1], y:[-2*b, 1], v:(Math.pow(radia[0]-hit_radius, 2)-(a*a)-(b*b)), op:"gt"})
+			this.hit_eqn.push({x:[1], y:[1], op:"lt", v:(ro[0].x+ro[0].y+ds)});
+		}
+		else if(this.type == "dsf"){
+			this.hit_eqn.push({x:[1], y:[], op:"gt", v:ds});
+			this.hit_eqn.push({x:[1], y:[], op:"lt", v:ro[0].x});
+			var a = ds;
+			var b = -radia[0];
+			console.log(this.sA+"\t-2*"+a+"*x+x^2 - 2*"+b+"*y+y^2 = (r-5)^2-"+a+"^2-"+b+"^2");
+			this.hit_eqn.push({x:[-2*a, 1], y:[-2*b, 1], v:(Math.pow(radia[0]-hit_radius, 2)-(a*a)-(b*b)), op:"gt"});
+			this.hit_eqn.push({x:[1], y:[-1], op:"gt", v:(-ro[0].y)});
+			// this.hit_eqn.push({x:[1], y:[-1], op:"lt", v:(-ro[0].y)});
+			var a = ro[0].x;
+			var b = radia[0];
+			console.log(this.sB+"\t-2*"+a+"*x+x^2 - 2*"+b+"*y+y^2 = (r-5)^2-"+a+"^2-"+b+"^2");
+			this.hit_eqn.push({x:[-2*a, 1], y:[-2*b, 1], v:(Math.pow(radia[0]-hit_radius, 2)-(a*a)-(b*b)), op:"gt"});
+			this.hit_eqn.push({x:[1], y:[-1], op:"lt", v:(ro[0].x+ro[0].y+ds)});
+		}
+	}
+
+	hit_eval(x, y){
+		if(this.hit_eqn.length == 0){
+			return false;
+		}
+
+		var _l = Math.sqrt(Math.pow(x-this.x, 2)+Math.pow(y-this.y, 2));
+		var _r = Math.atan2((y-this.y), (x-this.x));
+		_r -= this.r*Math.PI;
+		x = _l*Math.cos(_r);
+		y = _l*Math.sin(_r);
+
+		for(var i = 0; i < this.hit_eqn.length; i++){
+			if(!equation_tester(this.hit_eqn[i], {x:x, y:y})){
+				return false;
+			}
+		}
+		return true;
+	}
+
+	hit(x, y){
+		// {eval_code:"(_x > 2.5 && _x < 52.5 && _y > 15 && _y < 40)?1:0;",name:"Switch 1",action:"tSw",switch:0},
+		if(this.hit_eval(x,y)){
+			console.warn("Throw double slip "+this.module_id+":"+this.sA +"+"+this.sB);
+			throw_doubleSlib(this.module_id, [this.sA, this.sB]);
+		}
+	}
+
+	// dotmatrix(){
+	// 	var coords = [];
+	// 	coords.push({x:this.xtr,y:this.ytr});
+	// 	coords.push({x:this.xtr-ds,y:this.ytr+ro[0].y});
+	// 	coords.push({x:this.xtr-ro[0].x,y:this.ytr+ro[0].y});
+	// 	coords.push({x:this.xtr-ro[0].x-ds,y:this.ytr+2*ro[0].y});
+
+	// 	return [coords, this.b, [this.sA, this.sB]];
+	// }
+
+	draw_back(obj, color, rotation, offset){
+		var x = rotation.X*this.x + rotation.Y_*this.y + offset.X;
+		var y = rotation.Y*this.y + rotation.X_*this.x + offset.Y;
+		var r = this.r - this.m.r;
+
+		if(this.if != undefined){
+			var j = 0;
+			for (var i = this.if.length - 1; i >= 0; i--) {
+				if(this.m.switches[this.if[i].sw] != this.if[i].st){
+					j++;
+				}
+			}
+			if(j != this.if.length){
+				this.draw(x, y, r, "B",this.m.blocks[this.b], this.m.switches[this.sA], this.m.switches[this.sB]);
+				c.stroke();
+				return true
+			}
+			this.draw(x, y, r, "G",this.m.blocks[this.b], this.m.switches[this.sA], this.m.switches[this.sB]);
+		}
+		else{
+			this.draw(x, y, r, "B",this.m.blocks[this.b], this.m.switches[this.sA], this.m.switches[this.sB]);
+		}
+	}
+
+	draw_fore(obj, rotation, offset){
+		if(this.if != undefined){
+			var where = "F";
+			for (var i = this.if.length - 1; i >= 0; i--) {
+				if(this.m.switches[this.if[i].sw] != this.if[i].st)
+					return true;
+			}
+		}
+
+		var x = rotation.X*this.x + rotation.Y_*this.y + offset.X;
+		var y = rotation.Y*this.y + rotation.X_*this.x + offset.Y;
+		var r = this.r - this.m.r
+
+		this.draw(x, y, r, "F",this.m.blocks[this.b], this.m.switches[this.sA], this.m.switches[this.sB]);
+	}
+}
+
+class canvas_dslip extends canvas_double_slip {
+	dotmatrix(){
+		var coords = [];
+
+		var rvX = Math.cos(this.r*Math.PI);
+		var rvX_ = -Math.cos((this.r+0.5)*Math.PI);
+		var rvY = Math.sin((this.r+0.5)*Math.PI);
+		var rvY_ = -Math.sin((this.r)*Math.PI);
+		var tx, ty, dis_X, dis_Y;
+
+		tx = this.x - rvX*ds - rvY_*ro[0].y;
+		ty = this.y - rvX_*ds - rvY*ro[0].y;
+		coords.push({x: tx, y: ty});
+
+		dis_X = ro[0].x+ds;
+		dis_Y = 2 * ro[0].y;
+		coords.push({x: tx+rvX*dis_X+rvY_*dis_Y, y: ty+rvX_*dis_X+rvY*dis_Y});
+
+		tx = this.x;
+		ty = this.y;
+		coords.push({x: tx, y: ty});
+
+		dis_X = ro[0].x - ds;
+		dis_Y = 0;
+		coords.push({x: tx+rvX*dis_X+rvY_*dis_Y, y: ty+rvX_*dis_X+rvY*dis_Y});
+
+		return [coords, this.b, [this.sA, this.sB]];
+	}
+
+	draw(x,y,r,type,bl,swA,swB){
 		if(r >  1){r -= 2;}
 		if(r < -1){r += 2;}
 
@@ -965,28 +1244,15 @@ var Draw = {
 		var rvX_ = -Math.cos((r+0.5)*Math.PI);
 		var rvY = Math.sin((r+0.5)*Math.PI);
 		var rvY_ = -Math.sin((r)*Math.PI);
+		var tx, ty, dis_X, dis_Y;
 
 		if((swA == 1 && swB == 0 && type == "F") || ((swA == 0 || swB == 1) && type == "B")){
 			(type == "F")?Canvas.setStrokeColor(bl,0):Canvas.setStrokeColor(bl,1);
 
-			if(r == 0.25 || r == -1.75){
-				c.arc(x+radia[0],y,radia[0],Math.PI*(r+0.75),Math.PI*(r+0.5),true);//
-			}else if(r == -0.25 || r == 1.75){
-				c.arc(x,y-radia[0],radia[0],Math.PI*(r+0.750),Math.PI*(r+0.5),true);
-			}else if(r == 0.75 || r == -1.25){
-				c.arc(x,y+radia[0],radia[0],Math.PI*(r+0.75),Math.PI*(r+0.5),true);//
-			}else if(r == -0.75 || r == 1.25){
-				c.arc(x-radia[0],y,radia[0],Math.PI*(r+0.75),Math.PI*(r+0.5),true);
-			}
-			else if(r == 0){
-				c.arc(x+ro[0].x,y-radia[0]+ro[0].y,radia[0],Math.PI*(r+0.75),Math.PI*(r+0.50),true);
-			}else if(r == -1 || r == 1){
-				c.arc(x-ro[0].x,y-ro[0].y+radia[0],radia[0],Math.PI*(r+0.75),Math.PI*(r+0.5),true);
-			}else if(r == -0.5){
-				c.arc(x-radia[0]+ro[0].y,y-ro[0].x,radia[0],Math.PI*(r+0.75),Math.PI*(r+0.5),true);
-			}else if(r == 0.5){
-				c.arc(x-ro[0].y+radia[0],y+ro[0].x,radia[0], Math.PI*(r+0.75), Math.PI*(r+0.5), true)
-			}
+			tx = x - rvX*(ds - ro[0].x) - rvY_*radia[0];
+			ty = y - rvX_*(ds - ro[0].x) - rvY*radia[0];
+			
+			c.arc(tx, ty,radia[0],Math.PI*(r+0.75),Math.PI*(r+0.50),true);
 
 			c.stroke();c.beginPath();
 		}
@@ -996,73 +1262,69 @@ var Draw = {
 			dis_X = ro[0].x+ds;
 			dis_Y = 2 * ro[0].y;
 
-			if(r == 0.25 || r == 0.75 || r == 1.25 || r == 1.75 || r == -0.25 || r == -0.75 || r == -1.25 || r == -1.75){
-				c.moveTo(x,y);
-				if(r == -0.25 || r == 1.75){
-					c.lineTo(x+ro[0].x-ds,y);
-				}else if(r == -0.75 || r == 1.25){
-					c.lineTo(x,y-ro[0].x+ds);
-				}else if(r == -1.25 || r == 0.75){
-					c.lineTo(x-ro[0].x+ds,y);
-				}else if(r == -1.75 || r == 0.25){
-					c.lineTo(x,y+ro[0].x-ds);
-				}
-			}else if(r == 0 || r == 0.5 || r == 1 || r == 1.5 || r == 2 || r == -0.5 || r == -1 || r == -1.5 || r == -2){
-				c.moveTo(x,y);
-				c.lineTo(x+rvX*dis_X+rvY_*dis_Y, y+rvX_*dis_X+rvY*dis_Y);
-			}
+			tx = x - rvX*ds - rvY_*ro[0].y;
+			ty = y - rvX_*ds - rvY*ro[0].y;
+
+			c.moveTo(tx, ty);
+			c.lineTo(tx+rvX*dis_X+rvY_*dis_Y, ty+rvX_*dis_X+rvY*dis_Y);
 			c.stroke();c.beginPath();
 		}
 
 		if((swA == 0 && swB == 0 && type == "F") || ((swA == 1 || swB == 1) && type == "B")){
 			(type == "F")?Canvas.setStrokeColor(bl,0):Canvas.setStrokeColor(bl,1);
-			tx = x; ty = y;
 
-			x += rvX*ds + rvY_*ro[0].y;
-			y += rvX_*ds + rvY*ro[0].y;
+			tx = x;
+			ty = y;
 			dis_X = ro[0].x - ds;
 			dis_Y = 0;
 
-			if(r == 0.25 || r == 0.75 || r == 1.25 || r == 1.75 || r == -0.25 || r == -0.75 || r == -1.25 || r == -1.75){
-				dis_X += -ds;
-			}
-
-			c.moveTo(x,y);
-			c.lineTo(x+rvX*dis_X+rvY_*dis_Y, y+rvX_*dis_X+rvY*dis_Y);
+			c.moveTo(tx, ty);
+			c.lineTo(tx+rvX*dis_X+rvY_*dis_Y, ty+rvX_*dis_X+rvY*dis_Y);
 			c.stroke();c.beginPath();
-
-			x = tx; y = ty;
 		}
 		if((swA == 0 && swB == 1 && type == "F") || ((swA == 1 || swB == 0) && type == "B")){
 			(type == "F")?Canvas.setStrokeColor(bl,0):Canvas.setStrokeColor(bl,1);
 
-			x += rvX*ds + rvY_*ro[0].y;
-			y += rvX_*ds + rvY*ro[0].y;
+			tx = x+rvY_*radia[0];
+			ty = y+rvY*radia[0];
 
-			if(r == 0.25 || r == -1.75){
-				c.arc(x-rvX*radia[0],y+rvY*radia[0],radia[0],Math.PI*(r-0.25),Math.PI*(r-0.5),true);
-			}else if(r == -0.25 || r == 1.75){
-				c.arc(x+rvX*radia[0],y+rvY*radia[0],radia[0],Math.PI*(r-0.25),Math.PI*(r-0.5),true);
-			}else if(r == 0.75 || r == -1.25){
-				c.arc(x+rvX*radia[0],y+rvY*radia[0],radia[0],Math.PI*(r-0.25),Math.PI*(r-0.5),true);
-			}else if(r == -0.75 || r == 1.25){
-				c.arc(x-rvX*radia[0],y+rvY*radia[0],radia[0],Math.PI*(r-0.25),Math.PI*(r-0.5),true);
-			}
-			else if(r == 0){
-				c.arc(x,y+radia[0],radia[0],Math.PI*(r-0.25),Math.PI*(r-0.5),true);
-			}else if(r == -1 || r == 1){
-				c.arc(x,y-radia[0],radia[0],Math.PI*(r-0.25),Math.PI*(r-0.5),true);
-			}else if(r == -0.5){
-				c.arc(x+radia[0],y,radia[0],Math.PI*(r-0.25),Math.PI*(r-0.5),true);
-			}else if(r == 0.5){
-				c.arc(x-radia[0],y,radia[0],Math.PI*(r-0.25),Math.PI*(r-0.5),true);
-			}
+			c.arc(tx,ty,radia[0],Math.PI*(r-0.25),Math.PI*(r-0.5),true);
 
 			c.stroke();c.beginPath();
 		}
-	},
+	}
+}
 
-	double_slip_mirrored: function(x,y,r,type,bl,swA,swB){
+class canvas_fl_dslip extends canvas_double_slip {
+	dotmatrix(){
+		var coords = [];
+
+		var rvX = Math.cos(this.r*Math.PI);
+		var rvX_ = -Math.cos((this.r+0.5)*Math.PI);
+		var rvY = Math.sin((this.r+0.5)*Math.PI);
+		var rvY_ = -Math.sin((this.r)*Math.PI);
+		var tx, ty, dis_X, dis_Y;
+
+		tx = this.x - rvX*ds + rvY_*ro[0].y;
+		ty = this.y - rvX_*ds + rvY*ro[0].y;
+		coords.push({x: tx, y: ty});
+
+		dis_X = ro[0].x+ds;
+		dis_Y = -2 * ro[0].y;
+		coords.push({x: tx+rvX*dis_X+rvY_*dis_Y, y: ty+rvX_*dis_X+rvY*dis_Y});
+
+		tx = this.x;
+		ty = this.y;
+		coords.push({x: tx, y: ty});
+
+		dis_X = ro[0].x - ds;
+		dis_Y = 0;
+		coords.push({x: tx+rvX*dis_X+rvY_*dis_Y, y: ty+rvX_*dis_X+rvY*dis_Y});
+
+		return [coords, this.b, [this.sA, this.sB]];
+	}
+
+	draw(x,y,r,type,bl,swA,swB){
 		if(r >  1){r -= 2;}
 		if(r < -1){r += 2;}
 
@@ -1070,167 +1332,118 @@ var Draw = {
 		var rvX_ = -Math.cos((r+0.5)*Math.PI);
 		var rvY = Math.sin((r+0.5)*Math.PI);
 		var rvY_ = -Math.sin((r)*Math.PI);
+		var tx, ty, dis_X, dis_Y;
 
 		if((swA == 1 && swB == 0 && type == "F") || ((swA == 0 || swB == 1) && type == "B")){
 			(type == "F")?Canvas.setStrokeColor(bl,0):Canvas.setStrokeColor(bl,1);
 
-			if(r == 0.25 || r == -1.75){
-				// c.arc(x+radia[0],y,radia[0],Math.PI*(r+0.75),Math.PI*(r+0.5),true);//
-			}else if(r == -0.25 || r == 1.75){
-				// c.arc(x,y-radia[0],radia[0],Math.PI*(r+0.750),Math.PI*(r+0.5),true);
-			}else if(r == 0.75 || r == -1.25){
-				// c.arc(x,y+radia[0],radia[0],Math.PI*(r+0.75),Math.PI*(r+0.5),true);//
-			}else if(r == -0.75 || r == 1.25){
-				// c.arc(x-radia[0],y,radia[0],Math.PI*(r+0.75),Math.PI*(r+0.5),true);
-			}
-			else if(r == 0){
-				c.arc(x-ro[0].x,y-radia[0]+ro[0].y,radia[0],Math.PI*(r+0.5),Math.PI*(r+0.25),true);
-			}else if(r == -1 || r == 1){
-				c.arc(x+ro[0].x,y-ro[0].y+radia[0],radia[0],Math.PI*(r+0.5),Math.PI*(r+0.25),true);
-			}else if(r == -0.5){
-				// c.arc(x-radia[0]+ro[0].y,y-ro[0].x,radia[0],Math.PI*(r+0.75),Math.PI*(r+0.5),true);
-			}else if(r == 0.5){
-				// c.arc(x-ro[0].y+radia[0],y+ro[0].x,radia[0], Math.PI*(r+0.75), Math.PI*(r+0.5), true)
-			}
+			tx = x - rvY_*radia[0];
+			ty = y - rvY*radia[0];
+			
+			c.arc(tx, ty,radia[0],Math.PI*(r+0.5),Math.PI*(r+0.25),true);
 
 			c.stroke();c.beginPath();
 		}
 		if((swA == 1 && swB == 1 && type == "F") || ((swA == 0 || swB == 0) && type == "B")){
 			(type == "F")?Canvas.setStrokeColor(bl,0):Canvas.setStrokeColor(bl,1);
 
-			dis_X = -(ro[0].x+ds);
-			dis_Y = 2 * ro[0].y;
+			dis_X = ro[0].x+ds;
+			dis_Y = -2 * ro[0].y;
 
-			if(r == 0.25 || r == 0.75 || r == 1.25 || r == 1.75 || r == -0.25 || r == -0.75 || r == -1.25 || r == -1.75){
-				c.moveTo(x,y);
-				if(r == -0.25 || r == 1.75){
-					c.lineTo(x-ro[0].x-ds,y);
-				}else if(r == -0.75 || r == 1.25){
-					c.lineTo(x,y-ro[0].x+ds);
-				}else if(r == -1.25 || r == 0.75){
-					c.lineTo(x+ro[0].x+ds,y);
-				}else if(r == -1.75 || r == 0.25){
-					c.lineTo(x,y+ro[0].x-ds);
-				}
-			}else if(r == 0 || r == 0.5 || r == 1 || r == 1.5 || r == 2 || r == -0.5 || r == -1 || r == -1.5 || r == -2){
-				c.moveTo(x,y);
-				c.lineTo(x+rvX*dis_X+rvY_*dis_Y, y+rvX_*dis_X+rvY*dis_Y);
-			}
+			tx = x - rvX*ds + rvY_*ro[0].y;
+			ty = y - rvX_*ds + rvY*ro[0].y;
+
+			c.moveTo(tx, ty);
+			c.lineTo(tx+rvX*dis_X+rvY_*dis_Y, ty+rvX_*dis_X+rvY*dis_Y);
 			c.stroke();c.beginPath();
 		}
 
 		if((swA == 0 && swB == 0 && type == "F") || ((swA == 1 || swB == 1) && type == "B")){
 			(type == "F")?Canvas.setStrokeColor(bl,0):Canvas.setStrokeColor(bl,1);
-			tx = x; ty = y;
 
-			x += -rvX*ds + rvY_*ro[0].y;
-			y += -rvX_*ds + rvY*ro[0].y;
-			dis_X = -(ro[0].x - ds);
+			tx = x;
+			ty = y;
+			dis_X = ro[0].x - ds;
 			dis_Y = 0;
 
-			if(r == 0.25 || r == 0.75 || r == 1.25 || r == 1.75 || r == -0.25 || r == -0.75 || r == -1.25 || r == -1.75){
-				dis_X += -ds;
-			}
-
-			c.moveTo(x,y);
-			c.lineTo(x+rvX*dis_X+rvY_*dis_Y, y+rvX_*dis_X+rvY*dis_Y);
+			c.moveTo(tx, ty);
+			c.lineTo(tx+rvX*dis_X+rvY_*dis_Y, ty+rvX_*dis_X+rvY*dis_Y);
 			c.stroke();c.beginPath();
-
-			x = tx; y = ty;
 		}
 		if((swA == 0 && swB == 1 && type == "F") || ((swA == 1 || swB == 0) && type == "B")){
 			(type == "F")?Canvas.setStrokeColor(bl,0):Canvas.setStrokeColor(bl,1);
 
-			x += -rvX*ds + rvY_*ro[0].y;
-			y += -rvX_*ds + rvY*ro[0].y;
+			tx = x - rvX*(ds-ro[0].x)+rvY_*radia[0];
+			ty = y - rvX_*(ds-ro[0].x)+rvY*radia[0];
 
-			if(r == 0.25 || r == -1.75){
-				// c.arc(x-rvX*radia[0],y+rvY*radia[0],radia[0],Math.PI*(r-0.25),Math.PI*(r-0.5),true);
-			}else if(r == -0.25 || r == 1.75){
-				// c.arc(x+rvX*radia[0],y+rvY*radia[0],radia[0],Math.PI*(r-0.25),Math.PI*(r-0.5),true);
-			}else if(r == 0.75 || r == -1.25){
-				// c.arc(x+rvX*radia[0],y+rvY*radia[0],radia[0],Math.PI*(r-0.25),Math.PI*(r-0.5),true);
-			}else if(r == -0.75 || r == 1.25){
-				// c.arc(x-rvX*radia[0],y+rvY*radia[0],radia[0],Math.PI*(r-0.25),Math.PI*(r-0.5),true);
-			}
-			else if(r == 0){
-				c.arc(x,y+radia[0],radia[0],Math.PI*(r-0.5),Math.PI*(r-0.75),true);
-			}else if(r == -1 || r == 1){
-				c.arc(x,y-radia[0],radia[0],Math.PI*(r-0.5),Math.PI*(r-0.75),true);
-			}else if(r == -0.5){
-				// c.arc(x+radia[0],y,radia[0],Math.PI*(r-0.25),Math.PI*(r-0.5),true);
-			}else if(r == 0.5){
-				// c.arc(x-radia[0],y,radia[0],Math.PI*(r-0.25),Math.PI*(r-0.5),true);
-			}
+			c.arc(tx,ty,radia[0],Math.PI*(r-0.5),Math.PI*(r-0.75),true);
 
 			c.stroke();c.beginPath();
 		}
-			// if(swB == 0){
-			// 	c.moveTo(v.xtl+ofX+ds,v.ytl+ofY+ro[0].y);
-			// 	c.lineTo(v.xtl+ofX+ro[0].x,v.ytl+ofY+ro[0].y);
-			// 	c.stroke();c.beginPath();
-			// }
-			// else{
-			// 	c.arc(v.xtl+ofX-8.28,v.ytl+ofY+radia[0]+ro[0].y,radia[0],Math.PI*-0.50,Math.PI*-0.25,false);
-			// 	c.stroke();c.beginPath();
-			// }
-		
-
-
-
-
-
-
-		// if((sw == 0 && type == "P") || (sw == 1 && type == "B")){
-		// 	(type == "P")?Canvas.setStrokeColor(bl,0):Canvas.setStrokeColor(bl,1);
-		// 	if(r == 0.25 || r == 0.75 || r == 1.25 || r == 1.75 || r == -0.25 || r == -0.75 || r == -1.25 || r == -1.75){
-		// 		c.moveTo(x,y);
-		// 		if(r == -0.25 || r == 1.75){
-		// 			c.lineTo(x+ro[0].x+ds,y-2*ro[0].y);
-		// 		}else if(r == -0.75 || r == 1.25){
-		// 			c.lineTo(x-ro[0].x-ds,y-2*ro[0].y);
-		// 		}else if(r == -1.25 || r == 0.75){
-		// 			c.lineTo(x-ro[0].x-ds,y+2*ro[0].y);
-		// 		}else if(r == -1.75 || r == 0.25){
-		// 			c.lineTo(x+ro[0].x+ds,y+2*ro[0].y);
-		// 		}
-		// 	}else if(r == 0 || r == 0.5 || r == 1 || r == 1.5 || r == 2 || r == -0.5 || r == -1 || r == -1.5 || r == -2){
-		// 		c.moveTo(x,y);
-		// 		c.lineTo(x+rvX*ro[0].x,y+rvY_*ro[0].x);
-		// 	}
-		// }
-		// else{
-		// 	(type == "P")?Canvas.setStrokeColor(bl,0):Canvas.setStrokeColor(bl,1);
-		// 	if(lr == "swr"){
-		// 		if(r == 0.25 || r == -1.75){
-		// 			c.arc(x-rvX*radia[0],y+rvY*radia[0],radia[0],Math.PI*(r-0.25),Math.PI*(r-0.5),true);
-		// 		}else if(r == -0.25 || r == 1.75){
-		// 			c.arc(x+rvX*radia[0],y+rvY*radia[0],radia[0],Math.PI*(r-0.25),Math.PI*(r-0.5),true);
-		// 		}else if(r == 0.75 || r == -1.25){
-		// 			c.arc(x+rvX*radia[0],y+rvY*radia[0],radia[0],Math.PI*(r-0.25),Math.PI*(r-0.5),true);
-		// 		}else if(r == -0.75 || r == 1.25){
-		// 			c.arc(x-rvX*radia[0],y+rvY*radia[0],radia[0],Math.PI*(r-0.25),Math.PI*(r-0.5),true);
-		// 		}else if(r == 0){
-		// 			c.arc(x,y+radia[0],radia[0],Math.PI*(r-0.25),Math.PI*(r-0.5),true);
-		// 		}else{
-		// 			c.arc(x,y-radia[0],radia[0],Math.PI*(r-0.25),Math.PI*(r-0.5),true);
-		// 		}
-		// 	}
-		// 	else{
-		// 		if(r == 0.25 || r == -1.75){
-		// 			c.arc(x+rvX*radia[0],y-rvY*radia[0],radia[0],Math.PI*(r+0.5),Math.PI*(r+0.25),true);//
-		// 		}else if(r == -0.25 || r == 1.75){
-		// 			c.arc(x-rvX*radia[0],y-rvY*radia[0],radia[0],Math.PI*(r+0.5),Math.PI*(r+0.25),true);//
-		// 		}else if(r == 0.75 || r == -1.25){
-		// 			c.arc(x-rvX*radia[0],y-rvY*radia[0],radia[0],Math.PI*(r+0.5),Math.PI*(r+0.25),true);//
-		// 		}else if(r == -0.75 || r == 1.25){
-		// 			c.arc(x+rvX*radia[0],y-rvY*radia[0],radia[0],Math.PI*(r+0.5),Math.PI*(r+0.25),true);
-		// 		}else if(r == 0){
-		// 			c.arc(x,y-radia[0],radia[0],Math.PI*(r+0.5),Math.PI*(r+0.25),true);
-		// 		}else if(r == -1 || r == 1){
-		// 			c.arc(x,y+radia[0],radia[0],Math.PI*(r+0.5),Math.PI*(r+0.25),true);
-		// 		}
-		// 	}
-		// }
 	}
 }
+
+class canvas_module {
+	constructor(id, name, dimensions, blocks, switches){
+		this.id = id;
+		this.name = name;
+		this.OffsetX = 0;
+		this.OffsetY = 0;
+		this.width = dimensions.w;
+		this.height = dimensions.h;
+		this.r = 0;
+		this.visible = false;
+
+		this.blocks = Array.apply(null, Array(blocks)).map(function (){return 5});
+		this.switches = Array.apply(null, Array(switches)).map(function (){return 0});
+
+		this.dotmatrix = [];
+		this.data = [];
+		this.hitboxes = [];
+	}
+
+	add(obj){
+		this.data.push(obj);
+	}
+
+	add_hitbox(hit){
+		this.hitboxes.push(hit);
+	}
+
+	init(options = {}){
+		if(options.visible != undefined && options.visible){
+			this.visible = true;
+		}
+		if(options.OffsetX != undefined){
+			this.OffsetX = options.OffsetX;
+		}
+		if(options.OffsetY != undefined){
+			this.OffsetY = options.OffsetY;
+		}
+		if(options.r != undefined){
+			this.r = options.r;
+		}
+
+		for(var i = 0; i < this.data.length; i++){
+			this.data[i].init();
+		}
+	}
+}
+
+function load_module(id, callback){
+	jQuery.ajax({
+        url: "../configs/units/"+id+".js",
+        dataType: 'script',
+        success: callback,
+        async: true
+    });
+};
+
+$(document).ready(function(){
+	load_module(20, function(){modules[20].init({visible: true, OffsetX:  250, OffsetY:  20, r: 0});Canvas.update_frame()});
+	load_module(21, function(){modules[21].init({visible: true, OffsetX: 1050, OffsetY: 460, r: 1});Canvas.update_frame()});
+	load_module(22, function(){modules[22].init({visible: true, OffsetX: 1050, OffsetY:  20, r: 0});Canvas.update_frame()});
+	load_module(23, function(){modules[23].init({visible: true, OffsetX:  250, OffsetY: 460, r: 1});Canvas.update_frame()});
+});
+
+var modules = {};

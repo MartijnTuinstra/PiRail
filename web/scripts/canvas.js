@@ -81,39 +81,22 @@ var Canvas = {
 
 	calc_dotmatrix: function(){
 		$.each(modules,function(module,module_v){
+			module_v.dotmatrix = [];
 			$.each(module_v.data,function(i,v){
 				var coords = [];
 				var block_list = [];
 				var switch_list = [];
-				if(v.type == "line" || v.type == "arc" || v.type == "swr" || v.type == "swl" || v.type == "ds" || v.type == "dsf"){
-					data = v.dotmatrix()
-					coords.push(...data[0]);
-					block_list.push(data[1]);
-					if(data[2] != undefined){
-						if(data[2].isArray != undefined && data[2].isArray()){
-							switch_list.push(...data[2]);
-						}
-						else{
-							switch_list.push(data[2]);
-						}
+				
+				data = v.dotmatrix()
+				coords.push(...data[0]);
+				block_list.push(data[1]);
+				if(data[2] != undefined){
+					if(data[2].isArray != undefined && data[2].isArray()){
+						switch_list.push(...data[2]);
 					}
-				}
-				else if(v.type == "dc"){
-					block_list.push(v.blockA);
-					block_list.push(v.blockB);
-
-					coords.push({x:v.xtl,y:v.ytl});
-					coords.push({x:v.xtl+ro[0].x,y:v.ytl});
-					coords.push({x:v.xtl+2*ro[0].x,y:v.ytl});
-					coords.push({x:v.xtl+ro[0].x,y:v.ytl+ro[0].y});
-					coords.push({x:v.xtl,y:v.ytl+2*ro[0].y});
-					coords.push({x:v.xtl+ro[0].x,y:v.ytl+2*ro[0].y});
-					coords.push({x:v.xtl+2*ro[0].x,y:v.ytl+2*ro[0].y});
-
-					switch_list.push(v.switchA);
-					switch_list.push(v.switchB);
-					switch_list.push(v.switchC);
-					switch_list.push(v.switchD);
+					else{
+						switch_list.push(data[2]);
+					}
 				}
 
 				$.each(coords,function(i,v){
@@ -128,18 +111,6 @@ var Canvas = {
 						}
 					}
 				});
-
-				if(Math.max(...block_list) > module_v.blocks.length-1){
-					for(0;(Math.max(...block_list) - module_v.blocks.length) > -1;0){
-						module_v.blocks.push(10);
-					}
-				}
-
-				if(Math.max(...switch_list) > module_v.switches.length-1){
-					for(0;(Math.max(...switch_list) - module_v.switches.length) > -1;0){
-						module_v.switches.push(1);
-					}
-				}
 			});
 		});
 	},
@@ -147,200 +118,35 @@ var Canvas = {
 		c.lineWidth = 0.1;
 		//Draw dots
 		var dot_radius = Math.min(2.8*this.dimensions.scale,2.8);
-		var tmp_this = this;
+		var obj = this;
+
 		$.each(modules,function(module,module_v){
-			if (module_v.visible == false){
-				return true;
+			if (module_v.visible){
+				module_v.draw_dotmatrix(obj.setStrokeColor, obj.dimensions, dot_radius);
 			}
-			var ofX = module_v.OffsetX + tmp_this.dimensions.ofX;
-			var ofY = module_v.OffsetY + tmp_this.dimensions.ofY;
-			var rvX = Math.cos(module_v.r*Math.PI);
-			var rvX_ = Math.cos((module_v.r+0.5)*Math.PI);
-			var rvY = Math.sin((module_v.r+0.5)*Math.PI);
-			var rvY_ = Math.sin((module_v.r)*Math.PI);
-			$.each(module_v.dotmatrix,function(i,v){
-				c.beginPath();
-				var block_state = 255;
-				$.each(v.blocks,function(i2,v2){
-					if(module_v.blocks[v2] < block_state){
-						block_state = module_v.blocks[v2];
-					}
-				});
-				c.arc(ofX+rvX*v.x+rvY_*v.y,ofY+rvY*v.y+rvX_*v.x,dot_radius,0,2*Math.PI,false);
-				tmp_this.setStrokeColor(block_state,0);
-				c.fillStyle = c.strokeStyle;
-				c.fill();
-				c.stroke();
-			});
 		});
 	},
 
 	draw_background: function(){
 		c.lineWidth = 6;
-		var tmp_this = this;
 		var obj = this;
 		//Draw background lines
 		$.each(modules,function(module,module_v){
-			if (module_v.visible == false){
-				return true;
+			if (module_v.visible){
+				module_v.draw_background(obj.setStrokeColor, obj.dimensions);
 			}
-			var ofX = module_v.OffsetX + tmp_this.dimensions.ofX;
-			var ofY = module_v.OffsetY + tmp_this.dimensions.ofY;
-			var rvX = Math.cos(module_v.r*Math.PI);
-			var rvX_ = Math.cos((module_v.r+0.5)*Math.PI);
-			var rvY = Math.sin((module_v.r+0.5)*Math.PI);
-			var rvY_ = Math.sin((module_v.r)*Math.PI);
-			$.each(module_v.data,function(i,v){
-				c.beginPath();
-				c.strokeStyle = v.stroke;
-
-				if(v.type == "ds"){
-					test = 13;
-				}
-
-				if(v.type == "arc"){
-
-				}else{
-					nx = rvX*v.x + rvY_*v.y + ofX;
-					ny = rvY*v.y + rvX_*v.x + ofY;
-				}
-				nr = v.r - module_v.r;
-
-				if(v.type == "line" || v.type == "arc" || v.type == "swr" || v.type == "swl" || v.type == "ds" || v.type == "dsf"){
-					v.draw_back(obj, 1, {X: rvX, X_:rvX_, Y:rvY, Y_:rvY_}, {X: ofX, Y: ofY});
-				}
-				else if(v.type == "dc"){ //Double crossover
-					if(v.xtl != undefined && v.ytl != undefined){
-						tmp_this.setStrokeColor(module_v.blocks[v.blockA],1);
-						if(module_v.switches[v.switchA] == 1 || module_v.switches[v.switchB] == 1){
-							c.moveTo(v.xtl+ofX,v.ytl+ofY);
-							c.lineTo(v.xtl+ofX+1*ro[0].x,v.ytl+ofY);
-							c.stroke();c.beginPath();
-							c.moveTo(v.xtl+ofX+1*ro[0].x,v.ytl+ofY);
-							c.lineTo(v.xtl+ofX+2*ro[0].x,v.ytl+ofY);
-							c.stroke();c.beginPath();
-						}
-						if(module_v.switches[v.switchA] == 0){
-							c.arc(v.xtl+ofX,v.ytl+ofY+radia[0],radia[0],Math.PI*-0.5+0.05,Math.PI*-0.25,false);
-							c.stroke();c.beginPath();
-						}
-
-						if(module_v.switches[v.switchB] == 0){
-							c.arc(v.xtl+ofX+2*ro[0].x,v.ytl+ofY+radia[0],radia[0],Math.PI*-0.5-0.05,Math.PI*-0.75,true);
-							c.stroke();c.beginPath();
-						}
-
-						tmp_this.setStrokeColor(module_v.blocks[v.blockB],1);
-						if(module_v.switches[v.switchC] == 1 || module_v.switches[v.switchD] == 1){
-							c.moveTo(v.xtl+ofX,v.ytl+ofY+2*ro[0].y);
-							c.lineTo(v.xtl+ofX+1*ro[0].x,v.ytl+ofY+2*ro[0].y);
-							c.stroke();c.beginPath();
-							c.moveTo(v.xtl+ofX+1*ro[0].x,v.ytl+ofY+2*ro[0].y);
-							c.lineTo(v.xtl+ofX+2*ro[0].x,v.ytl+ofY+2*ro[0].y);
-							c.stroke();c.beginPath();
-						}
-						if(module_v.switches[v.switchC] == 0){
-							c.arc(v.xtl+ofX,v.ytl+ofY+2*ro[0].y-radia[0],radia[0],Math.PI*0.5-0.05,Math.PI*0.25,true);
-							c.stroke();c.beginPath();
-						}
-
-						if(module_v.switches[v.switchD] == 0){
-							c.arc(v.xtl+ofX+2*ro[0].x,v.ytl+ofY+2*ro[0].y-radia[0],radia[0],Math.PI*0.5+0.05,Math.PI*0.75,false);
-							c.stroke();c.beginPath();
-						}
-
-					}
-				}
-				c.stroke();
-			});
 		});
 	},
 
 	draw_foreground: function(){
-		var tmp_this = this;
+		c.lineWidth = 6;
 		var obj = this;
 		//Draw lines
 		c.lineWidth = 6;
 		$.each(modules,function(module,module_v){
-			if (module_v.visible == false){
-				return true;
+			if (module_v.visible){
+				module_v.draw_foreground(obj.setStrokeColor, obj.dimensions);
 			}
-			var ofX = module_v.OffsetX + tmp_this.dimensions.ofX;
-			var ofY = module_v.OffsetY + tmp_this.dimensions.ofY;
-			var rvX = Math.cos(module_v.r*Math.PI);
-			var rvX_ = Math.cos((module_v.r+0.5)*Math.PI);
-			var rvY = Math.sin((module_v.r+0.5)*Math.PI);
-			var rvY_ = Math.sin((module_v.r)*Math.PI);
-			var _rotation = {X: rvX, X_:rvX_, Y:rvY, Y_:rvY_};
-			var _offset = {X: ofX, Y: ofY};
-
-			$.each(module_v.data,function(i,v){
-				c.beginPath();
-				c.strokeStyle = v.stroke;
-
-				if(v.type == "ds"){
-					test = 13;
-				}
-
-				if(v.type == "arc"){
-
-				}else{
-					nx = rvX*v.x + rvY_*v.y + ofX;
-					ny = rvY*v.y + rvX_*v.x + ofY;
-				}
-				nr = v.r - module_v.r
-
-				if(v.type == "line" || v.type == "arc" || v.type == "swr" || v.type == "swl" || v.type == "ds" || v.type == "dsf"){
-					v.draw_fore(obj, _rotation, _offset);
-				}
-				else if(v.type == "dc"){
-					if(v.xtl != undefined && v.ytl != undefined){
-						tmp_this.setStrokeColor(module_v.blocks[v.blockA],0);
-						if(module_v.switches[v.switchA] == 0 && module_v.switches[v.switchB] == 0){
-							c.moveTo(v.xtl+ofX,v.ytl+ofY);
-							c.lineTo(v.xtl+ofX+1*ro[0].x,v.ytl+ofY);
-							c.stroke();c.beginPath();
-							c.moveTo(v.xtl+ofX+1*ro[0].x,v.ytl+ofY);
-							c.lineTo(v.xtl+ofX+2*ro[0].x,v.ytl+ofY);
-							c.stroke();c.beginPath();
-						}
-						else{
-							if(module_v.switches[v.switchA] == 1){
-								c.arc(v.xtl+ofX,v.ytl+ofY+radia[0],radia[0],Math.PI*-0.5,Math.PI*-0.25,false);
-								c.stroke();c.beginPath();
-							}
-
-							if(module_v.switches[v.switchB] == 1){
-								c.arc(v.xtl+ofX+2*ro[0].x,v.ytl+ofY+radia[0],radia[0],Math.PI*-0.5,Math.PI*-0.75,true);
-								c.stroke();c.beginPath();
-							}
-						}
-
-						tmp_this.setStrokeColor(module_v.blocks[v.blockB],0);
-						if(module_v.switches[v.switchC] == 0 && module_v.switches[v.switchD] == 0){
-							c.moveTo(v.xtl+ofX,v.ytl+ofY+2*ro[0].y);
-							c.lineTo(v.xtl+ofX+1*ro[0].x,v.ytl+ofY+2*ro[0].y);
-							c.stroke();c.beginPath();
-							c.moveTo(v.xtl+ofX+1*ro[0].x,v.ytl+ofY+2*ro[0].y);
-							c.lineTo(v.xtl+ofX+2*ro[0].x,v.ytl+ofY+2*ro[0].y);
-							c.stroke();c.beginPath();
-						}
-						else{
-							if(module_v.switches[v.switchC] == 1){
-								c.arc(v.xtl+ofX,v.ytl+ofY+2*ro[0].y-radia[0],radia[0],Math.PI*0.5,Math.PI*0.25,true);
-								c.stroke();c.beginPath();
-							}
-
-							if(module_v.switches[v.switchD] == 1){
-								c.arc(v.xtl+ofX+2*ro[0].x,v.ytl+ofY+2*ro[0].y-radia[0],radia[0],Math.PI*0.5,Math.PI*0.75,false);
-								c.stroke();c.beginPath();
-							}
-						}
-
-					}
-				}
-				c.stroke();
-			});
 		});
 	},
 
@@ -706,11 +512,11 @@ class canvas_line {
 		return [coords, this.b]
 	}
 
-	draw_fore(obj, rotation, offset){
+	draw_fore(stroke, rotation, offset){
 		if(this.m == undefined){
 			this.update_module();
 		}
-		obj.setStrokeColor(this.m.blocks[this.b]);
+		stroke(this.m.blocks[this.b]);
 		if(this.if != undefined){
 			var where = "F";
 			for (var i = this.if.length - 1; i >= 0; i--) {
@@ -729,11 +535,11 @@ class canvas_line {
 		c.lineTo(x2, y2);
 	}
 
-	draw_back(obj, color, rotation, offset){
+	draw_back(stroke, color, rotation, offset){
 		if(this.m == undefined){
 			this.update_module();
 		}
-		obj.setStrokeColor(this.m.blocks[this.b], color);
+		stroke(this.m.blocks[this.b], color);
 
 		if(this.if != undefined){
 			var counter = 0;
@@ -787,8 +593,8 @@ class canvas_arc {
 		return [coords, this.b]
 	}
 
-	draw_back(obj, color, rotation, offset){
-		obj.setStrokeColor(this.m.blocks[this.b], color);
+	draw_back(stroke, color, rotation, offset){
+		stroke(this.m.blocks[this.b], color);
 		if(this.if != undefined){
 			var counter = 0;
 			for (var i = this.if.length - 1; i >= 0; i--) {
@@ -807,8 +613,8 @@ class canvas_arc {
 			  this.cw);
 	}
 
-	draw_fore(obj, rotation, offset){
-		obj.setStrokeColor(this.m.blocks[this.b]);
+	draw_fore(stroke, rotation, offset){
+		stroke(this.m.blocks[this.b]);
 		if(this.if != undefined){
 			var where = "F";
 			for (var i = this.if.length - 1; i >= 0; i--) {
@@ -1384,7 +1190,7 @@ class canvas_fl_dslip extends canvas_double_slip {
 }
 
 class canvas_module {
-	constructor(id, name, dimensions, blocks, switches){
+	constructor(id, name, dimensions, blocks, switches, connections){
 		this.id = id;
 		this.name = name;
 		this.OffsetX = 0;
@@ -1393,6 +1199,7 @@ class canvas_module {
 		this.height = dimensions.h;
 		this.r = 0;
 		this.visible = false;
+		this.connections = connections;
 
 		this.blocks = Array.apply(null, Array(blocks)).map(function (){return 5});
 		this.switches = Array.apply(null, Array(switches)).map(function (){return 0});
@@ -1428,6 +1235,57 @@ class canvas_module {
 			this.data[i].init();
 		}
 	}
+
+	draw_dotmatrix(stroke, dimensions, r){
+		var offset = {X: this.OffsetX + dimensions.ofX, Y: this.OffsetY + dimensions.ofY};
+		var rotation = {X: Math.cos(this.r*Math.PI), X_: Math.cos((this.r+0.5)*Math.PI),
+			            Y: Math.sin((this.r+0.5)*Math.PI), Y_: Math.sin((this.r)*Math.PI)};
+
+		for(var i = 0; i < this.dotmatrix.length; i++){
+			c.beginPath();
+
+			var block_state = 255;
+			for(var j = 0; j < this.dotmatrix[i].blocks.length; j++){
+				if(this.dotmatrix[i].blocks[j] < block_state){
+					block_state = this.dotmatrix[i].blocks[i];
+				}
+			};
+
+			stroke(block_state, 0);
+			c.fillStyle = c.strokeStyle;
+
+			c.arc(offset.X+rotation.X*this.dotmatrix[i].x+rotation.Y_*this.dotmatrix[i].y,
+				  offset.Y+rotation.Y*this.dotmatrix[i].y+rotation.X_*this.dotmatrix[i].x,
+				  r, 0, 2*Math.PI, false);
+
+			c.fill();
+			c.stroke();
+		};
+	}
+
+	draw_background(stroke, dimensions){
+		var offset = {X: this.OffsetX + dimensions.ofX, Y: this.OffsetY + dimensions.ofY};
+		var rotation = {X: Math.cos(this.r*Math.PI), X_: Math.cos((this.r+0.5)*Math.PI),
+			            Y: Math.sin((this.r+0.5)*Math.PI), Y_: Math.sin((this.r)*Math.PI)};
+
+		for(var i = 0; i < this.data.length; i++){
+			c.beginPath();
+			this.data[i].draw_back(stroke, 1, rotation, offset);
+			c.stroke();
+		};
+	}
+
+	draw_foreground(stroke, dimensions){
+		var offset = {X: this.OffsetX + dimensions.ofX, Y: this.OffsetY + dimensions.ofY};
+		var rotation = {X: Math.cos(this.r*Math.PI), X_: Math.cos((this.r+0.5)*Math.PI),
+			            Y: Math.sin((this.r+0.5)*Math.PI), Y_: Math.sin((this.r)*Math.PI)};
+
+		for(var i = 0; i < this.data.length; i++){
+			c.beginPath();
+			this.data[i].draw_fore(stroke, rotation, offset);
+			c.stroke();
+		};
+	}
 }
 
 function load_module(id, callback){
@@ -1440,10 +1298,10 @@ function load_module(id, callback){
 };
 
 $(document).ready(function(){
-	load_module(20, function(){modules[20].init({visible: true, OffsetX:  250, OffsetY:  20, r: 0});Canvas.update_frame()});
-	load_module(21, function(){modules[21].init({visible: true, OffsetX: 1050, OffsetY: 460, r: 1});Canvas.update_frame()});
-	load_module(22, function(){modules[22].init({visible: true, OffsetX: 1050, OffsetY:  20, r: 0});Canvas.update_frame()});
-	load_module(23, function(){modules[23].init({visible: true, OffsetX:  250, OffsetY: 460, r: 1});Canvas.update_frame()});
+	load_module(20, function(){modules[20].init({visible: true, OffsetX:  250, OffsetY:  20, r: 0});Canvas.calc_dotmatrix(); Canvas.update_frame()});
+	load_module(21, function(){modules[21].init({visible: true, OffsetX: 1050, OffsetY: 460, r: 1});Canvas.calc_dotmatrix(); Canvas.update_frame()});
+	load_module(22, function(){modules[22].init({visible: true, OffsetX: 1050, OffsetY:  20, r: 0});Canvas.calc_dotmatrix(); Canvas.update_frame()});
+	load_module(23, function(){modules[23].init({visible: true, OffsetX:  250, OffsetY: 460, r: 1});Canvas.calc_dotmatrix(); Canvas.update_frame()});
 });
 
 var modules = {};

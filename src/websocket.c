@@ -17,56 +17,72 @@ int websocket_decode(uint8_t data[1024], struct web_client_t * client){
 
   struct s_WS_Data * d = (struct s_WS_Data *)data;
 
-  if(data[0] & 0x80){ //Admin settings
-    printf("Admin settings: %02X\n",data[0]);
-    if(data[0] == 0xFF){ //Admin login
-      printf("\nAdmin Login\n\n");
+  if((data[0] & 0xB0) == 0x80){ // System settings
+    if(data[0] == WSopc_ClearTrack){
+
+    }
+    else if(data[0] == WSopc_ReloadTrack){
+
+    }
+    else if(data[0] == WSopc_Track_Scan_Progress){
+
+    }
+    else if(data[0] == WSopc_Track_Info){
+
+    }
+    else if(data[0] == WSopc_Reset_Switches){
+
+    }
+    else if(data[0] == WSopc_TrainsToDepot){
+
+    }
+    else if(data[0] == WSopc_EnableSubModule){
+
+    }
+    else if(data[0] == WSopc_DisableSubModule){
+
+    }
+    else if(data[0] == WSopc_RestartApplication){
+
+    }
+
+  }else if(data[0] & 0xB0){ //Admin settings
+    if(data[0] == WSopc_Admin_Login){ //Admin login
       if(strcmp((char *)&data[1],WS_password) == 1){
-        printf("\n\n\n\n\nSUCCESSFULL LOGIN\n\n");
+        loggerf(INFO, "SUCCESSFULL LOGIN");
         //0xc3,0xbf,0x35,0x66,0x34,0x64,0x63,0x63,0x33,0x62,0x35,0x61,0x61,0x37,0x36,0x35,0x64,0x36,0x31,0x64,0x38,0x33,0x32,0x37,0x64,0x65,0x62,0x38,0x38,0x32,0x63,0x66,0x39,0x39
         client->type |= 0x10;
 
         ws_send(client->fd,(char [2]){WSopc_ChangeBroadcast,client->type},2,255);
       }else{
-        printf("\n\n\n\n\nFAILED LOGIN!!\n\n");
+        loggerf(INFO, "FAILED LOGIN!!");
       }
     }
-    if((client->type & 0x10) != 0x10){
+    if((client->type & 0x10) == 0){
       //Client is not an admin
-      printf("Not an Admin client");
+      loggerf(INFO, "Not an Admin client");
       return 0;
     }
 
 
-    if(data[0] == WSopc_Track_Scan){
+    if(data[0] == WSopc_Track_Scan_Progress){
       if(data[1] == 1){
         //Stop connecting
         _SYS_change(STATE_Modules_Coupled,1);
       }else if(data[1] == 2){
         //reload setup
-        printf("\n\nReload setup not implemented\n\n");
+        loggerf(ERROR, "Reload setup not implemented");
       }
     }
+    else if(data[0] == WSopc_Admin_Logout){
+      client->type &= ~0x10;
 
-
-    if(data[0] == 0x83){ //Reset switches to default
+      ws_send(client->fd,(char [2]){WSopc_ChangeBroadcast,client->type},2,255);
+    }
+    else if(data[0] == WSopc_EmergencyStopAdmin){
 
     }
-    else if(data[0] == 0x84){ //Toggle Light Output
-
-    }
-    else if(data[0] == 0x88){ //All trains back to depot
-
-    }
-
-    else if(data[0] == 0xA0){ //Force switch
-
-    }
-
-    else if(data[0] == 0x90){ //Emergency stop, Admin authority / Disable track voltage
-
-    }
-    else if(data[0] == 0x91){ //Emergency stop, Admin authority / Enable track voltage
+    else if(data[0] == WSopc_EmergencyStopAdminR){
 
     }
   }
@@ -76,7 +92,7 @@ int websocket_decode(uint8_t data[1024], struct web_client_t * client){
       uint8_t tID = data[2]; //TrainID
       uint16_t mID = ((data[3] & 0x1F) << 8)+data[4];
       char return_value;
-      printf("Linking train %i with %s\n",fID,trains[tID]->name);
+      loggerf(INFO, "Linking train %i with %s\n",fID,trains[tID]->name);
       #warning FIX
       if((return_value = link_train(fID,tID,data[3] & 0x80)) == 1){
         WS_clear_message(mID, 1);
@@ -84,12 +100,12 @@ int websocket_decode(uint8_t data[1024], struct web_client_t * client){
         Z21_get_train(trains[tID]);
       }
       else{
-        printf("Failed link_train()\n");
+        loggerf(WARNING, "Failed link_train()\n");
         WS_clear_message(mID, return_value); //Failed
       }
     }
     else if(data[0] == WSopc_TrainSpeed){ //Train speed control
-      printf("Train speed control\n");
+      loggerf(INFO, "Train speed control\n");
       loggerf(ERROR,"RE-IMPLEMENT WSopc_TrainSpeed");
       uint8_t tID = data[1];
       uint8_t speed = data[2];

@@ -260,7 +260,7 @@ void WS_Partial_Layout(uint8_t M_A,uint8_t M_B){
   char data[20];
   int q = 1;
   memset(data,0,20);
-  data[0] = WSopc_Track_PUp_Layout;
+  data[0] = WSopc_Track_Layout_Update;
 
   printf("WS_Partial_Layout\n");
   printf("Checking Module A, %i\n",M_A);
@@ -304,7 +304,7 @@ void WS_Track_Layout(){
   char data[100];
   int q = 1;
   memset(data,0,100);
-  data[0] = WSopc_Track_Layout;
+  data[0] = WSopc_Track_Layout_Config;
 
   printf("WS_Track_Layout\n");
 

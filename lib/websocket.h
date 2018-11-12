@@ -120,10 +120,26 @@
 
 
   //Opcodes
-  #define WSopc_Track_Scan         0x82
-  #define WSopc_Track_PUp_Layout   0x83
-  #define WSopc_Track_Info         0x84
+  //System
+  #define WSopc_ClearTrack          0x80
+  #define WSopc_ReloadTrack         0x81
+  #define WSopc_Track_Scan_Progress 0x82
+  #define WSopc_Track_Layout_Update 0x83
+  #define WSopc_Track_Layout_Config 0x83
+  #define WSopc_Track_Info          0x86
+  #define WSopc_Reset_Switches      0x8C
+  #define WSopc_TrainsToDepot       0x8F
 
+  #define WSopc_EnableSubModule     0x90
+  #define WSopc_DisableSubModule    0x91
+  #define WSopc_RestartApplication  0x9F
+  //Admin
+  #define WSopc_EmergencyStopAdmin  0xB0
+  #define WSopc_EmergencyStopAdminR 0xB1
+  #define WSopc_Admin_Logout        0xBE
+  #define WSopc_Admin_Login         0xBF
+
+  //Trains
   #define WSopc_LinkTrain          0x41
   #define WSopc_TrainSpeed         0x42
   #define WSopc_TrainFunction      0x43
@@ -134,13 +150,16 @@
   #define WSopc_AddNewEnginetolib  0x50
   #define WSopc_EditEnginelib      0x51
   #define WSopc_EnginesLibrary     0x52
+
   #define WSopc_AddNewCartolib     0x53
   #define WSopc_EditCarlib         0x54
   #define WSopc_CarsLibrary        0x55
+
   #define WSopc_AddNewTraintolib   0x56
   #define WSopc_EditTrainlib       0x57
   #define WSopc_TrainsLibrary      0x58
 
+  //Track and switches
   #define WSopc_SetSwitch          0x20
   #define WSopc_SetMultiSwitch     0x21
   #define WSopc_SetSwitchReserved  0x22
@@ -148,9 +167,9 @@
   #define WSopc_SetSwitchRoute     0x25
   #define WSopc_BroadTrack         0x26
   #define WSopc_BroadSwitch        0x27
-  #define WSopc_Track_Layout       0x30
-  #define WSopc_StationLibrary     0x31
+  #define WSopc_StationLibrary     0x32
 
+  //Client / General
   #define WSopc_EmergencyStop      0x10
   #define WSopc_ShortCircuitStop   0x11
   #define WSopc_ClearEmergency     0x12

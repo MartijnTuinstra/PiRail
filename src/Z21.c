@@ -10,13 +10,15 @@
 #include<arpa/inet.h>
 #include<sys/socket.h>
 
+#include "websocket_msg.h"
+
 void die(char *s){
   loggerf(CRITICAL, "Crashed: %s", s);
   exit(1);
 }
 
 int z21_fd = -1;
-_Bool z21_connected = false;
+_Bool z21_connected = 0;
 
 pthread_mutex_t z21_send_mutex;
 char * z21_send_buffer;
@@ -36,7 +38,7 @@ void Z21(pthread_t * thread){
   
   if(ret == 1){
     loggerf(INFO, "Connected Succesfully to Z21");
-    z21_connected = true;
+    z21_connected = 1;
     pthread_create(thread, NULL, Z21_run, NULL);
   }
   else{
@@ -101,7 +103,7 @@ void * Z21_run(){
     Z21_recv(z21_buf, read(z21_fd, z21_buf, z21_buf_size));
   }
 
-  z21_connected = false;
+  z21_connected = 0;
 
   loggerf(DEBUG, "Z21 LOGOUT");
   Z21_LOGOUT;

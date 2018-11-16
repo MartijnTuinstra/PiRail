@@ -26,7 +26,23 @@
     uint16_t _STATE;
     uint16_t _Clients;
     int _COM_fd;
+    int _Z21_fd;
+
+    volatile uint8_t Z21_State:2;       // Z21  State
+    volatile uint8_t UART_State:2;      // UART State
+    volatile uint8_t TC_State:2;        // Train Control State
+    volatile uint8_t LC_State:3;        // Layout Control State
+    volatile uint8_t Websocket_State:2; // Websocket State
+    volatile uint8_t SimA_State:2; // SimA State
+    volatile uint8_t SimB_State:2; // SimB State
   };
+
+  #define _SYS_Module_Stop 0
+  #define _SYS_Module_Init 1
+  #define _SYS_Module_Run  2
+  #define _SYS_Module_Fail 3
+  #define _SYS_LC_Searching 4
+  #define _SYS_LC_Connecting 5
 
   struct adr{
     int M;    // Module

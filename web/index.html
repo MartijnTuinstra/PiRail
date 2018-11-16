@@ -1,1896 +1,587 @@
 <!DOCTYPE html>
+<?php
+header('Expires: Sun, 01 Jan 2014 00:00:00 GMT');
+header('Cache-Control: no-store, no-cache, must-revalidate');
+header('Cache-Control: post-check=0, pre-check=0', FALSE);
+header('Pragma: no-cache');
+?>
 <html>
 <head>
- <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=2.0, minimum-scale=1.0, user-scalable=0">
- <meta name="mobile-web-app-capable" content="yes">
- <meta name="apple-mobile-web-app-capable" content="yes">
- <meta charset="UTF-8">
-	<title>Canvas</title>
-    <script src="./scripts/framework/jquery-3.1.1.js"></script>
+	<title>PiRail</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=2.0, minimum-scale=1.0, user-scalable=0">
+	<meta name="mobile-web-app-capable" content="yes">
+	<meta name="apple-mobile-web-app-capable" content="yes">
+	<script src="./scripts/framework/jquery-3.1.1.js"></script>
+	<script src="./scripts/framework/bootstrap.min.js"></script>
+	<link rel="stylesheet" href="./styles/bootstrap/bootstrap.min.css" />
 	<style type="text/css">
-		* {
-			margin: 0px;
-			padding:0px;
-		}
-		body,html {
-			overflow:hidden;
+		html, body, .full-height {
 			height: 100%;
-			width: 100%;
-			font-family:sans-serif;
 		}
+
 		body {
-			position: fixed;
-		}
-		canvas {
-			display:inline;
+			overflow: hidden;
 		}
 
-		.Emergency_btn {
-			width:50px;
-			height: 50px;
-			border-radius:25px;
-			background:#F44336;
-			margin:20px;
-			text-align: center;
-			color: white;
+		.blink {
+			animation: blinker 1s cubic-bezier(.77,0,.18,1) infinite;
+		}
+
+		@keyframes blinker {  
+			50% { opacity: 0; }
+		}
+
+		.info-box {
+			width: calc(100% - 20px);
+			margin: 10px;
+			box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+			background-color: #fff;
+			padding: 10px 30px;
+		}
+
+		.info-box > div > .header,.info-box > .header , .forceheader{
+			margin:auto;
+			width: calc(100% + 60px);
+			margin-left: -30px;
+			text-align:center;
+			text-transform: uppercase;
+			display: block;
+			font-size: 14px;
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			border-bottom: 1px solid #ddd;
 			font-weight: bold;
-			font-size: small;
-			cursor: pointer;
-			position: relative;
 		}
 
-		.Emergency_btn span {
-		    width: 100%;
-		    height: 20px;
-		    line-height: 20px;
-		    margin-top: 15px;
-		    margin-bottom: 15px;
-		    float: left;
-		    display: block;
+		.info-box .fieldname {
+			display: block;
+			float:left;
+			font-size: 18px;
+			width:50%;
+			text-transform: uppercase;
+			font-size: 14px;
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
 		}
 
-		.Emergency_btn .Emergency_Em_img, .Emergency_btn .Emergency_Es_img {
+		.info-box .fieldvalue {
+			display: block;
+			float:left;
+			font-weight: bold;
+			font-size: 18px;
+		}
+
+		.fieldvalue>small {
+				margin-left: 0.25em;
+		}
+
+		.info-box .tile {
+			display: block;
+			float: left;
+			height:90px;
+			width:90px;
+			border-top-left-radius: 2px;
+			border-top-right-radius: 0;
+			border-bottom-right-radius: 0;
+			border-bottom-left-radius: 2px;
+			margin-left:-30px;
+			margin-top:-10px;
+		}
+
+		.info-box .box-row, .info-box .box-trow {
+			text-align: center;
+			border-bottom: 1px solid #ddd;
+		}
+
+		.info-box .box-row {
+			display:block;
+		}
+
+		.info-box .box-trow {
+			display:table-row;
+		}
+		.info-box .box-trow > span {
+			display:table-cell;
+		}
+
+		.info-box .box-row:last-child {
+			border-bottom: 0px;
+		}
+
+		.top-group {
 			display: none;
 		}
 
-		.Emergency_btn.Emergency_Em span, .Emergency_btn.Emergency_Es span {
-			display: none;
-		}
-
-		.Emergency_btn.Emergency_Em .Emergency_Em_img {
+		.top-group.active {
 			display: block;
-			position: absolute;
-			top:12px;
-			width:24px;
-			left: 12px;
 		}
 
-		.Emergency_btn.Emergency_Es .Emergency_Es_img {
-			display: block;
-			position: absolute;
-			top:12px;
-			width:24px;
-			left: 12px;
-		}
-
-		.menu_toggle_btn img {
-			position: absolute;
-			top:5px;
-			width:16px;
-			left: 17px;
-			transition: 0.75s;
-		}
-
-		.menu_toggle_btn {
+		.bottom-group {
+			top: calc(100% - 61px);
+			column-gap: 0;
+			column-count: 2;
+			max-height: 61px;
 			position: absolute;
 			margin: 0px;
-			margin-left: 20px;
-			bottom:-45px;
-		}
-
-		.menu_toggle_btn img.active {
-			transform: scaleY(-1);
-		}
-
-		.menu {
-			position: absolute;
-			transition: 0.75s;
-			left:0px;
-		}
-
-		.menu.active {
-			bottom:0px;
-		}
-
-		.menu_btn {
-			cursor: pointer;
-			background:#2196F3;
-			left:0px;
-			width:50px;
-			height: 50px;
-			border-radius:25px;
-			margin:20px;
-		}
-
-		.menu_btn:hover{
-			background: #1565C0;
-		}
-
-		#train_list {
-			position: absolute;
-			bottom:0px;
-			background: #eee;
-			padding-left: 90px;
-			padding-right: 20px;
-			width: calc(100% - 110px);
-			overflow-x:hidden;
-			height: 90px;
-			overflow-x: hidden;
-			overflow-y: hidden;
-		}
-
-		#train_list .scroller {
-			margin-left: -20px;
-			height: 150%;
-			min-width: 100%;
-			max-height: 150%;
-			overflow-x:scroll;
-			overflow-wrap: nowrap;
-			overflow-y:hidden;
-		}
-
-		#train_list .list {
-			margin:20px;
-			height: calc(100% - 40px);
-			width: calc(25% - 40px);
-			float:left;
-			background: grey;
-			overflow-x: hidden;
-			overflow-y: hidden;
-		}
-
-		#train_list .train_list_box {
-			width:200px;
-			height:40px;
-			padding:5px;
-			border-radius:5px;
-			background:lightgrey;
-			border: 1px solid lightgrey;
-			position:relative;
-			margin:20px;
-			float:left;
-			cursor: pointer;
-		}
-
-		#train_list .train_list_box.active {
-			background:grey;
-			border: 1px solid grey;
-		}
-
-		#train_list .train_list_box .img {
-			width:70px;
-			height:50px;
-			top:0px;
-			left:0px;
-			position: absolute;
-			border-top-left-radius: 5px;
-			border-bottom-left-radius: 5px;
-			overflow: hidden;
-    		background-size: cover;
-    		background-position: center; 
-		}
-
-		#train_list .train_list_box .name {
-			left: 70px;
-			top: 7px;
-			width: calc(100% - 70px);
-			position: absolute;
-			text-align: center;
-			font-weight: bold;
-			font-size:small;
-		}
-
-		#train_list .train_list_box .id {
-			left: 70px;
-			bottom: 7px;
-			width: calc(100% - 70px);
-			position: absolute;
-			text-align: center;
-			font-size:small;
-		}
-
-		#route {
-			display: flex;
-			justify-content: center;
-			height: calc(100% - 90px);
-		}
-
-		#route.vertical{ overflow-y: auto; flex-wrap: wrap;}
-		#route.horizontal{overflow-x: auto;flex-wrap: nowrap;}
-
-		#route .station_Box {
-			padding:10px 20px;
-			border:1px solid lightgrey;
-			background: lightgrey;
-			border-radius:2px;
-			width:200px;
-			overflow:hidden;
-			float:left;
-			margin:10px;
-			align-self: flex-start;
-			flex: 0 0 auto;
-		}
-
-		#route .station_Box .header {
-			font-weight:bold;
-			text-align:center;
-			width:100%;
-		}
-
-		#route .station_Box .scroller {
-			width:150%;
-			height: 292px;
-			overflow-y: auto;
-		}
-
-		#route .station_Box .station {
-			position: relative;
-			float:left;
-			width:192px;
-			height:50px;
-			background:#e6e6e6;
-			border-radius: 2px;
-			margin:4px;
-		}
-
-		#route .station_Box .station.active {
-			background: #ccc;
-		}
-
-		#route .station_Box .station_type {
-			position:absolute;
-			left:0px;
-			width:100%;
-			height:3px;
-			display: inline;
-			border-top-left-radius: 2px;
-			border-top-right-radius: 2px;
-		}
-
-		#route .station_Box .station_type.person {
-			background:lightblue
-		}
-
-		#route .station_Box .station_type.cargo {
-			background:lightcoral;
-		}
-
-		#route .station_Box .station_type.storage {
-			background:lightsalmon;
-		}
-
-		#route .station_Box .station_name {
-			position:absolute;left:0px;top:3px;width: 100%;text-align: center;
-		}
-
-		#route .station_Box .station_DCC_id {
-			position:absolute;left:5px;bottom:4px;width: 50px;text-align: left;
-		}
-
-		#route .station_Box .station_state {
-			position:absolute;right:5px;bottom:4px;width: 145px;text-align: right;
-		}
-
-		#route .station_Box .lengthL {
-			border-bottom-left-radius: 2px;
-			left: 0px;
-		}
-
-		#route .station_Box .lengthR {
-			border-bottom-right-radius: 2px;
-			right: 0px;
-		}
-
-		#route .station_Box .length_1 {
+			padding: 0px;
 			width: 100%;
+			display: block;
+			transition: max-height 1.2s cubic-bezier(0.22, 0.61, 0.36, 1);
+			transition: top 1.2s cubic-bezier(0.22, 0.61, 0.36, 1);
 		}
-
-		#route .station_Box .length_2.m {
-			width: 60px;
-			left: calc(50% - 30px);
-		}
-
-		#route .station_Box .length_2 {
-			width: calc(50% - 32px);
-		}
-
-		#route .station_Box .length_1, #route .station_Box .length_2 {
-			position:absolute;
-			bottom:0px;
-			height:3px;
-			background: green;
-			line-height: 1px;
-			color: transparent;
-			text-align: center;
-			float:left;
-		}
-
-		#route .station_Box .length_1.active, #route .station_Box .length_2.active {
-			height:20px;
-			color:white;
-			line-height:20px;
-		}
-
-		#route .station_Box .set {
-			background: red;
-		}
-
-		#route .station_Box .expected {
-			background: orange;
-		}
-
-		#route .station_Box .leaving {
-			background: darkorange;
-		}
-
-		#trains {
-			float:left;
-			width:100%;
-		}
-
-		#trains.half {
-			width: 50%;
-		}
-
-		#trains .controlA, #trains .controlB {
-			margin:20px;
-			height: calc(100% - 52px);
-			width: calc(50% - 52px);
-			float:left;
-			background:lightgrey;
-			padding: 5px;
-			border: 1px solid lightgrey;
-			border-radius: 5px;
-			position: relative;
-		}
-		#trains.half .controlA {
-			width: calc(100% - 52px);
-		}
-		#trains.half .controlB {
-			display: none;
-		}
-
-		#trains .control .name {
-			font-size:large;
-		}
-
-		#trains .specs {
-			width:calc(100% - 78px);
-			height:calc(100% - 10px);
-			position: relative;
-		}
-
-		@media only screen and (max-width: 600px) {
-		    #trains .controlA {
-				width: calc(100% - 50px);
-			}
-
-			 #trains .controlB {
-			 	display:none;
-			 }
-		}
-
-		#trains .funcs, #train_hover .funcs {
-			display: flex;
-			width: 100%;
-			overflow-x: hidden;
-			flex-wrap: wrap;
-			justify-content: center;
-			align-items: flex-end;
-			margin-top:5px;
-		}
-
-		#trains .func, #train_hover .func {
-			width: 25px;
-			height: 20px;
-			line-height: 20px;
-			text-align: center;
-			background: grey;
-			margin: 2px;
-			border-radius: 2px;
-			color: white;
-			font-size: smaller;
-			font-weight: bold;
-		}
-
-		#train_hover {
-			position: fixed;
-			width:260px;
-			padding: 5px;
-			height:360px;
-			border: 1px solid grey;
-			border-radius: 5px;
-			box-shadow: 0px 0px 20px 2px grey;
-			background: lightgrey;
-			z-index: 1;
-		}
-
-		.slider_containter {
-			position: absolute;
-			right:25px;
-			bottom:25px;
-			height: calc(100% - 50px);
-			width:30px;
-			box-shadow: 0px 1px 6px 2px #bbb;
-			background: white;
-			border-radius: 15px;
-			overflow: hidden;
-		}
-
-		.slider {
-			bottom: 0px;
-			height: 75%;
-			width:100%;
-			background: #ff9800;
-			position: absolute;
-		}
-
-		.slider_value {
-			top: 5px;
-			width: 100%;
-			color: white;
-			position: absolute;
-			font-weight: bold;
-			font-size: smaller;
-			text-align: center;
-		}
-
-		.slider_value.inverse {
-			top: -18px;
-			color: black;
-		}
-
-		#train_hover .specs {
-			width:calc(100% - 78px);
-			height:calc(100% - 10px);
-			position: relative;
-		}
-
-		#train_hover .specs .img, #trains .specs .img {
-			width:calc(100% - 10px);
-			margin:5px;
-			padding-top:50%;
-			background-size: cover;
-			background-position: center;
-		}
-
-		#train_hover .specs .row, #trains .specs .row {
-			width: calc(100% - 40px);
-			background: #aaa;
-			color: white;
-			margin: 0px 5px;
-			padding: 3px 15px;
-			text-align: center;
-			min-height:18px;
-		}
-
-		#train_hover .specs .name, #trains .specs .name {
-			background: grey;
-			color: white;
-			font-weight: bold;
-			margin-top: -5px;
-			border-top: 2px solid white;
-		}
-
-		#train_hover .specs .type, #trains .specs .type {
-			float:left;
-		}
-
-		#train_hover .specs .route, #trains .specs .route {
-			float: right;
-		}
-
-		#settings {
-			width:100%;
-			height: calc(100% - 90px);
-			overflow: hidden;
-			overflow-y: auto;
-		}
-
-		.settings_box {
-			overflow: hidden;
-			min-height: 100%;
-		}
-
-		.set-box {
-		    width: calc(100% - 40px);
-		    padding: 10px;
-		    margin: 10px;
-		    border: 2px solid #1565C0;
-		    border-radius: 10px;
-		    overflow: hidden;
-		}
-
-		.set-box > .header {
-			width: calc(100% + 20px);
-			padding: 10px 0px;
-			padding-top: 10px;
-			margin-top: -10px;
-			margin-left: -10px;
-			background: #1565C0;
-			text-align: center;
-			font-weight: bold;
-			margin-bottom: 10px;
-			color: white;
-		}
-
-		.box-containter {
-			display: flex;
-			flex-wrap: wrap;
-		}
-
-		.set-box .checkbox input[type="checkbox"] {
+		.bottom-group > .info-box {
 			display: inline-block;
+			width: calc(100% - 34px);
 		}
 
-		.set-box .box,
-		.set-box .checkbox,
-		.set-box .buttonbox,
-		.set-box .collapsebox {
-			margin: 10px;
-			border-radius: 5px;
-			background: lightgrey;
-			min-width: calc(50% - 30px);
-			position: relative;
-			overflow:hidden;
+		.bottom-group.active {
+			top: 0%;
+			max-height: 400%;
 		}
 
-		.set-box .checkbox {
-			height: 30px;
-			vertical-align: middle;
-			padding-left: 10px;
-			line-height: 30px;
-			cursor: pointer;
-		}
-
-		.set-box .checkbox div {
-			line-height: 30px;
-			position: absolute;
-			right: 0px;
-			top: 0px;
-			height: 30px;
-			width: 100%;
-			text-align: center;
-		}
-
-		.set-box .buttonbox, .set-box .collapsebox {
-			height: 30px;
-			vertical-align: middle;
-			line-height: 30px;
-			cursor: pointer;
-			background: lightgrey;
-			font-weight: bold;
-			text-align: center;
-		}
-
-		.set-box .collapsebox.active{
-			height: unset;
-		}
-
-		.set-box .collapsebox div {
-			display: none;
-		}
-
-		.set-box .collapsebox.active div {
-			display: block;
-			border-top: 1px solid grey;
-		}
-
-		.set-box .collapsebox.active div:first-child {
-			margin-top:5px;
-		}
-
-		@media only screen and (max-width: 600px){
-			.set-box .checkbox,
-			.set-box .buttonbox,
-			.set-box .collapsebox {
-				min-width: calc(100% - 30px);
-			}
-		}
-
-		.set-box .box textarea {
-			width: calc(100% - 12px);
-			margin: 5px;
-			height: 200px;
-			white-space: nowrap;
-			overflow: auto;
-			resize: none;
-			margin-bottom: 1px;
-		}
-
-		#log_box {
-			height: 200px;
-			margin: 5px;
-			position: relative;
-			width: calc(100% - 10px);
-			font-family: monospace;
-			overflow-y: auto;
-			overflow-x: auto;
-			white-space: nowrap;
-			background: white;
-		}
-		
-		.box.status-box-container {
-			background: white;
-			display: flex;
-			flex-wrap: wrap;
-			flex-direction: column;
-			max-height:180px;
-		}
-
-		.status-box {
-			float: left;
-			width: calc(25% - 20px);
-			margin: 5px;
-			background: lightgrey;
-			border-radius: 2px;
-			text-align: center;
-			padding: 5px;
-			position: relative;
-			overflow: hidden;
-		}
-
-		@media only screen and (max-width: 800px){
-			.status-box {
-				min-width: calc(50% - 20px);
-			}
-			.box.status-box-container {
-				max-height: 340px;
-			}
-		}
-
-		@media only screen and (min-width: 1000px){
-			.status-box {
-				min-width: calc(50% - 20px);
-			}
-			.box.status-box-container {
-				max-height: 340px;
-			}
-		}
-
-		@media only screen and (min-width: 1600px){
-			.status-box {
-				min-width: calc(25% - 20px);
-			}
-			.box.status-box-container {
-				max-height: 180px;
-			}
-		}
-
-		.status-box:before {
-		    content: "";
-		    position: absolute;
-		    left: 0px;
-		    top: 0px;
-		    height: 100%;
-		    width: 20px;
-		}
-
-		.status-box.green:before{
-		    background: #66BB6A;
-		}
-		.status-box.red:before{
-			background: #EF5350;
-		}
-
-
-
-
-
-
-
-		#train_compositor {
-		    width: calc(100% - 80px);
-		    max-height: calc(100% - 80px);
-		    max-width: 1200px;
-		    padding: 10px;
-		    margin: 30px;
-		    border: 2px solid #1565C0;
-		    border-radius: 10px;
-		    overflow: hidden;
-		    background: white;
-		    position: fixed;
-		    top: 0px;
-		    left: 50%;
-		    box-shadow: 0px 0px 10px 5px lightgrey;
-		    -webkit-transform: translate(calc(-50% - 30px), 0);
-		    transform: translate(calc(-50% - 30px),0);
-		    min-height: 200px;
-		}
-
-		#train_compositor .header {
-			width: calc(100% + 20px);
-			padding: 10px 0px;
-			padding-top: 10px;
-			margin-top: -10px;
-			margin-left: -10px;
-			background: #1565C0;
-			text-align: center;
-			font-weight: bold;
-			margin-bottom: 10px;
-			color: white;
-		}
-
-		#train_compositor .compositor {
-			width: calc(100% - 2px);
-			height: 106px;
-			overflow: hidden;
-			border: 1px solid grey;
-		}
-
-		#train_compositor .compositor .scroller {
-			height: 150%;
-			overflow-x: scroll;
-		}
-
-		#train_compositor .compositor .scroller > div{
-			height: 106px;
-		}
-
-		#train_compositor .compositor .box{
-			height: calc(100% - 6px);
-			float: left;
-			margin: 2px;
-			border: 1px solid lightgrey;
-		}
-
-		#train_compositor .compositor .box img{
-			height: 56px;
-			margin: 2px;
-			cursor: move;
-		}
-
-		#train_compositor .compositor .box .name{
-			height: 14px;
-			padding: 2px;
-			line-height: 14px;
-			width: calc(100% - 4px);
-			background: lightgrey;
-			text-align: center;
-			font-size: smaller;
-			font-weight: bold;
-		}
-
-		#train_compositor .compositor .box .control{
-			height: 14px;
-			padding: 2px;
-			line-height: 14px;
-			width: calc(100% - 4px);
-			background: lightgreen;
-			font-size: smaller;
-			text-align: center;
-			display: flex;
-			justify-content: center;
-		}
-
-		#train_compositor .compositor .box .cbtn{
-			height: 16px;
-			width: 16px;
-			margin: 0px 2px;
-			background: grey;
-			color: white;
-			border-top-left-radius: 2px;
-			border-top-right-radius: 2px;
-		}
-
-		#train_compositor .btn {
-			width: 200px;
-			margin: 5px;
-			padding: 5px;
-			float:left;
-			background: lightgrey;
-			text-align: center;
-			border-radius: 2px;
-		}
-
-		#train_compositor .btn_container {
-			width:440px;
-			margin:20px auto;
-			height:38px;
-		}
-
-		@media only screen and (max-width: 500px){
-			#train_compositor .btn {
-				width: calc(50% - 20px);
-			}
-
-			#train_compositor .btn_container {
-				width: 100%;
-			}
-		}
-
-		#train_compositor .selector {
-			width: 100%;
-			overflow-y: auto;
-			display: flex;
-			align-items: center;
-			justify-content: center;
-			flex-wrap: wrap;
-		}
-
-		#train_compositor .list_box {
-			width:200px;
-			height:40px;
-			padding:5px;
-			border-radius:5px;
-			background:lightgrey;
-			border: 1px solid lightgrey;
-			position:relative;
-			margin:10px 5px;
-			float:left;
-			cursor: pointer;
-		}
-
-		#train_compositor .list_box .img {
-			width:70px;
-			height:50px;
-			top:0px;
-			left:0px;
-			position: absolute;
-			border-top-left-radius: 5px;
-			border-bottom-left-radius: 5px;
-			overflow: hidden;
-    		background-size: contain;
-    		background-repeat: no-repeat;
-    		background-position: center; 
-		}
-
-		#train_compositor .list_box .name {
-			left: 70px;
-			top: 7px;
-			width: calc(100% - 70px);
-			position: absolute;
-			text-align: center;
-			font-weight: bold;
-			font-size:small;
-		}
-
-		#train_compositor .list_box .id {
-			left: 70px;
-			bottom: 7px;
-			width: calc(100% - 70px);
-			position: absolute;
-			text-align: center;
-			font-size:small;
-		}
-
-
-
-
-
-		#train_linker {
-		    width: calc(100% - 80px);
-		    max-height: calc(100% - 80px);
-		    max-width: 600px;
-		    padding: 10px;
-		    margin: 30px;
-		    border: 2px solid #1565C0;
-		    border-radius: 10px;
-		    background: white;
-		    position: fixed;
-		    top: 0px;
-		    left: 50%;
-		    box-shadow: 0px 0px 10px 5px lightgrey;
-		    -webkit-transform: translate(calc(-50% - 30px), 0);
-		    transform: translate(calc(-50% - 30px),0);
-		    min-height: 200px;
-		}
-
-		#train_linker .header {
-			width: calc(100% + 20px);
-			padding: 10px 0px;
-			padding-top: 10px;
-			margin-top: -10px;
-			margin-left: -10px;
-			background: #1565C0;
-			text-align: center;
-			font-weight: bold;
-			margin-bottom: 10px;
-			color: white;
-		}
-
-		#train_linker .selected {
+		.bottom-group > .info-box {
 			width: calc(100% - 20px);
-			border: 1px solid grey;
-			margin: 20px auto;
-			position: relative;
-			height: 60px;
 		}
 
-		#train_linker .selected .container {
-			width: 100%;
-			height: 60px;
-			cursor: pointer;
-		}
-
-		#train_linker .selected .selector{
-			width: calc(100% - 2px);
-			border: 2px solid grey;
-			position: absolute;
-			top: 100%;
-			left: -1px;
-			max-height: 290px;
-			background: white;
-			display: none;
-			overflow: overlay;
-		}
-
-		#train_linker .selected .selector.active{
-			display: block;
-		}
-
-		#train_linker .selector > div {
-			width: 100%;
-			height: 60px;
-			position: relative;
-			overflow: hidden;
-			cursor: pointer;
-		}
-
-		#train_linker .selector > div:not(:last-child) {
-			border-bottom: 1px solid grey;
-		}
-
-		#train_linker .selector > div:hover {
-			background: #ddd;
-		}
-
-		#train_linker .selector .imgbox, #train_linker .selected .container .imgbox {
-			width: calc(100% - 12px);
-			height: 30px;
-			border:1px solid lightgrey;
-			top:5px;
-			left:5px;
-			position: absolute;
-			overflow: hidden;
-		}
-
-		#train_linker .selector .imgbox .scroller, #train_linker .selected .container .imgbox .scroller {
-			height: 60px;
-			width: 100%;
-			overflow-x: scroll;
-			overflow-y: hidden;
-		}
-
-		#train_linker .selector .imgbox img, #train_linker .selected .container .imgbox img{
-			height: 30px;
-		}
-
-		#train_linker .selector .textbox, #train_linker .selected .container .textbox {
-			position: absolute;
-			bottom: 0.25em;
-			left: 0.5em;
-			height: 1em;
-			font-weight: bold;
-			width: calc(100% - 0.5em);
-		}
-
-		#train_linker .name {
-			position: absolute;
-			left: 0px;
-		}
-
-		#train_linker .dcc {
-			position: absolute;
-			right: 20%;
-			bottom: 0px;
-			white-space: nowrap;
-			font-size: x-small;
-			vertical-align: text-bottom;
-		}
-
-		#train_linker .btn {
-			width: calc(33% - 20px);
-			margin: 5px;
-			padding: 5px;
-			float:left;
-			background: lightgrey;
-			text-align: center;
-			border-radius: 2px;
-            cursor: pointer;
-		}
-
-		#train_linker .btn_container {
-			width: calc(100% - 40px);
-			max-width:550px;
-			margin:20px auto;
-			height:38px;
-		}
-
-		@media only screen and (max-width: 550px){
-			#train_linker .btn {
-				width: calc(100% - 20px);
-			}
-
-			#train_linker .btn_container {
-				width: 100%;
-			}
-		}
-
-
-
-		#engine_car_creator {
-		    width: calc(100% - 80px);
-		    max-height: calc(100% - 80px);
-		    max-width: 600px;
-		    padding: 10px;
-		    margin: 30px;
-		    border: 2px solid #1565C0;
-		    border-radius: 10px;
-		    background: white;
-		    position: fixed;
-		    overflow-y: overlay;
-		    top: 0px;
-		    left: 50%;
-		    box-shadow: 0px 0px 10px 5px lightgrey;
-		    -webkit-transform: translate(calc(-50% - 30px), 0);
-		    transform: translate(calc(-50% - 30px),0);
-		    min-height: 200px;
-		}
-
-		#engine_car_creator .header {
-			width: calc(100% + 20px);
-			padding: 10px 0px;
-			padding-top: 10px;
-			margin-top: -10px;
-			margin-left: -10px;
-			background: #1565C0;
-			text-align: center;
-			font-weight: bold;
-			margin-bottom: 10px;
-			color: white;
-		}
-
-		#engine_car_creator .field_container {
-			float: left;
-			width: calc(50% - 20px);
-			background: #eee;
-			border-radius: 3px;
-			margin: 5px;
-			padding: 5px;
-		}
-
-		#engine_car_creator .field_container span {
-			font-weight: bold;
-			display: block;
-		}
-
-		#engine_car_creator .field_container input {
-			width: calc(100% - 10px);
-			border: 1px solid grey;
-			padding: 5px;
-			margin-top: 2px;
-			border-radius: 5px;
-		}
-
-		#engine_car_creator .field_container input:not(:first) {
-			margin-bottom: 3px;
-		}
-
-		#engine_car_creator .row_container.speed_steps_box .box,
-		#engine_car_creator .row_container.speed_steps_box .add_box {
-			float:left;
-			width:80px;
-			height:64px;
-			padding:5px;
-			margin-right:5px;
-			border-radius:5px;
-			background: lightgrey;
-		}
-
-		#engine_car_creator .row_container.speed_steps_box .box:hover,
-		#engine_car_creator .row_container.speed_steps_box .add_box:hover {
-			background: grey;
-		}
-
-		#engine_car_creator .row_container {
-			float: left;
-			width: calc(100% - 20px);
-			background: #eee;
-			border-radius: 3px;
-			margin: 5px;
-			padding: 5px;
-			overflow: hidden;
-			height: 74px;
-		}
-
-		#engine_car_creator .row_container span {
-			font-weight: bold;
-			display: block;
-		}
-
-		#engine_car_creator .row_container input {
-			width: calc(100% - 10px);
-			border: 1px solid grey;
-			padding: 5px;
-			margin-top: 2px;
-			border-radius: 5px;
-		}
-
-		#engine_car_creator .row_container input:not(:first) {
-			margin-bottom: 3px;
-		}
-
-		#engine_car_creator .row_container .scroller {
-			height: 150%;
-			overflow-x:scroll;
-			max-width:100%;
-		}
-
-		#engine_car_creator .radio_container {
-			width: 100%;
-		}
-
-		#engine_car_creator .radio_button {
-			width: calc(33% - 20px);
-			padding: 5px;
-			margin: 5px;
-			border-radius: 5px;
-			background: #ddd;
-			text-align: center;
-			font-size: smaller;
-			font-weight: bold;
-			float: left;
-		}
-
-		#engine_car_creator .radio_button input {
-			width: 100%;
-		}
-
-		#engine_car_creator .btn {
-			width: calc(33% - 20px);
-			margin: 5px;
-			padding: 5px;
-			float:left;
-			background: lightgrey;
-			text-align: center;
-			border-radius: 2px;
-			cursor: pointer;
-		}
-
-		#engine_car_creator .btn_container {
-			width: calc(100% - 40px);
-			max-width:550px;
-			margin:20px auto;
-			height:38px;
-		}
-
-		@media only screen and (max-width: 550px){
-			#engine_car_creator .btn {
-				width: calc(100% - 20px);
-			}
-
-			#engine_car_creator .btn_container {
-				width: 100%;
-			}
-		}
-
-
-
-
-		#edit_selector {
-		    width: calc(100% - 80px);
-		    max-height: calc(100% - 80px);
-		    max-width: 600px;
-		    padding: 10px;
-		    margin: 30px;
-		    border: 2px solid #1565C0;
-		    border-radius: 10px;
-		    background: white;
-		    position: fixed;
-		    top: 0px;
-		    left: 50%;
-		    box-shadow: 0px 0px 10px 5px lightgrey;
-		    -webkit-transform: translate(calc(-50% - 30px), 0);
-		    transform: translate(calc(-50% - 30px),0);
-		    min-height: 200px;
-		}
-
-		#edit_selector .header {
-			width: calc(100% + 20px);
-			padding: 10px 0px;
-			padding-top: 10px;
-			margin-top: -10px;
-			margin-left: -10px;
-			background: #1565C0;
-			text-align: center;
-			font-weight: bold;
-			margin-bottom: 10px;
-			color: white;
-		}
-
-		#edit_selector .selected {
-			width: calc(100% - 20px);
-			border: 1px solid grey;
-			margin: 20px auto;
-			position: relative;
-			height: 60px;
-		}
-
-		#edit_selector .selected .container {
-			width: 100%;
-			height: 60px;
-			cursor: pointer;
-		}
-
-		#edit_selector .selected .selector{
-			width: calc(100% - 2px);
-			border: 2px solid grey;
-			position: absolute;
-			top: 100%;
-			left: -1px;
-			max-height: 290px;
-			background: white;
-			display: none;
-			overflow-y: scroll;
-			overflow-x: hidden;
-		}
-
-		#edit_selector .selected .selector.active{
-			display: block;
-		}
-
-		#edit_selector .selector > div {
-			width: 100%;
-			height: 60px;
-			position: relative;
-			overflow: hidden;
-			cursor: pointer;
-		}
-
-		#edit_selector .selector > div:not(:last-child) {
-			border-bottom: 1px solid grey;
-		}
-
-		#edit_selector .selector > div:hover {
-			background: #ddd;
-		}
-
-		#edit_selector .selector .imgbox, #edit_selector .selected .container .imgbox {
-			width: calc(100% - 12px);
-			height: 30px;
-			border:1px solid lightgrey;
-			top:5px;
-			left:5px;
-			position: absolute;
-			overflow: hidden;
-		}
-
-		#edit_selector .selector .imgbox .scroller, #edit_selector .selected .container .imgbox .scroller {
-			height: 60px;
-			width: 100%;
-			overflow-x: scroll;
-			overflow-y: hidden;
-		}
-
-		#edit_selector .selector .imgbox img, #edit_selector .selected .container .imgbox img{
-			height: 30px;
-		}
-
-		#edit_selector .selector .textbox, #edit_selector .selected .container .textbox {
-			position: absolute;
-			bottom: 0.25em;
-			left: 0.5em;
-			height: 1em;
-			font-weight: bold;
-			width: calc(100% - 0.5em);
-		}
-
-		#edit_selector .name {
-			position: absolute;
-			left: 0px;
-		}
-
-		#edit_selector .dcc {
-			position: absolute;
-			right: 20%;
-			bottom: 0px;
-			white-space: nowrap;
-			font-size: x-small;
-			vertical-align: text-bottom;
-		}
-
-		#edit_selector .btn {
-			width: calc(33% - 20px);
-			margin: 5px;
-			padding: 5px;
-			float:left;
-			background: lightgrey;
-			text-align: center;
-			border-radius: 2px;
-            cursor: pointer;
-		}
-
-		#edit_selector .btn_container {
-			width: calc(100% - 40px);
-			max-width:550px;
-			margin:20px auto;
-			height:38px;
-		}
-
-		@media only screen and (max-width: 550px){
-			#edit_selector .btn {
-				width: calc(100% - 20px);
-			}
-
-			#edit_selector .btn_container {
-				width: 100%;
-			}
-		}
-
-
-
-
-		#message_popup {
-			top: -1px;
-			position: fixed;
-			transform: translate(-50%,0);
-			left: 50%;
-			padding-top: 10px;
-			width: calc(100% - 10px);
-			background: white;
-			border: 1px solid grey;
-			padding: 5px;
-			max-width: 350px;
-			box-shadow: 2px 2px 3px 0px #c5c5c5;
-		}
-		@media only screen and (min-width: 362px){
-			#message_popup {
-				border-bottom-left-radius: 5px;
-				border-bottom-right-radius: 5px;
-			}
-		}
-
-		.set-box .messages, #message_popup .messages {
-			width: 100%;
-			max-height: 250px;
-			overflow: auto;
-			display: flex;
-			flex-wrap: wrap;
-		}
-
-		.set-box .messages .message, #message_popup .messages .message {
-			width: calc(100% - 20px);
-			min-width: 200px;
-			padding: 5px;
-			margin: 5px;
-			min-height: 20px;
-			max-height: 55px;
-			background: lightgrey;
-			border-radius: 3px;
-			overflow: hidden;
-			float:left;
-			position: relative;
-		}
-		@media only screen and (min-width: 500px){
-			.set-box .messages .message {
-				width: calc(50% - 20px);
-			}
-		}
-
-		.message .color-box {
-			height: calc(100% + 10px);
-			width: 30px;
-			top: 0px;
-			left: 0px;
-			position: relative;
-			float: left;
-			margin-right: 10px;
-			position: absolute;
-		}
-
-		.message .color-box.info {
-			background: #03A9F4;
-		}
-		.message .color-box.warning {
-			background: #FF9800;
-		}
-		.message .color-box.servere {
-			background: #EF5350;
-		}
-
-		.message .header, .message .content {
-			float: left;
-			position: relative;
-		}
-		.message .header {
-			left: 40px;
-			width: calc(100% - 40px);
-			font-weight: bold;
-		}
-		.message .content {
-			left: 60px;
-			width: calc(100% - 60px);
-		}
-
-
-		.masonry { /* Masonry container */
-			column-count: 2;
-			column-gap: 0;
-		}
-
-		@media only screen and (max-width: 1000px){
-			.masonry {
+		@media (min-width: 1140px) {
+			.bottom-group {
 				column-count: 1;
 			}
 		}
 
-		.masonry > .masonry-item { /* Masonry bricks or child elements */
-			display: inline-block;
+		@media (min-width: 992px; max-width: 1140px) {
+			.bottom-group {
+				column-count: 3;
+			}
 		}
 
+		@media (min-width: 576px; max-width: 992px) {
+			.bottom-group {
+				column-count: 2;
+			}
+		}
+
+		@media (max-width: 576px) {
+			.bottom-group {
+				column-count: 1;
+			}
+		}
+
+		.sidebar {
+			width: 100%;
+			display: block;
+			float: left;
+			position: relative;
+			border-right: 1px solid lightgrey;
+			background: #ecf0f5;
+			overflow: hidden;
+		}
+
+		.main {
+			float: left;
+			width: 100%;
+		}
+
+		@media(max-width: 1140px){
+			.top-group.active{
+				display: none;
+			}
+
+			.bottom-group {
+				top: 0%;
+				max-height: 400%;
+			}
+
+			.bottom-group .info-box:nth-child(1) {
+				display: none;
+			}
+		}
+
+		@media(min-width: 1140px){
+			.sidebar {
+				width: 280px;
+			}
+
+			.main {
+				width: calc(100% - 280px);
+			}
+
+			.top-group.active {
+				display: block;
+			}
+
+			.info-box.active-only {
+				display: none;
+			}
+
+			.active > .info-box.active-only {
+				display: inline-block;
+			}
+		}
+
+		.info-box .media:hover {
+			background: #ecf0f5;
+			cursor: pointer;
+		}
+
+		.scrollcontainer {
+			position: relative;
+			min-height: 100%;
+		}
+
+		.messages {margin: 0px -30px; max-height: 300px; overflow-y: auto; overflow-x: hidden;}
+		.messages li.message {border-bottom:1px solid #ddd; padding: 0px 30px}
+		.messages .message-mbox {width:32px;height:16px;border-radius: 3px;}
+		.messages .message-header {position: relative; top: 0.2em}
+		.messages .message-content {position:relative; top:-0.3em}
+
+		#subsystems ul {margin: 0px -30px;}
+		#subsystems li {border-bottom: 1px solid #ddd; padding: 0px 30px;}
+		#subsystems .indicator {width:16px;height:16px;border-radius: 3px;}
+		#subsystems .media-body:first-child() {position: relative; top: 0.2em; font-weight: bold;}
+		#subsystems .media-body small {position: relative; top: -0.3em; font-style: italic;}
+
+		#menu-box {position: fixed; right: 10px; bottom:10px; width:200px; height:22px; text-align: right;}
+		#menu-box button {width: 60px;padding: .125rem .25rem;font-size: .7rem;line-height: 0.9rem;margin: 0.2em;}
+
+		button.mini-btn {width: 60px;padding: .125rem .25rem;font-size: .7rem;line-height: 0.9rem;font-weight: bold}
+		input.ip-input {display:inline-block;width:3em;border:none;outline:none;text-align: center; background:#f5f5f5}
 	</style>
 </head>
 <body>
-	<div id="track" style="height:calc(100% - 90px);display:none"><canvas></canvas></div>
-	<div id="trains" style="display:none;">
-		<div class="control controlA">
-			<div class="specs">
-				<div class="img" style="background-image: url('./trains_img/NoTrain.jpg');"></div>
-				<div class="row name">No Train Selected</div>
-				<div class="row control">
-					<span class="type">...</span>
-					<span class="route">...</span>
-				</div>
-			</div>
-			<div style="width: 78px; right:0px; top:0px;position: absolute;height:100%">
-				<div class="slider_containter sliderA">
-					<div class="slider">
-						<span class="slider_value">...</span>
-					</div>
-				</div>
-			</div>
-		</div>
-		<div class="control controlB">
-			<div class="specs">
-				<div class="img" style="background-image: url('./trains_img/NoTrain.jpg');"></div>
-				<div class="row name">No Train Selected</div>
-				<div class="row control">
-					<span class="type">...</span>
-					<span class="route">...</span>
-				</div>
-			</div>
-			<div style="width: 78px; right:0px; top:0px;position: absolute;height:100%">
-				<div class="slider_containter sliderB">
-					<div class="slider">
-						<span class="slider_value">...</span>
-					</div>
-				</div>
-			</div>
-		</div>
-	</div>
-	<div id="train_hover" style="display:none">
-		<div class="specs">
-			<div class="img" style="background-image: url('./trains_img/NoTrain.jpg');"></div>
-			<div class="row name"></div>
-			<div class="row control">
-				<span class="type"></span>
-				<span class="route"></span>
-			</div>
-			<div class="funcs" style="display:flex;width:100%; overflow-x: hidden; flex-wrap: wrap">
-				<div class="func"></div>
-				<div class="func"></div>
-				<div class="func"></div>
-				<div class="func"></div>
-			</div>
-		</div>
-		<div style="width: 78px; right:0px; top:0px;position: absolute;height:100%">
-			<div class="slider_containter">
-				<div class="slider">
-					<span class="slider_value">140</span>
-				</div>
-			</div>
-		</div>
-	</div>
-	<div id="train_list">
-		<div class="scroller">
-			<div style="width:2270px;height:10px;"><!--content--></div>
-		</div>
-	</div>
-	<div id="route" class="vertical" style="display:none;">
-	</div>
-	<div id="settings">
-		<div class="settings_box masonry">
-			<div class="set-box masonry-item">
-				<div class="header">Broadcastflags</div>
-				<div id="Broadcastflags" class="box-containter">
-					<div class="checkbox bf80">
-						<input type="checkbox"/>
-						<div>X</div>
-					</div>
-					<div class="checkbox bf40">
-						<input type="checkbox"/>
-						<div>X</div>
-					</div>
-					<div class="checkbox bf20">
-						<input type="checkbox"/>
-						<div>X</div>
-					</div>
-					<div class="checkbox bf10">
-						<input type="checkbox"/>
-						<div>Admin</div>
-					</div>
-					<div class="checkbox bf08">
-						<input type="checkbox"/>
-						<div>Messages</div>
-					</div>
-					<div class="checkbox bf04">
-						<input type="checkbox"/>
-						<div>Switches</div>
-					</div>
-					<div class="checkbox bf02">
-						<input type="checkbox"/>
-						<div>Track</div>
-					</div>
-					<div class="checkbox bf01">
-						<input type="checkbox"/>
-						<div>Trains</div>
-					</div>
-				</div>
-			</div>
 
-			<div class="set-box masonry-item">
-				<div class="header">Track layout</div>
-				<div class="box-containter">
-					<div class="buttonbox">
-						Reload
-					</div>
-					<div class="collapsebox" done="websocket.cts_reload_previous(value);">
-						Reload Previous
-						<div class="0">20-05-2018</div>
-						<div class="1">20-05-2018</div>
-						<div class="2">20-05-2018</div>
-						<div class="3">20-05-2018</div>
-						<div class="4">20-05-2018</div>
-						<div class="5">20-05-2018</div>
-						<div class="6">20-05-2018</div>
-						<div class="7">20-05-2018</div>
-					</div>
-					<div class="buttonbox">
-						Add a module
-					</div>
-					<div class="buttonbox">
-						Update / Remove module
-					</div>
-				</div>
-			</div>
-
-			<div class="set-box masonry-item">
-				<div class="header">Trains / Engines</div>
-				<div class="box-containter">
-					<div class="buttonbox" onclick="Train.comp.open()">
-						Add a Train
-					</div>
-					<div class="buttonbox" onclick="Train.edit_selector.open('T')">
-						Update / Remove a Train
-					</div>
-					<div class="buttonbox" onclick="Train.engine_car_creator.open('E')">
-						Add an Engine
-					</div>
-					<div class="buttonbox" onclick="Train.edit_selector.open('E')">
-						Update / Remove an Engine
-					</div>
-					<div class="buttonbox" onclick="Train.engine_car_creator.open('C')">
-						Add an Car
-					</div>
-					<div class="buttonbox" onclick="Train.edit_selector.open('C')">
-						Update / Remove an Car
-					</div>
-				</div>
-			</div>
-
-			<div class="set-box masonry-item">
-				<div class="header">Status</div>
-				<div id="status_flags" class="box status-box-container">
-					<div class="status-box f8000 green">Z21</div>
-					<div class="status-box f4000 green">Websocket</div>
-					<div class="status-box f2000 red">COM</div>
-					<div class="status-box f1000 green">Client accept</div>
-
-					<div class="status-box f0800 green">.</div>
-					<div class="status-box f0400 green">.</div>
-					<div class="status-box f0200 green">Digital</div>
-					<div class="status-box f0100 green">Running</div>
-
-					<div class="status-box f0080 green">.</div>
-					<div class="status-box f0040 green">.</div>
-					<div class="status-box f0020 green">.</div>
-					<div class="status-box f0010 green">.</div>
-
-					<div class="status-box f0008 green">Modules Coupled</div>
-					<div class="status-box f0004 green">Modules Found</div>
-					<div class="status-box f0002 green">.</div>
-					<div class="status-box f0001 green">Trains Loaded</div>
-				</div>
-				<div class="box">
-					<div id="log_box">
-					</div>
-				</div>
-			</div>
-
-			<div class="set-box masonry-item">
-				<div class="header">Messages</div>
-				<div class="messages"></div>
-			</div>
-		</div>
-	</div>
-
-	<div id="train_linker" style="display:none">
-		<div class="header">Train Linker</div>
-
-		<div class="selected">
-			<div class="container">
-				<div data="10">
-					<div class="imgbox"></div>
-				</div>
-			</div>
-			<div class="selector"></div>
-		</div>
-		<div class="btn_container">
-			<div class="btn select">Select</div>
-			<div class="btn close">Discard</div>
-			<div class="btn add_cars">Create new train</div>
-		</div>
-	</div>
-
-	<div id="train_compositor" style="display:none">
-		<div class="header">Train Compositor</div>
-
-		<div class="compositor">
-			<div class="scroller">
-				<div></div>
-			</div>
-		</div>
-		<div class="btn_container">
-			<div class="btn save">Save</div>
-			<div class="btn close">Discard</div>
-			<div class="btn add_cars">Add Car</div>
-			<div class="btn add_engines">Add Engine</div>
-		</div>
-		<div class="cars selector"></div>
-		<div class="engines selector"></div>
-	</div>
-
-	<div id="engine_car_creator" style="display:block">
-		<div class="header">Some Title</div>
-		<div style="width: 100%; float: left; display: flex; flex-wrap: wrap;">
-			<div class="field_container" style="width: 100%;">
-				<span>Images</span>
-				<div style="width:49%;float:left; position: relative; height:130px">
-					<div class="img_icon" style="width: 140px;height: 100px;margin: auto;border-top-left-radius: 5px;border-bottom-left-radius: 5px;overflow: hidden;background-size: cover;background-position: center;background-image: url(./trains_img/6.png);"></div>
-					<input class="icon" style="bottom: 0px; position: absolute;" type="file" onchange="Train.engine_car_creator.upload('.icon');"/>
-				</div>
-				<div style="width:49%;float:right; position: relative; height:130px">
-					<div style="margin: auto; height: 50px; width: 100%; text-align: center; top: calc(40% - 25px); position: absolute;">
-						<img class="img_train" src="./trains_img/cars/traxx.png" style="height: 100%;">
-					</div>
-					<input class="img" style="bottom: 0px; position: absolute;" type="file" onchange="Train.engine_car_creator.upload('.img');"/>
-				</div>
-			</div>
-			<div class="field_container name">
-				<span>Name</span>
-				<input type="text" placeholder="A name for the car"/>
-			</div>
-			<div class="field_container nr">
-				<span>Nr</span>
-				<input type="number" placeholder="Reference number"/>
-			</div>
-			<div class="field_container dcc">
-				<span>DCC address</span>
-				<input type="number" placeholder="DCC id"/>
-			</div>
-			<div class="field_container length">
-				<span>Length</span>
-				<input type="number" step="0.1" placeholder="length in cm"/>
-			</div>
-			<div class="field_container speed">
-				<span>Speedsteps</span>
-				<input type="number" name="speed" placeholder="m/s"/>
-				<div class="radio_container">
-					<div class="radio_button"><input value="0" name="speedstep" type="radio"/>14</div>
-					<div class="radio_button"><input value="2" name="speedstep" type="radio"/>28</div>
-					<div class="radio_button"><input value="1" name="speedstep" type="radio"/>128</div>
-				</div>
-			</div>
-			<div class="field_container type">
-				<span>Type</span>
-				<div class="radio_container">
-					<div class="radio_button"><input value="0" name="car_type" type="radio"/>Passenger</div>
-					<div class="radio_button"><input value="2" name="car_type" type="radio"/>Both</div>
-					<div class="radio_button"><input value="1" name="car_type" type="radio"/>Cargo</div>
-				</div>
-			</div>
-			<div class="field_container functions" style="width: calc(25% - 20px);position: relative;cursor: pointer" onclick="$('#engine_car_creator .speed_steps_box').hide();$('#engine_car_creator .functions_box').show()">
-				<span>Functions</span>
-				<div style="position: absolute;right:10px;top:5px;width:18px;height:18px;">
-					<img src="img/arrow_down.png" width="18px"/>
-				</div>
-			</div>
-			<div class="field_container speed_steps" style="width: calc(25% - 20px);position: relative;cursor: pointer" onclick="$('#engine_car_creator .speed_steps_box').show();$('#engine_car_creator .functions_box').hide()">
-				<span>Speed</span>
-				<div style="position: absolute;right:10px;top:5px;width:18px;height:18px;">
-					<img src="img/arrow_down.png" width="18px"/>
-				</div>
-			</div>
-			<div class="row_container functions_box" style="display: none;">
-			</div>
-			<div class="row_container speed_steps_box" style="display: none;">
-				<div class="scroller">
-					<div style="width:190px;height:10px;">
-						<div class="box">
-							<input type="text" name="speed" placeholder="speed" style="text-align:center;"/>
-							<input type="text" name="step"  placeholder="step"  style="text-align:center;"/>
+	<div class="sidebar full-height">
+		<div style="width: 125%; overflow-y: scroll; overflow-x:hidden; height: 100%">
+			<div class="scrollcontainer" style="width: 280px;">
+				<div class="top-group active" style="position: absolute; top: 0px; margin: 0px; padding: 0px; width: 100%; height: calc(100% - 61px)">
+					<div class="info-box message-box">
+						<span class="header">Messages</span>
+						<div class="messages">
+							<ul class="list-unstyled">
+							</ul>
 						</div>
-						<div class="add_box" style="cursor:pointer;position: relative;">
-							<img src="img/plus_h.png" style="position:absolute;top:calc(50% - 16px);left:calc(50% - 16px);"/>
+					</div>
+					<div class="info-box" style="position: absolute;bottom: 10px;">
+						<span class="header">Train Control</span>
+						<span class="box-row">Websocket</span>
+						<span class="box-row">Z21</span>
+						<span class="box-row">UART</span>
+						<span class="box-row">LayoutControl</span>
+						<span class="box-row">TrainControl</span>
+					</div>
+				</div>
+				<div class="bottom-group" style="">
+					<div class="info-box settings-toggle" style="cursor: pointer; position: relative;">
+						<span class="header" style="border-bottom: 0px">Settings</span>
+						<span style="position: absolute;right: 10px;font-weight: bold;line-height: 41px;font-size: large;top: 0px;">+</span>
+					</div>
+					<div id="subsystems" class="info-box active-only">
+						<span class="header">Sub Systems</span>
+						<ul class="list-unstyled">
+						</ul>
+						<div class="box-row">
+							<button type="button" class="btn btn-sm mini-btn btn-warning" onClick='window.location.replace("");'>Reload</button>
+							<button type="button" class="btn-hard-reset btn btn-sm mini-btn btn-danger">Restart</button></div>
+					</div>
+					<div class="info-box active-only">
+						<span class="header">Z21 Status</span>
+						<div style="display: inline-table; width: 80%; min-width: 200px">
+							<span class="box-trow"><span>Temps</span><span>20.6</span>C</span></span>
+							<span class="box-trow"><span>Track Current</span><span>693</span>mA</span></span>
+							<span class="box-trow"><span>Prog. Current</span><span>1</span>mA</span></span>
+							<span class="box-trow"><span>Track Voltage</span><span>17.4</span>V</span></span>
+							<span class="box-trow"><span>Supply Voltage</span><span>20.0</span>V</span></span>
+						</div>
+						<div class="box-row"><button type="button" class="btn-Z21-settings btn btn-sm mini-btn btn-warning">Settings</button></div>
+					</div>
+					<div class="info-box active-only">
+						<span class="header">Layout</span>
+						<span class="box-row">Reload</span>
+						<div class="box-row">
+							<span>Module</span><br/>
+							<div style="margin-bottom: 5px">
+								<button type="button" class="btn btn-sm mini-btn btn-success">Add</button>
+								<button type="button" class="btn btn-sm mini-btn btn-warning">Edit</button>
+								<button type="button" class="btn btn-sm mini-btn btn-danger">Remove</button>
+							</div>
+						</div>
+					</div>
+					<div class="info-box active-only">
+						<span class="header">Rolling Stock</span>
+						<div class="box-row">
+							<span>Trains</span><br/>
+							<div style="margin-bottom: 5px">
+								<button type="button" class="btn btn-sm mini-btn btn-success">Add</button>
+								<button type="button" class="btn btn-sm mini-btn btn-warning">Edit</button>
+								<button type="button" class="btn btn-sm mini-btn btn-danger">Remove</button>
+							</div>
+						</div>
+						<div class="box-row">
+							<span>Engines</span><br/>
+							<div style="margin-bottom: 5px">
+								<button type="button" class="btn btn-sm mini-btn btn-success">Add</button>
+								<button type="button" class="btn btn-sm mini-btn btn-warning">Edit</button>
+								<button type="button" class="btn btn-sm mini-btn btn-danger">Remove</button>
+							</div>
+						</div>
+						<div class="box-row">
+							<span>Cars</span><br/>
+							<div style="margin-bottom: 5px">
+								<button type="button" class="btn btn-sm mini-btn btn-success">Add</button>
+								<button type="button" class="btn btn-sm mini-btn btn-warning">Edit</button>
+								<button type="button" class="btn btn-sm mini-btn btn-danger">Remove</button>
+							</div>
+						</div>
+					</div>
+					<div class="info-box message-box">
+						<span class="header">Messages</span>
+						<div class="messages">
+							<ul class="list-unstyled">
+							</ul>
 						</div>
 					</div>
 				</div>
 			</div>
 		</div>
-
-		<div class="btn_container">
-			<div class="btn save">Save</div>
-			<div class="btn save_new">Save + New</div>
-			<div class="btn close">Discard</div>
-		</div>
 	</div>
-
-	<div id="message_popup">
-		<div class="messages"></div>
+	<div class="main" id="LayoutContainer" style="height: 100%; padding: 0px">
+		<canvas height="300" width="300"/>
 	</div>
-
-	<div id="edit_selector" style="display:none">
-		<div class="header">Train / Car / Engine / Module Selector</div>
-
-		<div class="selected">
-			<div class="container">
-				<div data="10">
-					<div class="imgbox"></div>
+	<div id="menu-box"></div>
+	<div class="modal" id="modal" tabindex="-1" role="dialog">
+		<div class="modal-dialog" role="document">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title" id="label">Are You Sure?</h5>
+					<button type="button" class="close" data-dismiss="modal">
+						<span>&times;</span>
+					</button>
+				</div>
+				<div class="modal-body">
+					The system will be down for a couple minutes
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-success">Cancel</button>
+					<button type="button" class="btn btn-warning">Warning</button>
+					<button type="button" class="btn btn-danger">Yes, Restart</button>
 				</div>
 			</div>
-			<div class="selector"></div>
-		</div>
-		<div class="btn_container">
-			<div class="btn edit">Edit</div>
-			<div class="btn remove">Remove</div>
-			<div class="btn close">Discard</div>
 		</div>
 	</div>
 
-	<div style="position: absolute;right: 0px;bottom: 0px;height: 50px;width: 50px;background: red" onClick='window.location.replace("");'></div> <!-- TODO remove -->
-	<div class="menu" style="bottom:-185px;">
-		<div class="Emergency_btn">
-			<span>STOP</span>
-			<img class="Emergency_Em_img" src="./img/stop_hand.png"/>
-			<img class="Emergency_Es_img" src="./img/electrical.png"/>
-		</div>
-		<div class="menu_btn route">
-			<img src="./img/route.png" width="26px" style="margin:12px;"/>
-		</div>
-		<div class="menu_btn trains">
-			<img src="./img/trains.png" width="26px" style="margin:12px;"/>
-		</div>
-		<div class="menu_btn settings">
-			<img src="./img/setting_cog.svg" width="26px" style="margin:12px;"/>
-		</div>
-	</div>
-	<div class="menu_btn menu_toggle_btn" style="">
-		<img src="./img/arrow_up.png"/>
-	</div>
+		<script src="./scripts/canvas.js"></script>
+		<script src="./scripts/socket.js"></script>
+		<script src="./scripts/train.js"></script>
+		<script src="./scripts/messages.js"></script>
+		<script src="./scripts/script.js"></script>
 
-    <script src="./scripts/Sortable.js">
-    </script>
+	<script>
 
-    <script src="./scripts/emergency.js"></script>
-    <script src="./scripts/menu.js"></script>
-    <script src="./scripts/train.js"></script>
-    <script src="./scripts/stations.js"></script>
-    <script src="./scripts/messages.js"></script>
-    <script src="./scripts/canvas.js"></script>
+		var Modals = {
+			setups: {
+				"hard.reset":{
+					link: "button.btn-hard-reset",
+					title: "Are You Sure?",
+					content: "The system will be down for a couple minutes",
+					buttons: {
+						success: {visible: true, content: "Cancel", cb: undefined, wait: false},
+						warning: {visible: false, content: ""},
+						danger: {visible: true, content: "Yes, Restart", cb: function(){websocket.cts_restart()}, wait: false},
+					}
+				},
+				"Z21.settings":{
+					link: "button.btn-Z21-settings",
+					title: "Z21 Settings",
+					content: '<div> \
+							IP-address<br/> \
+							<input type="text" size="3" maxlength="3" class="ip-input modal-form" name="ip1" placeholder="127">.\
+							<input type="text" size="3" maxlength="3" class="ip-input modal-form" name="ip2" placeholder="0">.\
+							<input type="text" size="3" maxlength="3" class="ip-input modal-form" name="ip3" placeholder="0">.\
+							<input type="text" size="3" maxlength="3" class="ip-input modal-form" name="ip4" placeholder="1">\
+						</div><br/>\
+						Updating will result in subsystem restarting',
+					buttons: {
+						success: {visible: false, content: ""},
+						warning: {visible: true, content: "Update", cb: function(ip){websocket.cts_z21_settings(ip)}, wait: false},
+						danger: {visible: true, content: "Cancel", cb: undefined, wait: false},
+					}
+				},
+				"train.link":{
+					open_cb: function(data, ref_obj){
+						$('.imgbox', ref_obj).append(data.fid);
+					},
+					title: "Link Train",
+					content: '<div> \
+							<div class="selected">\
+								<div class="container">\
+									<div data="10">\
+										<div class="imgbox"></div>\
+									</div>\
+								</div>\
+								<div class="selector"></div>\
+							</div>\
+						</div>',
+					buttons: {
+						success: {visible: true, content: "Link", cb: function(data){/*websocket.cts_link_train(fid, rid, type, mid)*/}, wait: false},
+						warning: {visible: false, content: ""},
+						danger: {visible: true, content: "Cancel", cb: undefined, wait: false},
+					}
+				},
+			},
 
-	<script type="text/javascript">
+			init: function(){
+				var keys = Object.keys(this.setups);
+				for(var i = 0; i < keys.length; i++){
+					if(this.setups[ keys[i] ].link != undefined){
+						$(this.setups[ keys[i] ].link).on("click", this.open.bind(this, keys[i]));
+					}
+				}
+			},
 
-		var small_dev = false;
+			frame: undefined,
 
-		$('.Emergency_btn').on("click",function(){Emergency.start("Em");return false});
-		$('.menu_toggle_btn').on("click",function(){Menu.toggle();});
+			open: function(modal, args=undefined){
+				this.frame = this.setups[modal];
+				$('#modal .modal-title').html(this.frame.title);
+				$('#modal .modal-body').html(this.frame.content);
 
-		$('.menu_btn.trains').on("click",function(){Menu.open_window("trains")});
-		$('.menu_btn.route').on("click",function(){Menu.open_window("route")});
-		$('.menu_btn.settings').on("click",function(){Menu.open_window("settings")});
+				buttons = Object.keys(this.frame.buttons);
+				for(var i = 0; i < buttons.length; i++){
+					var btn = this.frame.buttons[ buttons[i] ];
+					if(btn.visible){
+						$('#modal .modal-footer .btn-'+buttons[i]).show();
+						$('#modal .modal-footer .btn-'+buttons[i]).html(btn.content);
+						$('#modal .modal-footer .btn-'+buttons[i]).on("click", this.close.bind(this, buttons[i]));
+					}
+					else{
+						$('#modal .modal-footer .btn-'+buttons[i]).hide();
+						$('#modal .modal-footer .btn-'+buttons[i]).html("");
+					}
+				}
 
-		$('.train_list_box').on("click",function(evt){Train.select(parseInt(evt.currentTarget.id.slice(2)));});
+				if(this.frame.open_cb != undefined && args != undefined){
+					this.frame.open_cb(args, $('#modal'));
+				}
 
-		$('#route .station').on("click",function(evt){Stations.click(evt)});
+				$('#modal').modal('show');
+			},
 
-		$('#settings .set-box .collapsebox').on("click",function(evt){
-			if(!$(evt.target).hasClass("collapsebox")){
-				// console.log(evt);
-				var value = parseInt(evt.target.className);
-				eval(evt.currentTarget.getAttribute("done"));
+			close: function(evt){
+				var list = {};
+				$.each($('#modal .modal-form'), function(){
+					list[this.getAttribute("name")] = this.value;
+				});
+				if(this.frame.buttons[evt].cb != undefined){
+					this.frame.buttons[evt].cb(list);
+				}
+
+				if(!this.frame.buttons[evt].wait){
+					$('#modal .modal-footer button').off();
+					$('#modal').modal('hide');
+				}
+
+				this.frame = undefined;
 			}
-			$(evt.currentTarget).toggleClass('active');
-		});
+		};
 
-		$(document).on("keydown",function(evt){
-			if($(evt.target).is("textarea") || $(evt.target).is("input"))
-				return
-			if(evt.key == "s" || evt.key == "S"){
-				Emergency.start('Em');
-			}
-		});
+		var Menu = {
+			init: function(){
+				this.buttons = {
+					"Settings": {name: "Settings", page: "sidebar"},
+					"Train": {name: "Train", page: "train-control"},
+					"Layout": {name: "Layout", page: "main"},
+				};
+				this.current = undefined;
+				this.page_size = window.innerWidth;
+				this.draw();
+				this.toggle({currentTarget: $('#menu-box button[target=Layout]')[0]})
+			},
+			resize: function(){
+				this.page_size = window.innerWidth;
+				this.draw();
+			},
 
-		//alert(window.innerWidth+","+window.innerHeight)
+			button: function(name){
+				var text = '<button type="button" class="btn btn-sm btn-outline-primary" target="'+name+'">'+name+
+							 '</button>';
+				return text;
+			},
+			draw: function(){
+				$('#menu-box button').off();
+				$('#menu-box').empty();
+				if(this.page_size < 1140){
+					$('#menu-box').append(this.button(this.buttons["Settings"].name));
+					$('#menu-box').append(this.button(this.buttons["Train"].name));
+					$('#menu-box').append(this.button(this.buttons["Layout"].name));
 
-		$(document).resize(function(){
-			Menu.resize();
-			Train.resize();
-		});
-
-		var container = $("#train_compositor .compositor .scroller > div")[0];
-		var sort = Sortable.create(container, {
-		  animation: 150, // ms, animation speed moving items when sorting, `0` - without animation
-		  handle: 'img',
-		  draggable: ".box", // Specifies which items inside the element should be sortable
-		  onUpdate: function (evt/**Event*/){
-		     var item = evt.item; // the current dragged HTMLElement
-		     console.log(evt);
-		  }
-		});
-
-		log_lines = [];
-
-		function log_data(data){
-			//$('#log_box').html(data.replace(/(\n)+/g,'<br/>'));
-			// lines = data.split(/(\n)/);
-			lines = data.split("\n");
-			for(var i = log_lines.length; i < lines.length; i++){
-				if(lines[i] == ""){
-					continue;
-				}
-				if(/CRITICAL/.test(lines[i])){
-					lines[i] = '<pre style="color: red;font-weight: bold;">'+lines[i]+'</pre>';
-				}
-				else if(/ERROR/.test(lines[i])){
-					lines[i] = '<pre style="color: red">'+lines[i]+'</pre>';
-				}
-				else if(/WARNING/.test(lines[i])){
-					lines[i] = '<pre style="color: orange">'+lines[i]+'</pre>';
+					if(this.current != undefined && this.current.name != "Setting"){
+						$('body .sidebar').hide();
+					}
 				}
 				else{
-					lines[i] = '<pre>'+lines[i]+'</pre>';
+					$('body .sidebar').show();
+					$('#menu-box').append(this.button(this.buttons["Train"].name));
+					$('#menu-box').append(this.button(this.buttons["Layout"].name));
 				}
-				$('#log_box').append(lines[i]);
-				log_lines.push(lines[i]);
-			}
 
-			if((document.getElementById('log_box').scrollTop - document.getElementById('log_box').scrollHeight + document.getElementById('log_box').clientHeight) > -10){
-				document.getElementById('log_box').scrollTo(0,document.getElementById('log_box').scrollHeight+document.getElementById('log_box').clientHeight);
+				if(this.current != undefined){
+					$('#menu-box button[target='+this.current.name+']').removeClass("btn-outline-primary");
+					$('#menu-box button[target='+this.current.name+']').addClass("btn-primary");
+				}
+
+				$('#menu-box button').on("click", this.toggle.bind(this));
+			},
+			toggle: function(evt){
+				var page = evt.currentTarget.getAttribute("target");
+
+				if(this.current != undefined){
+					$('#menu-box button[target='+this.current.name+']').addClass("btn-outline-primary");
+					$('#menu-box button[target='+this.current.name+']').removeClass("btn-primary");
+				}
+
+				$('body .main').hide();
+				$('body .train-control').hide();
+				if(this.page_size < 1140){
+					$('body .sidebar').hide();
+				}
+
+				this.current = this.buttons[page];
+
+				$('body .'+this.current.page).show();
+
+				$('#menu-box button[target='+page+']').removeClass("btn-outline-primary");
+				$('#menu-box button[target='+page+']').addClass("btn-primary");
 			}
 		}
 
+		$( window ).resize(function(){ resize(); Canvas.resize(); Menu.resize(); });
+
+		function resize(){
+			if($("html").width() < 1140){
+				$(".sidebar .scrollcontainer").css("width", $("html").width()+"px");
+			}
+			else{
+				$(".sidebar .scrollcontainer").css("width", 280+"px");
+			}
+		}
 
 		$(document).ready(function(){
+			resize();
+
 			Canvas.init();
 			if(window.innerWidth < 764){
 				Canvas.rescale(0.5);
 			}
 
-			Train.init();
-			Stations.init();
+			// Train.init();
+			// Stations.init();
 			Menu.init();
-			Train.resize();
+			Modals.init();
+			// Train.resize();
+
+			Canvas.resize();
 
 			Canvas.calc_dotmatrix();
 
@@ -1898,143 +589,27 @@
 			Canvas.dimensions.content_height= 460;
 			Canvas.dimensions.box_width  = Canvas.dimensions.content_width;
 			Canvas.dimensions.box_height = Canvas.dimensions.content_height;
-			Canvas.dimensions.width = $('#track').width();
-			Canvas.dimensions.height = $('#track').height();
 			Canvas.dimensions.ofX = Canvas.dimensions.width/2-Canvas.dimensions.content_width/2;
 			Canvas.calc_limits();
 
 			Canvas.update_frame();
 
-			$('#settings .set-box .checkbox').on("click",websocket.cts_BroadcastFlag);
+			$('.settings-toggle').on("click", function(){
+				$('.top-group').toggleClass('active');
+				$('.bottom-group').toggleClass('active');
+			});
 
-			setInterval(function(){
-				$.ajax({
-				    url: "./../log.txt",
-				    success: function (data){
-				        log_data(data);
-				    }
-				});
-			},5000);
+			// $('#settings .set-box .checkbox').on("click",websocket.cts_BroadcastFlag);
+
+			// setInterval(function(){
+			// 	$.ajax({
+			// 	    url: "./../log.txt",
+			// 	    success: function (data){
+			// 	        log_data(data);
+			// 	    }
+			// 	});
+			// },5000);
 		});
-
-			// document.ontouchmove = function(event){
-			//     event.preventDefault();
-			// }
-
-		function reset_blocks_in_modules(){
-			$.each(modules, function(i,v){
-				console.log(v)
-				$.each(v.blocks,function(i2,v2){
-					modules[i].blocks[i2] = 10;
-				})
-			})
-		}
-
-
-		// if(window.innerWidth < 764 && window.innerWidth/window.innerHeight < 1){
-			//Small Portrait window
-		// }
-
-		
-		var rotate_timeout;
-		function rotate(){
-			console.log("rotate");
-			Menu.resize();
-			Canvas.resize();
-
-			setTimeout(function(){
-				Canvas.resize();
-			}, 100);
-		}
-
-		
-	    if("onorientationchange" in window){
-	    	window.addEventListener("orientationchange", function () {
-			    orientationChanged().then(function() {
-			     rotate();
-			    });
-			}, false);
-	    }else{
-	    	window.addEventListener("resize", function(){
-	    		Menu.resize();Canvas.resize()
-	    	}, false);
-	    }
-
-		
-		// window.addEventListener("resize", view.resize, false);
-
-		//Calculate dotmatrix
-		
-		// Canvas.resize();
-
-		// Wait until innerheight changes, for max 120 frames
-		function orientationChanged() {
-		  const timeout = 120;
-		  return new window.Promise(function(resolve) {
-		    const go = (i, height0) => {
-		      window.innerHeight != height0 || i >= timeout ?
-		        resolve() :
-		        window.requestAnimationFrame(() => go(i + 1, height0));
-		    };
-		    go(0, window.innerHeight);
-		  });
-		}
-
-		
-
-		function throw_Switch(m,s){
-			if(!ws.connected){
-				console.error("Throw_switch: Not connected");
-				return;
-			}
-
-			if(modules[m].switches[s] == 0){
-				websocket.cts_set_switch([[m,s,1]]);
-			}else{
-				websocket.cts_set_switch([[m,s,0]]);
-			}
-		}
-
-		function throw_doubleSlib(m,sw){
-			if(!ws.connected){
-				console.error("throw_doubleSlib: Not connected");
-				return;
-			}
-			
-			if(modules[m].switches[sw[0]] == 0){
-				if(modules[m].switches[sw[1]] == 0){
-					websocket.cts_set_switch([[m,sw[0],0],[m,sw[1],1]]);
-				}else{
-					websocket.cts_set_switch([[m,sw[0],1],[m,sw[1],1]]);
-				}
-			}else{
-				if(modules[m].switches[sw[1]] == 1){
-					websocket.cts_set_switch([[m,sw[0],1],[m,sw[1],0]]);
-				}else{
-					websocket.cts_set_switch([[m,sw[0],0],[m,sw[1],0]]);
-				}
-			}
-		}
-
-		function throw_doubleCrossover(m,sw){
-			if(!ws.connected){
-				console.error("throw_doubleCrossover: Not connected");
-				return;
-			}
-			
-			if(modules[m].switches[sw[0]] == 0 && modules[m].switches[sw[1]] == 0 && modules[m].switches[sw[2]] == 0 && modules[m].switches[sw[3]] == 0){
-				websocket.cts_set_switch([[m,sw[0],1],[m,sw[1],0],[m,sw[2],0],[m,sw[3],1]]);
-			}
-			else if(modules[m].switches[sw[0]] == 1 && modules[m].switches[sw[1]] == 0 && modules[m].switches[sw[2]] == 0 && modules[m].switches[sw[3]] == 1){
-				websocket.cts_set_switch([[m,sw[0],0],[m,sw[1],1],[m,sw[2],1],[m,sw[3],0]]);
-			}
-			else{
-				websocket.cts_set_switch([[m,sw[0],0],[m,sw[1],0],[m,sw[2],0],[m,sw[3],0]]);
-			}
-		}
 	</script>
-
-    <script src="./scripts/socket.js">
-    </script>
 </body>
 </html>

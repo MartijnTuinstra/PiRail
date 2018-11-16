@@ -11,11 +11,7 @@
 #include<sys/socket.h>
 
 #include "websocket_msg.h"
-
-void die(char *s){
-  loggerf(CRITICAL, "Crashed: %s", s);
-  exit(1);
-}
+#include "submodule.h"
 
 int z21_fd = -1;
 _Bool z21_connected = 0;
@@ -23,27 +19,32 @@ _Bool z21_connected = 0;
 pthread_mutex_t z21_send_mutex;
 char * z21_send_buffer;
 
-void Z21(pthread_t * thread){
+void * Z21(){
+  pthread_join(z21_thread, NULL);
+  z21_connected = 1;
+  _SYS->Z21_State = _SYS_Module_Init;
+  WS_stc_SubmoduleState();
+
   loggerf(INFO, "Connecting to Z21");
   int ret = 0;
   ret = Z21_client(Z21_IP, Z21_PORT);
   if(ret == -2){
     //Retry on second port
     ret = Z21_client(Z21_IP, Z21_PORT+1);
-
-    if(ret != 1){
-      return;
-    }
   }
   
   if(ret == 1){
     loggerf(INFO, "Connected Succesfully to Z21");
-    z21_connected = 1;
-    pthread_create(thread, NULL, Z21_run, NULL);
+    _SYS->Z21_State = _SYS_Module_Run;
   }
   else{
-    return;
+    loggerf(WARNING, "Failed to connect to Z21");
+    z21_connected = 0;
+    _SYS->Z21_State = _SYS_Module_Fail;
   }
+  WS_stc_SubmoduleState();
+  pthread_create(&z21_thread, NULL, Z21_run, NULL);
+  return 0;
 }
 
 int Z21_client(char * ip, uint16_t port){
@@ -53,7 +54,6 @@ int Z21_client(char * ip, uint16_t port){
   z21_fd = socket(AF_INET, SOCK_DGRAM, 0);
   if(z21_fd == -1){
     loggerf(CRITICAL, "Cannot create Socket");
-    _SYS_change(STATE_RUN | STATE_Client_Accept, 3);
     return -1;
   }
   
@@ -86,20 +86,26 @@ int Z21_client(char * ip, uint16_t port){
     return -2;
   }
 
-  tv.tv_sec = 30;
-  setsockopt(z21_fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
+  // tv.tv_sec = 30;
+  // setsockopt(z21_fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
 
   _free(z21_buf);
   return 1;
 }
 
 void * Z21_run(){
+  pthread_join(z21_start_thread, NULL);
+
+  if(!z21_connected){
+    return 0;
+  }
+
   char * z21_buf = _calloc(1, 1024);
   int z21_buf_size = 1024;
 
   Z21_SET_BROADCAST_FLAGS(Z21_BROADCAST_FLAGS);
 
-  while(_SYS->_STATE & STATE_RUN){
+  while(_SYS->Z21_State == _SYS_Module_Run){
     Z21_recv(z21_buf, read(z21_fd, z21_buf, z21_buf_size));
   }
 
@@ -117,6 +123,9 @@ char Z21_prio_list[05][30];
 char Z21_send_list[10][30];
 
 void Z21_recv(char * data, int length){
+  if(length < 4){
+    return; // Invalid size
+  }
   // TODO Implement
   loggerf(DEBUG, "Z21 got %d bytes, %d data-size", length, length-4);
   // char * sdata = _calloc(3, length);
@@ -210,7 +219,8 @@ void Z21_recv(char * data, int length){
 }
 
 void Z21_send(uint16_t length, uint16_t header, ...){
-  if(!z21_connected)
+  // Check if not connected
+  if(_SYS->Z21_State == _SYS_Module_Stop || _SYS->Z21_State == _SYS_Module_Fail)
     return;
   // TODO lock z21 mutex
   z21_send_buffer[0] = length & 0x00ff;

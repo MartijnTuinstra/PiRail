@@ -21,6 +21,8 @@
 #include "com.h"
 #include "websocket_msg.h"
 
+#include "submodule.h"
+
 pthread_mutex_t mutex_lockA;
 pthread_mutex_t algor_mutex;
 
@@ -170,6 +172,48 @@ void processAlgorQueue(){
     }
     B = getAlgorQueue();
   }
+}
+
+void * Algor_Run(){
+  loggerf(INFO, "Algor_run started");
+
+  while(_SYS->UART_State != _SYS_Module_Run){
+    if(_SYS->UART_State == _SYS_Module_Fail || _SYS->UART_State == _SYS_Module_Stop){
+      loggerf(ERROR, "Cannot run Algor when UART FAIL or STOP %x", _SYS->UART_State);
+      return 0;
+    }
+  }
+  
+  usleep(2000000);
+  _SYS->LC_State = _SYS_LC_Searching;
+  WS_stc_SubmoduleState();
+  JoinModules();
+  usleep(10000000);
+  _SYS->LC_State = _SYS_LC_Connecting;
+  WS_stc_SubmoduleState();
+  Connect_Rail_links();
+  usleep(8000000);
+  _SYS->LC_State = _SYS_Module_Run;
+  WS_stc_SubmoduleState();
+  scan_All();
+  usleep(100000);
+
+  while(_SYS->LC_State == _SYS_Module_Run){
+    sem_wait(&AlgorQueueNoEmpty);
+    processAlgorQueue();
+
+    mutex_lock(&algor_mutex, "Algor Mutex");
+    //Notify clients
+    WS_trackUpdate(0);
+    WS_SwitchesUpdate(0);
+
+    mutex_unlock(&algor_mutex, "Algor Mutex");
+
+    usleep(1000);
+  }
+
+  loggerf(INFO, "Algor_run done");
+  return 0;
 }
 
 void change_block_state(Algor_Block * A, enum Rail_states state){
@@ -891,14 +935,14 @@ void Algor_train_following(struct algor_blocks AllBlocks, int debug){
 
     //Create a message for WebSocket
     WS_NewTrain(B->train, B->module, B->id);
-    if(debug) printf("NEW_TRAIN at %i\t", B->train);
+    loggerf(DEBUG, "NEW_TRAIN at %i\t", B->train);
   }
 
   //If current block is unoccupied and surrounding are occupied and have the same train pointer
   else if(BN.blocks > 0 && BP.blocks > 0 && BN.blocked && BP.blocked && !B->blocked && BN.B[0]->train == BP.B[0]->train){
     //A train has split
     WS_TrainSplit(BN.B[0]->train, BP.B[0]->module,BP.B[0]->id,BN.B[0]->module,BN.B[0]->id);
-    if(debug) printf("SPLIT_TRAIN");
+    loggerf(DEBUG, "SPLIT_TRAIN");
   }
 
   // If only current and prev blocks are occupied

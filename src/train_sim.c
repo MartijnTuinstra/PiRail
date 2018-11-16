@@ -7,6 +7,8 @@
 #include "logger.h"
 #include "module.h"
 
+#include "submodule.h"
+
 pthread_mutex_t mutex_lockA;
 
 #define delayA 5000000
@@ -30,6 +32,9 @@ void change_Block(Block * B, enum Rail_states state){
 }
 
 void *TRAIN_SIMA(){
+  while(_SYS->LC_State != _SYS_Module_Run){
+    usleep(10000);
+  }
   Block *B = Units[20]->B[8];
   Block *N = Units[20]->B[8];
   Block *N2 = 0;
@@ -40,18 +45,13 @@ void *TRAIN_SIMA(){
 
   putAlgorQueue(B, 1);
 
-  while(1){
-    if(B->state == RESTRICTED){ //B->train != 0 && train_link[B->train] != 0 ||
-      break;
-    }
-    else if((_SYS->_STATE & STATE_RUN) == 0){
-      break;
-    }
-    usleep(100);
-  }
+  usleep(100000);
 
+  _SYS->SimA_State = _SYS_Module_Run;
+  WS_stc_SubmoduleState();
+  return;
 
-  while(_SYS->_STATE & STATE_RUN){
+  while(_SYS->SimA_State & _SYS_Module_Run){
 
     N = Next(B, NEXT, 1);
     if(!N){

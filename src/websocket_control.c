@@ -112,15 +112,48 @@ void * websocket_client_connect(void * p){
     return 0;
   }
 
-  char * buf = _calloc(1024, char);
+  char * buf = _calloc(WS_BUF_SIZE, char);
+  int length = 0;
 
   _SYS->_Clients++;
 
   char data[3];
+  if(_SYS->Websocket_State == _SYS_Module_Init){
+    // Require login
+    data[0] = WSopc_Admin_Login;
+    ws_send(client->fd, data, 1, 0xFF);
+
+    int status = websocket_get_msg(client->fd, buf, &length);
+
+    if(status == 1){
+      websocket_decode((uint8_t *)buf, client);
+    }
+    else if(status == -8){
+      loggerf(INFO, "Client %i disconnected", client->id);
+      close(client->fd);
+      _SYS->_Clients--;
+      client->state = 2;
+      _free(buf);
+      return 0;
+    }
+
+    if((client->type & 0x10) == 0){
+      loggerf(ERROR, "Client not authenticated");
+      close(client->fd);
+      _SYS->_Clients--;
+      client->state = 2;
+      _free(buf);
+      return 0;
+    }
+  }
+
+  // Send Enabled options
   data[0] = WSopc_Service_State;
   data[1] = _SYS->_STATE >> 8;
   data[2] = _SYS->_STATE & 0xFF;
   ws_send(client->fd, data, 3, 0xFF);
+
+  WS_stc_SubmoduleState();
   
   if(_SYS->_STATE & STATE_Modules_Loaded && _SYS->_STATE & STATE_Modules_Coupled){
     ws_send(client->fd,(char [6]){2,4,1,8,4,2},6,8);
@@ -153,14 +186,12 @@ void * websocket_client_connect(void * p){
   tv.tv_usec = 0;
   setsockopt(client->fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
 
-  memset(buf,0,1024);
+  memset(buf, 0, WS_BUF_SIZE);
 
   while(1){
     // If threre is data recieved
-    if(recv(client->fd, buf, 1024, MSG_PEEK) > 0){
-      usleep(1000);
-      int length = 0;
-      memset(buf,0,1024);
+    if(recv(client->fd, buf, WS_BUF_SIZE, MSG_PEEK) > 0){
+      memset(buf, 0, WS_BUF_SIZE);
       int status = websocket_get_msg(client->fd, buf, &length);
 
       if(status == 1){
@@ -301,24 +332,17 @@ void * websocket_server(){
 
   //Start clear_clients
   pthread_create(&websocket_clear_thread, NULL, websocket_clear_clients, NULL);
+
+  WS_init_Message_List();
   
+  _SYS->Websocket_State = _SYS_Module_Init;
   _SYS_change(STATE_WebSocket_FLAG, 0);
 
-  loggerf(DEBUG, "Waiting for STATE_Client_Accept");
-  while((_SYS->_STATE & STATE_Client_Accept) == 0){
-    usleep(100000);
-  }
-
   loggerf(DEBUG, "Listening for Websocket Clients");
-  while((_SYS->_STATE & (STATE_RUN | STATE_Client_Accept)) == (STATE_RUN | STATE_Client_Accept)){
+  while((_SYS->_STATE & STATE_RUN) == STATE_RUN){
     // Run until system is stopped, or until client_accept is closed
 
     fd_client = accept(server, (struct sockaddr *)&client_addr, &sin_len);
-
-    if((_SYS->_STATE & STATE_Client_Accept) == 0){
-      loggerf(WARNING, "Client_Accept has been disabled");
-      break;
-    }
 
     if(fd_client == -1){
       loggerf(WARNING, "Failed to connect with client");
@@ -335,6 +359,7 @@ void * websocket_server(){
   pthread_join(websocket_clear_thread, NULL);
 
   _SYS_change(STATE_WebSocket_FLAG, 2);
+  _SYS->Websocket_State = _SYS_Module_Stop;
 
   _free(websocket_clients);
   _free(WS_password);

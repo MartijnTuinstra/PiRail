@@ -147,8 +147,8 @@ void write_module_from_conf(struct module_config * config, char * filename){
     p += sizeof(struct s_switch_conf) + 1;
 
     for(int j = 0; j < (config->Switches[i].IO & 0x0f); j++){
-      memcpy(p, &config->Switches[i].IO_Ports[j], 2);
-      p += 2;
+      memcpy(p, &config->Switches[i].IO_Ports[j], sizeof(struct s_IO_port_conf));
+      p += sizeof(struct s_IO_port_conf);
     }
 
     p += 1;

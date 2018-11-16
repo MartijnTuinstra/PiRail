@@ -15,21 +15,30 @@ var Canvas = {
 		this.ro[0].l = Math.sqrt(Math.pow(this.ro[0].x-this.ds,2)+Math.pow(this.ro[0].y,2));
 	},
 	init: function(){
-		this.canvas = document.querySelector('canvas');
+		this.canvas_jquery = $('#LayoutContainer canvas');
+		this.canvas = this.canvas_jquery[0];
 		this.c = this.canvas.getContext('2d');
 		c = this.c;
 
-	    this.canvas.height = $('#track').height();
-		this.canvas.width = $('#track').width();
+	    this.canvas.height = $('#LayoutContainer').height();
+		this.canvas.width = $('#LayoutContainer').width();
 
-		$('canvas').on('mousedown',this.evt_mousedown);
-		$('canvas').on('mouseup',this.evt_mouseup);
+		this.canvas_jquery.on('mousedown',this.evt_mousedown);
+		this.canvas_jquery.on('mouseup',this.evt_mouseup);
 
-		$('canvas').on("mousewheel",this.evt_scrolled)
+		this.canvas_jquery.on("mousewheel",this.evt_scrolled)
 
-		$('canvas').on("touchstart",this.evt_drag_start);
-		$('canvas').on("touchmove",this.evt_drag_move);
-		$('canvas').on("touchend",this.evt_drag_end);
+		this.canvas_jquery.on("touchstart",this.evt_drag_start);
+		this.canvas_jquery.on("touchmove",this.evt_drag_move);
+		this.canvas_jquery.on("touchend",this.evt_drag_end);
+
+		this.dimensions.width = this.canvas.width;
+		this.dimensions.height = this.canvas.height;
+		
+		this.dimensions.ofX = 0.5*this.dimensions.width-0.5*this.dimensions.content_width;
+		this.dimensions.ofY = 0;
+
+		this.calc_limits();
 	},
 	resize: function(){
 		console.log("resize");
@@ -37,8 +46,8 @@ var Canvas = {
 		tmp_scale = this.dimensions.scale;
 		this.rescale(1);
 
-	    this.canvas.height = $('#track').height();
-		this.canvas.width  = $('#track').width();
+	    this.canvas.height = $('#LayoutContainer').height();
+		this.canvas.width  = $('#LayoutContainer').width();
 
 		this.dimensions.width = this.canvas.width;
 		this.dimensions.height = this.canvas.height;
@@ -383,7 +392,6 @@ var Canvas = {
 	evt_mousedown: function(evt){
 		Canvas.Longclick = false;
 		Canvas.LongclickTimer = setTimeout(function(){Canvas.longClick(evt)},400);
-		Train.hide(evt);
 	},
 	evt_mouseup: function(evt){
 		clearTimeout(Canvas.LongclickTimer);
@@ -404,8 +412,6 @@ var Canvas = {
 		Canvas.touchMoved = false;
 
 		Canvas.LongclickTimer = setTimeout(function(){longClick(evt)},600);
-
-		Train.hide(evt);
 	},
 	evt_drag_move: function(evt){
 		if(Canvas.touchMoved == true){

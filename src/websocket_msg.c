@@ -25,6 +25,8 @@
 #include "module.h"
 #include "Z21.h"
 
+#include "submodule.h"
+
 
 #define ACTIVATE 0
 #define RELEASE  1
@@ -34,69 +36,146 @@ pthread_mutex_t mutex_lockB;
 struct WS_Message MessageList[0x1FFF];
 uint16_t MessageCounter = 0;
 
-void WS_init_Message_List(){
-  memset(MessageList,0,64);
-  MessageCounter = 0;
-}
 
-char WS_init_Message(char type){
-  if(MessageCounter >= 0x1FFF){
-    MessageCounter = 0;
-  }
-  while((MessageList[MessageCounter].type & 0x8000) != 0){
-    MessageCounter++;
-    printf("Busy Message %i, Skip index %02X\n",MessageCounter,MessageList[MessageCounter].type);
-    if(MessageCounter >= 0x1FFF){
-      MessageCounter = 0;
+//System Messages
+void WS_Partial_Layout(uint8_t M_A,uint8_t M_B){
+
+  char data[20];
+  int q = 1;
+  memset(data,0,20);
+  data[0] = WSopc_Track_Layout_Update;
+
+  printf("WS_Partial_Layout\n");
+  printf("Checking Module A, %i\n",M_A);
+  data[q++] = M_A;
+  for(int i = 0;i<Units[M_A]->connections_len;i++){
+    if(Units[M_A]->connection[i]){
+      printf(" - Connect found, module %i\n",Units[M_A]->connection[i]->module);
+      data[q++] = Units[M_A]->connection[i]->module;
+    }
+    else{
+      printf("Reset\n");
+      q = 1;
+      break;
     }
   }
-  MessageList[MessageCounter].type = type + 0x8000;
-  return MessageCounter++;
-}
 
-void WS_add_Message(uint16_t ID, char length,char data[16]){
-  memcpy(MessageList[ID].data,data,length);
-  MessageList[ID].data_length = length;
-}
+  printf("Checking Module B, %i\n",M_B);
 
-void WS_send_open_Messages(int Client_fd){
-  for(int i = 0;i<=0x1FFF;i++){
-    if(MessageList[i].type & 0x8000){
-      ws_send(Client_fd,MessageList[i].data,MessageList[i].data_length,0xFF);
+  data[q++] = M_B;
+  for(int i = 0;i<Units[M_B]->connections_len;i++){
+    if(Units[M_B]->connection[i]){
+      printf(" - Connect found, module %i\n",Units[M_B]->connection[i]->module);
+      data[q++] = Units[M_B]->connection[i]->module;
     }
+    else{
+      printf("Reset\n");
+      q = 1;
+      break;
+    }
+  }
+
+  if(q > 1){
+    printf("Send %i\n",q);
+    ws_send_all(data,q,WS_Flag_Admin);
   }
 }
 
-void WS_clear_message(uint16_t ID, char ret_code){
-  if(ret_code == 1)
-    MessageList[ID].type = 0;
+void WS_Track_Layout(){
 
-  ws_send_all((char [3]){WSopc_ClearMessage,((ID >> 8) & 0x1F) + (ret_code << 5),ID&0xFF},3,0xFF);
+  char data[100];
+  int q = 1;
+  memset(data,0,100);
+  data[0] = WSopc_Track_Layout_Config;
+
+  printf("WS_Track_Layout\n");
+
+  for(int i = 0;i<unit_len;i++){
+    if(Units[i]){
+      data[q++] = i;
+      // loggerf(ERROR, "Fix CONNECT_POINTS UNIT");
+      // for(int j = 0;j<Units[i]->connect_points;j++){
+      //   if(Units[i]->Connect[j]){
+      //     printf(" - Connect found, module %i\n",Units[i]->Connect[j]->Module);
+      //     data[q++] = Units[i]->Connect[j]->Module;
+      //   }
+      //   else{
+      //     printf(" - No Connect found\n");
+      //     data[q++] = 0;
+      //   }
+      // }
+    }
+  }
+
+  if(q > 1){
+    printf("Send %i\n",q);
+    ws_send_all(data,q,WS_Flag_Track);
+  }
 }
 
-
-
-
-
-
-
-void WS_EmergencyStop(){
-  loggerf(WARNING, "EMERGENCY STOP");
-  ws_send_all((char []){WSopc_EmergencyStop},1,0xFF); //Everyone
+void WS_cts_Enable_Disable_SubmoduleState(uint8_t opcode, uint8_t flags){
+  if(opcode == WSopc_EnableSubModule){
+    loggerf(TRACE, "WSopc_EnableSubModule");
+    if(flags & 0x80){ //Websocket
+      _SYS->Websocket_State = _SYS_Module_Run;
+    }
+    else if(flags & 0x40){ //Z21
+      Z21_start();
+    }
+    else if(flags & 0x20){ //LayoutControl
+      UART_start();
+    }
+    else if(flags & 0x10){ //LayoutControl
+      Algor_start();
+    }
+    else if(flags & 0x04){ //SimA
+      if(_SYS->UART_State == _SYS_Module_Stop){
+        UART_start();
+      }
+      if(_SYS->LC_State == _SYS_Module_Stop){
+        Algor_start();
+      }
+      _SYS->SimA_State = _SYS_Module_Init;
+      SimA_start();
+    }
+    WS_stc_SubmoduleState();
+  }
+  else if(opcode == WSopc_DisableSubModule){
+    loggerf(TRACE, "WSopc_DisableSubModule");
+    if(flags & 0x80){  //Websocket
+      _SYS->Websocket_State = _SYS_Module_Init;
+    }
+    else if(flags & 0x40){ // Z21
+      Z21_stop();
+    }
+    else if(flags & 0x20){ //UART
+      UART_stop();
+    }
+    else if(flags & 0x10){
+      Algor_stop();
+    }
+    else if(flags & 0x04){
+      _SYS->SimA_State = _SYS_Module_Stop;
+    }
+    WS_stc_SubmoduleState();
+  }
 }
 
-void WS_ShortCircuit(){
-  loggerf(WARNING, "SHORT CIRCUIT");
-  ws_send_all((char []){WSopc_ShortCircuitStop},1,0xFF); //Everyone
+void WS_stc_SubmoduleState(){
+  char data[4];
+  data[0] = WSopc_SubModuleState;
+
+  loggerf(DEBUG, "WS_stc_SubmoduleState %x %x %x %x %x", _SYS->Websocket_State, _SYS->Z21_State, _SYS->UART_State, _SYS->LC_State, _SYS->TC_State);
+
+  data[1] = (_SYS->Websocket_State << 6) | (_SYS->Z21_State << 4) | (_SYS->UART_State << 2) | _SYS->TC_State;
+  data[2] = (_SYS->LC_State << 5) | (_SYS->SimA_State << 3) | (_SYS->SimB_State << 1);
+
+  ws_send_all(data, 3, 0xFF);
 }
 
-void WS_ClearEmergency(){
-  loggerf(INFO, "EMERGENCY Released");
-  ws_send_all((char []){WSopc_ClearEmergency},1,0xFF); //Everyone
-}
+//Admin Messages
 
-
-
+//Train Messages
 void WS_EnginesLib(int client_fd){
   int buffer_size = 1024;
 
@@ -163,7 +242,7 @@ void WS_CarsLib(int client_fd){
 
   char * data = _calloc(buffer_size, 1);
 
-  int len = 0;
+  int len = 1;
 
   data[len++] = WSopc_CarsLibrary;
 
@@ -254,85 +333,241 @@ void WS_TrainsLib(int client_fd){
 }
 
 
+void WS_NewTrain(char nr,char M,char B){
+  //Nr:   follow id of train
+  //M,B:  module nr and block nr
+  uint16_t msg_ID = WS_init_Message(0);
 
-void WS_Partial_Layout(uint8_t M_A,uint8_t M_B){
+  loggerf(INFO, "WS_NewTrain");
 
-  char data[20];
-  int q = 1;
-  memset(data,0,20);
-  data[0] = WSopc_Track_Layout_Update;
-
-  printf("WS_Partial_Layout\n");
-  printf("Checking Module A, %i\n",M_A);
-  data[q++] = M_A;
-  for(int i = 0;i<Units[M_A]->connections_len;i++){
-    if(Units[M_A]->connection[i]){
-      printf(" - Connect found, module %i\n",Units[M_A]->connection[i]->module);
-      data[q++] = Units[M_A]->connection[i]->module;
-    }
-    else{
-      printf("Reset\n");
-      q = 1;
-      break;
-    }
-  }
-
-  printf("Checking Module B, %i\n",M_B);
-
-  data[q++] = M_B;
-  for(int i = 0;i<Units[M_B]->connections_len;i++){
-    if(Units[M_B]->connection[i]){
-      printf(" - Connect found, module %i\n",Units[M_B]->connection[i]->module);
-      data[q++] = Units[M_B]->connection[i]->module;
-    }
-    else{
-      printf("Reset\n");
-      q = 1;
-      break;
-    }
-  }
-
-  if(q > 1){
-    printf("Send %i\n",q);
-    ws_send_all(data,q,WS_Flag_Admin);
-  }
-
+  char data[6];
+  data[0] = WSopc_NewMessage;
+  data[1] = ((msg_ID >> 8) & 0x1F) + 0; //type = 0
+  data[2] = (msg_ID & 0xFF);
+  data[3] = nr;
+  data[4] = M;
+  data[5] = B;
+  ws_send_all(data,6,WS_Flag_Messages);
+  WS_add_Message(msg_ID,6,data);
 }
 
-void WS_Track_Layout(){
+void WS_TrainSplit(char nr,char M1,char B1,char M2,char B2){
+  //Nr:   follow id of train
+  //M,B:  module nr and block nr
+  uint16_t msg_ID = WS_init_Message(1);
 
-  char data[100];
-  int q = 1;
-  memset(data,0,100);
-  data[0] = WSopc_Track_Layout_Config;
+  loggerf(INFO, "WS_TrainSplit");
 
-  printf("WS_Track_Layout\n");
+  char data[8];
+  data[0] = WSopc_NewMessage;
+  data[1] = ((msg_ID >> 8) & 0x1F) + 0x20; //type = 1
+  data[2] = (msg_ID & 0xFF);
+  data[3] = nr;
+  data[4] = M1;
+  data[5] = B1;
+  data[6] = M2;
+  data[7] = B2;
+  ws_send_all(data,8,WS_Flag_Messages);
+  WS_add_Message(msg_ID,8,data);
+}
 
-  for(int i = 0;i<unit_len;i++){
-    if(Units[i]){
-      data[q++] = i;
-      // loggerf(ERROR, "Fix CONNECT_POINTS UNIT");
-      // for(int j = 0;j<Units[i]->connect_points;j++){
-      //   if(Units[i]->Connect[j]){
-      //     printf(" - Connect found, module %i\n",Units[i]->Connect[j]->Module);
-      //     data[q++] = Units[i]->Connect[j]->Module;
-      //   }
-      //   else{
-      //     printf(" - No Connect found\n");
-      //     data[q++] = 0;
-      //   }
-      // }
-    }
+/*
+void Web_Train_Split(int i,char tID,char B[]){
+  printf("\n\nWeb_Train_Split(%i,%i,{%i,%i});\n\n",i,tID,B[0],B[1]);
+  char data[8];
+  data[0] = 1;
+  if(i == ACTIVATE){
+    data[1] = 5;
+    data[2] = tID;
+    data[3] = B[0];
+    data[4] = B[1];
+    ws_send_all(data,5,1);
+  }else if(i == RELEASE){
+    data[1] = 6;
+    data[2] = tID;
+    ws_send_all(data,3,1);
+  }else{
+    return;
+  }
+}
+*/
+void WS_LinkTrain(uint8_t fID, uint8_t tID){
+  ws_send_all((char []){WSopc_LinkTrain,fID,tID},3,0xFF);
+}
+
+void WS_TrainData(char data[14]){
+  loggerf(TRACE,"WS_TrainData");
+  char s_data[20];
+  s_data[0] = WSopc_Z21TrainData;
+
+  for(int i = 0;i<7;i++){
+    s_data[i+2] = data[i];
   }
 
-  if(q > 1){
-    printf("Send %i\n",q);
-    ws_send_all(data,q,WS_Flag_Track);
+  loggerf(ERROR, "FIX ID");
+  return;
+  // s_data[1] = DCC_train[((s_data[2] << 8) + s_data[3])]->ID;
+
+  ws_send_all(s_data,9,WS_Flag_Trains);
+}
+
+void WS_cts_AddCartoLib(struct s_opc_AddNewCartolib * data, struct web_client_t * client){
+  loggerf(DEBUG, "WS_cts_AddCartoLib");
+  struct s_WS_Data * rdata = _calloc(1, sizeof(struct s_WS_Data));
+
+  rdata->opcode = WSopc_AddNewCartolib;
+  rdata->data.opc_AddNewCartolib_res.nr = data->nr;
+
+  char * name = _calloc(data->name_len + 1, 1);
+  char * img = _calloc(data->name_len + 8 + 3 + 20, 1);
+  char * icon = _calloc(data->name_len + 8 + 3 + 20, 1);
+  char * simg = _calloc(20 + 3, 1);
+  char * sicon = _calloc(20 + 3, 1);
+  char * filetype = _calloc(4, 1);
+
+  memcpy(name, &data->strings, data->name_len);
+
+  if((data->filetype & 0xf0) == 0){
+    sprintf(img, "%s_%i_im.%s", name, data->nr, "png");
+    sprintf(simg, "%s.%s", "web/tmp_img", "png");
+  }
+  else{
+    sprintf(img, "%s_%i_im.%s", name, data->nr, "jpg");
+    sprintf(simg, "%s.%s", "web/tmp_img", "jpg");
   }
 
+  if((data->filetype & 0x0f) == 0){
+    sprintf(icon, "%s_%i_ic.%s", name, data->nr, "png");
+    sprintf(sicon, "%s.%s", "web/tmp_icon", "png");
+  }
+  else{
+    sprintf(icon, "%s_%i_ic.%s", name, data->nr, "jpg");
+    sprintf(sicon, "%s.%s", "web/tmp_icon", "jpg");
+  }
+
+  create_car(name, data->nr, img, icon, data->type, data->length, data->max_speed);
+
+  char * dimg = _calloc(strlen(img)+10, 1);
+  char * dicon = _calloc(strlen(icon)+10, 1);
+
+  sprintf(dimg, "%s%s", "web/trains_img/", img);
+  sprintf(dicon, "%s%s", "web/trains_img/", icon);
+
+  move_file(simg,  dimg);
+  move_file(sicon, dicon);
+
+  train_write_confs();
+
+  rdata->data.opc_AddNewCartolib_res.response = 1;
+  ws_send(client->fd, (char *)rdata, WSopc_AddNewCartolib_res_len, 0xff);
+
+  _free(dimg);
+  _free(dicon);
+  _free(simg);
+  _free(sicon);
+  _free(filetype);
+
+  //Update clients Train Library
+  WS_CarsLib(0);
+}
+
+void WS_cts_AddEnginetoLib(struct s_opc_AddNewEnginetolib * data, struct web_client_t * client){
+  loggerf(DEBUG, "WS_cts_AddEnginetoLib");
+  struct s_WS_Data * rdata = _calloc(1, sizeof(struct s_WS_Data));
+
+  rdata->opcode = WSopc_AddNewEnginetolib;
+  rdata->data.opc_AddNewEnginetolib_res.DCC_ID = data->DCC_ID;
+
+  if (DCC_train[data->DCC_ID]){
+    loggerf(ERROR, "DCC allready in use");
+    rdata->data.opc_AddNewEnginetolib_res.response = 255;
+    ws_send(client->fd, (char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
+    return;
+  }
+
+  char * name = _calloc(data->name_len + 1, 1);
+  char * steps = _calloc(data->steps, 3);
+  char * img = _calloc(data->name_len + 8 + 3 + 20, 1);
+  char * icon = _calloc(data->name_len + 8 + 3 + 20, 1);
+  char * simg = _calloc(20 + 3, 1);
+  char * sicon = _calloc(20 + 3, 1);
+  char * filetype = _calloc(4, 1);
+
+  memcpy(name, &data->strings, data->name_len);
+  memcpy(steps, &data->strings + data->name_len, data->steps);
+
+  if((data->filetype & 0xf0) == 0){
+    sprintf(img, "%i_%s.%s", data->DCC_ID, name, "png");
+    sprintf(simg, "%s.%s", "web/tmp_img", "png");
+  }
+  else{
+    sprintf(img, "%i_%s.%s", data->DCC_ID, name, "jpg");
+    sprintf(simg, "%s.%s", "web/tmp_img", "jpg");
+  }
+
+  if((data->filetype & 0x0f) == 0){
+    sprintf(icon, "%i_%s.%s", data->DCC_ID, name, "png");
+    sprintf(sicon, "%s.%s", "web/tmp_icon", "png");
+  }
+  else{
+    sprintf(icon, "%i_%s.%s", data->DCC_ID, name, "jpg");
+    sprintf(sicon, "%s.%s", "web/tmp_icon", "jpg");
+  }
+
+  create_engine(name, data->DCC_ID, img, icon, data->fl, data->length, data->steps, (struct engine_speed_steps *)steps);
+
+  char * dimg = _calloc(strlen(img)+10, 1);
+  char * dicon = _calloc(strlen(icon)+10, 1);
+
+  sprintf(dimg, "%s%s", "web/trains_img/", img);
+  sprintf(dicon, "%s%s", "web/trains_img/", icon);
+
+  move_file(simg,  dimg);
+  move_file(sicon, dicon);
+
+  train_write_confs();
+
+  rdata->data.opc_AddNewEnginetolib_res.response = 1;
+  ws_send(client->fd, (char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
+
+  _free(dimg);
+  _free(dicon);
+  _free(simg);
+  _free(sicon);
+  _free(filetype);
+
+  //Update clients Train Library
+  WS_EnginesLib(0);
+}
+
+void WS_cts_AddTraintoLib(struct s_opc_AddNewTraintolib * data, struct web_client_t * client){
+  loggerf(DEBUG, "WS_cts_AddTraintoLib");
+  struct s_WS_Data * rdata = _calloc(1, sizeof(struct s_WS_Data));
+
+  rdata->opcode = WSopc_AddNewTraintolib;
+
+  char * name = _calloc(data->name_len + 1, 1);
+  char * comps = _calloc(data->nr_stock, 3);
+
+  loggerf(DEBUG, "Nmae:%i\tComp: %i", data->name_len, data->nr_stock);
+  print_hex(&data->strings + data->name_len, data->nr_stock*3);
+
+  memcpy(name, &data->strings, data->name_len);
+  memcpy(comps, &data->strings + data->name_len, data->nr_stock*3);
+
+  create_train(name, data->nr_stock, (struct train_comp_ws *)comps, data->catagory, data->save);
+
+  train_write_confs();
+
+  rdata->data.opc_AddNewTraintolib_res.response = 1;
+  ws_send(client->fd, (char *)rdata, WSopc_AddNewTraintolib_res_len, 0xff);
+
+  //Update clients Train Library
+  WS_TrainsLib(0);
 }
 
 
+//Track Messages
 void WS_trackUpdate(int Client_fd){
   loggerf(TRACE, "WS_trackUpdate");
   mutex_lock(&mutex_lockB, "Lock Mutex B");
@@ -602,116 +837,6 @@ void WS_NewClient_track_Switch_Update(int Client_fd){
   mutex_unlock(&mutex_lockB, "UnLock Mutex B");
 }
 
-
-/*
-void Web_Emergency_Stop(int i){
-  char data[5];
-  data[0] = 1;
-  if(i == ACTIVATE){
-    data[1] = 1;
-  }else if(i == RELEASE){
-    data[1] = 2;
-  }else{
-    return;
-  }
-  printf("Emergency_Stop (%i):[%i][%i]",i,data[0],data[1]);
-  ws_send_all(data,2,1);
-}
-void Web_Electrical_Stop(int i){
-  char data[5];
-  data[0] = 1;
-  if(i == ACTIVATE){
-    data[1] = 3;
-  }else if(i == RELEASE){
-    data[1] = 4;
-  }else{
-    return;
-  }
-  ws_send_all(data,2,1);
-}
-void Web_Train_Split(int i,char tID,char B[]){
-  printf("\n\nWeb_Train_Split(%i,%i,{%i,%i});\n\n",i,tID,B[0],B[1]);
-  char data[8];
-  data[0] = 1;
-  if(i == ACTIVATE){
-    data[1] = 5;
-    data[2] = tID;
-    data[3] = B[0];
-    data[4] = B[1];
-    ws_send_all(data,5,1);
-  }else if(i == RELEASE){
-    data[1] = 6;
-    data[2] = tID;
-    ws_send_all(data,3,1);
-  }else{
-    return;
-  }
-}
-*/
-void WS_NewTrain(char nr,char M,char B){
-  //Nr:   follow id of train
-  //M,B:  module nr and block nr
-  uint16_t msg_ID = WS_init_Message(0);
-
-  loggerf(INFO, "WS_NewTrain");
-
-  char data[6];
-  data[0] = WSopc_NewMessage;
-  data[1] = ((msg_ID >> 8) & 0x1F) + 0; //type = 0
-  data[2] = (msg_ID & 0xFF);
-  data[3] = nr;
-  data[4] = M;
-  data[5] = B;
-  ws_send_all(data,6,WS_Flag_Messages);
-  WS_add_Message(msg_ID,6,data);
-}
-
-void WS_TrainSplit(char nr,char M1,char B1,char M2,char B2){
-  //Nr:   follow id of train
-  //M,B:  module nr and block nr
-  uint16_t msg_ID = WS_init_Message(1);
-
-  loggerf(INFO, "WS_TrainSplit");
-
-  char data[8];
-  data[0] = WSopc_NewMessage;
-  data[1] = ((msg_ID >> 8) & 0x1F) + 0x20; //type = 1
-  data[2] = (msg_ID & 0xFF);
-  data[3] = nr;
-  data[4] = M1;
-  data[5] = B1;
-  data[6] = M2;
-  data[7] = B2;
-  ws_send_all(data,8,WS_Flag_Messages);
-  WS_add_Message(msg_ID,8,data);
-}
-/*
-void Web_Link_Train(int type,char nr,char B[]){
-  //Type: type of message ACTIVATE or RELEASE
-  //Nr:   follow id of train
-  //B:    a two byte array containing the module nr and block nr
-  char data[8];
-  if(type == ACTIVATE){
-    data[0] = WSopc_NewMessage;
-    data[1] = (WS_add_Message(0) & 0x1F) + 0;
-    data[2] = B[0];
-    data[3] = B[1];
-    data[4] = nr;
-    ws_send_all(data,5,1);
-  }else if(type == RELEASE){
-    data[0] = WSopc_ClearMessage;
-    data[1] = (WS_add_Message(0) & 0x1F) + 0;
-    data[1] = 12;
-    data[2] = nr;
-    data[3] = B[0];
-    data[4] = B[1];
-    data[5] = B[2];
-    ws_send_all(data,6,1);
-  }else{
-    return;
-  }
-}*/
-
 void WS_reset_switches(int client_fd){
   //Check if client has admin rights
   char admin = 1;
@@ -730,192 +855,59 @@ void WS_reset_switches(int client_fd){
   }
 }
 
-void WS_LinkTrain(uint8_t fID, uint8_t tID){
-  ws_send_all((char []){WSopc_LinkTrain,fID,tID},3,0xFF);
+//General Messages
+void WS_EmergencyStop(){
+  loggerf(WARNING, "EMERGENCY STOP");
+  ws_send_all((char []){WSopc_EmergencyStop},1,0xFF); //Everyone
 }
 
-void WS_TrainData(char data[14]){
-  printf("\n\nWeb_Train_Data\n\n");
-  char s_data[20];
-  s_data[0] = WSopc_Z21TrainData;
-
-  for(int i = 0;i<7;i++){
-    s_data[i+2] = data[i];
-  }
-
-  loggerf(ERROR, "FIX ID");
-  return;
-  // s_data[1] = DCC_train[((s_data[2] << 8) + s_data[3])]->ID;
-
-  ws_send_all(s_data,9,WS_Flag_Trains);
-}
-/*
-void Web_Train_Data(char data[14]){
-  printf("\n\nWeb_Train_Data;\n\n");
-  char s_data[20];
-  s_data[0] = 7;
-  for(int i = 0;i<7;i++){
-    s_data[i+1] = data[i];
-  }
-  ws_send_all(s_data,8,1);
-}
-*/
-
-
-
-
-// Client to server
-void WS_cts_AddCartoLib(struct s_opc_AddNewCartolib * data, struct web_client_t * client){
-  loggerf(DEBUG, "WS_cts_AddCartoLib");
-  struct s_WS_Data * rdata = _calloc(1, sizeof(struct s_WS_Data));
-
-  rdata->opcode = WSopc_AddNewCartolib;
-  rdata->data.opc_AddNewCartolib_res.nr = data->nr;
-
-  char * name = _calloc(data->name_len + 1, 1);
-  char * img = _calloc(data->name_len + 8 + 3 + 20, 1);
-  char * icon = _calloc(data->name_len + 8 + 3 + 20, 1);
-  char * simg = _calloc(20 + 3, 1);
-  char * sicon = _calloc(20 + 3, 1);
-  char * filetype = _calloc(4, 1);
-
-  memcpy(name, &data->strings, data->name_len);
-
-  if((data->filetype & 0xf0) == 0){
-    sprintf(img, "%s_%i_im.%s", name, data->nr, "png");
-    sprintf(simg, "%s.%s", "web/tmp_img", "png");
-  }
-  else{
-    sprintf(img, "%s_%i_im.%s", name, data->nr, "jpg");
-    sprintf(simg, "%s.%s", "web/tmp_img", "jpg");
-  }
-
-  if((data->filetype & 0x0f) == 0){
-    sprintf(icon, "%s_%i_ic.%s", name, data->nr, "png");
-    sprintf(sicon, "%s.%s", "web/tmp_icon", "png");
-  }
-  else{
-    sprintf(icon, "%s_%i_ic.%s", name, data->nr, "jpg");
-    sprintf(sicon, "%s.%s", "web/tmp_icon", "jpg");
-  }
-
-  create_car(name, data->nr, img, icon, data->type, data->length, data->max_speed);
-
-  char * dimg = _calloc(strlen(img)+10, 1);
-  char * dicon = _calloc(strlen(icon)+10, 1);
-
-  sprintf(dimg, "%s%s", "web/trains_img/", img);
-  sprintf(dicon, "%s%s", "web/trains_img/", icon);
-
-  move_file(simg,  dimg);
-  move_file(sicon, dicon);
-
-  train_write_confs();
-
-  rdata->data.opc_AddNewCartolib_res.response = 1;
-  ws_send(client->fd, (char *)rdata, WSopc_AddNewCartolib_res_len, 0xff);
-
-  _free(dimg);
-  _free(dicon);
-  _free(simg);
-  _free(sicon);
-  _free(filetype);
-
-  //Update clients Train Library
-  WS_CarsLib(0);
+void WS_ShortCircuit(){
+  loggerf(WARNING, "SHORT CIRCUIT");
+  ws_send_all((char []){WSopc_ShortCircuitStop},1,0xFF); //Everyone
 }
 
-void WS_cts_AddEnginetoLib(struct s_opc_AddNewEnginetolib * data, struct web_client_t * client){
-  loggerf(DEBUG, "WS_cts_AddEnginetoLib");
-  struct s_WS_Data * rdata = _calloc(1, sizeof(struct s_WS_Data));
-
-  rdata->opcode = WSopc_AddNewEnginetolib;
-  rdata->data.opc_AddNewEnginetolib_res.DCC_ID = data->DCC_ID;
-
-  if (DCC_train[data->DCC_ID]){
-    loggerf(ERROR, "DCC allready in use");
-    rdata->data.opc_AddNewEnginetolib_res.response = 255;
-    ws_send(client->fd, (char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
-    return;
-  }
-
-  char * name = _calloc(data->name_len + 1, 1);
-  char * steps = _calloc(data->steps, 3);
-  char * img = _calloc(data->name_len + 8 + 3 + 20, 1);
-  char * icon = _calloc(data->name_len + 8 + 3 + 20, 1);
-  char * simg = _calloc(20 + 3, 1);
-  char * sicon = _calloc(20 + 3, 1);
-  char * filetype = _calloc(4, 1);
-
-  memcpy(name, &data->strings, data->name_len);
-  memcpy(steps, &data->strings + data->name_len, data->steps);
-
-  if((data->filetype & 0xf0) == 0){
-    sprintf(img, "%i_%s.%s", data->DCC_ID, name, "png");
-    sprintf(simg, "%s.%s", "web/tmp_img", "png");
-  }
-  else{
-    sprintf(img, "%i_%s.%s", data->DCC_ID, name, "jpg");
-    sprintf(simg, "%s.%s", "web/tmp_img", "jpg");
-  }
-
-  if((data->filetype & 0x0f) == 0){
-    sprintf(icon, "%i_%s.%s", data->DCC_ID, name, "png");
-    sprintf(sicon, "%s.%s", "web/tmp_icon", "png");
-  }
-  else{
-    sprintf(icon, "%i_%s.%s", data->DCC_ID, name, "jpg");
-    sprintf(sicon, "%s.%s", "web/tmp_icon", "jpg");
-  }
-
-  create_engine(name, data->DCC_ID, img, icon, data->fl, data->length, data->steps, (struct engine_speed_steps *)steps);
-
-  char * dimg = _calloc(strlen(img)+10, 1);
-  char * dicon = _calloc(strlen(icon)+10, 1);
-
-  sprintf(dimg, "%s%s", "web/trains_img/", img);
-  sprintf(dicon, "%s%s", "web/trains_img/", icon);
-
-  move_file(simg,  dimg);
-  move_file(sicon, dicon);
-
-  train_write_confs();
-
-  rdata->data.opc_AddNewEnginetolib_res.response = 1;
-  ws_send(client->fd, (char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
-
-  _free(dimg);
-  _free(dicon);
-  _free(simg);
-  _free(sicon);
-  _free(filetype);
-
-  //Update clients Train Library
-  WS_EnginesLib(0);
+void WS_ClearEmergency(){
+  loggerf(INFO, "EMERGENCY Released");
+  ws_send_all((char []){WSopc_ClearEmergency},1,0xFF); //Everyone
 }
 
-void WS_cts_AddTraintoLib(struct s_opc_AddNewTraintolib * data, struct web_client_t * client){
-  loggerf(DEBUG, "WS_cts_AddTraintoLib");
-  struct s_WS_Data * rdata = _calloc(1, sizeof(struct s_WS_Data));
 
-  rdata->opcode = WSopc_AddNewTraintolib;
+void WS_init_Message_List(){
+  memset(MessageList,0,64);
+  MessageCounter = 0;
+}
 
-  char * name = _calloc(data->name_len + 1, 1);
-  char * comps = _calloc(data->nr_stock, 3);
+char WS_init_Message(char type){
+  if(MessageCounter >= 0x1FFF){
+    MessageCounter = 0;
+  }
+  while((MessageList[MessageCounter].type & 0x8000) != 0){
+    MessageCounter++;
+    printf("Busy Message %i, Skip index %02X\n",MessageCounter,MessageList[MessageCounter].type);
+    if(MessageCounter >= 0x1FFF){
+      MessageCounter = 0;
+    }
+  }
+  MessageList[MessageCounter].type = type + 0x8000;
+  return MessageCounter++;
+}
 
-  loggerf(DEBUG, "Nmae:%i\tComp: %i", data->name_len, data->nr_stock);
-  print_hex(&data->strings + data->name_len, data->nr_stock*3);
+void WS_add_Message(uint16_t ID, char length,char data[16]){
+  memcpy(MessageList[ID].data,data,length);
+  MessageList[ID].data_length = length;
+}
 
-  memcpy(name, &data->strings, data->name_len);
-  memcpy(comps, &data->strings + data->name_len, data->nr_stock*3);
+void WS_send_open_Messages(int Client_fd){
+  for(int i = 0;i<=0x1FFF;i++){
+    if(MessageList[i].type & 0x8000){
+      ws_send(Client_fd,MessageList[i].data,MessageList[i].data_length,0xFF);
+    }
+  }
+}
 
-  create_train(name, data->nr_stock, (struct train_comp_ws *)comps, data->catagory, data->save);
+void WS_clear_message(uint16_t ID, char ret_code){
+  if(ret_code == 1)
+    MessageList[ID].type = 0;
 
-  train_write_confs();
-
-  rdata->data.opc_AddNewTraintolib_res.response = 1;
-  ws_send(client->fd, (char *)rdata, WSopc_AddNewTraintolib_res_len, 0xff);
-
-  //Update clients Train Library
-  WS_TrainsLib(0);
+  ws_send_all((char [3]){WSopc_ClearMessage,((ID >> 8) & 0x1F) + (ret_code << 5),ID&0xFF},3,0xFF);
 }

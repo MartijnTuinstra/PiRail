@@ -30,11 +30,11 @@ $(BIN)/config.o: $(SRC)/config.c $(LIB)/config.h $(LIB)/logger.h
 
 baan: $(BIN)/baan.o $(BIN)/logger.o $(BIN)/rail.o $(BIN)/train.o $(BIN)/system.o $(BIN)/websocket_control.o $(BIN)/websocket_msg.o $(BIN)/module.o \
 		$(BIN)/train_sim.o $(BIN)/com.o $(BIN)/algorithm.o $(BIN)/signals.o $(BIN)/switch.o $(BIN)/Z21.o $(BIN)/websocket.o $(BIN)/encryption.o $(BIN)/IO.o \
-		$(BIN)/config.o $(BIN)/mem.o
+		$(BIN)/config.o $(BIN)/mem.o $(BIN)/submodule.o
 	@echo baan
 	$(GCC) -o baan $(BIN)/baan.o $(BIN)/logger.o $(BIN)/rail.o $(BIN)/train.o $(BIN)/system.o $(BIN)/websocket_control.o $(BIN)/websocket_msg.o $(BIN)/module.o \
 	$(BIN)/train_sim.o $(BIN)/com.o $(BIN)/algorithm.o $(BIN)/signals.o $(BIN)/switch.o $(BIN)/Z21.o $(BIN)/websocket.o $(BIN)/encryption.o $(BIN)/IO.o \
-	$(BIN)/config.o $(BIN)/mem.o
+	$(BIN)/config.o $(BIN)/mem.o $(BIN)/submodule.o
 
 $(BIN)/baan.o: baan.c $(LIB)/logger.h $(LIB)/train.h $(LIB)/rail.h $(LIB)/switch.h $(LIB)/com.h $(LIB)/websocket_control.h $(LIB)/system.h $(LIB)/mem.h
 	@echo baan.o
@@ -47,14 +47,14 @@ $(BIN)/mem.o: $(LIB)/mem.h $(SRC)/mem.c $(LIB)/logger.h
 $(LIB)/algorithm.h: $(LIB)/rail.h
 $(BIN)/algorithm.o: $(SRC)/algorithm.c $(LIB)/algorithm.h $(LIB)/system.h \
 		$(LIB)/logger.h $(LIB)/train.h $(LIB)/switch.h $(LIB)/signals.h \
-		$(LIB)/module.h $(LIB)/com.h $(LIB)/websocket_msg.h
+		$(LIB)/module.h $(LIB)/com.h $(LIB)/websocket_msg.h $(LIB)/submodule.h
 	@echo algorithm.o
 	$(GCC) $(SRC)/algorithm.c -c -o $(BIN)/algorithm.o
 
 $(LIB)/com.h: $(LIB)/signals.h
 $(BIN)/com.o: $(SRC)/com.c $(LIB)/com.h $(LIB)/system.h $(LIB)/rail.h \
 		$(LIB)/switch.h $(LIB)/signals.h $(LIB)/train.h $(LIB)/logger.h \
-		$(LIB)/module.h
+		$(LIB)/module.h $(LIB)/submodule.h
 	@echo com.c
 	$(GCC) $(SRC)/com.c -c -o $(BIN)/com.o
 
@@ -91,6 +91,11 @@ $(BIN)/switch.o: $(SRC)/switch.c $(LIB)/switch.h $(LIB)/logger.h
 	@echo switch.o
 	$(GCC) $(SRC)/switch.c -c -o $(BIN)/switch.o
 
+$(SRC)/submodule.c: $(LIB)/algorithm.h $(LIB)/com.h $(LIB)/train_sim.h $(LIB)/Z21.h $(LIB)/logger.h
+$(BIN)/submodule.o: $(SRC)/submodule.c
+	@echo submodule.o
+	$(GCC) $^ -c -o $@
+
 $(BIN)/system.o: $(SRC)/system.c $(LIB)/system.h $(LIB)/websocket_control.h \
 		$(LIB)/logger.h $(LIB)/algorithm.h
 	@echo system.o
@@ -103,7 +108,7 @@ $(BIN)/train.o: $(SRC)/train.c $(LIB)/train.h $(LIB)/system.h \
 	$(GCC) $(SRC)/train.c -c -o $(BIN)/train.o
 
 $(BIN)/train_sim.o: $(SRC)/train_sim.c $(LIB)/train_sim.h $(LIB)/rail.h \
-		$(LIB)/train.h $(LIB)/system.h $(LIB)/module.h
+		$(LIB)/train.h $(LIB)/system.h $(LIB)/module.h $(LIB)/submodule.h
 	@echo train_sim.o
 	$(GCC) $(SRC)/train_sim.c -c -o $(BIN)/train_sim.o
 
@@ -118,13 +123,13 @@ $(BIN)/websocket_control.o: $(SRC)/websocket_control.c \
 	$(GCC) $(SRC)/websocket_control.c -c -o $(BIN)/websocket_control.o
 
 $(LIB)/websocket_msg.h: $(LIB)/websocket.h
-$(BIN)/websocket_msg.o: $(SRC)/websocket_msg.c $(LIB)/websocket_msg.h \
-		$(LIB)/system.h $(LIB)/rail.h $(LIB)/switch.h $(LIB)/train.h \
-		$(LIB)/logger.h $(LIB)/module.h $(LIB)/Z21.h
+$(SRC)/websocket_msg.c: $(LIB)/websocket_msg.h $(LIB)/system.h $(LIB)/rail.h $(LIB)/switch.h \
+	                    $(LIB)/train.h $(LIB)/logger.h $(LIB)/module.h $(LIB)/Z21.h
+$(BIN)/websocket_msg.o: $(SRC)/websocket_msg.c
 	@echo websocket_msg.o
-	$(GCC) $(SRC)/websocket_msg.c -c -o $(BIN)/websocket_msg.o
+	$(GCC) $^ -c -o $@
 
-$(BIN)/Z21.o: $(SRC)/Z21.c $(LIB)/Z21.h $(LIB)/logger.h
+$(BIN)/Z21.o: $(SRC)/Z21.c $(LIB)/Z21.h $(LIB)/logger.h $(LIB)/submodule.h
 	@echo Z21.o
 	$(GCC) $(SRC)/Z21.c -c -o $(BIN)/Z21.o
 

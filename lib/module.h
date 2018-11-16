@@ -36,7 +36,11 @@
     uint8_t switch_state_changed:1;
     uint8_t msswitch_state_changed:1;
     uint8_t signal_state_changed:1;
+
+    uint8_t on_layout:1;
   } Unit;
+
+  #define ModuleConfigBasePath "./configs/units/"
 
   struct rail_link CAdr(int module, int id, char type);
 
@@ -55,6 +59,7 @@
   void Unit_expand_IO(_Bool type, Unit * U);
   
   void LoadModuleFromConfig(int M);
+  void ReadAllModuleConfigs();
 
   void JoinModules();
 

@@ -6,6 +6,7 @@
 #include "Z21.h"
 #include "websocket.h"
 #include "websocket_control.h"
+#include "algorithm.h"
 
 pthread_mutex_t m_websocket_send;
 
@@ -17,45 +18,60 @@ int websocket_decode(uint8_t data[1024], struct web_client_t * client){
 
   struct s_WS_Data * d = (struct s_WS_Data *)data;
 
-  if((data[0] & 0xB0) == 0x80){ // System settings
+  if((data[0] & 0xC0) == 0x80){ // System settings
+    loggerf(TRACE, "System Settings");
     if(data[0] == WSopc_ClearTrack){
 
     }
     else if(data[0] == WSopc_ReloadTrack){
+      loggerf(TRACE, "WSopc_ReloadTrack");
 
     }
     else if(data[0] == WSopc_Track_Scan_Progress){
+      loggerf(TRACE, "WSopc_Track_Scan_Progress");
 
     }
     else if(data[0] == WSopc_Track_Info){
+      loggerf(TRACE, "WSopc_Track_Info");
 
     }
     else if(data[0] == WSopc_Reset_Switches){
+      loggerf(TRACE, "WSopc_Reset_Switches");
 
     }
     else if(data[0] == WSopc_TrainsToDepot){
+      loggerf(TRACE, "WSopc_TrainsToDepot");
 
     }
-    else if(data[0] == WSopc_EnableSubModule){
-
+    else if(data[0] == WSopc_DisableSubModule ||
+            data[0] == WSopc_EnableSubModule){
+      WS_cts_Enable_Disable_SubmoduleState(data[0], data[1]);
+      
     }
-    else if(data[0] == WSopc_DisableSubModule){
-
+    else if(data[0] == WSopc_SubModuleState){
+      loggerf(TRACE, "WSopc_SubModuleState");
+      WS_stc_SubmoduleState();
     }
     else if(data[0] == WSopc_RestartApplication){
+      loggerf(TRACE, "WSopc_RestartApplication");
 
     }
 
-  }else if(data[0] & 0xB0){ //Admin settings
+  }else if(data[0] & 0xC0){ //Admin settings
+    loggerf(TRACE, "Admin Settings  %02X", data[0]);
     if(data[0] == WSopc_Admin_Login){ //Admin login
-      if(strcmp((char *)&data[1],WS_password) == 1){
+      if(strcmp((char *)&data[1],WS_password) == 0){
         loggerf(INFO, "SUCCESSFULL LOGIN");
         //0xc3,0xbf,0x35,0x66,0x34,0x64,0x63,0x63,0x33,0x62,0x35,0x61,0x61,0x37,0x36,0x35,0x64,0x36,0x31,0x64,0x38,0x33,0x32,0x37,0x64,0x65,0x62,0x38,0x38,0x32,0x63,0x66,0x39,0x39
         client->type |= 0x10;
 
+	loggerf(INFO, "Change client flags to %x", client->type);
+
         ws_send(client->fd,(char [2]){WSopc_ChangeBroadcast,client->type},2,255);
       }else{
-        loggerf(INFO, "FAILED LOGIN!!");
+        loggerf(INFO, "FAILED LOGIN!! %d", strcmp((char *)&data[1],WS_password));
+        loggerf(INFO, "%s", &data[1]);
+        loggerf(INFO, "%s", WS_password);
       }
     }
     if((client->type & 0x10) == 0){
@@ -87,6 +103,7 @@ int websocket_decode(uint8_t data[1024], struct web_client_t * client){
     }
   }
   else if(data[0] & 0x40){ //Train stuff
+    loggerf(TRACE, "Train Settings");
     if(data[0] == WSopc_LinkTrain){ //Link train
       uint8_t fID = data[1]; //follow ID
       uint8_t tID = data[2]; //TrainID
@@ -172,6 +189,7 @@ int websocket_decode(uint8_t data[1024], struct web_client_t * client){
     }
   }
   else if(data[0] & 0x20){ //Track stuff
+    loggerf(TRACE, "Track Settings");
     if(data[0] == WSopc_SetSwitch){ //Toggle switch
       if(Units[data[1]] && U_Sw(data[1], data[2])){ //Check if switch exists
         loggerf(INFO, "throw switch %i:%i to state: \t%i->%i",
@@ -191,6 +209,7 @@ int websocket_decode(uint8_t data[1024], struct web_client_t * client){
     }
   }
   else if(data[0] & 0x10){ // General Operation
+    loggerf(TRACE, "General Settings");
     if(data[0] == WSopc_EmergencyStop){ //Enable Emergency Stop!!
       WS_EmergencyStop();
     }
@@ -306,40 +325,46 @@ void websocket_create_msg(char * input, int length_in, char * output, int * leng
   *length_out = header_len + length_in;
 }
 
-void ws_send(int fd, char data[], int length, int flag){
-  char outbuf[4096];
+void ws_send(int fd, char * data, int length, int flag){
+  char * outbuf = _calloc(4096, 1);
+  int outlength = 0;
 
-  websocket_create_msg(data, length, outbuf, &length);
+  websocket_create_msg(data, length, outbuf, &outlength);
 
   pthread_mutex_lock(&m_websocket_send);
 
-  printf("WS send (%i)\t",fd);
-  for(int zi = 0;zi<(length);zi++){printf("%02X ",data[zi]);};
-  printf("\n");
+  char log[200];
+  sprintf(log, "WS send (%i)\t",fd);
+  for(int zi = 0;zi<(outlength);zi++){sprintf(log, "%s%02X ", log, outbuf[zi]);};
+  loggerf(DEBUG, "%s", log);
 
-  write(fd, outbuf, length);
+  write(fd, outbuf, outlength);
+  _free(outbuf);
 
   pthread_mutex_unlock(&m_websocket_send);
 }
 
 void ws_send_all(char data[],int length,int flag){
-  char outbuf[4096];
+  char * outbuf = _calloc(2048, 1);
+  int outlength = 0;
 
   if(!(_SYS->_STATE & STATE_WebSocket_FLAG)){
     return;
   }
 
-  websocket_create_msg(data, length, outbuf, &length);
+  websocket_create_msg(data, length, outbuf, &outlength);
+
+  char log[200];
+  sprintf(log, "WS send (all)\t");
+  for(int zi = 0;zi<(outlength);zi++){sprintf(log, "%s%02X ", log, outbuf[zi]);};
+  loggerf(DEBUG, "%s", log);
 
   pthread_mutex_lock(&m_websocket_send);
 
   for(int i = 0; i<MAX_WEB_CLIENTS; i++){
     if(websocket_clients[i].state == 1 && (websocket_clients[i].type & flag) != 0){
-      // printf("WS send (%i)\t",i);
-      // for(int zi = 0; zi<(length); zi++){ printf("%02X ",data[zi]); };
-      // printf("\n");
-
-      if(write(websocket_clients[i].fd, outbuf, length) == -1){
+      loggerf(INFO, "write %d bytes", outlength);
+      if(write(websocket_clients[i].fd, outbuf, outlength) == -1){
         if(errno == EPIPE){
           printf("Broken Pipe!!!!!\n\n");
           close(websocket_clients[i].fd);
@@ -348,6 +373,11 @@ void ws_send_all(char data[],int length,int flag){
         }
       }
     }
+    else if(websocket_clients[i].state == 1){
+      loggerf(INFO, "Client not enrolled");
+    }
   }
   pthread_mutex_unlock(&m_websocket_send);
+
+  _free(outbuf);
 }

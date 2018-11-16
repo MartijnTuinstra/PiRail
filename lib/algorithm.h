@@ -11,7 +11,6 @@
 
   extern pthread_mutex_t algor_mutex;
 
-
   struct s_AlgorQueue {
     Block * B[AlgorQueueLength];
     uint16_t writeIndex;
@@ -32,6 +31,8 @@
   void putList_AlgorQueue(struct algor_blocks AllBlocks, int enable);
   Block * getAlgorQueue();
   void processAlgorQueue();
+
+  void * Algor_Run();
 
   void process(Block * B,int debug);
   void Algor_Set_Changed(struct algor_blocks * blocks);

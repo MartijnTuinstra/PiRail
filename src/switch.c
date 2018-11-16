@@ -10,7 +10,7 @@
 #include "algorithm.h"
 
 void Create_Switch(struct switch_connect connect, uint8_t block_id, uint8_t output_len, Node_adr * output_pins, uint8_t * output_states){
-  loggerf(DEBUG, "Create Sw %i:%i", connect.module, connect.id);
+  loggerf(TRACE, "Create Sw %i:%i", connect.module, connect.id);
   Switch * Z = _calloc(1, Switch);
 
   Z->module = connect.module;
@@ -37,7 +37,7 @@ void Create_Switch(struct switch_connect connect, uint8_t block_id, uint8_t outp
       Units[Z->module]->B[block_id]->Sw = _calloc(1, void *);
       Units[Z->module]->B[block_id]->switch_len = 1;
     }
-    loggerf(DEBUG, "Block linked switches find index");
+    
     int id = find_free_index(Units[Z->module]->B[block_id]->Sw, Units[Z->module]->B[block_id]->switch_len);
     Units[Z->module]->B[block_id]->Sw[id] = Z;
   }

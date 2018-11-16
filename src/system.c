@@ -51,9 +51,7 @@ int _find_free_index(void *** list, int * length){
     }
   }
 
-  loggerf(INFO, "LIST EXPANDING %x", *list);
   *list = _realloc(*list, (*length)+1, void *);
-  loggerf(INFO, "LIST EXPANDED %x", *list);
   for(int i = *length; i < (*length)+1; i++){
     (*list)[i] = 0;
   }

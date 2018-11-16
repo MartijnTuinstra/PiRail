@@ -27,7 +27,7 @@
 
   void die(char *s);
 
-  void Z21(pthread_t * thread);
+  void * Z21();
   int Z21_client(char * ip, uint16_t port);
   void * Z21_run();
 

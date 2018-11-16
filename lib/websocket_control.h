@@ -5,6 +5,7 @@
 
   #define WEBSOCKET_PORT 9000
   #define MAX_WEB_CLIENTS 10
+  #define WS_BUF_SIZE 1024
 
   struct web_client_t{
     int fd;

@@ -22,7 +22,6 @@ void Add_IO_Node(Unit * U, int Node_nr, int IO){
   }
 
   U->Node[Node_nr] = Z;
-  loggerf(INFO, "Node %i, IO %i\n", Node_nr, IO);
   return;
 }
 
@@ -38,8 +37,6 @@ void Init_IO(Unit * U, Node_adr adr, enum IO_type type){
 
     A->type = type;
     A->id = adr.io;
-
-    loggerf(DEBUG, "IO %i:%i", adr.Node, adr.io);
   }
   else{
     loggerf(ERROR, "Init_IO Error");

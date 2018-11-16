@@ -1,3 +1,8 @@
+#define _BSD_SOURCE 
+
+#include <dirent.h>
+#include <unistd.h>
+
 #include "system.h"
 #include "mem.h"
 #include "logger.h"
@@ -204,11 +209,18 @@ void clear_Modules(){
 }
 
 void LoadModuleFromConfig(int M){
-  char filename[40] = "configs/units/";
+  char filename[40] = "";
 
-  sprintf(filename, "%s%i.bin", filename, M);
+  sprintf(filename, "%s%i.bin", ModuleConfigBasePath, M);
+
+  loggerf(DEBUG, "Loading %s", filename);
 
   FILE * fp = fopen(filename,"rb");
+
+  if(!fp){
+    loggerf(ERROR, "Unable to open %s (errno %i)", filename, errno);
+    return;
+  }
 
   struct module_config * config = _calloc(1, struct module_config);
 
@@ -223,7 +235,7 @@ void LoadModuleFromConfig(int M){
   char * buf_start = &buffer[0];
   fread(buffer, fsize, 1, fp);
 
-  print_hex(buffer, fsize);
+  // print_hex(buffer, fsize);
 
   uint8_t ** buf_ptr = (uint8_t **)&buffer;
 
@@ -293,11 +305,66 @@ void LoadModuleFromConfig(int M){
   fclose(fp);
 }
 
-void JoinModules(){
-  if((_SYS->_STATE & STATE_Modules_Loaded) == 0){
-    //No track loaded
-    return;
+void ReadAllModuleConfigs(){
+  DIR *d;
+
+  struct dirent *dir;
+
+  d = opendir(ModuleConfigBasePath);
+
+  char type[5] = "";
+  int moduleID;
+  uint8_t moduleID_list[255];
+  memset(moduleID_list, 0, 255);
+
+  init_modules();
+
+  if (d)
+  {
+    while ((dir = readdir(d)) != NULL)
+    {
+      if(sscanf(dir->d_name, "%i.%s", &moduleID, type) > 1 && strcmp(type, "bin") == 0){
+        int i = 0;
+        uint8_t tmp, tmp2;
+        // Add to list and sort
+        for(; i<255; i++){
+          if(moduleID_list[i] == 0){
+            moduleID_list[i] = moduleID;
+            break;
+          }
+          else if(moduleID_list[i] > moduleID){
+            tmp = moduleID_list[i];
+            moduleID_list[i] = moduleID;
+            break;
+          }
+        }
+        i++;
+        if(tmp != 0){
+          for(; i<255; i++){
+            tmp2 = moduleID_list[i];
+            moduleID_list[i] = tmp;
+            tmp = tmp2;
+            if(tmp == 0){
+              break;
+            }
+          }
+        }
+      }
+    }
+    closedir(d);
   }
+  
+  for(uint8_t i = 0; i<255; i++){
+    if(moduleID_list[i] == 0){
+      break;
+    }
+    LoadModuleFromConfig((int)moduleID_list[i]);
+  }
+
+  return;
+}
+
+void JoinModules(){
   printf("Ready to join modules\n");
 
   struct ConnectList List;
@@ -409,14 +476,14 @@ void JoinModules(){
 }
 
 void ConnectModulePoints(Block * A,Block * B){
-  uint8_t anchor_A,rail_A,anchor_B,rail_B;
-  if(A->next.type == RAIL_LINK_C){
-    anchor_A = A->next.module;
-    rail_A   = A->next.id;
-  }else{
-    anchor_A = A->next.module;
-    rail_A   = A->next.id;
-  }
-
-  printf("%i, %i, %i, %i\n", anchor_A, rail_A, anchor_B, rail_B);
+  A = B;
+  B = A;
+  // uint8_t anchor_A,rail_A;
+  // if(A->next.type == RAIL_LINK_C){
+  //   anchor_A = A->next.module;
+  //   rail_A   = A->next.id;
+  // }else{
+  //   anchor_A = A->next.module;
+  //   rail_A   = A->next.id;
+  // }
 }

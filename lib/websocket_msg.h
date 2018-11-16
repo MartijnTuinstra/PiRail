@@ -15,44 +15,24 @@
   // struct WS_Message MessageList[0x1FFF];
   // char MessageCounter = 0;
 
-  void WS_init_Message_List();
 
-  char WS_init_Message(char type);
+  //System Messages
+  void WS_Partial_Layout(uint8_t M_A,uint8_t M_B);
+  void WS_Track_Layout();
 
-  void WS_add_Message(uint16_t ID, char length,char data[16]);
+void WS_cts_Enable_Disable_SubmoduleState(uint8_t opcode, uint8_t flags);
+  void WS_stc_SubmoduleState();
 
-  void WS_send_open_Messages(int Client_fd);
+  //Admin Messages
 
-  void WS_clear_message(uint16_t ID, char ret_code);
-
-  void WS_EmergencyStop();
-
-  void WS_ShortCircuit();
-
-  void WS_ClearEmergency();
-
+  //Train Messages
   void WS_EnginesLib(int client_fd);
   void WS_CarsLib(int client_fd);
   void WS_TrainsLib(int client_fd);
 
-  void WS_Partial_Layout(uint8_t M_A,uint8_t M_B);
-
-  void WS_Track_Layout();
-
-  void WS_trackUpdate(int Client_fd);
-
-  void WS_SwitchesUpdate(int Client_fd);
-
-  void WS_NewClient_track_Switch_Update(int Client_fd);
-
   void WS_NewTrain(char nr,char M,char B);
-
   void WS_TrainSplit(char nr,char M1,char B1,char M2,char B2);
-
-  void WS_reset_switches(int client_fd);
-
   void WS_LinkTrain(uint8_t fID, uint8_t tID);
-
   void WS_TrainData(char data[14]);
 
   struct s_opc_AddNewCartolib;
@@ -62,4 +42,22 @@
   void WS_cts_AddCartoLib(struct s_opc_AddNewCartolib * data, struct web_client_t * client);
   void WS_cts_AddEnginetoLib(struct s_opc_AddNewEnginetolib * data, struct web_client_t * client);
   void WS_cts_AddTraintoLib(struct s_opc_AddNewTraintolib * data, struct web_client_t * client);
+
+  //Track Messages
+  void WS_trackUpdate(int Client_fd);
+  void WS_SwitchesUpdate(int Client_fd);
+  void WS_NewClient_track_Switch_Update(int Client_fd);
+
+  void WS_reset_switches(int client_fd);
+
+  //General Messages
+  void WS_EmergencyStop();
+  void WS_ShortCircuit();
+  void WS_ClearEmergency();
+
+  void WS_init_Message_List();
+  char WS_init_Message(char type);
+  void WS_add_Message(uint16_t ID, char length,char data[16]);
+  void WS_send_open_Messages(int Client_fd);
+  void WS_clear_message(uint16_t ID, char ret_code);
 #endif

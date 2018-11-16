@@ -19,14 +19,28 @@ function IntArrayToString(data){
 var websocket = {
   //Opcodes
   opc: {
-    Track_Scan:           0x82,
-    Track_PUp_Layout:     0x83,
-    Track_Info:           0x84,
+    ClearTrack:           0x80,
+    ReloadTrack:          0x81,
+    Track_Scan_Progress:  0x82,
+    Track_Layout_Update:  0x83,
+    Track_Layout_Config:  0x84,
+    Z21_Track_Info:       0x86,
+    Z21_Settings:         0x87,
+    Reset_Switches:       0x8C,
+    TrainsToDepot:        0x8F,
 
-    AdminLogout:          0xFE,
-    AdminLogin:           0xFF,
+    EnableSubModule:      0x90,
+    DisableSubModule:     0x91,
+    SubModuleState:       0x92,
+    RestartApplication:   0x9F,
+
+    AdminEmergency:       0xC0,
+    AdminEmergencyRelease:0xC1,
+    AdminLogout:          0xCE,
+    AdminLogin:           0xCF,
 
 
+    //Trains
     LinkTrain:            0x41,
     TrainSpeed:           0x42,
     TrainFunction:        0x43,
@@ -37,13 +51,17 @@ var websocket = {
     AddNewEnginetolib: 0x50,
     EditEnginelib:     0x51,
     EnginesLibrary:    0x52,
+
     AddNewCartolib:    0x53,
     EditCarlib:        0x54,
     CarsLibrary:       0x55,
+
     AddNewTraintolib:  0x56,
     EditTrainlib:      0x57,
     TrainsLibrary:     0x58,
 
+
+    //Track and switches
     SetSwitch:            0x20,
     SetMultiSwitch:       0x21,
     SetSwitchReserved:    0x22,
@@ -52,9 +70,10 @@ var websocket = {
 
     BroadTrack:           0x26,
     BroadSwitch:          0x27,
-    TrackLayoutSetup:     0x30,
-    StationLibrary:       0x31,
+    StationLibrary:       0x32,
 
+
+    //Client / General
     EmergencyStop:        0x10,
     ShortCircuitStop:     0x11,
     ClearEmergency:       0x12,
@@ -90,6 +109,38 @@ var websocket = {
 /*Client to Server*/
   cts_reload_previous: function(entry){
     console.warn("WEBSOCKET: RELOAD_PREVIOUS, not implemented, entry: "+entry);
+  },
+  cts_enable_submodule: function(module){
+    data = [];
+    data[0] = this.opc.EnableSubModule;
+    data[1] = 1 << module;
+
+    this.send(data);
+  },
+  cts_disable_submodule: function(module){
+    data = [];
+    data[0] = this.opc.DisableSubModule;
+    data[1] = 1 << module;
+
+    this.send(data);
+  },
+
+  cts_z21_settings: function(ip){
+    data = [];
+    data[0] = this.opc.Z21_Settings;
+    data[1] = parseInt(ip.ip1);
+    data[2] = parseInt(ip.ip2);
+    data[3] = parseInt(ip.ip3);
+    data[4] = parseInt(ip.ip4);
+
+    this.send(data);
+  },
+
+  cts_restart: function(){
+    data = [];
+    data[0] = this.opc.RestartApplication;
+
+    this.send(data);
   },
 
   /*Trains*/
@@ -337,7 +388,7 @@ var websocket = {
     if(admin){
       var data = [];
 
-      data[0] = this.opc.Track_Scan;
+      data[0] = this.opc.Track_Scan_Progress;
       data[1] = 1;
 
       ws.send(new Int8Array(data));
@@ -350,15 +401,21 @@ var websocket = {
       data[i+1] = passphrase.charCodeAt(i);
     }
 
-    ws.send(data);
+    websocket.send(data);
   },
 
   cts_logout: function(){
-    ws.send([this.opc.AdminLogout]);
+    websocket.send([this.opc.AdminLogout]);
   },
 /**/
 /*Server to Client*/
   /*  ADMIN MESSAGES  */
+    stc_login: function(){
+      // var passphrase = $.md5(prompt("Please enter your password", "password"));
+      var passphrase = $.md5("password");
+
+      websocket.cts_login(passphrase);
+    },
     // Track scan progress
     stc_scan_progress: function(data){
       console.warn("TODO: reimplement");return;
@@ -960,19 +1017,28 @@ function WebSocket_handler(adress){
 
 
 
+
+      /* SYSTEM MESSAGES  */
+        if(data[0] == websocket.opc.SubModuleState){
+          console.log("SubModule States", data);
+          Submodules.update([data[1], data[2]]);
+        }
       /*  ADMIN MESSAGES  */
 
-        if(data[0] == websocket.opc.Track_Scan){
+        else if(data[0] == websocket.opc.Track_Scan_Progress){
           console.log("Scan Progress");
           websocket.stc_scan_progress(data);
         }
-        else if(data[0] == websocket.opc.Track_PUp_Layout){
+        else if(data[0] == websocket.opc.Track_Scan_Progress){
           console.log("Partial Track Layout");
           websocket.stc_track_setup_partial(data);
         }
         else if(data[0] == websocket.opc.Track_Info){
           console.log("Track info");
           websocket.stc_track_info(data);
+        }
+        else if(data[0] == websocket.opc.AdminLogin){
+          websocket.stc_login();
         }
 
       /*  TRAIN MESSAGES  */
@@ -1121,10 +1187,10 @@ function WebSocket_handler(adress){
     ws.onclose = function(event){
       // websocket is closed.
       if(ws.connected == true){
-        reset_blocks_in_modules();
+        // reset_blocks_in_modules();
         Canvas.update_frame();
         Messages.clear();
-        websocket.message_id = Messages.add({type:0xff,id:1});
+        Messages.add({type:0xff,id:0});
       }
       ws.connected = false;
       setTimeout(function(){
@@ -1135,6 +1201,7 @@ function WebSocket_handler(adress){
 }
 
 $(document).ready(function(){
+  Messages.add({type:0xff,id:0});
   //Open websocket or fail on unsupported browsers
   if ("WebSocket" in window){
   try{

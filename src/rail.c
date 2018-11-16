@@ -93,7 +93,7 @@ void create_block(uint8_t module, struct s_block_conf block){
 
   // If block array is to small
   if(Units[p->module]->block_len <= p->id){
-    loggerf(INFO, "Expand block len %i", Units[p->module]->block_len+8);
+    loggerf(TRACE, "Expand block len %i", Units[p->module]->block_len+8);
     Units[p->module]->B = _realloc(Units[p->module]->B, (Units[p->module]->block_len + 8), Block *);
 
     int i = Units[p->module]->block_len;

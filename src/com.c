@@ -21,6 +21,9 @@
 
 #include "module.h"
 
+#include "submodule.h"
+#include "websocket_msg.h"
+
 pthread_mutex_t mutex_UART;
 
 //------------COM PROTOCOL------------//
@@ -33,10 +36,25 @@ char COM_ACK = 0;
 void * UART(){
   loggerf(INFO, "Starting UART thread");
   //OPEN THE UART
-  uart0_filestream = open(Serial_Port, O_RDWR | O_NOCTTY);
+
+  ReadAllModuleConfigs();
+
+  _SYS->UART_State = _SYS_Module_Init;
+  WS_stc_SubmoduleState();
+
+  usleep(2000000);
+  _SYS->UART_State = _SYS_Module_Run;
+  WS_stc_SubmoduleState();
+
+  usleep(3000000);
+
+  // uart0_filestream = open(Serial_Port, O_RDWR | O_NOCTTY);
   if (uart0_filestream == -1)
   {
     //ERROR - CAN'T OPEN SERIAL PORT
+
+    _SYS->UART_State = _SYS_Module_Fail;
+    WS_stc_SubmoduleState();
     logger("Unable to open UART",CRITICAL);
     return 0;
   }

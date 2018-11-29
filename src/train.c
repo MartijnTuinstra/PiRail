@@ -38,6 +38,7 @@ struct train_composition ** trains_comp;
 int trains_comp_len = 0;
 Trains ** train_link;
 int train_link_len;
+
 struct cat_conf * train_P_cat;
 int train_P_cat_len = 0;
 struct cat_conf * train_C_cat;
@@ -205,13 +206,20 @@ void create_engine(char * name,int DCC,char * img, char * icon, char type, int l
   DCC_train[DCC] = Z;
 
   Z->length = length;
-  Z->cur_speed_step = 0;
+  Z->speed_step_type = TRAIN_128_FAHR_STUFEN;
 
-  Z->max_step = type >> 4;
-  Z->type = 0x0f & type;
+  Z->type = type;
 
   Z->steps_len = steps_len;
   Z->steps = steps;
+
+  for(int i = 0; i < steps_len; i++){
+    if(Z->max_speed < steps[i].speed){
+      Z->max_speed = steps[i].speed;
+    }
+    printf("  %d, %d", steps[i].step, steps[i].speed);
+  }
+  printf("\n");
 
   int index = find_free_index(engines, engines_len);
 
@@ -434,7 +442,7 @@ void train_write_confs(){
     struct s_engine_conf e;
     e.DCC_ID = engines[i]->DCC_ID;
     e.length = engines[i]->length;
-    e.type = engines[i]->type | (engines[i]->max_step << 4);
+    e.type = engines[i]->type;
     e.config_steps = engines[i]->steps_len;
     e.name_len = strlen(engines[i]->name);
     e.img_path_len = strlen(engines[i]->img_path);
@@ -558,28 +566,34 @@ void unlink_train(int fid){
   train_link[fid] = NULL;
 }
 
-void train_speed(Block * B, Trains * T, char speed){
-  loggerf(ERROR, "TODO: implement train_speed (%x, %x, %x)", (uint32_t)B, (uint32_t)T, speed);
+void engine_calc_speed(Engines * E){
+  struct engine_speed_steps left;
+  struct engine_speed_steps right;
+
+  left.speed = 0; left.step = 0;
+  right.speed = 0; right.step = 0;
+
+  for(int i = 0; i < E->steps_len; i++){
+    if(E->steps[i].speed < E->cur_speed){
+      left.speed = E->steps[i].speed;
+      left.step = E->steps[i].step;
+    }
+
+    if(E->steps[i].speed >= E->cur_speed && right.step == 0){
+      right.speed = E->steps[i].speed;
+      right.step = E->steps[i].step;
+    }
+  }
+
+  float ratio = ((float)(E->cur_speed - left.speed)) / ((float)(right.speed - left.speed));
+  uint8_t step = ratio * ((float)(right.step - left.step)) + left.step;
+
+  E->speed = step;
 }
 
-void train_set_speed(Trains *T, char speed){
-  loggerf(ERROR, "TODO: implement train_set_speed (%x, %i)", (uint32_t)T, speed);
+void train_calc_speed(Trains * T){
+  for(int i = 0; i < T->nr_engines; i++){
+    T->engines[i]->cur_speed = T->cur_speed;
+    engine_calc_speed(T->engines[i]);
+  }
 }
-
-void train_set_dir(Trains *T, char dir){
-  loggerf(ERROR, "TODO: implement train_set_dir (%x, %i)", (uint32_t)T, dir);
-}
-
-void train_set_route(Trains *T, Station * S){
-  loggerf(ERROR, "TODO: implement train_set_route (%x, %x)", (uint32_t)T, (uint32_t)S);
-}
-
-void train_stop(Trains * T){
-  loggerf(ERROR, "TODO: implement train_stop (%x)", (uint32_t *)T);
-}
-
-void train_signal(Block * B, Trains * T, int type){
-  loggerf(ERROR, "TODO: implement train_signal (%x, %x, %i)", (uint32_t)B, (uint32_t)T, type);
-}
-
-void train_block_timer();

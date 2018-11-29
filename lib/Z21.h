@@ -1,8 +1,6 @@
 
 #ifndef _INCLUDE_Z21_H
   #define _INCLUDE_Z21_H
-  // #define Z21_IP "192.168.2.8"
-  #define Z21_IP "127.0.0.1"
   #define Z21_PORT 21105
 
   /*
@@ -27,6 +25,7 @@
 
   void die(char *s);
 
+  void Z21_boot();
   void * Z21();
   int Z21_client(char * ip, uint16_t port);
   void * Z21_run();
@@ -34,9 +33,25 @@
   extern char Z21_prio_list[05][30];
   extern char Z21_send_list[10][30];
 
+  struct s_Z21_info {
+    int16_t MainCurrent;
+    int16_t ProgCurrent;
+    int16_t FilteredMainCurrent;
+    int16_t Temperature;
+    uint16_t SupplyVoltage;
+    uint16_t VCCVoltage;
+    uint8_t CentralState;
+    uint8_t CentralStateEx;
+    uint8_t IP[4];
+    uint8_t Firmware[2];
+  };
+
+  extern struct s_Z21_info Z21_info;
+
   void Z21_recv(char * data, int length);
 
   void Z21_send(uint16_t length, uint16_t header, ...);
+  void Z21_send_data(uint8_t * data, uint8_t length);
 
   void Z21_get_train(Trains * T);
   void Z21_get_engine(int dcc);

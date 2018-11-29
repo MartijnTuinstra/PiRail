@@ -49,7 +49,6 @@ void *TRAIN_SIMA(){
 
   _SYS->SimA_State = _SYS_Module_Run;
   WS_stc_SubmoduleState();
-  return;
 
   while(_SYS->SimA_State & _SYS_Module_Run){
 

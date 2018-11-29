@@ -20,6 +20,9 @@
   void WS_Partial_Layout(uint8_t M_A,uint8_t M_B);
   void WS_Track_Layout();
 
+  void WS_stc_Z21_info(int client_fd);
+  void WS_stc_Z21_IP(int client_fd);
+
 void WS_cts_Enable_Disable_SubmoduleState(uint8_t opcode, uint8_t flags);
   void WS_stc_SubmoduleState();
 
@@ -29,6 +32,7 @@ void WS_cts_Enable_Disable_SubmoduleState(uint8_t opcode, uint8_t flags);
   void WS_EnginesLib(int client_fd);
   void WS_CarsLib(int client_fd);
   void WS_TrainsLib(int client_fd);
+  void WS_stc_TrainCategories(int client_fd);
 
   void WS_NewTrain(char nr,char M,char B);
   void WS_TrainSplit(char nr,char M1,char B1,char M2,char B2);

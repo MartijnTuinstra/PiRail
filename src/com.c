@@ -608,7 +608,3 @@ void COM_update_switch(int M){
 
   loggerf(ERROR, "IMPLEMENT");
 }
-
-void COM_set_train_speed(struct train * T,char speed){
-  //printf("");
-}

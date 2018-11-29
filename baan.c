@@ -14,6 +14,7 @@
 #include "websocket_control.h"
 
 #include "train_sim.h"
+#include "Z21.h"
 
 struct systemState * _SYS;
 
@@ -33,7 +34,7 @@ int main(){
   init_allocs();
 
   init_logger("log.txt");
-  set_level(DEBUG);
+  set_level(TRACE);
 
   if (signal(SIGINT, sigint_func) == SIG_ERR){
     logger("Cannot catch SIGINT", CRITICAL);
@@ -46,10 +47,13 @@ int main(){
   srand(time(NULL));
   
   init_trains();
+  Z21_boot();
 
   websocket_server();
 
   close(_SYS->_COM_fd);
+
+  free_trains();
 
   _free(_SYS);
 

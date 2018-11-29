@@ -4,6 +4,7 @@
   #include <signal.h>
   #include "rail.h"
   #include "route.h"
+  #include "config_data.h"
 
   #define TRAIN_COMPS_CONF "./configs/train_comp.conf"
   #define CARS_CONF "./configs/cars.conf"
@@ -34,16 +35,17 @@
   typedef struct engine {
     uint16_t DCC_ID;
     
-    char type:3;
-    char control:2;
-    char dir:1;
-    char halt:2;
+    uint8_t type;
+    uint8_t control;
+    uint8_t dir;
+    uint8_t halt;
 
     _Bool use;
 
-    char cur_speed_step;
-    char max_step;
-    uint16_t max_speed;
+    char speed; // Z21 Speed
+    char speed_step_type;
+    uint16_t max_speed; // Real Speed
+    uint16_t cur_speed; // Real Speed
 
     uint8_t steps_len;
     struct engine_speed_steps * steps;
@@ -59,10 +61,10 @@
 
   typedef struct car {
     uint16_t nr;
-    char type:3;
-    char control:2;
-    char dir:1;
-    char halt:2;
+    uint8_t type;
+    uint8_t control;
+    uint8_t dir;
+    uint8_t halt;
     uint16_t max_speed;
 
     char funcs_len;
@@ -106,6 +108,10 @@
     int timer_id;
   } Trains;
 
+  #define TRAIN_14_FAHR_STUFEN 0
+  #define TRAIN_28_FAHR_STUFEN 1
+  #define TRAIN_128_FAHR_STUFEN 2
+
   extern Trains ** trains;
   extern int trains_len;
   extern Engines ** engines;
@@ -117,6 +123,11 @@
   extern Trains ** train_link;
   extern int train_link_len;
   extern Engines * DCC_train[9999];
+
+  extern struct cat_conf * train_P_cat;
+  extern int train_P_cat_len;
+  extern struct cat_conf * train_C_cat;
+  extern int train_C_cat_len;
 
   void init_trains();
   void alloc_trains();
@@ -138,4 +149,7 @@
 
   int link_train(int fid, int tid, char type);
   void unlink_train(int fid);
+
+  void engine_calc_speed(Engines * E);
+  void train_calc_speed(Trains * T);
 #endif

@@ -37,9 +37,6 @@
 
   void COM_DevReset();
 
-  void COM_set_train_speed(struct train * T,char speed);
-
-
   #define COMopc_ReportID     0x00
   #define COMopc_EmergencyEn  0x01
   #define COMopc_EmergencyDis 0x02

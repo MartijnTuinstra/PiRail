@@ -4,6 +4,7 @@
 #include "train.h"
 #include "module.h"
 #include "Z21.h"
+#include "Z21_msg.h"
 #include "websocket.h"
 #include "websocket_control.h"
 #include "algorithm.h"
@@ -43,6 +44,13 @@ int websocket_decode(uint8_t data[1024], struct web_client_t * client){
       loggerf(TRACE, "WSopc_TrainsToDepot");
 
     }
+    else if(data[0] == WSopc_Z21_Settings){
+      Z21_info.IP[0] = data[1];
+      Z21_info.IP[1] = data[2];
+      Z21_info.IP[2] = data[3];
+      Z21_info.IP[3] = data[4];
+      WS_stc_Z21_IP(0);
+    }
     else if(data[0] == WSopc_DisableSubModule ||
             data[0] == WSopc_EnableSubModule){
       WS_cts_Enable_Disable_SubmoduleState(data[0], data[1]);
@@ -57,7 +65,7 @@ int websocket_decode(uint8_t data[1024], struct web_client_t * client){
 
     }
 
-  }else if(data[0] & 0xC0){ //Admin settings
+  }else if((data[0] & 0xC0) == 0xC0){ //Admin settings
     loggerf(TRACE, "Admin Settings  %02X", data[0]);
     if(data[0] == WSopc_Admin_Login){ //Admin login
       if(strcmp((char *)&data[1],WS_password) == 0){
@@ -65,7 +73,7 @@ int websocket_decode(uint8_t data[1024], struct web_client_t * client){
         //0xc3,0xbf,0x35,0x66,0x34,0x64,0x63,0x63,0x33,0x62,0x35,0x61,0x61,0x37,0x36,0x35,0x64,0x36,0x31,0x64,0x38,0x33,0x32,0x37,0x64,0x65,0x62,0x38,0x38,0x32,0x63,0x66,0x39,0x39
         client->type |= 0x10;
 
-	loggerf(INFO, "Change client flags to %x", client->type);
+	      loggerf(INFO, "Change client flags to %x", client->type);
 
         ws_send(client->fd,(char [2]){WSopc_ChangeBroadcast,client->type},2,255);
       }else{
@@ -122,14 +130,25 @@ int websocket_decode(uint8_t data[1024], struct web_client_t * client){
       }
     }
     else if(data[0] == WSopc_TrainSpeed){ //Train speed control
-      loggerf(INFO, "Train speed control\n");
-      loggerf(ERROR,"RE-IMPLEMENT WSopc_TrainSpeed");
-      uint8_t tID = data[1];
-      uint8_t speed = data[2];
-      trains[tID]->cur_speed = speed & 0x7F;
-      trains[tID]->dir       = speed >> 7;
+      uint16_t id = data[1] + ((data[2] & 0xC0) << 2);
+      uint16_t speed = data[3] + ((data[2] & 0x0F) << 8);
+      loggerf(INFO, "Train speed control %3i %3i %i", id, speed, (data[2] & 0x10) >> 4);
+      if(data[2] & 0x20 && id < trains_len){ //Train
+        trains[id]->cur_speed = speed;
+        trains[id]->dir = (data[2] & 0x10) >> 4;
 
-      Z21_get_train(trains[tID]);
+        train_calc_speed(trains[id]);
+
+        Z21_Set_Loco_Drive_Train(trains[id]);
+      }
+      else if(id < engines_len){ //Engine
+        engines[id]->cur_speed = speed;
+        engines[id]->dir = (data[2] & 0x10) >> 4;
+
+        engine_calc_speed(engines[id]);
+
+        Z21_Set_Loco_Drive_Engine(engines[id]);
+      }
     }
     else if(data[0] == WSopc_TrainFunction){ //Train function control
 
@@ -326,26 +345,28 @@ void websocket_create_msg(char * input, int length_in, char * output, int * leng
 }
 
 void ws_send(int fd, char * data, int length, int flag){
-  char * outbuf = _calloc(4096, 1);
+  char outbuf[4096];
   int outlength = 0;
 
   websocket_create_msg(data, length, outbuf, &outlength);
 
   pthread_mutex_lock(&m_websocket_send);
 
-  char log[200];
+  char log[2000];
   sprintf(log, "WS send (%i)\t",fd);
-  for(int zi = 0;zi<(outlength);zi++){sprintf(log, "%s%02X ", log, outbuf[zi]);};
+  for(int zi = 0;zi<length;zi++){sprintf(log, "%s%02X ", log, data[zi]);};
   loggerf(DEBUG, "%s", log);
 
-  write(fd, outbuf, outlength);
-  _free(outbuf);
+  if(write(fd, outbuf, outlength) == -1){
+    loggerf(WARNING, "socket write error %x", errno);
+  };
 
   pthread_mutex_unlock(&m_websocket_send);
 }
 
 void ws_send_all(char data[],int length,int flag){
-  char * outbuf = _calloc(2048, 1);
+  char outbuf[2048];
+  memset(outbuf, 0, 2048);
   int outlength = 0;
 
   if(!(_SYS->_STATE & STATE_WebSocket_FLAG)){
@@ -354,17 +375,17 @@ void ws_send_all(char data[],int length,int flag){
 
   websocket_create_msg(data, length, outbuf, &outlength);
 
-  char log[200];
+  char log[2000];
   sprintf(log, "WS send (all)\t");
-  for(int zi = 0;zi<(outlength);zi++){sprintf(log, "%s%02X ", log, outbuf[zi]);};
+  for(int zi = 0;zi<(length);zi++){sprintf(log, "%s%02X ", log, data[zi]);};
   loggerf(DEBUG, "%s", log);
 
   pthread_mutex_lock(&m_websocket_send);
 
   for(int i = 0; i<MAX_WEB_CLIENTS; i++){
     if(websocket_clients[i].state == 1 && (websocket_clients[i].type & flag) != 0){
-      loggerf(INFO, "write %d bytes", outlength);
       if(write(websocket_clients[i].fd, outbuf, outlength) == -1){
+        loggerf(WARNING, "socket write error %x", errno); 
         if(errno == EPIPE){
           printf("Broken Pipe!!!!!\n\n");
           close(websocket_clients[i].fd);
@@ -373,11 +394,6 @@ void ws_send_all(char data[],int length,int flag){
         }
       }
     }
-    else if(websocket_clients[i].state == 1){
-      loggerf(INFO, "Client not enrolled");
-    }
   }
   pthread_mutex_unlock(&m_websocket_send);
-
-  _free(outbuf);
 }

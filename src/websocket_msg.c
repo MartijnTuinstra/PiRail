@@ -113,6 +113,46 @@ void WS_Track_Layout(){
   }
 }
 
+void WS_stc_Z21_info(int client_fd){
+  uint8_t data[20];
+  data[0] = WSopc_Track_Info;
+  data[1] = Z21_info.MainCurrent & 0xFF;
+  data[2] = Z21_info.MainCurrent >> 8;
+  data[3] = Z21_info.FilteredMainCurrent & 0xFF;
+  data[4] = Z21_info.FilteredMainCurrent >> 8;
+  data[5] = Z21_info.ProgCurrent & 0xFF;
+  data[6] = Z21_info.ProgCurrent >> 8;
+  data[7] = Z21_info.VCCVoltage & 0xFF;
+  data[8] = Z21_info.VCCVoltage >> 8;
+  data[9] = Z21_info.SupplyVoltage & 0xFF;
+  data[10] = Z21_info.SupplyVoltage >> 8;
+  data[11] = Z21_info.Temperature & 0xFF;
+  data[12] = Z21_info.Temperature >> 8;
+  data[13] = Z21_info.CentralState;
+  data[14] = Z21_info.CentralStateEx;
+
+  if(client_fd <= 0){
+    ws_send_all((char *)data, 15, 0xff);
+  }
+  else{
+    ws_send(client_fd, (char *)data, 15, 0xff);
+  }
+}
+
+void WS_stc_Z21_IP(int client_fd){
+  uint8_t data[10];
+  data[0] = WSopc_Z21_Settings;
+  memcpy(&data[1], &Z21_info.IP[0], 4);
+  memcpy(&data[5], &Z21_info.Firmware[0], 2);
+
+  if(client_fd <= 0){
+    ws_send_all((char *)data, 7, 0xff);
+  }
+  else{
+    ws_send(client_fd, (char *)data, 7, 0xff);
+  }
+}
+
 void WS_cts_Enable_Disable_SubmoduleState(uint8_t opcode, uint8_t flags){
   if(opcode == WSopc_EnableSubModule){
     loggerf(TRACE, "WSopc_EnableSubModule");
@@ -242,7 +282,7 @@ void WS_CarsLib(int client_fd){
 
   char * data = _calloc(buffer_size, 1);
 
-  int len = 1;
+  int len = 0;
 
   data[len++] = WSopc_CarsLibrary;
 
@@ -297,30 +337,41 @@ void WS_TrainsLib(int client_fd){
   data[len++] = WSopc_TrainsLibrary;
 
   for(int i = 0;i<trains_len;i++){
+    if(!trains[i]){
+      continue;
+    }
     if(buffer_size < (len + 100)){
       buffer_size += 1024;
       data = _realloc(data, buffer_size, 1);
     }
-    if(trains[i]){
-      data[len++] = trains[i]->max_speed & 0xFF;
-      data[len++] = trains[i]->max_speed >> 8;
-      data[len++] = trains[i]->length & 0xFF;
-      data[len++] = trains[i]->length >> 8;
-      data[len++] = trains[i]->type;
-      data[len++] = trains[i]->in_use;
-      data[len++] = strlen(trains[i]->name);
-      data[len++] = trains[i]->nr_stock;
+    int ilen = len;
+    data[len++] = trains[i]->max_speed & 0xFF;
+    data[len++] = trains[i]->max_speed >> 8;
 
-      int l = strlen(trains[i]->name);
-      memcpy(&data[len], trains[i]->name, l);
-      len += l;
+    data[len++] = trains[i]->length & 0xFF;
+    data[len++] = trains[i]->length >> 8;
 
-      for(int c = 0; c<trains[i]->nr_stock; c++){
-        data[len++] = trains[i]->composition[c].type;
-        data[len++] = trains[i]->composition[c].id & 0xFF;
-        data[len++] = trains[i]->composition[c].id >> 8;
-      }
+    data[len] = trains[i]->type << 1;
+    data[len++] |= trains[i]->in_use;
+
+    data[len++] = strlen(trains[i]->name);
+
+    data[len++] = trains[i]->nr_stock;
+
+    int l = strlen(trains[i]->name);
+    memcpy(&data[len], trains[i]->name, l);
+    len += l;
+
+    for(int c = 0; c<trains[i]->nr_stock; c++){
+      data[len++] = trains[i]->composition[c].type;
+      data[len++] = trains[i]->composition[c].id & 0xFF;
+      data[len++] = trains[i]->composition[c].id >> 8;
     }
+
+    for(;ilen < len; ilen++){
+      printf("%02X ", data[ilen]);
+    }
+    printf("\n");
   }
   if(client_fd <= 0){
     ws_send_all(data, len, WS_Flag_Trains);
@@ -332,6 +383,53 @@ void WS_TrainsLib(int client_fd){
   _free(data);
 }
 
+void WS_stc_TrainCategories(int client_fd){
+  loggerf(INFO, "TrainCategories for client %i", client_fd);
+  int buffer_size = 1024;
+
+  char * data = _calloc(buffer_size, 1);
+
+  int len = 0;
+
+  data[len++] = WSopc_TrainCategories;
+
+  for(int i = 0;i<train_P_cat_len;i++){
+    if(buffer_size < (len + 100)){
+      buffer_size += 1024;
+      data = _realloc(data, buffer_size, 1);
+    }
+    data[len++] = i;
+
+    data[len++] = strlen(train_P_cat[i].name);
+
+    int l = strlen(train_P_cat[i].name);
+    memcpy(&data[len], train_P_cat[i].name, l);
+    len += l;
+  }
+
+  for(int i = 0;i<train_C_cat_len;i++){
+    if(buffer_size < (len + 100)){
+      buffer_size += 1024;
+      data = _realloc(data, buffer_size, 1);
+    }
+    data[len++] = i | 0x80;
+
+    data[len++] = strlen(train_C_cat[i].name);
+
+    int l = strlen(train_C_cat[i].name);
+    memcpy(&data[len], train_C_cat[i].name, l);
+    len += l;
+  }
+
+  if(client_fd <= 0){
+    ws_send_all(data, len, WS_Flag_Trains);
+  }
+  else{
+    ws_send(client_fd, data, len, WS_Flag_Trains);
+  }
+
+  _free(data);
+}
 
 void WS_NewTrain(char nr,char M,char B){
   //Nr:   follow id of train

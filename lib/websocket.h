@@ -127,6 +127,7 @@
   #define WSopc_Track_Layout_Update 0x83
   #define WSopc_Track_Layout_Config 0x84
   #define WSopc_Track_Info          0x86
+  #define WSopc_Z21_Settings        0x87
   #define WSopc_Reset_Switches      0x8C
   #define WSopc_TrainsToDepot       0x8F
 
@@ -159,6 +160,8 @@
   #define WSopc_AddNewTraintolib   0x56
   #define WSopc_EditTrainlib       0x57
   #define WSopc_TrainsLibrary      0x58
+
+  #define WSopc_TrainCategories    0x5A
 
   //Track and switches
   #define WSopc_SetSwitch             0x20

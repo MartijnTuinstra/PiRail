@@ -28,11 +28,11 @@ int websocket_client_check(struct web_client_t * client){
   char * _protocol = _calloc(10, char);
   int protocol;
 
-  loggerf(INFO, "Web Client check");
+  loggerf(INFO, "Web Client (%d) check", client->fd);
 
   if((strstr(buf, Connection) || strstr(buf,Connection2)) &&
         strstr(buf, UpgradeType) && strstr(buf, Key)) {
-    printf("\nIt is a HTML5 WebSocket!!\n");
+    printf("It is a HTML5 WebSocket!!\n");
 
     //Search for the Security Key
     key_s = strstr(buf, Key) + strlen(Key);
@@ -129,7 +129,7 @@ void * websocket_client_connect(void * p){
       websocket_decode((uint8_t *)buf, client);
     }
     else if(status == -8){
-      loggerf(INFO, "Client %i disconnected", client->id);
+      loggerf(INFO, "Client %i disconnected", client->fd);
       close(client->fd);
       _SYS->_Clients--;
       client->state = 2;
@@ -176,7 +176,13 @@ void * websocket_client_connect(void * p){
     WS_EnginesLib(client->fd);
     WS_CarsLib(client->fd);
     WS_TrainsLib(client->fd);
+    WS_stc_TrainCategories(client->fd);
   }
+
+  if(_SYS->Z21_State & _SYS_Module_Run){
+    WS_stc_Z21_info(client->fd);
+  }
+  WS_stc_Z21_IP(client->fd);
 
   printf("Done\n");
 

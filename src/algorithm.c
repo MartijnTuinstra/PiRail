@@ -736,6 +736,27 @@ void Algor_special_search_Blocks(struct algor_blocks * Blocks, int flags){
         else if(p == 2)
           C_Blocks_P = Blocks->BPPP;
       }
+      else if(Aside[0] && Aside[0]->dir == Blocks->B->dir && (Aside[0]->dir ^ 1) == Bside[0]->dir){
+        if((b_dir && 1) == NEXT){
+          if(p == 0)
+            C_Blocks_P = Blocks->BP;
+	  else if(p == 1)
+	    C_Blocks_P = Blocks->BPP;
+	  else if(p == 2)
+	    C_Blocks_P = Blocks->BPPP;
+        }
+        else if((b_dir && 1) == PREV){
+          if(p == 0)
+	    C_Blocks_P = Blocks->BN;
+	  else if(p == 1)
+	    C_Blocks_P = Blocks->BNN;
+	  else if(p == 2)
+	    C_Blocks_P = Blocks->BNNN;
+        }
+        else{
+          loggerf(ERROR, "Unkown Direction B %x A %x(%x)  %x", Bside[0]->dir, Aside[0]->dir, Aside[0]->dir ^ 1, Blocks->B->dir);
+        }
+      }
       else{
         loggerf(ERROR, "Unkown Direction B %x  %x", Bside[0]->dir, Blocks->B->dir);
       }
@@ -771,6 +792,24 @@ void Algor_special_search_Blocks(struct algor_blocks * Blocks, int flags){
         else if(n == 2)
           C_Blocks_P = Blocks->BNNN;
       }
+      else if(Bside[0] && Bside[0]->dir == Blocks->B->dir && (Aside[0]->dir ^ 1) == Bside[0]->dir){
+        if((b_dir && 1) == PREV){
+          if(n == 0)
+            C_Blocks_P = Blocks->BN;
+          else if(n == 1)
+            C_Blocks_P = Blocks->BNN;
+          else if(n == 2)
+            C_Blocks_P = Blocks->BNNN;
+	}
+        else if((b_dir && 1) == NEXT){
+          if(n == 0)
+            C_Blocks_P = Blocks->BP;
+          else if(n == 1)
+            C_Blocks_P = Blocks->BPP;
+          else if(n == 2)
+            C_Blocks_P = Blocks->BPPP;
+        }
+      }
       else{
         loggerf(ERROR, "Unkown Direction A%x  %x", Aside[0]->dir, Blocks->B->dir);
       }
@@ -799,7 +838,7 @@ void Algor_search_Blocks(struct algor_blocks * AllBlocks, int debug){
   Algor_clear_Blocks(AllBlocks);
 
   if(B->type == SPECIAL){
-    printf("Algor Special search blocks\n");
+    printf("Algor Special search blocks %i:%i\n", B->module, B->id);
     Algor_special_search_Blocks(AllBlocks, debug);
     return;
   }

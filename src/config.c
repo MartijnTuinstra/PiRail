@@ -512,7 +512,7 @@ struct trains_conf read_trains_conf(uint8_t ** p){
   if(!check_Spacing(p))
     return t;
 
-  t.composition = _calloc(t.nr_stock+1, char);
+  t.composition = _calloc(t.nr_stock+1, sizeof(struct train_comp_ws));
   memcpy(t.composition, *p, sizeof(struct train_comp_ws) * t.nr_stock);
   *p += sizeof(struct train_comp_ws) * t.nr_stock;
 

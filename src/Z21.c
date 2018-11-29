@@ -19,6 +19,14 @@ _Bool z21_connected = 0;
 pthread_mutex_t z21_send_mutex;
 char * z21_send_buffer;
 
+struct s_Z21_info Z21_info;
+
+void Z21_boot(){
+  memset(&Z21_info, 0, sizeof(struct s_Z21_info));
+  Z21_info.IP[0] = 127;
+  Z21_info.IP[3] = 1;
+}
+
 void * Z21(){
   pthread_join(z21_thread, NULL);
   z21_connected = 1;
@@ -27,6 +35,10 @@ void * Z21(){
 
   loggerf(INFO, "Connecting to Z21");
   int ret = 0;
+
+  char Z21_IP[20];
+  sprintf(Z21_IP, "%d.%d.%d.%d", Z21_info.IP[0], Z21_info.IP[1], Z21_info.IP[2], Z21_info.IP[3]);
+
   ret = Z21_client(Z21_IP, Z21_PORT);
   if(ret == -2){
     //Retry on second port
@@ -38,7 +50,6 @@ void * Z21(){
     _SYS->Z21_State = _SYS_Module_Run;
   }
   else{
-    loggerf(WARNING, "Failed to connect to Z21");
     z21_connected = 0;
     _SYS->Z21_State = _SYS_Module_Fail;
   }
@@ -73,8 +84,8 @@ int Z21_client(char * ip, uint16_t port){
     return -2;
   }
 
-  char * z21_buf = _calloc(1, 1024);
-  z21_send_buffer = _calloc(1, 1024);
+  char * z21_buf = _calloc(1024, 1);
+  z21_send_buffer = _calloc(1024, 1);
   int z21_buf_size = 1024;
 
   Z21_GET_SERIAL;
@@ -82,8 +93,36 @@ int Z21_client(char * ip, uint16_t port){
   int read_length = read(z21_fd, z21_buf, z21_buf_size);
   loggerf(DEBUG, "Z21: got serial, %d", read_length);
   if(read_length <= 0){
-    // Failed to read data
+    loggerf(WARNING, "Z21 failed to receive data");
     return -2;
+  }
+
+  Z21_GET_FIRMWARE_VERSION;
+  int i = 10;
+  while(i > 0){
+    read_length = read(z21_fd, z21_buf, z21_buf_size);
+    if(read_length <= 0){
+      loggerf(WARNING, "Z21 failed to receive data");
+      return -2;
+    }
+    else if(z21_buf[0] == 0x09 && z21_buf[2] == 0x40 && z21_buf[4] == 0xF3 && z21_buf[5] == 0x0A){
+      if(z21_buf[6] < 1 || z21_buf[7] < 0x20){
+        loggerf(ERROR, "Non compatible Firware version");
+        return -4;
+      }
+      else{
+        loggerf(DEBUG, "Z21: got firmware, %d.%d", z21_buf[6], 10*(z21_buf[7] >> 4) + (z21_buf[7] & 0xF));
+        Z21_info.Firmware[0] = z21_buf[6];
+        Z21_info.Firmware[1] = 10*(z21_buf[7] >> 4) + (z21_buf[7] & 0xF);
+        WS_stc_Z21_IP(0);
+        break;
+      }
+    }
+    i--;
+    if(i == 0){
+      loggerf(ERROR, "No Firmware response packet");
+      return -3;
+    }
   }
 
   // tv.tv_sec = 30;
@@ -100,13 +139,14 @@ void * Z21_run(){
     return 0;
   }
 
-  char * z21_buf = _calloc(1, 1024);
+  char * z21_buf = _calloc(1024, 1);
   int z21_buf_size = 1024;
 
   Z21_SET_BROADCAST_FLAGS(Z21_BROADCAST_FLAGS);
 
   while(_SYS->Z21_State == _SYS_Module_Run){
-    Z21_recv(z21_buf, read(z21_fd, z21_buf, z21_buf_size));
+    int length = read(z21_fd, z21_buf, z21_buf_size);
+    Z21_recv(z21_buf, length);
   }
 
   z21_connected = 0;
@@ -138,15 +178,15 @@ void Z21_recv(char * data, int length){
   for(int i = 4; i < (d_length - 1); i++){
     checksum ^= data[i];
   }
-  if(checksum != data[d_length-1]){
-    loggerf(INFO, "Z21 wrong checksum");
-  }
+  _Bool check = (checksum != data[d_length-1]);
 
   switch (header){
     case 0x10: // LAN_GET_SERIAL_NUMBER
       loggerf(TRACE, "LAN_GET_SERIAL_NUMBER");
       break;
     case 0x40: ;
+      if(!check)
+        return;
       uint8_t XHeader = data[4];
       if(XHeader == 0x63){ // LAN_X_GET_VERSION
         loggerf(TRACE, "LAN_X_GET_VERSION");
@@ -193,7 +233,16 @@ void Z21_recv(char * data, int length){
       break;
 
     case 0x84: //LAN_SYSTEMSTATE_DATACHANGED
-        loggerf(TRACE, "LAN_SYSTEMSTATE_DATACHANGED");
+        loggerf(DEBUG, "LAN_SYSTEMSTATE_DATACHANGED");
+        Z21_info.MainCurrent = (int16_t)(data[4] + (data[5] << 8));
+        Z21_info.ProgCurrent = (int16_t)(data[6] + (data[7] << 8));
+        Z21_info.FilteredMainCurrent = (int16_t)(data[8] + (data[9] << 8));
+        Z21_info.Temperature = (int16_t)(data[10] + (data[11] << 8));
+        Z21_info.SupplyVoltage = data[12] + (data[13] << 8);
+        Z21_info.VCCVoltage = data[14] + (data[15] << 8);
+        Z21_info.CentralState = data[16];
+        Z21_info.CentralStateEx = data[17];
+        WS_stc_Z21_info(0);
       break;
 
     case 0x1A: //LAN_GET_HWINFO
@@ -222,7 +271,9 @@ void Z21_send(uint16_t length, uint16_t header, ...){
   // Check if not connected
   if(_SYS->Z21_State == _SYS_Module_Stop || _SYS->Z21_State == _SYS_Module_Fail)
     return;
-  // TODO lock z21 mutex
+  
+  pthread_mutex_lock(&z21_send_mutex);
+
   z21_send_buffer[0] = length & 0x00ff;
   z21_send_buffer[1] = (length & 0xff00) >> 8;
   z21_send_buffer[2] = header & 0x00ff;
@@ -242,7 +293,17 @@ void Z21_send(uint16_t length, uint16_t header, ...){
   }
   
   write(z21_fd, z21_send_buffer, length);
-  // TODO unlock z21 mutex
+  
+  pthread_mutex_unlock(&z21_send_mutex);
+}
+
+void Z21_send_data(uint8_t * data, uint8_t length){
+  if(_SYS->Z21_State == _SYS_Module_Stop || _SYS->Z21_State == _SYS_Module_Fail)
+    return;
+
+  pthread_mutex_lock(&z21_send_mutex);
+  write(z21_fd, data, length);
+  pthread_mutex_unlock(&z21_send_mutex);
 }
 
 void Z21_get_train(Trains * T){

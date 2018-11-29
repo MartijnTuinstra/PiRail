@@ -46,48 +46,21 @@ header('Pragma: no-cache');
 			text-align:center;
 			text-transform: uppercase;
 			display: block;
-			font-size: 14px;
+			font-size: 0.8em;
 			white-space: nowrap;
-			overflow: hidden;
 			text-overflow: ellipsis;
 			border-bottom: 1px solid #ddd;
 			font-weight: bold;
 		}
 
-		.info-box .fieldname {
-			display: block;
-			float:left;
-			font-size: 18px;
-			width:50%;
-			text-transform: uppercase;
-			font-size: 14px;
-			white-space: nowrap;
+		.info-box > div > .header > div,.info-box > .header > div , .forceheader > div{
 			overflow: hidden;
-			text-overflow: ellipsis;
-		}
-
-		.info-box .fieldvalue {
-			display: block;
-			float:left;
-			font-weight: bold;
-			font-size: 18px;
+			display: inline-block;
+			width: 100%;
 		}
 
 		.fieldvalue>small {
 				margin-left: 0.25em;
-		}
-
-		.info-box .tile {
-			display: block;
-			float: left;
-			height:90px;
-			width:90px;
-			border-top-left-radius: 2px;
-			border-top-right-radius: 0;
-			border-bottom-right-radius: 0;
-			border-bottom-left-radius: 2px;
-			margin-left:-30px;
-			margin-top:-10px;
 		}
 
 		.info-box .box-row, .info-box .box-trow {
@@ -95,78 +68,55 @@ header('Pragma: no-cache');
 			border-bottom: 1px solid #ddd;
 		}
 
-		.info-box .box-row {
-			display:block;
-		}
+		.info-box .box-row {display:block;}
 
-		.info-box .box-trow {
-			display:table-row;
+		.info-box .box-trow {display:table-row;}
+		.info-box table {display: inline-table;}
+		.info-box table {width: 80%;margin: 0px 10%;}
+		@media (min-width: 1140px) {
+			.info-box table {width: 100%;margin: 0;}
+			.info-box table > tr > td:nth-child(1) {font-size: small;}
 		}
-		.info-box .box-trow > span {
-			display:table-cell;
-		}
+		.info-box table > tr > td {display:table-cell;}
+		.info-box table > tr:not(:last-child) {border-bottom: 1px solid #eee;}
+		.info-box table > tr > td:nth-child(1) {text-align: left;}
+		.info-box table > tr > td:not([colspan]):nth-child(2) {text-align: right;min-width:60px;}
+		.info-box table > tr > td[colspan]:nth-child(2) {text-align: center;}
+		.info-box table > tr > td:nth-child(3) {text-align: left;}
 
 		.info-box .box-row:last-child {
 			border-bottom: 0px;
 		}
 
-		.top-group {
-			display: none;
-		}
-
-		.top-group.active {
-			display: block;
-		}
-
-		.bottom-group {
-			top: calc(100% - 61px);
+		.settings-group, .train-group {
 			column-gap: 0;
 			column-count: 2;
-			max-height: 61px;
-			position: absolute;
 			margin: 0px;
 			padding: 0px;
 			width: 100%;
 			display: block;
-			transition: max-height 1.2s cubic-bezier(0.22, 0.61, 0.36, 1);
-			transition: top 1.2s cubic-bezier(0.22, 0.61, 0.36, 1);
 		}
-		.bottom-group > .info-box {
+		.train-group {display: flex;}
+		.settings-group > .info-box, .train-group > .info-box {
 			display: inline-block;
 			width: calc(100% - 34px);
 		}
 
-		.bottom-group.active {
-			top: 0%;
-			max-height: 400%;
-		}
-
-		.bottom-group > .info-box {
-			width: calc(100% - 20px);
-		}
+		.settings-group > .info-box, .train-group > .info-box {width: calc(100% - 20px);}
 
 		@media (min-width: 1140px) {
-			.bottom-group {
-				column-count: 1;
-			}
-		}
-
-		@media (min-width: 992px; max-width: 1140px) {
-			.bottom-group {
-				column-count: 3;
-			}
+			.settings-group {column-count: 1;}
+			.train-group {column-count: 1;display:block;}
 		}
 
 		@media (min-width: 576px; max-width: 992px) {
-			.bottom-group {
-				column-count: 2;
-			}
+			.settings-group {column-count: 2;}
+			.train-group {column-count: 2;}
 		}
 
 		@media (max-width: 576px) {
-			.bottom-group {
-				column-count: 1;
-			}
+			.settings-group {column-count: 1;}
+			.train-group {column-count: 1;}
 		}
 
 		.sidebar {
@@ -184,21 +134,6 @@ header('Pragma: no-cache');
 			width: 100%;
 		}
 
-		@media(max-width: 1140px){
-			.top-group.active{
-				display: none;
-			}
-
-			.bottom-group {
-				top: 0%;
-				max-height: 400%;
-			}
-
-			.bottom-group .info-box:nth-child(1) {
-				display: none;
-			}
-		}
-
 		@media(min-width: 1140px){
 			.sidebar {
 				width: 280px;
@@ -206,18 +141,6 @@ header('Pragma: no-cache');
 
 			.main {
 				width: calc(100% - 280px);
-			}
-
-			.top-group.active {
-				display: block;
-			}
-
-			.info-box.active-only {
-				display: none;
-			}
-
-			.active > .info-box.active-only {
-				display: inline-block;
 			}
 		}
 
@@ -244,94 +167,272 @@ header('Pragma: no-cache');
 		#subsystems .media-body small {position: relative; top: -0.3em; font-style: italic;}
 
 		#menu-box {position: fixed; right: 10px; bottom:10px; width:200px; height:22px; text-align: right;}
-		#menu-box button {width: 60px;padding: .125rem .25rem;font-size: .7rem;line-height: 0.9rem;margin: 0.2em;}
+		#menu-box button {width: 60px;margin: 0.2em;}
 
-		button.mini-btn {width: 60px;padding: .125rem .25rem;font-size: .7rem;line-height: 0.9rem;font-weight: bold}
+		button.mini-btn {width: 55px;font-weight: bold}
+
+		button.btn-xs {padding: .125rem .25rem;font-size: .7rem;line-height: 0.8rem;}
+		:not(.btn-group) > button.btn-xs{margin-right: 0.1rem;margin-left: 0.1rem;}
+
 		input.ip-input {display:inline-block;width:3em;border:none;outline:none;text-align: center; background:#f5f5f5}
+
+		.train-box {height: calc(100vh - 80px);}
+
+		@media (min-width: 1140px) {
+			.train-box {height: calc(50vh - 40px);}
+		}
+
+		#modal ul > li:not(:last-child) {border-bottom: 1px solid #eee;}
+
+		.settings-group > div.info-box:last-child {margin-bottom: 40px;}
+
+
+		.train-box {padding-left:0px;padding-right:0px}
+		.train-box .header {width:100%; margin-left:0px; position: relative;}
+		.train-box .select-train {position: absolute;right: 5px; bottom:5px}
+		.train-box > div.row {height: calc(100% - 1em); margin: 0}
+		.train-box > div.row > div {padding: 0}
+
+		.train-box .train-img-container {width: 100%; padding-top: 50%; position: relative;}
+		.train-box .train-img {position: absolute; top:0;left:0;right:0;bottom:0;overflow: hidden;background-size: cover;background-repeat: no-repeat;background-position: 50% 50%;}
+
+		.train-box .train-info-box {padding: 0.5em;}
+		.train-box .route > button {float: right;}
+		.train-box .control {text-align: center;}
+		.train-box .control button {white-space: nowrap}
+
+		.train-box .train-function-box {text-align: center; column-count: 3; padding: 5px}
+		.train-box .train-function-box button {margin:0.3em}
+
+		.train-box .train-speed {width: 100%; height:30px; text-align: center;}
+		.train-box .train-speed-slider {width: 100%; height: 100%;position: relative;touch-action: none;}
+		.train-box .slider-handle {height: 1em; width:3em; position: absolute; left:50%; transform: translate(-1.5em, 0.5em);background: #ddd;border:1px solid #bbb;border-radius:3px;touch-action: none;}
+		.train-box .slider-handle:hover {background: #aaa; cursor: grab;}
+		.train-box .slider-handle:active {cursor: grabbing;}
+
+		.train-box .slider-bar {position: absolute; bottom:0px; margin-left:calc(50% - 6px);margin-right:calc(50% - 6px);width:12px; background: #eee;border:1px solid #dadada;touch-action: none;}
+
+		.train-box .train-dir-box {width: 80%; position: absolute; bottom: 10px; margin: 0 10%;}
+		.train-box .train-dir-box .btn-group.btn-toggle-group {display: block; text-align: center; width: 100%}
+		.train-box .train-dir-box .btn-group.btn-toggle-group div.btn-toggle {display: block; padding: 0.1em 0.4em; width:50%; line-height:0; 
+			margin-bottom: 0px; }
+
+		.train-box div.btn-toggle > svg {width:100%; max-width: 20px;} 
+		.train-box div.btn-secondary > svg > path {fill: #fff;}
+		.train-box div.btn-outline-secondary > svg > path {fill: #6c757d;transition: fill 0.15s ease-in-out}
+		.train-box div.btn-outline-secondary:hover > svg > path {fill: #fff;}
+
+		.train-box .train-stop {display: block; text-align: center; width: 100%}
+		.train-box .train-stop > button.btn {width: 100%; border-top-left-radius: 0px;border-top-right-radius: 0px; font-weight: bold;}
+
+		#modal ul.engine-list .empty,
+		#modal ul.train-list .empty {display: none;text-align: center;}
+
 	</style>
+	<script>
+		var init_list = [];
+		var resize_list = [];
+	</script>
 </head>
 <body>
 
 	<div class="sidebar full-height">
-		<div style="width: 125%; overflow-y: scroll; overflow-x:hidden; height: 100%">
-			<div class="scrollcontainer" style="width: 280px;">
-				<div class="top-group active" style="position: absolute; top: 0px; margin: 0px; padding: 0px; width: 100%; height: calc(100% - 61px)">
-					<div class="info-box message-box">
-						<span class="header">Messages</span>
-						<div class="messages">
-							<ul class="list-unstyled">
-							</ul>
+		<div style="width: 125%; overflow-y: overlay; overflow-x:hidden; height: 100%">
+			<div class="scrollcontainer" style="width: 80%;">
+				<div class="train-group active">
+					<div class="info-box train-box box1">
+						<span class="header">
+							<div>ICE</div>
+							<button class="select-train btn btn-xs btn-outline-primary">Select</button>
+						</span>
+						<div class="row">
+							<div class="col-8">
+								<div class="train-img-container bg-light">
+									<div class="train-img" style="background-image: url('./trains_img/200_ice3_im.jpg');">
+									</div>
+								</div>
+								<div class="train-info-box">
+									<div class="description">ICE DB</div>
+									<div class="route">
+										<span>No Route</span>
+										<button class="set-route btn btn-xs btn-outline-primary">Set</button>
+									</div>
+									<div class="control">
+										<div class="btn-group" role="group" aria-label="Basic example">
+											<button type="button" class="btn btn-xs btn-secondary">Manual</button>
+											<button type="button" class="btn btn-xs btn-secondary">
+												Semi<span class="d-none d-sm-inline-block d-xl-none">&nbsp;Auto</span>
+											</button>
+											<button type="button" class="btn btn-xs btn-secondary">
+												Full<span class="d-none d-sm-inline-block d-xl-none">&nbsp;Auto</span>
+											</button>
+										</div>
+									</div>
+								</div>
+								<div class="train-function-box">
+									<div><button class="btn btn-sm btn-outline-primary">F1</button></div>
+									<div><button class="btn btn-sm btn-outline-primary">F2</button></div>
+									<div><button class="btn btn-sm btn-outline-primary">F3</button></div>
+									<div><button class="btn btn-sm btn-outline-primary">F4</button></div>
+									<div><button class="btn btn-sm btn-outline-primary">F5</button></div>
+									<div><button class="btn btn-sm btn-outline-primary">F6</button></div>
+									<div><button class="btn btn-sm btn-outline-primary">F7</button></div>
+									<div><button class="btn btn-sm btn-outline-primary">F8</button></div>
+								</div>
+							</div>
+							<div class="col-4">
+								<div style="height:100%; position: relative;">
+									<div style="height: calc(100% - 110px); width:100%;">
+										<div class="train-speed"><span>145</span> <small>km/h</small></div>
+										<div class="train-speed-slider">
+											<div class="slider-bar" style="height:40px; "></div>
+											<div class="slider-handle" style="bottom:40px;"></div>
+										</div>
+									</div>
+									<div class="train-dir-box">
+										<div class="btn-group btn-toggle-group">
+											<div class="btn btn-toggle btn-sm btn-secondary" value="R" style="border-bottom-left-radius: 0px">
+												<svg x="0px" y="0px" viewBox="0 0 492 492">
+													<path d="M464.344,207.418l0.768,0.168H135.888l103.496-103.724c5.068-5.064,7.848-11.924,7.848-19.124    c0-7.2-2.78-14.012-7.848-19.088L223.28,49.538c-5.064-5.064-11.812-7.864-19.008-7.864c-7.2,0-13.952,2.78-19.016,7.844    L7.844,226.914C2.76,231.998-0.02,238.77,0,245.974c-0.02,7.244,2.76,14.02,7.844,19.096l177.412,177.412    c5.064,5.06,11.812,7.844,19.016,7.844c7.196,0,13.944-2.788,19.008-7.844l16.104-16.112c5.068-5.056,7.848-11.808,7.848-19.008    c0-7.196-2.78-13.592-7.848-18.652L134.72,284.406h329.992c14.828,0,27.288-12.78,27.288-27.6v-22.788    C492,219.198,479.172,207.418,464.344,207.418z" fill="#FFFFFF"/>
+												</svg>
+											</div>
+											<div class="btn btn-toggle btn-sm btn-outline-secondary" value="F" style="border-bottom-right-radius: 0px; position: absolute; right: 0px; top:0px">
+												<svg x="0px" y="0px" viewBox="0 0 492 492">
+													<path d="M464.344,207.418l0.768,0.168H135.888l103.496-103.724c5.068-5.064,7.848-11.924,7.848-19.124    c0-7.2-2.78-14.012-7.848-19.088L223.28,49.538c-5.064-5.064-11.812-7.864-19.008-7.864c-7.2,0-13.952,2.78-19.016,7.844    L7.844,226.914C2.76,231.998-0.02,238.77,0,245.974c-0.02,7.244,2.76,14.02,7.844,19.096l177.412,177.412    c5.064,5.06,11.812,7.844,19.016,7.844c7.196,0,13.944-2.788,19.008-7.844l16.104-16.112c5.068-5.056,7.848-11.808,7.848-19.008    c0-7.196-2.78-13.592-7.848-18.652L134.72,284.406h329.992c14.828,0,27.288-12.78,27.288-27.6v-22.788    C492,219.198,479.172,207.418,464.344,207.418z" transform="rotate(180 246 246)"/>
+												</svg>
+											</div>
+										</div>
+										<div class="train-stop btn-group">
+											<button type="button" class="btn btn-sm btn-danger" style="">STOP</button>
+										</div>
+									</div>
+								</div>
+							</div>
 						</div>
 					</div>
-					<div class="info-box" style="position: absolute;bottom: 10px;">
-						<span class="header">Train Control</span>
-						<span class="box-row">Websocket</span>
-						<span class="box-row">Z21</span>
-						<span class="box-row">UART</span>
-						<span class="box-row">LayoutControl</span>
-						<span class="box-row">TrainControl</span>
+					<div class="info-box train-box box2">
+						<span class="header">
+							<div>NS ICM</div>
+							<button class="select-train btn btn-xs btn-outline-primary">Select</button>
+						</span>
+						<div class="row">
+							<div class="col-8">
+								<div class="train-img-container bg-light">
+									<div class="train-img" style="background-image: url('./trains_img/1400_Koploper3_im.jpg');"></div>
+								</div>
+								<div class="train-info-box">
+									<div class="description">NS Koploper</div>
+									<div class="route">
+										<span>No Route</span>
+										<button class="set-route btn btn-xs btn-outline-primary">Set</button>
+									</div>
+									<div class="control">
+										<div class="btn-group" role="group" aria-label="Basic example">
+											<button type="button" class="btn btn-xs btn-secondary">Manual</button>
+											<button type="button" class="btn btn-xs btn-secondary">
+												Semi<span class="d-none d-sm-inline-block d-xl-none">&nbsp;Auto</span>
+											</button>
+											<button type="button" class="btn btn-xs btn-secondary">
+												Full<span class="d-none d-sm-inline-block d-xl-none">&nbsp;Auto</span>
+											</button>
+										</div>
+									</div>
+								</div>
+								<div class="train-function-box">
+									<div><button class="btn btn-sm btn-outline-primary">F1</button></div>
+									<div><button class="btn btn-sm btn-outline-primary">F2</button></div>
+									<div><button class="btn btn-sm btn-outline-primary">F3</button></div>
+									<div><button class="btn btn-sm btn-outline-primary">F4</button></div>
+									<div><button class="btn btn-sm btn-outline-primary">F5</button></div>
+									<div><button class="btn btn-sm btn-outline-primary">F6</button></div>
+									<div><button class="btn btn-sm btn-outline-primary">F7</button></div>
+									<div><button class="btn btn-sm btn-outline-primary">F8</button></div>
+								</div>
+							</div>
+							<div class="col-4">
+								<div style="height:100%; position: relative;">
+									<div style="height: calc(100% - 110px); width:100%;">
+										<div class="train-speed"><span>145</span> <small>km/h</small></div>
+										<div class="train-speed-slider">
+											<div class="slider-bar" style="height:40px; "></div>
+											<div class="slider-handle" style="bottom:40px;"></div>
+										</div>
+									</div>
+									<div class="train-dir-box">
+										<div class="btn-group btn-toggle-group">
+											<div class="btn btn-toggle btn-sm btn-secondary" value="R" style="border-bottom-left-radius: 0px">
+												<svg x="0px" y="0px" viewBox="0 0 492 492">
+													<path d="M464.344,207.418l0.768,0.168H135.888l103.496-103.724c5.068-5.064,7.848-11.924,7.848-19.124    c0-7.2-2.78-14.012-7.848-19.088L223.28,49.538c-5.064-5.064-11.812-7.864-19.008-7.864c-7.2,0-13.952,2.78-19.016,7.844    L7.844,226.914C2.76,231.998-0.02,238.77,0,245.974c-0.02,7.244,2.76,14.02,7.844,19.096l177.412,177.412    c5.064,5.06,11.812,7.844,19.016,7.844c7.196,0,13.944-2.788,19.008-7.844l16.104-16.112c5.068-5.056,7.848-11.808,7.848-19.008    c0-7.196-2.78-13.592-7.848-18.652L134.72,284.406h329.992c14.828,0,27.288-12.78,27.288-27.6v-22.788    C492,219.198,479.172,207.418,464.344,207.418z" fill="#FFFFFF"/>
+												</svg>
+											</div>
+											<div class="btn btn-toggle btn-sm btn-outline-secondary" value="F" style="border-bottom-right-radius: 0px; position: absolute; right: 0px; top:0px">
+												<svg x="0px" y="0px" viewBox="0 0 492 492">
+													<path d="M464.344,207.418l0.768,0.168H135.888l103.496-103.724c5.068-5.064,7.848-11.924,7.848-19.124    c0-7.2-2.78-14.012-7.848-19.088L223.28,49.538c-5.064-5.064-11.812-7.864-19.008-7.864c-7.2,0-13.952,2.78-19.016,7.844    L7.844,226.914C2.76,231.998-0.02,238.77,0,245.974c-0.02,7.244,2.76,14.02,7.844,19.096l177.412,177.412    c5.064,5.06,11.812,7.844,19.016,7.844c7.196,0,13.944-2.788,19.008-7.844l16.104-16.112c5.068-5.056,7.848-11.808,7.848-19.008    c0-7.196-2.78-13.592-7.848-18.652L134.72,284.406h329.992c14.828,0,27.288-12.78,27.288-27.6v-22.788    C492,219.198,479.172,207.418,464.344,207.418z" transform="rotate(180 246 246)"/>
+												</svg>
+											</div>
+										</div>
+										<div class="train-stop btn-group">
+											<button type="button" class="btn btn-sm btn-danger">STOP</button>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
 					</div>
 				</div>
-				<div class="bottom-group" style="">
-					<div class="info-box settings-toggle" style="cursor: pointer; position: relative;">
-						<span class="header" style="border-bottom: 0px">Settings</span>
-						<span style="position: absolute;right: 10px;font-weight: bold;line-height: 41px;font-size: large;top: 0px;">+</span>
-					</div>
-					<div id="subsystems" class="info-box active-only">
+				<div class="settings-group" style="">
+					<div id="subsystems" class="info-box">
 						<span class="header">Sub Systems</span>
 						<ul class="list-unstyled">
 						</ul>
 						<div class="box-row">
-							<button type="button" class="btn btn-sm mini-btn btn-warning" onClick='window.location.replace("");'>Reload</button>
-							<button type="button" class="btn-hard-reset btn btn-sm mini-btn btn-danger">Restart</button></div>
+							<button type="button" class="btn btn-sm btn-xs mini-btn btn-warning" onClick='window.location.replace("");'>Reload</button>
+							<button type="button" class="btn-hard-reset btn btn-sm btn-xs mini-btn btn-danger">Restart</button></div>
 					</div>
-					<div class="info-box active-only">
+					<div id="Z21-settings" class="info-box">
 						<span class="header">Z21 Status</span>
-						<div style="display: inline-table; width: 80%; min-width: 200px">
-							<span class="box-trow"><span>Temps</span><span>20.6</span>C</span></span>
-							<span class="box-trow"><span>Track Current</span><span>693</span>mA</span></span>
-							<span class="box-trow"><span>Prog. Current</span><span>1</span>mA</span></span>
-							<span class="box-trow"><span>Track Voltage</span><span>17.4</span>V</span></span>
-							<span class="box-trow"><span>Supply Voltage</span><span>20.0</span>V</span></span>
-						</div>
-						<div class="box-row"><button type="button" class="btn-Z21-settings btn btn-sm mini-btn btn-warning">Settings</button></div>
+						<div class="box-row"><button type="button" class="btn-Z21-settings btn btn-sm btn-xs mini-btn btn-warning">Settings</button></div>
 					</div>
-					<div class="info-box active-only">
+					<div class="info-box">
 						<span class="header">Layout</span>
 						<span class="box-row">Reload</span>
 						<div class="box-row">
 							<span>Module</span><br/>
 							<div style="margin-bottom: 5px">
-								<button type="button" class="btn btn-sm mini-btn btn-success">Add</button>
-								<button type="button" class="btn btn-sm mini-btn btn-warning">Edit</button>
-								<button type="button" class="btn btn-sm mini-btn btn-danger">Remove</button>
+								<button type="button" class="btn btn-sm btn-xs mini-btn btn-success">Add</button>
+								<button type="button" class="btn btn-sm btn-xs mini-btn btn-warning">Edit</button>
+								<button type="button" class="btn btn-sm btn-xs mini-btn btn-danger">Remove</button>
 							</div>
 						</div>
 					</div>
-					<div class="info-box active-only">
+					<div class="info-box">
 						<span class="header">Rolling Stock</span>
+						<div class="box-row">
+							<span>Categories</span><br/>
+							<div style="margin-bottom: 5px">
+								<button type="button" class="btn-categories-edit  btn btn-sm btn-xs mini-btn btn-warning">Edit</button>
+								<button type="button" class="btn-categories-remove btn btn-sm btn-xs mini-btn btn-danger">Remove</button>
+							</div>
+						</div>
 						<div class="box-row">
 							<span>Trains</span><br/>
 							<div style="margin-bottom: 5px">
-								<button type="button" class="btn btn-sm mini-btn btn-success">Add</button>
-								<button type="button" class="btn btn-sm mini-btn btn-warning">Edit</button>
-								<button type="button" class="btn btn-sm mini-btn btn-danger">Remove</button>
+								<button type="button" class="btn-trains-new  btn btn-sm btn-xs mini-btn btn-success">Add</button>
+								<button type="button" class="btn-trains-edit btn btn-sm btn-xs mini-btn btn-warning">Update</button>
 							</div>
 						</div>
 						<div class="box-row">
 							<span>Engines</span><br/>
 							<div style="margin-bottom: 5px">
-								<button type="button" class="btn btn-sm mini-btn btn-success">Add</button>
-								<button type="button" class="btn btn-sm mini-btn btn-warning">Edit</button>
-								<button type="button" class="btn btn-sm mini-btn btn-danger">Remove</button>
+								<button type="button" class="btn-engines-new  btn btn-sm btn-xs mini-btn btn-success">Add</button>
+								<button type="button" class="btn-engines-edit btn btn-sm btn-xs mini-btn btn-warning">Update</button>
 							</div>
 						</div>
 						<div class="box-row">
 							<span>Cars</span><br/>
 							<div style="margin-bottom: 5px">
-								<button type="button" class="btn btn-sm mini-btn btn-success">Add</button>
-								<button type="button" class="btn btn-sm mini-btn btn-warning">Edit</button>
-								<button type="button" class="btn btn-sm mini-btn btn-danger">Remove</button>
+								<button type="button" class="btn-cars-new  btn btn-sm btn-xs mini-btn btn-success">Add</button>
+								<button type="button" class="btn-cars-edit btn btn-sm btn-xs mini-btn btn-warning">Update</button>
 							</div>
 						</div>
 					</div>
@@ -354,262 +455,163 @@ header('Pragma: no-cache');
 		<div class="modal-dialog" role="document">
 			<div class="modal-content">
 				<div class="modal-header">
-					<h5 class="modal-title" id="label">Are You Sure?</h5>
+					<h5 class="modal-title" id="label"></h5>
 					<button type="button" class="close" data-dismiss="modal">
 						<span>&times;</span>
 					</button>
 				</div>
-				<div class="modal-body">
-					The system will be down for a couple minutes
-				</div>
+				<div class="modal-body"></div>
 				<div class="modal-footer">
-					<button type="button" class="btn btn-success">Cancel</button>
-					<button type="button" class="btn btn-warning">Warning</button>
-					<button type="button" class="btn btn-danger">Yes, Restart</button>
+					<button type="button" class="btn btn-success"></button>
+					<button type="button" class="btn btn-warning"></button>
+					<button type="button" class="btn btn-danger"></button>
 				</div>
 			</div>
 		</div>
 	</div>
+		<script src="./scripts/Sortable.js"></script>
 
 		<script src="./scripts/canvas.js"></script>
 		<script src="./scripts/socket.js"></script>
 		<script src="./scripts/train.js"></script>
+		<script src="./scripts/modals.js"></script>
+		<script src="./scripts/menu.js"></script>
 		<script src="./scripts/messages.js"></script>
 		<script src="./scripts/script.js"></script>
 
 	<script>
 
-		var Modals = {
-			setups: {
-				"hard.reset":{
-					link: "button.btn-hard-reset",
-					title: "Are You Sure?",
-					content: "The system will be down for a couple minutes",
-					buttons: {
-						success: {visible: true, content: "Cancel", cb: undefined, wait: false},
-						warning: {visible: false, content: ""},
-						danger: {visible: true, content: "Yes, Restart", cb: function(){websocket.cts_restart()}, wait: false},
-					}
-				},
-				"Z21.settings":{
-					link: "button.btn-Z21-settings",
-					title: "Z21 Settings",
-					content: '<div> \
-							IP-address<br/> \
-							<input type="text" size="3" maxlength="3" class="ip-input modal-form" name="ip1" placeholder="127">.\
-							<input type="text" size="3" maxlength="3" class="ip-input modal-form" name="ip2" placeholder="0">.\
-							<input type="text" size="3" maxlength="3" class="ip-input modal-form" name="ip3" placeholder="0">.\
-							<input type="text" size="3" maxlength="3" class="ip-input modal-form" name="ip4" placeholder="1">\
-						</div><br/>\
-						Updating will result in subsystem restarting',
-					buttons: {
-						success: {visible: false, content: ""},
-						warning: {visible: true, content: "Update", cb: function(ip){websocket.cts_z21_settings(ip)}, wait: false},
-						danger: {visible: true, content: "Cancel", cb: undefined, wait: false},
-					}
-				},
-				"train.link":{
-					open_cb: function(data, ref_obj){
-						$('.imgbox', ref_obj).append(data.fid);
-					},
-					title: "Link Train",
-					content: '<div> \
-							<div class="selected">\
-								<div class="container">\
-									<div data="10">\
-										<div class="imgbox"></div>\
-									</div>\
-								</div>\
-								<div class="selector"></div>\
-							</div>\
-						</div>',
-					buttons: {
-						success: {visible: true, content: "Link", cb: function(data){/*websocket.cts_link_train(fid, rid, type, mid)*/}, wait: false},
-						warning: {visible: false, content: ""},
-						danger: {visible: true, content: "Cancel", cb: undefined, wait: false},
-					}
-				},
-			},
+		// var TestObj = {
+		// 	list = {
+		// 		pizza: 1,
+		// 		taart: 2,
+		// 		fiets: 10,
+		// 		auto:  11,
+		// 		laptop: 192
+		// 	},
+		// 	(this.list.pizza): function(){
+		// 		console.log("pizza");
+		// 	},
+		// 	this.list.taart: function(){
+		// 		console.log("taart");
+		// 	},
+		// 	this.list.fiets: function(){
+		// 		console.log("fiets");
+		// 	},
+		// 	this.list.auto: function(){
+		// 		console.log("auto");
+		// 	}
+		// }
 
+		var Z21 = {
 			init: function(){
-				var keys = Object.keys(this.setups);
-				for(var i = 0; i < keys.length; i++){
-					if(this.setups[ keys[i] ].link != undefined){
-						$(this.setups[ keys[i] ].link).on("click", this.open.bind(this, keys[i]));
-					}
-				}
-			},
+				$('.sidebar #Z21-settings span').after('<table></table>');
 
-			frame: undefined,
-
-			open: function(modal, args=undefined){
-				this.frame = this.setups[modal];
-				$('#modal .modal-title').html(this.frame.title);
-				$('#modal .modal-body').html(this.frame.content);
-
-				buttons = Object.keys(this.frame.buttons);
-				for(var i = 0; i < buttons.length; i++){
-					var btn = this.frame.buttons[ buttons[i] ];
-					if(btn.visible){
-						$('#modal .modal-footer .btn-'+buttons[i]).show();
-						$('#modal .modal-footer .btn-'+buttons[i]).html(btn.content);
-						$('#modal .modal-footer .btn-'+buttons[i]).on("click", this.close.bind(this, buttons[i]));
+				for(var i = 0; i < this.values.length; i++){
+					if(this.values[i].unit != undefined){
+						$('.sidebar #Z21-settings > table').append('<tr><td>'+this.values[i].name+'</td>\
+															  <td class="'+this.values[i].identifier+'"></td><td>'+
+															  this.values[i].unit+'</td></tr>');
 					}
 					else{
-						$('#modal .modal-footer .btn-'+buttons[i]).hide();
-						$('#modal .modal-footer .btn-'+buttons[i]).html("");
+						$('.sidebar #Z21-settings > table').append('<tr><td>'+this.values[i].name+'</td>\
+															  <td colspan="2" class="'+this.values[i].identifier+'"></td></tr>');
 					}
 				}
 
-				if(this.frame.open_cb != undefined && args != undefined){
-					this.frame.open_cb(args, $('#modal'));
+				websocket.ws_close_add(this.ws_close.bind(this));
+			},
+			update: function(data){
+				var keys = Object.keys(data);
+				for(var i = 0; i < keys.length; i++){
+					$('.sidebar #Z21-settings td.'+keys[i]).html(data[keys[i]])
 				}
-
-				$('#modal').modal('show');
 			},
-
-			close: function(evt){
-				var list = {};
-				$.each($('#modal .modal-form'), function(){
-					list[this.getAttribute("name")] = this.value;
-				});
-				if(this.frame.buttons[evt].cb != undefined){
-					this.frame.buttons[evt].cb(list);
-				}
-
-				if(!this.frame.buttons[evt].wait){
-					$('#modal .modal-footer button').off();
-					$('#modal').modal('hide');
-				}
-
-				this.frame = undefined;
-			}
-		};
-
-		var Menu = {
-			init: function(){
-				this.buttons = {
-					"Settings": {name: "Settings", page: "sidebar"},
-					"Train": {name: "Train", page: "train-control"},
-					"Layout": {name: "Layout", page: "main"},
-				};
-				this.current = undefined;
-				this.page_size = window.innerWidth;
-				this.draw();
-				this.toggle({currentTarget: $('#menu-box button[target=Layout]')[0]})
-			},
-			resize: function(){
-				this.page_size = window.innerWidth;
-				this.draw();
-			},
-
-			button: function(name){
-				var text = '<button type="button" class="btn btn-sm btn-outline-primary" target="'+name+'">'+name+
-							 '</button>';
-				return text;
-			},
-			draw: function(){
-				$('#menu-box button').off();
-				$('#menu-box').empty();
-				if(this.page_size < 1140){
-					$('#menu-box').append(this.button(this.buttons["Settings"].name));
-					$('#menu-box').append(this.button(this.buttons["Train"].name));
-					$('#menu-box').append(this.button(this.buttons["Layout"].name));
-
-					if(this.current != undefined && this.current.name != "Setting"){
-						$('body .sidebar').hide();
+			ws_close: function(){
+				for(var i = 0; i < this.values.length; i++){
+					if(this.values[i].unit != undefined){
+						$('.sidebar #Z21-settings td.'+this.values[i].identifier).html("");
 					}
 				}
-				else{
-					$('body .sidebar').show();
-					$('#menu-box').append(this.button(this.buttons["Train"].name));
-					$('#menu-box').append(this.button(this.buttons["Layout"].name));
-				}
-
-				if(this.current != undefined){
-					$('#menu-box button[target='+this.current.name+']').removeClass("btn-outline-primary");
-					$('#menu-box button[target='+this.current.name+']').addClass("btn-primary");
-				}
-
-				$('#menu-box button').on("click", this.toggle.bind(this));
 			},
-			toggle: function(evt){
-				var page = evt.currentTarget.getAttribute("target");
-
-				if(this.current != undefined){
-					$('#menu-box button[target='+this.current.name+']').addClass("btn-outline-primary");
-					$('#menu-box button[target='+this.current.name+']').removeClass("btn-primary");
-				}
-
-				$('body .main').hide();
-				$('body .train-control').hide();
-				if(this.page_size < 1140){
-					$('body .sidebar').hide();
-				}
-
-				this.current = this.buttons[page];
-
-				$('body .'+this.current.page).show();
-
-				$('#menu-box button[target='+page+']').removeClass("btn-outline-primary");
-				$('#menu-box button[target='+page+']').addClass("btn-primary");
-			}
+			values: [
+				{name: "Track Current", unit: "mA", identifier: "tcur"},
+				{name: "Prog. Current", unit: "mA", identifier: "pcur"},
+				{name: "Track Voltage", unit: "mA", identifier: "tvol"},
+				{name: "Supply Voltage", unit: "mV", identifier: "svol"},
+				{name: "Temp", unit: "&deg;C", identifier: "temp"},
+				{name: "IP-Address", identifier: "ip-addr"},
+				{name: "<small>Firmware version</small>", identifier: "fw-version"},
+			]
 		}
 
-		$( window ).resize(function(){ resize(); Canvas.resize(); Menu.resize(); });
+		init_list.push(Z21.init.bind(Z21));
 
-		function resize(){
-			if($("html").width() < 1140){
-				$(".sidebar .scrollcontainer").css("width", $("html").width()+"px");
+		$( window ).resize(function(){ 
+			for(var i = 0; i < resize_list.length; i++){
+				resize_list[i]();
 			}
-			else{
-				$(".sidebar .scrollcontainer").css("width", 280+"px");
-			}
-		}
+		});
+
+		// function resize(){
+		// 	if($("html").width() < 1140){
+		// 		$(".sidebar .sidebar").css("width", $("html").width()+"px");
+		// 	}
+		// 	else{
+		// 		$(".sidebar .sidebar").css("width", 300+"px");
+		// 	}
+		// }
 
 		$(document).ready(function(){
-			resize();
-
-			Canvas.init();
-			if(window.innerWidth < 764){
-				Canvas.rescale(0.5);
+			// resize();
+			if(window.innerWidth < 350){
+				$('head meta[name=viewport]').attr('content','width=350');
 			}
 
-			// Train.init();
+			for(var i = 0; i < init_list.length; i++){
+				init_list[i]();
+			}
+
 			// Stations.init();
-			Menu.init();
-			Modals.init();
-			// Train.resize();
-
-			Canvas.resize();
-
-			Canvas.calc_dotmatrix();
-
-			Canvas.dimensions.content_width = 1300;
-			Canvas.dimensions.content_height= 460;
-			Canvas.dimensions.box_width  = Canvas.dimensions.content_width;
-			Canvas.dimensions.box_height = Canvas.dimensions.content_height;
-			Canvas.dimensions.ofX = Canvas.dimensions.width/2-Canvas.dimensions.content_width/2;
-			Canvas.calc_limits();
-
-			Canvas.update_frame();
 
 			$('.settings-toggle').on("click", function(){
 				$('.top-group').toggleClass('active');
 				$('.bottom-group').toggleClass('active');
 			});
-
-			// $('#settings .set-box .checkbox').on("click",websocket.cts_BroadcastFlag);
-
-			// setInterval(function(){
-			// 	$.ajax({
-			// 	    url: "./../log.txt",
-			// 	    success: function (data){
-			// 	        log_data(data);
-			// 	    }
-			// 	});
-			// },5000);
 		});
+
+		function throw_Switch(m,s){
+			if(!ws.connected){
+				console.error("Throw_switchc: not connected");
+			}
+
+			if(modules[m].switches[s] == 0){
+				websocket.cts_set_switch([[m,s,1]]);
+			}else{
+				websocket.cts_set_switch([[m,s,0]]);
+			}
+		}
+
+		function throw_doubleSlib(m,sw){
+			if(!ws.connected){
+				console.error("Not connected");
+				return;
+			}
+
+			if(modules[m].switches[sw[0]] == 0){
+				if(modules[m].switches[sw[1]] == 0){
+					websocket.cts_set_switch([[m,sw[0],0],[m,sw[1],1]]);
+				}else{
+					websocket.cts_set_switch([[m,sw[0],1],[m,sw[1],1]]);
+				}
+			}else{
+				if(modules[m].switches[sw[1]] == 1){
+					websocket.cts_set_switch([[m,sw[0],1],[m,sw[1],0]]);
+				}else{
+					websocket.cts_set_switch([[m,sw[0],0],[m,sw[1],0]]);
+				}
+			}
+		}
 	</script>
 </body>
 </html>

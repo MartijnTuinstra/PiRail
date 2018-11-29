@@ -39,6 +39,23 @@ var Canvas = {
 		this.dimensions.ofY = 0;
 
 		this.calc_limits();
+
+		if(window.innerWidth < 764){
+			this.rescale(0.5);
+		}
+
+		this.resize();
+
+		this.calc_dotmatrix();
+
+		this.dimensions.content_width = 1300;
+		this.dimensions.content_height= 460;
+		this.dimensions.box_width  = this.dimensions.content_width;
+		this.dimensions.box_height = this.dimensions.content_height;
+		this.dimensions.ofX = this.dimensions.width/2-this.dimensions.content_width/2;
+		this.calc_limits();
+
+		this.update_frame();
 	},
 	resize: function(){
 		console.log("resize");
@@ -348,7 +365,6 @@ var Canvas = {
 					console.log("Hit switch");
 					module_v.hitboxes[i](_x, _y);
 				}
-				console.log(module_v.hitboxes[i])
 			}
 		});
 		//if(update)
@@ -460,6 +476,10 @@ var Canvas = {
 		Canvas.moved();
 	}
 }
+
+
+init_list.push(Canvas.init.bind(Canvas));
+resize_list.push(Canvas.resize.bind(Canvas));
 
 Canvas.init_calc();
 ro = Canvas.ro;

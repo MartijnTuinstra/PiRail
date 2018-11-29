@@ -16,6 +16,17 @@ function IntArrayToString(data){
   return str;
 }
 
+function ToInt16(value){
+  // If a positive value, return it
+  if ((value & 0x8000) == 0)
+  {
+    return value;
+  }
+  else{
+    return value | 0xffff0000;
+  }
+}
+
 var websocket = {
   //Opcodes
   opc: {
@@ -59,6 +70,8 @@ var websocket = {
     AddNewTraintolib:  0x56,
     EditTrainlib:      0x57,
     TrainsLibrary:     0x58,
+
+    TrainCategories:   0x5A,
 
 
     //Track and switches
@@ -106,6 +119,16 @@ var websocket = {
     ws.send(new Int8Array(data));
   },
 
+  ws_close_list: [],
+  ws_close: function(){
+    for(var i = 0; i < this.ws_close_list.length; i++){
+      this.ws_close_list[i]();
+    }
+  },
+  ws_close_add: function(f){
+    this.ws_close_list.push(f);
+  },
+
 /*Client to Server*/
   cts_reload_previous: function(entry){
     console.warn("WEBSOCKET: RELOAD_PREVIOUS, not implemented, entry: "+entry);
@@ -150,6 +173,21 @@ var websocket = {
       data[1] = fid;
       data[2] = rid;
       data[3] = ((type == "E")?0x80:0) + ((mid & 0x1F) >> 8)
+
+      this.send(data);
+    },
+
+    cts_train_speed: async function(type, train){
+      data = [];
+      data[0] = this.opc.TrainSpeed;
+      data[1] = train.id & 0xFF;
+      data[2] = (train.id & 0x300) >> 2;
+      if(type == "T"){
+        data[2] |= 0x20;
+      }
+      data[2] |= (train.dir & 1) << 4;
+      data[2] |= (train.speed & 0xF00) >> 8;
+      data[3] = train.speed & 0xFF;
 
       this.send(data);
     },
@@ -325,11 +363,6 @@ var websocket = {
       this.send(msg);
     },
 
-    cts_train_speed: function(tid, direction, speed_step){
-      var data = ((direction)?0x80:0) | (speed_step & 0x7F);
-      this.send([this.opc.TrainSpeed, tid, data]);
-    },
-
 
   /*Track / Switches*/
     cts_set_switch: function(d){ //Module, Switch, NewState
@@ -443,7 +476,22 @@ var websocket = {
 
     // Track info, voltage,current
     stc_track_info: function(data){
-      console.warn("TODO: Implement track info");
+      var i=0;
+      var mcur = ToInt16(data[i++] + (data[i++] << 8));
+      var mfcur = ToInt16(data[i++] + (data[i++] << 8));
+      var pcur = ToInt16(data[i++] + (data[i++] << 8));
+      var vcc = data[i++] + (data[i++] << 8);
+      var sup = data[i++] + (data[i++] << 8);
+      var temp = ToInt16(data[i++] + (data[i++] << 8));
+      var flags = data[i++] + (data[i++] << 8);
+      Z21.update({"tcur": mcur, "tfcur": mfcur, "pcur": pcur, "svol": sup, "tvol": vcc, "temp": temp, "flags": flags});
+    },
+
+    stc_z21_settings: function(data){
+      var i = 0;
+      var ip = data[i++] + "." + data[i++] + "." + data[i++] + "." + data[i++];
+      var fw = data[i++] + "." + data[i++];
+      Z21.update({"ip-addr": ip, "fw-version": fw});
     },
 
 
@@ -459,8 +507,6 @@ var websocket = {
         var speed_step = (data[5] & 0x7F); // divide by 127
 
         Train.data[train_ID-2].speed = (speed_step/127)*Train.data[train_ID-2].max_speed;
-
-        Train.update();
 
         // (data[5] & 0x80) == 0 // direction reverse
 
@@ -521,9 +567,8 @@ var websocket = {
           steps[j].step = data[i++];
         }
         console.log("Add engine", {name: name, dcc: dcc_id, img: img, icon: icon, max_speed: max_spd, length: length, type: type, steps: steps});
-        Train.engines.push({name: name, dcc: dcc_id, img: img, icon: icon, max_speed: max_spd, length: length, type: type, steps: steps});
+        Train.engines.push({ontrack: 0, id: Train.engines.length, name: name, dcc: dcc_id, img: img, icon: icon, max_speed: max_spd, length: length, type: type, steps: steps});
       }
-      Train.comp.update_list();
     },
 
     // Add new train to library
@@ -544,7 +589,7 @@ var websocket = {
     // Cars Lib 0x53
     stc_cars_lib: function(data){
       Train.cars = [];
-      for(var i = 0;i<data.length;i++){
+      for(var i = 0;i<data.length;){
         var nr_id = (data[i] + (data[i+1] << 8));
         i += 2;
         var max_spd = (data[i] + (data[i+1] << 8));
@@ -560,12 +605,11 @@ var websocket = {
         text_length += data[i++];
 
         var icon = IntArrayToString(data.slice(i+1+text_length, i+1+text_length+data[i]));
-        text_length += data[i];
+        text_length += data[i++];
 
         Train.cars.push({name: name, nr: nr_id, img: img, icon: icon, max_speed: max_spd, length: length, type: type});
         i += text_length;
       }
-      Train.comp.update_list();
     },
 
     // Add new train to library
@@ -586,36 +630,51 @@ var websocket = {
     //Trains 0x55
     stc_trains_lib: function(data){
       Train.trains = [];
-      for(var i = 0;i<data.length;i++){
+      for(var i = 0;i<data.length;){
         var max_spd = (data[i] + (data[i+1] << 8));
         var length = (data[i+2] + (data[i+3] << 8));
         i += 4;
-        var type = data[i++];
+        var type = data[i] >> 1;
 
         var use = data[i++] & 0b1;
 
         var name = IntArrayToString(data.slice(i+2, i+2+data[i]));
+        console.log("Got train: "+name);
         var data_len = data[i++];
 
         var links = data.slice(i+1+data_len, i+1+data_len+3*data[i]);
         data_len += data[i++]*3;
 
         var link_list = [];
+        var dcc = [];
         
         for(var j = 0; j<links.length; j+=3){
           link_list.push([links[j], links[j+1]+ (links[j+2] << 8)]);
+
+          if(links[j] == 0 && Train.engines[links[j+1]+ (links[j+2] << 8)] != undefined){
+            dcc.push(Train.engines[links[j+1]+ (links[j+2] << 8)].dcc);
+          }
         }
 
-        Train.trains.push({name: name, max_speed: max_spd, length: length, type: type, link: link_list, use: use});
+        Train.trains.push({ontrack: 0, name: name, dcc: dcc, max_speed: max_spd, length: length, type: type, link: link_list, use: use});
         i += data_len;
       }
-      Train.comp.update_list();
-      Train.update_list();
-      Train.linker.update_list();
     },
 
     stc_newtrain_tolib: function(data){
       console.warn("implement");
+    },
+
+    stc_traincategories: function(data){
+      Train.cat = {};
+      for(var i = 0;i<data.length;){
+        var id = data[i++];
+
+        var name = IntArrayToString(data.slice(i+1, i+1+data[i]));
+
+        Train.cat[id] = name;
+        i += data[i]+1;
+      }
     },
 
   /*  TRACK MESSAGES  */
@@ -1033,9 +1092,11 @@ function WebSocket_handler(adress){
           console.log("Partial Track Layout");
           websocket.stc_track_setup_partial(data);
         }
-        else if(data[0] == websocket.opc.Track_Info){
-          console.log("Track info");
-          websocket.stc_track_info(data);
+        else if(data[0] == websocket.opc.Z21_Track_Info){
+          websocket.stc_track_info(data.slice(1));
+        }
+        else if(data[0] == websocket.opc.Z21_Settings){
+          websocket.stc_z21_settings(data.slice(1));
         }
         else if(data[0] == websocket.opc.AdminLogin){
           websocket.stc_login();
@@ -1077,6 +1138,10 @@ function WebSocket_handler(adress){
         else if(data[0] == websocket.opc.AddNewTraintolib){
           console.log("AddNewTraintoLibrary");
           websocket.stc_newtrain_tolib(data);
+        }
+
+        else if(data[0] == websocket.opc.TrainCategories){
+          websocket.stc_traincategories(data.slice(1));
         }
 
       /*  TRACK MESSAGES  */
@@ -1187,7 +1252,7 @@ function WebSocket_handler(adress){
     ws.onclose = function(event){
       // websocket is closed.
       if(ws.connected == true){
-        // reset_blocks_in_modules();
+        websocket.ws_close();
         Canvas.update_frame();
         Messages.clear();
         Messages.add({type:0xff,id:0});

@@ -1,3 +1,4 @@
+#include "logger.h"
 #include "mem.h"
 #include "train.h"
 #include "Z21.h"
@@ -27,7 +28,7 @@ void Z21_Set_Loco_Drive_Train(Trains * T){
 	uint8_t * data = _calloc(T->nr_engines * 10 + 2, 1);
 	uint16_t i = 0;
 
-	for(int e = 0; e < T->nr_engines; i++){
+	for(int e = 0; e < T->nr_engines; e++){
 		Engines * E = T->engines[e];
 
 		data[i] = 0x0A;

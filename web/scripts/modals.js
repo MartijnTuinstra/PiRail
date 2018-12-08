@@ -247,6 +247,7 @@ var Modals = {
     },
     "engines.edit":{
       link: "button.btn-engines-new",
+      chart: undefined,
       open_cb: function(data, ref){
         console.log("engines.edit open_cb: ", data);
         if(data.id == undefined){
@@ -256,15 +257,9 @@ var Modals = {
           $('button.btn-success', ref).hide();
         }
 
-        if(data.id != undefined){
-          $('input[name=name]', ref).val(Train.engines[parseInt(data.id)].name);
-          $('input[name=dcc]', ref).val(Train.engines[parseInt(data.id)].dcc);
-          $('input[name=length]', ref).val(Train.engines[parseInt(data.id)].length);
+        Modals.setups["engines.edit"].speedsteps = [];
 
-          // TODO select speedstep and type buttons
-        }
-
-        $('input[type=file]', ref).on("update", function(){});
+        //Init catagories buttons
 
         var keys = Object.keys(Train.cat);
         var enter = false;
@@ -273,50 +268,200 @@ var Modals = {
             enter = true;
             $('.train-categories.btn-toggle-group', ref).append("<br/>");
           }
-          $('.train-categories.btn-toggle-group', ref).append('<button name="type" class="modal-form btn-toggle btn btn-xs btn-outline-primary" value="'+keys[i]+'">'+Train.cat[ keys[i] ]+'</button>');
+          $('.train-categories.btn-toggle-group', ref).append('<button name="type" type="number" class="modal-form btn-toggle btn btn-xs btn-outline-primary" value="'+keys[i]+'">'+Train.cat[ keys[i] ]+'</button>');
         }
+
+        if(data.id != undefined){
+          $('input[name=name]', ref).val(Train.engines[parseInt(data.id)].name);
+          $('input[name=dcc]', ref).val(Train.engines[parseInt(data.id)].dcc);
+          $('input[name=length]', ref).val(Train.engines[parseInt(data.id)].length);
+
+          Modals.setups["engines.edit"].speedsteps = Train.engines[parseInt(data.id)].steps;
+
+          // TODO select speedstep and type buttons
+        }
+
+        $('input[type=file]', ref).on("update", function(){});
+
+        var ctx = document.getElementById('engine_Speedsteps').getContext('2d');
+        Modals.setups["engines.edit"].chart = new Chart(ctx, {
+          // The type of chart we want to create
+          type: 'line',
+
+          // The data for our dataset
+          data: {
+            datasets: [{
+              borderColor: 'rgb(255, 99, 132)',
+              lineTension: 0,
+              data: [{x:0, y:0}, {x:127, y:160}],
+            }]
+          },
+
+          // Configuration options go here
+          options: {
+            legend: false,
+            scales: {
+              xAxes: [{
+                type: 'linear',
+                display: true,
+                ticks: {
+                  suggestedMin: 0,    // minimum will be 0, unless there is a lower value.
+                  suggestedMax: 128,
+                  stepSize: 16,
+                }
+              }],
+              yAxes: [{
+                type: 'linear',
+                display: true,
+                ticks:{
+                  suggestedMin: 0,
+                  suggestedMax: 100
+                }
+              }]
+            },
+            animation: false,
+          }
+        });
+
+        Modals.setups["engines.edit"].update_graph();
+
+        $('#engine_update_speedstep').on("click", function(){
+          var speed = parseInt($('#engine_speedstep_config input[name=speed]').val());
+          var step = parseInt($('#engine_speedstep_config input[name=step]').val());
+          var list = Modals.setups["engines.edit"].speedsteps;
+
+          if(speed >= 0){
+            for(var i = 0; i < list.length; i++){
+              if(list[i].step == step){
+                list[i].speed = speed;
+              }
+              if(i == list.length - 1){
+                list.push({step: step, speed: speed});
+                break;
+              }
+            }
+            if(list.length == 0){
+              list.push({step: step, speed: speed});
+            }
+          }
+          else{
+            var i = 0;
+            for(i; i < list.length; i++){
+              if(list[i].step == step){
+                break;
+              }
+            }
+            if(i > 0){
+              list.splice(i, 1);
+            }
+          }
+          list.sort(function(a, b){return a.step-b.step});
+          Modals.setups["engines.edit"].speedsteps = list;
+          Modals.setups["engines.edit"].update_graph();
+        });
       },
       close_cb: function(data, ref){
         $('input[type=file]', ref).off();
       },
+      update_graph: function(){
+        var i, datetime, used, sun;
+        var chart = Modals.setups["engines.edit"].chart;
+
+        chart.data.datasets[0].data = [{x:0, y:0}];
+        for (i = 0; i < Modals.setups["engines.edit"].speedsteps.length; i++) {
+          step = Modals.setups["engines.edit"].speedsteps[i];
+          chart.data.datasets[0].data.push({'x': step.step, 'y': step.speed});
+        }
+        chart.update();
+      },
+      create_cb: function(data){
+        if(data.return_code == undefined){
+          return;
+        }
+
+        if(data.return_code == 0){
+          alert("Failed with no error code");
+        }else if(data.return_code == -1){
+          alert("DCC allready in use");
+          $('#modal .modal-body input[name=dcc]').addClass("is-invalid");
+          $('#modal .modal-body input[name=dcc]').focus();
+        }
+        else if(data.return_code == -2){
+          $('#modal .modal-body input[name='+data.data[0]+']').focus();
+          for(var i = 0; i < data.data.length; i++){
+            $('#modal .modal-body input[name='+data.data[i]+']').addClass("is-invalid");
+            $('#modal .modal-body button[name='+data.data[i]+']').addClass("btn-outline-danger").addClass("isinvalid").removeClass("btn-outline-primary");
+          }
+        }
+      },
+      update_cb: function(return_code){
+
+      },
       title: "Engine",
       content: '<div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
-      <div class="col-6"><input class="modal-form" name="icon" type="file" style="font-size: 0.7rem"></div>\
-      <div class="col-6"><input class="modal-form" name="image" type="file" style="font-size: 0.7rem"></div>\
-      </div><div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
-      <div class="col-4 control-label"><span style="line-height: 38px;vertical-align:middle">Name</span></div>\
-      <div class="col-8"><input name="name" class="modal-form form-control input-sm"></div>\
-      </div><div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
-      <div class="col-4 control-label"><span style="line-height: 38px;vertical-align:middle">DCC address</span></div>\
-      <div class="col-8"><input type="number" name="dcc" class="modal-form form-control input-sm"></div>\
-      </div><div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
-      <div class="col-4 control-label"><span style="line-height: 38px;vertical-align:middle">Length</span></div>\
-      <div class="col-8"><input type="number" name="length" class="modal-form form-control input-sm"></div>\
-      </div><div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
-      <div class="col-4 control-label"><span style="line-height: 28px;vertical-align:middle">Speedsteps</span></div>\
-      <div class="col-8 btn-toggle-group">\
-        <button name="speedstep" name="speed14" class="modal-form btn-toggle btn btn-xs btn-outline-primary" value="14">14</button>\
-        <button name="speedstep" name="speed28" class="modal-form btn-toggle btn btn-xs btn-outline-primary" value="28">28</button>\
-        <button name="speedstep" name="speed128" class="modal-form btn-toggle btn btn-xs btn-outline-primary" value="128">128</button>\
-      </div></div><div class="row">\
-      <div class="col-4 control-label"><span style="line-height: 48px;vertical-align:middle">Type</span></div>\
-      <div class="col-8" style="height: 3.2rem; overflow: hidden">\
-          <div class="train-categories btn-toggle-group" style="overflow:overlay;height:150%;white-space: nowrap;min-width:100%"></div>\
-        </div></div>',
+                  <div class="col-6"><input class="modal-form" name="icon" type="file" style="font-size: 0.7rem"></div>\
+                  <div class="col-6"><input class="modal-form" name="image" type="file" style="font-size: 0.7rem"></div>\
+                </div>\
+                <div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
+                  <div class="col-4 control-label"><span style="line-height: 38px;vertical-align:middle">Name</span></div>\
+                  <div class="col-8"><input name="name" type="text" class="modal-form form-control input-sm"></div>\
+                </div>\
+                <div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
+                  <div class="col-4 control-label"><span style="line-height: 38px;vertical-align:middle">DCC address</span></div>\
+                  <div class="col-8"><input type="number" name="dcc" class="modal-form form-control input-sm"></div>\
+                </div>\
+                <div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
+                  <div class="col-4 control-label"><span style="line-height: 38px;vertical-align:middle">Length</span></div>\
+                  <div class="col-8"><input type="number" name="length" class="modal-form form-control input-sm"></div>\
+                </div>\
+                <div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
+                  <div class="col-4 control-label"><span style="line-height: 28px;vertical-align:middle">Speedsteps</span></div>\
+                  <div class="col-8 btn-toggle-group">\
+                    <button type="number" name="speedstep" class="modal-form btn-toggle btn btn-xs btn-outline-primary" value="14">14</button>\
+                    <button type="number" name="speedstep" class="modal-form btn-toggle btn btn-xs btn-outline-primary" value="28">28</button>\
+                    <button type="number" name="speedstep" class="modal-form btn-toggle btn btn-xs btn-outline-primary" value="128">128</button>\
+                  </div>\
+                </div>\
+                <div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
+                  <div class="col-4 control-label"><span style="line-height: 48px;vertical-align:middle">Type</span></div>\
+                  <div class="col-8" style="height: 3.2rem; overflow: hidden">\
+                      <div class="train-categories btn-toggle-group" style="overflow:overlay;height:150%;white-space: nowrap;min-width:100%"></div>\
+                    </div>\
+                  </div>\
+                </div>\
+                <div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
+                  <div class="col-4 control-label"><span class="modal-form" type="speedsteps" name="speedsteps" style="line-height: 38px;vertical-align:middle">Speedsteps</span></div>\
+                  <div id="engine_speedstep_config" class="col-8">\
+                    <input type="number" name="step" placeholder="step" class="form-control input-sm" style="width:40%;display:inline-block">\
+                    <input type="number" name="speed" placeholder="speed" class="form-control input-sm" style="width:40%;display:inline-block">\
+                    <svg id="engine_update_speedstep" x="0px" y="0px" width="24px" height="24px" viewBox="0 0 530 530" style="float:right;margin:7px;cursor:pointer">\
+                      <path d="M328.883,89.125l107.59,107.589l-272.34,272.34L56.604,361.465L328.883,89.125z M518.113,63.177l-47.981-47.981\
+                        c-18.543-18.543-48.653-18.543-67.259,0l-45.961,45.961l107.59,107.59l53.611-53.611\
+                        C532.495,100.753,532.495,77.559,518.113,63.177z M0.3,512.69c-1.958,8.812,5.998,16.708,14.811,14.565l119.891-29.069\
+                        L27.473,390.597L0.3,512.69z" fill="#dddddd"/>\
+                    </svg>\
+                  </div>\
+                </div>\
+                <div class="row">\
+                  <div class="col-12">\
+                      <canvas id="engine_Speedsteps"></canvas>\
+                    </div>\
+                  </div>\
+                </div>',
       buttons: {
         success: {visible: true, content: "Create",
               cb: function(data){
                   console.log("Engine Create");
                   console.log(data);
-                  /*websocket.cts_link_train(fid, rid, type, mid)*/
+                  websocket.cts_add_engine(data);
               },
-              wait: false},
+              wait: true},
         warning: {visible: true, content: "Update",
                   cb: function(data){
                       console.log("Engine Update");
                       console.log(data);
                   },
-                  wait: false},
+                  wait: true},
         danger: {visible: true, content: "Cancel", cb: undefined, wait: false},
       }
     },
@@ -588,6 +733,16 @@ var Modals = {
     }
   },
 
+  call_cb: function(func_name, arg){
+    if(this.frame == undefined){
+      return;
+    }
+
+    if(this.frame[func_name] && {}.toString.call(this.frame[func_name]) === '[object Function]'){
+      this.frame[func_name](arg);
+    }
+  },
+
   frame: undefined,
 
   open: function(modal, args=undefined){
@@ -619,6 +774,9 @@ var Modals = {
     }
 
     $('#modal .modal-body button.btn-toggle').on("click", function(evt){
+      if($(evt.target).hasClass("isinvalid")){
+        $('button.btn-toggle', $(evt.target).closest("div.modal-body, .btn-toggle-group")).removeClass('btn-outline-danger').removeClass("isinvalid");
+      }
       $('button.btn-toggle', $(evt.target).closest("div.modal-body, .btn-toggle-group")).removeClass('btn-primary');
       $('button.btn-toggle', $(evt.target).closest("div.modal-body, .btn-toggle-group")).addClass('btn-outline-primary');
       $(evt.target).removeClass('btn-outline-primary');
@@ -637,24 +795,26 @@ var Modals = {
       var name = this.getAttribute("name");
       var type = this.getAttribute("type")
       if(this.tagName == "BUTTON" && this.classList.contains("btn-primary")){
-        console.log("btn", this);
         that.data[name] = this.getAttribute("value");
         if(type == "number"){
           that.data[name] = parseInt(that.data[name]);
         }
       }
       else if(type == "file"){
-        console.log("file", this);
         that.data[name] = this.files[0];
       }
       else if(this.tagName != "BUTTON" && (type == "text" || type == "number")){
-        console.log("text/nr", this);
         that.data[name] = this.value;
         if(type == "number"){
           that.data[name] = parseInt(that.data[name]);
         }
       }
+      else if(this.tagName != "BUTTON" && type == "speedsteps"){
+        that.data[name] = frame.speedsteps;
+      }
     });
+
+    console.log(this.data);
 
     if(frame.buttons[evt].cb != undefined){
       frame.buttons[evt].cb(this.data);

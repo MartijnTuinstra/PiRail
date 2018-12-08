@@ -131,24 +131,34 @@ void create_train(char * name, int nr_stock, struct train_comp_ws * comps, uint8
   Z->type = catagory;
   Z->save = save;
 
+  Z->engines = _calloc(1, Engines *);
+  Z->nr_engines = 0;
+
   for(int i = 0;i<nr_stock;i++){
     Z->composition[i].type = comps[i].type;
     Z->composition[i].id = comps[i].id;
 
     if(comps[i].type == 0){
-      loggerf(DEBUG, "Add enginge %i", comps[i].id);
+      loggerf(DEBUG, "Add engine %i", comps[i].id);
+      Engines * E = engines[comps[i].id];
       //Engine
-      if(comps[i].id >= engines_len || engines[comps[i].id] == 0){
+      if(comps[i].id >= engines_len || E == 0){
         loggerf(ERROR, "Engine (%i) doesn't exist", comps[i].id);
         continue;
       }
 
-      Z->length += engines[comps[i].id]->length;
-      if(Z->max_speed > engines[comps[i].id]->max_speed){
-        Z->max_speed = engines[comps[i].id]->max_speed;
+      Z->length += E->length;
+      if(Z->max_speed > E->max_speed && E->max_speed != 0){
+        Z->max_speed = E->max_speed;
       }
 
-      Z->composition[i].p = engines[comps[i].id];
+      Z->composition[i].p = E;
+
+      int index = find_free_index(Z->engines, Z->nr_engines);
+
+      Z->engines[index] = E;
+
+      loggerf(TRACE, "Train engine index: %d", index);
     }
     else{
       loggerf(DEBUG, "Add car %i", comps[i].id);
@@ -159,7 +169,7 @@ void create_train(char * name, int nr_stock, struct train_comp_ws * comps, uint8
       }
       
       Z->length += cars[comps[i].id]->length;
-      if(Z->max_speed > cars[comps[i].id]->max_speed){
+      if(Z->max_speed > cars[comps[i].id]->max_speed && cars[comps[i].id]->max_speed != 0){
         Z->max_speed = cars[comps[i].id]->max_speed;
       }
 

@@ -132,7 +132,7 @@ int websocket_decode(uint8_t data[1024], struct web_client_t * client){
     else if(data[0] == WSopc_TrainSpeed){ //Train speed control
       uint16_t id = data[1] + ((data[2] & 0xC0) << 2);
       uint16_t speed = data[3] + ((data[2] & 0x0F) << 8);
-      loggerf(INFO, "Train speed control %3i %3i %i", id, speed, (data[2] & 0x10) >> 4);
+
       if(data[2] & 0x20 && id < trains_len){ //Train
         trains[id]->cur_speed = speed;
         trains[id]->dir = (data[2] & 0x10) >> 4;

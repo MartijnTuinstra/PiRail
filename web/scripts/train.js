@@ -27,9 +27,9 @@ var Train_Control = {
           var pageY = slider_box.offset().top + slider_box.height();
           var ylim = slider_box.height() - $('.slider-handle', slider_box).height();
           var pos = 0;
-          if(evt.type == "mousemove"){
+          if(evt.type == "mousemove" || evt.type == "mousedown"){
             pos = (pageY - evt.pageY);
-          }else if(evt.type == "touchmove"){
+          }else if(evt.type == "touchmove" || evt.type == "touchstart"){
             pos = (pageY - evt.touches[0].pageY);
           }
           if(pos < 0){
@@ -54,9 +54,10 @@ var Train_Control = {
       var box = this.get_box(evt.currentTarget);
 
       this.start_train_timer(box);
+
+      handler.bind(this)(box, evt);
       
       $('body').on('mouseup mousemove touchmove touchend', handler.bind(this, box));
-      handler.bind(this, box, evt)();
     }.bind(this));
 
     $('.train-box .btn-toggle').on("click", function(evt){
@@ -150,7 +151,7 @@ var Train_Control = {
       list = Train.engines;
     }
     else{
-      list = Train.trians;
+      list = Train.trains;
     }
 
     this.train[box] = {type: type, t: list[id]};
@@ -163,7 +164,7 @@ var Train_Control = {
     var slider_box = $('.train-box.box'+box+' .train-speed-slider')
     var pageY = slider_box.offset().top + slider_box.height();
     var ylim = slider_box.height() - $('.slider-handle', slider_box).height();
-    var pos = ylim * list[id].speed / list[id].max_speed
+    var pos = ylim * list[id].speed / list[id].max_speed;
 
     $('.slider-handle', slider_box).css("bottom", pos+"px");
     $('.slider-bar', slider_box).css("height", pos+"px");

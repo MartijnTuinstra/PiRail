@@ -251,21 +251,49 @@ var websocket = {
     },
 
     cts_add_engine: function(data){
+      var req_keys = ["name", "dcc", "length", "type", "speedstep", "image", "icon"];
+      var missing_data = [];
+      for(var i = 0; i < req_keys.length; i++){
+        if(data[ req_keys[i] ] == undefined){
+          missing_data.push( req_keys[i] );
+        }
+        else if(typeof data[ req_keys[i] ] == "number" && isNaN(data[ req_keys[i] ])){
+          missing_data.push( req_keys[i] );
+        }
+        else if(typeof data[ req_keys[i] ] == "string" && data[ req_keys[i] ] == ""){
+          missing_data.push( req_keys[i] );
+        }
+      }
+      if(missing_data.length > 0){
+        Modals.call_cb("create_cb", {return_code: -2, data: missing_data});
+        return;
+      }
+
       msg = [];
       msg[0] = this.opc.AddNewEnginetolib;
       msg[1] = (data.dcc & 0x00ff);
       msg[2] = (data.dcc & 0xff00) >> 8;
       msg[3] = (data.length & 0x00ff);
       msg[4] = (data.length & 0xff00) >> 8;
-      msg[5] = (data.type & 0xf) | (data.speedsteps << 4);
-      msg[6] = data.name.length;
+      msg[5] = data.type;
+
+      if(data.speedsteps == 28){
+        msg[6] |= 0b01;
+      }
+      else if(data.speedsteps == 128){
+        msg[6] |= 0b10;
+      }
+
+      msg[7] = data.name.length;
+
       if(data.img_ext.includes('jpg')){
-        msg[7] |= 0x10;
+        msg[8] |= 0x10;
       }
       if(data.icon_ext.includes('jpg')){
-        msg[7] |= 0x1;
+        msg[8] |= 0x1;
       }
-      msg[8] = data.speed_steps.length;
+
+      msg[9] = data.speed_steps.length;
 
       for (var i = 0; i < data.name.length; i++) {
         msg.push(data.name.charCodeAt(i));
@@ -656,7 +684,7 @@ var websocket = {
           }
         }
 
-        Train.trains.push({ontrack: 0, name: name, dcc: dcc, max_speed: max_spd, length: length, type: type, link: link_list, use: use});
+        Train.trains.push({ontrack: 0, id: Train.trains.length, name: name, dcc: dcc, max_speed: max_spd, length: length, type: type, link: link_list, use: use});
         i += data_len;
       }
     },

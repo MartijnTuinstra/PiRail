@@ -17,7 +17,7 @@ all: config_reader baan
 
 $(BIN)/%.o: $(SRC)/%.c
 	@echo $@
-	@$(GCC_SIMPLE) -c -o $@ $^
+	@$(GCC) -c -o $@ $^
 
 config_reader: $(BIN)/config_reader.o $(BIN)/config.o $(BIN)/logger.o $(BIN)/mem.o
 	@echo config_reader

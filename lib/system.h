@@ -55,7 +55,7 @@
 
   void sigint_func(int sig);
 
-  #define find_free_index(list, length) _find_free_index((void ***)&list, &length)
+  #define find_free_index(list, length) _find_free_index((void ***)&list, (int *)&length)
 
   int _find_free_index(void *** list, int * length);
 

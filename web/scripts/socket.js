@@ -251,7 +251,7 @@ var websocket = {
     },
 
     cts_add_engine: function(data){
-      var req_keys = ["name", "dcc", "length", "type", "speedstep", "image", "icon"];
+      var req_keys = ["icon", "image", "name", "dcc", "length", "type", "speedstep", "image", "icon"];
       var missing_data = [];
       for(var i = 0; i < req_keys.length; i++){
         if(data[ req_keys[i] ] == undefined){
@@ -574,6 +574,7 @@ var websocket = {
         var length = (data[i] + (data[i+1] << 8));
         i += 2;
         type = data[i++];
+        speedsteps = data[i++];
         steps_len = data[i++];
 
         var name = IntArrayToString(data.slice(i+3, i+3+data[i]));
@@ -594,8 +595,18 @@ var websocket = {
           i+=2;
           steps[j].step = data[i++];
         }
-        console.log("Add engine", {name: name, dcc: dcc_id, img: img, icon: icon, max_speed: max_spd, length: length, type: type, steps: steps});
-        Train.engines.push({ontrack: 0, id: Train.engines.length, name: name, dcc: dcc_id, img: img, icon: icon, max_speed: max_spd, length: length, type: type, steps: steps});
+
+        if(speedsteps == 0){
+          speedsteps = 14;
+        }
+        else if(speedsteps == 1){
+          speedsteps = 28;
+        }
+        else{
+          speedsteps = 128;
+        }
+        console.log("Add engine", {name: name, dcc: dcc_id, img: img, icon: icon, max_speed: max_spd, length: length, type: type, speedstep: speedsteps, steps: steps});
+        Train.engines.push({ontrack: 0, id: Train.engines.length, name: name, dcc: dcc_id, img: img, icon: icon, max_speed: max_spd, length: length, type: type, speedstep: speedsteps, steps: steps});
       }
     },
 

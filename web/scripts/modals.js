@@ -220,21 +220,23 @@ var Modals = {
         $('.modal-body > div').css("max-height", "calc("+(window.innerHeight*0.8-71)+"px - 3em)");
         $('.modal-body > div > div').css("max-height", "calc("+(window.innerHeight*0.8-71)+"px - 3em)");
         for(var i = 0; i<Train.engines.length; i++){
-          var t = Train.engines[i];
+          var e = Train.engines[i];
 
           var text = '<li class="message media">'+
-              '<div class="message-mbox align-self-center mr-3 bg-primary" style="width:120px;height:60px"></div>'+
+              '<div class="message-mbox align-self-center mr-3 bg-primary" style="width:120px;height:60px;position:relative;">\
+                <div class="train-img" style="background-image: url(\'./trains_img/'+e.img+'\')"></div>\
+              </div>'+
               '<div class="message-body media-body">'+
-                '<div class="mt-0 mb-0 message-header"><b>'+t.name+'</b></div>'+
+                '<div class="mt-0 mb-0 message-header"><b>'+e.name+'</b></div>'+
                 '<div class="message-content" style="max-width: 210px;font-size:small; width:100%;">\
-                  <i>DCC: '+t.dcc+'</i>\
-                  <i style="float:right">Length: '+t.length+' mm</i>\
+                  <i>DCC: '+e.dcc+'</i>\
+                  <i style="float:right">Length: '+e.length+' mm</i>\
                 </div>'+
                 '<button name="train_id" class="modal-form btn btn-toggle btn-xs btn-outline-primary m-1"\
                   value="'+i+'" style="display: block;">Select</button>'+
               '</div></li>';
           $('.modal-body .cont ul', ref).append(text);
-          // $('.modal-body .cont ul', ref).append("<button name='train_id' class='modal-form btn btn-toggle btn-outline-primary m-1' value='"+i+"' style='display: block;'>"+t.name+'</button><br/>PIZZA<br/>');
+          // $('.modal-body .cont ul', ref).append("<button name='train_id' class='modal-form btn btn-toggle btn-outline-primary m-1' value='"+i+"' style='display: block;'>"+e.name+'</button><br/>PIZZA<br/>');
         }
       },
       title: "Choose a engine",
@@ -242,7 +244,7 @@ var Modals = {
       buttons: {
         success: {visible: false, content: "", cb: undefined, wait: false},
         warning: {visible: true, content: "Edit", cb: function(){Modals.hide(); Modals.open('engines.edit', {id: Modals.data.train_id})}, wait:true},
-        danger: {visible: true, content: "Remove", cb: undefined, wait: false},
+        danger: {visible: true, content: "Remove", cb: function(){websocket.edit_train({}, Modals.data.train_id, true)}, wait: false},
       }
     },
     "engines.edit":{
@@ -260,7 +262,6 @@ var Modals = {
         Modals.setups["engines.edit"].speedsteps = [];
 
         //Init catagories buttons
-
         var keys = Object.keys(Train.cat);
         var enter = false;
         for(var i = 0; i < keys.length; i++){
@@ -278,10 +279,54 @@ var Modals = {
 
           Modals.setups["engines.edit"].speedsteps = Train.engines[parseInt(data.id)].steps;
 
-          // TODO select speedstep and type buttons
+          $('button[name=speedstep][value='+Train.engines[parseInt(data.id)].speedstep+']').removeClass("btn-outline-primary").addClass("btn-primary");
+          $('button[name=type][value='+Train.engines[parseInt(data.id)].type+']').removeClass("btn-outline-primary").addClass("btn-primary");
         }
 
-        $('input[type=file]', ref).on("update", function(){});
+        $('input[type=file]', ref).on("change", function(evt){
+          var input = $(evt.currentTarget);
+          var type = input.attr("name");
+          var file = input.get(0).files[0];
+          var extention = file.name.split(".")[file.name.split(".").length-1];
+
+          //Get all data and put in a form
+          var formdata = new FormData();
+          formdata.append("file1", file);
+          if(extention != "jpg" && extention != "jpeg" && extention != "png"){
+              alert("Select a png or jpeg/jpg file");
+              input.val("");
+              return;
+          }
+
+          //Rename to temporary name
+          if (type == "icon"){
+            formdata.append("name", "tmp_icon");
+            $('#modal .train-icon').css("background-image", ('url("./img/loading.svg")'));
+          }
+          else{
+            formdata.append("name", "tmp_img");
+            $('#modal .train-img').css("background-image", ('url("./img/loading.svg")'));
+          }
+
+          function success(){
+            var time = (new Date).getTime(); //Prevent caching
+            if (type == "icon"){
+              $('#modal .train-icon').css("background-image", ('url(./tmp_icon.'+extention+'?q='+time+')'));
+            }
+            else{
+              $('#modal .train-img').css("background-image", ('url(./tmp_img.'+extention+'?q='+time+')'));
+            }
+          }
+
+          //Create ajax request
+          var ajax = new XMLHttpRequest();
+          ajax.addEventListener("load", function(){
+            setTimeout(success, 1000);
+          }, false);
+          ajax.addEventListener("error", function(){alert("error");console.warn(this.responseText);}, false);
+          ajax.open("POST", "./img_upload.php");
+          ajax.send(formdata);
+        });
 
         var ctx = document.getElementById('engine_Speedsteps').getContext('2d');
         Modals.setups["engines.edit"].chart = new Chart(ctx, {
@@ -345,13 +390,13 @@ var Modals = {
             }
           }
           else{
-            var i = 0;
+            var i = -1;
             for(i; i < list.length; i++){
               if(list[i].step == step){
                 break;
               }
             }
-            if(i > 0){
+            if(i >= 0){
               list.splice(i, 1);
             }
           }
@@ -391,6 +436,7 @@ var Modals = {
           for(var i = 0; i < data.data.length; i++){
             $('#modal .modal-body input[name='+data.data[i]+']').addClass("is-invalid");
             $('#modal .modal-body button[name='+data.data[i]+']').addClass("btn-outline-danger").addClass("isinvalid").removeClass("btn-outline-primary");
+            $('#modal .modal-body button[name='+data.data[i]+'-btn]').addClass("btn-danger").addClass("isinvalid").removeClass("btn-primary");
           }
         }
       },
@@ -399,8 +445,20 @@ var Modals = {
       },
       title: "Engine",
       content: '<div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
-                  <div class="col-6"><input class="modal-form" name="icon" type="file" style="font-size: 0.7rem"></div>\
-                  <div class="col-6"><input class="modal-form" name="image" type="file" style="font-size: 0.7rem"></div>\
+                  <div class="col-6">\
+                    <div class="bg-light" style="width: 100%; padding-top: 50%; position: relative;">\
+                      <div class="train-icon" style="background-image: url(\'./trains_img/200_ice3_im.jpg\');"></div>\
+                    </div>\
+                    <input class="modal-form" name="icon" type="file" style="display: none;">\
+                    <button name="icon-btn" onclick="$(\'#modal .modal-body input[type=file][name=icon]\').click();" class="btn mt-2 btn-sm btn-primary" style="margin:auto;display:block;">Browse icon</button>\
+                  </div>\
+                  <div class="col-6">\
+                    <div class="bg-light" style="width: 100%; padding-top: 50%; position: relative;">\
+                      <div class="train-img" style="background-image: url(\'./trains_img/200_ice3_im.jpg\');"></div>\
+                    </div>\
+                    <input class="modal-form" name="image" type="file" style="display: none;">\
+                    <button name="image-btn" onclick="$(\'#modal .modal-body input[type=file][name=image]\').click();" class="btn mt-2 btn-sm btn-primary" style="margin:auto;display:block;">Browse image</button>\
+                  </div>\
                 </div>\
                 <div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
                   <div class="col-4 control-label"><span style="line-height: 38px;vertical-align:middle">Name</span></div>\

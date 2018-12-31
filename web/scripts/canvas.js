@@ -193,7 +193,7 @@ var Canvas = {
 	    	(s == 0)?this.c.strokeStyle = "#aaa":this.c.strokeStyle = "#ddd";
 	    }
 	    else if(b == 5){ // RESERVED
-	    	(s == 0)?this.c.strokeStyle = "#ccc":this.c.strokeStyle = "#eee";
+	    	(s == 0)?this.c.strokeStyle = "#aaf":this.c.strokeStyle = "#ddf";
 	    }
 	    else if(b == 6){ // RESERVED_SWICTH
 	    	(s == 0)?this.c.strokeStyle = "#aaa":this.c.strokeStyle = "#fcc";

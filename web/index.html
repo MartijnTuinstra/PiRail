@@ -194,8 +194,10 @@ header('Pragma: no-cache');
 		.train-box > div.row {height: calc(100% - 1em); margin: 0}
 		.train-box > div.row > div {padding: 0}
 
-		.train-box .train-img-container {width: 100%; padding-top: 50%; position: relative;}
-		.train-box .train-img {position: absolute; top:0;left:0;right:0;bottom:0;overflow: hidden;background-size: cover;background-repeat: no-repeat;background-position: 50% 50%;}
+		.train-img-container, .train-icon-container {width: 100%; padding-top: 50%; position: relative;}
+		.train-img, .train-icon {position: absolute; top:0;left:0;right:0;bottom:0;overflow: hidden;background-repeat: no-repeat;background-position: 50% 50%;}
+		.train-img {background-size: cover}
+		.train-icon {background-size: 100%}
 
 		.train-box .train-info-box {padding: 0.5em;}
 		.train-box .route > button {float: right;}
@@ -249,8 +251,7 @@ header('Pragma: no-cache');
 						<div class="row">
 							<div class="col-8">
 								<div class="train-img-container bg-light">
-									<div class="train-img" style="background-image: url('./trains_img/200_ice3_im.jpg');">
-									</div>
+									<div class="train-img" style="background-image: url('./trains_img/200_ice3_im.jpg');"></div>
 								</div>
 								<div class="train-info-box">
 									<div class="description">ICE DB</div>

@@ -220,7 +220,6 @@ Block * _Next(Block * B, int flags, int level){
   int dir = flags & 0x0F;
   // dir: 0 next, 1 prev
   if(!B){
-    loggerf(ERROR, "Empty block");
     return 0;
   }
 
@@ -461,7 +460,7 @@ Block * Next_Switch_Block(Switch * S, char type, int flags, int level){
     next = S->app;
   }
   else{
-    if(S->state == 0){
+    if((S->state & 0x7F) == 0){
       next = S->str;
     }
     else{
@@ -538,10 +537,10 @@ Block * Next_MSSwitch_Block(MSSwitch * S, char type, int flags, int level){
   }
 
   if(type == RAIL_LINK_M){
-    next = S->sideB[S->state];
+    next = S->sideB[S->state & 0x7F];
   }
   else{
-    next = S->sideA[S->state];
+    next = S->sideA[S->state & 0x7F];
   }
 
   if(!next.p){
@@ -923,6 +922,58 @@ struct rail_link Prev_link(Block * B){
   loggerf(ERROR, "FIX Prev_link");
 }
 
+void Reserve_To_Next_Switch(Block * B){
+  Block * Next_Block = B->Alg.BN->B[0];
+
+  while(1){
+    if(!Next_Block){
+      break;
+    }
+    else if(Next_Block->type == SPECIAL){
+      putAlgorQueue(Next_Block, 1);
+      break;
+    }
+
+    Next_Block->state = RESERVED;
+    Next_Block->changed |= State_Changed;
+
+    Next_Block = Next_Block->Alg.BN->B[0];
+  }
+}
+
+void Block_Reverse(Block * B){
+  B->dir ^= 0b100;
+
+  Algor_Block * tmp = B->Alg.BN;
+  B->Alg.BN = B->Alg.BP;
+  B->Alg.BP = tmp;
+
+  tmp = B->Alg.BNN;
+  B->Alg.BNN = B->Alg.BPP;
+  B->Alg.BPP = tmp;
+
+  tmp = B->Alg.BNNN;
+  B->Alg.BNNN = B->Alg.BPPP;
+  B->Alg.BPPP = tmp;
+}
+
 int Block_Reverse_To_Next_Switch(Block * B){
+  Block * Next_Block = B->Alg.BN->B[0];
+
+  while(1){
+    if(!Next_Block){
+      break;
+    }
+    else if(Next_Block->type == SPECIAL){
+      putAlgorQueue(Next_Block, 1);
+      break;
+    }
+
+    Block_Reverse(Next_Block);
+    Next_Block->state = RESERVED;
+    Next_Block->changed |= State_Changed;
+
+    Next_Block = Next_Block->Alg.BN->B[0];
+  }
   return 0;
 }

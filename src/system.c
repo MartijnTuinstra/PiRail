@@ -88,13 +88,3 @@ void move_file(char * src, char * dest){
   fclose(source);
   fclose(target);
 }
-
-void mutex_lock(pthread_mutex_t * m, char * mutex_name){
-  loggerf(TRACE, "Lock mutex %s", mutex_name);
-  pthread_mutex_lock(m);
-}
-
-void mutex_unlock(pthread_mutex_t * m, char * mutex_name){
-  loggerf(TRACE, "UNLock mutex %s", mutex_name);
-  pthread_mutex_unlock(m);
-}

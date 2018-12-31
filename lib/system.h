@@ -61,8 +61,11 @@
 
   void move_file(char * src, char * dest);
 
-  void mutex_lock(pthread_mutex_t * m, char * mutex_name);
-  void mutex_unlock(pthread_mutex_t * m, char * mutex_name);
+  #define mutex_lock(mutex, name) loggerf(TRACE, "  Lock mutex %s", name);\
+                                  pthread_mutex_lock(mutex);
+  #define mutex_unlock(mutex, name) loggerf(TRACE, "unLock mutex %s", name);\
+                                    pthread_mutex_unlock(mutex);
+
 
   extern struct systemState * _SYS; 
 
@@ -70,6 +73,8 @@
     #define FALSE 0
     #define TRUE  1
   #endif
+
+  #define NO_LOCK 0x80
 
   #define TRACK_SCALE 160
 

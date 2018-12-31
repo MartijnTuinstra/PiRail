@@ -287,9 +287,15 @@ void new_websocket_client(int fd){
       websocket_clients[i].state = 1;
 
       pthread_create(&websocket_clients[i].thread, NULL, websocket_client_connect, (void *) &websocket_clients[i]);
-      break;
+      return;
     }
   }
+
+  // Send failed code
+  char response[100] = "HTTP/1.1 400 OK\r\n\r\n";
+  write(fd, response, strlen(response));
+
+  close(fd);
 }
 
 void * websocket_server(){

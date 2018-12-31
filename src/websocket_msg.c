@@ -242,6 +242,9 @@ void WS_EnginesLib(int client_fd){
     data[len++] = engines[i]->length & 0xFF;
     data[len++] = engines[i]->length >> 8;
     data[len++] = engines[i]->type;
+
+    data[len++] = engines[i]->speed_step_type & 0x3;
+
     data[len++] = engines[i]->steps_len;
     data[len++] = strlen(engines[i]->name);
     data[len++] = strlen(engines[i]->img_path);

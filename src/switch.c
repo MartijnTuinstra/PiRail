@@ -167,7 +167,7 @@ void throw_switch(Switch * S, uint8_t state){
 
   Units[S->module]->switch_state_changed |= 1;
 
-  process(S->Detection, 3);
+  process(S->Detection, 3 | NO_LOCK);
 
   Algor_Set_Changed(&S->Detection->Alg);
   putList_AlgorQueue(S->Detection->Alg, 0);
@@ -226,7 +226,7 @@ int set_switch(Switch * S, uint8_t state){
     }
   }
 
-  loggerf(INFO, "Throw Switch %i:%i\n");
+  loggerf(INFO, "Throw Switch %i:%i\n", S->module, S->id);
   COM_update_switch(S->module);
   return 1;
 }

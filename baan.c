@@ -34,7 +34,7 @@ int main(){
   init_allocs();
 
   init_logger("log.txt");
-  set_level(TRACE);
+  set_level(INFO);
 
   if (signal(SIGINT, sigint_func) == SIG_ERR){
     logger("Cannot catch SIGINT", CRITICAL);
@@ -51,7 +51,8 @@ int main(){
 
   websocket_server();
 
-  close(_SYS->_COM_fd);
+  UART_stop();
+  clear_Modules();
 
   free_trains();
 

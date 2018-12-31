@@ -35,8 +35,8 @@ void *TRAIN_SIMA(){
   while(_SYS->LC_State != _SYS_Module_Run){
     usleep(10000);
   }
-  Block *B = Units[20]->B[8];
-  Block *N = Units[20]->B[8];
+  Block *B = Units[23]->B[2];
+  Block *N = Units[23]->B[2];
   Block *N2 = 0;
 
   B->state = BLOCKED;
@@ -52,12 +52,10 @@ void *TRAIN_SIMA(){
 
   while(_SYS->SimA_State & _SYS_Module_Run){
 
-    N = Next(B, NEXT, 1);
+    N = B->Alg.BN->B[0];
     if(!N){
       loggerf(WARNING, "Sim A reached end of the line");
-      while(1){
-        usleep(100000);
-      }
+      usleep(1000000);
     }
     loggerf(INFO, "Sim A step %i:%i", N->module, N->id);
     change_Block(N, BLOCKED);
@@ -65,7 +63,7 @@ void *TRAIN_SIMA(){
     // IF len(N) < len(TRAIN)
     if(N->length < TRAIN_A_LEN){
       usleep((N->length/TRAIN_A_SPEED) * OneSec);
-      N2 = Next(B, NEXT, 2);
+      N2 = N->Alg.BN->B[0];
       if(!N2){
         loggerf(WARNING, "Sim A reached end of the line");
         while(1){

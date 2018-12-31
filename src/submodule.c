@@ -56,6 +56,11 @@ void SimA_start(){
   if(_SYS->LC_State == _SYS_Module_Stop){
     Algor_start();
   }
+
+  while(_SYS->LC_State != _SYS_Module_Run){
+    usleep(10000);
+  }
+
   _SYS->SimA_State = _SYS_Module_Init;
   pthread_create(&pt_train_simA, NULL, TRAIN_SIMA, NULL);
 }

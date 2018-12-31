@@ -738,10 +738,7 @@ void Algor_special_search_Blocks(struct algor_blocks * Blocks, int flags){
     loggerf(TRACE, "%s", debug_output);
 
     // Put all blocks into Algor blocks
-    int i = 0;
-    int8_t Adir = -1;
-    int8_t Bdir = -1;
-
+    int8_t dir = -1;
 
     //Determine direction for A side and B side
     if(Aside[0] && Bside[0]){
@@ -749,123 +746,95 @@ void Algor_special_search_Blocks(struct algor_blocks * Blocks, int flags){
       if((Aside[0]->dir == Bside[0]->dir || (Aside[0]->dir ^ 0b101) == Bside[0]->dir)){
         // As the block itself
         if(Aside[0]->dir == Blocks->B->dir || Bside[0]->dir == Blocks->B->dir){
-          Adir = (b_dir & 1) ^ 1;
-          Bdir = (b_dir & 1);
+          dir = (b_dir & 1) ^ 1;
         }
         // Or as reversed blocks
         else if((Aside[0]->dir ^ 0b1) == Blocks->B->dir || (Bside[0]->dir ^ 0b1) == Blocks->B->dir){
-          Adir = (b_dir & 1);
-          Bdir = (b_dir & 1) ^ 1;
+          dir = (b_dir & 1);
         }
       }
 
       // If A has the same direction as block
       // If A is reversed to block
       else if(Aside[0]->dir == Blocks->B->dir || (Aside[0]->dir ^ 0b101) == Blocks->B->dir){
-        Adir = (a_dir & 1);
-        Bdir = (a_dir & 1) ^ 1;
+        dir = (a_dir & 1);
       }
 
       // If B has the same direction as block
       // If B is reversed to block
       else if(Bside[0]->dir == Blocks->B->dir || (Bside[0]->dir ^ 0b101) == Blocks->B->dir){
-        Adir = (b_dir & 1) ^ 1;
-        Bdir = (b_dir & 1);
+        dir = (b_dir & 1) ^ 1;
       }
     }
     else if(Bside[0]){
       if(Bside[0]->dir == Blocks->B->dir || (Blocks->B->dir ^ 0b101) == Bside[0]->dir){
-        Adir = (b_dir & 1) ^ 1;
-        Bdir = (b_dir & 1);
+        dir = (b_dir & 1) ^ 1;
       }
     }
     else if(Aside[0]){
       if(Aside[0]->dir == Blocks->B->dir || (Blocks->B->dir ^ 0b101) == Aside[0]->dir){
-        Adir = (a_dir & 1);
-        Bdir = (a_dir & 1) ^ 1;
+        dir = (a_dir & 1);
       }
     }
 
     // Debug stuf
-    if(Adir == -1 || Bdir == -1){
-      if(Aside[0])
-        printf("%i", Aside[0]->dir);
-      else
-        printf("_");
-      printf("<%i>", Blocks->B->dir);
-      if(Bside[0])
-        printf("%i\n", Bside[0]->dir);
-      else
-        printf("_\n");
-
-      printf("%i <> %i\n", Adir, Bdir);
+    if(dir == -1){
       loggerf(ERROR, "No direction found");
       return;
     }
 
+    Algor_Block * Aside_P = 0;
+    Algor_Block * Bside_P = 0;
+
+    uint8_t a = 0, b = 0;
+
     for(int p = 0; p < 3; p++){
-      if(!Bside[0])
-        break;
-      Algor_Block * C_Blocks_P = 0;
-      
-      if(Bdir == NEXT){
-        if(p == 0)
-          C_Blocks_P = Blocks->BN;
-        else if(p == 1)
-          C_Blocks_P = Blocks->BNN;
-        else if(p == 2)
-          C_Blocks_P = Blocks->BNNN;
+      if(dir == PREV){
+        if(p == 0){
+          Bside_P = Blocks->BN;
+          Aside_P = Blocks->BP;
+        }
+        else if(p == 1){
+          Bside_P = Blocks->BNN;
+          Aside_P = Blocks->BPP;
+        }
+        else if(p == 2){
+          Bside_P = Blocks->BNNN;
+          Aside_P = Blocks->BPPP;
+        }
       }
-      else if(Bdir == PREV){
-        if(p == 0)
-          C_Blocks_P = Blocks->BP;
-        else if(p == 1)
-          C_Blocks_P = Blocks->BPP;
-        else if(p == 2)
-          C_Blocks_P = Blocks->BPPP;
+      else if(dir == NEXT){
+        if(p == 0){
+          Bside_P = Blocks->BP;
+          Aside_P = Blocks->BN;
+        }
+        else if(p == 1){
+          Bside_P = Blocks->BPP;
+          Aside_P = Blocks->BNN;
+        }
+        else if(p == 2){
+          Bside_P = Blocks->BPPP;
+          Aside_P = Blocks->BNNN;
+        }
       }
 
       do{
-        if(!Bside[i] || !C_Blocks_P)
+        if(!Bside[b] || !Bside_P)
           break;
-        C_Blocks_P->B[C_Blocks_P->blocks] = Bside[i++];
-        C_Blocks_P->length += C_Blocks_P->B[C_Blocks_P->blocks]->length;
-        C_Blocks_P->blocks++;
+        Bside_P->B[Bside_P->blocks] = Bside[b++];
+        Bside_P->length += Bside_P->B[Bside_P->blocks]->length;
+        Bside_P->blocks++;
       }
-      while(C_Blocks_P->length < Block_Minimum_Size && C_Blocks_P->blocks < 5);
-    }
-
-    i = 0;
-    for(int n = 0; n < 3; n++){
-      if(!Aside[0])
-        break;
-      Algor_Block * C_Blocks_P = 0;
-
-      if(Adir == PREV){
-        if(n == 0)
-          C_Blocks_P = Blocks->BP;
-        else if(n == 1)
-          C_Blocks_P = Blocks->BPP;
-        else if(n == 2)
-          C_Blocks_P = Blocks->BPPP;
-      }
-      else if(Adir == NEXT){
-        if(n == 0)
-          C_Blocks_P = Blocks->BN;
-        else if(n == 1)
-          C_Blocks_P = Blocks->BNN;
-        else if(n == 2)
-          C_Blocks_P = Blocks->BNNN;
-      }
+      while(Bside_P->length < Block_Minimum_Size && Bside_P->blocks < 5);
       
       do{
-        if(!Aside[i] || !C_Blocks_P)
+        if(!Aside[a] || !Aside_P)
           break;
-        C_Blocks_P->B[C_Blocks_P->blocks] = Aside[i++];
-        C_Blocks_P->length += C_Blocks_P->B[C_Blocks_P->blocks]->length;
-        C_Blocks_P->blocks++;
+        Aside_P->B[Aside_P->blocks] = Aside[a++];
+        Aside_P->length += Aside_P->B[Aside_P->blocks]->length;
+        Aside_P->blocks++;
       }
-      while(C_Blocks_P->length < Block_Minimum_Size && C_Blocks_P->blocks < 5);
+      while(Aside_P->length < Block_Minimum_Size && Aside_P->blocks < 5);
     }
   }
   else{

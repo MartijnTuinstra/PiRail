@@ -291,6 +291,12 @@ void LoadModuleFromConfig(int M){
   for(int i = 0; i < config->header.MSSwitches; i++){
     config->MSSwitches[i]  = read_s_ms_switch_conf(buf_ptr);
   }
+  
+  for(int i = 0; i < config->header.Signals; i++){
+    struct signal_conf sig = read_s_signal_conf(buf_ptr);
+    
+    create_signal_from_conf(M, sig);
+  }
 
   for(int i = 0; i < config->header.Stations; i++){
     struct station_conf st = read_s_station_conf(buf_ptr);

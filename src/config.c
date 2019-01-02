@@ -33,6 +33,13 @@ int calc_write_module_size(struct module_config * config){
   }
 
 
+  //Signals
+  for(int i = 0; i <  config->header.Signals; i++){
+    size += sizeof(struct s_signal_conf) + 1;
+    size += config->Signals[i].output_len * sizeof(struct s_IO_port_conf) + 1;
+    size += config->Signals[i].output_len * sizeof(struct s_IO_signal_event_conf) + 1;
+  }
+
   //Stations
   for(int i = 0; i <  config->header.Stations; i++){
     size += sizeof(struct s_station_conf) + 1;
@@ -173,6 +180,19 @@ void write_module_from_conf(struct module_config * config, char * filename){
     }
 
     p += 1;
+  }
+
+  //Copy Signals
+  for(int i = 0; i < config->header.Signals; i++){
+    memcpy(p, &config->Signals[i], sizeof(struct s_signal_conf));
+
+    p += sizeof(struct s_signal_conf) + 1;
+
+    memcpy(p, config->Signals[i].output, config->Signals[i].output_len * sizeof(struct s_IO_port_conf));
+    p += config->Signals[i].output_len * sizeof(struct s_IO_port_conf) + 1;
+
+    memcpy(p, config->Signals[i].stating, config->Signals[i].output_len * sizeof(struct s_IO_signal_event_conf));
+    p += config->Signals[i].output_len * sizeof(struct s_IO_signal_event_conf) + 1;
   }
 
   //Copy Stations
@@ -409,6 +429,33 @@ struct station_conf read_s_station_conf(uint8_t ** p){
 
   memcpy(s.name, *p, s.name_len);
   *p += s.name_len;
+
+  check_Spacing(p);
+
+  return s;
+}
+
+struct signal_conf read_s_signal_conf(uint8_t ** p){
+  struct signal_conf s;
+
+  memcpy(&s, *p, sizeof(struct s_signal_conf));
+
+  *p += sizeof(struct s_signal_conf);
+
+  s.output = _calloc(s.output_len, struct s_IO_port_conf);
+  s.stating = _calloc(s.output_len, struct s_IO_signal_event_conf);
+
+  if(!check_Spacing(p))
+    return s;
+
+  memcpy(s.output, *p, s.output_len * sizeof(struct s_IO_port_conf));
+  *p += s.output_len * sizeof(struct s_IO_port_conf);
+
+  if(!check_Spacing(p))
+    return s;
+
+  memcpy(s.stating, *p, s.output_len * sizeof(struct s_IO_signal_event_conf));
+  *p += s.output_len * sizeof(struct s_IO_signal_event_conf);
 
   check_Spacing(p);
 

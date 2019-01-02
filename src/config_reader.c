@@ -99,6 +99,20 @@ void print_MSSwitch(struct ms_switch_conf Switch){
   printf( "%s\n", debug);
 }
 
+void print_Signals(struct signal_conf signal){
+  char debug[400];
+
+  sprintf(debug, "%i\t%i\t%i", signal.id, signal.blockId, signal.output_len);
+  for(int i = 0;i < signal.output_len; i++){
+    sprintf(debug, "%s\n\t\t\t%02i:%02i - ", debug, signal.output[i].Node, signal.output[i].Adr);
+    for(int j = 0; j < 8; j++){
+      sprintf(debug, "%s%i ", debug, signal.stating[i].event[j]);
+    }
+  }
+
+  printf("%s\n", debug);
+}
+
 void print_Stations(struct station_conf stations){
   char debug[200];
 
@@ -210,6 +224,12 @@ void print_module_config(struct module_config * config){
     print_MSSwitch(config->MSSwitches[i]);
   }
 
+  printf( "Signals\n");
+  printf( "id\tBlockID\tOutput Length\t\tOutput states\n");
+  for(int i = 0; i < config->header.Signals; i++){
+    print_Signals(config->Signals[i]);
+  }
+
   printf( "Station\n");
   printf( "type\tName\t\tblocks\n");
   for(int i = 0; i < config->header.Stations; i++){
@@ -299,6 +319,12 @@ int read_module_config(struct module_config * config, FILE * fp){
 
   for(int i = 0; i < config->header.MSSwitches; i++){
     config->MSSwitches[i]  = read_s_ms_switch_conf(buf_ptr);
+  }
+
+  config->Signals = _calloc(config->header.Signals, struct signal_conf);
+
+  for(int i = 0; i < config->header.Signals; i++){
+    config->Signals[i]  = read_s_signal_conf(buf_ptr);
   }
 
   config->Stations = _calloc(config->header.Stations, struct station_conf);
@@ -499,7 +525,7 @@ void modify_Block(struct module_config * config, char cmd){
 
     printf("Block Link Next (%2i:%2i:%2x)  | ", config->Blocks[id].next.module, config->Blocks[id].next.id, config->Blocks[id].next.type);
     fgets(_cmd, 20, stdin);
-    if(sscanf(_cmd, "%i:%i:%i", &tmp, &tmp1, &tmp2) > 2){
+    if(sscanf(_cmd, "%i%*c%i%*c%i", &tmp, &tmp1, &tmp2) > 2){
       config->Blocks[id].next.module = tmp;
       config->Blocks[id].next.id = tmp1;
       config->Blocks[id].next.type = tmp2;
@@ -507,7 +533,7 @@ void modify_Block(struct module_config * config, char cmd){
 
     printf("Block Link Prev (%2i:%2i:%2x)  | ", config->Blocks[id].prev.module, config->Blocks[id].prev.id, config->Blocks[id].prev.type);
     fgets(_cmd, 20, stdin);
-    if(sscanf(_cmd, "%i:%i:%i", &tmp, &tmp1, &tmp2) > 2){
+    if(sscanf(_cmd, "%i%*c%i%*c%i", &tmp, &tmp1, &tmp2) > 2){
       config->Blocks[id].prev.module = tmp;
       config->Blocks[id].prev.id = tmp1;
       config->Blocks[id].prev.type = tmp2;
@@ -556,7 +582,7 @@ void modify_Block(struct module_config * config, char cmd){
 
     printf("Block IO In     (%2i:%2i)      | ", config->Blocks[id].IO_In.Node, config->Blocks[id].IO_In.Adr);
     fgets(_cmd, 20, stdin);
-    if(sscanf(_cmd, "%i:%i", &tmp, &tmp1) > 0){
+    if(sscanf(_cmd, "%i%*c%i", &tmp, &tmp1) > 0){
       config->Blocks[id].IO_In.Node = tmp;
       config->Blocks[id].IO_In.Adr = tmp1;
     }
@@ -564,7 +590,7 @@ void modify_Block(struct module_config * config, char cmd){
     if(config->Blocks[id].fl & 0x8){
       printf("Block IO Out    (%2i:%2i)       | ", config->Blocks[id].IO_Out.Node, config->Blocks[id].IO_Out.Adr);
       fgets(_cmd, 20, stdin);
-      if(sscanf(_cmd, "%i:%i", &tmp, &tmp1) > 0){
+      if(sscanf(_cmd, "%i%*c%i", &tmp, &tmp1) > 0){
         config->Blocks[id].IO_Out.Node = tmp;
         config->Blocks[id].IO_Out.Adr = tmp1;
       }
@@ -642,7 +668,7 @@ void modify_Switch(struct module_config * config, char cmd){
 
     printf("Switch Link App (%2i:%2i:%2x)  | ", config->Switches[id].App.module, config->Switches[id].App.id, config->Switches[id].App.type);
     fgets(_cmd, 20, stdin);
-    if(sscanf(_cmd, "%i:%i:%i", &tmp, &tmp1, &tmp2) > 2){
+    if(sscanf(_cmd, "%i%*c%i%*c%i", &tmp, &tmp1, &tmp2) > 2){
       config->Switches[id].App.module = tmp;
       config->Switches[id].App.id = tmp1;
       config->Switches[id].App.type = tmp2;
@@ -650,7 +676,7 @@ void modify_Switch(struct module_config * config, char cmd){
 
     printf("Switch Link Str (%2i:%2i:%2x)  | ", config->Switches[id].Str.module, config->Switches[id].Str.id, config->Switches[id].Str.type);
     fgets(_cmd, 20, stdin);
-    if(sscanf(_cmd, "%i:%i:%i", &tmp, &tmp1, &tmp2) > 2){
+    if(sscanf(_cmd, "%i%*c%i%*c%i", &tmp, &tmp1, &tmp2) > 2){
       config->Switches[id].Str.module = tmp;
       config->Switches[id].Str.id = tmp1;
       config->Switches[id].Str.type = tmp2;
@@ -658,7 +684,7 @@ void modify_Switch(struct module_config * config, char cmd){
 
     printf("Switch Link Div (%2i:%2i:%2x)  | ", config->Switches[id].Div.module, config->Switches[id].Div.id, config->Switches[id].Div.type);
     fgets(_cmd, 20, stdin);
-    if(sscanf(_cmd, "%i:%i:%i", &tmp, &tmp1, &tmp2) > 2){
+    if(sscanf(_cmd, "%i%*c%i%*c%i", &tmp, &tmp1, &tmp2) > 2){
       config->Switches[id].Div.module = tmp;
       config->Switches[id].Div.id = tmp1;
       config->Switches[id].Div.type = tmp2;
@@ -675,9 +701,9 @@ void modify_Switch(struct module_config * config, char cmd){
       config->Switches[id].IO = (tmp & 0xf0) + (config->Switches[id].IO & 0x0f);;
 
     for(int i = 0; i < (config->Switches[id].IO & 0x0f); i++){
-      printf("Switch IO%2i  (%2i:%2i)        | ", i, config->Blocks[id].IO_In.Node, config->Blocks[id].IO_In.Adr);
+      printf("Switch IO%2i  (%2i:%2i)        | ", i, config->Switches[id].IO_Ports[i].Node, config->Switches[id].IO_Ports[i].Adr);
       fgets(_cmd, 20, stdin);
-      if(sscanf(_cmd, "%i:%i", &tmp, &tmp1) > 0){
+      if(sscanf(_cmd, "%i%*c%i", &tmp, &tmp1) > 0){
         config->Switches[id].IO_Ports[i].Node = tmp;
         config->Switches[id].IO_Ports[i].Adr = tmp1;
       }
@@ -788,7 +814,7 @@ void modify_MSSwitch(struct module_config * config, char cmd){
                 config->MSSwitches[id].states[i].sideA.type);
 
       fgets(_cmd, 20, stdin);
-      if(sscanf(_cmd, "%i:%i:%i", &tmp, &tmp1, &tmp2) > 2){
+      if(sscanf(_cmd, "%i%*c%i%*c%i", &tmp, &tmp1, &tmp2) > 2){
         config->MSSwitches[id].states[i].sideA.module = tmp;
         config->MSSwitches[id].states[i].sideA.id = tmp1;
         config->MSSwitches[id].states[i].sideA.type = tmp2;
@@ -800,7 +826,7 @@ void modify_MSSwitch(struct module_config * config, char cmd){
                 config->MSSwitches[id].states[i].sideB.type);
 
       fgets(_cmd, 20, stdin);
-      if(sscanf(_cmd, "%i:%i:%i", &tmp, &tmp1, &tmp2) > 2){
+      if(sscanf(_cmd, "%i%*c%i%*c%i", &tmp, &tmp1, &tmp2) > 2){
         config->MSSwitches[id].states[i].sideB.module = tmp;
         config->MSSwitches[id].states[i].sideB.id = tmp1;
         config->MSSwitches[id].states[i].sideB.type = tmp2;
@@ -830,13 +856,131 @@ void modify_MSSwitch(struct module_config * config, char cmd){
                 config->MSSwitches[id].IO_Ports[i].Adr);
 
       fgets(_cmd, 20, stdin);
-      if(sscanf(_cmd, "%i:%i:%i", &tmp, &tmp1, &tmp2) > 1){
+      if(sscanf(_cmd, "%i%*c%i%*c%i", &tmp, &tmp1, &tmp2) > 1){
         config->MSSwitches[id].IO_Ports[i].Node = tmp;
         config->MSSwitches[id].IO_Ports[i].Adr = tmp1;
       }
     }
     printf("New:      \t");
     print_MSSwitch(config->MSSwitches[id]);
+    // struct s_block_conf tmp;
+    // int dir, oneway, Out_en;
+    // scanf("%i\t%i\t%2i:%2i:%c\t\t%2i:%2i:%c\t\t%i\t%i\t%i\t%i\t%i\t%i:%i\t%i:%i",
+    //   &tmp.id, &tmp.type,
+    //   &tmp.next.module, &tmp.next.id, &tmp.next.type,
+    //   &tmp.prev.module, &tmp.prev.id, &tmp.prev.type,
+    //   &tmp.speed,
+    //   &dir,
+    //   &tmp.length,
+    //   &oneway,
+    //   &Out_en,
+    //   &tmp.IO_In.Node, &tmp.IO_In.Adr,
+    //   &tmp.IO_Out.Node, &tmp.IO_Out.Adr);
+
+  }
+}
+
+void modify_Signal(struct module_config * config, char cmd){
+  int id;
+  char _cmd[20];
+  int tmp, tmp1;//, tmp2;
+  if(cmd == 'e'){
+    printf("Signal ID: ");
+    fgets(_cmd, 20, stdin);
+    fgets(_cmd, 20, stdin);
+    if(sscanf(_cmd, "%i", &id) < 1)
+      return;
+    printf("Editing Signal %i\n", id);
+    // print_Block(config->Blocks[id]);
+  }
+  else if(cmd == 'a'){
+    printf("Signal ID: (%i)\n", config->header.Signals);
+    fgets(_cmd, 20, stdin); // Clear stdin
+
+    if(config->header.Signals == 0){
+      printf("Calloc");
+      config->Signals = _calloc(1, struct signal_conf);
+    }
+    else{
+      printf("Realloc");
+      config->Signals = _realloc(config->Signals, config->header.Signals+1, struct signal_conf);
+    }
+    memset(&config->Signals[config->header.Signals], 0, sizeof(struct signal_conf));
+    id = config->header.Signals++;
+
+    //Set child pointers
+    config->Signals[id].output_len = 1;
+    config->Signals[id].output = _calloc(1, struct s_IO_port_conf);
+    config->Signals[id].stating = _calloc(1, struct s_IO_signal_event_conf);
+  }
+  else if(cmd == 'r'){
+    printf("Remove Signal ID: ");
+    fgets(_cmd, 20, stdin);
+    fgets(_cmd, 20, stdin);
+    if(sscanf(_cmd, "%i", &id) < 1)
+      return;
+
+    if(id == (config->header.Signals - 1) && id >= 0){
+      _free(config->Signals[id].output);
+      _free(config->Signals[id].stating);
+
+      memset(&config->Signals[config->header.Signals - 1], 0, sizeof(struct signal_conf));
+      config->Signals = _realloc(config->Signals, --config->header.Signals, struct signal_conf);
+    }
+    else{
+      printf("Only last block can be removed\n");
+    }
+  }
+
+
+  if(cmd == 'e' || cmd == 'a'){
+    printf("Signals Block id (%i)| ", config->Signals[id].blockId);
+    fgets(_cmd, 20, stdin);
+    if(sscanf(_cmd, "%i", &tmp) > 0)
+      config->Signals[id].blockId = tmp;
+    
+    
+    if(config->Signals[id].side == NEXT)
+      printf("Signals Block side (N)| ");
+    else
+      printf("Signals Block side (P)| ");
+    
+    fgets(_cmd, 20, stdin);
+    char tmp_char;
+    if(sscanf(_cmd, "%c", &tmp_char) > 0){
+      printf("Got %i\n", tmp_char);
+      if(tmp_char == 'N')
+        config->Signals[id].side = NEXT;
+      else if(tmp_char == 'P')
+        config->Signals[id].side = PREV;
+    }
+    
+    printf("Signals Outputs (%i) | ", config->Signals[id].output_len);
+    fgets(_cmd, 20, stdin);
+    if(sscanf(_cmd, "%i", &tmp) > 0){
+      config->Signals[id].output = _realloc(config->Signals[id].output, tmp, struct s_IO_port_conf);
+      config->Signals[id].stating = _realloc(config->Signals[id].stating, tmp, struct s_IO_signal_event_conf);
+      config->Signals[id].output_len = tmp;
+    }
+
+    for(int i = 0; i < config->Signals[id].output_len; i++){
+      printf(" - IO-Address: (%02i:%02i) | ", config->Signals[id].output[i].Node, config->Signals[id].output[i].Adr);
+      fgets(_cmd, 20, stdin);
+      if(sscanf(_cmd, "%i%*c%i", &tmp, &tmp1) > 0){
+        config->Signals[id].output[i].Node = tmp;
+        config->Signals[id].output[i].Adr = tmp1;
+      }
+      for(int j = 0; j < 8; j++){
+        printf("   IO-Event %i: (%i)    | ", j, config->Signals[id].stating[i].event[j]);
+        fgets(_cmd, 20, stdin);
+        if(sscanf(_cmd, "%i", &tmp) > 0){
+          config->Signals[id].stating[i].event[j] = tmp;
+        }
+      }
+    }
+
+    printf("New:      \t");
+    print_Signals(config->Signals[id]);
     // struct s_block_conf tmp;
     // int dir, oneway, Out_en;
     // scanf("%i\t%i\t%2i:%2i:%c\t\t%2i:%2i:%c\t\t%i\t%i\t%i\t%i\t%i\t%i:%i\t%i:%i",
@@ -1489,6 +1633,9 @@ int edit_module(){
       else if(strcmp(cmd, "MSSw") == 0){
         modify_MSSwitch(&config, cmd1);
       }
+      else if(strcmp(cmd, "Sig") == 0){
+        modify_Signal(&config, cmd1);
+      }
       else if(strcmp(cmd, "St") == 0){
         modify_Station(&config, cmd1);
       }
@@ -1517,6 +1664,12 @@ int edit_module(){
     _free(config.MSSwitches[i].IO_Ports);
   }
 
+  //free signals
+  for(int i = 0; i < config.header.Signals; i++){
+    _free(config.Signals[i].output);
+    _free(config.Signals[i].stating);
+  }
+
   //free station
   for(int i = 0; i < config.header.Stations; i++){
     _free(config.Stations[i].name);
@@ -1527,6 +1680,7 @@ int edit_module(){
   _free(config.Blocks);
   _free(config.Switches);
   _free(config.MSSwitches);
+  _free(config.Signals);
   _free(config.Stations);
 
   exit_logger();
@@ -1534,6 +1688,8 @@ int edit_module(){
   printf("Done\n");
   return 1;
 }
+
+struct train_config * global_config;
 
 int edit_rolling_stock(){
   printf("Reading file");
@@ -1552,6 +1708,7 @@ int edit_rolling_stock(){
     fclose(fp);
   }
   print_train_config(&config);
+  global_config = &config;
 
   char cmd[300];
 

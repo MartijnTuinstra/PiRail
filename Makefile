@@ -68,6 +68,7 @@ $(SRC)/rail.c: $(LIB)/rail.h $(LIB)/system.h $(LIB)/module.h $(LIB)/switch.h $(L
 $(LIB)/route.h: $(LIB)/rail.h #$(LIB)/switch.h
 
 $(LIB)/signals.h: $(LIB)/rail.h
+$(SRC)/signals.c: $(LIB)/signals.h $(LIB)/system.h $(LIB)/mem.h $(LIB)/config_data.h $(LIB)/module.h $(LIB)/logger.h
 
 $(LIB)/switch.h: $(LIB)/rail.h $(LIB)/train.h
 $(SRC)/switch.c: $(LIB)/switch.h $(LIB)/logger.h

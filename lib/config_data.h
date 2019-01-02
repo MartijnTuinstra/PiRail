@@ -134,6 +134,28 @@ struct station_conf {
 };
 
 
+struct __attribute__((__packed__)) signal_conf {
+  uint16_t side:1;
+  uint16_t id:15;
+  uint16_t blockId;
+  uint8_t output_len;
+
+  struct s_IO_port_conf * output;
+  struct s_IO_signal_event_conf * stating;
+};
+
+struct __attribute__((__packed__)) s_IO_signal_event_conf {
+  uint8_t event[8];
+};
+
+struct __attribute__((__packed__)) s_signal_conf {
+  uint16_t side:1;
+  uint16_t id:15;
+  uint16_t blockId;
+  uint8_t output_len;
+};
+
+
 struct module_config {
   struct s_unit_conf header;
 
@@ -143,6 +165,7 @@ struct module_config {
   struct switch_conf * Switches;
   struct ms_switch_conf * MSSwitches;
   struct station_conf * Stations;
+  struct signal_conf * Signals;
 };
 
 struct __attribute__((__packed__)) s_train_header_conf {

@@ -1,6 +1,8 @@
 #ifndef _INCLUDE_SIGNALS_H
   #define _INCLUDE_SIGNALS_H
 
+  #include "IO.h"
+
   /**///Signal passing speed
   //Flashing Red speed
   #define RED_F_SPEED 20
@@ -11,21 +13,29 @@
 
   #include "rail.h"
 
+  struct _signal_stating {
+    enum IO_event state[8];
+  };
+  
   typedef struct _signal{
     uint16_t id;
     uint8_t module;
     Block * B;
     enum Rail_states state;
-    char io; // 0 = 2-state / 1 = 4-state / 2 = 8-state
 
-    short adr[8];
-    char states[4];
-    char flash[4];
+    uint8_t output_len;
+
+    IO_Port ** output;
+    struct _signal_stating * output_stating;
+
   } Signal;
 
-  void create_signal(Block * B, _Bool side, char length, char * addresses, char * states, char * flash);
 
-  void signal_create_states(char io, enum Rail_states state, char * list, ...);
+  
+  #define create_signal_from_conf(module, data) create_signal(module, data.blockId, data.id, data.side, data.output_len, data.output, data.stating)
+  void create_signal(uint8_t module, uint8_t blockId, uint16_t signalId, _Bool side, char output_len, struct s_IO_port_conf * output, struct s_IO_signal_event_conf * stating);
+  
+  void * clear_Signal(Signal * Sig);
 
   void set_signal(Signal *Si, enum Rail_states state);
 #endif

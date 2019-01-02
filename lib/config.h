@@ -21,16 +21,13 @@ void write_train_from_conf(struct train_config * config, char * filename);
 int check_Spacing(uint8_t ** p);
 
 struct s_node_conf read_s_node_conf(uint8_t ** p);
-
 struct s_unit_conf read_s_unit_conf(uint8_t ** p);
 
 struct s_block_conf read_s_block_conf(uint8_t ** p);
-
 struct switch_conf read_s_switch_conf(uint8_t ** p);
-
 struct ms_switch_conf read_s_ms_switch_conf(uint8_t ** p);
-
 struct station_conf read_s_station_conf(uint8_t ** p);
+struct signal_conf read_s_signal_conf(uint8_t ** p);
 
 struct s_train_header_conf read_s_train_header_conf(uint8_t ** p);
 struct cars_conf read_cars_conf(uint8_t ** p);

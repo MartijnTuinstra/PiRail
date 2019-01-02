@@ -48,6 +48,8 @@ enum IO_event {
   IO_event_PWM4
 };
 
+#define U_IO(a, b, c) Units[a]->Node[b].io[c]
+
 void Add_IO_Node(Unit * U, int Node_nr, int IO);
 
 void Init_IO(Unit * U, Node_adr adr, enum IO_type type);

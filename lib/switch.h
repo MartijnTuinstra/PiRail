@@ -104,8 +104,8 @@
     void ** p;
   };
 
-  void throw_switch(Switch * S, uint8_t state);
-  void throw_msswitch(MSSwitch * S, uint8_t state);
+  void throw_switch(Switch * S, uint8_t state, uint8_t lock);
+  void throw_msswitch(MSSwitch * S, uint8_t state, uint8_t lock);
 
   int set_switch(Switch * S, uint8_t state);
   int set_msswitch(MSSwitch * S, uint8_t state);

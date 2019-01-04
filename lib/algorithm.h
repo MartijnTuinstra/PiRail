@@ -34,6 +34,13 @@
 
   void * Algor_Run();
 
+  #define lock_Algor_process() mutex_lock(&algor_mutex, "Algor_mutex")
+  #define unlock_Algor_process() mutex_unlock(&algor_mutex, "Algor_mutex")
+
+  #define algor_queue_enable(enable) int val; \
+                                sem_getvalue(&AlgorQueueNoEmpty, &val); \
+                                if(val == 0 && enable){sem_post(&AlgorQueueNoEmpty);}
+
   void process(Block * B,int debug);
   void Algor_Set_Changed(struct algor_blocks * blocks);
   void Algor_init_Blocks(struct algor_blocks * AllBlocks, Block * B);

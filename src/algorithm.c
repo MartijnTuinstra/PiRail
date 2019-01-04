@@ -87,7 +87,7 @@ void scan_All(){
   mutex_lock(&mutex_lockA, "Mutex A");
   for(int i = 0;i<unit_len;i++){
     if(Units[i]){
-      for(int j = 0;j<=Units[i]->block_len;j++){
+      for(int j = 0; j < Units[i]->block_len; j++){
         if(U_B(i, j)){
           //printf("%i:%i\n",i,j);
           process(Units[i]->B[j], 2);
@@ -115,11 +115,7 @@ void putAlgorQueue(Block * B, int enableQueue){
   mutex_lock(&AlgorQueueMutex, "AlgorQueueMutex");
   AlgorQueue.B[AlgorQueue.writeIndex++] = B;
 
-  int val;
-  sem_getvalue(&AlgorQueueNoEmpty, &val);
-  if(val == 0 && enableQueue){
-    sem_post(&AlgorQueueNoEmpty);
-  }
+  algor_queue_enable(enableQueue);
 
   if(AlgorQueue.writeIndex == AlgorQueueLength)
     AlgorQueue.writeIndex = 0;
@@ -127,7 +123,7 @@ void putAlgorQueue(Block * B, int enableQueue){
 }
 
 void putList_AlgorQueue(struct algor_blocks AllBlocks, int enable){
-  putAlgorQueue(AllBlocks.B, 1);
+  putAlgorQueue(AllBlocks.B, enable);
 
   Algor_Block * AB;
 
@@ -174,7 +170,7 @@ void processAlgorQueue(){
     process(B, 2);
      if(B->changed & IO_Changed){
       loggerf(TRACE, "ReProcess");
-      process(B, 1);
+      process(B, 0);
     }
     B = getAlgorQueue();
   }
@@ -202,8 +198,8 @@ void * Algor_Run(){
   _SYS->LC_State = _SYS_Module_Run;
   WS_stc_SubmoduleState();
   scan_All();
-  throw_switch(U_Sw(20, 5), 1);
-  throw_switch(U_Sw(20, 6), 1);
+  throw_switch(U_Sw(20, 5), 1, 0);
+  throw_switch(U_Sw(20, 6), 1, 1);
   // throw_switch(U_Sw(20, 2), 1);
   usleep(10000);
 
@@ -250,11 +246,9 @@ void change_block_state(Algor_Block * A, enum Rail_states state){
 
 void Algor_Set_Changed(struct algor_blocks * blocks){
   loggerf(TRACE, "Algor_Set_Changed");
-  printf("Block update required for %02i:%02i:\t", blocks->B->module, blocks->B->id);
   //Scroll through all the pointers of allblocks
   for(int i = 0; i < 7; i++){
     if(i == 3){
-      blocks->B->changed |= Block_Algor_Changed;
       continue;
     }
 
@@ -274,7 +268,6 @@ void Algor_Set_Changed(struct algor_blocks * blocks){
       AB = blocks->BNNN;
 
     for(int j = 0; j < AB->blocks; j++){
-      printf("%02i:%02i\t", AB->B[j]->module, AB->B[j]->id);
       AB->B[j]->changed |= Block_Algor_Changed;
     }
   }
@@ -282,20 +275,22 @@ void Algor_Set_Changed(struct algor_blocks * blocks){
 }
 
 void process(Block * B,int flags){
-  loggerf(TRACE, "process %02i:%02i", B->module, B->id);
+  loggerf(TRACE, "process %02i:%02i, flags %x", B->module, B->id, flags);
 
   int debug = (flags & 1);
   int force = (flags & 2) >> 1;
 
   if((flags & NO_LOCK) == 0){
-    mutex_lock(&algor_mutex, "Algor_mutex");
+    lock_Algor_process();
   }
 
   if((B->changed & (IO_Changed | Block_Algor_Changed)) == 0 && !force){
     if((flags & NO_LOCK) == 0)
-      mutex_unlock(&algor_mutex, "AlgorMutex");
+      unlock_Algor_process();
     return;
   }
+
+  debug = 1;
 
   B->changed &= ~(IO_Changed);
   B->changed |= State_Changed;
@@ -314,13 +309,12 @@ void process(Block * B,int flags){
     Algor_search_Blocks(&B->Alg, debug);
     B->changed &= ~Block_Algor_Changed;
   }
-  else if(B->module == 22){
-    loggerf(INFO, "No search needed");
-  }
 
   Algor_GetBlocked_Blocks(B->Alg);
 
-  Algor_print_block_debug(B->Alg);
+  if(debug){
+    Algor_print_block_debug(B->Alg);
+  }
 
   //Follow the train arround the layout
   Algor_train_following(B->Alg, debug);
@@ -328,7 +322,7 @@ void process(Block * B,int flags){
     printf("Block Train ReProcess\n");
     Algor_clear_Blocks(&B->Alg);
     if((flags & NO_LOCK) == 0)
-      mutex_unlock(&algor_mutex, "AlgorMutex");
+      unlock_Algor_process();
     return;
   }
 
@@ -338,7 +332,7 @@ void process(Block * B,int flags){
     printf("Block Switch ReProcess\n");
     Algor_clear_Blocks(&B->Alg);
     if((flags & NO_LOCK) == 0)
-      mutex_unlock(&algor_mutex, "AlgorMutex");
+      unlock_Algor_process();
     return;
   }
 
@@ -355,7 +349,7 @@ void process(Block * B,int flags){
   //Train Control
 
   if((flags & NO_LOCK) == 0)
-    mutex_unlock(&algor_mutex, "AlgorMutex");
+    unlock_Algor_process();
 }
 
 
@@ -419,25 +413,33 @@ void Algor_print_block_debug(struct algor_blocks AllBlocks){
   Algor_Block BNN  = *AllBlocks.BNN;
   Algor_Block BNNN = *AllBlocks.BNNN;
 
+  int debug = INFO;
+
   char output[200] = "";
 
   if(BPPP.blocks > 0){
     sprintf(output, "%sPPP%i ", output, BPP.blocks);
     if(BPPP.blocked)
-    sprintf(output, "%sB", output);
+      sprintf(output, "%sB", output);
     else
-    sprintf(output, "%s ", output);
+      sprintf(output, "%s ", output);
+
     for(int i = 1;i>=0;i--){
-    if(BPPP.B[i]){
-      sprintf(output, "%s%02i:%02i", output,BPPP.B[i]->module,BPPP.B[i]->id);
-      if(BPPP.B[i]->blocked){
-      sprintf(output, "%sB  ", output);
-      }else{
-      sprintf(output, "%s   ", output);
+      if(BPPP.B[i]){
+        sprintf(output, "%s%02i:%02i", output,BPPP.B[i]->module,BPPP.B[i]->id);
+        if(BPPP.B[i]->blocked){
+          sprintf(output, "%sB  ", output);
+        }else{
+          sprintf(output, "%s   ", output);
+        }
       }
-    }else{
-      sprintf(output, "%s        ", output);
-    }
+      else if(i < BPPP.blocks){
+        debug = ERROR;
+        sprintf(output, "%s !!!!!! ", output);
+      }
+      else{
+        sprintf(output, "%s        ", output);
+      }
     }
   }else{
     sprintf(output, "%s                      ", output);
@@ -456,6 +458,10 @@ void Algor_print_block_debug(struct algor_blocks AllBlocks){
         }else{
         sprintf(output, "%s   ", output);
         }
+      }
+      else if(i < BPP.blocks){
+        debug = ERROR;
+        sprintf(output, "%s !!!!!! ", output);
       }else{
         sprintf(output, "%s        ", output);
       }
@@ -477,6 +483,10 @@ void Algor_print_block_debug(struct algor_blocks AllBlocks){
         }else{
         sprintf(output, "%s   ", output);
         }
+      }
+      else if(i < BP.blocks){
+        debug = ERROR;
+        sprintf(output, "%s !!!!!! ", output);
       }else{
         sprintf(output, "%s        ", output);
       }
@@ -492,9 +502,10 @@ void Algor_print_block_debug(struct algor_blocks AllBlocks){
   if(BN.blocks > 0){
     sprintf(output, "%sN%i ", output,BN.blocks);
     if(BN.blocked)
-    sprintf(output, "%sB", output);
+      sprintf(output, "%sB", output);
     else
-    sprintf(output, "%s ", output);
+      sprintf(output, "%s ", output);
+
     for(int i = 0;i<3;i++){
       if(BN.B[i]){
         sprintf(output, "%s%02i:%02i", output,BN.B[i]->module,BN.B[i]->id);
@@ -503,51 +514,65 @@ void Algor_print_block_debug(struct algor_blocks AllBlocks){
         }else{
         sprintf(output, "%s   ", output);
         }
+      }
+      else if(i < BN.blocks){
+        debug = ERROR;
+        sprintf(output, "%s !!!!!! ", output);
       }else{
         sprintf(output, "%s        ", output);
       }
     }
   }
   if(BNN.blocks > 0){
-    sprintf(output, "%sNN%i ", output,BNN.blocks);
+      sprintf(output, "%sNN%i ", output,BNN.blocks);
     if(BNN.blocked)
-    sprintf(output, "%sB", output);
+      sprintf(output, "%sB", output);
     else
-    sprintf(output, "%s ", output);
+      sprintf(output, "%s ", output);
+
     for(int i = 0;i<2;i++){
-    if(BNN.B[i]){
-      sprintf(output, "%s%02i:%02i", output,BNN.B[i]->module,BNN.B[i]->id);
-      if(BNN.B[i]->blocked){
-      sprintf(output, "%sB  ", output);
-      }else{
-      sprintf(output, "%s   ", output);
+      if(BNN.B[i]){
+        sprintf(output, "%s%02i:%02i", output,BNN.B[i]->module,BNN.B[i]->id);
+        if(BNN.B[i]->blocked){
+        sprintf(output, "%sB  ", output);
+        }else{
+        sprintf(output, "%s   ", output);
+        }
       }
-    }else{
+      else if(i < BNN.blocks){
+        debug = ERROR;
+        sprintf(output, "%s !!!!!! ", output);
+      }else{
       sprintf(output, "%s        ", output);
-    }
+     }
     }
   }
   if(BNNN.blocks > 0){
     sprintf(output, "%sNNN%i ", output,BNNN.blocks);
     if(BNNN.blocked)
-    sprintf(output, "%sB", output);
+      sprintf(output, "%sB", output);
     else
-    sprintf(output, "%s ", output);
+      sprintf(output, "%s ", output);
+
     for(int i = 0;i<2;i++){
-    if(BNNN.B[i]){
-      sprintf(output, "%s%02i:%02i", output,BNNN.B[i]->module,BNNN.B[i]->id);
-      if(BNNN.B[i]->blocked){
-      sprintf(output, "%sB  ", output);
-      }else{
-      sprintf(output, "%s   ", output);
+      if(BNNN.B[i]){
+        sprintf(output, "%s%02i:%02i", output,BNNN.B[i]->module,BNNN.B[i]->id);
+        if(BNNN.B[i]->blocked){
+          sprintf(output, "%sB  ", output);
+        }else{
+          sprintf(output, "%s   ", output);
+        }
       }
-    }else{
+      else if(i < BNNN.blocks){
+        debug = ERROR;
+        sprintf(output, "%s !!!!!! ", output);
+      }else{
       sprintf(output, "%s        ", output);
-    }
+      }
     }
   }
 
-  loggerf(INFO, "%s", output);
+  loggerf(debug, "%s", output);
 }
 
 void Algor_Switch_Checker(struct algor_blocks AllBlocks, int debug){
@@ -618,7 +643,7 @@ void Algor_Switch_Checker(struct algor_blocks AllBlocks, int debug){
 }
 
 void Algor_special_search_Blocks(struct algor_blocks * Blocks, int flags){
-  loggerf(TRACE, "Algor_special_search_Blocks");
+  loggerf(INFO, "Algor_special_search_Blocks %i:%i", Blocks->B->module, Blocks->B->id);
   struct next_prev_Block {
     Block * prev;
     uint8_t prev_l;
@@ -726,7 +751,7 @@ void Algor_special_search_Blocks(struct algor_blocks * Blocks, int flags){
     sprintf(debug_output, "A%i    ", a_dir);
     for(int ab = 0; ab < 15; ab++){
       if(Aside[ab])
-        printf(debug_output, "%s%2i:%2i\t", debug_output, Aside[ab]->module, Aside[ab]->id);
+        sprintf(debug_output, "%s%2i:%2i\t", debug_output, Aside[ab]->module, Aside[ab]->id);
     }
     loggerf(TRACE, "%s", debug_output);
 
@@ -818,23 +843,32 @@ void Algor_special_search_Blocks(struct algor_blocks * Blocks, int flags){
         }
       }
 
+      Aside_P->blocks = 0;
+      Bside_P->blocks = 0;
+
       do{
         if(!Bside[b] || !Bside_P)
           break;
-        Bside_P->B[Bside_P->blocks] = Bside[b++];
-        Bside_P->length += Bside_P->B[Bside_P->blocks]->length;
+        Bside_P->B[Bside_P->blocks] = Bside[b];
+        Bside_P->length += Bside[b]->length;
         Bside_P->blocks++;
+        b++;
       }
       while(Bside_P->length < Block_Minimum_Size && Bside_P->blocks < 5);
       
       do{
         if(!Aside[a] || !Aside_P)
           break;
-        Aside_P->B[Aside_P->blocks] = Aside[a++];
-        Aside_P->length += Aside_P->B[Aside_P->blocks]->length;
+        Aside_P->B[Aside_P->blocks] = Aside[a];
+        Aside_P->length += Aside[a]->length;
         Aside_P->blocks++;
+        a++;
       }
       while(Aside_P->length < Block_Minimum_Size && Aside_P->blocks < 5);
+
+      printf("Block %02i:%02i  %i\n", Blocks->B->module, Blocks->B->id, p);
+      printf("Aside len: %i\t0x%x\n", Aside_P->blocks, (unsigned int)Aside_P);
+      printf("Bside len: %i\t0x%x\n", Bside_P->blocks, (unsigned int)Bside_P);
     }
   }
   else{
@@ -848,18 +882,9 @@ void Algor_search_Blocks(struct algor_blocks * AllBlocks, int debug){
   Block * prev = 0;
   Block * B = AllBlocks->B;
 
-  if(AllBlocks->B->module == 23 && AllBlocks->B->id == 2){
-    debug = 1;
-  }
-
   Algor_clear_Blocks(AllBlocks);
 
-  if(debug != 204){
-    Algor_print_block_debug(*AllBlocks);
-  }
-
   if(B->type == SPECIAL){
-    printf("Algor Special search blocks %i:%i\n", B->module, B->id);
     Algor_special_search_Blocks(AllBlocks, debug);
     return;
   }
@@ -872,76 +897,73 @@ void Algor_search_Blocks(struct algor_blocks * AllBlocks, int debug){
 
   //Select all surrounding blocks
   if(next){
-  for(int i = 0; i < 3; i++){
-    Algor_Block * block_p;
-    if(i == 0){
-    block_p = AllBlocks->BN;
-    }
-    else if(i == 1){
-    block_p = AllBlocks->BNN;
-    }
-    else if(i == 2){
-    block_p = AllBlocks->BNNN;
-    }
+    for(int i = 0; i < 3; i++){
+      Algor_Block * block_p;
+      if(i == 0)
+        block_p = AllBlocks->BN;
+      else if(i == 1)
+        block_p = AllBlocks->BNN;
+      else if(i == 2)
+        block_p = AllBlocks->BNNN;
 
-    do{
-    if(i == 0 && block_p->blocks == 0){
-      block_p->B[block_p->blocks] = next;
-      next_level++;
-    }
-    else{
-      block_p->B[block_p->blocks] = Next(B, NEXT | SWITCH_CARE, next_level++);
-    }
+      block_p->blocks = 0;
 
-    if(!block_p->B[block_p->blocks]){
-      i = 4;
-      break;
-    }
+      do{
+        if(i == 0 && block_p->blocks == 0){
+          block_p->B[block_p->blocks] = next;
+          next_level++;
+        }
+        else{
+          block_p->B[block_p->blocks] = Next(B, NEXT | SWITCH_CARE, next_level++);
+        }
 
-    if(block_p->B[block_p->blocks]->blocked)
-      block_p->blocked = 1;
+        if(!block_p->B[block_p->blocks]){
+          i = 4;
+          break;
+        }
 
-    block_p->length += block_p->B[block_p->blocks]->length;
+        if(block_p->B[block_p->blocks]->blocked)
+          block_p->blocked = 1;
 
-    block_p->blocks += 1;
+        block_p->length += block_p->B[block_p->blocks]->length;
+
+      block_p->blocks += 1;
 
     }
     while(block_p->length < Block_Minimum_Size && block_p->blocks < 5);
   }
   }
   if(prev){
-  for(int i = 0; i < 3; i++){
-    Algor_Block * block_p;
-    if(i == 0){
-    block_p = AllBlocks->BP;
-    }
-    else if(i == 1){
-    block_p = AllBlocks->BPP;
-    }
-    else if(i == 2){
-    block_p = AllBlocks->BPPP;
-    }
+    for(int i = 0; i < 3; i++){
+      Algor_Block * block_p;
+      if(i == 0)
+        block_p = AllBlocks->BP;
+      else if(i == 1)
+        block_p = AllBlocks->BPP;
+      else if(i == 2)
+        block_p = AllBlocks->BPPP;
+      block_p->blocks = 0;
 
     do{
-    if(i == 0 && block_p->blocks == 0){
-      block_p->B[block_p->blocks] = prev;
-      prev_level++;
-    }
-    else{
-      block_p->B[block_p->blocks] = Next(B, PREV | SWITCH_CARE, prev_level++);
-    }
+      if(i == 0 && block_p->blocks == 0){
+        block_p->B[block_p->blocks] = prev;
+        prev_level++;
+      }
+      else{
+        block_p->B[block_p->blocks] = Next(B, PREV | SWITCH_CARE, prev_level++);
+      }
 
-    if(!block_p->B[block_p->blocks]){
-      i = 4;
-      break;
-    }
+      if(!block_p->B[block_p->blocks]){
+        i = 4;
+        break;
+      }
 
-    if(block_p->B[block_p->blocks]->blocked)
-      block_p->blocked = 1;
+      if(block_p->B[block_p->blocks]->blocked)
+        block_p->blocked = 1;
 
-    block_p->length += block_p->B[block_p->blocks]->length;
+      block_p->length += block_p->B[block_p->blocks]->length;
 
-    block_p->blocks += 1;
+      block_p->blocks += 1;
 
     }
     while(block_p->length < Block_Minimum_Size && block_p->blocks < 5);
@@ -1088,6 +1110,10 @@ void Algor_GetBlocked_Blocks(struct algor_blocks AllBlocks){
     Algor_Block * ABl = ((void **)&AllBlocks)[i];
     ABl->blocked = 0;
     for(int j = 0; j < ABl->blocks; j++){
+      if(!ABl->B[j]){
+        loggerf(ERROR, "Empty allblocks entry");
+        continue;
+      }
       if(ABl->B[j]->blocked){
         ABl->blocked = 1;
       }
@@ -1170,54 +1196,186 @@ void Algor_signal_state(struct algor_blocks AllBlocks, int debug){
   //Unpack AllBlocks
   // Algor_Block BPPP = *AllBlocks.BPPP;
   // Algor_Block BPP  = *AllBlocks.BPP;
-  // Algor_Block BP   = *AllBlocks.BP;
-  // Block * B        =  AllBlocks.B;
-  // Algor_Block BN   = *AllBlocks.BN;
+  Algor_Block BP   = *AllBlocks.BP;
+  Block * B        =  AllBlocks.B;
+
+  Algor_Block tmp;
+  tmp.blocks = 1;
+  tmp.B[0] = B;
+
+  Algor_Block BN   = *AllBlocks.BN;
   // Algor_Block BNN  = *AllBlocks.BNN;
   // Algor_Block BNNN = *AllBlocks.BNNN;
+  Algor_Block * ABlocks[7];
+  ABlocks[0] = AllBlocks.BPPP;
+  ABlocks[1] = AllBlocks.BPP;
+  ABlocks[2] = AllBlocks.BP;
+  ABlocks[3] = &tmp;
+  ABlocks[4] = AllBlocks.BN;
+  ABlocks[5] = AllBlocks.BNN;
+  ABlocks[6] = AllBlocks.BNNN;
 
-  //TODO write Signal state
-
-  // if(BN.blocks > 0){
-  //   for(int i = 0; i < BN.blocks; i++){
-  //     CB = BN.B[i]
-  //     if(BN.B[i]->NextSignal){
-  //       if(i == BN.blocks - 1 && BNN.blocks > 0 && (BN.B[i]->state != BNN.B[0]->state || BNN.B[0]->state != BN.B[i]->NextSignal->state)){
-  //         set_signal(BN.B[i]->NextSignal, BNN.B[0]->state);
-  //       }
-  //       else(i < BN.blocks - 1 && (BN.B[i]->state != BN.B[i+1]->state || BN.B[i+1]->state != BN.B[i]->NextSignal->state)){
-  //         set_signal(BN.B[i]->NextSignal, BN.B[i+1]->state);
-  //       }
-  //     }
-  //   }
-  //   if(BN.B[0]->NextSignal){
-  //     if(BNN.blocks > 0){
-  //       if(BNN.B[0]->state == DANGER && BN.B[0]->state != DANGER)
-  //         printf("Signal Next red %i:%i ",BN.B[0]->module, BN.B[0]->id);
-  //     }
-  //     printf("Next block Next signal ");
-  //   }
-  //   else if(BN.B[0]->PrevSignal){
-  //     if(B->state == DANGER && BN.B[0]->state != DANGER){
-  //       printf("Signal Prev red %i:%i ",BN.B[0]->module, BN.B[0]->id);
-  //     }
-  //     printf("Next block Prev signal ");
-  //   }
+  // debug = 0;
+  // if((B->module == 20 && B->module >= 6 && B->module <= 11) || B->module == 22){
+  //   debug = 1;
   // }
 
-  // if(BP.blocks > 0){
-  //   for(int i = 0; i < BP.blocks; i++){
-  //     if(BP.B[i]->NextSignal){
-  //       if(i == 0 && (BP.B[i]->state != B->state || B->state != BP.B[i]->NextSignal->state))
-  //         set_signal(BP.B[i]->NextSignal, B->state);
-  //       else if(i > 0 && (BP.B[i]->state != BP.B[i-1]->state || BP.B[i-1]->state != BP.B[i]->NextSignal->state))
-  //         set_signal(BP.B[i]->NextSignal, BP.B[i-1]->state);
+  // if(debug)
+  //   loggerf(ERROR, "Signal checker %02i:%02i", B->module, B->id);
+
+  // if(B->NextSignal || B->PrevSignal){
+  //   if(B->NextSignal)
+  //     loggerf(INFO, "NextSignal");
+  //   if(B->PrevSignal)
+  //     loggerf(INFO, "PrevSignal");
+  // }
+
+  if(B->NextSignal){
+    if(B->dir == 0 || B->dir == 2 || B->dir == 3){
+      if(BN.blocks > 0)
+        set_signal(B->NextSignal, BN.B[0]->state);
+      else
+        set_signal(B->NextSignal, DANGER);
+    }
+    else{
+      if(BP.blocks > 0)
+        set_signal(B->NextSignal, BP.B[0]->state);
+      else
+        set_signal(B->NextSignal, DANGER);
+    }
+  }
+
+  if(B->PrevSignal){
+    if(B->dir == 1 || B->dir == 4 || B->dir == 6){
+      if(BN.blocks > 0)
+        set_signal(B->PrevSignal, BN.B[0]->state);
+      else
+        set_signal(B->PrevSignal, DANGER);
+    }
+    else{
+      if(BP.blocks > 0)
+        set_signal(B->PrevSignal, BP.B[0]->state);
+      else
+        set_signal(B->PrevSignal, DANGER);
+    }
+  }
+
+  for(int i = 2; i >= 0; i--){
+    for(int j = 0; j < ABlocks[i]->blocks; j++){
+      if(i == 0 && j == ABlocks[i]->blocks - 1)
+        continue;
+
+      // if(debug)
+      //   loggerf(ERROR, "%02i:%02i", ABlocks[i]->B[j]->module, ABlocks[i]->B[j]->id);
+      if(ABlocks[i]->B[j]->NextSignal){
+        // if(debug)
+        //   loggerf(ERROR, "NextSignal");
+
+        if(dircmp(ABlocks[i]->B[j], B)){
+          if(B->dir == 0 || B->dir == 2 || B->dir == 3){
+            // If next block is in next algor block
+            if(j == 0){
+              if(ABlocks[i+1]->blocks > 0){
+                set_signal(ABlocks[i]->B[j]->NextSignal, ABlocks[i+1]->B[0]->state);
+              }
+              else{
+                set_signal(ABlocks[i]->B[j]->NextSignal, DANGER);
+              }
+            }
+            else{
+              set_signal(ABlocks[i]->B[j]->NextSignal, ABlocks[i]->B[j-1]->state);
+            }
+          }
+          else{
+            if(j == ABlocks[i]->blocks - 1){
+              if(ABlocks[i-1]->blocks > 0){
+                set_signal(ABlocks[i]->B[j]->NextSignal, ABlocks[i-1]->B[ ABlocks[i-1]->blocks - 1 ]->state);
+              }
+              else{
+                set_signal(ABlocks[i]->B[j]->NextSignal, DANGER);
+              }
+            }
+            else{
+              set_signal(ABlocks[i]->B[j]->NextSignal, ABlocks[i]->B[j+1]->state);
+            }
+          }
+        }
+
+      }
+
+      if(ABlocks[i]->B[j]->PrevSignal){
+        // if(debug)
+        //   loggerf(ERROR, "PrevSignal");
+
+        if(dircmp(ABlocks[i]->B[j], B)){
+          if(B->dir == 1 || B->dir == 4 || B->dir == 6){
+            // If next block is in next algor block
+            if(j == 0){
+              if(ABlocks[i+1]->blocks > 0){
+                set_signal(ABlocks[i]->B[j]->PrevSignal, ABlocks[i+1]->B[0]->state);
+              }
+              else{
+                set_signal(ABlocks[i]->B[j]->PrevSignal, DANGER);
+              }
+            }
+            else{
+              set_signal(ABlocks[i]->B[j]->PrevSignal, ABlocks[i]->B[j-1]->state);
+            }
+          }
+          else{
+            if(j == ABlocks[i]->blocks - 1){
+              if(ABlocks[i-1]->blocks > 0){
+                set_signal(ABlocks[i]->B[j]->PrevSignal, ABlocks[i-1]->B[ ABlocks[i-1]->blocks - 1 ]->state);
+              }
+              else{
+                set_signal(ABlocks[i]->B[j]->PrevSignal, DANGER);
+              }
+            }
+            else{
+              set_signal(ABlocks[i]->B[j]->PrevSignal, ABlocks[i]->B[j+1]->state);
+            }
+          }
+        }
+
+      }
+    }
+  }
+
+  // for(int i = 0; i < 6; i++){
+  //   for(int j = 0; j < ABlocks[i]->blocks; j++){
+  //     if(ABlocks[i]->B[j]->NextSignal && i < 5){
+  //       if(dircmp(AllBlocks.B, ABlocks[i]->B[j])){
+  //         if(B->dir == 0 || B->dir == 2 || B->dir == 3){
+  //           if(j == ABlocks[i]->blocks - 1){
+  //             loggerf(INFO, "Signal at %02i:%02i", ABlocks[i]->B[j]->module, ABlocks[i]->B[j]->id);
+  //             Algor_print_block_debug(AllBlocks);
+  //             set_signal(ABlocks[i]->B[j]->NextSignal, ABlocks[i+1]->B[0]->state);
+  //           }
+  //           else{
+  //             loggerf(INFO, "Signal at %02i:%02i", ABlocks[i]->B[j]->module, ABlocks[i]->B[j]->id);
+  //             Algor_print_block_debug(AllBlocks);
+  //             set_signal(ABlocks[i]->B[j]->NextSignal, ABlocks[i]->B[j+1]->state);
+  //           }
+  //         }
+  //         else{
+
+  //         }
+  //       }
   //     }
-  //     else if(BP.B[i]->PrevSignal){
-  //       if(i == BP.blocks - 1 && BPP.blocks > 0 && (BPP.B[0]->state != BP.B[i]->state || BPP.B[i]->state != BP.B[i]->PrevSignal->state))
-  //         set_signal(BP.B[i]->PrevSignal, BPP.B[0]->state);
-  //       else if(i < BP.blocks - 1 && (BP.B[i]->state != BP.B[i-1]->state || BP.B[i-1]->state != BP.B[i]->PrevSignal->state))
-  //         set_signal(BP.B[i]->PrevSignal, BP.B[i-1]->state);
+
+  //     if(ABlocks[i]->B[j]->PrevSignal && i > 0){
+  //       if(dircmp(AllBlocks.B, ABlocks[i]->B[j])){
+  //         if(j == 0){
+  //           loggerf(INFO, "Signal at %02i:%02i", ABlocks[i]->B[j]->module, ABlocks[i]->B[j]->id);
+  //           Algor_print_block_debug(AllBlocks);
+  //           set_signal(ABlocks[i]->B[j]->PrevSignal, ABlocks[i-1]->B[ABlocks[i-1]->blocks - 1]->state);
+  //         }
+  //         else{
+  //           loggerf(INFO, "Signal at %02i:%02i", ABlocks[i]->B[j]->module, ABlocks[i]->B[j]->id);
+  //           Algor_print_block_debug(AllBlocks);
+  //           set_signal(ABlocks[i]->B[j]->PrevSignal, ABlocks[i]->B[j-1]->state);
+  //         }
+  //       }
   //     }
   //   }
   // }

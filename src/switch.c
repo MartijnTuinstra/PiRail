@@ -157,7 +157,7 @@ int check_linked_msswitches(MSSwitch * S){
   return 1;
 }
 
-void throw_switch(Switch * S, uint8_t state){
+void throw_switch(Switch * S, uint8_t state, uint8_t lock){
   loggerf(TRACE, "throw_switch");
 
   Algor_Set_Changed(&S->Detection->Alg);
@@ -167,15 +167,15 @@ void throw_switch(Switch * S, uint8_t state){
 
   Units[S->module]->switch_state_changed |= 1;
 
-  process(S->Detection, 3 | NO_LOCK);
+  Algor_search_Blocks(&S->Detection->Alg, 0);
 
   Algor_Set_Changed(&S->Detection->Alg);
   putList_AlgorQueue(S->Detection->Alg, 0);
 
-  putAlgorQueue(S->Detection, 1);
+  putAlgorQueue(S->Detection, lock);
 }
 
-void throw_msswitch(MSSwitch * S, uint8_t state){
+void throw_msswitch(MSSwitch * S, uint8_t state, uint8_t lock){
   loggerf(TRACE, "throw_msswitch");
 
   Algor_Set_Changed(&S->Detection->Alg);
@@ -185,12 +185,12 @@ void throw_msswitch(MSSwitch * S, uint8_t state){
 
   Units[S->module]->msswitch_state_changed |= 1;
 
-  process(S->Detection, 3);
+  Algor_search_Blocks(&S->Detection->Alg, 0);
 
   Algor_Set_Changed(&S->Detection->Alg);
   putList_AlgorQueue(S->Detection->Alg, 0);
 
-  putAlgorQueue(S->Detection, 1);
+  putAlgorQueue(S->Detection, lock);
 }
 
 int set_switch(Switch * S, uint8_t state){
@@ -212,18 +212,28 @@ int set_switch(Switch * S, uint8_t state){
     return 0;
   }
 
-  throw_switch(S, state);
+  int lock = 1;
+
+  if(S->links_len > 0)
+    lock = 0;
+
+  throw_switch(S, state, lock);
 
   for(int i = 0; i<S->links_len; i++){
     if(!S->links[i].p)
       continue;
 
     if(S->links[i].type == RAIL_LINK_S || S->links[i].type == RAIL_LINK_s){
-      throw_switch(S->links[i].p, S->links[i].states[S->state & 0x7f]);
+      throw_switch(S->links[i].p, S->links[i].states[S->state & 0x7f], lock);
     }
     else if(S->links[i].type == RAIL_LINK_M || S->links[i].type == RAIL_LINK_m){
-      throw_msswitch(S->links[i].p, S->links[i].states[S->state & 0x7f]);
+      throw_msswitch(S->links[i].p, S->links[i].states[S->state & 0x7f], lock);
     }
+  }
+
+  // If algor queue is not allready unlocked
+  if(lock == 0){
+    algor_queue_enable(1);
   }
 
   loggerf(INFO, "Throw Switch %i:%i\n", S->module, S->id);
@@ -318,18 +328,27 @@ int set_msswitch(MSSwitch * S, uint8_t state){
     return 0;
   }
 
-  throw_msswitch(S, state);
+  int lock = 1;
+
+  if(S->links_len > 0)
+    lock = 0;
+
+  throw_msswitch(S, state, lock);
 
   for(int i = 0; i<S->links_len; i++){
     if(!S->links[i].p)
       continue;
 
     if(S->links[i].type == RAIL_LINK_S || S->links[i].type == RAIL_LINK_s){
-      throw_switch(S->links[i].p, S->links[i].states[S->state & 0x7f]);
+      throw_switch(S->links[i].p, S->links[i].states[S->state & 0x7f], lock);
     }
     else if(S->links[i].type == RAIL_LINK_M || S->links[i].type == RAIL_LINK_m){
-      throw_msswitch(S->links[i].p, S->links[i].states[S->state & 0x7f]);
+      throw_msswitch(S->links[i].p, S->links[i].states[S->state & 0x7f], lock);
     }
+  }
+
+  if(lock == 0){
+    algor_queue_enable(1);
   }
 
   loggerf(INFO, "Throw MSSwitch %i:%i\n");
@@ -384,12 +403,14 @@ int throw_multiple_switches(uint8_t len, char * msg){
     p.state = data[2];
 
     if(p.type == 0){
-      throw_switch(U_Sw(p.module, p.id), p.state);
+      throw_switch(U_Sw(p.module, p.id), p.state, 0);
     }
     else if(p.type == 1){
-      throw_msswitch(U_MSSw(p.module, p.id), p.state);
+      throw_msswitch(U_MSSw(p.module, p.id), p.state, 0);
     }
   }
+
+  algor_queue_enable(1);
 
   COM_change_switch(0);
   return 1;

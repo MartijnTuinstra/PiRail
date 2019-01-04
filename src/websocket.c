@@ -213,12 +213,16 @@ int websocket_decode(uint8_t data[1024], struct web_client_t * client){
       if(Units[data[1]] && U_Sw(data[1], data[2])){ //Check if switch exists
         loggerf(INFO, "throw switch %i:%i to state: \t%i->%i",
                 data[1], data[2], U_Sw(data[1], data[2])->state, !U_Sw(data[1], data[2])->state);
-        throw_switch(U_Sw(data[1], data[2]), data[3]);
+        lock_Algor_process();
+        throw_switch(U_Sw(data[1], data[2]), data[3], 1);
+        unlock_Algor_process();
       }
     }
     else if(data[0] == WSopc_SetMultiSwitch){ // Set mulitple switches at once
       loggerf(INFO, "Throw multiple switches\n");
+      lock_Algor_process();
       throw_multiple_switches(data[1], (char *)&data[2]);
+      unlock_Algor_process();
     }
     else if(data[0] == WSopc_SetSwitchReserved){ //Set switch reserved
 
@@ -308,7 +312,7 @@ int websocket_get_msg(int fd, char outbuf[], int * length_out){
   for(uint16_t q = 0;q<mes_length;q++){
     printf("%02x ",output[q]);
   }
-  printf(" %s\n",output);
+  printf("\n");
 
   _free(buf);
 

@@ -262,7 +262,7 @@ void read_password(){
     fseek (f, 0, SEEK_END);
     WS_pass_length = ftell (f);
     fseek (f, 0, SEEK_SET);
-    WS_password = _calloc(WS_pass_length, char);
+    WS_password = _calloc(WS_pass_length + 2, char);
     if (WS_password && WS_pass_length == 32)
     {
       fread (WS_password, 1, WS_pass_length, f);

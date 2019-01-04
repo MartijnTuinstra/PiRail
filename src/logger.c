@@ -5,6 +5,7 @@
 #include <pthread.h>
 
 #include "logger.h"
+#include "mem.h"
 
 #define LOG_TO_STDOUT
 #ifdef LOG_TO_STDOUT
@@ -28,12 +29,12 @@ void init_logger(char * file_location){
   FILE * fp = fopen(file_location,"w");
   fclose(fp);
 
-  logger_file = (char *)malloc(sizeof(char)*strlen(file_location));
+  logger_file = _calloc(strlen(file_location) + 1, char);
   strcpy(logger_file,file_location);
 }
 
 void exit_logger(){
-  free(logger_file);
+  _free(logger_file);
 }
 
 enum logging_levels logger_set_lvl;

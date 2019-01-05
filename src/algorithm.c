@@ -290,8 +290,6 @@ void process(Block * B,int flags){
     return;
   }
 
-  debug = 1;
-
   B->changed &= ~(IO_Changed);
   B->changed |= State_Changed;
 
@@ -865,10 +863,6 @@ void Algor_special_search_Blocks(struct algor_blocks * Blocks, int flags){
         a++;
       }
       while(Aside_P->length < Block_Minimum_Size && Aside_P->blocks < 5);
-
-      printf("Block %02i:%02i  %i\n", Blocks->B->module, Blocks->B->id, p);
-      printf("Aside len: %i\t0x%x\n", Aside_P->blocks, (unsigned int)Aside_P);
-      printf("Bside len: %i\t0x%x\n", Bside_P->blocks, (unsigned int)Bside_P);
     }
   }
   else{
@@ -1231,7 +1225,7 @@ void Algor_signal_state(struct algor_blocks AllBlocks, int debug){
   // }
 
   if(B->NextSignal){
-    if(B->dir == 0 || B->dir == 2 || B->dir == 3){
+    if(B->dir == 0 || B->dir == 2 || B->dir == 5){
       if(BN.blocks > 0)
         set_signal(B->NextSignal, BN.B[0]->state);
       else
@@ -1260,47 +1254,41 @@ void Algor_signal_state(struct algor_blocks AllBlocks, int debug){
     }
   }
 
-  for(int i = 2; i >= 0; i--){
+  for(int i = 6; i > 3; i--){
+
     for(int j = 0; j < ABlocks[i]->blocks; j++){
-      if(i == 0 && j == ABlocks[i]->blocks - 1)
-        continue;
 
-      // if(debug)
-      //   loggerf(ERROR, "%02i:%02i", ABlocks[i]->B[j]->module, ABlocks[i]->B[j]->id);
       if(ABlocks[i]->B[j]->NextSignal){
-        // if(debug)
-        //   loggerf(ERROR, "NextSignal");
-
         if(dircmp(ABlocks[i]->B[j], B)){
-          if(B->dir == 0 || B->dir == 2 || B->dir == 3){
+          if(B->dir == 0 || B->dir == 2 || B->dir == 5){
             // If next block is in next algor block
+            if(j == ABlocks[i]->blocks - 1){
+              if(i < 6){
+                if(ABlocks[i+1]->blocks > 0){
+                  set_signal(ABlocks[i]->B[j]->NextSignal, ABlocks[i+1]->B[0]->state);
+                }
+                else
+                  set_signal(ABlocks[i]->B[j]->NextSignal, DANGER);
+            }}
+            else{
+              set_signal(ABlocks[i]->B[j]->NextSignal, ABlocks[i]->B[j+1]->state);
+            }
+
+          }
+          else{
             if(j == 0){
-              if(ABlocks[i+1]->blocks > 0){
-                set_signal(ABlocks[i]->B[j]->NextSignal, ABlocks[i+1]->B[0]->state);
+              if(ABlocks[i-1]->blocks > 0){
+                set_signal(ABlocks[i]->B[j]->NextSignal, ABlocks[i-1]->B[ ABlocks[i-1]->blocks - 1 ]->state);
               }
-              else{
+              else
                 set_signal(ABlocks[i]->B[j]->NextSignal, DANGER);
-              }
             }
             else{
               set_signal(ABlocks[i]->B[j]->NextSignal, ABlocks[i]->B[j-1]->state);
             }
-          }
-          else{
-            if(j == ABlocks[i]->blocks - 1){
-              if(ABlocks[i-1]->blocks > 0){
-                set_signal(ABlocks[i]->B[j]->NextSignal, ABlocks[i-1]->B[ ABlocks[i-1]->blocks - 1 ]->state);
-              }
-              else{
-                set_signal(ABlocks[i]->B[j]->NextSignal, DANGER);
-              }
-            }
-            else{
-              set_signal(ABlocks[i]->B[j]->NextSignal, ABlocks[i]->B[j+1]->state);
-            }
+
           }
         }
-
       }
 
       if(ABlocks[i]->B[j]->PrevSignal){
@@ -1309,31 +1297,108 @@ void Algor_signal_state(struct algor_blocks AllBlocks, int debug){
 
         if(dircmp(ABlocks[i]->B[j], B)){
           if(B->dir == 1 || B->dir == 4 || B->dir == 6){
-            // If next block is in next algor block
+            // If prev block is in next algor block
+            if(j == ABlocks[i]->blocks - 1){
+              if(i < 6){
+                if(ABlocks[i+1]->blocks > 0){
+                  set_signal(ABlocks[i]->B[j]->PrevSignal, ABlocks[i+1]->B[0]->state);
+                }
+                else
+                  set_signal(ABlocks[i]->B[j]->PrevSignal, DANGER);
+            }}
+            else{
+              set_signal(ABlocks[i]->B[j]->PrevSignal, ABlocks[i]->B[j+1]->state);
+            }
+
+          }
+          else{
             if(j == 0){
-              if(ABlocks[i+1]->blocks > 0){
-                set_signal(ABlocks[i]->B[j]->PrevSignal, ABlocks[i+1]->B[0]->state);
+              if(ABlocks[i-1]->blocks > 0){
+                set_signal(ABlocks[i]->B[j]->PrevSignal, ABlocks[i-1]->B[ ABlocks[i-1]->blocks - 1 ]->state);
               }
-              else{
+              else
                 set_signal(ABlocks[i]->B[j]->PrevSignal, DANGER);
-              }
             }
             else{
               set_signal(ABlocks[i]->B[j]->PrevSignal, ABlocks[i]->B[j-1]->state);
             }
+
+          }
+        }
+
+      }
+    }
+  }
+
+  for(int i = 2; i >= 0; i--){
+
+    for(int j = 0; j < ABlocks[i]->blocks; j++){
+
+      if(ABlocks[i]->B[j]->NextSignal){
+        if(dircmp(ABlocks[i]->B[j], B)){
+          if(B->dir == 0 || B->dir == 2 || B->dir == 3){
+            // If next block is in next algor block
+            if(j == 0){
+              if(ABlocks[i+1]->blocks > 0){
+                set_signal(ABlocks[i]->B[j]->NextSignal, ABlocks[i+1]->B[0]->state);
+              }
+              else
+                set_signal(ABlocks[i]->B[j]->NextSignal, DANGER);
+            }
+            else{
+              set_signal(ABlocks[i]->B[j]->NextSignal, ABlocks[i]->B[j-1]->state);
+            }
+
           }
           else{
             if(j == ABlocks[i]->blocks - 1){
-              if(ABlocks[i-1]->blocks > 0){
-                set_signal(ABlocks[i]->B[j]->PrevSignal, ABlocks[i-1]->B[ ABlocks[i-1]->blocks - 1 ]->state);
-              }
-              else{
-                set_signal(ABlocks[i]->B[j]->PrevSignal, DANGER);
-              }
+              if(i > 0){
+                if(ABlocks[i-1]->blocks > 0){
+                  set_signal(ABlocks[i]->B[j]->NextSignal, ABlocks[i-1]->B[ ABlocks[i-1]->blocks - 1 ]->state);
+                }
+                else
+                  set_signal(ABlocks[i]->B[j]->NextSignal, DANGER);
+            }}
+            else{
+              set_signal(ABlocks[i]->B[j]->NextSignal, ABlocks[i]->B[j+1]->state);
             }
+
+          }
+        }
+      }
+
+      if(ABlocks[i]->B[j]->PrevSignal){
+        // if(debug)
+        //   loggerf(ERROR, "PrevSignal");
+
+        if(dircmp(ABlocks[i]->B[j], B)){
+          if(B->dir == 4 || B->dir == 6 || B->dir == 1){
+            // If prev block is in next algor block
+            if(j == 0){
+              if(ABlocks[i+1]->blocks > 0){
+                set_signal(ABlocks[i]->B[j]->PrevSignal, ABlocks[i+1]->B[ ABlocks[i+1]->blocks - 1 ]->state);
+              }
+              else
+                set_signal(ABlocks[i]->B[j]->PrevSignal, DANGER);
+            }
+            else{
+              set_signal(ABlocks[i]->B[j]->PrevSignal, ABlocks[i]->B[j-1]->state);
+            }
+
+          }
+          else{
+            if(j == ABlocks[i]->blocks - 1){
+              if(i > 0){
+                if(ABlocks[i-1]->blocks > 0){
+                  set_signal(ABlocks[i]->B[j]->PrevSignal, ABlocks[i-1]->B[0]->state);
+                }
+                else
+                  set_signal(ABlocks[i]->B[j]->PrevSignal, DANGER);
+            }}
             else{
               set_signal(ABlocks[i]->B[j]->PrevSignal, ABlocks[i]->B[j+1]->state);
             }
+
           }
         }
 

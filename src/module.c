@@ -128,7 +128,7 @@ void clear_Modules(){
 
       //clear Segments
       loggerf(DEBUG,"Clear segments (%i)",Units[i]->block_len);
-      for(int j = 0;j<=Units[i]->block_len;j++){
+      for(int j = 0; j < Units[i]->block_len; j++){
         if(!Units[i]->B[j])
           continue;
         printf("- Block %i\n",j);
@@ -170,8 +170,7 @@ void clear_Modules(){
           if(!Units[i]->Sig[j])
             continue;
           printf("- Signal %i\n",j);
-          _free(Units[i]->Sig[j]);
-          Units[i]->Sig[j] = NULL;
+          Units[i]->Sig[j] = clear_Signal(Units[i]->Sig[j]);
         }
       }
 
@@ -296,6 +295,9 @@ void LoadModuleFromConfig(int M){
     struct signal_conf sig = read_s_signal_conf(buf_ptr);
     
     create_signal_from_conf(M, sig);
+
+    _free(sig.stating);
+    _free(sig.output);
   }
 
   for(int i = 0; i < config->header.Stations; i++){
@@ -331,7 +333,8 @@ void ReadAllModuleConfigs(){
     {
       if(sscanf(dir->d_name, "%i.%s", &moduleID, type) > 1 && strcmp(type, "bin") == 0){
         int i = 0;
-        uint8_t tmp, tmp2;
+        uint8_t tmp = 0;
+        uint8_t tmp2 = 0;
         // Add to list and sort
         for(; i<255; i++){
           if(moduleID_list[i] == 0){

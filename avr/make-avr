@@ -25,5 +25,10 @@ hex: elf
 	@avr-size $(OUT_d).elf -C --mcu=atmega328 | grep Data    | awk ' {printf "%s %s %s %s\n",$$2$(,)$$3$(,)$$4$(,)$$5} '
 
 flash: hex
-	@echo "  [FLASH]   $(OUT_d)"
+	@echo "  [FLASH]        $(dev)\t$(OUT_d)"
 	@avrdude -p$(dev) -c$(prog) -P$(prot) -b$(baud) -v -U flash:w:$(OUT_d).flash.hex
+
+flash_eeprom: hex
+	@echo "  [FLASH] EEPROM $(dev)\t$(OUT_d)"
+	@avrdude -p$(dev) -c$(prog) -P$(prot) -b$(baud) -v -U eeprom:w:$(OUT_d).eeprom.hex
+

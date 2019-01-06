@@ -42,3 +42,19 @@ void Init_IO(Unit * U, Node_adr adr, enum IO_type type){
     loggerf(ERROR, "Init_IO Error");
   }
 }
+
+void update_IO(){
+  for(int u = 0; u < unit_len; u++){
+    if(!Units[u] || Units[u]->io_out_changed == 0)
+      continue;
+
+    for(int n = 0; n < Units[u]->IO_Nodes; n++){
+      for(int io = 0; io < Units[u]->Node[n].io_ports; io++){
+        if(U_IO(u, n, io)->type == IO_Output && U_IO(u, n, io)->w_state != U_IO(u, n, io)->r_state){
+          loggerf(WARNING, "Update io %02i:%02i:%02i", u, n, io);
+          U_IO(u, n, io)->r_state = U_IO(u, n, io)->w_state;
+        }
+      }
+    }
+  }
+}

@@ -61,4 +61,7 @@ void Init_IO(Unit * U, Node_adr adr, enum IO_type type);
 
 void update_IO();
 
+void str_IO_type(enum IO_type type, char * str);
+void str_IO_event(enum IO_event event, char * str);
+
 #endif

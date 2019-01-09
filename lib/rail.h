@@ -29,8 +29,9 @@
   typedef struct s_node_adr Node_adr;
 
   typedef struct proces_block {
-    _Bool blocked;
-    uint8_t blocks;
+    uint8_t blocked:1;
+    uint8_t signal:1;
+    uint8_t blocks:6;
     int length;
     Block * B[5];
   } Algor_Block;
@@ -112,7 +113,9 @@ enum link_types {
     uint8_t max_speed;
 
     enum Rail_states state;
-    _Bool blocked;
+    enum Rail_states reverse_state;
+    uint8_t reserved:4;
+    uint8_t blocked:1;
 
     uint8_t train; //Follow id
     uint8_t changed; // 0x1 = IO changed, 0x2 = state changed, 0x4 = Algor blocks changed

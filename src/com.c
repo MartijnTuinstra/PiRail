@@ -37,12 +37,10 @@ void * UART(){
   loggerf(INFO, "Starting UART thread");
   //OPEN THE UART
 
-  ReadAllModuleConfigs();
-
   _SYS->UART_State = _SYS_Module_Init;
   WS_stc_SubmoduleState();
 
-  usleep(2000000);
+  usleep(200000);
   _SYS->UART_State = _SYS_Module_Run;
   WS_stc_SubmoduleState();
 

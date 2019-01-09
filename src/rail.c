@@ -934,7 +934,10 @@ void Reserve_To_Next_Switch(Block * B){
       break;
     }
 
-    Next_Block->state = RESERVED;
+    if(Next_Block->state >= PROCEED)
+      Next_Block->state = RESERVED;
+    Next_Block->reverse_state = DANGER;
+    Next_Block->reserved++;
     Next_Block->changed |= State_Changed;
 
     Next_Block = Next_Block->Alg.BN->B[0];
@@ -943,6 +946,10 @@ void Reserve_To_Next_Switch(Block * B){
 
 void Block_Reverse(Block * B){
   B->dir ^= 0b100;
+
+  int tmp_state = B->state;
+  B->state = B->reverse_state;
+  B->reverse_state = tmp_state;
 
   Algor_Block * tmp = B->Alg.BN;
   B->Alg.BN = B->Alg.BP;
@@ -970,7 +977,11 @@ int Block_Reverse_To_Next_Switch(Block * B){
     }
 
     Block_Reverse(Next_Block);
-    Next_Block->state = RESERVED;
+
+    if(Next_Block->state >= PROCEED)
+      Next_Block->state = RESERVED;
+    Next_Block->reverse_state = DANGER;
+    Next_Block->reserved++;
     Next_Block->changed |= State_Changed;
 
     Next_Block = Next_Block->Alg.BN->B[0];

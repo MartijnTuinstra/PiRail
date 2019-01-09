@@ -37,6 +37,8 @@
     uint8_t msswitch_state_changed:1;
     uint8_t signal_state_changed:1;
 
+    uint8_t io_out_changed:1;
+
     uint8_t on_layout:1;
   } Unit;
 

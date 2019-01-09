@@ -30,13 +30,14 @@
 
   } Signal;
 
-
+  #define U_Sig(M, S) Units[M]->Sig[S]
   
   #define create_signal_from_conf(module, data) create_signal(module, data.blockId, data.id, data.side, data.output_len, data.output, data.stating)
   void create_signal(uint8_t module, uint8_t blockId, uint16_t signalId, _Bool side, char output_len, struct s_IO_port_conf * output, struct s_IO_signal_event_conf * stating);
   
   void * clear_Signal(Signal * Sig);
 
+  void check_Signal(Signal * Si);
   void set_signal(Signal *Si, enum Rail_states state);
 #endif
 

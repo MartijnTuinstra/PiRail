@@ -35,8 +35,8 @@ void *TRAIN_SIMA(){
   while(_SYS->LC_State != _SYS_Module_Run){
     usleep(10000);
   }
-  Block *B = Units[23]->B[2];
-  Block *N = Units[23]->B[2];
+  Block *B = Units[20]->B[4];
+  Block *N = Units[20]->B[4];
   Block *N2 = 0;
 
   B->state = BLOCKED;

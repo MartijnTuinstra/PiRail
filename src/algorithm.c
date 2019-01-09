@@ -185,6 +185,10 @@ void * Algor_Run(){
       return 0;
     }
   }
+
+  ReadAllModuleConfigs();
+
+  //UART_Send_Search();
   
   usleep(200000);
   _SYS->LC_State = _SYS_LC_Searching;
@@ -211,6 +215,8 @@ void * Algor_Run(){
     //Notify clients
     WS_trackUpdate(0);
     WS_SwitchesUpdate(0);
+
+    update_IO();
 
     mutex_unlock(&algor_mutex, "Algor Mutex");
 
@@ -1001,11 +1007,11 @@ void Algor_train_following(struct algor_blocks AllBlocks, int debug){
     // Reverse immediate block
     if(((BP.blocks > 0 && !BP.blocked) || BP.blocks == 0) && BN.blocked && BN.B[0]->train && !B->train){
       //REVERSED
-      B->dir ^= 0b100;
+      Block_Reverse(B);
       loggerf(WARNING, "REVERSE BLOCK %i:%i", B->module, B->id);
-      B->changed |= IO_Changed | Block_Algor_Changed;
-      Block_Reverse_To_Next_Switch(B);
-      return;
+      B->changed |= IO_Changed;
+      // Block_Reverse_To_Next_Switch(B);
+      // return;
     }
 
     if(BN.blocks > 0 && !BN.blocked && !dircmp(B, BN.B[0])){
@@ -1111,6 +1117,8 @@ void Algor_GetBlocked_Blocks(struct algor_blocks AllBlocks){
       if(ABl->B[j]->blocked){
         ABl->blocked = 1;
       }
+      if(ABl->B[j]->NextSignal || ABl->B[j]->PrevSignal)
+        ABl->signal = 1;
     }
   }
 }
@@ -1126,23 +1134,39 @@ void Algor_rail_state(struct algor_blocks AllBlocks, int debug){
   Algor_Block BNN  = *AllBlocks.BNN;
   // Algor_Block BNNN = *AllBlocks.BNNN;
 
+  if(B->blocked){
+    if(B->reserved)
+      B->reserved--;
+    B->reverse_state = DANGER;
+  }
+  else{
+    if(B->state != RESERVED || B->state != RESERVED_SWITCH){
+      B->reverse_state = PROCEED;
+    }
+    else{
+      B->reverse_state = DANGER;
+    }
+  }
+
   if(B->blocked && !BP.blocked && BP.blocks > 0){
-    Algor_apply_rail_state(BP, DANGER);
-    Algor_apply_rail_state(BPP, CAUTION);
-    Algor_apply_rail_state(BPPP, PROCEED);
+    if(BP.blocks > 0 && dircmp(B, BP.B[0]))
+      Algor_apply_rail_state(BP, DANGER);
+    if(BPP.blocks > 0 && dircmp(B, BPP.B[0]))
+      Algor_apply_rail_state(BPP, CAUTION);
+
+    if(BPPP.blocks > 0 && dircmp(B, BPPP.B[0]))
+      Algor_apply_rail_state(BPPP, PROCEED);
   }
   else if(!B->blocked && BN.blocks == 0){
     if(B->type != SPECIAL){
       B->state = CAUTION;
       B->changed |= State_Changed;
       // printf(" End of track %i:%i ",B->module, B->id);
-      if(!BP.blocked && BP.blocks > 0){
+      if(!BP.blocked && BP.blocks > 0 && dircmp(B, BP.B[0]))
         Algor_apply_rail_state(BP, PROCEED);
 
-        if(!BPP.blocked && BPP.blocks > 0){
-          Algor_apply_rail_state(BPP, PROCEED);
-        }
-      }
+      if(!BPP.blocked && BPP.blocks > 0 && dircmp(B, BPP.B[0]))
+        Algor_apply_rail_state(BPP, PROCEED);
     }
     //B->type == SPECIAL
     else{
@@ -1178,10 +1202,21 @@ void Algor_rail_state(struct algor_blocks AllBlocks, int debug){
 
 void Algor_apply_rail_state(Algor_Block b, enum Rail_states state){
   loggerf(TRACE, "Algor_apply_rail_state");
+  uint8_t dir = b.B[0]->dir;
   for(int i = 0; i < b.blocks; i++){
-  b.B[i]->state = state;
-  b.B[i]->changed |= State_Changed;
-  Units[b.B[i]->module]->block_state_changed |= 1;
+    if(dir == b.B[i]->dir || dir == (b.B[i]->dir ^ 0b101) || dir == (b.B[i]->dir ^ 0b10)){
+      if(state != PROCEED)
+        b.B[i]->state = state;
+      else if(b.B[i]->reserved > 0)
+        b.B[i]->state = RESERVED;
+      else
+        b.B[i]->state = PROCEED;
+      b.B[i]->changed |= State_Changed;
+      Units[b.B[i]->module]->block_state_changed |= 1;
+    }
+    else{
+      break;
+    }
   }
 }
 
@@ -1190,14 +1225,17 @@ void Algor_signal_state(struct algor_blocks AllBlocks, int debug){
   //Unpack AllBlocks
   // Algor_Block BPPP = *AllBlocks.BPPP;
   // Algor_Block BPP  = *AllBlocks.BPP;
-  Algor_Block BP   = *AllBlocks.BP;
+  // Algor_Block BP   = *AllBlocks.BP;
   Block * B        =  AllBlocks.B;
 
   Algor_Block tmp;
   tmp.blocks = 1;
   tmp.B[0] = B;
 
-  Algor_Block BN   = *AllBlocks.BN;
+  if(B->NextSignal || B->PrevSignal)
+    tmp.signal = 1;
+
+  // Algor_Block BN   = *AllBlocks.BN;
   // Algor_Block BNN  = *AllBlocks.BNN;
   // Algor_Block BNNN = *AllBlocks.BNNN;
   Algor_Block * ABlocks[7];
@@ -1209,200 +1247,16 @@ void Algor_signal_state(struct algor_blocks AllBlocks, int debug){
   ABlocks[5] = AllBlocks.BNN;
   ABlocks[6] = AllBlocks.BNNN;
 
-  // debug = 0;
-  // if((B->module == 20 && B->module >= 6 && B->module <= 11) || B->module == 22){
-  //   debug = 1;
-  // }
+  for(int i = 0; i <= 6; i++){
+    if(ABlocks[i]->signal){
 
-  // if(debug)
-  //   loggerf(ERROR, "Signal checker %02i:%02i", B->module, B->id);
-
-  // if(B->NextSignal || B->PrevSignal){
-  //   if(B->NextSignal)
-  //     loggerf(INFO, "NextSignal");
-  //   if(B->PrevSignal)
-  //     loggerf(INFO, "PrevSignal");
-  // }
-
-  if(B->NextSignal){
-    if(B->dir == 0 || B->dir == 2 || B->dir == 5){
-      if(BN.blocks > 0)
-        set_signal(B->NextSignal, BN.B[0]->state);
-      else
-        set_signal(B->NextSignal, DANGER);
-    }
-    else{
-      if(BP.blocks > 0)
-        set_signal(B->NextSignal, BP.B[0]->state);
-      else
-        set_signal(B->NextSignal, DANGER);
-    }
-  }
-
-  if(B->PrevSignal){
-    if(B->dir == 1 || B->dir == 4 || B->dir == 6){
-      if(BN.blocks > 0)
-        set_signal(B->PrevSignal, BN.B[0]->state);
-      else
-        set_signal(B->PrevSignal, DANGER);
-    }
-    else{
-      if(BP.blocks > 0)
-        set_signal(B->PrevSignal, BP.B[0]->state);
-      else
-        set_signal(B->PrevSignal, DANGER);
-    }
-  }
-
-  for(int i = 6; i > 3; i--){
-
-    for(int j = 0; j < ABlocks[i]->blocks; j++){
-
-      if(ABlocks[i]->B[j]->NextSignal){
-        if(dircmp(ABlocks[i]->B[j], B)){
-          if(B->dir == 0 || B->dir == 2 || B->dir == 5){
-            // If next block is in next algor block
-            if(j == ABlocks[i]->blocks - 1){
-              if(i < 6){
-                if(ABlocks[i+1]->blocks > 0){
-                  set_signal(ABlocks[i]->B[j]->NextSignal, ABlocks[i+1]->B[0]->state);
-                }
-                else
-                  set_signal(ABlocks[i]->B[j]->NextSignal, DANGER);
-            }}
-            else{
-              set_signal(ABlocks[i]->B[j]->NextSignal, ABlocks[i]->B[j+1]->state);
-            }
-
-          }
-          else{
-            if(j == 0){
-              if(ABlocks[i-1]->blocks > 0){
-                set_signal(ABlocks[i]->B[j]->NextSignal, ABlocks[i-1]->B[ ABlocks[i-1]->blocks - 1 ]->state);
-              }
-              else
-                set_signal(ABlocks[i]->B[j]->NextSignal, DANGER);
-            }
-            else{
-              set_signal(ABlocks[i]->B[j]->NextSignal, ABlocks[i]->B[j-1]->state);
-            }
-
-          }
-        }
+      for(int j = 0; j < ABlocks[i]->blocks; j++){
+        if(ABlocks[i]->B[j]->NextSignal)
+          check_Signal(ABlocks[i]->B[j]->NextSignal);
+        if(ABlocks[i]->B[j]->PrevSignal)
+          check_Signal(ABlocks[i]->B[j]->PrevSignal);
       }
 
-      if(ABlocks[i]->B[j]->PrevSignal){
-        // if(debug)
-        //   loggerf(ERROR, "PrevSignal");
-
-        if(dircmp(ABlocks[i]->B[j], B)){
-          if(B->dir == 1 || B->dir == 4 || B->dir == 6){
-            // If prev block is in next algor block
-            if(j == ABlocks[i]->blocks - 1){
-              if(i < 6){
-                if(ABlocks[i+1]->blocks > 0){
-                  set_signal(ABlocks[i]->B[j]->PrevSignal, ABlocks[i+1]->B[0]->state);
-                }
-                else
-                  set_signal(ABlocks[i]->B[j]->PrevSignal, DANGER);
-            }}
-            else{
-              set_signal(ABlocks[i]->B[j]->PrevSignal, ABlocks[i]->B[j+1]->state);
-            }
-
-          }
-          else{
-            if(j == 0){
-              if(ABlocks[i-1]->blocks > 0){
-                set_signal(ABlocks[i]->B[j]->PrevSignal, ABlocks[i-1]->B[ ABlocks[i-1]->blocks - 1 ]->state);
-              }
-              else
-                set_signal(ABlocks[i]->B[j]->PrevSignal, DANGER);
-            }
-            else{
-              set_signal(ABlocks[i]->B[j]->PrevSignal, ABlocks[i]->B[j-1]->state);
-            }
-
-          }
-        }
-
-      }
-    }
-  }
-
-  for(int i = 2; i >= 0; i--){
-
-    for(int j = 0; j < ABlocks[i]->blocks; j++){
-
-      if(ABlocks[i]->B[j]->NextSignal){
-        if(dircmp(ABlocks[i]->B[j], B)){
-          if(B->dir == 0 || B->dir == 2 || B->dir == 3){
-            // If next block is in next algor block
-            if(j == 0){
-              if(ABlocks[i+1]->blocks > 0){
-                set_signal(ABlocks[i]->B[j]->NextSignal, ABlocks[i+1]->B[0]->state);
-              }
-              else
-                set_signal(ABlocks[i]->B[j]->NextSignal, DANGER);
-            }
-            else{
-              set_signal(ABlocks[i]->B[j]->NextSignal, ABlocks[i]->B[j-1]->state);
-            }
-
-          }
-          else{
-            if(j == ABlocks[i]->blocks - 1){
-              if(i > 0){
-                if(ABlocks[i-1]->blocks > 0){
-                  set_signal(ABlocks[i]->B[j]->NextSignal, ABlocks[i-1]->B[ ABlocks[i-1]->blocks - 1 ]->state);
-                }
-                else
-                  set_signal(ABlocks[i]->B[j]->NextSignal, DANGER);
-            }}
-            else{
-              set_signal(ABlocks[i]->B[j]->NextSignal, ABlocks[i]->B[j+1]->state);
-            }
-
-          }
-        }
-      }
-
-      if(ABlocks[i]->B[j]->PrevSignal){
-        // if(debug)
-        //   loggerf(ERROR, "PrevSignal");
-
-        if(dircmp(ABlocks[i]->B[j], B)){
-          if(B->dir == 4 || B->dir == 6 || B->dir == 1){
-            // If prev block is in next algor block
-            if(j == 0){
-              if(ABlocks[i+1]->blocks > 0){
-                set_signal(ABlocks[i]->B[j]->PrevSignal, ABlocks[i+1]->B[ ABlocks[i+1]->blocks - 1 ]->state);
-              }
-              else
-                set_signal(ABlocks[i]->B[j]->PrevSignal, DANGER);
-            }
-            else{
-              set_signal(ABlocks[i]->B[j]->PrevSignal, ABlocks[i]->B[j-1]->state);
-            }
-
-          }
-          else{
-            if(j == ABlocks[i]->blocks - 1){
-              if(i > 0){
-                if(ABlocks[i-1]->blocks > 0){
-                  set_signal(ABlocks[i]->B[j]->PrevSignal, ABlocks[i-1]->B[0]->state);
-                }
-                else
-                  set_signal(ABlocks[i]->B[j]->PrevSignal, DANGER);
-            }}
-            else{
-              set_signal(ABlocks[i]->B[j]->PrevSignal, ABlocks[i]->B[j+1]->state);
-            }
-
-          }
-        }
-
-      }
     }
   }
 
@@ -1788,78 +1642,78 @@ int connect_Algor(struct ConnectList * List){
   int value = 0;
 
   for(int i = 0;i<List->length;i++){
-  if(!List->R_L[i]->p){
-    continue;
-  }
-  if(List->R_L[i]->type == 'R'){
-    if(((Block *)List->R_L[i]->p)->next.type != RAIL_LINK_C && ((Block *)List->R_L[i]->p)->prev.type != RAIL_LINK_C) {
-    value++;
-    continue;
+    if(!List->R_L[i]->p)
+      continue;
+
+    if(List->R_L[i]->type == 'R'){
+      if(((Block *)List->R_L[i]->p)->next.type != RAIL_LINK_C && ((Block *)List->R_L[i]->p)->prev.type != RAIL_LINK_C) {
+        value++;
+        continue;
+      }
+      if(((Block *)List->R_L[i]->p)->blocked){
+        printf("Found block %i:%i %i\t",((Block*)List->R_L[i]->p)->module,((Block*)List->R_L[i]->p)->id,((Block*)List->R_L[i]->p)->blocked);
+        //Blocked block
+        if(!R)
+          R = List->R_L[i];
+        else
+        {
+          _Bool connected = FALSE;
+          char anchor_A = 0;
+          char anchor_B = 0;
+
+          int ModuleA = 0;
+          int ModuleB = 0;
+          if(R->type == 'R'){
+          ModuleA = ((Block *)R->p)->module;
+          ModuleB = ((Block *)List->R_L[i]->p)->module;
+
+          if(((Block *)R->p)->next.type == RAIL_LINK_C){
+            anchor_A = ((Block *)R->p)->next.module;
+            anchor_B = ((Block *)List->R_L[i]->p)->prev.module;
+          }
+          else if(((Block *)R->p)->prev.type == RAIL_LINK_C){
+            anchor_A = ((Block *)R->p)->prev.module;
+            anchor_B = ((Block *)List->R_L[i]->p)->next.module;
+          }
+
+          connected = find_and_connect(ModuleA,anchor_A,ModuleB,anchor_B);
+          }
+          else if(R->type == 'S'){
+          ModuleA = ((Switch *)R->p)->module;
+          ModuleB = ((Block *)List->R_L[i]->p)->module;
+          if(((Block *)List->R_L[i]->p)->next.type == RAIL_LINK_C){
+            anchor_B = ((Block *)List->R_L[i]->p)->next.module;
+          }
+          else{
+            anchor_B = ((Block *)List->R_L[i]->p)->prev.module;
+          }
+
+          if(((Switch *)R->p)->app.type == RAIL_LINK_C){
+            anchor_A = ((Switch *)R->p)->app.module;
+          }
+          else if(((Switch *)R->p)->str.type == RAIL_LINK_C){
+            anchor_A = ((Switch *)R->p)->str.module;
+          }
+          else if(((Switch *)R->p)->div.type == RAIL_LINK_C){
+            anchor_A = ((Switch *)R->p)->div.module;
+          } //End Switch approach type
+
+          connected = find_and_connect(ModuleA,anchor_A,ModuleB,anchor_B);
+          } // End Switch type
+
+          if(connected){
+          WS_Partial_Layout(ModuleA,ModuleB);
+          connected = FALSE;
+          }
+        }
+      }
     }
-    // printf("Found block %i:%i %i\t",((Block*)List->R_L[i]->p)->module,((Block*)List->R_L[i]->p)->id,((Block*)List->R_L[i]->p)->blocked);
-    if(((Block *)List->R_L[i]->p)->blocked){
-    //Blocked block
-    if(!R){
+    else if(List->R_L[i]->type == 'S' && ((Switch *)List->R_L[i]->p)->Detection->blocked){
+      //Blocked switch
+      if(!R){
       R = List->R_L[i];
-    }
-    else{
-      _Bool connected = FALSE;
-      char anchor_A = 0;
-      char anchor_B = 0;
-
-      int ModuleA = 0;
-      int ModuleB = 0;
-      if(R->type == 'R'){
-      ModuleA = ((Block *)R->p)->module;
-      ModuleB = ((Block *)List->R_L[i]->p)->module;
-
-      if(((Block *)R->p)->next.type == RAIL_LINK_C){
-        anchor_A = ((Block *)R->p)->next.module;
-        anchor_B = ((Block *)List->R_L[i]->p)->prev.module;
-      }
-      else if(((Block *)R->p)->prev.type == RAIL_LINK_C){
-        anchor_A = ((Block *)R->p)->prev.module;
-        anchor_B = ((Block *)List->R_L[i]->p)->next.module;
-      }
-
-      connected = find_and_connect(ModuleA,anchor_A,ModuleB,anchor_B);
-      }
-      else if(R->type == 'S'){
-      ModuleA = ((Switch *)R->p)->module;
-      ModuleB = ((Block *)List->R_L[i]->p)->module;
-      if(((Block *)List->R_L[i]->p)->next.type == RAIL_LINK_C){
-        anchor_B = ((Block *)List->R_L[i]->p)->next.module;
-      }
-      else{
-        anchor_B = ((Block *)List->R_L[i]->p)->prev.module;
-      }
-
-      if(((Switch *)R->p)->app.type == RAIL_LINK_C){
-        anchor_A = ((Switch *)R->p)->app.module;
-      }
-      else if(((Switch *)R->p)->str.type == RAIL_LINK_C){
-        anchor_A = ((Switch *)R->p)->str.module;
-      }
-      else if(((Switch *)R->p)->div.type == RAIL_LINK_C){
-        anchor_A = ((Switch *)R->p)->div.module;
-      } //End Switch approach type
-
-      connected = find_and_connect(ModuleA,anchor_A,ModuleB,anchor_B);
-      } // End Switch type
-
-      if(connected){
-      WS_Partial_Layout(ModuleA,ModuleB);
-      connected = FALSE;
       }
     }
-    }
-  }
-  else if(List->R_L[i]->type == 'S' && ((Switch *)List->R_L[i]->p)->Detection->blocked){
-    //Blocked switch
-    if(!R){
-    R = List->R_L[i];
-    }
-  }
   }
 
   value = 0;

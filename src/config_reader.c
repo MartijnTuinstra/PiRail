@@ -909,6 +909,7 @@ void modify_Signal(struct module_config * config, char cmd){
     id = config->header.Signals++;
 
     //Set child pointers
+    config->Signals[id].id = id;
     config->Signals[id].output_len = 1;
     config->Signals[id].output = _calloc(1, struct s_IO_port_conf);
     config->Signals[id].stating = _calloc(1, struct s_IO_signal_event_conf);

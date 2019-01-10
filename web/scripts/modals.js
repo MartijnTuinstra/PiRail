@@ -308,20 +308,23 @@ var Modals = {
             $('#modal .train-img').css("background-image", ('url("./img/loading.svg")'));
           }
 
-          function success(){
-            var time = (new Date).getTime(); //Prevent caching
+          function success(location){
+            
             if (type == "icon"){
-              $('#modal .train-icon').css("background-image", ('url(./tmp_icon.'+extention+'?q='+time+')'));
+              $('#modal .train-icon').css("background-image", ('url(./'+location+')'));
+              var file = $('#modal .train-icon-name').val(location);
+
             }
             else{
-              $('#modal .train-img').css("background-image", ('url(./tmp_img.'+extention+'?q='+time+')'));
+              $('#modal .train-img').css("background-image", ('url(./'+location+')'));
+              var file = $('#modal .train-image-name').val(location);
             }
           }
 
           //Create ajax request
           var ajax = new XMLHttpRequest();
-          ajax.addEventListener("load", function(){
-            setTimeout(success, 1000);
+          ajax.addEventListener("load", function(message){
+            setTimeout(success.bind(null, ajax.responseText), 1000);
           }, false);
           ajax.addEventListener("error", function(){alert("error");console.warn(this.responseText);}, false);
           ajax.open("POST", "./img_upload.php");
@@ -407,6 +410,8 @@ var Modals = {
       },
       close_cb: function(data, ref){
         $('input[type=file]', ref).off();
+
+        console.log(data);
       },
       update_graph: function(){
         var i, datetime, used, sun;
@@ -433,6 +438,7 @@ var Modals = {
         }
         else if(data.return_code == -2){
           $('#modal .modal-body input[name='+data.data[0]+']').focus();
+          console.warn(data);
           for(var i = 0; i < data.data.length; i++){
             $('#modal .modal-body input[name='+data.data[i]+']').addClass("is-invalid");
             $('#modal .modal-body button[name='+data.data[i]+']').addClass("btn-outline-danger").addClass("isinvalid").removeClass("btn-outline-primary");
@@ -449,15 +455,17 @@ var Modals = {
                     <div class="bg-light" style="width: 100%; padding-top: 50%; position: relative;">\
                       <div class="train-icon" style="background-image: url(\'./trains_img/200_ice3_im.jpg\');"></div>\
                     </div>\
-                    <input class="modal-form" name="icon" type="file" style="display: none;">\
-                    <button name="icon-btn" onclick="$(\'#modal .modal-body input[type=file][name=icon]\').click();" class="btn mt-2 btn-sm btn-primary" style="margin:auto;display:block;">Browse icon</button>\
+                    <input class="modal-form train-icon-name" name="icon_name" type="text" style="display: none;">\
+                    <input name="icon" type="file" style="display: none;">\
+                    <button name="train-icon-name-btn" onclick="$(\'#modal .modal-body input[type=file][name=icon]\').click();" class="btn mt-2 btn-sm btn-primary" style="margin:auto;display:block;">Browse icon</button>\
                   </div>\
                   <div class="col-6">\
                     <div class="bg-light" style="width: 100%; padding-top: 50%; position: relative;">\
                       <div class="train-img" style="background-image: url(\'./trains_img/200_ice3_im.jpg\');"></div>\
                     </div>\
-                    <input class="modal-form" name="image" type="file" style="display: none;">\
-                    <button name="image-btn" onclick="$(\'#modal .modal-body input[type=file][name=image]\').click();" class="btn mt-2 btn-sm btn-primary" style="margin:auto;display:block;">Browse image</button>\
+                    <input class="modal-form train-image-name" name="image_name" type="text" style="display: none;">\
+                    <input name="image" type="file" style="display: none;">\
+                    <button name="train-image-name-btn" onclick="$(\'#modal .modal-body input[type=file][name=image]\').click();" class="btn mt-2 btn-sm btn-primary" style="margin:auto;display:block;">Browse image</button>\
                   </div>\
                 </div>\
                 <div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
@@ -581,26 +589,39 @@ var Modals = {
       },
       title: "Car",
       content: '<div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
-      <div class="col-12"><input class="modal-form" name="icon" type="file" style="font-size: 0.7rem"></div>\
-      </div><div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
-      <div class="col-4 control-label"><span style="line-height: 38px;vertical-align:middle">Name</span></div>\
-      <div class="col-8"><input name="name" class="modal-form form-control input-sm"></div>\
-      </div><div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
-      <div class="col-4 control-label"><span style="line-height: 38px;vertical-align:middle">ID number</span></div>\
-      <div class="col-8"><input type="number" name="nr" class="modal-form form-control input-sm"></div>\
-      </div><div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
-      <div class="col-4 control-label"><span style="line-height: 38px;vertical-align:middle">Length</span></div>\
-      <div class="col-8"><input type="number" name="length" class="modal-form form-control input-sm"></div>\
-      </div><div class="row">\
-      <div class="col-4 control-label"><span style="line-height: 48px;vertical-align:middle">Type</span></div>\
-      <div class="col-8">\
-        <button name="type" class="modal-form btn-toggle btn btn-xs btn-outline-primary">Highspeed</button>\
-        <button name="type" class="modal-form btn-toggle btn btn-xs btn-outline-primary">Intercity</button>\
-        <button name="type" class="modal-form btn-toggle btn btn-xs btn-outline-primary">Regional</button><br/>\
-        <button name="type" class="modal-form btn-toggle btn btn-xs btn-outline-primary">Cargo</button>\
-        <button name="type" class="modal-form btn-toggle btn btn-xs btn-outline-primary">Coal</button>\
-        <button name="type" class="modal-form btn-toggle btn btn-xs btn-outline-primary">Boxes</button>\
-      </div></div>',
+                  <div class="col-12">\
+                    <div class="bg-light" style="width: 100%; padding-top: 50%; position: relative;">\
+                      <div class="train-icon" style="background-image: url(\'./trains_img/200_ice3_im.jpg\');"></div>\
+                    </div>\
+                    <input class="modal-form train-icon-name" name="icon_name" type="text" style="display: none;">\
+                    <input name="icon" type="file" style="display: none;">\
+                    <button name="train-icon-name-btn" onclick="$(\'#modal .modal-body input[type=file][name=icon]\').click();" class="btn mt-2 btn-sm btn-primary" style="margin:auto;display:block;">Browse icon</button>\
+                  </div>\
+                  <div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
+                    <div class="col-4 control-label">\
+                      <span style="line-height: 38px;vertical-align:middle">Name</span>\
+                    </div>\
+                    <div class="col-8"><input name="name" class="modal-form form-control input-sm"></div>\
+                  </div>\
+                  <div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
+                    <div class="col-4 control-label"><span style="line-height: 38px;vertical-align:middle">ID number</span></div>\
+                    <div class="col-8"><input type="number" name="nr" class="modal-form form-control input-sm"></div>\
+                  </div>\
+                  <div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
+                    <div class="col-4 control-label"><span style="line-height: 38px;vertical-align:middle">Length</span></div>\
+                    <div class="col-8"><input type="number" name="length" class="modal-form form-control input-sm"></div>\
+                  </div>\
+                  <div class="row">\
+                    <div class="col-4 control-label"><span style="line-height: 48px;vertical-align:middle">Type</span></div>\
+                    <div class="col-8">\
+                      <button name="type" class="modal-form btn-toggle btn btn-xs btn-outline-primary">Highspeed</button>\
+                      <button name="type" class="modal-form btn-toggle btn btn-xs btn-outline-primary">Intercity</button>\
+                      <button name="type" class="modal-form btn-toggle btn btn-xs btn-outline-primary">Regional</button><br/>\
+                      <button name="type" class="modal-form btn-toggle btn btn-xs btn-outline-primary">Cargo</button>\
+                      <button name="type" class="modal-form btn-toggle btn btn-xs btn-outline-primary">Coal</button>\
+                      <button name="type" class="modal-form btn-toggle btn btn-xs btn-outline-primary">Boxes</button>\
+                    </div>\
+                  </div>',
       buttons: {
         success: {visible: true, content: "Create", cb: function(data){/*websocket.cts_link_train(fid, rid, type, mid)*/}, wait: false},
         warning: {visible: true, content: "Update", cb: function(){alert("Update");}, wait: false},

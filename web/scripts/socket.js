@@ -202,10 +202,10 @@ var websocket = {
       msg[5] = (data.length & 0x00ff);
       msg[6] = (data.length & 0xff00) >> 8;
       msg[7] = data.type & 0xf;
-      if(data.img_ext.includes('jpg')){
+      if(data.image_name.endsWith('jpg')){
         msg[8] |= 0x10;
       }
-      if(data.icon_ext.includes('jpg')){
+      if(data.icon_name.endsWith('jpg')){
         msg[8] |= 0x1;
       }
       msg[9] = data.name.length;
@@ -235,10 +235,10 @@ var websocket = {
       msg[7] = (data.length & 0x00ff);
       msg[8] = (data.length & 0xff00) >> 8;
       msg[9] = data.type & 0xf;
-      if(data.img_ext.includes('jpg')){
+      if(data.image_name.endsWith('jpg')){
         msg[10] |= 0x10;
       }
-      if(data.icon_ext.includes('jpg')){
+      if(data.icon_name.endsWith('jpg')){
         msg[10] |= 0x1;
       }
       msg[11] = data.name.length;
@@ -251,7 +251,7 @@ var websocket = {
     },
 
     cts_add_engine: function(data){
-      var req_keys = ["icon", "image", "name", "dcc", "length", "type", "speedstep", "image", "icon"];
+      var req_keys = ["icon_name", "image_name", "name", "dcc", "length", "type", "speedstep"];
       var missing_data = [];
       for(var i = 0; i < req_keys.length; i++){
         if(data[ req_keys[i] ] == undefined){
@@ -277,31 +277,46 @@ var websocket = {
       msg[4] = (data.length & 0xff00) >> 8;
       msg[5] = data.type;
 
-      if(data.speedsteps == 28){
-        msg[6] |= 0b01;
+      if(data.speedstep == 28){
+        msg[6] |= 0b0100;
       }
-      else if(data.speedsteps == 128){
+      else if(data.speedstep == 128){
+        msg[6] |= 0b1000;
+      }
+
+      if(data.image_name.endsWith('jpg')){
         msg[6] |= 0b10;
+      }
+      if(data.icon_name.endsWith('jpg')){
+        msg[6] |= 0b01;
       }
 
       msg[7] = data.name.length;
 
-      if(data.img_ext.includes('jpg')){
-        msg[8] |= 0x10;
-      }
-      if(data.icon_ext.includes('jpg')){
-        msg[8] |= 0x1;
-      }
+      msg[8] = data.speedsteps.length;
 
-      msg[9] = data.speed_steps.length;
+      //Upload timestamps
+      var time = data.image_name.split(".");
+      time = time[time.length - 2].split("");
+
+      var time_image = parseInt(time[0]) * 600 + parseInt(time[1]) * 60 + parseInt(time[2]) * 10 + parseInt(time[3]);
+
+      var time = data.icon_name.split(".");
+      time = time[time.length - 2].split("");
+
+      var time_icon = parseInt(time[0]) * 600 + parseInt(time[1]) * 60 + parseInt(time[2]) * 10 + parseInt(time[3]);
+
+      msg[9] = time_image & 0xFF;
+      msg[10] = ((time_image >> 4) & 0xF0) | (time_icon & 0x0F);
+      msg[11] = (time_icon >> 4);
 
       for (var i = 0; i < data.name.length; i++) {
         msg.push(data.name.charCodeAt(i));
       }
 
-      for (var i = 0; i < data.speed_steps.length; i++){
-        msg.push(data.speed_steps[i].step);
-        msg.push(data.speed_steps[i].speed);
+      for (var i = 0; i < data.speedsteps.length; i++){
+        msg.push(data.speedsteps[i].step);
+        msg.push(data.speedsteps[i].speed);
       }
 
       this.send(msg);
@@ -322,23 +337,46 @@ var websocket = {
       msg[4] = (data.dcc & 0xff00) >> 8;
       msg[5] = (data.length & 0x00ff);
       msg[6] = (data.length & 0xff00) >> 8;
-      msg[7] = (data.type & 0xf) | (data.speedsteps << 4);
-      msg[8] = data.name.length;
-      if(data.img_ext.includes('jpg')){
-        msg[9] |= 0x10;
+      msg[7] = data.type;
+
+      if(data.speedstep == 28){
+        msg[8] |= 0b0100;
       }
-      if(data.icon_ext.includes('jpg')){
-        msg[10] |= 0x1;
+      else if(data.speedstep == 128){
+        msg[8] |= 0b1000;
       }
-      msg[11] = data.speed_steps.length;
+      if(data.image_name.endsWith('jpg')){
+        msg[8] |= 0b10;
+      }
+      if(data.icon_name.endsWith('jpg')){
+        msg[8] |= 0b1;
+      }
+
+      msg[9] = data.name.length;
+      msg[10] = data.speedsteps.length;
+
+      //Upload timestamps
+      var time = data.image_name.split(".");
+      time = time[time.length - 2].split("");
+
+      var time_image = parseInt(time[0]) * 600 + parseInt(time[1]) * 60 + parseInt(time[2]) * 10 + parseInt(time[3]);
+
+      var time = data.icon_name.split(".");
+      time = time[time.length - 2].split("");
+
+      var time_icon = parseInt(time[0]) * 600 + parseInt(time[1]) * 60 + parseInt(time[2]) * 10 + parseInt(time[3]);
+
+      msg[11] = time_image & 0xFF;
+      msg[12] = ((time_image >> 4) & 0xF0) | (time_icon & 0x0F);
+      msg[13] = (time_icon >> 4) & 0xFF;
 
       for (var i = 0; i < data.name.length; i++) {
         msg.push(data.name.charCodeAt(i));
       }
 
-      for (var i = 0; i < data.speed_steps.length; i++){
-        msg.push(data.speed_steps[i].step);
-        msg.push(data.speed_steps[i].speed);
+      for (var i = 0; i < data.speedsteps.length; i++){
+        msg.push(data.speedsteps[i].step);
+        msg.push(data.speedsteps[i].speed);
       }
 
       this.send(msg);

@@ -32,10 +32,11 @@
   struct __attribute__((__packed__)) s_opc_AddNewEnginetolib {
     uint16_t DCC_ID;
     uint16_t length;
-    uint8_t fl;
+    uint8_t type;
+    uint8_t flags;
     uint8_t name_len;
-    uint8_t filetype;
     uint8_t steps;
+    uint8_t timing[3];
     char strings;
   };
 

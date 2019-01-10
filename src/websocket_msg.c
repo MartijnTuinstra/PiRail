@@ -580,7 +580,7 @@ void WS_cts_AddEnginetoLib(struct s_opc_AddNewEnginetolib * data, struct web_cli
   rdata->data.opc_AddNewEnginetolib_res.DCC_ID = data->DCC_ID;
 
   if (DCC_train[data->DCC_ID]){
-    loggerf(ERROR, "DCC allready in use");
+    loggerf(ERROR, "DCC %i allready in use", data->DCC_ID);
     rdata->data.opc_AddNewEnginetolib_res.response = 255;
     ws_send(client->fd, (char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
     return;
@@ -588,34 +588,41 @@ void WS_cts_AddEnginetoLib(struct s_opc_AddNewEnginetolib * data, struct web_cli
 
   char * name = _calloc(data->name_len + 1, 1);
   char * steps = _calloc(data->steps, 3);
-  char * img = _calloc(data->name_len + 8 + 3 + 20, 1);
-  char * icon = _calloc(data->name_len + 8 + 3 + 20, 1);
-  char * simg = _calloc(20 + 3, 1);
-  char * sicon = _calloc(20 + 3, 1);
+  char * img = _calloc(data->name_len + 8 + 3 + 20, 1);  //Destination file
+  char * icon = _calloc(data->name_len + 8 + 3 + 20, 1); //Destination file
+  char * simg = _calloc(40, 1); //Source file
+  char * sicon = _calloc(40, 1); //Source file
   char * filetype = _calloc(4, 1);
 
   memcpy(name, &data->strings, data->name_len);
-  memcpy(steps, &data->strings + data->name_len, data->steps);
+  memcpy(steps, &data->strings + data->name_len, data->steps * 3);
 
-  if((data->filetype & 0xf0) == 0){
+  uint16_t image_time = data->timing[0] + ((data->timing[1] & 0xf0) << 4);
+  image_time = (image_time / 60) * 100 + (image_time % 60);
+  uint16_t icon_time = (data->timing[1] & 0x0f) + (data->timing[2] << 4);
+  icon_time = (icon_time / 60) * 100 + (icon_time % 60);
+
+  loggerf(ERROR, "%04i - %04i", image_time, icon_time);
+
+  if((data->flags & 0b10) == 0){
     sprintf(img, "%i_%s.%s", data->DCC_ID, name, "png");
-    sprintf(simg, "%s.%s", "web/tmp_img", "png");
+    sprintf(simg, "%s.%04i.%s", "web/tmp_img", image_time, "png");
   }
   else{
     sprintf(img, "%i_%s.%s", data->DCC_ID, name, "jpg");
-    sprintf(simg, "%s.%s", "web/tmp_img", "jpg");
+    sprintf(simg, "%s.%04i.%s", "web/tmp_img", image_time, "jpg");
   }
 
-  if((data->filetype & 0x0f) == 0){
+  if((data->flags & 0b1) == 0){
     sprintf(icon, "%i_%s.%s", data->DCC_ID, name, "png");
-    sprintf(sicon, "%s.%s", "web/tmp_icon", "png");
+    sprintf(sicon, "%s.%04i.%s", "web/tmp_icon", icon_time, "png");
   }
   else{
     sprintf(icon, "%i_%s.%s", data->DCC_ID, name, "jpg");
-    sprintf(sicon, "%s.%s", "web/tmp_icon", "jpg");
+    sprintf(sicon, "%s.%04i.%s", "web/tmp_icon", icon_time, "jpg");
   }
 
-  create_engine(name, data->DCC_ID, img, icon, data->fl, data->length, data->steps, (struct engine_speed_steps *)steps);
+  create_engine(name, data->DCC_ID, img, icon, data->type, data->length, data->steps, (struct engine_speed_steps *)steps);
 
   char * dimg = _calloc(strlen(img)+10, 1);
   char * dicon = _calloc(strlen(icon)+10, 1);

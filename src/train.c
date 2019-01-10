@@ -216,6 +216,7 @@ void create_engine(char * name,int DCC,char * img, char * icon, char type, int l
   DCC_train[DCC] = Z;
 
   Z->length = length;
+  //TODO add to arguments
   Z->speed_step_type = TRAIN_128_FAHR_STUFEN;
 
   Z->type = type;

@@ -11,22 +11,24 @@ if (!$fileTmpLoc) { // if file not chosen
 }
 $ext = pathinfo($fileName, PATHINFO_EXTENSION);
 
-$dst_loc = __DIR__."/".$_POST['name'].".".end(explode(".",$_FILES["file1"]["name"]));
+$time = date("is"); //Minute and second
+$filename = $_POST['name'];
+$file_extension = end(explode(".",$_FILES["file1"]["name"]));
 
-if(move_uploaded_file($fileTmpLoc, $dst_loc)){
-    echo $dst_loc." upload is complete\n";
-    echo "name: ".$_POST['name']."\n";
-}else {
-    //phpinfo();
-    echo "Error nr $fileErrorMsg\n";
-    echo "Failed to move a file from $fileTmpLoc to $dst_loc\n";
+$new_filename = $filename . "." . $time . "." . $file_extension;
+
+$dst_loc = __DIR__."/".$new_filename;
+
+echo $new_filename;
+
+if(!move_uploaded_file($fileTmpLoc, $dst_loc)){
+    echo "Failed to move a file from $fileTmpLoc to $dst_loc";
     http_response_code(404);
     exit();
 }
 
 $resize = false;
 if($fileType == "image/jpeg" || $fileType == "image/png"){
-  echo "resize\n";
   list($width,$height) = getimagesize($dst_loc);
   $ratio = $height / $width;
   if($height > 500){

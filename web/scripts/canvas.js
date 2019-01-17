@@ -9,7 +9,7 @@ var Canvas = {
 	ro: [],
 	c: undefined,
 	canvas: undefined,
-	dimensions: {scale:1,width:0,height:0,ofX:0,ofY:0,content_width:0,content_height:0,box_width:0,box_height:0,x_left:0,x_right:0,y_top:0,y_bottom:0},
+	dimensions: {scale:1,width:0,height:0,ofX:0,ofY:0,box_width:0,box_height:0,x_left:0,x_right:0,y_top:0,y_bottom:0, content:{width:0, height: 0}},
 	init_calc: function(){
 		this.ro = [{x:this.radia[0]*Math.cos(Math.PI*0.25),y:this.radia[0] - this.radia[0]*Math.sin(Math.PI*0.25),yr:this.radia[0]*Math.sin(Math.PI*0.25)}];
 		this.ro[0].l = Math.sqrt(Math.pow(this.ro[0].x-this.ds,2)+Math.pow(this.ro[0].y,2));
@@ -20,22 +20,21 @@ var Canvas = {
 		this.c = this.canvas.getContext('2d');
 		c = this.c;
 
-	    this.canvas.height = $('#LayoutContainer').height();
-		this.canvas.width = $('#LayoutContainer').width();
+	    this.dimensions.height = (this.canvas.height = $('#LayoutContainer').height());
+		this.dimensions.width  = (this.canvas.width  = $('#LayoutContainer').width());
 
 		this.canvas_jquery.on('mousedown',this.evt_mousedown);
 		this.canvas_jquery.on('mouseup',this.evt_mouseup);
 
-		this.canvas_jquery.on("mousewheel",this.evt_scrolled)
+		// this.canvas_jquery.on("scroll", this.evt_scrolled.bind(this));
+		this.canvas_jquery.on("wheel", Canvas.evt_scrolled.bind(this));
+		// this.canvas_jquery.on("DOMMouseScroll", Canvas.evt_DOMscrolled.bind(this));
 
 		this.canvas_jquery.on("touchstart",this.evt_drag_start);
 		this.canvas_jquery.on("touchmove",this.evt_drag_move);
 		this.canvas_jquery.on("touchend",this.evt_drag_end);
-
-		this.dimensions.width = this.canvas.width;
-		this.dimensions.height = this.canvas.height;
 		
-		this.dimensions.ofX = 0.5*this.dimensions.width-0.5*this.dimensions.content_width;
+		this.dimensions.ofX = 0.5*this.dimensions.width-0.5*this.dimensions.content.width;
 		this.dimensions.ofY = 0;
 
 		this.calc_limits();
@@ -46,48 +45,99 @@ var Canvas = {
 
 		this.resize();
 
-		this.calc_dotmatrix();
-
-		this.dimensions.content_width = 1300;
-		this.dimensions.content_height= 460;
-		this.dimensions.box_width  = this.dimensions.content_width;
-		this.dimensions.box_height = this.dimensions.content_height;
-		this.dimensions.ofX = this.dimensions.width/2-this.dimensions.content_width/2;
-		this.calc_limits();
+		this.get_content_box();
 
 		this.update_frame();
+	},
+
+	get_content_box: function(){
+
+		var l = 1e100;
+		var r = 0;
+		var t = 1e100;
+		var b = 0;
+
+		for(const i in modules){
+			if(!modules[i].visible){
+				continue;
+			}
+
+			console.log("Module "+i, modules[i].width, modules[i].height, modules[i].OffsetX, modules[i].OffsetY, modules[i].r);
+			console.log([l, r, t, b]);
+
+			if(modules[i].r == 0){
+				if(modules[i].OffsetX < l){
+					l = modules[i].OffsetX - 20;
+				}
+
+				if((modules[i].OffsetX + modules[i].width) > r){
+					r = modules[i].OffsetX + modules[i].width + 20;
+				}
+
+				if(modules[i].OffsetY < t){
+					t = modules[i].OffsetY - 20;
+				}
+
+				if((modules[i].OffsetY + modules[i].height) > b){
+					b = modules[i].OffsetY + modules[i].height + 20;
+				}
+			}
+			else if(modules[i].r == 1){
+				if((modules[i].OffsetX - modules[i].width) < l){
+					l = modules[i].OffsetX - modules[i].width - 20;
+				}
+
+				if((modules[i].OffsetX) > r){
+					r = modules[i].OffsetX + 20;
+				}
+
+				if((modules[i].OffsetY - modules[i].height) < t){
+					t = modules[i].OffsetY - modules[i].height - 20;
+				}
+
+				if((modules[i].OffsetY) > b){
+					b = modules[i].OffsetY + 20;
+				}
+			}
+
+			console.log([l, r, t, b]);
+		}
+
+		this.dimensions.content.width = (r - l)*this.dimensions.scale;
+		this.dimensions.content.height = (b - t)*this.dimensions.scale;
+		this.dimensions.content.ofX = l*this.dimensions.scale;
+		this.dimensions.content.ofY = t*this.dimensions.scale;
+
+		console.log("content_box", [r-l, b-t])
+		this.calc_limits();
 	},
 	resize: function(){
 		console.log("resize");
 
-		tmp_scale = this.dimensions.scale;
-		this.rescale(1);
-
-	    this.canvas.height = $('#LayoutContainer').height();
-		this.canvas.width  = $('#LayoutContainer').width();
-
-		this.dimensions.width = this.canvas.width;
-		this.dimensions.height = this.canvas.height;
+	    this.dimensions.height = (this.canvas.height = $('#LayoutContainer').height());
+		this.dimensions.width  = (this.canvas.width  = $('#LayoutContainer').width());
 		
-		this.dimensions.ofX = 0.5*this.dimensions.width-0.5*this.dimensions.content_width;
+		//Recenter content
+		this.dimensions.ofX = 0.5*this.dimensions.width/this.dimensions.scale-0.5*this.dimensions.content.width;
 		this.dimensions.ofY = 0;
 
+		this.get_content_box();
 		this.calc_limits();
-
-		this.rescale(tmp_scale);
 
 		this.update_frame();
 	},
 	rescale: function(new_scale){
-		c.scale(1/this.dimensions.scale,1/this.dimensions.scale);
+		console.log("rescale");
+		this.c.scale(1/this.dimensions.scale,1/this.dimensions.scale);
 
 		this.dimensions.scale = new_scale;
-		c.scale(this.dimensions.scale,this.dimensions.scale);
+		this.c.scale(this.dimensions.scale,this.dimensions.scale);
 
-		this.dimensions.ofX = 0.5*this.dimensions.width/this.dimensions.scale-0.5*this.dimensions.content_width;
+		this.get_content_box();
+
+		//Recenter content
+		this.dimensions.ofX = 0.5*this.dimensions.width/this.dimensions.scale-0.5*this.dimensions.content.width;
 		this.dimensions.ofY = 0;
-
-		this.calc_limits();
 
 		this.moved();
 
@@ -95,14 +145,13 @@ var Canvas = {
 	},
 
 	calc_limits: function(){
-		if(this.dimensions.content_width == 0 || this.dimensions.content_height == 0){
+		if(this.dimensions.content.width == 0 || this.dimensions.content.height == 0){
 			return;
 		}
-		var margin = 20/this.dimensions.scale;
-		this.dimensions.x_left   = -margin;
-		this.dimensions.x_right  = this.dimensions.content_width+margin;
+		this.dimensions.x_left   = 0;
+		this.dimensions.x_right  = this.dimensions.content.width;
 		this.dimensions.y_top    = 0;
-		this.dimensions.y_bottom = this.dimensions.content_height+margin;
+		this.dimensions.y_bottom = this.dimensions.content.height;
 	},
 
 	calc_dotmatrix: function(){
@@ -143,12 +192,12 @@ var Canvas = {
 	draw_dotmatrix: function(){
 		c.lineWidth = 0.1;
 		//Draw dots
-		var dot_radius = Math.min(2.8*this.dimensions.scale,2.8);
+		var dot_radius = 2.8;
 		var obj = this;
 
 		$.each(modules,function(module,module_v){
 			if (module_v.visible){
-				module_v.draw_dotmatrix(obj.setStrokeColor, obj.dimensions, dot_radius);
+				module_v.draw_dotmatrix(obj.setStrokeColor, dot_radius);
 			}
 		});
 	},
@@ -159,7 +208,7 @@ var Canvas = {
 		//Draw background lines
 		$.each(modules,function(module,module_v){
 			if (module_v.visible){
-				module_v.draw_background(obj.setStrokeColor, obj.dimensions);
+				module_v.draw_background(obj.setStrokeColor);
 			}
 		});
 	},
@@ -171,7 +220,7 @@ var Canvas = {
 		c.lineWidth = 6;
 		$.each(modules,function(module,module_v){
 			if (module_v.visible){
-				module_v.draw_foreground(obj.setStrokeColor, obj.dimensions);
+				module_v.draw_foreground(obj.setStrokeColor);
 			}
 		});
 	},
@@ -204,8 +253,28 @@ var Canvas = {
 	},
 
     update_frame: function(){
-		c.clearRect(0, 0, this.dimensions.width/this.dimensions.scale, this.dimensions.height/this.dimensions.scale);
+    	this.c.setTransform(1, 0, 0, 1, 0, 0);
+		this.c.clearRect(-10, -10, 10 + this.dimensions.width/this.dimensions.scale, 10 + this.dimensions.height/this.dimensions.scale);
 		var tmp_this = this;
+
+		this.c.setTransform(1, 0, 0, 1, this.dimensions.ofX, this.dimensions.ofY);
+
+		this.c.beginPath();
+		this.c.lineWidth = "6";
+		this.c.rect(0, 0,this.dimensions.content.width, this.dimensions.content.height);
+
+		this.c.stroke();
+
+		this.c.setTransform(this.dimensions.scale, 0, 0, this.dimensions.scale, this.dimensions.ofX-this.dimensions.content.ofX, this.dimensions.ofY-this.dimensions.content.ofY);
+
+
+		for (var w = 50; w < this.dimensions.content.width + 50; w += 100) {
+		    for (var h = 50; h < this.dimensions.content.height + 50; h += 100) {
+		      var x = Math.round((w) / 100) * 100;
+		      var y = Math.round((h) / 100) * 100;
+		      this.c.fillText(x + ',' + y, x, y);
+		    }
+		  }
 
 		this.draw_background();
 		this.draw_dotmatrix();
@@ -218,8 +287,8 @@ var Canvas = {
 			if (module_v.visible == false){
 				return true;
 			}
-			var ofX = module_v.OffsetX + tmp_this.dimensions.ofX;
-			var ofY = module_v.OffsetY + tmp_this.dimensions.ofY;
+			var ofX = module_v.OffsetX;
+			var ofY = module_v.OffsetY;
 			var rvX = Math.cos(module_v.r*Math.PI);
 			var rvX_ = Math.cos((module_v.r+0.5)*Math.PI);
 			var rvY = Math.sin((module_v.r+0.5)*Math.PI);
@@ -373,22 +442,24 @@ var Canvas = {
 
 	moved: function(){
 		console.log("Moved");
-		if(this.dimensions.width < this.dimensions.content_width){
+		console.log([this.dimensions.ofX, this.dimensions.ofY, this.dimensions.width, this.dimensions.content]);
+		console.log([this.dimensions.x_left, this.dimensions.x_right, this.dimensions.y_top, this.dimensions.y_bottom]);
+		if(this.dimensions.width < this.dimensions.content.width){
 			//Scroll limiter
 			if((this.dimensions.x_left) > -this.dimensions.ofX){
 				this.dimensions.ofX = -this.dimensions.x_left;
 			}
-			if((this.dimensions.x_right) < -this.dimensions.ofX+this.canvas.width / this.dimensions.scale){
-				this.dimensions.ofX = -(this.dimensions.x_right - this.canvas.width / this.dimensions.scale);
+			if((this.dimensions.x_right) < -this.dimensions.ofX+this.canvas.width){
+				this.dimensions.ofX = -(this.dimensions.x_right - this.canvas.width);
 			}
 		}
-		if(this.dimensions.height < this.dimensions.content_height){
+		if(this.dimensions.height < this.dimensions.content.height){
 			//Scroll limiter
 			if((this.dimensions.y_top) > -this.dimensions.ofY){
 				this.dimensions.ofY = this.dimensions.y_top;
 			}
-			if((this.dimensions.y_bottom) < -this.dimensions.ofY+this.canvas.height / this.dimensions.scale){
-				this.dimensions.ofY = -(this.dimensions.y_bottom - this.canvas.height / this.dimensions.scale);
+			if((this.dimensions.y_bottom) < -this.dimensions.ofY+this.canvas.height){
+				this.dimensions.ofY = -(this.dimensions.y_bottom - this.canvas.height);
 			}
 		}
 
@@ -431,10 +502,10 @@ var Canvas = {
 	},
 	evt_drag_move: function(evt){
 		if(Canvas.touchMoved == true){
-			if(Canvas.dimensions.width < Canvas.dimensions.content_width){
+			if(Canvas.dimensions.width < Canvas.dimensions.content.width){
 				Canvas.dimensions.ofX += (evt.touches[0].pageX - Canvas.touchMove.x)/Canvas.dimensions.scale;
 			}
-			if(Canvas.dimensions.height < Canvas.dimensions.content_height){
+			if(Canvas.dimensions.height < Canvas.dimensions.content.height){
 				Canvas.dimensions.ofY += (evt.touches[0].pageY - Canvas.touchMove.y)/Canvas.dimensions.scale;
 			}
 
@@ -466,14 +537,24 @@ var Canvas = {
 	evt_scrolled: function(evt){
 		console.log("Scroll");
 
-		if(Canvas.dimensions.width < Canvas.dimensions.content_width){
-			Canvas.dimensions.ofX -= evt.originalEvent.deltaX/10;
+		if(this.dimensions.width < this.dimensions.content.width){
+			if(Math.abs(evt.originalEvent.deltaX) < 20){
+				this.dimensions.ofX -= evt.originalEvent.deltaX*10;
+			}
+			else{
+				this.dimensions.ofX -= evt.originalEvent.deltaX/10;
+			}
 		}
-		if(Canvas.dimensions.height < Canvas.dimensions.content_height){
-			Canvas.dimensions.ofY -= evt.originalEvent.deltaY/10;
+		if(this.dimensions.height < this.dimensions.content.height){
+			if(Math.abs(evt.originalEvent.deltaY) < 20){
+				this.dimensions.ofX -= evt.originalEvent.deltaY*10;
+			}
+			else{
+				this.dimensions.ofX -= evt.originalEvent.deltaY/10;
+			}
 		}
 
-		Canvas.moved();
+		this.moved();
 	}
 }
 
@@ -544,7 +625,6 @@ class canvas_line {
 		}
 		stroke(this.m.blocks[this.b]);
 		if(this.if != undefined){
-			var where = "F";
 			for (var i = this.if.length - 1; i >= 0; i--) {
 				if(this.m.switches[this.if[i].sw] != this.if[i].st)
 					return true; // Print on background
@@ -1260,10 +1340,12 @@ class canvas_module {
 		for(var i = 0; i < this.data.length; i++){
 			this.data[i].init();
 		}
+
+		Canvas.get_content_box();
 	}
 
-	draw_dotmatrix(stroke, dimensions, r){
-		var offset = {X: this.OffsetX + dimensions.ofX, Y: this.OffsetY + dimensions.ofY};
+	draw_dotmatrix(stroke, r){
+		var offset = {X: this.OffsetX, Y: this.OffsetY};
 		var rotation = {X: Math.cos(this.r*Math.PI), X_: Math.cos((this.r+0.5)*Math.PI),
 			            Y: Math.sin((this.r+0.5)*Math.PI), Y_: Math.sin((this.r)*Math.PI)};
 
@@ -1289,8 +1371,8 @@ class canvas_module {
 		};
 	}
 
-	draw_background(stroke, dimensions){
-		var offset = {X: this.OffsetX + dimensions.ofX, Y: this.OffsetY + dimensions.ofY};
+	draw_background(stroke){
+		var offset = {X: this.OffsetX, Y: this.OffsetY};
 		var rotation = {X: Math.cos(this.r*Math.PI), X_: Math.cos((this.r+0.5)*Math.PI),
 			            Y: Math.sin((this.r+0.5)*Math.PI), Y_: Math.sin((this.r)*Math.PI)};
 
@@ -1301,8 +1383,8 @@ class canvas_module {
 		};
 	}
 
-	draw_foreground(stroke, dimensions){
-		var offset = {X: this.OffsetX + dimensions.ofX, Y: this.OffsetY + dimensions.ofY};
+	draw_foreground(stroke){
+		var offset = {X: this.OffsetX, Y: this.OffsetY};
 		var rotation = {X: Math.cos(this.r*Math.PI), X_: Math.cos((this.r+0.5)*Math.PI),
 			            Y: Math.sin((this.r+0.5)*Math.PI), Y_: Math.sin((this.r)*Math.PI)};
 
@@ -1323,11 +1405,14 @@ function load_module(id, callback){
     });
 };
 
-$(document).ready(function(){
+
+init_list.push(function(){
 	load_module(20, function(){modules[20].init({visible: true, OffsetX:  250, OffsetY:  20, r: 0});Canvas.calc_dotmatrix(); Canvas.update_frame()});
 	load_module(21, function(){modules[21].init({visible: true, OffsetX: 1050, OffsetY: 460, r: 1});Canvas.calc_dotmatrix(); Canvas.update_frame()});
-	load_module(22, function(){modules[22].init({visible: true, OffsetX: 1050, OffsetY:  20, r: 0});Canvas.calc_dotmatrix(); Canvas.update_frame()});
+	load_module(22, function(){modules[22].init({visible: true, OffsetX: 1850, OffsetY:  20, r: 0});Canvas.calc_dotmatrix(); Canvas.update_frame()});
 	load_module(23, function(){modules[23].init({visible: true, OffsetX:  250, OffsetY: 460, r: 1});Canvas.calc_dotmatrix(); Canvas.update_frame()});
+	load_module(25, function(){modules[25].init({visible: true, OffsetX: 1050, OffsetY:  20, r: 0});Canvas.calc_dotmatrix(); Canvas.update_frame()});
+	load_module(26, function(){modules[26].init({visible: true, OffsetX: 1850, OffsetY: 460, r: 1});Canvas.calc_dotmatrix(); Canvas.update_frame()});
 });
 
 var modules = {};

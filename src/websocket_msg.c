@@ -42,10 +42,11 @@ void WS_Partial_Layout(uint8_t M_A,uint8_t M_B){
 
   char data[20];
   int q = 1;
+  int x = 1;
   memset(data,0,20);
   data[0] = WSopc_Track_Layout_Update;
 
-  printf("WS_Partial_Layout\n");
+  loggerf(INFO, "WS_Partial_Layout\n");
   printf("Checking Module A, %i\n",M_A);
   data[q++] = M_A;
   for(int i = 0;i<Units[M_A]->connections_len;i++){
@@ -60,6 +61,8 @@ void WS_Partial_Layout(uint8_t M_A,uint8_t M_B){
     }
   }
 
+  x = q;
+
   printf("Checking Module B, %i\n",M_B);
 
   data[q++] = M_B;
@@ -70,7 +73,7 @@ void WS_Partial_Layout(uint8_t M_A,uint8_t M_B){
     }
     else{
       printf("Reset\n");
-      q = 1;
+      q = x;
       break;
     }
   }
@@ -91,24 +94,27 @@ void WS_Track_Layout(){
   printf("WS_Track_Layout\n");
 
   for(int i = 0;i<unit_len;i++){
-    if(Units[i]){
-      data[q++] = i;
-      // loggerf(ERROR, "Fix CONNECT_POINTS UNIT");
-      // for(int j = 0;j<Units[i]->connect_points;j++){
-      //   if(Units[i]->Connect[j]){
-      //     printf(" - Connect found, module %i\n",Units[i]->Connect[j]->Module);
-      //     data[q++] = Units[i]->Connect[j]->Module;
-      //   }
-      //   else{
-      //     printf(" - No Connect found\n");
-      //     data[q++] = 0;
-      //   }
-      // }
+    if(!Units[i])
+      continue;
+
+    data[q++] = i;
+    printf("Module %i\n", i);
+
+    for(int j = 0;j<Units[i]->connections_len;j++){
+      if(Units[i]->connection[j]){
+        printf(" - Connect found, module %i\n",Units[i]->connection[j]->module);
+        data[q++] = Units[i]->connection[j]->module;
+      }
+      else{
+        printf(" - No Connect found\n");
+        data[q++] = 0;
+      }
     }
   }
+  
+  printf("Send %i\n",q);
 
   if(q > 1){
-    printf("Send %i\n",q);
     ws_send_all(data,q,WS_Flag_Track);
   }
 }
@@ -169,14 +175,10 @@ void WS_cts_Enable_Disable_SubmoduleState(uint8_t opcode, uint8_t flags){
       Algor_start();
     }
     else if(flags & 0x04){ //SimA
-      if(_SYS->UART_State == _SYS_Module_Stop){
-        UART_start();
-      }
-      if(_SYS->LC_State == _SYS_Module_Stop){
-        Algor_start();
-      }
-      _SYS->SimA_State = _SYS_Module_Init;
       SimA_start();
+    // }
+    // else if(flags & 0x02){ //SimB
+      SimB_start();
     }
     WS_stc_SubmoduleState();
   }
@@ -196,6 +198,9 @@ void WS_cts_Enable_Disable_SubmoduleState(uint8_t opcode, uint8_t flags){
     }
     else if(flags & 0x04){
       _SYS->SimA_State = _SYS_Module_Stop;
+    }
+    else if(flags & 0x02){
+      _SYS->SimB_State = _SYS_Module_Stop;
     }
     WS_stc_SubmoduleState();
   }

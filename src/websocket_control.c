@@ -153,8 +153,10 @@ void * websocket_client_connect(void * p){
   data[2] = _SYS->_STATE & 0xFF;
   ws_send(client->fd, data, 3, 0xFF);
 
+  //Send submodule status
   WS_stc_SubmoduleState();
   
+  //Send track layout and data
   if(_SYS->_STATE & STATE_Modules_Loaded && _SYS->_STATE & STATE_Modules_Coupled){
     ws_send(client->fd,(char [6]){2,4,1,8,4,2},6,8);
 

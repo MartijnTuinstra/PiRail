@@ -30,8 +30,9 @@
 
   typedef struct proces_block {
     uint8_t blocked:1;
+    uint8_t switches:1;
     uint8_t signal:1;
-    uint8_t blocks:6;
+    uint8_t blocks:5;
     int length;
     Block * B[5];
   } Algor_Block;
@@ -195,10 +196,15 @@ enum link_types {
   int Next_check_Switch_Path_one_block(Block * B, void * p, struct rail_link link, int flags);
   int Switch_to_rail(Block ** B, void * Sw, char type, uint8_t counter);
 
-  struct rail_link Next_link(Block * B, int flags);
-  struct rail_link Prev_link(Block * B);
+  struct rail_link * Next_link(Block * B, int flags);
+  // struct rail_link Prev_link(Block * B);
 
   void Reserve_To_Next_Switch(Block * B);
+
+  #define Block_reserve(B) loggerf(INFO, "RESERVE BLOCK %02i:%02i", B->module, B->id);\
+                            B->reserved++
+  #define Block_dereserve(B) loggerf(INFO, "deRESERVE BLOCK %02i:%02i", B->module, B->id);\
+                            B->reserved--
 
   void Block_Reverse(Block * B);
   int Block_Reverse_To_Next_Switch(Block * B);

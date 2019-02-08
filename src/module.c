@@ -416,35 +416,50 @@ void JoinModules(){
     prev_j = cur_j;
 
     if(i == 15){
+    usleep(500000);
     if(x == 1){
       Units[20]->B[5]->blocked = 1;
-      Units[22]->B[0]->blocked = 1;
+      Units[25]->B[0]->blocked = 1;
       printf("\n1\n");
     }else if(x == 2){
+      Units[25]->B[3]->blocked = 1;
+      Units[22]->B[0]->blocked = 1;
+
+      Units[20]->B[5]->blocked = 0;
+      Units[25]->B[0]->blocked = 0;
+      printf("\n2\n");
+    }else if(x == 3){
+      Units[22]->B[1]->blocked = 1;
+      Units[26]->B[0]->blocked = 1;
+
+      Units[25]->B[3]->blocked = 1;
+      Units[22]->B[0]->blocked = 1;
+      printf("\n3\n");
+    }else if(x == 4){
+      Units[26]->B[3]->blocked = 1;
+      Units[21]->B[0]->blocked = 1;
+
+      Units[22]->B[1]->blocked = 0;
+      Units[26]->B[0]->blocked = 0;
+      printf("\n4\n");
+    }else if(x == 5){
       Units[21]->B[3]->blocked = 1;
       Units[23]->B[0]->blocked = 1;
 
-      Units[20]->B[5]->blocked = 0;
-      Units[22]->B[0]->blocked = 0;
-      printf("\n2\n");
-    }else if(x == 3){
-      Units[20]->B[0]->blocked = 1;
+      Units[26]->B[3]->blocked = 0;
+      Units[21]->B[0]->blocked = 0;
+      printf("\n5\n");
+    }else if(x == 6){
       Units[23]->B[1]->blocked = 1;
+      Units[20]->B[0]->blocked = 1;
 
       Units[21]->B[3]->blocked = 0;
       Units[23]->B[0]->blocked = 0;
-      printf("\n3\n");
-    }else if(x == 4){
-      Units[21]->B[0]->blocked = 1;
-      Units[22]->B[1]->blocked = 1;
-
-      Units[20]->B[0]->blocked = 0;
+      printf("\n6\n");
+    }else if(x == 7){
       Units[23]->B[1]->blocked = 0;
-      printf("\n4\n");
-    }else if(x == 5){
-      Units[21]->B[0]->blocked = 0;
-      Units[22]->B[1]->blocked = 0;
-      printf("\n41\n");
+      Units[20]->B[0]->blocked = 0;
+      printf("\n7\n");
     }else if(x == 6){
       printf("\nend\n");
     }
@@ -480,7 +495,7 @@ void JoinModules(){
   }
   _free(List.R_L);
 
-  WS_Track_Layout();
+  // WS_Track_Layout();
 
 }
 

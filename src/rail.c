@@ -348,6 +348,11 @@ int Next_check_Switch(void * p, struct rail_link link, int flags){
 
 int Next_check_Switch_Path(void * p, struct rail_link link, int flags){
   loggerf(TRACE, "Next_check_Switch_Path (%x, %x, %i)", (unsigned int)p, (unsigned int)&link, flags);
+  if(!link.p){
+    loggerf(ERROR, "Empty LINK {%i:%i - %i}", link.module, link.id, link.type);
+    return 1;
+  }
+
   if((flags & 0x80) == 0){
     //No SWITCH_CARE
     return 1;
@@ -484,9 +489,9 @@ Block * Next_Switch_Block(Switch * S, char type, int flags, int level){
       return (Block *)next.p;
     }
     else{
-      struct rail_link nextnext = Next_link(next.p, flags);
+      struct rail_link * nextnext = Next_link(next.p, flags);
       // printf("-%x==%x-\t",S,nextnext.p);
-      if(nextnext.p == S){
+      if(nextnext->p == S){
         // printf("FLIP\n");
         if((flags & 0xf) == NEXT){
           flags = (flags & 0xf0) | PREV;
@@ -876,38 +881,32 @@ int Switch_to_rail(Block ** B, void * Sw, char type, uint8_t counter){
   return 0;
 }
 
-struct rail_link Next_link(Block * B, int flags){
+struct rail_link * Next_link(Block * B, int flags){
   // dir: 0 next, 1 prev
-  int dir = flags & 0x0F;
+  int dir = flags & 0x01;
 
-  struct rail_link next;
-  next.p = 0;
+  struct rail_link * next = 0;
 
   if(!B){
     loggerf(ERROR, "Empty block");
     return next;
   }
 
-  if((dir == 0 && B->dir == 1) || (dir == 1 && B->dir == 0)
-      || (dir == 1 && B->dir == 2)){
-    // If next + reversed direction
-    // Or prev + normal direction
-    // or prev + switching direction (normal)
-    next = B->prev;
+  if((dir == NEXT && (B->dir == 1 || B->dir == 4 || B->dir == 6)) ||
+     (dir == PREV && (B->dir == 0 || B->dir == 2 || B->dir == 5))) {
+    next = &B->prev;
   }
-  else if((dir == 0 && B->dir == 0) || (dir == 1 && B->dir == 1)
-      || (dir == 0 && B->dir == 2)){
-    // If next + normal direction
-    // or prev + reversed direction
-    // or next + switching direction (normal)
-    next = B->next;
+  else{
+    next = &B->next;
   }
 
   if(B->dir == 2){
     dir = !dir;
   }
+
+  if(!next)
+    loggerf(ERROR, "Empty next Link");
   return next;
-  loggerf(ERROR, "FIX Next_link");
 }
 
 struct rail_link Prev_link(Block * B){
@@ -937,7 +936,8 @@ void Reserve_To_Next_Switch(Block * B){
     if(Next_Block->state >= PROCEED)
       Next_Block->state = RESERVED;
     Next_Block->reverse_state = DANGER;
-    Next_Block->reserved++;
+    Block_reserve(Next_Block);
+    // Next_Block->reserved++;
     Next_Block->changed |= State_Changed;
 
     Next_Block = Next_Block->Alg.BN->B[0];
@@ -981,7 +981,8 @@ int Block_Reverse_To_Next_Switch(Block * B){
     if(Next_Block->state >= PROCEED)
       Next_Block->state = RESERVED;
     Next_Block->reverse_state = DANGER;
-    Next_Block->reserved++;
+    Block_reserve(Next_Block);
+    // Next_Block->reserved++;
     Next_Block->changed |= State_Changed;
 
     Next_Block = Next_Block->Alg.BN->B[0];

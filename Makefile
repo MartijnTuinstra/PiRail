@@ -55,7 +55,7 @@ $(SRC)/com.c: $(LIB)/com.h $(LIB)/system.h $(LIB)/rail.h \
 
 $(SRC)/encryption.c: $(LIB)/encryption.h
 
-$(SRC)/logger.c: $(LIB)/logger.h
+$(SRC)/logger.c: $(LIB)/logger.h $(LIB)/mem.h
 
 $(LIB)/module.h: $(LIB)/rail.h $(LIB)/switch.h $(LIB)/signals.h
 $(SRC)/module.c: $(LIB)/module.h $(LIB)/system.h \

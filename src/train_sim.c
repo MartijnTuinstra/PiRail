@@ -18,6 +18,9 @@ pthread_mutex_t mutex_lockA;
 #define TRAIN_A_LEN   5 //cm
 #define TRAIN_A_SPEED 5 //cm/s
 
+#define TRAIN_B_LEN   5 //cm
+#define TRAIN_B_SPEED 5 //cm/s
+
 
 void change_Block(Block * B, enum Rail_states state){
   B->changed |= IO_Changed;
@@ -101,11 +104,15 @@ void *TRAIN_SIMA(){
   return 0;
 }
 
-
 void *TRAIN_SIMB(){
-  Block *B = Units[20]->B[4];
-  Block *N = Units[20]->B[4];
+  while(_SYS->LC_State != _SYS_Module_Run){
+    usleep(10000);
+  }
+  Block *B = Units[26]->B[2];
+  Block *N = Units[26]->B[2];
   Block *N2 = 0;
+
+  Reserve_To_Next_Switch(B);
 
   B->state = BLOCKED;
   B->blocked = 1;
@@ -113,33 +120,25 @@ void *TRAIN_SIMB(){
 
   putAlgorQueue(B, 1);
 
-  while(1){
-    if(B->state == RESTRICTED){ //B->train != 0 && train_link[B->train] != 0 ||
-      break;
-    }
-    else if((_SYS->_STATE & STATE_RUN) == 0){
-      break;
-    }
-    usleep(100);
-  }
+  usleep(100000);
 
+  _SYS->SimB_State = _SYS_Module_Run;
+  WS_stc_SubmoduleState();
 
-  while(_SYS->_STATE & STATE_RUN){
+  while(_SYS->SimB_State & _SYS_Module_Run){
 
-    N = Next(B, NEXT, 1);
+    N = B->Alg.BN->B[0];
     if(!N){
       loggerf(WARNING, "Sim B reached end of the line");
-      while(1){
-        usleep(100000);
-      }
+      usleep(1000000);
     }
     loggerf(INFO, "Sim B step %i:%i", N->module, N->id);
     change_Block(N, BLOCKED);
 
     // IF len(N) < len(TRAIN)
-    if(N->length < TRAIN_A_LEN){
-      usleep((N->length/TRAIN_A_SPEED) * OneSec);
-      N2 = Next(B, NEXT, 2);
+    if(N->length < TRAIN_B_LEN){
+      usleep((N->length/TRAIN_B_SPEED) * OneSec);
+      N2 = N->Alg.BN->B[0];
       if(!N2){
         loggerf(WARNING, "Sim B reached end of the line");
         while(1){
@@ -149,12 +148,12 @@ void *TRAIN_SIMB(){
       loggerf(DEBUG, "Sim B substep %i:%i", N2->module, N2->id);
 
       change_Block(N2, BLOCKED);
-      usleep(((TRAIN_A_LEN - N->length)/TRAIN_A_SPEED) * OneSec);
+      usleep(((TRAIN_B_LEN - N->length)/TRAIN_B_SPEED) * OneSec);
       change_Block(B, PROCEED);
-      if(N2 && N2->length > TRAIN_A_LEN){
-        usleep(((N2->length - (TRAIN_A_LEN - N->length))/TRAIN_A_SPEED) * OneSec);
+      if(N2 && N2->length > TRAIN_B_LEN){
+        usleep(((N2->length - (TRAIN_B_LEN - N->length))/TRAIN_B_SPEED) * OneSec);
         change_Block(N, PROCEED);
-        usleep(((N2->length - TRAIN_A_LEN)/TRAIN_A_SPEED) * OneSec);
+        usleep(((N2->length - TRAIN_B_LEN)/TRAIN_B_SPEED) * OneSec);
 
         B = N2;
       }
@@ -166,9 +165,9 @@ void *TRAIN_SIMB(){
       }
     }
     else{
-      usleep((TRAIN_A_LEN/TRAIN_A_SPEED) * OneSec);
+      usleep((TRAIN_B_LEN/TRAIN_B_SPEED) * OneSec);
       change_Block(B, PROCEED);
-      usleep(((N->length - TRAIN_A_LEN)/TRAIN_A_SPEED) * OneSec);
+      usleep(((N->length - TRAIN_B_LEN)/TRAIN_B_SPEED) * OneSec);
 
       B = N;
     }

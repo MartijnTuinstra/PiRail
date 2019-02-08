@@ -308,6 +308,65 @@ int set_switch_path(void * p, struct rail_link link, int flags){
   return 0;
 }
 
+int reserve_switch_path(void * p, struct rail_link link, int flags){
+  loggerf(TRACE, "reserve_switch_path (%x, %x, %i)", (unsigned int)p, (unsigned int)&link, flags);
+  if((flags & 0x80) == 0){
+    //No SWITCH_CARE
+    return 1;
+  }
+
+
+  if(link.type == RAIL_LINK_S){
+    // Go to next switch
+    Switch * Sw = link.p;
+
+    Block_reserve(Sw->Detection);
+    Sw->Detection->state = RESERVED_SWITCH;
+    Sw->Detection->reserved = 1;
+    Sw->Detection->changed |= State_Changed;
+    loggerf(INFO, "Set switch %02i:%02i to RESERVED", Sw->module, Sw->id);
+
+    if((Sw->state & 0x7F) == 0 && Sw->str.type != RAIL_LINK_R && Sw->str.type != 'D'){
+      return reserve_switch_path(Sw, Sw->str, flags);
+    }
+    else if((Sw->state & 0x7F) == 1 && Sw->div.type != RAIL_LINK_R && Sw->div.type != 'D'){
+      return reserve_switch_path(Sw, Sw->div, flags);
+    }
+  }
+  else if(link.type == RAIL_LINK_s){
+    // Check if switch is in correct state
+    // and continue to next switch
+    Switch * Sw = link.p;
+
+    Block_reserve(Sw->Detection);
+    Sw->Detection->state = RESERVED_SWITCH;
+    Sw->Detection->reserved = 1;
+    Sw->Detection->changed |= State_Changed;
+    loggerf(INFO, "Set switch %02i:%02i to RESERVED", Sw->module, Sw->id);
+
+    return reserve_switch_path(Sw, Sw->app, flags);
+  }
+  else if(link.type == RAIL_LINK_M){
+    loggerf(ERROR, "IMPLEMENT");
+    MSSwitch * N = link.p;
+    if(N->sideB[N->state].p == p){
+      return 1;
+    }
+  }
+  else if(link.type == RAIL_LINK_m){
+    loggerf(ERROR, "IMPLEMENT");
+    MSSwitch * N = link.p;
+    if(N->sideA[N->state].p == p){
+      return 1;
+    }
+  }
+
+  else if (link.type == RAIL_LINK_R || link.type == 'D'){
+    return 1;
+  }
+  return 0;
+}
+
 
 int set_msswitch(MSSwitch * S, uint8_t state){
 

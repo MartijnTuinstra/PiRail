@@ -65,8 +65,21 @@ void SimA_start(){
   pthread_create(&pt_train_simA, NULL, TRAIN_SIMA, NULL);
 }
 
-void SimA_stop(){
-  _SYS->SimA_State = _SYS_Module_Stop;
+pthread_t pt_train_simB;
+
+void SimB_start(){
+  pthread_join(pt_train_simB, NULL);
+
+  if(_SYS->LC_State == _SYS_Module_Stop){
+    Algor_start();
+  }
+
+  while(_SYS->LC_State != _SYS_Module_Run){
+    usleep(10000);
+  }
+
+  _SYS->SimB_State = _SYS_Module_Init;
+  pthread_create(&pt_train_simB, NULL, TRAIN_SIMB, NULL);
 }
 
 pthread_t z21_thread;

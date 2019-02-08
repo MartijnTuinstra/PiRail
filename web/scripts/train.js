@@ -174,5 +174,99 @@ var Train_Control = {
   }
 }
 
-init_list.push(Train_Control.init.bind(Train_Control));
-resize_list.push(Train_Control.resize.bind(Train_Control));
+var Train_Configurator = {
+  clear: function(){
+    $("#rollingstock .info-box.trains .box-container").empty();
+    $("#rollingstock .info-box.engines .box-container").empty();
+    $("#rollingstock .info-box.cars .box-container").empty();
+  },
+  update: function(){
+    this.clear();
+
+    // Update trains
+    $("#rollingstock .info-box.trains .box-container").append("<div style='width:100%;'><ul class='list-unstyled'></ul></div>");
+    // $('.modal-body > div > div').css("max-height", "calc("+(window.innerHeight*0.8-71)+"px - 3em)");
+    for(var i = 0; i<Train.trains.length; i++){
+      var t = Train.trains[i];
+
+      var text = '<li class="list-unstyled">'+
+          '<div class="mr-3 ml-3 mt-3 bg-outline-dark" style="width:calc(100% - 2rem);height:36px; padding: 3px; overflow: hidden"><div style="width:100%; height:150%; overflow-x: overlay;white-space: nowrap">';
+
+      for(var j = 0; j < t.link.length; j++){
+        if(t.link[j][0] == 0 && Train.engines[t.link[j][1]] != undefined){
+          text += '<img src="./trains_img/'+Train.engines[t.link[j][1]].icon+'" style="height:30px"/>';
+        }else if(Train.cars[t.link[j][1]] != undefined){
+          text += '<img src="./trains_img/'+Train.cars[t.link[j][1]].icon+'" style="height:30px"/>';
+        }
+      }
+
+      text += '</div></div><div class="m-2" style="width:calc(100% - 2rem)">'+
+            '<button name="train_id" class="modal-form btn btn-toggle btn-xs btn-outline-primary m-1 mr-3"\
+              value="'+i+'" style="display: inline-block;">Update</button>'+
+            '<div class="mt-0 mb-0" style="display: inline-block"><b>'+t.name+'</b></div>'+
+            '<div class="" style="display: inline-block; float:right; max-width: 210px;font-size:small; width:100%;">\
+              <i>DCC: '+t.dcc.join(", ")+'</i>\
+              <i style="float:right"><span class="d-none d-md-block">Length: </span>'+t.length+' mm</i>\
+            </div>'+
+          '</div></li>';
+      $("#rollingstock .info-box.trains .box-container ul").append(text);
+      // $('.modal-body .cont ul', ref).append("<button name='train_id' class='modal-form btn btn-toggle btn-outline-primary m-1' value='"+i+"' style='display: block;'>"+t.name+'</button><br/>PIZZA<br/>');
+    }
+
+    //Update engines
+    $("#rollingstock .info-box.engines .box-container").append("<div style='width:100%;'><ul class='list-unstyled'></ul></div>");
+    for(var i = 0; i<Train.engines.length; i++){
+      var e = Train.engines[i];
+
+      var text = '<li class="message media">'+
+              '<div class="message-mbox align-self-center mr-3 bg-primary" style="width:120px;height:60px;position:relative;">\
+                <div class="train-img" style="background-image: url(\'./trains_img/'+e.img+'\')"></div>\
+              </div>'+
+              '<div class="message-body media-body">'+
+                '<div class="mt-0 mb-0 message-header"><b>'+e.name+'</b></div>'+
+                '<div class="message-content" style="max-width: 210px;font-size:small; margin-right:0.5em">\
+                  <i>DCC: '+e.dcc+'</i>\
+                  <i style="float:right"><span class="d-none d-md-block">Length: </span>'+e.length+' mm</i>\
+                </div>'+
+                '<button name="train_id" class="modal-form btn btn-toggle btn-xs btn-outline-primary m-1"\
+                  value="'+i+'" style="display: block;">Update</button>'+
+              '</div></li>';
+
+      $("#rollingstock .info-box.engines .box-container ul").append(text);
+    }
+
+    //Update cars
+    $("#rollingstock .info-box.cars .box-container").append("<div style='width:100%;'><ul class='list-unstyled'></ul></div>");
+    for(var i = 0; i<Train.cars.length; i++){
+      var c = Train.cars[i];
+
+      var text = '<li class="message media">'+
+              '<div class="message-mbox align-self-center mr-3 bg-primary" style="width:120px;height:60px"></div>'+
+              '<div class="message-body media-body">'+
+                '<div class="mt-0 mb-0 message-header"><b>'+c.name+'</b></div>'+
+                '<small class="message-content">\
+                  <i>nr: '+c.nr+'</i>\
+                  <span style="width:2em; display:inline-block;"></span>\
+                  <i><span class="d-none d-md-block">Length: </span>'+c.length+' mm</i>\
+                </small>'+
+                '<button name="train_id" class="modal-form btn btn-toggle btn-xs btn-outline-primary m-1"\
+                  value="'+i+'" style="display: block;">Update</button>'+
+              '</div></li>';
+
+      $("#rollingstock .info-box.cars .box-container ul").append(text);
+    }
+  },
+  show: function(){
+    $("#rollingstock .info-box.trains .box-container").show();
+    $("#rollingstock .info-box.engines .box-container").show();
+    $("#rollingstock .info-box.cars .box-container").show();
+  },
+  hide: function(){
+    $("#rollingstock .info-box.trains .box-container").hide();
+    $("#rollingstock .info-box.engines .box-container").hide();
+    $("#rollingstock .info-box.cars .box-container").hide();
+  }
+}
+
+events.add_init(Train_Control.init.bind(Train_Control));
+events.add_resize(Train_Control.resize.bind(Train_Control));

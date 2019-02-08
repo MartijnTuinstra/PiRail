@@ -83,5 +83,5 @@ var Menu = {
 	}
 }
 
-init_list.push(Menu.init.bind(Menu));
-resize_list.push(Menu.resize.bind(Menu));
+events.add_init(Menu.init.bind(Menu));
+events.add_resize(Menu.resize.bind(Menu));

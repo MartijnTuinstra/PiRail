@@ -49,47 +49,6 @@ var Modals = {
       }
     },
 
-    "trains.choose":{
-      link: "button.btn-trains-edit",
-      open_cb: function(data, ref){
-        $('.modal-body', ref).append("<div style='width:100%; overflow:hidden; max-height: 600px'><div style='width:125%;position: relative; overflow: overlay;'><div class='cont' style='width:80%;'><ul class='list-unstyled'></ul></div></div></div>");
-        $('.modal-body > div').css("max-height", "calc("+(window.innerHeight*0.8-71)+"px - 3em)");
-        $('.modal-body > div > div').css("max-height", "calc("+(window.innerHeight*0.8-71)+"px - 3em)");
-        for(var i = 0; i<Train.trains.length; i++){
-          var t = Train.trains[i];
-
-          var text = '<li class="list-unstyled">'+
-              '<div class="mr-3 ml-3 mt-3 bg-outline-dark" style="width:calc(100% - 2rem);height:36px; padding: 3px; overflow: hidden"><div style="width:100%; height:150%; overflow-x: overlay;white-space: nowrap">';
-
-          for(var j = 0; j < t.link.length; j++){
-            if(t.link[j][0] == 0 && Train.engines[t.link[j][1]] != undefined){
-              text += '<img src="./trains_img/'+Train.engines[t.link[j][1]].icon+'" style="height:30px"/>';
-            }else if(Train.cars[t.link[j][1]] != undefined){
-              text += '<img src="./trains_img/'+Train.cars[t.link[j][1]].icon+'" style="height:30px"/>';
-            }
-          }
-
-          text += '</div></div><div class="m-2" style="width:calc(100% - 2rem)">'+
-                '<button name="train_id" class="modal-form btn btn-toggle btn-xs btn-outline-primary m-1 mr-3"\
-                  value="'+i+'" style="display: inline-block;">Select</button>'+
-                '<div class="mt-0 mb-0" style="display: inline-block"><b>'+t.name+'</b></div>'+
-                '<div class="" style="display: inline-block; float:right; max-width: 210px;font-size:small; width:100%;">\
-                  <i>DCC: '+t.dcc.join(", ")+'</i>\
-                  <i style="float:right">Length: '+t.length+' mm</i>\
-                </div>'+
-              '</div></li>';
-          $('.modal-body .cont ul', ref).append(text);
-          // $('.modal-body .cont ul', ref).append("<button name='train_id' class='modal-form btn btn-toggle btn-outline-primary m-1' value='"+i+"' style='display: block;'>"+t.name+'</button><br/>PIZZA<br/>');
-        }
-      },
-      title: "Choose a train",
-      content: '',
-      buttons: {
-        success: {visible: false, content: "", cb: undefined, wait: false},
-        warning: {visible: true, content: "Edit", cb: function(){Modals.hide(); Modals.open('trains.edit', {id: Modals.data.train_id})}, wait:true},
-        danger: {visible: true, content: "Remove", cb: undefined, wait: false},
-      }
-    },
     "trains.edit":{
       link: "button.btn-trains-new",
       open_cb: function(data, ref){
@@ -213,40 +172,6 @@ var Modals = {
       }
     },
 
-    "engines.choose":{
-      link: "button.btn-engines-edit",
-      open_cb: function(data, ref){
-        $('.modal-body', ref).append("<div style='width:100%; overflow:hidden; max-height: 600px'><div style='width:125%;position: relative; overflow: overlay;'><div class='cont' style='width:80%;'><ul class='list-unstyled'></ul></div></div></div>");
-        $('.modal-body > div').css("max-height", "calc("+(window.innerHeight*0.8-71)+"px - 3em)");
-        $('.modal-body > div > div').css("max-height", "calc("+(window.innerHeight*0.8-71)+"px - 3em)");
-        for(var i = 0; i<Train.engines.length; i++){
-          var e = Train.engines[i];
-
-          var text = '<li class="message media">'+
-              '<div class="message-mbox align-self-center mr-3 bg-primary" style="width:120px;height:60px;position:relative;">\
-                <div class="train-img" style="background-image: url(\'./trains_img/'+e.img+'\')"></div>\
-              </div>'+
-              '<div class="message-body media-body">'+
-                '<div class="mt-0 mb-0 message-header"><b>'+e.name+'</b></div>'+
-                '<div class="message-content" style="max-width: 210px;font-size:small; width:100%;">\
-                  <i>DCC: '+e.dcc+'</i>\
-                  <i style="float:right">Length: '+e.length+' mm</i>\
-                </div>'+
-                '<button name="train_id" class="modal-form btn btn-toggle btn-xs btn-outline-primary m-1"\
-                  value="'+i+'" style="display: block;">Select</button>'+
-              '</div></li>';
-          $('.modal-body .cont ul', ref).append(text);
-          // $('.modal-body .cont ul', ref).append("<button name='train_id' class='modal-form btn btn-toggle btn-outline-primary m-1' value='"+i+"' style='display: block;'>"+e.name+'</button><br/>PIZZA<br/>');
-        }
-      },
-      title: "Choose a engine",
-      content: '',
-      buttons: {
-        success: {visible: false, content: "", cb: undefined, wait: false},
-        warning: {visible: true, content: "Edit", cb: function(){Modals.hide(); Modals.open('engines.edit', {id: Modals.data.train_id})}, wait:true},
-        danger: {visible: true, content: "Remove", cb: function(){websocket.edit_train({}, Modals.data.train_id, true)}, wait: false},
-      }
-    },
     "engines.edit":{
       link: "button.btn-engines-new",
       chart: undefined,
@@ -572,6 +497,7 @@ var Modals = {
         $('.datafield', ref).html(parseInt(data.id));
         if(data.id == undefined){
           $('button.btn-warning', ref).hide();
+          $('button.btn-danger', ref).hide();
         }
         else{
           $('button.btn-success', ref).hide();
@@ -625,7 +551,7 @@ var Modals = {
       buttons: {
         success: {visible: true, content: "Create", cb: function(data){/*websocket.cts_link_train(fid, rid, type, mid)*/}, wait: false},
         warning: {visible: true, content: "Update", cb: function(){alert("Update");}, wait: false},
-        danger: {visible: true, content: "Cancel", cb: undefined, wait: false},
+        danger: {visible: true, content: "Delete", cb: function(){alert("Delete")}, wait: false},
       }
     },
 
@@ -916,4 +842,4 @@ var Modals = {
   }
 };
 
-init_list.push(Modals.init.bind(Modals));
+events.add_init(Modals.init.bind(Modals));

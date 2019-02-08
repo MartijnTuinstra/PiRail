@@ -231,228 +231,303 @@ header('Pragma: no-cache');
 		#modal ul.engine-list .empty,
 		#modal ul.train-list .empty {display: none;text-align: center;}
 
+		.window {width: 100%; height: 100%;}
+
 	</style>
 	<script>
-		var init_list = [];
-		var resize_list = [];
+		var events = {
+			init: function(){
+				console.log("Init event");
+				for(var i = 0; i < this._init.length; i++){
+					console.log(this._init[i]);
+					this._init[i]();
+				}
+			},
+			add_init: function(callback){
+				this._init.push(callback)
+			},
+			_init: [],
+
+			resize: function(){
+				console.log("Resize event");
+				for(var i = 0; i < this._resize.length; i++){
+					console.log(this._resize[i]);
+					this._resize[i]();
+				}
+			},
+			add_resize: function(callback){
+				this._resize.push(callback)
+			},
+			_resize: [],
+
+			ws_onopen: function(){
+				for(var i = 0; i < this._ws_onopen.length; i++){
+					this._ws_onopen[i]();
+				}
+			},
+			add_ws_onopen: function(callback){
+				this._ws_onopen.push(callback)
+			},
+			_ws_onopen: [],
+
+			ws_onclose: function(){
+				for(var i = 0; i < this._ws_onclose.length; i++){
+					this._ws_onclose[i]();
+				}
+			},
+			add_ws_onclose: function(callback){
+				this._ws_onclose.push(callback)
+			},
+			_ws_onclose: []
+		};
 	</script>
 </head>
 <body>
 
-	<div class="sidebar full-height">
-		<div style="width: 125%; overflow-y: overlay; overflow-x:hidden; height: 100%">
-			<div class="scrollcontainer" style="width: 80%;">
-				<div class="train-group active">
-					<div class="info-box train-box box1">
-						<span class="header">
-							<div>ICE</div>
-							<button class="select-train btn btn-xs btn-outline-primary">Select</button>
-						</span>
-						<div class="row">
-							<div class="col-8">
-								<div class="train-img-container bg-light">
-									<div class="train-img" style="background-image: url('./trains_img/200_ice3_im.jpg');"></div>
-								</div>
-								<div class="train-info-box">
-									<div class="description">ICE DB</div>
-									<div class="route">
-										<span>No Route</span>
-										<button class="set-route btn btn-xs btn-outline-primary">Set</button>
+	<div id="main" class="window" style="display:block;">
+		<div class="sidebar full-height">
+			<div style="width: 125%; overflow-y: overlay; overflow-x:hidden; height: 100%">
+				<div class="scrollcontainer" style="width: 80%;">
+					<div class="train-group active">
+						<div class="info-box train-box box1">
+							<span class="header">
+								<div>ICE</div>
+								<button class="select-train btn btn-xs btn-outline-primary">Select</button>
+							</span>
+							<div class="row">
+								<div class="col-8">
+									<div class="train-img-container bg-light">
+										<div class="train-img" style="background-image: url('./trains_img/200_ice3_im.jpg');"></div>
 									</div>
-									<div class="control">
-										<div class="btn-group" role="group" aria-label="Basic example">
-											<button type="button" class="btn btn-xs btn-secondary">Manual</button>
-											<button type="button" class="btn btn-xs btn-secondary">
-												Semi<span class="d-none d-sm-inline-block d-xl-none">&nbsp;Auto</span>
-											</button>
-											<button type="button" class="btn btn-xs btn-secondary">
-												Full<span class="d-none d-sm-inline-block d-xl-none">&nbsp;Auto</span>
-											</button>
+									<div class="train-info-box">
+										<div class="description">ICE DB</div>
+										<div class="route">
+											<span>No Route</span>
+											<button class="set-route btn btn-xs btn-outline-primary">Set</button>
+										</div>
+										<div class="control">
+											<div class="btn-group" role="group" aria-label="Basic example">
+												<button type="button" class="btn btn-xs btn-secondary">Manual</button>
+												<button type="button" class="btn btn-xs btn-secondary">
+													Semi<span class="d-none d-sm-inline-block d-xl-none">&nbsp;Auto</span>
+												</button>
+												<button type="button" class="btn btn-xs btn-secondary">
+													Full<span class="d-none d-sm-inline-block d-xl-none">&nbsp;Auto</span>
+												</button>
+											</div>
 										</div>
 									</div>
+									<div class="train-function-box">
+										<div><button class="btn btn-sm btn-outline-primary">F1</button></div>
+										<div><button class="btn btn-sm btn-outline-primary">F2</button></div>
+										<div><button class="btn btn-sm btn-outline-primary">F3</button></div>
+										<div><button class="btn btn-sm btn-outline-primary">F4</button></div>
+										<div><button class="btn btn-sm btn-outline-primary">F5</button></div>
+										<div><button class="btn btn-sm btn-outline-primary">F6</button></div>
+										<div><button class="btn btn-sm btn-outline-primary">F7</button></div>
+										<div><button class="btn btn-sm btn-outline-primary">F8</button></div>
+									</div>
 								</div>
-								<div class="train-function-box">
-									<div><button class="btn btn-sm btn-outline-primary">F1</button></div>
-									<div><button class="btn btn-sm btn-outline-primary">F2</button></div>
-									<div><button class="btn btn-sm btn-outline-primary">F3</button></div>
-									<div><button class="btn btn-sm btn-outline-primary">F4</button></div>
-									<div><button class="btn btn-sm btn-outline-primary">F5</button></div>
-									<div><button class="btn btn-sm btn-outline-primary">F6</button></div>
-									<div><button class="btn btn-sm btn-outline-primary">F7</button></div>
-									<div><button class="btn btn-sm btn-outline-primary">F8</button></div>
+								<div class="col-4">
+									<div style="height:100%; position: relative;">
+										<div style="height: calc(100% - 110px); width:100%;">
+											<div class="train-speed"><span>145</span> <small>km/h</small></div>
+											<div class="train-speed-slider">
+												<div class="slider-bar" style="height:40px; "></div>
+												<div class="slider-handle" style="bottom:40px;"></div>
+											</div>
+										</div>
+										<div class="train-dir-box">
+											<div class="btn-group btn-toggle-group">
+												<div class="btn btn-toggle btn-sm btn-secondary" value="R" style="border-bottom-left-radius: 0px">
+													<svg x="0px" y="0px" viewBox="0 0 492 492">
+														<path d="M464.344,207.418l0.768,0.168H135.888l103.496-103.724c5.068-5.064,7.848-11.924,7.848-19.124    c0-7.2-2.78-14.012-7.848-19.088L223.28,49.538c-5.064-5.064-11.812-7.864-19.008-7.864c-7.2,0-13.952,2.78-19.016,7.844    L7.844,226.914C2.76,231.998-0.02,238.77,0,245.974c-0.02,7.244,2.76,14.02,7.844,19.096l177.412,177.412    c5.064,5.06,11.812,7.844,19.016,7.844c7.196,0,13.944-2.788,19.008-7.844l16.104-16.112c5.068-5.056,7.848-11.808,7.848-19.008    c0-7.196-2.78-13.592-7.848-18.652L134.72,284.406h329.992c14.828,0,27.288-12.78,27.288-27.6v-22.788    C492,219.198,479.172,207.418,464.344,207.418z" fill="#FFFFFF"/>
+													</svg>
+												</div>
+												<div class="btn btn-toggle btn-sm btn-outline-secondary" value="F" style="border-bottom-right-radius: 0px; position: absolute; right: 0px; top:0px">
+													<svg x="0px" y="0px" viewBox="0 0 492 492">
+														<path d="M464.344,207.418l0.768,0.168H135.888l103.496-103.724c5.068-5.064,7.848-11.924,7.848-19.124    c0-7.2-2.78-14.012-7.848-19.088L223.28,49.538c-5.064-5.064-11.812-7.864-19.008-7.864c-7.2,0-13.952,2.78-19.016,7.844    L7.844,226.914C2.76,231.998-0.02,238.77,0,245.974c-0.02,7.244,2.76,14.02,7.844,19.096l177.412,177.412    c5.064,5.06,11.812,7.844,19.016,7.844c7.196,0,13.944-2.788,19.008-7.844l16.104-16.112c5.068-5.056,7.848-11.808,7.848-19.008    c0-7.196-2.78-13.592-7.848-18.652L134.72,284.406h329.992c14.828,0,27.288-12.78,27.288-27.6v-22.788    C492,219.198,479.172,207.418,464.344,207.418z" transform="rotate(180 246 246)"/>
+													</svg>
+												</div>
+											</div>
+											<div class="train-stop btn-group">
+												<button type="button" class="btn btn-sm btn-danger" style="">STOP</button>
+											</div>
+										</div>
+									</div>
 								</div>
 							</div>
-							<div class="col-4">
-								<div style="height:100%; position: relative;">
-									<div style="height: calc(100% - 110px); width:100%;">
-										<div class="train-speed"><span>145</span> <small>km/h</small></div>
-										<div class="train-speed-slider">
-											<div class="slider-bar" style="height:40px; "></div>
-											<div class="slider-handle" style="bottom:40px;"></div>
+						</div>
+						<div class="info-box train-box box2">
+							<span class="header">
+								<div>NS ICM</div>
+								<button class="select-train btn btn-xs btn-outline-primary">Select</button>
+							</span>
+							<div class="row">
+								<div class="col-8">
+									<div class="train-img-container bg-light">
+										<div class="train-img" style="background-image: url('./trains_img/1400_Koploper3_im.jpg');"></div>
+									</div>
+									<div class="train-info-box">
+										<div class="description">NS Koploper</div>
+										<div class="route">
+											<span>No Route</span>
+											<button class="set-route btn btn-xs btn-outline-primary">Set</button>
+										</div>
+										<div class="control">
+											<div class="btn-group" role="group" aria-label="Basic example">
+												<button type="button" class="btn btn-xs btn-secondary">Manual</button>
+												<button type="button" class="btn btn-xs btn-secondary">
+													Semi<span class="d-none d-sm-inline-block d-xl-none">&nbsp;Auto</span>
+												</button>
+												<button type="button" class="btn btn-xs btn-secondary">
+													Full<span class="d-none d-sm-inline-block d-xl-none">&nbsp;Auto</span>
+												</button>
+											</div>
 										</div>
 									</div>
-									<div class="train-dir-box">
-										<div class="btn-group btn-toggle-group">
-											<div class="btn btn-toggle btn-sm btn-secondary" value="R" style="border-bottom-left-radius: 0px">
-												<svg x="0px" y="0px" viewBox="0 0 492 492">
-													<path d="M464.344,207.418l0.768,0.168H135.888l103.496-103.724c5.068-5.064,7.848-11.924,7.848-19.124    c0-7.2-2.78-14.012-7.848-19.088L223.28,49.538c-5.064-5.064-11.812-7.864-19.008-7.864c-7.2,0-13.952,2.78-19.016,7.844    L7.844,226.914C2.76,231.998-0.02,238.77,0,245.974c-0.02,7.244,2.76,14.02,7.844,19.096l177.412,177.412    c5.064,5.06,11.812,7.844,19.016,7.844c7.196,0,13.944-2.788,19.008-7.844l16.104-16.112c5.068-5.056,7.848-11.808,7.848-19.008    c0-7.196-2.78-13.592-7.848-18.652L134.72,284.406h329.992c14.828,0,27.288-12.78,27.288-27.6v-22.788    C492,219.198,479.172,207.418,464.344,207.418z" fill="#FFFFFF"/>
-												</svg>
-											</div>
-											<div class="btn btn-toggle btn-sm btn-outline-secondary" value="F" style="border-bottom-right-radius: 0px; position: absolute; right: 0px; top:0px">
-												<svg x="0px" y="0px" viewBox="0 0 492 492">
-													<path d="M464.344,207.418l0.768,0.168H135.888l103.496-103.724c5.068-5.064,7.848-11.924,7.848-19.124    c0-7.2-2.78-14.012-7.848-19.088L223.28,49.538c-5.064-5.064-11.812-7.864-19.008-7.864c-7.2,0-13.952,2.78-19.016,7.844    L7.844,226.914C2.76,231.998-0.02,238.77,0,245.974c-0.02,7.244,2.76,14.02,7.844,19.096l177.412,177.412    c5.064,5.06,11.812,7.844,19.016,7.844c7.196,0,13.944-2.788,19.008-7.844l16.104-16.112c5.068-5.056,7.848-11.808,7.848-19.008    c0-7.196-2.78-13.592-7.848-18.652L134.72,284.406h329.992c14.828,0,27.288-12.78,27.288-27.6v-22.788    C492,219.198,479.172,207.418,464.344,207.418z" transform="rotate(180 246 246)"/>
-												</svg>
+									<div class="train-function-box">
+										<div><button class="btn btn-sm btn-outline-primary">F1</button></div>
+										<div><button class="btn btn-sm btn-outline-primary">F2</button></div>
+										<div><button class="btn btn-sm btn-outline-primary">F3</button></div>
+										<div><button class="btn btn-sm btn-outline-primary">F4</button></div>
+										<div><button class="btn btn-sm btn-outline-primary">F5</button></div>
+										<div><button class="btn btn-sm btn-outline-primary">F6</button></div>
+										<div><button class="btn btn-sm btn-outline-primary">F7</button></div>
+										<div><button class="btn btn-sm btn-outline-primary">F8</button></div>
+									</div>
+								</div>
+								<div class="col-4">
+									<div style="height:100%; position: relative;">
+										<div style="height: calc(100% - 110px); width:100%;">
+											<div class="train-speed"><span>145</span> <small>km/h</small></div>
+											<div class="train-speed-slider">
+												<div class="slider-bar" style="height:40px; "></div>
+												<div class="slider-handle" style="bottom:40px;"></div>
 											</div>
 										</div>
-										<div class="train-stop btn-group">
-											<button type="button" class="btn btn-sm btn-danger" style="">STOP</button>
+										<div class="train-dir-box">
+											<div class="btn-group btn-toggle-group">
+												<div class="btn btn-toggle btn-sm btn-secondary" value="R" style="border-bottom-left-radius: 0px">
+													<svg x="0px" y="0px" viewBox="0 0 492 492">
+														<path d="M464.344,207.418l0.768,0.168H135.888l103.496-103.724c5.068-5.064,7.848-11.924,7.848-19.124    c0-7.2-2.78-14.012-7.848-19.088L223.28,49.538c-5.064-5.064-11.812-7.864-19.008-7.864c-7.2,0-13.952,2.78-19.016,7.844    L7.844,226.914C2.76,231.998-0.02,238.77,0,245.974c-0.02,7.244,2.76,14.02,7.844,19.096l177.412,177.412    c5.064,5.06,11.812,7.844,19.016,7.844c7.196,0,13.944-2.788,19.008-7.844l16.104-16.112c5.068-5.056,7.848-11.808,7.848-19.008    c0-7.196-2.78-13.592-7.848-18.652L134.72,284.406h329.992c14.828,0,27.288-12.78,27.288-27.6v-22.788    C492,219.198,479.172,207.418,464.344,207.418z" fill="#FFFFFF"/>
+													</svg>
+												</div>
+												<div class="btn btn-toggle btn-sm btn-outline-secondary" value="F" style="border-bottom-right-radius: 0px; position: absolute; right: 0px; top:0px">
+													<svg x="0px" y="0px" viewBox="0 0 492 492">
+														<path d="M464.344,207.418l0.768,0.168H135.888l103.496-103.724c5.068-5.064,7.848-11.924,7.848-19.124    c0-7.2-2.78-14.012-7.848-19.088L223.28,49.538c-5.064-5.064-11.812-7.864-19.008-7.864c-7.2,0-13.952,2.78-19.016,7.844    L7.844,226.914C2.76,231.998-0.02,238.77,0,245.974c-0.02,7.244,2.76,14.02,7.844,19.096l177.412,177.412    c5.064,5.06,11.812,7.844,19.016,7.844c7.196,0,13.944-2.788,19.008-7.844l16.104-16.112c5.068-5.056,7.848-11.808,7.848-19.008    c0-7.196-2.78-13.592-7.848-18.652L134.72,284.406h329.992c14.828,0,27.288-12.78,27.288-27.6v-22.788    C492,219.198,479.172,207.418,464.344,207.418z" transform="rotate(180 246 246)"/>
+													</svg>
+												</div>
+											</div>
+											<div class="train-stop btn-group">
+												<button type="button" class="btn btn-sm btn-danger">STOP</button>
+											</div>
 										</div>
 									</div>
 								</div>
 							</div>
 						</div>
 					</div>
-					<div class="info-box train-box box2">
-						<span class="header">
-							<div>NS ICM</div>
-							<button class="select-train btn btn-xs btn-outline-primary">Select</button>
-						</span>
-						<div class="row">
-							<div class="col-8">
-								<div class="train-img-container bg-light">
-									<div class="train-img" style="background-image: url('./trains_img/1400_Koploper3_im.jpg');"></div>
-								</div>
-								<div class="train-info-box">
-									<div class="description">NS Koploper</div>
-									<div class="route">
-										<span>No Route</span>
-										<button class="set-route btn btn-xs btn-outline-primary">Set</button>
-									</div>
-									<div class="control">
-										<div class="btn-group" role="group" aria-label="Basic example">
-											<button type="button" class="btn btn-xs btn-secondary">Manual</button>
-											<button type="button" class="btn btn-xs btn-secondary">
-												Semi<span class="d-none d-sm-inline-block d-xl-none">&nbsp;Auto</span>
-											</button>
-											<button type="button" class="btn btn-xs btn-secondary">
-												Full<span class="d-none d-sm-inline-block d-xl-none">&nbsp;Auto</span>
-											</button>
-										</div>
-									</div>
-								</div>
-								<div class="train-function-box">
-									<div><button class="btn btn-sm btn-outline-primary">F1</button></div>
-									<div><button class="btn btn-sm btn-outline-primary">F2</button></div>
-									<div><button class="btn btn-sm btn-outline-primary">F3</button></div>
-									<div><button class="btn btn-sm btn-outline-primary">F4</button></div>
-									<div><button class="btn btn-sm btn-outline-primary">F5</button></div>
-									<div><button class="btn btn-sm btn-outline-primary">F6</button></div>
-									<div><button class="btn btn-sm btn-outline-primary">F7</button></div>
-									<div><button class="btn btn-sm btn-outline-primary">F8</button></div>
+					<div class="settings-group" style="">
+						<div id="subsystems" class="info-box">
+							<span class="header">Sub Systems</span>
+							<ul class="list-unstyled">
+							</ul>
+							<div class="box-row">
+								<button type="button" class="btn btn-sm btn-xs mini-btn btn-warning" onClick='window.location.replace("");'>Reload</button>
+								<button type="button" class="btn-hard-reset btn btn-sm btn-xs mini-btn btn-danger">Restart</button></div>
+						</div>
+						<div id="Z21-settings" class="info-box">
+							<span class="header">Z21 Status</span>
+							<div class="box-row"><button type="button" class="btn-Z21-settings btn btn-sm btn-xs mini-btn btn-warning">Settings</button></div>
+						</div>
+						<div class="info-box">
+							<span class="header">Configure</span>
+							<span class="box-row">Reload Layout</span>
+							<div class="box-row">
+								<div style="margin-bottom: 5px">
+									<button type="button" class="btn btn-sm btn-xs mini-btn btn-warning" style="width:150px" onClick='windows.switch("moduleconfig");'>Configure Modules</button>
 								</div>
 							</div>
-							<div class="col-4">
-								<div style="height:100%; position: relative;">
-									<div style="height: calc(100% - 110px); width:100%;">
-										<div class="train-speed"><span>145</span> <small>km/h</small></div>
-										<div class="train-speed-slider">
-											<div class="slider-bar" style="height:40px; "></div>
-											<div class="slider-handle" style="bottom:40px;"></div>
-										</div>
-									</div>
-									<div class="train-dir-box">
-										<div class="btn-group btn-toggle-group">
-											<div class="btn btn-toggle btn-sm btn-secondary" value="R" style="border-bottom-left-radius: 0px">
-												<svg x="0px" y="0px" viewBox="0 0 492 492">
-													<path d="M464.344,207.418l0.768,0.168H135.888l103.496-103.724c5.068-5.064,7.848-11.924,7.848-19.124    c0-7.2-2.78-14.012-7.848-19.088L223.28,49.538c-5.064-5.064-11.812-7.864-19.008-7.864c-7.2,0-13.952,2.78-19.016,7.844    L7.844,226.914C2.76,231.998-0.02,238.77,0,245.974c-0.02,7.244,2.76,14.02,7.844,19.096l177.412,177.412    c5.064,5.06,11.812,7.844,19.016,7.844c7.196,0,13.944-2.788,19.008-7.844l16.104-16.112c5.068-5.056,7.848-11.808,7.848-19.008    c0-7.196-2.78-13.592-7.848-18.652L134.72,284.406h329.992c14.828,0,27.288-12.78,27.288-27.6v-22.788    C492,219.198,479.172,207.418,464.344,207.418z" fill="#FFFFFF"/>
-												</svg>
-											</div>
-											<div class="btn btn-toggle btn-sm btn-outline-secondary" value="F" style="border-bottom-right-radius: 0px; position: absolute; right: 0px; top:0px">
-												<svg x="0px" y="0px" viewBox="0 0 492 492">
-													<path d="M464.344,207.418l0.768,0.168H135.888l103.496-103.724c5.068-5.064,7.848-11.924,7.848-19.124    c0-7.2-2.78-14.012-7.848-19.088L223.28,49.538c-5.064-5.064-11.812-7.864-19.008-7.864c-7.2,0-13.952,2.78-19.016,7.844    L7.844,226.914C2.76,231.998-0.02,238.77,0,245.974c-0.02,7.244,2.76,14.02,7.844,19.096l177.412,177.412    c5.064,5.06,11.812,7.844,19.016,7.844c7.196,0,13.944-2.788,19.008-7.844l16.104-16.112c5.068-5.056,7.848-11.808,7.848-19.008    c0-7.196-2.78-13.592-7.848-18.652L134.72,284.406h329.992c14.828,0,27.288-12.78,27.288-27.6v-22.788    C492,219.198,479.172,207.418,464.344,207.418z" transform="rotate(180 246 246)"/>
-												</svg>
-											</div>
-										</div>
-										<div class="train-stop btn-group">
-											<button type="button" class="btn btn-sm btn-danger">STOP</button>
-										</div>
-									</div>
+							<div class="box-row">
+								<div style="margin-bottom: 5px">
+									<button type="button" class="btn btn-sm btn-xs mini-btn btn-warning" style="width:150px" onClick='windows.switch("rollingstock");'>Configure Rolling Stock</button>
 								</div>
+							</div>
+						</div>
+						<div class="info-box message-box">
+							<span class="header">Messages</span>
+							<div class="messages">
+								<ul class="list-unstyled">
+								</ul>
 							</div>
 						</div>
 					</div>
 				</div>
-				<div class="settings-group" style="">
-					<div id="subsystems" class="info-box">
-						<span class="header">Sub Systems</span>
-						<ul class="list-unstyled">
-						</ul>
-						<div class="box-row">
-							<button type="button" class="btn btn-sm btn-xs mini-btn btn-warning" onClick='window.location.replace("");'>Reload</button>
-							<button type="button" class="btn-hard-reset btn btn-sm btn-xs mini-btn btn-danger">Restart</button></div>
-					</div>
-					<div id="Z21-settings" class="info-box">
-						<span class="header">Z21 Status</span>
-						<div class="box-row"><button type="button" class="btn-Z21-settings btn btn-sm btn-xs mini-btn btn-warning">Settings</button></div>
-					</div>
-					<div class="info-box">
-						<span class="header">Layout</span>
-						<span class="box-row">Reload</span>
-						<div class="box-row">
-							<span>Module</span><br/>
-							<div style="margin-bottom: 5px">
-								<button type="button" class="btn btn-sm btn-xs mini-btn btn-success">Add</button>
-								<button type="button" class="btn btn-sm btn-xs mini-btn btn-warning">Edit</button>
-								<button type="button" class="btn btn-sm btn-xs mini-btn btn-danger">Remove</button>
+			</div>
+		</div>
+		<div class="main" id="LayoutContainer" style="height: 100%; padding: 0px">
+			<canvas height="300" width="300"/>
+		</div>
+		<div id="menu-box"></div>
+	</div>
+	<div id="rollingstock" class="window" style="display:none;background-color:#ecf0f5;">
+		<div style="width: 125%; overflow-y: overlay; overflow-x:hidden; height: 100%">
+			<div class="scrollcontainer" style="width: 80%;">
+				<div style="">
+					<div class="row">
+						<div class="col-3 d-xs-none d-md-block"></div>
+						<div class="col-12 col-md-6">
+							<div class="info-box" style="max-width: 300px; margin-left: auto; margin-right: auto;">
+								<ul class="list-unstyled">
+									<li class="media connection_state" style="padding: 0px 30px">
+										<div class="indicator align-self-center mr-3 bg-danger" style="width:16px;height:16px;border-radius: 3px;"></div>
+										<div class="media-body" style="margin-top: 0.2em; margin-bottom: 0.2em">
+											<div class="mt-0 mb-0" style="position: relative; font-weight: bold;">Connected</div>
+										</div>
+									</li>
+								</ul>
+								<div class="box-row">
+									<button type="button" class="btn btn-sm btn-xs mini-btn btn-warning" onClick='window.location.replace("");'>Reload</button>
+									<button type="button" class="btn btn-sm btn-xs mini-btn btn-success" onClick='windows.switch("main");'>Close</button>
+								</div>
 							</div>
 						</div>
 					</div>
-					<div class="info-box">
-						<span class="header">Rolling Stock</span>
-						<div class="box-row">
-							<span>Categories</span><br/>
-							<div style="margin-bottom: 5px">
-								<button type="button" class="btn-categories-edit  btn btn-sm btn-xs mini-btn btn-warning">Edit</button>
-								<button type="button" class="btn-categories-remove btn btn-sm btn-xs mini-btn btn-danger">Remove</button>
+					<div class="row">
+						<div class="col-12 col-lg-4">
+							<div class="info-box trains">
+								<span class="header">Trains</span>
+								<div class="box-container"></div>
+								<div style="margin-bottom: 5px">
+									<button type="button" class="btn-trains-new  btn btn-success" onClick="Modals.open('trains.edit');">Add</button>
+								</div>
 							</div>
 						</div>
-						<div class="box-row">
-							<span>Trains</span><br/>
-							<div style="margin-bottom: 5px">
-								<button type="button" class="btn-trains-new  btn btn-sm btn-xs mini-btn btn-success">Add</button>
-								<button type="button" class="btn-trains-edit btn btn-sm btn-xs mini-btn btn-warning">Update</button>
+						<div class="col-12 col-lg-4">
+							<div class="info-box engines">
+								<span class="header">Engines</span>
+								<div class="box-container"></div>
+								<div style="margin-bottom: 5px">
+									<button type="button" class="btn-engines-new  btn btn-success" onClick="Modals.open('engines.edit');">Add</button>
+								</div>
 							</div>
 						</div>
-						<div class="box-row">
-							<span>Engines</span><br/>
-							<div style="margin-bottom: 5px">
-								<button type="button" class="btn-engines-new  btn btn-sm btn-xs mini-btn btn-success">Add</button>
-								<button type="button" class="btn-engines-edit btn btn-sm btn-xs mini-btn btn-warning">Update</button>
+						<div class="col-12 col-lg-4">
+							<div class="info-box cars">
+								<span class="header">Cars</span>
+								<div class="box-container"></div>
+								<div style="margin-bottom: 5px">
+									<button type="button" class="btn-cars-new  btn btn-success" onClick="Modals.open('cars.edit');">Add</button>
+								</div>
 							</div>
-						</div>
-						<div class="box-row">
-							<span>Cars</span><br/>
-							<div style="margin-bottom: 5px">
-								<button type="button" class="btn-cars-new  btn btn-sm btn-xs mini-btn btn-success">Add</button>
-								<button type="button" class="btn-cars-edit btn btn-sm btn-xs mini-btn btn-warning">Update</button>
-							</div>
-						</div>
-					</div>
-					<div class="info-box message-box">
-						<span class="header">Messages</span>
-						<div class="messages">
-							<ul class="list-unstyled">
-							</ul>
 						</div>
 					</div>
 				</div>
 			</div>
 		</div>
 	</div>
-	<div class="main" id="LayoutContainer" style="height: 100%; padding: 0px">
-		<canvas height="300" width="300"/>
-	</div>
-	<div id="menu-box"></div>
+	<div id="moduleconfig" class="window"></div>
 	<div class="modal" id="modal" tabindex="-1" role="dialog">
 		<div class="modal-dialog" role="document">
 			<div class="modal-content">
@@ -479,6 +554,7 @@ header('Pragma: no-cache');
 		<script src="./scripts/modals.js"></script>
 		<script src="./scripts/menu.js"></script>
 		<script src="./scripts/messages.js"></script>
+		<script src="./scripts/window.js"></script>
 		<script src="./scripts/script.js"></script>
 
 	<script>
@@ -547,13 +623,9 @@ header('Pragma: no-cache');
 			]
 		}
 
-		init_list.push(Z21.init.bind(Z21));
+		events.add_init(Z21.init.bind(Z21));
 
-		$( window ).resize(function(){ 
-			for(var i = 0; i < resize_list.length; i++){
-				resize_list[i]();
-			}
-		});
+		$( window ).resize(events.resize);
 
 		// function resize(){
 		// 	if($("html").width() < 1140){
@@ -570,9 +642,7 @@ header('Pragma: no-cache');
 				$('head meta[name=viewport]').attr('content','width=350');
 			}
 
-			for(var i = 0; i < init_list.length; i++){
-				init_list[i]();
-			}
+			events.init();
 
 			// Stations.init();
 

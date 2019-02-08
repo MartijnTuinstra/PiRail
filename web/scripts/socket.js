@@ -530,12 +530,39 @@ var websocket = {
 
     // Track Setup Partial Update
     stc_track_setup_partial: function(data){
-      console.warn("TODO: implement");return;
+      for(var i = 1;i<data.length;i++){
+        var module = modules[data[i]]
+        for(var j = 1;j<= module.connections.length; j++){
+          module.connection_link[j-1] = data[i+j];
+        }
+        console.log("Module "+data[i]+" connect ", module.connection_link, {x: module.OffsetX, y:module.OffsetY, r:module.r});
+        i += module.connections.length;
+
+        module.connect();
+      }
+
+      Canvas.rescale(1);
+    },
+
+    // Track Layout Setup
+    stc_track_setup: function(data){
+      var first = true;
+      for(const key of Object.keys(modules)){
+        for(i in modules[key].connections){
+          i.connected = false;
+        }
+      }
       // for(var i = 1;i<data.length;i++){
-      //   for(var j = 1;j<=Track_Layout_data[data[i]].anchor_len;j++){
-      //     Track_Layout_data[data[i]].anchors[j-1] = data[i+j];
+      //   var module = modules[data[i]]
+      //   for(var j = 1;j<= module.connections.length; j++){
+      //     module.connection_link[j-1] = data[i+j];
       //   }
-      //   i += Track_Layout_data[data[i]].anchor_len;
+      //   console.log("Module "+data[i]+" connect ", module.connection_link);
+      //   i += module.connections.length;
+
+      //   if(first){
+      //     module.move({OffsetX: 0, OffsetY: 0});
+      //   }
       // }
     },
 
@@ -646,6 +673,8 @@ var websocket = {
         console.log("Add engine", {name: name, dcc: dcc_id, img: img, icon: icon, max_speed: max_spd, length: length, type: type, speedstep: speedsteps, steps: steps});
         Train.engines.push({ontrack: 0, id: Train.engines.length, name: name, dcc: dcc_id, img: img, icon: icon, max_speed: max_spd, length: length, type: type, speedstep: speedsteps, steps: steps});
       }
+
+      Train_Configurator.update();
     },
 
     // Add new train to library
@@ -687,6 +716,8 @@ var websocket = {
         Train.cars.push({name: name, nr: nr_id, img: img, icon: icon, max_speed: max_spd, length: length, type: type});
         i += text_length;
       }
+
+      Train_Configurator.update();
     },
 
     // Add new train to library
@@ -736,6 +767,8 @@ var websocket = {
         Train.trains.push({ontrack: 0, id: Train.trains.length, name: name, dcc: dcc, max_speed: max_spd, length: length, type: type, link: link_list, use: use});
         i += data_len;
       }
+
+      Train_Configurator.update();
     },
 
     stc_newtrain_tolib: function(data){
@@ -795,49 +828,6 @@ var websocket = {
       }
 
       Canvas.update_frame();
-    },
-
-    // Track Layout Setup
-    stc_track_setup: function(data){
-      console.warn("TODO: implement");return;
-      // for(var i = 1;i<data.length;i++){
-      //   for(var j = 1;j<=Track_Layout_data[data[i]].anchor_len;j++){
-      //     Track_Layout_data[data[i]].anchors[j-1] = data[i+j];
-      //   }
-      //   i += Track_Layout_data[data[i]].anchor_len;
-      // }
-
-      // console.log("Finding first module");
-      // $.each(Track_Layout_data, function(i,v){
-      //   console.log("Module "+i);
-      //   if(Track_Layout_data[i] != [] && Track_Layout_data[i].anchors.length != 0 && i == 20){
-      //     Track_Layout_data[i].x = 0;
-      //     Track_Layout_data[i].y = 0;
-      //     Track_Layout_data[i].r = 0;
-
-      //     $('#Modules').append("<div class=\"M"+i+" Module M"+i+"b\"></div>");
-      //     blocks_load++;
-      //     console.log("Load: "+'./../modules/'+i+'/layout.svg');
-      //     $('.M'+i+'b').load('./../modules/'+i+'/layout.svg',function (evt){
-      //       blocks_load--;
-      //       if(blocks_load == 0){ //Done loading all modules?
-      //         $('#Modules').css('display','block');
-      //         ws.send("Ready");
-      //         $('g.SwGroup','.Module').on("click",ev_throw_switch);  //Attach click event to all switch and mswitches
-      //       }
-      //     });
-
-      //     Track_Layout_data[i].done = true;
-
-      //     for(var j = 0;j<Track_Layout_data[i].anchor_len;j++){
-      //       if(Track_Layout_data[i].anchors[j] != 0){
-      //         console.log("=============== "+j+" ===============");
-      //         track_layout(Track_Layout_data[i].anchors[j],i);
-      //       }
-      //     }
-      //     return false;
-      //   }
-      // });
     },
 
     // Station Library
@@ -1142,6 +1132,9 @@ function WebSocket_handler(adress){
 
     ws.onopen = function(){
       ws.connected = true;
+
+      events.ws_onopen();
+
       Messages.clear();
     };
 
@@ -1165,9 +1158,13 @@ function WebSocket_handler(adress){
           console.log("Scan Progress");
           websocket.stc_scan_progress(data);
         }
-        else if(data[0] == websocket.opc.Track_Scan_Progress){
+        else if(data[0] == websocket.opc.Track_Layout_Update){
           console.log("Partial Track Layout");
           websocket.stc_track_setup_partial(data);
+        }
+        else if(data[0] == websocket.opc.Track_Layout_Config){
+          console.log("Track Layout");
+          websocket.stc_track_setup(data);
         }
         else if(data[0] == websocket.opc.Z21_Track_Info){
           websocket.stc_track_info(data.slice(1));
@@ -1232,7 +1229,7 @@ function WebSocket_handler(adress){
         }
         else if(data[0] == websocket.opc.TrackLayoutSetup){
           console.log("Track Layout");
-          websocket.stc_track_setup(data);
+          websocket.stc_track_load(data);
         }
 
       /* GENERAL MESSAGES */
@@ -1334,6 +1331,9 @@ function WebSocket_handler(adress){
         Messages.clear();
         Messages.add({type:0xff,id:0});
       }
+
+      events.ws_onclose();
+
       ws.connected = false;
       setTimeout(function(){
         WebSocket_handler(adress);
@@ -1341,6 +1341,15 @@ function WebSocket_handler(adress){
     };
 
 }
+
+events.add_ws_onclose(function(){
+  $('.info-box .connection_state .indicator').removeClass("bg-success");
+  $('.info-box .connection_state .indicator').addClass("bg-danger");
+});
+events.add_ws_onopen(function(){
+  $('.info-box .connection_state .indicator').removeClass("bg-danger");
+  $('.info-box .connection_state .indicator').addClass("bg-success");
+});
 
 $(document).ready(function(){
   Messages.add({type:0xff,id:0});

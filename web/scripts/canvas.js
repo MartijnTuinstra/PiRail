@@ -62,8 +62,8 @@ var Canvas = {
 				continue;
 			}
 
-			console.log("Module "+i, modules[i].width, modules[i].height, modules[i].OffsetX, modules[i].OffsetY, modules[i].r);
-			console.log([l, r, t, b]);
+			// console.log("Module "+i, modules[i].width, modules[i].height, modules[i].OffsetX, modules[i].OffsetY, modules[i].r);
+			// console.log([l, r, t, b]);
 
 			if(modules[i].r == 0){
 				if(modules[i].OffsetX < l){
@@ -100,7 +100,7 @@ var Canvas = {
 				}
 			}
 
-			console.log([l, r, t, b]);
+			// console.log([l, r, t, b]);
 		}
 
 		this.dimensions.content.width = (r - l)*this.dimensions.scale;
@@ -108,7 +108,7 @@ var Canvas = {
 		this.dimensions.content.ofX = l*this.dimensions.scale;
 		this.dimensions.content.ofY = t*this.dimensions.scale;
 
-		console.log("content_box", [r-l, b-t])
+		// console.log("content_box", [r-l, b-t])
 		this.calc_limits();
 	},
 	resize: function(){
@@ -136,7 +136,7 @@ var Canvas = {
 		this.get_content_box();
 
 		//Recenter content
-		this.dimensions.ofX = 0.5*this.dimensions.width/this.dimensions.scale-0.5*this.dimensions.content.width;
+		this.dimensions.ofX = 0.5*(this.dimensions.width-this.dimensions.content.width);
 		this.dimensions.ofY = 0;
 
 		this.moved();
@@ -268,8 +268,8 @@ var Canvas = {
 		this.c.setTransform(this.dimensions.scale, 0, 0, this.dimensions.scale, this.dimensions.ofX-this.dimensions.content.ofX, this.dimensions.ofY-this.dimensions.content.ofY);
 
 
-		for (var w = this.dimensions.content.ofX; w < (this.dimensions.content.width/this.dimensions.scale) + 50; w += 100) {
-		    for (var h = this.dimensions.content.ofY; h < (this.dimensions.content.height/this.dimensions.scale) + 50; h += 100) {
+		for (var w = this.dimensions.content.ofX; w < (this.dimensions.content.ofX + this.dimensions.content.width/this.dimensions.scale) + 50; w += 100) {
+		    for (var h = this.dimensions.content.ofY; h < (this.dimensions.content.ofY + this.dimensions.content.height/this.dimensions.scale) + 50; h += 100) {
 		      var x = Math.round((w) / 100) * 100;
 		      var y = Math.round((h) / 100) * 100;
 
@@ -317,7 +317,13 @@ var Canvas = {
 				c.fill();
 				c.stroke();
 
-		      c.fillText(ofX + ',' + ofY, ofX, ofY+20);
+				c.fillStyle = "black";
+				if(this.r == 0){
+		      		c.fillText(ofX + ',' + ofY+' '+this.id, ofX+5, ofY+10);
+				}
+				else{
+					c.fillText(ofX + ',' + ofY+' '+this.id, ofX-40, ofY+10);
+				}
 			c.beginPath();
 			c.moveTo(ofX,ofY);
 			c.lineTo(rvX*module_v.width+ofX,rvX_*module_v.width+ofY);
@@ -473,9 +479,9 @@ var Canvas = {
 	},
 
 	moved: function(){
-		console.log("Moved");
-		console.log([this.dimensions.ofX, this.dimensions.ofY, this.dimensions.width, this.dimensions.content]);
-		console.log([this.dimensions.x_left, this.dimensions.x_right, this.dimensions.y_top, this.dimensions.y_bottom]);
+		// console.log("Moved");
+		// console.log([this.dimensions.ofX, this.dimensions.ofY, this.dimensions.width, this.dimensions.content]);
+		// console.log([this.dimensions.x_left, this.dimensions.x_right, this.dimensions.y_top, this.dimensions.y_bottom]);
 		if(this.dimensions.width < this.dimensions.content.width){
 			//Scroll limiter
 			if((this.dimensions.x_left) > -this.dimensions.ofX){
@@ -591,8 +597,8 @@ var Canvas = {
 }
 
 
-init_list.push(Canvas.init.bind(Canvas));
-resize_list.push(Canvas.resize.bind(Canvas));
+events.add_init(Canvas.init.bind(Canvas));
+events.add_resize(Canvas.resize.bind(Canvas));
 
 Canvas.init_calc();
 ro = Canvas.ro;
@@ -1338,6 +1344,11 @@ class canvas_module {
 		this.r = 0;
 		this.visible = false;
 		this.connections = connections;
+		this.connection_link = [];
+		
+		for(var i = 0; i < this.connections.length; i++){
+			this.connections[i].connected = false;
+		}
 
 		this.blocks = Array.apply(null, Array(blocks)).map(function (){return 5});
 		this.switches = Array.apply(null, Array(switches)).map(function (){return 0});
@@ -1348,17 +1359,95 @@ class canvas_module {
 	}
 
 	move(options = {}){
+		console.log("Move module "+this.id, options);
+		var dx = 0;
+		var dy = 0;
+		var dr = 0;
 		if(options.OffsetX != undefined){
-			this.OffsetX = options.OffsetX;
+			dx = options.OffsetX - this.OffsetX;
+			this.OffsetX = Math.round(options.OffsetX * 1000) / 1000;
 		}
 		if(options.OffsetY != undefined){
-			this.OffsetY = options.OffsetY;
+			dy = options.OffsetY - this.OffsetY;
+			this.OffsetY = Math.round(options.OffsetY * 1000) / 1000;
 		}
 		if(options.r != undefined){
+			dr = options.r - this.r;
 			this.r = options.r;
+			this.r = this.r % 2;
 		}
 
+		console.log("Moved module "+this.id, {x: this.OffsetX, y: this.OffsetY, r:this.r});
+
+		// if((options.nonest == undefined || options.nonest == false) && this.connection_link){
+		// 	for(var i = 0; i < this.connections.length; i++){
+		// 		if(this.connections[i].connected && this.connection_link[i] != undefined && this.connection_link[i] != options.parent){
+		// 			var m = modules[this.connection_link[i]];
+		// 			console.log("Move connected module", m.id);
+		// 			var point = rotated_point(m.OffsetX - this.OffsetX, m.OffsetY - this.OffsetY, m.r + dr, this.OffsetX, this.OffsetY);
+		// 			if((m.r + dr) % 2 == 0){
+		// 				point.y += dy;
+		// 				point.x += dx;
+		// 			}
+		// 			else if((m.r + dr) % 2 == 1){
+		// 				point.y -= dy;
+		// 				point.x += dx;
+		// 			}
+		// 			else if((m.r + dr) % 2 == 0.5){
+		// 				point.y += dy;
+		// 				point.x -= dx;	
+		// 			}
+		// 			m.move({OffsetX: point.xC, OffsetY: point.y, r: m.r + dr, parent: this.id});
+		// 		}
+		// 	}
+		// }
+
 		Canvas.get_content_box();
+	}
+
+	connect(){
+		console.log("Module connect");
+		for(var i = 0; i < this.connection_link.length; i++){
+			if(this.connections[i].connected){
+				continue;
+			}
+			var aModule = modules[this.connection_link[i]];
+
+			if(!aModule.connection_link.includes(this.id)){
+				continue;
+			}
+
+			var point = rotated_point(this.connections[i].x, this.connections[i].y, this.r, this.OffsetX, this.OffsetY);
+
+			var anchorX = point.x;
+			var anchorY = point.y;
+
+			var anchorR = (this.connections[i].r + 1) % 2;
+
+			var connect_list = aModule.connection_link.indexOf(this.id);
+
+			console.log("Module "+this.id+" anchor "+i+"=>"+connect_list, aModule.id);
+
+			if(anchorR != aModule.connections[connect_list].r){
+				this.move({r: aModule.r + aModule.connections[connect_list].r - anchorR})
+			}
+			else{
+				this.move({r: aModule.r});
+			}
+
+			point = rotated_point(aModule.connections[connect_list].x, aModule.connections[connect_list].y, aModule.r, aModule.OffsetX, aModule.OffsetY);
+			if(this.r == anchorR){
+				point = rotated_point(this.connections[i].x, -this.connections[i].y, this.r, point.x, point.y);
+			}
+			else{
+				point = rotated_point(-this.connections[i].x, -this.connections[i].y, this.r, point.x, point.y);
+			}
+
+			this.move({OffsetX: point.x, OffsetY: point.y});
+
+			aModule.connections[connect_list].connected = true;
+			this.connections[i].connected = true;
+		}
 	}
 
 	add(obj){
@@ -1439,6 +1528,18 @@ class canvas_module {
 			this.data[i].draw_fore(stroke, rotation, offset);
 			c.stroke();
 		};
+
+		for(const connect of this.connections){
+			c.beginPath();
+			c.lineWidth = 10;
+			c.strokeStyle = "#0000ff";
+			var point = rotated_point(connect.x, connect.y, this.r, offset.X, offset.Y);
+			c.moveTo(point.x, point.y);
+			point = rotated_point(20, 0, this.r+connect.r, point.x, point.y);
+			c.lineTo(point.x, point.y);
+			c.stroke();
+			c.lineWidth = 6;
+		}
 	}
 }
 
@@ -1469,10 +1570,15 @@ function load_module(id){
     });
 };
 
+function rotated_point(x, y, r, ofX=0, ofY=0){
+	r_ = {X: Math.cos(r*Math.PI), X_: Math.cos((r+0.5)*Math.PI), Y: Math.sin((r+0.5)*Math.PI), Y_: Math.sin((r)*Math.PI)};
+	return {x: ofX + r_.X*x + r_.Y_*y , y: ofY + r_.Y*y + r_.X_*x } ;
+}
+
 var loading_modules = 0;
 
 
-init_list.push(function(){
+events.add_init(function(){
 	load_module(20);
 	load_module(21);
 	load_module(22);
@@ -1482,12 +1588,12 @@ init_list.push(function(){
 });
 
 function conf_modules(){
-	modules[20].move({OffsetX:  50, OffsetY:  0});
-	modules[21].move({OffsetX: 850, OffsetY: 440, r: 1});
-	modules[22].move({OffsetX: 1650, OffsetY:  0});
-	modules[23].move({OffsetX:  50, OffsetY: 440, r: 1});
-	modules[25].move({OffsetX: 850, OffsetY:  0});
-	modules[26].move({OffsetX: 1650, OffsetY: 440, r: 1});
+	modules[20].move({OffsetX:  50, OffsetY:  0, nonest: true});
+	modules[21].move({OffsetX: 850, OffsetY: 440, r: 1, nonest: true});
+	modules[22].move({OffsetX: 1650, OffsetY:  0, nonest: true});
+	modules[23].move({OffsetX:  50, OffsetY: 440, r: 1, nonest: true});
+	modules[25].move({OffsetX: 850, OffsetY:  0, nonest: true});
+	modules[26].move({OffsetX: 1650, OffsetY: 440, r: 1, nonest: true});
 	Canvas.calc_dotmatrix();
 	Canvas.rescale(Canvas.dimensions.scale);
 	Canvas.update_frame();

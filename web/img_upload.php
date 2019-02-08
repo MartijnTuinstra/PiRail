@@ -27,22 +27,22 @@ if(!move_uploaded_file($fileTmpLoc, $dst_loc)){
     exit();
 }
 
-$resize = false;
-if($fileType == "image/jpeg" || $fileType == "image/png"){
-  list($width,$height) = getimagesize($dst_loc);
-  $ratio = $height / $width;
-  if($height > 500){
-    $resize = true;
-    $rheight = 500;
-    $rwidth = $rheight / $ratio;
-  }
-  if($resize){
-    //Resize image
-    $thumb = imagecreatetruecolor($rwidth, $rheight);
-    $source = imagecreatefromjpeg($dst_loc);
-    imagecopyresized($thumb, $source, 0, 0, 0, 0, $rwidth, $rheight, $width, $height);
-    //Save image
-    imagejpeg($thumb, $dst_loc);
-  }
-}
+// $resize = false;
+// if($fileType == "image/jpeg" || $fileType == "image/png"){
+//   list($width,$height) = getimagesize($dst_loc);
+//   $ratio = $height / $width;
+//   if($height > 500){
+//     $resize = true;
+//     $rheight = 500;
+//     $rwidth = $rheight / $ratio;
+//   }
+//   if($resize){
+//     //Resize image
+//     $thumb = imagecreatetruecolor($rwidth, $rheight);
+//     $source = imagecreatefromjpeg($dst_loc);
+//     imagecopyresized($thumb, $source, 0, 0, 0, 0, $rwidth, $rheight, $width, $height);
+//     //Save image
+//     imagejpeg($thumb, $dst_loc);
+//   }
+// }
 ?>

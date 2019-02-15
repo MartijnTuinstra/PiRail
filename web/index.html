@@ -233,6 +233,11 @@ header('Pragma: no-cache');
 
 		.window {width: 100%; height: 100%;}
 
+
+		#moduleconfig .modulebox { position:relative; height:220px; float:left; margin-right: 5px; display: inline-block; }
+		#moduleconfig .modulebox canvas { position:absolute; top:0px;left:0px; width:100%; height:200px;border: 1px solid lightgrey; }
+		#moduleconfig .modulebox .modulename { position:absolute; bottom:0px;left:0px; width:100%; height: 20px; font-weight: bold; text-align: center; }
+
 	</style>
 	<script>
 		var events = {
@@ -444,7 +449,7 @@ header('Pragma: no-cache');
 						<div class="info-box">
 							<span class="header">Configure</span>
 							<span class="box-row">Reload Layout</span>
-							<div class="box-row">
+							<div class="box-row d-none d-sm-block">
 								<div style="margin-bottom: 5px">
 									<button type="button" class="btn btn-sm btn-xs mini-btn btn-warning" style="width:150px" onClick='windows.switch("moduleconfig");'>Configure Modules</button>
 								</div>
@@ -527,7 +532,66 @@ header('Pragma: no-cache');
 			</div>
 		</div>
 	</div>
-	<div id="moduleconfig" class="window"></div>
+	<div id="moduleconfig" class="window" style="display:none;background-color:#ecf0f5">
+		<div class="row">
+			<div class="col-12">
+				<div class="info-box">
+					<div class="row">
+						<div class="col-sm-4 col-lg-2">
+							<ul class="list-unstyled">
+								<li class="media connection_state" style="padding: 0px 30px">
+									<div class="indicator align-self-center mr-3 bg-danger" style="width:16px;height:16px;border-radius: 3px;"></div>
+									<div class="media-body" style="margin-top: 0.2em; margin-bottom: 0.2em">
+										<div class="mt-0 mb-0" style="position: relative; font-weight: bold;">Connected</div>
+									</div>
+								</li>
+							</ul>
+							<div class="box-row">
+								<button type="button" class="btn btn-sm btn-xs mini-btn btn-warning" onClick='window.location.replace("");'>Reload</button>
+								<button type="button" class="btn btn-sm btn-xs mini-btn btn-success" onClick='windows.switch("main");'>Close</button>
+							</div>
+						</div>
+						<div class="col-sm-8 col-lg-10"></div>
+					</div>
+					<div class="row">
+						<div calss="col" style="height: 240px; overflow-y:hidden;">
+							<div style="overflow-x:scroll; overflow-y:hidden; height: 320px;padding:20px;width:100%">
+								<div style="height:260px; width:2800px; white-space: nowrap; overflow: hidden;">
+									<div class="modulebox" style="width:500px;">
+										<canvas>Canvas</canvas>
+										<div class="modulename">Name</div>
+									</div>
+									<div class="modulebox" style="width:800px;">
+										<canvas>Canvas</canvas>
+										<div class="modulename">Name</div>
+									</div>
+									<div class="modulebox" style="width:500px;">
+										<canvas>Canvas</canvas>
+										<div class="modulename">Name</div>
+									</div>
+									<div class="modulebox" style="width:200px;">
+										<canvas>Canvas</canvas>
+										<div class="modulename">Name</div>
+									</div>
+									<div class="modulebox" style="width:200px;">
+										<canvas>Canvas</canvas>
+										<div class="modulename">Name</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-12">
+				<div class="info-box">
+					<div>Configurator</div>
+				</div>
+			</div>
+		</div>
+	</div>
 	<div class="modal" id="modal" tabindex="-1" role="dialog">
 		<div class="modal-dialog" role="document">
 			<div class="modal-content">
@@ -625,7 +689,7 @@ header('Pragma: no-cache');
 
 		events.add_init(Z21.init.bind(Z21));
 
-		$( window ).resize(events.resize);
+		$( window ).resize(events.resize.bind(events));
 
 		// function resize(){
 		// 	if($("html").width() < 1140){

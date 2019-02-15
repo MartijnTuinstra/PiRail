@@ -1,6 +1,6 @@
 
 var windows = {
-	tabs: ["main", "rollingstock", "moduleeditor"],
+	tabs: ["main", "rollingstock", "moduleconfig"],
 
 	switch: function(tab){
 		var i = this.tabs.indexOf(tab);

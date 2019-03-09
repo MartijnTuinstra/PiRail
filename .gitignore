@@ -4,6 +4,7 @@ log_config.txt
 bin/
 baan
 config_reader
+configs/units/*
 web/trains_img/*
 !web/trains_img/.gitkeep
 web/tmp_*

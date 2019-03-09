@@ -289,7 +289,7 @@ header('Pragma: no-cache');
 </head>
 <body>
 
-	<div id="main" class="window" style="display:block;">
+	<div id="main" class="window" style="display:none;">
 		<div class="sidebar full-height">
 			<div style="width: 125%; overflow-y: overlay; overflow-x:hidden; height: 100%">
 				<div class="scrollcontainer" style="width: 80%;">
@@ -532,7 +532,7 @@ header('Pragma: no-cache');
 			</div>
 		</div>
 	</div>
-	<div id="moduleconfig" class="window" style="display:none;background-color:#ecf0f5">
+	<div id="moduleconfig" class="window" style="display:block;background-color:#ecf0f5">
 		<div class="row">
 			<div class="col-12">
 				<div class="info-box">
@@ -556,28 +556,7 @@ header('Pragma: no-cache');
 					<div class="row">
 						<div calss="col" style="height: 240px; overflow-y:hidden;">
 							<div style="overflow-x:scroll; overflow-y:hidden; height: 320px;padding:20px;width:100%">
-								<div style="height:260px; width:2800px; white-space: nowrap; overflow: hidden;">
-									<div class="modulebox" style="width:500px;">
-										<canvas>Canvas</canvas>
-										<div class="modulename">Name</div>
-									</div>
-									<div class="modulebox" style="width:800px;">
-										<canvas>Canvas</canvas>
-										<div class="modulename">Name</div>
-									</div>
-									<div class="modulebox" style="width:500px;">
-										<canvas>Canvas</canvas>
-										<div class="modulename">Name</div>
-									</div>
-									<div class="modulebox" style="width:200px;">
-										<canvas>Canvas</canvas>
-										<div class="modulename">Name</div>
-									</div>
-									<div class="modulebox" style="width:200px;">
-										<canvas>Canvas</canvas>
-										<div class="modulename">Name</div>
-									</div>
-								</div>
+								<div class="moduleContainer" style="height:260px; width:2800px; white-space: nowrap; overflow: hidden;"></div>
 							</div>
 						</div>
 					</div>
@@ -616,6 +595,7 @@ header('Pragma: no-cache');
 		<script src="./scripts/socket.js"></script>
 		<script src="./scripts/train.js"></script>
 		<script src="./scripts/modals.js"></script>
+		<script src="./scripts/modules.js"></script>
 		<script src="./scripts/menu.js"></script>
 		<script src="./scripts/messages.js"></script>
 		<script src="./scripts/window.js"></script>

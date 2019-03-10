@@ -17,16 +17,33 @@ var ModuleEditor = {
 			modules[key]
 
 
-			content += '<div class="modulebox" style="width:'+modules[key].width+'px;"> \
+			var scaling = 1;
+			if(modules[key].height > 200){
+				scaling = 200 / modules[key].height;
+			}
+
+			content = '<div class="modulebox" style="width:'+(modules[key].width*scaling)+'px;"> \
 											<canvas id="EditorModule'+key+'"></canvas> \
 											<div class="modulename">'+key+' - '+modules[key].name+'</div> \
 										</div>';
 
 			width += modules[key].width + 5;
+
+
+			$("#moduleconfig .moduleContainer").append(content);			
+
+			query = $('#moduleconfig #EditorModule'+key);
+			cnvs = query[0].getContext('2d');
+
+			query[0].width = (modules[key].width*scaling);
+			query[0].height = 200;
+
+			cnvs.setTransform(scaling, 0, 0, scaling, 0, 0);
+
+			modules[key].draw_background(cnvs, Canvas.setStrokeColor, {X:0,Y:0,R:0});
+			modules[key].draw_foreground(cnvs, Canvas.setStrokeColor, {X:0,Y:0,R:0});
 		}
 
-
-		$("#moduleconfig .moduleContainer").append(content);
 		$("#moduleconfig .moduleContainer").css("width", width);
 
 	}

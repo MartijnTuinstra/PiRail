@@ -1,7 +1,4 @@
 
-function round(number, decimals){
-	return Math.round(number * Math.pow(10, decimals))/Math.pow(10, decimals);
-}
 
 var ModuleEditor = {
 	init: function(){
@@ -40,6 +37,8 @@ var ModuleEditor = {
 
 			$("#moduleconfig .moduleContainer").append(content);			
 
+			$("#moduleconfig div > canvas#EditorModule"+key).on("click", function(){ModuleEditor.loadModule(key)});
+
 			query = $('#moduleconfig #EditorModule'+key);
 			cnvs = query[0].getContext('2d');
 
@@ -60,6 +59,9 @@ var ModuleEditor = {
 	},
 
 	loadModule: function(module){
+		$("#moduleconfig .moduleContainer .modulebox.selected").removeClass("selected");
+		$("#moduleconfig .moduleContainer .modulebox canvas#EditorModule"+module).parent().addClass("selected");
+
 		$("#moduleconfig #ModuleConfigurator tbody").empty();
 
 		$("#moduleconfig #ModuleConfigurator tbody").append(modules[module].configdata());

@@ -72,8 +72,8 @@ header('Pragma: no-cache');
 		.info-box .box-row {display:block;}
 
 		.info-box .box-trow {display:table-row;}
-		.info-box table {display: inline-table;}
-		.info-box table {width: 80%;margin: 0px 10%;}
+		.info-box table:not(#ModuleConfigurator) {display: inline-table;}
+		.info-box table:not(#ModuleConfigurator) {width: 80%;margin: 0px 10%;}
 		@media (min-width: 1140px) {
 			.info-box table {width: 100%;margin: 0;}
 			.info-box table > tr > td:nth-child(1) {font-size: small;}
@@ -233,10 +233,12 @@ header('Pragma: no-cache');
 
 		.window {width: 100%; height: 100%;}
 
-
+		#moduleconfig {overflow-x: hidden; overflow-y: auto;}
 		#moduleconfig .modulebox { position:relative; height:220px; float:left; margin-right: 5px; display: inline-block; }
 		#moduleconfig .modulebox canvas { position:absolute; top:0px;left:0px; width:100%; height:200px;border: 1px solid lightgrey; }
 		#moduleconfig .modulebox .modulename { position:absolute; bottom:0px;left:0px; width:100%; height: 20px; font-weight: bold; text-align: center; }
+
+		/*#moduleconfig table tr:hover {background-color: #fafafa;}*/
 
 	</style>
 	<script>
@@ -449,7 +451,7 @@ header('Pragma: no-cache');
 						<div class="info-box">
 							<span class="header">Configure</span>
 							<span class="box-row">Reload Layout</span>
-							<div class="box-row d-none d-sm-block">
+							<div class="box-row "> <!-- d-none d-sm-block -->
 								<div style="margin-bottom: 5px">
 									<button type="button" class="btn btn-sm btn-xs mini-btn btn-warning" style="width:150px" onClick='windows.switch("moduleconfig");'>Configure Modules</button>
 								</div>
@@ -554,7 +556,7 @@ header('Pragma: no-cache');
 						<div class="col-sm-8 col-lg-10"></div>
 					</div>
 					<div class="row">
-						<div calss="col" style="height: 240px; overflow-y:hidden;">
+						<div calss="col" style="height: 250px; overflow-y:hidden;">
 							<div style="overflow-x:scroll; overflow-y:hidden; height: 320px;padding:20px;width:100%">
 								<div class="moduleContainer" style="height:260px; width:2800px; white-space: nowrap; overflow: hidden;"></div>
 							</div>
@@ -564,9 +566,23 @@ header('Pragma: no-cache');
 			</div>
 		</div>
 		<div class="row">
-			<div class="col-12">
+			<div class="col">
 				<div class="info-box">
-					<div>Configurator</div>
+					<div style="text-align: center; width: 100%; margin-bottom: 0.5em; margin-top: 0.25em; font-weight: bold;">Layout Configurator</div>
+					<table id="ModuleConfigurator" class="table table-striped table-hover">
+					  <thead>
+					    <tr>
+					      <th scope="col">ID</th>
+					      <th scope="col">Block</th>
+					      <th scope="col">Type</th>
+					      <th scope="col">X<sub>1</sub> Y<sub>1</sub></th>
+					      <th scope="col">X<sub>2</sub> Y<sub>2</sub></th>
+					      <th scope="col">Rotation</th>
+					      <th scope="col">Switches</th>
+					    </tr>
+					  </thead>
+					  <tbody></tbody>
+					</table>
 				</div>
 			</div>
 		</div>

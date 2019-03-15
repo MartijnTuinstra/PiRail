@@ -8,3 +8,5 @@ configs/units/*
 web/trains_img/*
 !web/trains_img/.gitkeep
 web/tmp_*
+*.~vsdx
+*.~docx

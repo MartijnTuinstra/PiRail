@@ -667,6 +667,7 @@ function equation_tester(equation, values) {
 class canvas_line {
 	constructor(module_id, block, x1, y1, x2, y2, options){
 		this.type = "line";
+		this.edit_type = "line";
 		this.module_id = module_id;
 		this.m = undefined;
 		this.b = block;
@@ -749,6 +750,7 @@ class canvas_line {
 class canvas_arc {
 	constructor(module_id, block, cx, cy, r, arc, options){
 		this.type = "arc";
+		this.edit_type = "arc";
 		this.module_id = module_id;
 		this.m = undefined;
 		this.b = block;
@@ -829,6 +831,7 @@ class canvas_switch {
 		}
 
 		this.type = "sw"+side;
+		this.edit_type = "sw";
 		this.module_id = module_id;
 		this.m = undefined;
 		this.b = block;
@@ -1065,6 +1068,7 @@ class canvas_double_slip {
 		}
 
 		this.type = "ds"+side;
+		this.edit_type = "ds";
 		this.module_id = module_id;
 		this.m = undefined;
 		this.b = block;

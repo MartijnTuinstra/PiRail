@@ -1,6 +1,7 @@
 
 
 var ModuleEditor = {
+	open: 0,
 	init: function(){
 		console.log("ModuleEditor Init");
 		if(loading_modules != 0){
@@ -59,12 +60,24 @@ var ModuleEditor = {
 	},
 
 	loadModule: function(module){
+		ModuleEditor.open = module;
+
 		$("#moduleconfig .moduleContainer .modulebox.selected").removeClass("selected");
 		$("#moduleconfig .moduleContainer .modulebox canvas#EditorModule"+module).parent().addClass("selected");
 
 		$("#moduleconfig #ModuleConfigurator tbody").empty();
 
 		$("#moduleconfig #ModuleConfigurator tbody").append(modules[module].configdata());
+
+		$("#moduleconfig #ModuleConfigurator svg").on("click", function(evt){
+			var id = parseInt($("th", $(evt.target).parent().parent().parent()).text());
+
+			console.log(modules[ModuleEditor.open].data[id]);
+
+			module = modules[ModuleEditor.open].data[id];
+
+			Modals.open("module."+module.edit_type);
+		});
 	}
 }
 

@@ -717,6 +717,59 @@ var Modals = {
         warning: {visible: false, content: "", cb: undefined, wait: false},
         danger: {visible: true, content: "Cancel", cb: undefined, wait: false},
       }
+    },
+
+    "module.line":{
+      link: "",
+      open_cb: function(data, ref){
+
+      },
+      title: "Edit Line",
+      content: 'Test Line',
+      buttons: {
+        success: {visible: true, content: "Update", cb: undefined, wait: false},
+        warning: {visible: true, content: "Discard", cb: undefined, wait: false},
+        danger: {visible: false, content: "", cb: undefined, wait: false}
+      }
+    },
+    "module.arc":{
+      link: "",
+      open_cb: function(data, ref){
+
+      },
+      title: "Edit Arc",
+      content: 'Test Arc',
+      buttons: {
+        success: {visible: true, content: "Update", cb: undefined, wait: false},
+        warning: {visible: true, content: "Discard", cb: undefined, wait: false},
+        danger: {visible: false, content: "", cb: undefined, wait: false}
+      }
+    },
+    "module.sw":{
+      link: "",
+      open_cb: function(data, ref){
+
+      },
+      title: "Edit Switch",
+      content: 'Test Switch',
+      buttons: {
+        success: {visible: true, content: "Update", cb: undefined, wait: false},
+        warning: {visible: true, content: "Discard", cb: undefined, wait: false},
+        danger: {visible: false, content: "", cb: undefined, wait: false}
+      }
+    },
+    "module.ds":{
+      link: "",
+      open_cb: function(data, ref){
+
+      },
+      title: "Edit Double Slip Switch",
+      content: 'Test Double Slip Switch',
+      buttons: {
+        success: {visible: true, content: "Update", cb: undefined, wait: false},
+        warning: {visible: true, content: "Discard", cb: undefined, wait: false},
+        danger: {visible: false, content: "", cb: undefined, wait: false}
+      }
     }
   },
 

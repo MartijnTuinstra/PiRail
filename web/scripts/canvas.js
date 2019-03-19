@@ -1730,8 +1730,8 @@ events.add_init(function(){
 	load_module(21);
 	load_module(22);
 	load_module(23);
-	// load_module(25);
-	// load_module(26);
+	load_module(25);
+	load_module(26);
 });
 
 function conf_modules(){
@@ -1739,8 +1739,8 @@ function conf_modules(){
 	modules[21].move({OffsetX: 850, OffsetY: 440, r: 1, nonest: true});
 	modules[22].move({OffsetX: 1650, OffsetY:  0, nonest: true});
 	modules[23].move({OffsetX:  50, OffsetY: 440, r: 1, nonest: true});
-	// modules[25].move({OffsetX: 850, OffsetY:  0, nonest: true});
-	// modules[26].move({OffsetX: 1650, OffsetY: 440, r: 1, nonest: true});
+	modules[25].move({OffsetX: 850, OffsetY:  0, nonest: true});
+	modules[26].move({OffsetX: 1650, OffsetY: 440, r: 1, nonest: true});
 	Canvas.calc_dotmatrix();
 	Canvas.rescale(Canvas.dimensions.scale);
 	Canvas.update_frame();

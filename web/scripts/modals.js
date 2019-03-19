@@ -168,7 +168,7 @@ var Modals = {
       buttons: {
         success: {visible: true, content: "Create", cb: function(data){/*websocket.cts_link_train(fid, rid, type, mid)*/}, wait: false},
         warning: {visible: true, content: "Update", cb: function(){alert("Update");}, wait: false},
-        danger: {visible: true, content: "Cancel", cb: undefined, wait: false},
+        danger: {visible: true, content: "Delete", cb: function(){alert("Delete")}, wait: false},
       }
     },
 
@@ -469,40 +469,7 @@ var Modals = {
                  wait: false},
       }
     },
-
-    "cars.choose":{
-      link: "button.btn-cars-edit",
-      open_cb: function(data, ref){
-        $('.modal-body', ref).append("<div style='width:100%; overflow:hidden; max-height: 600px'><div style='width:125%;position: relative; overflow: overlay;'><div class='cont' style='width:80%;'><ul class='list-unstyled'></ul></div></div></div>");
-        $('.modal-body > div').css("max-height", "calc("+(window.innerHeight*0.8-71)+"px - 3em)");
-        $('.modal-body > div > div').css("max-height", "calc("+(window.innerHeight*0.8-71)+"px - 3em)");
-        for(var i = 0; i<Train.cars.length; i++){
-          var t = Train.cars[i];
-
-          var text = '<li class="message media">'+
-              '<div class="message-mbox align-self-center mr-3 bg-primary" style="width:120px;height:60px"></div>'+
-              '<div class="message-body media-body">'+
-                '<div class="mt-0 mb-0 message-header"><b>'+t.name+'</b></div>'+
-                '<small class="message-content">\
-                  <i>nr: '+t.nr+'</i>\
-                  <span style="width:2em; display:inline-block;"></span>\
-                  <i>Length: '+t.length+' mm</i>\
-                </small>'+
-                '<button name="train_id" class="modal-form btn btn-toggle btn-xs btn-outline-primary m-1"\
-                  value="'+i+'" style="display: block;">Select</button>'+
-              '</div></li>';
-          $('.modal-body .cont ul', ref).append(text);
-          // $('.modal-body .cont ul', ref).append("<button name='train_id' class='modal-form btn btn-toggle btn-outline-primary m-1' value='"+i+"' style='display: block;'>"+t.name+'</button><br/>PIZZA<br/>');
-        }
-      },
-      title: "Choose a car",
-      content: '',
-      buttons: {
-        success: {visible: false, content: "", cb: undefined, wait: false},
-        warning: {visible: true, content: "Edit", cb: function(){Modals.hide(); Modals.open('cars.edit', {id: Modals.data.train_id})}, wait:true},
-        danger: {visible: true, content: "Remove", cb: undefined, wait: false},
-      }
-    },
+    
     "cars.edit":{
       link: "button.btn-cars-new",
       open_cb: function(data, ref){

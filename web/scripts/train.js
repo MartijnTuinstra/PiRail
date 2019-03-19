@@ -189,7 +189,7 @@ var Train_Configurator = {
     for(var i = 0; i<Train.trains.length; i++){
       var t = Train.trains[i];
 
-      var text = '<li class="list-unstyled">'+
+      var text = '<li class="list-unstyled" name="'+i+'">'+
           '<div class="mr-3 ml-3 mt-3 bg-outline-dark" style="width:calc(100% - 2rem);height:36px; padding: 3px; overflow: hidden"><div style="width:100%; height:150%; overflow-x: overlay;white-space: nowrap">';
 
       for(var j = 0; j < t.link.length; j++){
@@ -212,6 +212,11 @@ var Train_Configurator = {
       $("#rollingstock .info-box.trains .box-container ul").append(text);
       // $('.modal-body .cont ul', ref).append("<button name='train_id' class='modal-form btn btn-toggle btn-outline-primary m-1' value='"+i+"' style='display: block;'>"+t.name+'</button><br/>PIZZA<br/>');
     }
+    $("#rollingstock .info-box.trains .box-container button").on("click", function(evt){
+      var id = parseInt($(evt.target).parent().parent().attr("name"));
+
+      Modals.open("trains.edit", {id: id});
+    });
 
     //Update engines
     $("#rollingstock .info-box.engines .box-container button").off("click");
@@ -246,21 +251,27 @@ var Train_Configurator = {
     for(var i = 0; i<Train.cars.length; i++){
       var c = Train.cars[i];
 
-      var text = '<li class="message media">'+
-              '<div class="message-mbox align-self-center mr-3 bg-primary" style="width:120px;height:60px"></div>'+
+      var text = '<li class="message media" name="'+i+'">'+
+              '<div class="message-mbox align-self-center mr-3" style="width:120px;height:60px;position:relative;">\
+                <div class="car-icon" style="background-image: url(\'./trains_img/'+c.icon+'\')"></div>\
+              </div>'+
               '<div class="message-body media-body">'+
                 '<div class="mt-0 mb-0 message-header"><b>'+c.name+'</b></div>'+
-                '<small class="message-content">\
-                  <i>nr: '+c.nr+'</i>\
-                  <span style="width:2em; display:inline-block;"></span>\
-                  <i><span class="d-none d-md-block">Length: </span>'+c.length+' mm</i>\
-                </small>'+
+                '<div class="message-content" style="max-width: 210px;font-size:small; margin-right:0.5em">\
+                  <i>Nr: '+c.nr+'</i>\
+                  <i style="float:right"><span class="d-none d-md-block">Length: </span>'+c.length+' mm</i>\
+                </div>'+
                 '<button name="train_id" class="modal-form btn btn-toggle btn-xs btn-outline-primary m-1"\
                   value="'+i+'" style="display: block;">Update</button>'+
               '</div></li>';
 
       $("#rollingstock .info-box.cars .box-container ul").append(text);
     }
+    $("#rollingstock .info-box.cars .box-container button").on("click", function(evt){
+      var id = parseInt($(evt.target).parent().parent().attr("name"));
+
+      Modals.open("cars.edit", {id: id});
+    });
   },
   show: function(){
     $("#rollingstock .info-box.trains .box-container").show();

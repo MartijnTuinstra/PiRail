@@ -83,7 +83,7 @@ var ModuleEditor = {
 				console.warn("No Module data obj found ("+ModuleEditor.open+", "+id+")");
 			}
 
-			Modals.open("module."+module.edit_type, {m: ModuleEditor.open, id:id});
+			Modals.open("module."+modules.edit_type, {m: ModuleEditor.open, id:id});
 		});
 
 		$("#moduleconfig #ModuleSettings td[name='name']").text(modules[ModuleEditor.open].name);

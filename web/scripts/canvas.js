@@ -53,8 +53,11 @@ var Canvas = {
 		this.c = this.canvas.getContext('2d');
 		c = this.c;
 
-	    this.dimensions.height = (this.canvas.height = $('#LayoutContainer').height());
-		this.dimensions.width  = (this.canvas.width  = $('#LayoutContainer').width());
+		this.canvas.height = $('#LayoutContainer').height();
+		this.canvas.width  = $('#LayoutContainer').width();
+
+	    this.dimensions.height = this.canvas.height;
+		this.dimensions.width  = this.canvas.width;
 
 		this.canvas_jquery.on('mousedown',this.evt_mousedown);
 		this.canvas_jquery.on('mouseup',this.evt_mouseup);
@@ -90,7 +93,7 @@ var Canvas = {
 		var t = 1e100;
 		var b = 0;
 
-		for(const i in modules){
+		for(i in modules){
 			if(!modules[i].visible){
 				continue;
 			}
@@ -665,26 +668,26 @@ function equation_tester(equation, values) {
 }
 
 class canvas_line {
-	constructor(module_id, block, x1, y1, x2, y2, options){
+	constructor(module, data){//module_id, block, x1, y1, x2, y2, options){
 		this.type = "line";
 		this.edit_type = "line";
-		this.module_id = module_id;
-		this.m = undefined;
-		this.b = block;
-		this.x1 = x1;
-		this.y1 = y1;
-		this.x2 = x2;
-		this.y2 = y2;
+		this.module_id = module.id;
+		this.m = module;
+		this.b = data.b;
+		this.x1 = data.x1;
+		this.y1 = data.y1;
+		this.x2 = data.x2;
+		this.y2 = data.y2;
 
-		if (options == undefined) { options = {}; }
+		if (data.options == undefined) { data.options = {}; }
 
-		if (options.if != undefined){
-			this.if = options.if;
+		if (data.options.if != undefined){
+			this.if = data.options.if;
 		}
 	}
 
 	init(){
-		this.m = modules[this.module_id]
+		return;
 	}
 
 	configdata(id){
@@ -748,28 +751,28 @@ class canvas_line {
 }
 
 class canvas_arc {
-	constructor(module_id, block, cx, cy, r, arc, options){
+	constructor(module, data){
 		this.type = "arc";
 		this.edit_type = "arc";
-		this.module_id = module_id;
-		this.m = undefined;
-		this.b = block;
-		this.cx = cx;
-		this.cy = cy;
-		this.r = r;
-		this.start = arc[0];
-		this.end = arc[1];
-		this.cw = arc[2];
+		this.module_id = module.id;
+		this.m = module;
+		this.b = data.b;
+		this.cx = data.cx;
+		this.cy = data.cy;
+		this.r = data.r;
+		this.start = data.s[0];
+		this.end = data.s[1];
+		this.cw = data.s[2];
 
-		if (options == undefined) { options = {}; }
+		if (data.options == undefined) { data.options = {}; }
 
-		if (options.if != undefined){
-			this.if = options.if;
+		if (data.options.if != undefined){
+			this.if = data.options.if;
 		}
 	}
 
 	init(){
-		this.m = modules[this.module_id]
+		return;
 	}
 
 	configdata(id){
@@ -822,34 +825,25 @@ class canvas_arc {
 }
 
 class canvas_switch {
-	constructor(module_id, block, side, sw, x, y, r, options){
-		if(side == "l"){
-			Object.setPrototypeOf(this, new canvas_switch_l);
-		}
-		else if(side == "r"){
-			Object.setPrototypeOf(this, new canvas_switch_r);
-		}
-
-		this.type = "sw"+side;
+	constructor(module, data){ //, block, side, sw, x, y, r, options){
+		this.type = data.type;
 		this.edit_type = "sw";
-		this.module_id = module_id;
-		this.m = undefined;
-		this.b = block;
-		this.s = sw;
-		this.x = x;
-		this.y = y;
-		this.r = r % 2;
+		this.module_id = module.id;
+		this.m = module;
+		this.b = data.b;
+		this.s = data.sw;
+		this.x = data.x;
+		this.y = data.y;
+		this.r = data.r % 2;
 
-		if (options == undefined) { options = {}; }
+		if (data.options == undefined) { data.options = {}; }
 
-		if (options.if != undefined){
-			this.if = options.if;
+		if (data.options.if != undefined){
+			this.if = data.options.if;
 		}
 	}
 
 	init(){
-		this.m = modules[this.module_id];
-
 		this.m.add_hitbox(this.hit.bind(this));
 
 		this.hit_eqn = [];
@@ -957,6 +951,10 @@ class canvas_switch {
 }
 
 class canvas_switch_l extends canvas_switch{
+	constructor(module, data){
+		super(module, data);
+	}
+
 	dotmatrix(){
 		var coords = [];
 
@@ -1008,6 +1006,10 @@ class canvas_switch_l extends canvas_switch{
 }
 
 class canvas_switch_r extends canvas_switch{
+	constructor(module, data){
+		super(module, data);
+	}
+	
 	dotmatrix(){
 		var coords = [];
 		
@@ -1059,34 +1061,27 @@ class canvas_switch_r extends canvas_switch{
 }
 
 class canvas_double_slip {
-	constructor(module_id, block, side, sw, x, y, r, options){
-		if(side == ""){
-			Object.setPrototypeOf(this, new canvas_dslip);
-		}
-		else if(side == "f"){
-			Object.setPrototypeOf(this, new canvas_fl_dslip);
-		}
-
-		this.type = "ds"+side;
+	constructor(module, data){//block, side, sw, x, y, r, options){
+		this.type = data.type;
 		this.edit_type = "ds";
-		this.module_id = module_id;
-		this.m = undefined;
-		this.b = block;
-		if(sw == undefined){
+		this.module_id = module.id;
+		this.m = module;
+		this.b = data.b;
+		if(data.sw == undefined){
 			this.sA = undefined; this.sB = undefined;
 		}
 		else{
-			this.sA = sw[0];
-			this.sB = sw[1];
+			this.sA = data.sw[0];
+			this.sB = data.sw[1];
 		}
-		this.x = x;
-		this.y = y;
-		this.r = r;
+		this.x = data.x;
+		this.y = data.y;
+		this.r = data.r;
 
-		if (options == undefined) { options = {}; }
+		if (data.options == undefined) { data.options = {}; }
 
-		if (options.if != undefined){
-			this.if = options.if;
+		if (data.options.if != undefined){
+			this.if = data.options.if;
 		}
 	}
 
@@ -1216,6 +1211,10 @@ class canvas_double_slip {
 }
 
 class canvas_dslip extends canvas_double_slip {
+	constructor(module, data){
+		super(module, data);
+	}
+	
 	dotmatrix(){
 		var coords = [];
 
@@ -1304,6 +1303,10 @@ class canvas_dslip extends canvas_double_slip {
 }
 
 class canvas_fl_dslip extends canvas_double_slip {
+	constructor(module, data){
+		super(module, data);
+	}
+	
 	dotmatrix(){
 		var coords = [];
 
@@ -1392,28 +1395,51 @@ class canvas_fl_dslip extends canvas_double_slip {
 }
 
 class canvas_module {
-	constructor(id, name, dimensions, blocks, switches, connections){
-		this.id = id;
-		this.name = name;
+	constructor(data){
+		this.id = data.id;
+		this.name = data.name;
 		this.OffsetX = 0;
 		this.OffsetY = 0;
-		this.width = dimensions.w;
-		this.height = dimensions.h;
+		this.width = data.dim.w;
+		this.height = data.dim.h;
 		this.r = 0;
 		this.visible = false;
-		this.connections = connections;
+		this.connections = data.anchors;
 		this.connection_link = [];
 		
 		for(var i = 0; i < this.connections.length; i++){
 			this.connections[i].connected = false;
 		}
 
-		this.blocks = Array.apply(null, Array(blocks)).map(function (){return 5});
-		this.switches = Array.apply(null, Array(switches)).map(function (){return 0});
+		this.blocks = Array.apply(null, Array(data.blocks)).map(function (){return 7});
+		this.switches = Array.apply(null, Array(data.switches)).map(function (){return 0});
 
 		this.dotmatrix = [];
 		this.data = [];
 		this.hitboxes = [];
+
+		for(var i =0; i < data.layout.length; i++){
+			switch(data.layout[i].type){
+				case "line":
+					this.data.push(new canvas_line(this, data.layout[i]));
+					break;
+				case "arc":
+					this.data.push(new canvas_arc(this, data.layout[i]));
+					break;
+				case "swl":
+					this.data.push(new canvas_switch_l(this, data.layout[i]));
+					break;
+				case "swr":
+					this.data.push(new canvas_switch_r(this, data.layout[i]));
+					break;
+				case "ds":
+					this.data.push(new canvas_dslip(this, data.layout[i]));
+					break;
+				case "dsf":
+					this.data.push(new canvas_fl_dslip(this, data.layout[i]));
+					break;
+			}
+		}
 	}
 
 	move(options = {}){
@@ -1646,27 +1672,47 @@ class canvas_module {
 
 function load_module(id){
 	loading_modules++;
-	function callback(){
-		loading_modules--;
-		var height = 0;
-
-		if(loading_modules != 0){
-			return;
-		}
-
-		for(const key of Object.keys(modules)){
-			modules[key].init({visible: true, OffsetX: 0, OffsetY: height, r: 0});
-			height += modules[key].height + 100;
-		}
-
-		Canvas.calc_dotmatrix();
-		Canvas.rescale(Canvas.dimensions.scale);
-		Canvas.update_frame();
-	}
+	console.log("Load module "+id);
+	// function callback(a, b, c){
+		
+	// }
 	jQuery.ajax({
-        url: "../configs/units/"+id+".js",
-        dataType: 'script',
-        success: callback,
+        url: "../configs/units/"+id+".txt",
+        // dataType: 'plain',
+        success: function(data, b,c){
+        	loading_modules--;
+			var height = 0;
+
+			function JsonParse(obj){
+			    return Function('"use strict";return (' + obj + ')')();
+			};
+
+			var newdata = JsonParse(data);
+			
+			modules[newdata.id] = new canvas_module(newdata);
+
+			// function customEval(obj){
+			// 	return Function('"use strict";return ('+obj+')')();
+			// }
+
+			// console.log(customEval(a));
+
+			if(loading_modules != 0){
+				return;
+			}
+
+			for(const key of Object.keys(modules)){
+				modules[key].init({visible: true, OffsetX: 0, OffsetY: height, r: 0});
+				height += modules[key].height + 100;
+			}
+
+			Canvas.calc_dotmatrix();
+			Canvas.rescale(Canvas.dimensions.scale);
+			Canvas.update_frame();
+        },
+        error: function(){
+        	console.warn("Error");
+        },
         async: true
     });
 };
@@ -1684,8 +1730,8 @@ events.add_init(function(){
 	load_module(21);
 	load_module(22);
 	load_module(23);
-	load_module(25);
-	load_module(26);
+	// load_module(25);
+	// load_module(26);
 });
 
 function conf_modules(){
@@ -1693,8 +1739,8 @@ function conf_modules(){
 	modules[21].move({OffsetX: 850, OffsetY: 440, r: 1, nonest: true});
 	modules[22].move({OffsetX: 1650, OffsetY:  0, nonest: true});
 	modules[23].move({OffsetX:  50, OffsetY: 440, r: 1, nonest: true});
-	modules[25].move({OffsetX: 850, OffsetY:  0, nonest: true});
-	modules[26].move({OffsetX: 1650, OffsetY: 440, r: 1, nonest: true});
+	// modules[25].move({OffsetX: 850, OffsetY:  0, nonest: true});
+	// modules[26].move({OffsetX: 1650, OffsetY: 440, r: 1, nonest: true});
 	Canvas.calc_dotmatrix();
 	Canvas.rescale(Canvas.dimensions.scale);
 	Canvas.update_frame();

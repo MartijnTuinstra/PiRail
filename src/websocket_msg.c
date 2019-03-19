@@ -525,41 +525,31 @@ void WS_cts_AddCartoLib(struct s_opc_AddNewCartolib * data, struct web_client_t 
   rdata->data.opc_AddNewCartolib_res.nr = data->nr;
 
   char * name = _calloc(data->name_len + 1, 1);
-  char * img = _calloc(data->name_len + 8 + 3 + 20, 1);
-  char * icon = _calloc(data->name_len + 8 + 3 + 20, 1);
-  char * simg = _calloc(20 + 3, 1);
-  char * sicon = _calloc(20 + 3, 1);
-  char * filetype = _calloc(4, 1);
+  char * icon = _calloc(data->name_len + 8 + 3 + 20, 1); //Destination file
+  char * sicon = _calloc(40, 1); //Source file
 
   memcpy(name, &data->strings, data->name_len);
 
-  if((data->filetype & 0xf0) == 0){
-    sprintf(img, "%s_%i_im.%s", name, data->nr, "png");
-    sprintf(simg, "%s.%s", "web/tmp_img", "png");
+  uint16_t icon_time = (data->timing / 60) * 100 + (data->timing % 60);
+
+  loggerf(ERROR, "%04i", icon_time);
+
+  if((data->filetype & 0b1) == 0){
+    sprintf(icon, "%i_%s_ic.%s", data->nr, name, "png");
+    sprintf(sicon, "%s.%04i.%s", "web/tmp_icon", icon_time, "png");
   }
   else{
-    sprintf(img, "%s_%i_im.%s", name, data->nr, "jpg");
-    sprintf(simg, "%s.%s", "web/tmp_img", "jpg");
+    sprintf(icon, "%i_%s_ic.%s", data->nr, name, "jpg");
+    sprintf(sicon, "%s.%04i.%s", "web/tmp_icon", icon_time, "jpg");
   }
 
-  if((data->filetype & 0x0f) == 0){
-    sprintf(icon, "%s_%i_ic.%s", name, data->nr, "png");
-    sprintf(sicon, "%s.%s", "web/tmp_icon", "png");
-  }
-  else{
-    sprintf(icon, "%s_%i_ic.%s", name, data->nr, "jpg");
-    sprintf(sicon, "%s.%s", "web/tmp_icon", "jpg");
-  }
 
-  create_car(name, data->nr, img, icon, data->type, data->length, data->max_speed);
+  create_car(name, data->nr, icon, icon, data->type, data->length, data->max_speed);
 
-  char * dimg = _calloc(strlen(img)+10, 1);
   char * dicon = _calloc(strlen(icon)+10, 1);
 
-  sprintf(dimg, "%s%s", "web/trains_img/", img);
   sprintf(dicon, "%s%s", "web/trains_img/", icon);
 
-  move_file(simg,  dimg);
   move_file(sicon, dicon);
 
   train_write_confs();
@@ -567,14 +557,52 @@ void WS_cts_AddCartoLib(struct s_opc_AddNewCartolib * data, struct web_client_t 
   rdata->data.opc_AddNewCartolib_res.response = 1;
   ws_send(client->fd, (char *)rdata, WSopc_AddNewCartolib_res_len, 0xff);
 
-  _free(dimg);
   _free(dicon);
-  _free(simg);
   _free(sicon);
-  _free(filetype);
+}
 
-  //Update clients Train Library
-  WS_CarsLib(0);
+void WS_cts_Edit_Car(Cars * C, struct s_opc_AddNewCartolib * data, struct web_client_t * client){
+  loggerf(DEBUG, "WS_cts_Edit_Car");
+  struct s_WS_Data * rdata = _calloc(1, sizeof(struct s_WS_Data));
+
+  rdata->opcode = WSopc_AddNewCartolib;
+  rdata->data.opc_AddNewCartolib_res.nr = data->nr;
+
+  C->name = _realloc(C->name, data->name_len + 1, 1);
+  memcpy(C->name, &data->strings, data->name_len);
+  C->name[data->name_len] = 0;
+
+  C->length = data->length;
+  C->type = data->type;
+
+  char * sicon = _calloc(40, 1); //Source file
+
+  uint16_t icon_time = (data->timing / 60) * 100 + (data->timing % 60);
+
+  loggerf(ERROR, "%04i", icon_time);
+
+  char * dicon = 0;
+
+  if(icon_time < 3000){
+    C->icon_path = _realloc(C->icon_path, data->name_len + 8 + 3 + 20, 1); //Destination file
+    if((data->filetype & 0b1) == 0){
+      sprintf(C->icon_path, "%i_%s_ic.%s", data->nr, C->name, "png");
+      sprintf(sicon, "%s.%04i.%s", "web/tmp_icon", icon_time, "png");
+    }
+    else{
+      sprintf(C->icon_path, "%i_%s_ic.%s", data->nr, C->name, "jpg");
+      sprintf(sicon, "%s.%04i.%s", "web/tmp_icon", icon_time, "jpg");
+    }
+    dicon = _calloc(strlen(C->icon_path)+10, 1);
+    sprintf(dicon, "%s%s", "web/trains_img/", C->icon_path);
+    move_file(sicon, dicon);
+  }
+
+  rdata->data.opc_AddNewCartolib_res.response = 1;
+  ws_send(client->fd, (char *)rdata, WSopc_AddNewCartolib_res_len, 0xff);
+
+  _free(dicon);
+  _free(sicon);
 }
 
 void WS_cts_AddEnginetoLib(struct s_opc_AddNewEnginetolib * data, struct web_client_t * client){
@@ -653,7 +681,7 @@ void WS_cts_AddEnginetoLib(struct s_opc_AddNewEnginetolib * data, struct web_cli
 }
 
 void WS_cts_Edit_Engine(Engines * E, struct s_opc_AddNewEnginetolib * data, struct web_client_t * client){
-  loggerf(DEBUG, "WS_cts_AddEnginetoLib");
+  loggerf(DEBUG, "WS_cts_Edit_Engine");
   struct s_WS_Data * rdata = _calloc(1, sizeof(struct s_WS_Data));
 
   rdata->opcode = WSopc_AddNewEnginetolib;
@@ -670,6 +698,7 @@ void WS_cts_Edit_Engine(Engines * E, struct s_opc_AddNewEnginetolib * data, stru
 
   E->name = _realloc(E->name, data->name_len + 1, 1);
   memcpy(E->name, &data->strings, data->name_len);
+  E->name[data->name_len] = 0;
 
   loggerf(INFO, "New name: %s", E->name);
 
@@ -750,7 +779,7 @@ void WS_cts_AddTraintoLib(struct s_opc_AddNewTraintolib * data, struct web_clien
   char * name = _calloc(data->name_len + 1, 1);
   char * comps = _calloc(data->nr_stock, 3);
 
-  loggerf(DEBUG, "Nmae:%i\tComp: %i", data->name_len, data->nr_stock);
+  loggerf(DEBUG, "Name:%i\tComp: %i", data->name_len, data->nr_stock);
   print_hex(&data->strings + data->name_len, data->nr_stock*3);
 
   memcpy(name, &data->strings, data->name_len);
@@ -759,6 +788,29 @@ void WS_cts_AddTraintoLib(struct s_opc_AddNewTraintolib * data, struct web_clien
   create_train(name, data->nr_stock, (struct train_comp_ws *)comps, data->catagory, data->save);
 
   train_write_confs();
+
+  rdata->data.opc_AddNewTraintolib_res.response = 1;
+  ws_send(client->fd, (char *)rdata, WSopc_AddNewTraintolib_res_len, 0xff);
+
+  //Update clients Train Library
+  WS_TrainsLib(0);
+}
+
+void WS_cts_Edit_Train(Trains * T, struct s_opc_AddNewTraintolib * data, struct web_client_t * client){
+  loggerf(DEBUG, "WS_cts_Edit_Train ");
+  struct s_WS_Data * rdata = _calloc(1, sizeof(struct s_WS_Data));
+
+  rdata->opcode = WSopc_AddNewTraintolib;
+
+  T->name = _realloc(T->name, data->name_len + 1, 1);
+  T->composition = _realloc(T->composition, data->nr_stock, 3);
+
+  loggerf(DEBUG, "Name:%i\tComp: %i", data->name_len, data->nr_stock);
+  print_hex(&data->strings + data->name_len, data->nr_stock*3);
+
+  memcpy(T->name, &data->strings, data->name_len);
+  T->name[data->name_len] = 0;
+  memcpy(T->composition, &data->strings + data->name_len, data->nr_stock*3);
 
   rdata->data.opc_AddNewTraintolib_res.response = 1;
   ws_send(client->fd, (char *)rdata, WSopc_AddNewTraintolib_res_len, 0xff);

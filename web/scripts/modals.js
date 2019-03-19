@@ -60,20 +60,34 @@ var Modals = {
           $('button.btn-success', ref).hide();
         }
 
+        //Init catagories buttons
+        var keys = Object.keys(Train.cat);
+        var enter = false;
+        for(var i = 0; i < keys.length; i++){
+          if(keys[i] >= 128 && !enter){
+            enter = true;
+            $('.train-categories.btn-toggle-group', ref).append("<br/>");
+          }
+          $('.train-categories.btn-toggle-group', ref).append('<button name="type" type="number" class="modal-form btn-toggle btn btn-xs btn-outline-primary" value="'+keys[i]+'">'+Train.cat[ keys[i] ]+'</button>');
+        }
+
         if(Train.trains[data.id] != undefined){
           var t = Train.trains[data.id];
 
           for(var j = 0; j < t.link.length; j++){
             if(t.link[j][0] == 0 && Train.engines[t.link[j][1]] != undefined){
               $('.modal-body .comp_box', ref).append('<img src="./trains_img/'+Train.engines[t.link[j][1]].icon+
-                                   '" type="E" id="'+t.link[j][1]+'" style="height:30px"/>');
+                                   '" type="0" id="'+t.link[j][1]+'" style="height:30px"/>');
             }else if(Train.cars[t.link[j][1]] != undefined){
               $('.modal-body .comp_box', ref).append('<img src="./trains_img/'+Train.cars[t.link[j][1]].icon+
-                                   '" type="C" id="'+t.link[j][1]+'" style="height:30px"/>');
+                                   '" type="1" id="'+t.link[j][1]+'" style="height:30px"/>');
             }
           }
 
+          $('button[name=type][value='+t.type+']').removeClass("btn-outline-primary").addClass("btn-primary");
+
           $('input[name=name]', ref).val(t.name);
+          $('input[name=id]', ref).val(data.id);
         }
 
         Sortable.create($('.comp_box', ref)[0], {dragable: "img"});
@@ -121,19 +135,15 @@ var Modals = {
         $('.engine-add, .car-add', ref).on("click", function(evt){
           var i = evt.currentTarget.getAttribute('id');
           var t = evt.currentTarget.getAttribute('type');
+          if(t == "E"){
+            t = 0;
+          }
+          else{
+            t = 1;
+          }
           var s = $('img', evt.currentTarget).attr("src");
           $('.modal-body .comp_box', ref).append('<img src="'+s+'" id="'+i+'" type="'+t+'" style="height:30px"/>')
         });
-
-        var keys = Object.keys(Train.cat);
-        var enter = false;
-        for(var i = 0; i < keys.length; i++){
-          if(keys[i] >= 128 && !enter){
-            enter = true;
-            $('.train-settings .btn-toggle-group', ref).append("<br/>");
-          }
-          $('.train-settings .btn-toggle-group', ref).append('<button name="type" class="modal-form btn-toggle btn btn-xs btn-outline-primary" value="'+keys[i]+'">'+Train.cat[ keys[i] ]+'</button>');
-        }
         
       },
       close_cb: function(data, ref){
@@ -142,7 +152,7 @@ var Modals = {
       title: "Train",
       content: '<div class="m-1" style="border: 1px solid #eee; width:calc(100% - 0.5rem);height:56px;\
                 padding: 3px; overflow: hidden">\
-                <div class="comp_box" style="width:100%; height:150%; overflow-x: scroll;white-space: nowrap"></div></div>\
+                <div class="comp_box modal-form" type="sortable" name="list" style="width:100%; height:150%; overflow-x: scroll;white-space: nowrap"></div></div>\
               <div class="row mb-2 btn-toggle-group" style="text-align: center; border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
               <div class="col"><button class="btn btn-toggle btn-outline-primary btn-xs">Add Engine</button></div>\
               <div class="col"><button class="btn btn-toggle btn-primary btn-xs">Settings</button></div>\
@@ -151,12 +161,12 @@ var Modals = {
               <div class="train-settings" style="display: block">\
                 <div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
               <div class="col-4 control-label"><span style="line-height: 38px;vertical-align:middle">Name</span></div>\
-              <div class="col-8"><input name="name" class="modal-form form-control input-sm"></div>\
+              <div class="col-8"><input name="name" type="text" class="modal-form form-control input-sm"><input name="id" type="number" style="display:none;" class="modal-form form-control input-sm"></div>\
               </div>\
                 <div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
               <div class="col-4 control-label"><span style="line-height: 48px;vertical-align:middle">Type</span></div>\
                 <div class="col-8" style="height: 3.2rem; overflow: hidden">\
-                  <div class="btn-toggle-group" style="overflow-x:scroll;height:150%;white-space: nowrap;min-width:100%"></div>\
+                  <div class="train-categories btn-toggle-group" style="overflow:overlay;height:150%;white-space: nowrap;min-width:100%"></div>\
                 </div>\
                 </div>\
               </div>\
@@ -166,9 +176,9 @@ var Modals = {
             <div class="row car" style="display:none; max-height: 300px; overflow-y: scroll; font-size: 0.8em">\
             </div>',
       buttons: {
-        success: {visible: true, content: "Create", cb: function(data){/*websocket.cts_link_train(fid, rid, type, mid)*/}, wait: false},
-        warning: {visible: true, content: "Update", cb: function(){alert("Update");}, wait: false},
-        danger: {visible: true, content: "Delete", cb: function(){alert("Delete")}, wait: false},
+        success: {visible: true, content: "Create", cb: function(data){websocket.cts_add_train(data)}, wait: false},
+        warning: {visible: true, content: "Update", cb: function(data){websocket.cts_edit_train(data, data.id)}, wait: false},
+        danger: {visible: true, content: "Delete", cb: function(data){websocket.cts_edit_train(data, data.id, false)}, wait: false},
       }
     },
 
@@ -448,28 +458,17 @@ var Modals = {
                 </div>',
       buttons: {
         success: {visible: true, content: "Create",
-              cb: function(data){
-                  console.log("Engine Create");
-                  console.log(data);
-                  websocket.cts_add_engine(data);
-              },
+              cb: function(data){websocket.cts_add_engine(data)},
               wait: true},
         warning: {visible: true, content: "Update",
-                  cb: function(data){
-                      console.log("Engine Update");
-                      console.log(data);
-                      websocket.cts_edit_engine(data, data.id);
-                  },
+                  cb: function(data){websocket.cts_edit_engine(data, data.id)},
                   wait: true},
         danger: {visible: true, content: "Delete",
-                 cb: function(){
-                   console.warn("Delete Engine");
-                   websocket.cts_edit_engine({id:data.id}, false)
-                 },
+                 cb: function(){websocket.cts_edit_engine({id:data.id}, false)},
                  wait: false},
       }
     },
-    
+
     "cars.edit":{
       link: "button.btn-cars-new",
       open_cb: function(data, ref){
@@ -483,35 +482,83 @@ var Modals = {
           $('button.btn-success', ref).hide();
         }
 
+        //Init catagories buttons
+        var keys = Object.keys(Train.cat);
+        var enter = false;
+        for(var i = 0; i < keys.length; i++){
+          if(keys[i] >= 128 && !enter){
+            enter = true;
+            $('.train-categories.btn-toggle-group', ref).append("<br/>");
+          }
+          $('.train-categories.btn-toggle-group', ref).append('<button name="type" type="number" class="modal-form btn-toggle btn btn-xs btn-outline-primary" value="'+keys[i]+'">'+Train.cat[ keys[i] ]+'</button>');
+        }
+
         if(data.id != undefined){
+          $('input[name=id]', ref).val(data.id);
+
           $('input[name=name]', ref).val(Train.cars[parseInt(data.id)].name);
           $('input[name=nr]', ref).val(Train.cars[parseInt(data.id)].nr);
           $('input[name=length]', ref).val(Train.cars[parseInt(data.id)].length);
 
-          // TODO select type buttons
+          $('button[name=type][value='+Train.cars[parseInt(data.id)].type+']').removeClass("btn-outline-primary").addClass("btn-primary");
+
+          $('input[name=icon_name]', ref).val(Train.cars[parseInt(data.id)].icon);
+          $('#modal .car-icon').css("background-image", ('url("./trains_img/'+Train.cars[parseInt(data.id)].icon+'")'));
         }
 
-        $('input[type=file]', ref).on("update", function(){});
+        $('input[type=file]', ref).on("change", function(evt){
+          var input = $(evt.currentTarget);
+          var type = input.attr("name");
+          var file = input.get(0).files[0];
+          var extention = file.name.split(".")[file.name.split(".").length-1];
+
+          //Get all data and put in a form
+          var formdata = new FormData();
+          formdata.append("file1", file);
+          if(extention != "jpg" && extention != "jpeg" && extention != "png"){
+              alert("Select a png or jpeg/jpg file\nGot "+extention);
+              input.val("");
+              return;
+          }
+
+          //Rename to temporary name
+          formdata.append("name", "tmp_icon");
+          $('#modal .car-icon').css("background-image", ('url("./img/loading.svg")'));
+
+          function success(location){
+            $('#modal .car-icon').css("background-image", ('url(./'+location+')'));
+            var file = $('#modal .car-icon-name').val(location);
+          }
+
+          //Create ajax request
+          var ajax = new XMLHttpRequest();
+          ajax.addEventListener("load", function(message){
+            setTimeout(success.bind(null, ajax.responseText), 1000);
+          }, false);
+          ajax.addEventListener("error", function(){alert("error");console.warn(this.responseText);}, false);
+          ajax.open("POST", "./img_upload.php");
+          ajax.send(formdata);
+        });
       },
       title: "Car",
       content: '<div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
                   <div class="col-12">\
-                    <div class="bg-light" style="width: 100%; padding-top: 50%; position: relative;">\
-                      <div class="train-icon" style="background-image: url(\'./trains_img/200_ice3_im.jpg\');"></div>\
+                    <div class="bg-light" style="width: 100%; max-width:200px; margin:auto; padding-top: 30%; position: relative;">\
+                      <div class="car-icon" style="background-image: url(\'./trains_img/200_ice3_im.jpg\');"></div>\
                     </div>\
-                    <input class="modal-form train-icon-name" name="icon_name" type="text" style="display: none;">\
+                    <input class="modal-form car-icon-name" name="icon_name" type="text" style="display: none;">\
                     <input name="icon" type="file" style="display: none;">\
-                    <button name="train-icon-name-btn" onclick="$(\'#modal .modal-body input[type=file][name=icon]\').click();" class="btn mt-2 btn-sm btn-primary" style="margin:auto;display:block;">Browse icon</button>\
-                  </div>\
+                    <button name="car-icon-name-btn" onclick="$(\'#modal .modal-body input[type=file][name=icon]\').click();" class="btn mt-2 btn-sm btn-primary" style="margin:auto;display:block;">Browse icon</button>\
+                  </div></div>\
                   <div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
                     <div class="col-4 control-label">\
                       <span style="line-height: 38px;vertical-align:middle">Name</span>\
                     </div>\
-                    <div class="col-8"><input name="name" class="modal-form form-control input-sm"></div>\
+                    <div class="col-8"><input name="name" type="text" class="modal-form form-control input-sm"></div>\
                   </div>\
                   <div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
                     <div class="col-4 control-label"><span style="line-height: 38px;vertical-align:middle">ID number</span></div>\
-                    <div class="col-8"><input type="number" name="nr" class="modal-form form-control input-sm"></div>\
+                    <div class="col-8"><input type="number" name="nr" class="modal-form form-control input-sm"><input type="number" name="id" class="modal-form form-control input-sm" style="display:none"></div>\
                   </div>\
                   <div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
                     <div class="col-4 control-label"><span style="line-height: 38px;vertical-align:middle">Length</span></div>\
@@ -520,18 +567,13 @@ var Modals = {
                   <div class="row">\
                     <div class="col-4 control-label"><span style="line-height: 48px;vertical-align:middle">Type</span></div>\
                     <div class="col-8">\
-                      <button name="type" class="modal-form btn-toggle btn btn-xs btn-outline-primary">Highspeed</button>\
-                      <button name="type" class="modal-form btn-toggle btn btn-xs btn-outline-primary">Intercity</button>\
-                      <button name="type" class="modal-form btn-toggle btn btn-xs btn-outline-primary">Regional</button><br/>\
-                      <button name="type" class="modal-form btn-toggle btn btn-xs btn-outline-primary">Cargo</button>\
-                      <button name="type" class="modal-form btn-toggle btn btn-xs btn-outline-primary">Coal</button>\
-                      <button name="type" class="modal-form btn-toggle btn btn-xs btn-outline-primary">Boxes</button>\
+                      <div class="train-categories btn-toggle-group" style="overflow:overlay;height:150%;white-space: nowrap;min-width:100%"></div>\
                     </div>\
                   </div>',
       buttons: {
-        success: {visible: true, content: "Create", cb: function(data){/*websocket.cts_link_train(fid, rid, type, mid)*/}, wait: false},
-        warning: {visible: true, content: "Update", cb: function(){alert("Update");}, wait: false},
-        danger: {visible: true, content: "Delete", cb: function(){alert("Delete")}, wait: false},
+        success: {visible: true, content: "Create", cb: function(data){websocket.cts_add_car(data)}, wait: false},
+        warning: {visible: true, content: "Update", cb: function(data){websocket.cts_edit_car(data, data.id)}, wait: false},
+        danger: {visible: true, content: "Delete", cb: function(data){websocket.cts_edit_car(data, data.id, false)}, wait: false},
       }
     },
 
@@ -1049,6 +1091,13 @@ var Modals = {
       }
       else if(this.tagName != "BUTTON" && type == "speedsteps"){
         that.data[name] = frame.speedsteps;
+      }
+      else if(type == "sortable"){
+        var list = [];
+        $.each($('img', this), function(){
+          list.push({id: $(this).attr("id"), type: $(this).attr("type")});
+        });
+        that.data[name] = list;
       }
     });
 

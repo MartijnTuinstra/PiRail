@@ -11,6 +11,7 @@
     uint8_t type;
     uint8_t filetype;
     uint8_t name_len;
+    uint16_t timing;
     char strings;
   };
 

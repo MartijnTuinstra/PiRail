@@ -116,6 +116,7 @@ var websocket = {
   },
 
   send: function(data){
+    console.log("Send: "+data);
     ws.send(new Int8Array(data));
   },
 
@@ -201,14 +202,21 @@ var websocket = {
       msg[4] = (data.max_speed & 0xff00) >> 8;
       msg[5] = (data.length & 0x00ff);
       msg[6] = (data.length & 0xff00) >> 8;
-      msg[7] = data.type & 0xf;
-      if(data.image_name.endsWith('jpg')){
-        msg[8] |= 0x10;
-      }
+      msg[7] = data.type;
+
       if(data.icon_name.endsWith('jpg')){
         msg[8] |= 0x1;
       }
       msg[9] = data.name.length;
+
+      //Upload timestamps
+      var time = data.icon_name.split(".");
+      time = time[time.length - 2].split("");
+
+      var time_icon = parseInt(time[0]) * 600 + parseInt(time[1]) * 60 + parseInt(time[2]) * 10 + parseInt(time[3]);
+
+      msg[10] = time_icon & 0xFF;
+      msg[11] = time_icon >> 8;
 
       for (var i = 0; i < data.name.length; i++) {
         msg.push(data.name.charCodeAt(i));
@@ -221,7 +229,7 @@ var websocket = {
       msg = [];
       msg[0] = this.opc.EditCarlib;
       msg[1] = ((!edit) << 7) | (id & 0x7f00) >> 8;
-      msg[2] = id & 0x7fff;
+      msg[2] = id & 0xff;
 
       if(!edit){ //Remove
         this.send(msg);
@@ -234,14 +242,21 @@ var websocket = {
       msg[6] = (data.max_speed & 0xff00) >> 8;
       msg[7] = (data.length & 0x00ff);
       msg[8] = (data.length & 0xff00) >> 8;
-      msg[9] = data.type & 0xf;
-      if(data.image_name.endsWith('jpg')){
-        msg[10] |= 0x10;
-      }
+      msg[9] = data.type;
+
       if(data.icon_name.endsWith('jpg')){
         msg[10] |= 0x1;
       }
       msg[11] = data.name.length;
+
+      //Upload timestamps
+      var time = data.icon_name.split(".");
+      time = time[time.length - 2].split("");
+
+      var time_icon = parseInt(time[0]) * 600 + parseInt(time[1]) * 60 + parseInt(time[2]) * 10 + parseInt(time[3]);
+
+      msg[12] = time_icon & 0x0F;
+      msg[13] = time_icon >> 4;
 
       for (var i = 0; i < data.name.length; i++) {
         msg.push(data.name.charCodeAt(i));
@@ -397,7 +412,7 @@ var websocket = {
       msg = [];
       msg[0] = this.opc.AddNewTraintolib;
       msg[1] = data.name.length;
-      msg[2] = data.list.length & 0x7f;
+      msg[2] = 0x80 | (data.list.length & 0x7f);
       msg[3] = data.type;
 
       for (var i = 0; i < data.name.length; i++) {
@@ -405,9 +420,9 @@ var websocket = {
       }
 
       for (var i = 0; i < data.list.length; i++){
-        msg.push(data.list[i].t);
-        msg.push((data.list[i].i & 0x00ff));
-        msg.push((data.list[i].i & 0xff00) >> 8);
+        msg.push(data.list[i].type);
+        msg.push((data.list[i].id & 0x00ff));
+        msg.push((data.list[i].id & 0xff00) >> 8);
       }
 
       this.send(msg);
@@ -433,9 +448,9 @@ var websocket = {
       }
 
       for (var i = 0; i < data.list.length; i++){
-        msg.push(data.list[i].t);
-        msg.push((data.list[i].i & 0x00ff));
-        msg.push((data.list[i].i & 0xff00) >> 8);
+        msg.push(data.list[i].type);
+        msg.push((data.list[i].id & 0x00ff));
+        msg.push((data.list[i].id & 0xff00) >> 8);
       }
       this.send(msg);
     },

@@ -165,12 +165,13 @@ int websocket_decode(uint8_t data[1024], struct web_client_t * client){
     }
     else if(d->opcode == WSopc_EditCarlib){
       uint16_t id = d->data.opc_EditCarlib.id_l + (d->data.opc_EditCarlib.id_h << 8);
-      if(d->data.opc_EditCarlib.remove){
+      if(d->data.opc_EditCarlib.remove && cars[id]){
         clear_car(&cars[id]);
       }
       else{
-        loggerf(ERROR, "Implement Car Edit id:%i", id);
+        WS_cts_Edit_Car(cars[id], &(d->data.opc_EditCarlib.data), client);
       }
+      train_write_confs();
       WS_CarsLib(0);
     }
 
@@ -190,7 +191,6 @@ int websocket_decode(uint8_t data[1024], struct web_client_t * client){
     }
 
     else if(data[0] == WSopc_AddNewTraintolib){
-      loggerf(WARNING, "Opcode %x found", data[0]);
       WS_cts_AddTraintoLib((void *)&d->data, client);
     }
     else if(d->opcode == WSopc_EditTrainlib){
@@ -199,8 +199,9 @@ int websocket_decode(uint8_t data[1024], struct web_client_t * client){
         clear_train(&trains[id]);
       }
       else{
-        loggerf(ERROR, "Implement Train Edit id:%i", id);
+        WS_cts_Edit_Train(trains[id], &(d->data.opc_EditTrainlib.data), client);
       }
+      train_write_confs();
       WS_TrainsLib(0);
     }
 

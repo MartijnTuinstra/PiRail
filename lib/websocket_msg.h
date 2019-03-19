@@ -5,6 +5,7 @@
 
   #include <stdint.h>
   #include "websocket.h"
+  #include "train.h"
 
   struct WS_Message {
     uint16_t type;
@@ -45,6 +46,7 @@ void WS_cts_Enable_Disable_SubmoduleState(uint8_t opcode, uint8_t flags);
 
   void WS_cts_AddCartoLib(struct s_opc_AddNewCartolib * data, struct web_client_t * client);
   void WS_cts_AddEnginetoLib(struct s_opc_AddNewEnginetolib * data, struct web_client_t * client);
+  void WS_cts_Edit_Engine(Engines * E, struct s_opc_AddNewEnginetolib * data, struct web_client_t * client);
   void WS_cts_AddTraintoLib(struct s_opc_AddNewTraintolib * data, struct web_client_t * client);
 
   //Track Messages

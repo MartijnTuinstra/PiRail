@@ -610,20 +610,20 @@ void WS_cts_AddEnginetoLib(struct s_opc_AddNewEnginetolib * data, struct web_cli
   loggerf(ERROR, "%04i - %04i", image_time, icon_time);
 
   if((data->flags & 0b10) == 0){
-    sprintf(img, "%i_%s.%s", data->DCC_ID, name, "png");
+    sprintf(img, "%i_%s_im.%s", data->DCC_ID, name, "png");
     sprintf(simg, "%s.%04i.%s", "web/tmp_img", image_time, "png");
   }
   else{
-    sprintf(img, "%i_%s.%s", data->DCC_ID, name, "jpg");
+    sprintf(img, "%i_%s_im.%s", data->DCC_ID, name, "jpg");
     sprintf(simg, "%s.%04i.%s", "web/tmp_img", image_time, "jpg");
   }
 
   if((data->flags & 0b1) == 0){
-    sprintf(icon, "%i_%s.%s", data->DCC_ID, name, "png");
+    sprintf(icon, "%i_%s_ic.%s", data->DCC_ID, name, "png");
     sprintf(sicon, "%s.%04i.%s", "web/tmp_icon", icon_time, "png");
   }
   else{
-    sprintf(icon, "%i_%s.%s", data->DCC_ID, name, "jpg");
+    sprintf(icon, "%i_%s_ic.%s", data->DCC_ID, name, "jpg");
     sprintf(sicon, "%s.%04i.%s", "web/tmp_icon", icon_time, "jpg");
   }
 
@@ -631,7 +631,6 @@ void WS_cts_AddEnginetoLib(struct s_opc_AddNewEnginetolib * data, struct web_cli
 
   char * dimg = _calloc(strlen(img)+10, 1);
   char * dicon = _calloc(strlen(icon)+10, 1);
-
   sprintf(dimg, "%s%s", "web/trains_img/", img);
   sprintf(dicon, "%s%s", "web/trains_img/", icon);
 
@@ -651,6 +650,95 @@ void WS_cts_AddEnginetoLib(struct s_opc_AddNewEnginetolib * data, struct web_cli
 
   //Update clients Train Library
   WS_EnginesLib(0);
+}
+
+void WS_cts_Edit_Engine(Engines * E, struct s_opc_AddNewEnginetolib * data, struct web_client_t * client){
+  loggerf(DEBUG, "WS_cts_AddEnginetoLib");
+  struct s_WS_Data * rdata = _calloc(1, sizeof(struct s_WS_Data));
+
+  rdata->opcode = WSopc_AddNewEnginetolib;
+  rdata->data.opc_AddNewEnginetolib_res.DCC_ID = data->DCC_ID;
+
+  loggerf(WARNING, "Editing %s", E->name);
+
+  if (DCC_train[data->DCC_ID] && data->DCC_ID != E->DCC_ID){
+    loggerf(ERROR, "DCC %i (%i) allready in use", data->DCC_ID, E->DCC_ID);
+    rdata->data.opc_AddNewEnginetolib_res.response = 255;
+    ws_send(client->fd, (char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
+    return;
+  }
+
+  E->name = _realloc(E->name, data->name_len + 1, 1);
+  memcpy(E->name, &data->strings, data->name_len);
+
+  loggerf(INFO, "New name: %s", E->name);
+
+  E->steps_len = data->steps;
+  E->steps = _realloc(E->steps, data->steps, 3);
+  memcpy(E->steps, &data->strings + data->name_len, data->steps * 3);
+
+  for(int i = 0; i < E->steps_len; i++){
+    printf("  %d, %d", E->steps[i].step, E->steps[i].speed);
+  }
+
+  E->length = data->length;
+  E->type = data->type;
+
+  char * simg = _calloc(40, 1); //Source file
+  char * sicon = _calloc(40, 1); //Source file
+  char * filetype = _calloc(4, 1);
+
+  uint16_t image_time = data->timing[0] + ((data->timing[1] & 0xf0) << 4);
+  image_time = (image_time / 60) * 100 + (image_time % 60);
+  uint16_t icon_time = (data->timing[1] & 0x0f) + (data->timing[2] << 4);
+  icon_time = (icon_time / 60) * 100 + (icon_time % 60);
+
+  loggerf(ERROR, "%04i - %04i", image_time, icon_time);
+
+  char * dimg = 0;
+  char * dicon = 0;
+
+  if(image_time < 3000){
+    E->img_path = _realloc(E->img_path, data->name_len + 8 + 3 + 20, 1);  //Destination file
+    if((data->flags & 0b10) == 0){
+      sprintf(E->img_path, "%i_%s_im.%s", data->DCC_ID, E->name, "png");
+      sprintf(simg, "%s.%04i.%s", "web/tmp_img", image_time, "png");
+    }
+    else{
+      sprintf(E->img_path, "%i_%s_im.%s", data->DCC_ID, E->name, "jpg");
+      sprintf(simg, "%s.%04i.%s", "web/tmp_img", image_time, "jpg");
+    }
+
+    dimg = _calloc(strlen(E->img_path)+10, 1);
+    sprintf(dimg, "%s%s", "web/trains_img/", E->img_path);
+    move_file(simg,  dimg);
+  }
+
+  if(icon_time < 3000){
+    E->icon_path = _realloc(E->icon_path, data->name_len + 8 + 3 + 20, 1); //Destination file
+    if((data->flags & 0b1) == 0){
+      sprintf(E->icon_path, "%i_%s_ic.%s", data->DCC_ID, E->name, "png");
+      sprintf(sicon, "%s.%04i.%s", "web/tmp_icon", icon_time, "png");
+    }
+    else{
+      sprintf(E->icon_path, "%i_%s_ic.%s", data->DCC_ID, E->name, "jpg");
+      sprintf(sicon, "%s.%04i.%s", "web/tmp_icon", icon_time, "jpg");
+    }
+    dicon = _calloc(strlen(E->icon_path)+10, 1);
+    sprintf(dicon, "%s%s", "web/trains_img/", E->icon_path);
+    move_file(sicon, dicon);
+  }
+
+  // create_engine(name, data->DCC_ID, img, icon, data->type, data->length, data->steps, (struct engine_speed_steps *)steps);
+
+  rdata->data.opc_AddNewEnginetolib_res.response = 1;
+  ws_send(client->fd, (char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
+
+  _free(dimg);
+  _free(dicon);
+  _free(simg);
+  _free(sicon);
+  _free(filetype);
 }
 
 void WS_cts_AddTraintoLib(struct s_opc_AddNewTraintolib * data, struct web_client_t * client){

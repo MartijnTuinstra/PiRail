@@ -198,6 +198,7 @@ var Modals = {
         }
 
         if(data.id != undefined){
+          $('input[name=id]', ref).val(data.id);
           $('input[name=name]', ref).val(Train.engines[parseInt(data.id)].name);
           $('input[name=dcc]', ref).val(Train.engines[parseInt(data.id)].dcc);
           $('input[name=length]', ref).val(Train.engines[parseInt(data.id)].length);
@@ -404,7 +405,8 @@ var Modals = {
                 </div>\
                 <div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
                   <div class="col-4 control-label"><span style="line-height: 38px;vertical-align:middle">DCC address</span></div>\
-                  <div class="col-8"><input type="number" name="dcc" class="modal-form form-control input-sm"></div>\
+                  <div class="col-8"><input type="number" name="dcc" class="modal-form form-control input-sm">\
+                  <input type="number" name="id" class="modal-form form-control input-sm" style="display:none;"></div>\
                 </div>\
                 <div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
                   <div class="col-4 control-label"><span style="line-height: 38px;vertical-align:middle">Length</span></div>\
@@ -456,7 +458,7 @@ var Modals = {
                   cb: function(data){
                       console.log("Engine Update");
                       console.log(data);
-                      websocket.cts_edit_engine(data);
+                      websocket.cts_edit_engine(data, data.id);
                   },
                   wait: true},
         danger: {visible: true, content: "Delete",

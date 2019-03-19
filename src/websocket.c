@@ -183,8 +183,9 @@ int websocket_decode(uint8_t data[1024], struct web_client_t * client){
         clear_engine(&engines[id]);
       }
       else{
-        loggerf(ERROR, "Implement Engine Edit id:%i", id);
+        WS_cts_Edit_Engine(engines[id], &(d->data.opc_EditEnginelib.data), client);
       }
+      train_write_confs();
       WS_EnginesLib(0);
     }
 

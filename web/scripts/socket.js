@@ -315,8 +315,10 @@ var websocket = {
       }
 
       for (var i = 0; i < data.speedsteps.length; i++){
-        msg.push(data.speedsteps[i].step);
+        console.log(data.speedsteps[i]);
         msg.push(data.speedsteps[i].speed);
+        msg.push(data.speedsteps[i].speed >> 8);
+        msg.push(data.speedsteps[i].step);
       }
 
       this.send(msg);
@@ -357,14 +359,21 @@ var websocket = {
 
       //Upload timestamps
       var time = data.image_name.split(".");
-      time = time[time.length - 2].split("");
+      var time_image = 0xFFF;
+      var time_icon = 0xFFF;
 
-      var time_image = parseInt(time[0]) * 600 + parseInt(time[1]) * 60 + parseInt(time[2]) * 10 + parseInt(time[3]);
+      if(time.length == 3){
+        time = time[time.length - 2].split("");
+
+        var time_image = parseInt(time[0]) * 600 + parseInt(time[1]) * 60 + parseInt(time[2]) * 10 + parseInt(time[3]);
+      }
 
       var time = data.icon_name.split(".");
-      time = time[time.length - 2].split("");
+      if(time.length == 3){
+        time = time[time.length - 2].split("");
 
-      var time_icon = parseInt(time[0]) * 600 + parseInt(time[1]) * 60 + parseInt(time[2]) * 10 + parseInt(time[3]);
+        var time_icon = parseInt(time[0]) * 600 + parseInt(time[1]) * 60 + parseInt(time[2]) * 10 + parseInt(time[3]);
+      }
 
       msg[11] = time_image & 0xFF;
       msg[12] = ((time_image >> 4) & 0xF0) | (time_icon & 0x0F);
@@ -375,8 +384,10 @@ var websocket = {
       }
 
       for (var i = 0; i < data.speedsteps.length; i++){
-        msg.push(data.speedsteps[i].step);
+        console.log(data.speedsteps[i]);
         msg.push(data.speedsteps[i].speed);
+        msg.push(data.speedsteps[i].speed >> 8);
+        msg.push(data.speedsteps[i].step);
       }
 
       this.send(msg);
@@ -680,7 +691,7 @@ var websocket = {
     // Add new train to library
     stc_newengine_tolib: function(data){
       if(data[3] == 1){
-        Modals.close();
+        Modals.hide();
       }
       else if(data[3] == 0){
         Modals.call_cb("create_cb", {return_code: 0});

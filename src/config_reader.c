@@ -1062,6 +1062,7 @@ void modify_Station(struct module_config * config, char cmd){
       tmp = strlen(_cmd);
       config->Stations[id].name = _realloc(config->Stations[id].name, tmp, char);
       memcpy(config->Stations[id].name, _cmd, tmp);
+      config->Stations[id].name[tmp] = 0;
       config->Stations[id].name_len = tmp;
     }
 
@@ -1185,6 +1186,7 @@ void modify_Car(struct train_config * config, char cmd){
       tmp = strlen(_cmd);
       config->Cars[id].name = _realloc(config->Cars[id].name, tmp, char);
       memcpy(config->Cars[id].name, _cmd, tmp);
+      config->Cars[id].name[tmp] = 0;
       config->Cars[id].name_len = tmp;
     }
 
@@ -1194,6 +1196,7 @@ void modify_Car(struct train_config * config, char cmd){
       tmp = strlen(_cmd);
       config->Cars[id].img_path = _realloc(config->Cars[id].img_path, tmp, char);
       memcpy(config->Cars[id].img_path, _cmd, tmp);
+      config->Cars[id].img_path[tmp] = 0;
       config->Cars[id].img_path_len = tmp;
     }
 
@@ -1203,6 +1206,7 @@ void modify_Car(struct train_config * config, char cmd){
       tmp = strlen(_cmd);
       config->Cars[id].icon_path = _realloc(config->Cars[id].icon_path, tmp, char);
       memcpy(config->Cars[id].icon_path, _cmd, tmp);
+      config->Cars[id].icon_path[tmp] = 0;
       config->Cars[id].icon_path_len = tmp;
     }
 
@@ -1337,6 +1341,7 @@ void modify_Engine(struct train_config * config, char cmd){
       tmp = strlen(_cmd);
       config->Engines[id].name = _realloc(config->Engines[id].name, tmp, char);
       memcpy(config->Engines[id].name, _cmd, tmp);
+      config->Engines[id].name[tmp] = 0;
       config->Engines[id].name_len = tmp;
     }
 
@@ -1346,6 +1351,7 @@ void modify_Engine(struct train_config * config, char cmd){
       tmp = strlen(_cmd);
       config->Engines[id].img_path = _realloc(config->Engines[id].img_path, tmp, char);
       memcpy(config->Engines[id].img_path, _cmd, tmp);
+      config->Engines[id].img_path[tmp] = 0;
       config->Engines[id].img_path_len = tmp;
     }
 
@@ -1355,6 +1361,7 @@ void modify_Engine(struct train_config * config, char cmd){
       tmp = strlen(_cmd);
       config->Engines[id].icon_path = _realloc(config->Engines[id].icon_path, tmp, char);
       memcpy(config->Engines[id].icon_path, _cmd, tmp);
+      config->Engines[id].icon_path[tmp] = 0;
       config->Engines[id].icon_path_len = tmp;
     }
 
@@ -1443,6 +1450,7 @@ void modify_Train(struct train_config * config, char cmd){
       tmp = strlen(_cmd);
       config->Trains[id].name = _realloc(config->Trains[id].name, tmp, char);
       memcpy(config->Trains[id].name, _cmd, tmp);
+      config->Trains[id].name[tmp] = 0;
       config->Trains[id].name_len = tmp;
     }
 

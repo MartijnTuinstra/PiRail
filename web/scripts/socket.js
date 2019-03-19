@@ -680,15 +680,13 @@ var websocket = {
     // Add new train to library
     stc_newengine_tolib: function(data){
       if(data[3] == 1){
-        if(Train.engine_car_creator.save_cb != undefined){
-          Train.engine_car_creator.save_cb();
-        }
+        Modals.close();
       }
       else if(data[3] == 0){
-        alert("Failed with no reason");
+        Modals.call_cb("create_cb", {return_code: 0});
       }
       else if(data[3] == 255){
-        alert("DCC address is allready in use\nEngine not uploaded");
+        Modals.call_cb("create_cb", {return_code: -1});
       }
     },
 

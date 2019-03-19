@@ -214,11 +214,12 @@ var Train_Configurator = {
     }
 
     //Update engines
+    $("#rollingstock .info-box.engines .box-container button").off("click");
     $("#rollingstock .info-box.engines .box-container").append("<div style='width:100%;'><ul class='list-unstyled'></ul></div>");
     for(var i = 0; i<Train.engines.length; i++){
       var e = Train.engines[i];
 
-      var text = '<li class="message media">'+
+      var text = '<li class="message media" name="'+i+'">'+
               '<div class="message-mbox align-self-center mr-3 bg-primary" style="width:120px;height:60px;position:relative;">\
                 <div class="train-img" style="background-image: url(\'./trains_img/'+e.img+'\')"></div>\
               </div>'+
@@ -234,6 +235,11 @@ var Train_Configurator = {
 
       $("#rollingstock .info-box.engines .box-container ul").append(text);
     }
+    $("#rollingstock .info-box.engines .box-container button").on("click", function(evt){
+      var id = parseInt($(evt.target).parent().parent().attr("name"));
+
+      Modals.open("engines.edit", {id: id});
+    });
 
     //Update cars
     $("#rollingstock .info-box.cars .box-container").append("<div style='width:100%;'><ul class='list-unstyled'></ul></div>");

@@ -201,6 +201,11 @@ var Modals = {
           $('input[name=name]', ref).val(Train.engines[parseInt(data.id)].name);
           $('input[name=dcc]', ref).val(Train.engines[parseInt(data.id)].dcc);
           $('input[name=length]', ref).val(Train.engines[parseInt(data.id)].length);
+          
+          $('input[name=icon_name]', ref).val(Train.engines[parseInt(data.id)].icon);
+          $('#modal .train-icon').css("background-image", ('url("./trains_img/'+Train.engines[parseInt(data.id)].icon+'")'));
+          $('input[name=image_name]', ref).val(Train.engines[parseInt(data.id)].img);
+          $('#modal .train-img').css("background-image", ('url("./trains_img/'+Train.engines[parseInt(data.id)].img+'")'));
 
           Modals.setups["engines.edit"].speedsteps = Train.engines[parseInt(data.id)].steps;
 
@@ -451,9 +456,15 @@ var Modals = {
                   cb: function(data){
                       console.log("Engine Update");
                       console.log(data);
+                      websocket.cts_edit_engine(data);
                   },
                   wait: true},
-        danger: {visible: true, content: "Cancel", cb: undefined, wait: false},
+        danger: {visible: true, content: "Delete",
+                 cb: function(){
+                   console.warn("Delete Engine");
+                   websocket.cts_edit_engine({id:data.id}, false)
+                 },
+                 wait: false},
       }
     },
 

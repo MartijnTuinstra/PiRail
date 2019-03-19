@@ -1420,8 +1420,8 @@ void modify_Train(struct train_config * config, char cmd){
     if(id == (config->header.Trains - 1) && id >= 0){
       _free(config->Trains[config->header.Trains - 1].name);
 
-      memset(&config->Engines[config->header.Engines - 1], 0, sizeof(struct trains_conf));
-      config->Engines = _realloc(config->Engines, --config->header.Engines, struct trains_conf);
+      memset(&config->Engines[config->header.Trains - 1], 0, sizeof(struct trains_conf));
+      config->Trains = _realloc(config->Trains, --config->header.Trains, struct trains_conf);
     }
     else{
       printf("Only last engine can be removed\n");

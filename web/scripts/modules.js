@@ -55,6 +55,11 @@ var ModuleEditor = {
 
 		$("#moduleconfig .moduleContainer").css("width", width);
 
+		$("#moduleconfig #ModuleSettings td[name='cog']").html(settings("#ccc", 23));
+		$("#moduleconfig #ModuleSettings td[name='cog'] svg").on("click", function(){
+			Modals.open("module.settings", ModuleEditor.open);
+		});
+
 		this.loadModule(20);
 
 	},
@@ -72,12 +77,25 @@ var ModuleEditor = {
 		$("#moduleconfig #ModuleLayoutConfigurator svg").on("click", function(evt){
 			var id = parseInt($("th", $(evt.target).parent().parent().parent()).text());
 
-			console.log(modules[ModuleEditor.open].data[id]);
-
 			module = modules[ModuleEditor.open].data[id];
 
-			Modals.open("module."+module.edit_type);
+			if(module == undefined){
+				console.warn("No Module data obj found ("+ModuleEditor.open+", "+id+")");
+			}
+
+			Modals.open("module."+module.edit_type, {m: ModuleEditor.open, id:id});
 		});
+
+		$("#moduleconfig #ModuleSettings td[name='name']").text(modules[ModuleEditor.open].name);
+		$("#moduleconfig #ModuleSettings td[name='dim']").text(modules[ModuleEditor.open].width + " / " + modules[ModuleEditor.open].height);
+		$("#moduleconfig #ModuleSettings td[name='blocks']").text(modules[ModuleEditor.open].blocks.length);
+		$("#moduleconfig #ModuleSettings td[name='switches']").text(modules[ModuleEditor.open].switches.length);
+
+		var text = "";
+		for(var i = 0; i < modules[ModuleEditor.open].connections.length; i++){
+			text += "X: " + modules[ModuleEditor.open].connections[i].x + ", Y: " + modules[ModuleEditor.open].connections[i].y + ", R: " + modules[ModuleEditor.open].connections[i].r + "<br/>";
+		}
+		$("#moduleconfig #ModuleSettings td[name='anchor']").html(text);
 	}
 }
 

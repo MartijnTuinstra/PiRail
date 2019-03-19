@@ -72,8 +72,8 @@ header('Pragma: no-cache');
 		.info-box .box-row {display:block;}
 
 		.info-box .box-trow {display:table-row;}
-		.info-box table:not(#ModuleConfigurator) {display: inline-table;}
-		.info-box table:not(#ModuleConfigurator) {width: 80%;margin: 0px 10%;}
+		.info-box table:not(#ModuleConfigurator,#ModuleLayoutConfigurator) {display: inline-table;}
+		.info-box table:not(#ModuleConfigurator,#ModuleLayoutConfigurator) {width: 80%;margin: 0px 10%;}
 		@media (min-width: 1140px) {
 			.info-box table {width: 100%;margin: 0;}
 			.info-box table > tr > td:nth-child(1) {font-size: small;}
@@ -570,7 +570,53 @@ header('Pragma: no-cache');
 		<div class="row">
 			<div class="col">
 				<div class="info-box">
-					<div style="text-align: center; width: 100%; margin-bottom: 0.5em; margin-top: 0.25em; font-weight: bold;">Layout Configurator</div>
+					<div style="text-align: center; width: 100%; margin: 0.5em auto; font-weight: bold;">Layout Configurator</div>
+					<table id="ModuleSettings" class="table table-border" style="border-bottom: 1px solid #dee2e6">
+						<tbody>
+							<tr>
+								<th>Name</th>
+								<td name="name">Station</td>
+								<td style="width:10px"></td>
+								<th>Blocks</th>
+								<td name="blocks">19</td>
+								<td style="width:10px; border-right: 1px solid #dee2e6;"></td>
+								<th rowspan="2">Anchors</th>
+								<td rowspan="2" name="anchor">{x:0, y:20, r:1}<br/>{x:800, y:20, r:0}</td>
+								<td rowspan="2" name="cog" style="width: 44px"></td>
+							</tr>
+							<tr>
+								<th>Dimensions</th>
+								<td name="dim">100 / 400</td>
+								<td style="width:10px"></td>
+								<th>Switches</th>
+								<td name="switches">6</td>
+								<td style="width:10px; border-right: 1px solid #dee2e6;"></td>
+							</tr>
+						</tbody>
+					</table>
+					<div style="width:100%; margin: 0.5em auto;"></div>
+					<table id="ModuleLayoutConfigurator" class="table table-striped table-hover">
+					  <thead>
+					    <tr>
+					      <th scope="col">ID</th>
+					      <th scope="col">Block</th>
+					      <th scope="col">Type</th>
+					      <th scope="col">X<sub>1</sub> Y<sub>1</sub></th>
+					      <th scope="col">X<sub>2</sub> Y<sub>2</sub></th>
+					      <th scope="col">Rotation</th>
+					      <th scope="col">Switches</th>
+					      <th scope="col" style="width: 44px"></th>
+					    </tr>
+					  </thead>
+					  <tbody></tbody>
+					</table>
+				</div>
+			</div>
+		</div>
+		<div class="row">
+			<div class="col">
+				<div class="info-box">
+					<div style="text-align: center; width: 100%; margin-bottom: 0.5em; margin-top: 0.25em; font-weight: bold;">Configurator</div>
 					<table id="ModuleConfigurator" class="table table-striped table-hover">
 					  <thead>
 					    <tr>

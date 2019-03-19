@@ -730,30 +730,230 @@ var Modals = {
       }
     },
 
-    "module.line":{
-      link: "",
+    "module.settings":{
+      link:"",
       open_cb: function(data, ref){
+        $("input[name='name']", ref).val(modules[data].name);
 
+        $("input[name='width']", ref).val(modules[data].width);
+        $("input[name='height']", ref).val(modules[data].height);
+
+        for(var i = 0; i < modules[data].connections.length; i++){
+          $("table", ref).append('<tr>\
+                      <td><input type="number" name="x'+i+'" class="modal-form form-control input-sm" placeholder="X"></td>\
+                      <td><input type="number" name="y'+i+'" class="modal-form form-control input-sm" placeholder="Y"></td>\
+                      <td><input type="number" name="r'+i+'" class="modal-form form-control input-sm" placeholder="R"></td>\
+                    </tr>');
+          $("table input[name='x"+i+"']", ref).val(modules[data].connections[i].x);
+          $("table input[name='y"+i+"']", ref).val(modules[data].connections[i].y);
+          $("table input[name='r"+i+"']", ref).val(modules[data].connections[i].r);
+
+
+        }
       },
-      title: "Edit Line",
-      content: 'Test Line',
+      title: "Edit Module",
+      content: '<div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
+                  <div class="col-4 control-label"><span style="line-height: 38px;vertical-align:middle">Name</span></div>\
+                  <div class="col-8"><input name="name" type="text" class="modal-form form-control input-sm"></div>\
+                </div>\
+                <div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
+                  <div class="col-4 control-label"><span style="line-height: 38px;vertical-align:middle">Width</span></div>\
+                  <div class="col-8"><input type="number" name="width" class="modal-form form-control input-sm"></div>\
+                </div>\
+                <div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
+                  <div class="col-4 control-label"><span style="line-height: 38px;vertical-align:middle">Height</span></div>\
+                  <div class="col-8"><input type="number" name="height" class="modal-form form-control input-sm"></div>\
+                </div>\
+                <div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
+                  <div class="col-4 control-label"><span style="line-height: 38px;vertical-align:middle">Anchors</span></div>\
+                  <div class="col-8">\
+                    <table></table>\
+                  </div>\
+                </div>',
       buttons: {
         success: {visible: true, content: "Update", cb: undefined, wait: false},
         warning: {visible: true, content: "Discard", cb: undefined, wait: false},
         danger: {visible: false, content: "", cb: undefined, wait: false}
       }
     },
+    "module.line":{
+      link: "",
+      open_cb: function(data, ref){
+
+        $('.modal-body button', ref).on("click", function(evt){
+          var val = parseFloat($('input', $(evt.target).parent().parent()).val());
+
+          var xy = $('input', $(evt.target).parent().parent()).attr("name").startsWith("x");
+
+          switch($(evt.target).text()){
+            case "-Sw":
+              val -= xy?ro[0].x:ro[0].y;
+              break;
+            case "-ds":
+              val += ds;
+              break;
+            case "+ds":
+              val -= ds;
+              break;
+            case "+Sw":
+              val += xy?ro[0].x:ro[0].y;
+              break;
+          }
+
+          $('input', $(evt.target).parent().parent()).val(round(val, 3));
+          console.log();
+        });
+
+        $("input[name='block']", ref).val(modules[data.m].data[data.id].b);
+
+        $("input[name='x1']", ref).val(modules[data.m].data[data.id].x1);
+        $("input[name='y1']", ref).val(modules[data.m].data[data.id].y1);
+        $("input[name='x2']", ref).val(modules[data.m].data[data.id].x2);
+        $("input[name='y2']", ref).val(modules[data.m].data[data.id].y2);
+
+      },
+      title: "Edit Line",
+      content: '<div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
+                  <div class="col-4 control-label"><span style="line-height: 38px;vertical-align:middle">X<sub>1</sub></span></div>\
+                  <div class="col-8"><input name="x1" type="float" class="modal-form form-control input-sm">\
+                    <div class="btn-group btn-group-sm" role="group" style="margin: 0.5em auto;display: flex;flex-direction: row;justify-content: center;">\
+                      <button type="button" class="btn btn-secondary">-Sw</button>\
+                      <button type="button" class="btn btn-secondary">-ds</button>\
+                      <button type="button" class="btn btn-secondary">+ds</button>\
+                      <button type="button" class="btn btn-secondary">+Sw</button>\
+                    </div></div>\
+                </div>\
+                <div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
+                  <div class="col-4 control-label"><span style="line-height: 38px;vertical-align:middle">Y<sub>1</sub></span></div>\
+                  <div class="col-8"><input name="y1" type="float" class="modal-form form-control input-sm">\
+                    <div class="btn-group btn-group-sm" role="group" style="margin: 0.5em auto;display: flex;flex-direction: row;justify-content: center;">\
+                      <button type="button" class="btn btn-secondary">-Sw</button>\
+                      <button type="button" class="btn btn-secondary">-ds</button>\
+                      <button type="button" class="btn btn-secondary">+ds</button>\
+                      <button type="button" class="btn btn-secondary">+Sw</button>\
+                    </div></div>\
+                </div>\
+                <div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
+                  <div class="col-4 control-label"><span style="line-height: 38px;vertical-align:middle">X<sub>2</sub></span></div>\
+                  <div class="col-8"><input name="x2" type="float" class="modal-form form-control input-sm">\
+                    <div class="btn-group btn-group-sm" role="group" style="margin: 0.5em auto;display: flex;flex-direction: row;justify-content: center;">\
+                      <button type="button" class="btn btn-secondary">-Sw</button>\
+                      <button type="button" class="btn btn-secondary">-ds</button>\
+                      <button type="button" class="btn btn-secondary">+ds</button>\
+                      <button type="button" class="btn btn-secondary">+Sw</button>\
+                    </div></div>\
+                </div>\
+                <div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
+                  <div class="col-4 control-label"><span style="line-height: 38px;vertical-align:middle">Y<sub>2</sub></span></div>\
+                  <div class="col-8"><input name="y2" type="float" class="modal-form form-control input-sm">\
+                    <div class="btn-group btn-group-sm" role="group" style="margin: 0.5em auto;display: flex;flex-direction: row;justify-content: center;">\
+                      <button type="button" class="btn btn-secondary">-Sw</button>\
+                      <button type="button" class="btn btn-secondary">-ds</button>\
+                      <button type="button" class="btn btn-secondary">+ds</button>\
+                      <button type="button" class="btn btn-secondary">+Sw</button>\
+                    </div></div>\
+                </div>\
+                <div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
+                  <div class="col-4 control-label"><span style="line-height: 38px;vertical-align:middle">Block</span></div>\
+                  <div class="col-8"><input type="number" name="block" class="modal-form form-control input-sm"></div>\
+                </div>',
+      buttons: {
+        success: {visible: true, content: "Update", cb: undefined, wait: false},
+        warning: {visible: true, content: "Discard", cb: undefined, wait: false},
+        danger: {visible: true, content: "Delete", cb: undefined, wait: false}
+      }
+    },
     "module.arc":{
       link: "",
       open_cb: function(data, ref){
 
+        $('.modal-body button', ref).on("click", function(evt){
+          var val = parseFloat($('input', $(evt.target).parent().parent()).val());
+
+          var xy = $('input', $(evt.target).parent().parent()).attr("name").startsWith("x");
+
+          switch($(evt.target).text()){
+            case "-Sw":
+              val -= xy?ro[0].x:ro[0].y;
+              break;
+            case "-ds":
+              val += ds;
+              break;
+            case "+ds":
+              val -= ds;
+              break;
+            case "+Sw":
+              val += xy?ro[0].x:ro[0].y;
+              break;
+            case "Radius 1":
+              val = radia[0];
+              break;
+            case "+R1":
+              val += radia[0];
+              break;
+            case "-R1":
+              val -= radia[0];
+              break;
+          }
+
+          $('input', $(evt.target).parent().parent()).val(round(val, 3));
+          console.log();
+        });
+
+        $("input[name='block']", ref).val(modules[data.m].data[data.id].b);
+
+        $("input[name='cx']", ref).val(modules[data.m].data[data.id].cx);
+        $("input[name='cy']", ref).val(modules[data.m].data[data.id].cy);
+        $("input[name='r']", ref).val(modules[data.m].data[data.id].r);
+        $("input[name='s1']", ref).val(modules[data.m].data[data.id].start);
+        $("input[name='s2']", ref).val(modules[data.m].data[data.id].end);
+
       },
       title: "Edit Arc",
-      content: 'Test Arc',
+      content: '<div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
+                  <div class="col-4 control-label"><span style="line-height: 38px;vertical-align:middle">X</span></div>\
+                  <div class="col-8"><input name="cx" type="float" class="modal-form form-control input-sm">\
+                    <div class="btn-group btn-group-sm" role="group" style="margin: 0.5em auto;display: flex;flex-direction: row;justify-content: center;">\
+                      <button type="button" class="btn btn-secondary">-R1</button>\
+                      <button type="button" class="btn btn-secondary">-Sw</button>\
+                      <button type="button" class="btn btn-secondary">-ds</button>\
+                      <button type="button" class="btn btn-secondary">+ds</button>\
+                      <button type="button" class="btn btn-secondary">+Sw</button>\
+                      <button type="button" class="btn btn-secondary">+R1</button>\
+                    </div></div>\
+                </div>\
+                <div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
+                  <div class="col-4 control-label"><span style="line-height: 38px;vertical-align:middle">Y</span></div>\
+                  <div class="col-8"><input name="cy" type="float" class="modal-form form-control input-sm">\
+                    <div class="btn-group btn-group-sm" role="group" style="margin: 0.5em auto;display: flex;flex-direction: row;justify-content: center;">\
+                      <button type="button" class="btn btn-secondary">-R1</button>\
+                      <button type="button" class="btn btn-secondary">-Sw</button>\
+                      <button type="button" class="btn btn-secondary">-ds</button>\
+                      <button type="button" class="btn btn-secondary">+ds</button>\
+                      <button type="button" class="btn btn-secondary">+Sw</button>\
+                      <button type="button" class="btn btn-secondary">+R1</button>\
+                    </div></div>\
+                </div>\
+                <div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
+                  <div class="col-4 control-label"><span style="line-height: 38px;vertical-align:middle">X<sub>2</sub></span></div>\
+                  <div class="col-8"><input name="r" type="float" class="modal-form form-control input-sm">\
+                    <div class="btn-group btn-group-sm" role="group" style="margin: 0.5em auto;display: flex;flex-direction: row;justify-content: center;">\
+                      <button type="button" class="btn btn-secondary">Radius 1</button>\
+                    </div></div>\
+                </div>\
+                <div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
+                  <div class="col-4 control-label"><span style="line-height: 38px;vertical-align:middle">Y<sub>2</sub></span></div>\
+                  <div class="col-4"><input name="s1" type="float" class="modal-form form-control input-sm"></div>\
+                  <div class="col-4"><input name="s2" type="float" class="modal-form form-control input-sm"></div>\
+                </div>\
+                <div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
+                  <div class="col-4 control-label"><span style="line-height: 38px;vertical-align:middle">Block</span></div>\
+                  <div class="col-8"><input type="number" name="block" class="modal-form form-control input-sm"></div>\
+                </div>',
       buttons: {
         success: {visible: true, content: "Update", cb: undefined, wait: false},
         warning: {visible: true, content: "Discard", cb: undefined, wait: false},
-        danger: {visible: false, content: "", cb: undefined, wait: false}
+        danger: {visible: true, content: "Delete", cb: undefined, wait: false}
       }
     },
     "module.sw":{
@@ -766,7 +966,7 @@ var Modals = {
       buttons: {
         success: {visible: true, content: "Update", cb: undefined, wait: false},
         warning: {visible: true, content: "Discard", cb: undefined, wait: false},
-        danger: {visible: false, content: "", cb: undefined, wait: false}
+        danger: {visible: true, content: "Delete", cb: undefined, wait: false}
       }
     },
     "module.ds":{
@@ -779,7 +979,7 @@ var Modals = {
       buttons: {
         success: {visible: true, content: "Update", cb: undefined, wait: false},
         warning: {visible: true, content: "Discard", cb: undefined, wait: false},
-        danger: {visible: false, content: "", cb: undefined, wait: false}
+        danger: {visible: true, content: "Delete", cb: undefined, wait: false}
       }
     }
   },

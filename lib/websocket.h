@@ -173,7 +173,11 @@
   #define WSopc_SetSwitchRoute        0x25
   #define WSopc_BroadTrack            0x26
   #define WSopc_BroadSwitch           0x27
-  #define WSopc_StationLibrary        0x32
+
+  #define WSopc_TrackLayoutOnlyRawData 0x30
+  #define WSopc_TrackLayoutRawData     0x31
+  #define WSopc_TrackLayoutUpdateRaw   0x33
+  #define WSopc_StationLibrary         0x36
 
   //Client / General
   #define WSopc_EmergencyStop      0x10

@@ -197,6 +197,8 @@ void clear_Modules(){
         _free(Units[i]->St);
       }
 
+      _free(Units[i]->Layout);
+
       printf("- Unit %i\n",i);
       _free(Units[i]);
       Units[i] = 0;
@@ -306,6 +308,13 @@ void LoadModuleFromConfig(int M){
     _free(st.name);
     _free(st.blocks);
   }
+
+  //Layout
+  memcpy(&config->Layout_length, *buf_ptr, sizeof(uint16_t));
+  *buf_ptr += 2;
+
+  config->Layout = _calloc(config->Layout_length + 1, 1);
+  memcpy(config->Layout, *buf_ptr, config->Layout_length);
 
   _free(header);
   _free(config);

@@ -47,6 +47,10 @@ int calc_write_module_size(struct module_config * config){
     size += config->Stations[i].nr_blocks + 1;
   }
 
+  //Layout
+
+  size += 2 + config->Layout_length;
+
   return size;
 }
 
@@ -207,6 +211,14 @@ void write_module_from_conf(struct module_config * config, char * filename){
     memcpy(p, config->Stations[i].name, config->Stations[i].name_len);
     p += config->Stations[i].name_len + 1;
   }
+
+  //Copy Layout
+  memcpy(p, &config->Layout_length, sizeof(uint16_t));
+  p += sizeof(uint16_t);
+
+  printf("Writing data: \n%s", config->Layout);
+  memcpy(p, config->Layout, config->Layout_length);
+  p += sizeof(uint16_t);
 
   //Print output
   print_hex(data, size);

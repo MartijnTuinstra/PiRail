@@ -1,7 +1,7 @@
 #ifndef INCLUDE_CONFIG_DATA_H
 #define INCLUDE_CONFIG_DATA_H
 
-#define MODULE_CONF_VERSION 2
+#define MODULE_CONF_VERSION 3
 #define TRAIN_CONF_VERSION 2
 
 #define TRAIN_CONF_PATH "configs/stock.bin"
@@ -166,6 +166,9 @@ struct module_config {
   struct ms_switch_conf * MSSwitches;
   struct station_conf * Stations;
   struct signal_conf * Signals;
+
+  uint16_t Layout_length;
+  char * Layout;
 };
 
 struct __attribute__((__packed__)) s_train_header_conf {

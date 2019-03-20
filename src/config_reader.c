@@ -127,6 +127,11 @@ void print_Stations(struct station_conf stations){
   printf( "%s\n", debug);
 }
 
+void print_Layout(struct module_config * config){
+  printf("Length: %i\n", config->Layout_length);
+  printf("Data:\n%s\n\n", config->Layout);
+}
+
 void print_Cars(struct cars_conf car){
   char debug[200];
 
@@ -332,6 +337,13 @@ int read_module_config(struct module_config * config, FILE * fp){
   for(int i = 0; i < config->header.Stations; i++){
     config->Stations[i]  = read_s_station_conf(buf_ptr);
   }
+
+  //Layout
+  memcpy(&config->Layout_length, *buf_ptr, sizeof(uint16_t));
+  *buf_ptr += 2;
+
+  config->Layout = _calloc(config->Layout_length + 1, 1);
+  memcpy(config->Layout, *buf_ptr, config->Layout_length);
 
   _free(header);
   _free(buffer_start);
@@ -1100,6 +1112,49 @@ void modify_Station(struct module_config * config, char cmd){
   }
 }
 
+void export_Layout(struct module_config * config){
+  FILE * fp;
+  /* open the file for writing*/
+  fp = fopen ("Layout_export.txt","w");
+
+  /* write 10 lines of text into the file stream*/
+  fprintf(fp, "%s", config->Layout);
+
+  /* close the file*/  
+  fclose (fp);
+}
+
+void import_Layout(struct module_config * config){
+  FILE * fp;
+  char src[80];
+
+  fgets(src, 2, stdin);
+  printf("Location: ");
+  fgets(src, 80, stdin);
+  sscanf(src, "%s", src);
+  /* open the file for writing*/
+  fp = fopen (src,"r");
+
+  if(!fp){
+    loggerf(ERROR, "File not found '%s'", src);
+    return;
+  }
+
+  fseek(fp, 0, SEEK_END);
+  long fsize = ftell(fp) - 1;
+  fseek(fp, 0, SEEK_SET);
+
+  config->Layout = _realloc(config->Layout, fsize, 1);
+
+  fread(config->Layout, fsize, 1, fp);
+  config->Layout[fsize] = 0;
+
+  config->Layout_length = fsize;
+
+  /* close the file*/  
+  fclose (fp);
+}
+
 void modify_Car(struct train_config * config, char cmd){
   int id;
   char _cmd[80];
@@ -1606,7 +1661,9 @@ int edit_module(){
     config.header.Stations = 0;
   }
   else{
-    read_module_config(&config, fp);
+    if(read_module_config(&config, fp) == -1){
+      return;
+    };
     if(config.header.module != file){
       loggerf(CRITICAL, "INVALID MODULE ID");
       return 0;
@@ -1651,6 +1708,15 @@ int edit_module(){
       else if(strcmp(cmd, "N") == 0){
         modify_Node(&config, cmd1);
       }
+    }
+    else if(strcmp(cmd, "ex") == 0 || strcmp(cmd, "Ex") == 0){
+      export_Layout(&config);
+    }
+    else if(strcmp(cmd, "im") == 0 || strcmp(cmd, "Im") == 0){
+      import_Layout(&config);
+    }
+    else if(strcmp(cmd,  "pL") == 0 || strcmp(cmd, "pl") == 0){
+      print_Layout(&config);
     }
     else if(strcmp(cmd, "s") == 0){
       write_module_from_conf(&config, filename);

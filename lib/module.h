@@ -40,6 +40,9 @@
     uint8_t io_out_changed:1;
 
     uint8_t on_layout:1;
+
+    uint16_t Layout_length;
+    char * Layout;
   } Unit;
 
   #define ModuleConfigBasePath "./configs/units/"

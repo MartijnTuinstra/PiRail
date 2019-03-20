@@ -83,6 +83,9 @@ var websocket = {
 
     BroadTrack:           0x26,
     BroadSwitch:          0x27,
+
+    TrackLayoutRawData:   0x30,
+    TrackLayoutUpdateRaw: 0x31,
     StationLibrary:       0x32,
 
 

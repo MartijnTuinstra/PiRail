@@ -334,8 +334,6 @@ void websocket_create_msg(char * input, int length_in, char * output, int * leng
     header_len = 2;
   }else if(length_in < 65535){
     buf[1] = 126;
-    buf[2] = 0xFF;
-    buf[3] = 0xFF;
     //printf("data length: %i\n",strlen(data));
     buf[2] = (length_in & 0xFF00) >> 8;
     buf[3] = length_in & 0xFF;
@@ -351,40 +349,46 @@ void websocket_create_msg(char * input, int length_in, char * output, int * leng
 }
 
 void ws_send(int fd, char * data, int length, int flag){
-  char outbuf[4096];
+  char * outbuf = _calloc(length + 100, 1);
   int outlength = 0;
 
   websocket_create_msg(data, length, outbuf, &outlength);
 
   pthread_mutex_lock(&m_websocket_send);
 
-  char log[2000];
+  char * log = _calloc(length + 100, 3);
   sprintf(log, "WS send (%i)\t",fd);
   for(int zi = 0;zi<length;zi++){sprintf(log, "%s%02X ", log, data[zi]);};
   loggerf(DEBUG, "%s", log);
+
+  _free(log);
 
   if(write(fd, outbuf, outlength) == -1){
     loggerf(WARNING, "socket write error %x", errno);
   };
 
   pthread_mutex_unlock(&m_websocket_send);
+
+  _free(outbuf);
 }
 
-void ws_send_all(char data[],int length,int flag){
-  char outbuf[2048];
-  memset(outbuf, 0, 2048);
+void ws_send_all(char * data,int length,int flag){
+  char * outbuf = _calloc(length + 100, 1);
   int outlength = 0;
 
   if(!(_SYS->_STATE & STATE_WebSocket_FLAG)){
+    _free(outbuf);
     return;
   }
 
   websocket_create_msg(data, length, outbuf, &outlength);
 
-  char log[2000];
+  char * log = _calloc(length + 100, 3);
   sprintf(log, "WS send (all)\t");
   for(int zi = 0;zi<(length);zi++){sprintf(log, "%s%02X ", log, data[zi]);};
   loggerf(DEBUG, "%s", log);
+
+  _free(log);
 
   pthread_mutex_lock(&m_websocket_send);
 
@@ -398,8 +402,13 @@ void ws_send_all(char data[],int length,int flag){
           _SYS->_Clients--;
           websocket_clients[i].state = 2;
         }
+        else if(errno == EFAULT){
+          loggerf(ERROR, "EFAULT ERROR");
+        }
       }
     }
   }
   pthread_mutex_unlock(&m_websocket_send);
+
+  _free(outbuf);
 }

@@ -311,10 +311,12 @@ void LoadModuleFromConfig(int M){
 
   //Layout
   memcpy(&config->Layout_length, *buf_ptr, sizeof(uint16_t));
+  Units[M]->Layout_length = config->Layout_length;
   *buf_ptr += 2;
 
   config->Layout = _calloc(config->Layout_length + 1, 1);
   memcpy(config->Layout, *buf_ptr, config->Layout_length);
+  Units[M]->Layout = config->Layout;
 
   _free(header);
   _free(config);
@@ -377,6 +379,7 @@ void ReadAllModuleConfigs(){
       break;
     }
     LoadModuleFromConfig((int)moduleID_list[i]);
+    WS_Track_LayoutDataOnly((int)moduleID_list[i], 0);
   }
 
   return;

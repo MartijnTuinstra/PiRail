@@ -1108,6 +1108,29 @@ void WS_reset_switches(int client_fd){
   }
 }
 
+void WS_Track_LayoutDataOnly(int unit, int Client_fd){
+  loggerf(ERROR, "WS_Track_LayoutDataOnly");
+
+  char * data = _calloc(Units[unit]->Layout_length + 20, 1);
+
+  data[0] = WSopc_TrackLayoutOnlyRawData;
+  data[1] = unit;
+  memcpy(&data[2], Units[unit]->Layout, Units[unit]->Layout_length);
+
+  print_hex(data, Units[unit]->Layout_length + 20);
+
+
+  if(Client_fd){
+    ws_send(Client_fd,data, Units[unit]->Layout_length+2, WS_Flag_Track);
+  }else{
+    ws_send_all(data, Units[unit]->Layout_length+2, WS_Flag_Track);
+  }
+}
+
+void WS_Track_LayoutData(int unit, int Client_fd){
+
+}
+
 //General Messages
 void WS_EmergencyStop(){
   loggerf(WARNING, "EMERGENCY STOP");

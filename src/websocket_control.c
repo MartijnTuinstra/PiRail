@@ -2,6 +2,7 @@
 #include "mem.h"
 
 #include "encryption.h"
+#include "module.h"
 
 #include "websocket_control.h"
 #include "logger.h"
@@ -157,13 +158,23 @@ void * websocket_client_connect(void * p){
   WS_stc_SubmoduleState();
   
   //Send track layout and data
-  if(_SYS->_STATE & STATE_Modules_Loaded && _SYS->_STATE & STATE_Modules_Coupled){
-    ws_send(client->fd,(char [6]){2,4,1,8,4,2},6,8);
+  if(_SYS->_STATE & STATE_Modules_Loaded){
+    // Send Track Layout Data
+    for(int i = 0; i < unit_len; i++){
+      if(!Units[i])
+        continue;
 
-    WS_Track_Layout();
-    
-    printf("Send new client JSON\n");
-    WS_NewClient_track_Switch_Update(client->fd);
+      WS_Track_LayoutDataOnly(i, client->fd);
+    }
+
+    if(_SYS->_STATE & STATE_Modules_Coupled){
+      ws_send(client->fd,(char [6]){2,4,1,8,4,2},6,8);
+
+      WS_Track_Layout();
+      
+      printf("Send new client JSON\n");
+      WS_NewClient_track_Switch_Update(client->fd);
+    }
   }
 
   printf("Send open messages\n");

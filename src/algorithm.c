@@ -1766,7 +1766,7 @@ int connect_Algor(struct ConnectList * List){
   }
 
   if(value == total){
-    _SYS_change(STATE_Modules_Coupled, 1);
+    _SYS_change(STATE_Modules_Coupled | STATE_Modules_Loaded, 1);
   }
 
   return value;

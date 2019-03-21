@@ -56,6 +56,9 @@ void WS_cts_Enable_Disable_SubmoduleState(uint8_t opcode, uint8_t flags);
   void WS_SwitchesUpdate(int Client_fd);
   void WS_NewClient_track_Switch_Update(int Client_fd);
 
+  void WS_Track_LayoutDataOnly(int unit, int Client_fd);
+  void WS_Track_LayoutData(int unit, int Client_fd);
+
   void WS_reset_switches(int client_fd);
 
   //General Messages

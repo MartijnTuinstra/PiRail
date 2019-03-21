@@ -84,7 +84,7 @@ $(SRC)/train_sim.c: $(LIB)/train_sim.h $(LIB)/rail.h $(LIB)/train.h $(LIB)/syste
 
 $(SRC)/websocket.c: $(LIB)/websocket.h
 
-$(LIB)/websocket_control.h: $(LIB)/websocket.h $(LIB)/websocket_msg.h
+$(LIB)/websocket_control.h: $(LIB)/websocket.h $(LIB)/websocket_msg.h $(LIB)/module.h
 
 $(LIB)/websocket_msg.h: $(LIB)/websocket.h $(LIB)/train.h
 $(SRC)/websocket_msg.c: $(LIB)/websocket_msg.h $(LIB)/system.h $(LIB)/rail.h $(LIB)/switch.h \

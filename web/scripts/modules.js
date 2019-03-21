@@ -3,13 +3,10 @@
 var ModuleEditor = {
 	open: 0,
 	init: function(){
-		console.log("ModuleEditor Init");
 		if(loading_modules != 0){
 			setTimeout(ModuleEditor.init.bind(ModuleEditor), 100);
 			return;
 		}
-
-		console.error("ModuleEditor Init");
 
 		content = "";
 
@@ -59,9 +56,6 @@ var ModuleEditor = {
 		$("#moduleconfig #ModuleSettings td[name='cog'] svg").on("click", function(){
 			Modals.open("module.settings", ModuleEditor.open);
 		});
-
-		this.loadModule(20);
-
 	},
 
 	loadModule: function(module){
@@ -75,7 +69,8 @@ var ModuleEditor = {
 		$("#moduleconfig #ModuleLayoutConfigurator tbody").append(modules[module].configdata());
 
 		$("#moduleconfig #ModuleLayoutConfigurator svg").on("click", function(evt){
-			var id = parseInt($("th", $(evt.target).parent().parent().parent()).text());
+			console.log($("th", $(evt.target).closest("tr")));
+			var id = parseInt($("th", $(evt.target).closest("tr")).text());
 
 			module = modules[ModuleEditor.open].data[id];
 
@@ -83,7 +78,7 @@ var ModuleEditor = {
 				console.warn("No Module data obj found ("+ModuleEditor.open+", "+id+")");
 			}
 
-			Modals.open("module."+modules.edit_type, {m: ModuleEditor.open, id:id});
+			Modals.open("module."+module.edit_type, {m: ModuleEditor.open, id:id});
 		});
 
 		$("#moduleconfig #ModuleSettings td[name='name']").text(modules[ModuleEditor.open].name);

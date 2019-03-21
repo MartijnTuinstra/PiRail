@@ -790,11 +790,12 @@ var Modals = {
     "module.line":{
       link: "",
       open_cb: function(data, ref){
+        $('#modal .modal-dialog').css("max-width", "800px");
 
         $('.modal-body button', ref).on("click", function(evt){
-          var val = parseFloat($('input', $(evt.target).parent().parent()).val());
+          var val = parseFloat($('input', $(evt.target).closest("tr")).val());
 
-          var xy = $('input', $(evt.target).parent().parent()).attr("name").startsWith("x");
+          var xy = $('input', $(evt.target).closest("tr")).attr("name").startsWith("x");
 
           switch($(evt.target).text()){
             case "-Sw":
@@ -823,10 +824,21 @@ var Modals = {
         $("input[name='y2']", ref).val(modules[data.m].data[data.id].y2);
 
       },
+      close_cb: function(){
+        $('#modal .modal-dialog').css("max-width", "");
+      },
       title: "Edit Line",
       content: '<div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
-                  <div class="col-4 control-label"><span style="line-height: 38px;vertical-align:middle">X<sub>1</sub></span></div>\
-                  <div class="col-8"><input name="x1" type="float" class="modal-form form-control input-sm">\
+                  <div class="col-2 control-label"><span style="line-height: 38px;vertical-align:middle">X<sub>1</sub></span></div>\
+                  <div class="col-4"><input name="x1" type="float" class="modal-form form-control input-sm">\
+                    <div class="btn-group btn-group-sm" role="group" style="margin: 0.5em auto;display: flex;flex-direction: row;justify-content: center;">\
+                      <button type="button" class="btn btn-secondary">-Sw</button>\
+                      <button type="button" class="btn btn-secondary">-ds</button>\
+                      <button type="button" class="btn btn-secondary">+ds</button>\
+                      <button type="button" class="btn btn-secondary">+Sw</button>\
+                    </div></div>\
+                  <div class="col-2 control-label"><span style="line-height: 38px;vertical-align:middle">Y<sub>1</sub></span></div>\
+                  <div class="col-4"><input name="y1" type="float" class="modal-form form-control input-sm">\
                     <div class="btn-group btn-group-sm" role="group" style="margin: 0.5em auto;display: flex;flex-direction: row;justify-content: center;">\
                       <button type="button" class="btn btn-secondary">-Sw</button>\
                       <button type="button" class="btn btn-secondary">-ds</button>\
@@ -835,28 +847,16 @@ var Modals = {
                     </div></div>\
                 </div>\
                 <div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
-                  <div class="col-4 control-label"><span style="line-height: 38px;vertical-align:middle">Y<sub>1</sub></span></div>\
-                  <div class="col-8"><input name="y1" type="float" class="modal-form form-control input-sm">\
+                  <div class="col-2 control-label"><span style="line-height: 38px;vertical-align:middle">X<sub>2</sub></span></div>\
+                  <div class="col-4"><input name="x2" type="float" class="modal-form form-control input-sm">\
                     <div class="btn-group btn-group-sm" role="group" style="margin: 0.5em auto;display: flex;flex-direction: row;justify-content: center;">\
                       <button type="button" class="btn btn-secondary">-Sw</button>\
                       <button type="button" class="btn btn-secondary">-ds</button>\
                       <button type="button" class="btn btn-secondary">+ds</button>\
                       <button type="button" class="btn btn-secondary">+Sw</button>\
                     </div></div>\
-                </div>\
-                <div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
-                  <div class="col-4 control-label"><span style="line-height: 38px;vertical-align:middle">X<sub>2</sub></span></div>\
-                  <div class="col-8"><input name="x2" type="float" class="modal-form form-control input-sm">\
-                    <div class="btn-group btn-group-sm" role="group" style="margin: 0.5em auto;display: flex;flex-direction: row;justify-content: center;">\
-                      <button type="button" class="btn btn-secondary">-Sw</button>\
-                      <button type="button" class="btn btn-secondary">-ds</button>\
-                      <button type="button" class="btn btn-secondary">+ds</button>\
-                      <button type="button" class="btn btn-secondary">+Sw</button>\
-                    </div></div>\
-                </div>\
-                <div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
-                  <div class="col-4 control-label"><span style="line-height: 38px;vertical-align:middle">Y<sub>2</sub></span></div>\
-                  <div class="col-8"><input name="y2" type="float" class="modal-form form-control input-sm">\
+                  <div class="col-2 control-label"><span style="line-height: 38px;vertical-align:middle">Y<sub>2</sub></span></div>\
+                  <div class="col-4"><input name="y2" type="float" class="modal-form form-control input-sm">\
                     <div class="btn-group btn-group-sm" role="group" style="margin: 0.5em auto;display: flex;flex-direction: row;justify-content: center;">\
                       <button type="button" class="btn btn-secondary">-Sw</button>\
                       <button type="button" class="btn btn-secondary">-ds</button>\

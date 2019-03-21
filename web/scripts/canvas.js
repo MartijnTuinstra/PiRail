@@ -1726,12 +1726,12 @@ var loading_modules = 0;
 
 
 events.add_init(function(){
-	load_module(20);
-	load_module(21);
-	load_module(22);
-	load_module(23);
-	load_module(25);
-	load_module(26);
+	// load_module(20);
+	// load_module(21);
+	// load_module(22);
+	// load_module(23);
+	// load_module(25);
+	// load_module(26);
 });
 
 function conf_modules(){

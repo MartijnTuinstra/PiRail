@@ -858,6 +858,21 @@ var websocket = {
       Canvas.update_frame();
     },
 
+    stc_track_layout_data: function(data){
+      console.log("ID: "+data[1]);;
+
+      function JsonParse(obj){
+          return Function('"use strict";return (' + obj + ')')();
+      };
+
+      var newdata = JsonParse(String.fromCharCode.apply(null, data.slice(2)));
+      
+      modules[newdata.id] = new canvas_module(newdata);
+      modules[newdata.id].visible = true;
+
+      Canvas.resize();
+    },
+
     // Station Library
     stc_station_lib: function(data){
       console.warn("implement");
@@ -1258,6 +1273,10 @@ function WebSocket_handler(adress){
         else if(data[0] == websocket.opc.TrackLayoutSetup){
           console.log("Track Layout");
           websocket.stc_track_load(data);
+        }
+        else if(data[0] == websocket.opc.TrackLayoutOnlyRawData){
+          console.log("Track Layout Data");
+          websocket.stc_track_layout_data(data);
         }
 
       /* GENERAL MESSAGES */

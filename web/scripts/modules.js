@@ -8,6 +8,15 @@ var ModuleEditor = {
 			return;
 		}
 
+		this.update();
+	},
+
+	open: function(module){
+
+	},
+
+	update: function(module){
+		$("#moduleconfig .moduleContainer").empty();
 		content = "";
 
 		width = 10;
@@ -17,9 +26,6 @@ var ModuleEditor = {
 		}
 
 		for(const key of Object.keys(modules)){
-			modules[key]
-
-
 			var scaling = 1;
 			if(modules[key].height > 200){
 				scaling = 200 / modules[key].height;

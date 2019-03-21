@@ -9,11 +9,13 @@ var windows = {
 		}
 
 		for(var j = 0; j < this.tabs.length; j++){
-			console.log("Hiding "+this.tabs[j]);
 			$("#"+this.tabs[j]+".window").hide();
 		}
 
-		console.log("Showing "+this.tabs[i]);
 		$("#"+this.tabs[i]+".window").show();
+
+		if(tab == "moduleconfig"){
+			ModuleEditor.open();
+		}
 	}
 }

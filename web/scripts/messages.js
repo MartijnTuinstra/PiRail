@@ -221,7 +221,6 @@ class submodule {
 			return;
 		}
 
-		console.log("Updating submodule "+this.title)
 		var box = $('.sidebar #subsystems li.submodule-'+this.title.toLowerCase())
 		$('.indicator', box).removeClass("bg-"+this.colors[this.state]);
 		$('.indicator', box).removeClass("blink");

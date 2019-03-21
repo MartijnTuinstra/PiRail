@@ -867,6 +867,8 @@ var websocket = {
       modules[newdata.id] = new canvas_module(newdata);
       modules[newdata.id].visible = true;
 
+      ModuleEditor.update()
+
       Canvas.resize();
     },
 

@@ -246,9 +246,7 @@ header('Pragma: no-cache');
 	<script>
 		var events = {
 			init: function(){
-				console.log("Init event");
 				for(var i = 0; i < this._init.length; i++){
-					console.log(this._init[i]);
 					this._init[i]();
 				}
 			},
@@ -258,9 +256,7 @@ header('Pragma: no-cache');
 			_init: [],
 
 			resize: function(){
-				console.log("Resize event");
 				for(var i = 0; i < this._resize.length; i++){
-					console.log(this._resize[i]);
 					this._resize[i]();
 				}
 			},

@@ -148,7 +148,7 @@ var Canvas = {
 		this.calc_limits();
 	},
 	resize: function(){
-		console.log("resize");
+		// console.log("resize");
 
 	    this.dimensions.height = (this.canvas.height = $('#LayoutContainer').height());
 		this.dimensions.width  = (this.canvas.width  = $('#LayoutContainer').width());
@@ -163,7 +163,7 @@ var Canvas = {
 		this.update_frame();
 	},
 	rescale: function(new_scale){
-		console.log("rescale");
+		// console.log("rescale");
 		this.c.scale(1/this.dimensions.scale,1/this.dimensions.scale);
 
 		this.dimensions.scale = new_scale;

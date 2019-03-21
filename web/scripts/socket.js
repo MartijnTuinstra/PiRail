@@ -120,7 +120,7 @@ var websocket = {
   },
 
   send: function(data){
-    console.log("Send: "+data);
+    console.log("Send", data);
     ws.send(new Int8Array(data));
   },
 
@@ -700,7 +700,7 @@ var websocket = {
         else{
           speedsteps = 128;
         }
-        console.log("Add engine", {name: name, dcc: dcc_id, img: img, icon: icon, max_speed: max_spd, length: length, type: type, speedstep: speedsteps, steps: steps});
+        
         Train.engines.push({ontrack: 0, id: Train.engines.length, name: name, dcc: dcc_id, img: img, icon: icon, max_speed: max_spd, length: length, type: type, speedstep: speedsteps, steps: steps});
       }
 
@@ -775,7 +775,6 @@ var websocket = {
         var use = data[i++] & 0b1;
 
         var name = IntArrayToString(data.slice(i+2, i+2+data[i]));
-        console.log("Got train: "+name);
         var data_len = data[i++];
 
         var links = data.slice(i+1+data_len, i+1+data_len+3*data[i]);
@@ -859,8 +858,6 @@ var websocket = {
     },
 
     stc_track_layout_data: function(data){
-      console.log("ID: "+data[1]);;
-
       function JsonParse(obj){
           return Function('"use strict";return (' + obj + ')')();
       };
@@ -1184,7 +1181,7 @@ function WebSocket_handler(adress){
     ws.onmessage = function (evt){
       var received_msg = evt.data;
       var data = new Uint8Array(received_msg);
-      console.log(data);
+      // console.log(data);
 
 
 
@@ -1198,48 +1195,53 @@ function WebSocket_handler(adress){
       /*  ADMIN MESSAGES  */
 
         else if(data[0] == websocket.opc.Track_Scan_Progress){
-          console.log("Scan Progress");
+          console.log("Scan Progress", data);
           websocket.stc_scan_progress(data);
         }
         else if(data[0] == websocket.opc.Track_Layout_Update){
-          console.log("Partial Track Layout");
+          console.log("Partial Track Layout", data);
           websocket.stc_track_setup_partial(data);
         }
         else if(data[0] == websocket.opc.Track_Layout_Config){
-          console.log("Track Layout");
+          console.log("Track Layout", data);
           websocket.stc_track_setup(data);
         }
         else if(data[0] == websocket.opc.Z21_Track_Info){
+          console.log("Z21_Track_Info", data);
           websocket.stc_track_info(data.slice(1));
         }
         else if(data[0] == websocket.opc.Z21_Settings){
+          console.log("Z21_Settings", data);
           websocket.stc_z21_settings(data.slice(1));
         }
         else if(data[0] == websocket.opc.AdminLogin){
+          console.log("AdminLogin", data);
           websocket.stc_login();
         }
 
       /*  TRAIN MESSAGES  */
 
         else if(data[0] == websocket.opc.Z21TrainData){
-          console.log("Z21 Train data");
+          console.log("Z21 Train data", data);
           websocket.stc_train_data(data);
         }
         else if(data[0] == websocket.opc.LinkTrain){
-          console.log("Link train");
+          console.log("Link train", data);
           train_follow[data[1]] = data[2]; // Link the follow ID to the train ID
         }
 
         else if(data[0] == websocket.opc.EnginesLibrary){
+          console.log("Engine Lib", data);
           websocket.stc_engines_lib(data.slice(1));
         }
 
         else if(data[0] == websocket.opc.AddNewEnginetolib){
-          console.log("AddNewEnginetoLibrary");
+          console.log("AddNewEnginetoLibrary", data);
           websocket.stc_newengine_tolib(data);
         }
 
         else if(data[0] == websocket.opc.CarsLibrary){
+          console.log("Engine Lib", data);
           websocket.stc_cars_lib(data.slice(1));
         }
 
@@ -1249,6 +1251,7 @@ function WebSocket_handler(adress){
         }
 
         else if(data[0] == websocket.opc.TrainsLibrary){
+          console.log("Trains Lib", data);
           websocket.stc_trains_lib(data.slice(1));
         }
 
@@ -1258,62 +1261,68 @@ function WebSocket_handler(adress){
         }
 
         else if(data[0] == websocket.opc.TrainCategories){
+          console.log("Train Catagories", data);
           websocket.stc_traincategories(data.slice(1));
         }
 
       /*  TRACK MESSAGES  */
 
         else if(data[0] == websocket.opc.BroadTrack){
-          console.log("Update for the track");
+          console.log("Update for the track", data);
           websocket.stc_track_broadcast(data);
         }else if(data[0] == websocket.opc.BroadSwitch){
-          console.log("Update for the Switches");
+          console.log("Update for the Switches", data);
           websocket.stc_switch_broadcast(data);
         }
         else if(data[0] == websocket.opc.TrackLayoutSetup){
-          console.log("Track Layout");
+          console.log("Track Layout", data);
           websocket.stc_track_load(data);
         }
         else if(data[0] == websocket.opc.TrackLayoutOnlyRawData){
-          console.log("Track Layout Data");
+          console.log("Track Layout Data", data);
           websocket.stc_track_layout_data(data);
         }
 
       /* GENERAL MESSAGES */
         else if(data[0] == websocket.opc.EmergencyStop){
-          console.warn("Emergency Stop enabled");
+          console.warn("Emergency Stop enabled", data);
           websocket.stc_emergency(0);
         }
         else if(data[0] == websocket.opc.ShortCircuitStop){
-          console.warn("Short Circuit enabled");
+          console.warn("Short Circuit enabled", data);
           websocket.stc_emergency(1);
         }
         else if(data[0] == websocket.opc.ClearEmergency){
-          console.warn("Emergency released");
+          console.warn("Emergency released", data);
           websocket.stc_emergency(2);
         }
         else if(data[0] == websocket.opc.NewMessage){
-          console.log("New Message");
+          console.log("New Message", data);
           websocket.stc_new_message(data);
         }
         else if(data[0] == websocket.opc.UpdateMessage){
-          console.log("Clear Message");
+          console.log("Clear Message", data);
           websocket.stc_update_message(data);
         }
         else if(data[0] == websocket.opc.ClearMessage){
-          console.log("Clear Message");
+          console.log("Clear Message", data);
           websocket.stc_clear_message(data);
         }
         else if(data[0] == websocket.opc.ChangeBroadcast){
-          console.log("New Broadcast Flags");
+          console.log("New Broadcast Flags", data);
           websocket.stc_Broadcast_Flags(data);
         }
         else if(data[0] == websocket.opc.Service_State){
-          websocket.stc_service_state(data);
+          websocket.stc_service_state(data, data);
         }
         else if(data[0] == websocket.opc.Canvas_Data){
-          console.log("Canvas Data");
+          console.log("Canvas Data", data);
           websocket.stc_canvas_data(data);
+        }
+
+
+        else{
+          console.warn("Unkown data packet", data);
         }
 
       /* Old Opcodes */

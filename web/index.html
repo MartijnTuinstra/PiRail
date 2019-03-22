@@ -264,26 +264,6 @@ header('Pragma: no-cache');
 				this._resize.push(callback)
 			},
 			_resize: [],
-
-			ws_onopen: function(){
-				for(var i = 0; i < this._ws_onopen.length; i++){
-					this._ws_onopen[i]();
-				}
-			},
-			add_ws_onopen: function(callback){
-				this._ws_onopen.push(callback)
-			},
-			_ws_onopen: [],
-
-			ws_onclose: function(){
-				for(var i = 0; i < this._ws_onclose.length; i++){
-					this._ws_onclose[i]();
-				}
-			},
-			add_ws_onclose: function(callback){
-				this._ws_onclose.push(callback)
-			},
-			_ws_onclose: []
 		};
 	</script>
 </head>
@@ -653,7 +633,7 @@ header('Pragma: no-cache');
 		<script src="./scripts/Sortable.js"></script>
 
 		<script src="./scripts/canvas.js"></script>
-		<script src="./scripts/socket.js"></script>
+		<script src="./scripts/socket_test.js"></script>
 		<script src="./scripts/train.js"></script>
 		<script src="./scripts/modals.js"></script>
 		<script src="./scripts/modules.js"></script>
@@ -702,7 +682,7 @@ header('Pragma: no-cache');
 					}
 				}
 
-				websocket.ws_close_add(this.ws_close.bind(this));
+				// websocket.ws_close_add(this.ws_close.bind(this));
 			},
 			update: function(data){
 				var keys = Object.keys(data);
@@ -758,34 +738,34 @@ header('Pragma: no-cache');
 		});
 
 		function throw_Switch(m,s){
-			if(!ws.connected){
+			if(!websocket.connected){
 				console.error("Throw_switchc: not connected");
 			}
 
 			if(modules[m].switches[s] == 0){
-				websocket.cts_set_switch([[m,s,1]]);
+				websocket.cts_SetSwitch([m,s,1]);
 			}else{
-				websocket.cts_set_switch([[m,s,0]]);
+				websocket.cts_SetSwitch([m,s,0]);
 			}
 		}
 
 		function throw_doubleSlib(m,sw){
-			if(!ws.connected){
+			if(!websocket.connected){
 				console.error("Not connected");
 				return;
 			}
 
 			if(modules[m].switches[sw[0]] == 0){
 				if(modules[m].switches[sw[1]] == 0){
-					websocket.cts_set_switch([[m,sw[0],0],[m,sw[1],1]]);
+					websocket.cts_SetMultiSwitch([[m,sw[0],0],[m,sw[1],1]]);
 				}else{
-					websocket.cts_set_switch([[m,sw[0],1],[m,sw[1],1]]);
+					websocket.cts_SetMultiSwitch([[m,sw[0],1],[m,sw[1],1]]);
 				}
 			}else{
 				if(modules[m].switches[sw[1]] == 1){
-					websocket.cts_set_switch([[m,sw[0],1],[m,sw[1],0]]);
+					websocket.cts_SetMultiSwitch([[m,sw[0],1],[m,sw[1],0]]);
 				}else{
-					websocket.cts_set_switch([[m,sw[0],0],[m,sw[1],0]]);
+					websocket.cts_SetMultiSwitch([[m,sw[0],0],[m,sw[1],0]]);
 				}
 			}
 		}

@@ -524,7 +524,7 @@ void train_write_confs(){
   }
 
   //Print output
-  print_hex(data, size);
+  // print_hex(data, size);
 
   FILE * fp = fopen(TRAIN_CONF_PATH, "wb");
 
@@ -600,6 +600,29 @@ void engine_calc_speed(Engines * E){
   uint8_t step = ratio * ((float)(right.step - left.step)) + left.step;
 
   E->speed = step;
+}
+
+void engine_calc_real_speed(Engines * E){
+  struct engine_speed_steps * left;
+  struct engine_speed_steps * right;
+
+  left = 0;
+  right = 0;
+
+  for(int i = 0; i < E->steps_len; i++){
+    if(E->steps[i].step < E->speed){
+      left = &E->step[i];
+    }
+
+    if(E->step[i].step >= E->speed && right == 0){
+      right = &E->step[i];
+    }
+  }
+
+  float ratio = ((float)(E->speed - left.step)) / ((float)(right.step - left.step));
+  uint8_t speed = ratio * ((float)(right.speed - left.speed)) + left.speed;
+
+  E->cur_speed = speed;
 }
 
 void train_calc_speed(Trains * T){

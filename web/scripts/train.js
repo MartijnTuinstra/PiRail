@@ -41,7 +41,7 @@ var Train_Control = {
 
           this.set_speed(box, pos / ylim);
 
-          // websocket.cts_train_speed(this.train[box].type, this.train[box].t);
+          // websocket.cts_TrainSpeed({type: this.train[box].type, train: this.train[box].t});
 
           this.set_handle(box, pos);
         }
@@ -106,7 +106,7 @@ var Train_Control = {
   },
 
   send_speed: function(box, resend){
-    websocket.cts_train_speed(this.train[box].type, this.train[box].t);
+    websocket.cts_TrainSpeed({type: this.train[box].type, train: this.train[box].t});
     if(resend != undefined && resend){
       this.timer = setTimeout(this.send_speed.bind(this, box, true), 100);
     }
@@ -126,13 +126,13 @@ var Train_Control = {
       this.train[box].t.dir = 0;
     }
 
-    websocket.cts_train_speed(this.train[box].type, this.train[box].t);
+    websocket.cts_TrainSpeed({type: this.train[box].type, train: this.train[box].t});
   },
   set_stop: function(box){
     this.set_handle(box, 0);
     this.set_speed(box, 0);
 
-    websocket.cts_train_speed(this.train[box].type, this.train[box].t);
+    websocket.cts_TrainSpeed({type: this.train[box].type, train: this.train[box].t});
   },
   get_box: function(target){
     var box = $(target).closest('.train-box');

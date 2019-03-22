@@ -471,10 +471,10 @@ var Canvas = {
 		var update = false;
 		var tmp_this = this;
 
-		_x = (x - tmp_this.dimensions.ofX + tmp_this.dimensions.content.ofX)/tmp_this.dimensions.scale;
-		_y = (y - tmp_this.dimensions.ofY + tmp_this.dimensions.content.ofY)/tmp_this.dimensions.scale;
+		click_x = (x - tmp_this.dimensions.ofX + tmp_this.dimensions.content.ofX)/tmp_this.dimensions.scale;
+		click_y = (y - tmp_this.dimensions.ofY + tmp_this.dimensions.content.ofY)/tmp_this.dimensions.scale;
 
-		console.log("xy", [_x, _y]);
+		console.log("xy", [click_x, click_y]);
 
 		$.each(modules,function(module,module_v){
 			if(!module_v.visible){
@@ -490,8 +490,8 @@ var Canvas = {
 			var rvY = Math.sin((module_v.r+0.5)*Math.PI);
 			var rvY_ = Math.sin((module_v.r)*Math.PI);
 
-			_x = _x - ofX;
-			_y = _y - ofY;
+			_x = click_x - ofX;
+			_y = click_y - ofY;
 
 			_l = Math.sqrt(Math.pow(_x,2)+Math.pow(_y,2));
 			_r = Math.atan2(_y, _x);

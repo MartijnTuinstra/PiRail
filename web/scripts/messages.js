@@ -208,10 +208,10 @@ class submodule {
 
 	hit(evt){
 		if(this.state == 0 || this.state == 1){
-			websocket.cts_enable_submodule(this.enable_bit);
+			websocket.cts_EnableSubModule(this.enable_bit);
 		}
 		else{
-			websocket.cts_disable_submodule(this.enable_bit);
+			websocket.cts_DisableSubModule(this.enable_bit);
 		}
 	}
 

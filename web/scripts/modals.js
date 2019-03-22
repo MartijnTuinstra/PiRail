@@ -23,7 +23,7 @@ var Modals = {
         Updating will result in subsystem restarting',
       buttons: {
         success: {visible: false, content: ""},
-        warning: {visible: true, content: "Update", cb: function(ip){websocket.cts_z21_settings(ip)}, wait: false},
+        warning: {visible: true, content: "Update", cb: function(ip){websocket.cts_Z21_Settings(ip)}, wait: false},
         danger: {visible: true, content: "Cancel", cb: undefined, wait: false},
       }
     },
@@ -176,9 +176,9 @@ var Modals = {
             <div class="row car" style="display:none; max-height: 300px; overflow-y: scroll; font-size: 0.8em">\
             </div>',
       buttons: {
-        success: {visible: true, content: "Create", cb: function(data){websocket.cts_add_train(data)}, wait: false},
-        warning: {visible: true, content: "Update", cb: function(data){websocket.cts_edit_train(data, data.id)}, wait: false},
-        danger: {visible: true, content: "Delete", cb: function(data){websocket.cts_edit_train(data, data.id, false)}, wait: false},
+        success: {visible: true, content: "Create", cb: function(data){websocket.cts_AddNewTraintolib(data)}, wait: false},
+        warning: {visible: true, content: "Update", cb: function(data){websocket.cts_EditTrainlib(data)}, wait: false},
+        danger: {visible: true, content: "Delete", cb: function(data){data.edit = false; websocket.cts_EditTrainlib(data)}, wait: false},
       }
     },
 
@@ -458,13 +458,13 @@ var Modals = {
                 </div>',
       buttons: {
         success: {visible: true, content: "Create",
-              cb: function(data){websocket.cts_add_engine(data)},
+              cb: function(data){websocket.cts_AddNewEnginetolib(data)},
               wait: true},
         warning: {visible: true, content: "Update",
-                  cb: function(data){websocket.cts_edit_engine(data, data.id)},
+                  cb: function(data){websocket.cts_EditEnginelib(data)},
                   wait: true},
         danger: {visible: true, content: "Delete",
-                 cb: function(){websocket.cts_edit_engine({id:data.id}, false)},
+                 cb: function(){data.edit = false; websocket.cts_EditEnginelib(data)},
                  wait: false},
       }
     },
@@ -571,9 +571,9 @@ var Modals = {
                     </div>\
                   </div>',
       buttons: {
-        success: {visible: true, content: "Create", cb: function(data){websocket.cts_add_car(data)}, wait: false},
-        warning: {visible: true, content: "Update", cb: function(data){websocket.cts_edit_car(data, data.id)}, wait: false},
-        danger: {visible: true, content: "Delete", cb: function(data){websocket.cts_edit_car(data, data.id, false)}, wait: false},
+        success: {visible: true, content: "Create", cb: function(data){websocket.cts_AddNewCartolib(data)}, wait: false},
+        warning: {visible: true, content: "Update", cb: function(data){websocket.cts_EditCarlib(data)}, wait: false},
+        danger: {visible: true, content: "Delete", cb: function(data){data.edit = false; websocket.cts_EditCarlib(data)}, wait: false},
       }
     },
 
@@ -1249,7 +1249,7 @@ var Modals = {
         if(type == "number"){
           that.data[name] = parseInt(that.data[name]);
         }
-        else if(parseFloat(that.data[name]) != NaN){
+        else if(isNaN(parseFloat(that.data[name])) == false){
           that.data[name] = parseFloat(that.data[name]);
         }
       }
@@ -1264,7 +1264,7 @@ var Modals = {
         if(type == "number"){
           that.data[name] = parseInt(that.data[name]);
         }
-        else if(parseFloat(that.data[name]) != NaN){
+        else if(isNaN(parseFloat(that.data[name])) == false){
           that.data[name] = parseFloat(that.data[name]);
         }
       }

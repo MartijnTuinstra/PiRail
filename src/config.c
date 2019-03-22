@@ -110,7 +110,7 @@ int calc_write_train_size(struct train_config * config){
 }
 
 void print_hex(char * data, int size){
-  if(read_level() >= TRACE){
+  // if(read_level() >= TRACE){
     printf("print_hex:\n");
     for(int i = 0; i < size; i++){
       printf("%02x ", data[i]);
@@ -118,7 +118,7 @@ void print_hex(char * data, int size){
         printf("\n");
     }
     printf("\n");
-  }
+  // }
 }
 
 void write_module_from_conf(struct module_config * config, char * filename){
@@ -221,7 +221,7 @@ void write_module_from_conf(struct module_config * config, char * filename){
   p += sizeof(uint16_t);
 
   //Print output
-  print_hex(data, size);
+  // print_hex(data, size);
 
   FILE * fp = fopen(filename, "wb");
 
@@ -310,7 +310,7 @@ void write_train_from_conf(struct train_config * config, char * filename){
   }
 
   //Print output
-  print_hex(data, size);
+  // print_hex(data, size);
 
   FILE * fp = fopen(filename, "wb");
 

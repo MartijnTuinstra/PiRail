@@ -186,8 +186,6 @@ void * Algor_Run(){
     }
   }
 
-  ReadAllModuleConfigs();
-
   //UART_Send_Search();
   
   usleep(200000);
@@ -198,7 +196,7 @@ void * Algor_Run(){
   _SYS->LC_State = _SYS_LC_Connecting;
   WS_stc_SubmoduleState();
   Connect_Rail_links();
-  WS_Track_Layout();
+  WS_Track_Layout(0);
   usleep(800000);
   _SYS->LC_State = _SYS_Module_Run;
   WS_stc_SubmoduleState();
@@ -1766,7 +1764,7 @@ int connect_Algor(struct ConnectList * List){
   }
 
   if(value == total){
-    _SYS_change(STATE_Modules_Coupled | STATE_Modules_Loaded, 1);
+    _SYS_change(STATE_Modules_Coupled, 1);
   }
 
   return value;

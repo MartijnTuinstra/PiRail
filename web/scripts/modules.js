@@ -8,6 +8,11 @@ var ModuleEditor = {
 			return;
 		}
 
+		$("#moduleconfig #ModuleSettings td[name='cog']").html(settings("#ccc", 23));
+		$("#moduleconfig #ModuleSettings td[name='cog'] svg").on("click", function(){
+			Modals.open("module.settings", ModuleEditor.open);
+		});
+
 		this.update();
 	},
 
@@ -16,6 +21,7 @@ var ModuleEditor = {
 	},
 
 	update: function(module){
+		$("#moduleconfig div > canvas").off("click");
 		$("#moduleconfig .moduleContainer").empty();
 		content = "";
 
@@ -57,15 +63,12 @@ var ModuleEditor = {
 		}
 
 		$("#moduleconfig .moduleContainer").css("width", width);
-
-		$("#moduleconfig #ModuleSettings td[name='cog']").html(settings("#ccc", 23));
-		$("#moduleconfig #ModuleSettings td[name='cog'] svg").on("click", function(){
-			Modals.open("module.settings", ModuleEditor.open);
-		});
 	},
 
 	loadModule: function(module){
 		ModuleEditor.open = module;
+
+		websocket.cts_layout_request_raw(module);
 
 		$("#moduleconfig .moduleContainer .modulebox.selected").removeClass("selected");
 		$("#moduleconfig .moduleContainer .modulebox canvas#EditorModule"+module).parent().addClass("selected");

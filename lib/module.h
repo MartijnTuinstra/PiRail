@@ -43,6 +43,9 @@
 
     uint16_t Layout_length;
     char * Layout;
+
+    uint16_t raw_length;
+    char * raw;
   } Unit;
 
   #define ModuleConfigBasePath "./configs/units/"

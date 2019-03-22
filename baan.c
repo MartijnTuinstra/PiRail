@@ -48,6 +48,8 @@ int main(){
   
   init_trains();
   Z21_boot();
+  
+  ReadAllModuleConfigs();
 
   websocket_server();
 

@@ -813,7 +813,6 @@ var Modals = {
           }
 
           $('input', $(evt.target).parent().parent()).val(round(val, 3));
-          console.log();
         });
 
         $("input[name='block']", ref).val(modules[data.m].data[data.id].b);
@@ -830,7 +829,7 @@ var Modals = {
       title: "Edit Line",
       content: '<div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
                   <div class="col-2 control-label"><span style="line-height: 38px;vertical-align:middle">X<sub>1</sub></span></div>\
-                  <div class="col-4"><input name="x1" type="float" class="modal-form form-control input-sm">\
+                  <div class="col-4"><input name="x1" type="text" class="modal-form form-control input-sm">\
                     <div class="btn-group btn-group-sm" role="group" style="margin: 0.5em auto;display: flex;flex-direction: row;justify-content: center;">\
                       <button type="button" class="btn btn-secondary">-Sw</button>\
                       <button type="button" class="btn btn-secondary">-ds</button>\
@@ -838,7 +837,7 @@ var Modals = {
                       <button type="button" class="btn btn-secondary">+Sw</button>\
                     </div></div>\
                   <div class="col-2 control-label"><span style="line-height: 38px;vertical-align:middle">Y<sub>1</sub></span></div>\
-                  <div class="col-4"><input name="y1" type="float" class="modal-form form-control input-sm">\
+                  <div class="col-4"><input name="y1" type="text" class="modal-form form-control input-sm">\
                     <div class="btn-group btn-group-sm" role="group" style="margin: 0.5em auto;display: flex;flex-direction: row;justify-content: center;">\
                       <button type="button" class="btn btn-secondary">-Sw</button>\
                       <button type="button" class="btn btn-secondary">-ds</button>\
@@ -848,7 +847,7 @@ var Modals = {
                 </div>\
                 <div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
                   <div class="col-2 control-label"><span style="line-height: 38px;vertical-align:middle">X<sub>2</sub></span></div>\
-                  <div class="col-4"><input name="x2" type="float" class="modal-form form-control input-sm">\
+                  <div class="col-4"><input name="x2" type="text" class="modal-form form-control input-sm">\
                     <div class="btn-group btn-group-sm" role="group" style="margin: 0.5em auto;display: flex;flex-direction: row;justify-content: center;">\
                       <button type="button" class="btn btn-secondary">-Sw</button>\
                       <button type="button" class="btn btn-secondary">-ds</button>\
@@ -856,7 +855,7 @@ var Modals = {
                       <button type="button" class="btn btn-secondary">+Sw</button>\
                     </div></div>\
                   <div class="col-2 control-label"><span style="line-height: 38px;vertical-align:middle">Y<sub>2</sub></span></div>\
-                  <div class="col-4"><input name="y2" type="float" class="modal-form form-control input-sm">\
+                  <div class="col-4"><input name="y2" type="text" class="modal-form form-control input-sm">\
                     <div class="btn-group btn-group-sm" role="group" style="margin: 0.5em auto;display: flex;flex-direction: row;justify-content: center;">\
                       <button type="button" class="btn btn-secondary">-Sw</button>\
                       <button type="button" class="btn btn-secondary">-ds</button>\
@@ -865,8 +864,9 @@ var Modals = {
                     </div></div>\
                 </div>\
                 <div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
-                  <div class="col-4 control-label"><span style="line-height: 38px;vertical-align:middle">Block</span></div>\
-                  <div class="col-8"><input type="number" name="block" class="modal-form form-control input-sm"></div>\
+                  <div class="col-2 control-label"><span style="line-height: 38px;vertical-align:middle">Block</span></div>\
+                  <div class="col-4"><input type="number" name="block" class="modal-form form-control input-sm"></div>\
+                  <div class="col-6"></div>\
                 </div>',
       buttons: {
         success: {visible: true, content: "Update", cb: undefined, wait: false},
@@ -877,6 +877,8 @@ var Modals = {
     "module.arc":{
       link: "",
       open_cb: function(data, ref){
+
+        $('#modal .modal-dialog').css("max-width", "800px");
 
         $('.modal-body button', ref).on("click", function(evt){
           var val = parseFloat($('input', $(evt.target).parent().parent()).val());
@@ -908,7 +910,6 @@ var Modals = {
           }
 
           $('input', $(evt.target).parent().parent()).val(round(val, 3));
-          console.log();
         });
 
         $("input[name='block']", ref).val(modules[data.m].data[data.id].b);
@@ -918,12 +919,26 @@ var Modals = {
         $("input[name='r']", ref).val(modules[data.m].data[data.id].r);
         $("input[name='s1']", ref).val(modules[data.m].data[data.id].start);
         $("input[name='s2']", ref).val(modules[data.m].data[data.id].end);
+        $("input[name='s3']", ref)[0].checked = modules[data.m].data[data.id].cw;
 
+      },
+      close_cb: function(){
+        $('#modal .modal-dialog').css("max-width", "");
       },
       title: "Edit Arc",
       content: '<div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
-                  <div class="col-4 control-label"><span style="line-height: 38px;vertical-align:middle">X</span></div>\
-                  <div class="col-8"><input name="cx" type="float" class="modal-form form-control input-sm">\
+                  <div class="col-2 control-label"><span style="line-height: 38px;vertical-align:middle">X</span></div>\
+                  <div class="col-4"><input name="cx" type="text" class="modal-form form-control input-sm">\
+                    <div class="btn-group btn-group-sm" role="group" style="margin: 0.5em auto;display: flex;flex-direction: row;justify-content: center;">\
+                      <button type="button" class="btn btn-secondary">-R1</button>\
+                      <button type="button" class="btn btn-secondary">-Sw</button>\
+                      <button type="button" class="btn btn-secondary">-ds</button>\
+                      <button type="button" class="btn btn-secondary">+ds</button>\
+                      <button type="button" class="btn btn-secondary">+Sw</button>\
+                      <button type="button" class="btn btn-secondary">+R1</button>\
+                    </div></div>\
+                  <div class="col-2 control-label"><span style="line-height: 38px;vertical-align:middle">Y</span></div>\
+                  <div class="col-4"><input name="cy" type="text" class="modal-form form-control input-sm">\
                     <div class="btn-group btn-group-sm" role="group" style="margin: 0.5em auto;display: flex;flex-direction: row;justify-content: center;">\
                       <button type="button" class="btn btn-secondary">-R1</button>\
                       <button type="button" class="btn btn-secondary">-Sw</button>\
@@ -934,32 +949,21 @@ var Modals = {
                     </div></div>\
                 </div>\
                 <div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
-                  <div class="col-4 control-label"><span style="line-height: 38px;vertical-align:middle">Y</span></div>\
-                  <div class="col-8"><input name="cy" type="float" class="modal-form form-control input-sm">\
-                    <div class="btn-group btn-group-sm" role="group" style="margin: 0.5em auto;display: flex;flex-direction: row;justify-content: center;">\
-                      <button type="button" class="btn btn-secondary">-R1</button>\
-                      <button type="button" class="btn btn-secondary">-Sw</button>\
-                      <button type="button" class="btn btn-secondary">-ds</button>\
-                      <button type="button" class="btn btn-secondary">+ds</button>\
-                      <button type="button" class="btn btn-secondary">+Sw</button>\
-                      <button type="button" class="btn btn-secondary">+R1</button>\
-                    </div></div>\
-                </div>\
-                <div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
-                  <div class="col-4 control-label"><span style="line-height: 38px;vertical-align:middle">X<sub>2</sub></span></div>\
-                  <div class="col-8"><input name="r" type="float" class="modal-form form-control input-sm">\
+                  <div class="col-2 control-label"><span style="line-height: 38px;vertical-align:middle">R</span></div>\
+                  <div class="col-4"><input name="r" type="text" class="modal-form form-control input-sm">\
                     <div class="btn-group btn-group-sm" role="group" style="margin: 0.5em auto;display: flex;flex-direction: row;justify-content: center;">\
                       <button type="button" class="btn btn-secondary">Radius 1</button>\
                     </div></div>\
+                  <div class="col-2 control-label"><span style="line-height: 38px;vertical-align:middle">Block</span></div>\
+                  <div class="col-4"><input type="number" name="block" class="modal-form form-control input-sm"></div>\
                 </div>\
                 <div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
-                  <div class="col-4 control-label"><span style="line-height: 38px;vertical-align:middle">Y<sub>2</sub></span></div>\
-                  <div class="col-4"><input name="s1" type="float" class="modal-form form-control input-sm"></div>\
-                  <div class="col-4"><input name="s2" type="float" class="modal-form form-control input-sm"></div>\
-                </div>\
-                <div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
-                  <div class="col-4 control-label"><span style="line-height: 38px;vertical-align:middle">Block</span></div>\
-                  <div class="col-8"><input type="number" name="block" class="modal-form form-control input-sm"></div>\
+                  <div class="col-2 control-label"><span style="line-height: 38px;vertical-align:middle">Block</span></div>\
+                  <div class="col-4"><input name="s1" type="text" class="modal-form form-control input-sm"></div>\
+                  <div class="col-4"><input name="s2" type="text" class="modal-form form-control input-sm"></div>\
+                  <div class="col-2"><span style="margin: 6px auto;display: block;width: 60px;height: 26px;">\
+                    <input name="s3" type="checkbox" class="modal-form form-control input-sm" style="width:20px;display:inline">\
+                    <label>CCW</label></span></div>\
                 </div>',
       buttons: {
         success: {visible: true, content: "Update", cb: undefined, wait: false},
@@ -971,9 +975,89 @@ var Modals = {
       link: "",
       open_cb: function(data, ref){
 
+        $('#modal .modal-dialog').css("max-width", "800px");
+
+        $('.modal-body button', ref).on("click", function(evt){
+          var val = parseFloat($('input', $(evt.target).parent().parent()).val());
+
+          var xy = $('input', $(evt.target).parent().parent()).attr("name").startsWith("x");
+
+          switch($(evt.target).text()){
+            case "-Sw":
+              val -= xy?ro[0].x:ro[0].y;
+              break;
+            case "-ds":
+              val += ds;
+              break;
+            case "+ds":
+              val -= ds;
+              break;
+            case "+Sw":
+              val += xy?ro[0].x:ro[0].y;
+              break;
+            case "Radius 1":
+              val = radia[0];
+              break;
+            case "+R1":
+              val += radia[0];
+              break;
+            case "-R1":
+              val -= radia[0];
+              break;
+          }
+
+          $('input', $(evt.target).parent().parent()).val(round(val, 3));
+        });
+
+        $("input[name='block']", ref).val(modules[data.m].data[data.id].b);
+        $("input[name='switch']", ref).val(modules[data.m].data[data.id].s);
+
+        $("input[name='x']", ref).val(modules[data.m].data[data.id].x);
+        $("input[name='y']", ref).val(modules[data.m].data[data.id].y);
+        $("input[name='r']", ref).val(modules[data.m].data[data.id].r);
+        $("input[name='side']", ref)[0].checked = (modules[data.m].data[data.id].type == "swl")?true:false;
+
+      },
+      close_cb: function(){
+        $('#modal .modal-dialog').css("max-width", "");
       },
       title: "Edit Switch",
-      content: 'Test Switch',
+      content: '<div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
+                  <div class="col-2 control-label"><span style="line-height: 38px;vertical-align:middle">X</span></div>\
+                  <div class="col-4"><input name="x" type="text" class="modal-form form-control input-sm">\
+                    <div class="btn-group btn-group-sm" role="group" style="margin: 0.5em auto;display: flex;flex-direction: row;justify-content: center;">\
+                      <button type="button" class="btn btn-secondary">-R1</button>\
+                      <button type="button" class="btn btn-secondary">-Sw</button>\
+                      <button type="button" class="btn btn-secondary">-ds</button>\
+                      <button type="button" class="btn btn-secondary">+ds</button>\
+                      <button type="button" class="btn btn-secondary">+Sw</button>\
+                      <button type="button" class="btn btn-secondary">+R1</button>\
+                    </div></div>\
+                  <div class="col-2 control-label"><span style="line-height: 38px;vertical-align:middle">Y</span></div>\
+                  <div class="col-4"><input name="y" type="text" class="modal-form form-control input-sm">\
+                    <div class="btn-group btn-group-sm" role="group" style="margin: 0.5em auto;display: flex;flex-direction: row;justify-content: center;">\
+                      <button type="button" class="btn btn-secondary">-R1</button>\
+                      <button type="button" class="btn btn-secondary">-Sw</button>\
+                      <button type="button" class="btn btn-secondary">-ds</button>\
+                      <button type="button" class="btn btn-secondary">+ds</button>\
+                      <button type="button" class="btn btn-secondary">+Sw</button>\
+                      <button type="button" class="btn btn-secondary">+R1</button>\
+                    </div></div>\
+                </div>\
+                <div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
+                  <div class="col-2 control-label"><span style="line-height: 38px;vertical-align:middle">Rotation</span></div>\
+                  <div class="col-4"><input name="r" type="text" class="modal-form form-control input-sm"></div>\
+                  <div class="col-2">Side</div>\
+                  <div class="col-4"><span style="margin: 6px auto;display: block;width: 60px;height: 26px;">\
+                    <input name="side" type="checkbox" class="modal-form form-control input-sm" style="width:20px;display:inline">\
+                    <label>Left</label></span></div>\
+                </div>\
+                <div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
+                  <div class="col-2 control-label"><span style="line-height: 38px;vertical-align:middle">Block</span></div>\
+                  <div class="col-4"><input type="number" name="block" class="modal-form form-control input-sm"></div>\
+                  <div class="col-2 control-label"><span style="line-height: 38px;vertical-align:middle">Switch</span></div>\
+                  <div class="col-4"><input type="number" name="switch" class="modal-form form-control input-sm"></div>\
+                </div>',
       buttons: {
         success: {visible: true, content: "Update", cb: undefined, wait: false},
         warning: {visible: true, content: "Discard", cb: undefined, wait: false},
@@ -984,9 +1068,91 @@ var Modals = {
       link: "",
       open_cb: function(data, ref){
 
+        $('#modal .modal-dialog').css("max-width", "800px");
+
+        $('.modal-body button', ref).on("click", function(evt){
+          var val = parseFloat($('input', $(evt.target).parent().parent()).val());
+
+          var xy = $('input', $(evt.target).parent().parent()).attr("name").startsWith("x");
+
+          switch($(evt.target).text()){
+            case "-Sw":
+              val -= xy?ro[0].x:ro[0].y;
+              break;
+            case "-ds":
+              val += ds;
+              break;
+            case "+ds":
+              val -= ds;
+              break;
+            case "+Sw":
+              val += xy?ro[0].x:ro[0].y;
+              break;
+            case "Radius 1":
+              val = radia[0];
+              break;
+            case "+R1":
+              val += radia[0];
+              break;
+            case "-R1":
+              val -= radia[0];
+              break;
+          }
+
+          $('input', $(evt.target).parent().parent()).val(round(val, 3));
+        });
+
+        $("input[name='block']", ref).val(modules[data.m].data[data.id].b);
+        $("input[name='switch1']", ref).val(modules[data.m].data[data.id].sA);
+        $("input[name='switch2']", ref).val(modules[data.m].data[data.id].sB);
+
+        $("input[name='x']", ref).val(modules[data.m].data[data.id].x);
+        $("input[name='y']", ref).val(modules[data.m].data[data.id].y);
+        $("input[name='r']", ref).val(modules[data.m].data[data.id].r);
+        $("input[name='flipped']", ref)[0].checked = (modules[data.m].data[data.id].type == "dsf")?true:false;
+
       },
-      title: "Edit Double Slip Switch",
-      content: 'Test Double Slip Switch',
+      close_cb: function(){
+        $('#modal .modal-dialog').css("max-width", "");
+      },
+      title: "Edit Double Slip",
+      content: '<div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
+                  <div class="col-2 control-label"><span style="line-height: 38px;vertical-align:middle">X</span></div>\
+                  <div class="col-4"><input name="x" type="text" class="modal-form form-control input-sm">\
+                    <div class="btn-group btn-group-sm" role="group" style="margin: 0.5em auto;display: flex;flex-direction: row;justify-content: center;">\
+                      <button type="button" class="btn btn-secondary">-R1</button>\
+                      <button type="button" class="btn btn-secondary">-Sw</button>\
+                      <button type="button" class="btn btn-secondary">-ds</button>\
+                      <button type="button" class="btn btn-secondary">+ds</button>\
+                      <button type="button" class="btn btn-secondary">+Sw</button>\
+                      <button type="button" class="btn btn-secondary">+R1</button>\
+                    </div></div>\
+                  <div class="col-2 control-label"><span style="line-height: 38px;vertical-align:middle">Y</span></div>\
+                  <div class="col-4"><input name="y" type="text" class="modal-form form-control input-sm">\
+                    <div class="btn-group btn-group-sm" role="group" style="margin: 0.5em auto;display: flex;flex-direction: row;justify-content: center;">\
+                      <button type="button" class="btn btn-secondary">-R1</button>\
+                      <button type="button" class="btn btn-secondary">-Sw</button>\
+                      <button type="button" class="btn btn-secondary">-ds</button>\
+                      <button type="button" class="btn btn-secondary">+ds</button>\
+                      <button type="button" class="btn btn-secondary">+Sw</button>\
+                      <button type="button" class="btn btn-secondary">+R1</button>\
+                    </div></div>\
+                </div>\
+                <div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
+                  <div class="col-2 control-label"><span style="line-height: 38px;vertical-align:middle">Rotation</span></div>\
+                  <div class="col-4"><input name="r" type="text" class="modal-form form-control input-sm"></div>\
+                  <div class="col-2">Mirror</div>\
+                  <div class="col-4"><span style="margin: 6px auto;display: block;width: 60px;height: 26px;">\
+                    <input name="flipped" type="checkbox" class="modal-form form-control input-sm" style="width:20px;display:inline">\
+                    <label>True</label></span></div>\
+                </div>\
+                <div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
+                  <div class="col-2 control-label"><span style="line-height: 38px;vertical-align:middle">Block</span></div>\
+                  <div class="col-4"><input type="number" name="block" class="modal-form form-control input-sm"></div>\
+                  <div class="col-2 control-label"><span style="line-height: 38px;vertical-align:middle">Switch</span></div>\
+                  <div class="col-2"><input type="number" name="switch1" class="modal-form form-control input-sm"></div>\
+                  <div class="col-2"><input type="number" name="switch2" class="modal-form form-control input-sm"></div>\
+                </div>',
       buttons: {
         success: {visible: true, content: "Update", cb: undefined, wait: false},
         warning: {visible: true, content: "Discard", cb: undefined, wait: false},
@@ -1011,6 +1177,8 @@ var Modals = {
         }
       }
     }
+
+    $('#modal').on('hidden.bs.modal', this.hide.bind(this));
   },
 
   call_cb: function(func_name, arg){
@@ -1041,7 +1209,7 @@ var Modals = {
       if(btn.visible){
         $('#modal .modal-footer .btn-'+buttons[i]).show();
         $('#modal .modal-footer .btn-'+buttons[i]).html(btn.content);
-        $('#modal .modal-footer .btn-'+buttons[i]).on("click", this.close.bind(this, buttons[i]));
+        $('#modal .modal-footer .btn-'+buttons[i]).on("click", this.button.bind(this, buttons[i]));
       }
       else{
         $('#modal .modal-footer .btn-'+buttons[i]).hide();
@@ -1066,9 +1234,11 @@ var Modals = {
     $('#modal').modal('show');
   },
 
-  close: function(evt){
+  button: function(evt){
     this.data = {};
     var frame = this.frame;
+
+    //Get formdata
 
     var that = this;
     $.each($('#modal .modal-form'), function(){
@@ -1079,14 +1249,23 @@ var Modals = {
         if(type == "number"){
           that.data[name] = parseInt(that.data[name]);
         }
+        else if(parseFloat(that.data[name]) != NaN){
+          that.data[name] = parseFloat(that.data[name]);
+        }
       }
       else if(type == "file"){
         that.data[name] = this.files[0];
+      }
+      else if(type == "checkbox"){
+        that.data[name] = this.checked;
       }
       else if(this.tagName != "BUTTON" && (type == "text" || type == "number")){
         that.data[name] = this.value;
         if(type == "number"){
           that.data[name] = parseInt(that.data[name]);
+        }
+        else if(parseFloat(that.data[name]) != NaN){
+          that.data[name] = parseFloat(that.data[name]);
         }
       }
       else if(this.tagName != "BUTTON" && type == "speedsteps"){

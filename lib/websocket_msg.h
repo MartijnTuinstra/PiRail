@@ -19,7 +19,7 @@
 
   //System Messages
   void WS_Partial_Layout(uint8_t M_A,uint8_t M_B);
-  void WS_Track_Layout();
+  void WS_Track_Layout(int Client_fd);
 
   void WS_stc_Z21_info(int client_fd);
   void WS_stc_Z21_IP(int client_fd);
@@ -57,7 +57,7 @@ void WS_cts_Enable_Disable_SubmoduleState(uint8_t opcode, uint8_t flags);
   void WS_NewClient_track_Switch_Update(int Client_fd);
 
   void WS_Track_LayoutDataOnly(int unit, int Client_fd);
-  void WS_Track_LayoutData(int unit, int Client_fd);
+  void WS_stc_TrackLayoutRawData(int unit, int Client_fd);
 
   void WS_reset_switches(int client_fd);
 

@@ -168,9 +168,7 @@ void * websocket_client_connect(void * p){
     }
 
     if(_SYS->_STATE & STATE_Modules_Coupled){
-      ws_send(client->fd,(char [6]){2,4,1,8,4,2},6,8);
-
-      WS_Track_Layout();
+      WS_Track_Layout(client->fd);
       
       printf("Send new client JSON\n");
       WS_NewClient_track_Switch_Update(client->fd);

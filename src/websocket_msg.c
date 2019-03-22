@@ -84,7 +84,7 @@ void WS_Partial_Layout(uint8_t M_A,uint8_t M_B){
   }
 }
 
-void WS_Track_Layout(){
+void WS_Track_Layout(int Client_fd){
 
   char data[100];
   int q = 1;
@@ -115,7 +115,12 @@ void WS_Track_Layout(){
   printf("Send %i\n",q);
 
   if(q > 1){
-    ws_send_all(data,q,WS_Flag_Track);
+    if(Client_fd){
+      ws_send(Client_fd, data,q,WS_Flag_Track);
+    }
+    else{
+      ws_send_all(data,q,WS_Flag_Track);
+    }
   }
 }
 
@@ -1109,7 +1114,7 @@ void WS_reset_switches(int client_fd){
 }
 
 void WS_Track_LayoutDataOnly(int unit, int Client_fd){
-  loggerf(ERROR, "WS_Track_LayoutDataOnly");
+  loggerf(DEBUG, "WS_Track_LayoutDataOnly");
 
   char * data = _calloc(Units[unit]->Layout_length + 20, 1);
 
@@ -1127,8 +1132,20 @@ void WS_Track_LayoutDataOnly(int unit, int Client_fd){
   }
 }
 
-void WS_Track_LayoutData(int unit, int Client_fd){
+void WS_stc_TrackLayoutRawData(int unit, int Client_fd){
+  Unit * U = Units[unit];
+  char * data = _calloc(U->raw_length+2, 1);
+  data[0] = WSopc_TrackLayoutRawData;
+  data[1] = unit;
 
+  memcpy(&data[2], U->raw, U->raw_length);
+
+  if(Client_fd){
+    ws_send(Client_fd, data, U->raw_length+2, WS_Flag_Track);
+  }
+  else{
+    ws_send_all(data, U->raw_length+2, WS_Flag_Track);
+  }
 }
 
 //General Messages

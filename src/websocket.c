@@ -232,7 +232,13 @@ int websocket_decode(uint8_t data[1024], struct web_client_t * client){
     else if(data[0] == WSopc_SetSwitchRoute){ //Set a route for switches
 
     }
+
+    else if(data[0] == WSopc_TrackLayoutRawData){
+      WS_stc_TrackLayoutRawData(data[1], client->fd);
+    }
   }
+
+
   else if(data[0] & 0x10){ // General Operation
     loggerf(TRACE, "General Settings");
     if(data[0] == WSopc_EmergencyStop){ //Enable Emergency Stop!!

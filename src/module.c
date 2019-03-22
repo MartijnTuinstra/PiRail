@@ -240,6 +240,8 @@ void LoadModuleFromConfig(int M){
 
   uint8_t ** buf_ptr = (uint8_t **)&buffer;
 
+  char * raw = &buffer[2];
+
   *buf_ptr += 1;
 
   config->header = read_s_unit_conf(buf_ptr);
@@ -251,6 +253,11 @@ void LoadModuleFromConfig(int M){
 
 
   Create_Unit(M, config->header.IO_Nodes, config->header.connections);
+
+  //Raw copy
+  Units[M]->raw_length = fsize-1;
+  Units[M]->raw = _calloc(fsize+5, char);
+  memcpy(Units[M]->raw, raw, fsize-1);
 
   for(int i = 0; i < config->header.IO_Nodes; i++){
     struct s_node_conf node = read_s_node_conf(buf_ptr);
@@ -381,6 +388,8 @@ void ReadAllModuleConfigs(){
     LoadModuleFromConfig((int)moduleID_list[i]);
     WS_Track_LayoutDataOnly((int)moduleID_list[i], 0);
   }
+
+  _SYS_change(STATE_Modules_Loaded, 1);
 
   return;
 }

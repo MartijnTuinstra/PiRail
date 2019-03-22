@@ -486,6 +486,15 @@ var websocket = {
       }
     },
 
+    cts_layout_request_raw: function(module){
+      var data = [];
+
+      data[0] = this.opc.TrackLayoutRawData;
+      data[1] = module;
+
+      this.send(data);
+    },
+
   cts_release_Emergency: function(evt){
     this.send([this.opc.ClearEmergency]);
   },
@@ -577,23 +586,18 @@ var websocket = {
     // Track Layout Setup
     stc_track_setup: function(data){
       var first = true;
-      for(const key of Object.keys(modules)){
-        for(i in modules[key].connections){
-          i.connected = false;
+      for(var i = 1;i<data.length;i++){
+        var module = modules[data[i]]
+        for(var j = 1;j<= module.connections.length; j++){
+          module.connection_link[j-1] = data[i+j];
         }
-      }
-      // for(var i = 1;i<data.length;i++){
-      //   var module = modules[data[i]]
-      //   for(var j = 1;j<= module.connections.length; j++){
-      //     module.connection_link[j-1] = data[i+j];
-      //   }
-      //   console.log("Module "+data[i]+" connect ", module.connection_link);
-      //   i += module.connections.length;
+        console.log("Module "+data[i]+" connect ", module.connection_link, {x: module.OffsetX, y:module.OffsetY, r:module.r});
+        i += module.connections.length;
 
-      //   if(first){
-      //     module.move({OffsetX: 0, OffsetY: 0});
-      //   }
-      // }
+        module.connect();
+      }
+
+      Canvas.rescale(1);
     },
 
 
@@ -857,7 +861,7 @@ var websocket = {
       Canvas.update_frame();
     },
 
-    stc_track_layout_data: function(data){
+    stc_track_layout_only_data: function(data){
       function JsonParse(obj){
           return Function('"use strict";return (' + obj + ')')();
       };
@@ -865,7 +869,8 @@ var websocket = {
       var newdata = JsonParse(String.fromCharCode.apply(null, data.slice(2)));
       
       modules[newdata.id] = new canvas_module(newdata);
-      modules[newdata.id].visible = true;
+
+      modules[newdata.id].init({visible: true, OffsetX: 0, OffsetY: newdata.id*500, r: 0});
 
       ModuleEditor.update()
 
@@ -1281,8 +1286,12 @@ function WebSocket_handler(adress){
           websocket.stc_track_load(data);
         }
         else if(data[0] == websocket.opc.TrackLayoutOnlyRawData){
-          console.log("Track Layout Data", data);
-          websocket.stc_track_layout_data(data);
+          console.log("Track Layout Only Data", data);
+          websocket.stc_track_layout_only_data(data);
+        }
+        else if(data[0] == websocket.opc.TrackLayoutRawData){
+          console.log("Track Layout Raw Data", data);
+          // websocket.stc_track_layout_only_data(data);
         }
 
       /* GENERAL MESSAGES */

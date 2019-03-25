@@ -243,6 +243,10 @@ var Submodules = {
 		this.modules.push(new submodule( 8, 2, 3, "TrainControl", ["Stopped", "Initializing", "Running", "Failure"]));
 		this.modules.push(new submodule( 3, 2, 2, "SimA", ["Stopped", "Initializing", "Running", "Failure"]));
 		this.modules.push(new submodule( 1, 2, 1, "SimB", ["Stopped", "Initializing", "Running", "Failure"]));
+
+		websocket.ws_add_cb("ws_close_cb", function(){
+			Submodules.update(0);
+		});
 	},
 	update: function(flags){
 		for(var i = 0; i < this.modules.length; i++){

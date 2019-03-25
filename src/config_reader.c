@@ -288,8 +288,6 @@ int read_module_config(struct module_config * config, FILE * fp){
   char * buffer_start = &buffer[0];
   fread(buffer, fsize, 1, fp);
 
-  print_hex(buffer, fsize);
-
   uint8_t ** buf_ptr = (uint8_t **)&buffer;
 
   *buf_ptr += 1;
@@ -363,8 +361,6 @@ int read_train_config(struct train_config * config, FILE * fp){
   char * buffer = _calloc(fsize, char);
   char * buffer_start = &buffer[0];
   fread(buffer, fsize, 1, fp);
-
-  print_hex(buffer, fsize);
 
   uint8_t ** buf_ptr = (uint8_t **)&buffer;
 
@@ -1767,7 +1763,7 @@ int edit_module(){
 struct train_config * global_config;
 
 int edit_rolling_stock(){
-  printf("Reading file");
+  printf("Reading file\n");
 
   FILE * fp = fopen(TRAIN_CONF_PATH,"rb");
 
@@ -1842,7 +1838,7 @@ int edit_rolling_stock(){
 
 int main(){
   init_logger("log_config.txt");
-  set_level(MEMORY);
+  set_level(INFO);
 
   printf("Edit module or rolling stock? ");
 

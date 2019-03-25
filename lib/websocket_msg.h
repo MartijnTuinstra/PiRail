@@ -30,6 +30,10 @@ void WS_cts_Enable_Disable_SubmoduleState(uint8_t opcode, uint8_t flags);
   //Admin Messages
 
   //Train Messages
+  void WS_UpdateTrain(void * t, int type);
+  void WS_TrainSubscribe(uint8_t * data, struct web_client_t * client);
+
+
   void WS_EnginesLib(int client_fd);
   void WS_CarsLib(int client_fd);
   void WS_TrainsLib(int client_fd);

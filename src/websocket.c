@@ -19,6 +19,8 @@ int websocket_decode(uint8_t data[1024], struct web_client_t * client){
 
   struct s_WS_Data * d = (struct s_WS_Data *)data;
 
+  printf("Websocket_decode got: %02x %02x %02x %02x\n", data[0], data[1], data[2], data[3]);
+
   if((data[0] & 0xC0) == 0x80){ // System settings
     loggerf(TRACE, "System Settings");
     if(data[0] == WSopc_ClearTrack){
@@ -159,6 +161,9 @@ int websocket_decode(uint8_t data[1024], struct web_client_t * client){
     else if(data[0] == WSopc_TrainAddRoute){ //Add route to train
 
     }
+    else if(data[0] == WSopc_TrainSubscribe){
+      WS_TrainSubscribe(&data[1], client);
+    }
 
     else if(data[0] == WSopc_AddNewCartolib){
       WS_cts_AddCartoLib((void *)&d->data, client);
@@ -270,7 +275,15 @@ int websocket_decode(uint8_t data[1024], struct web_client_t * client){
 int websocket_get_msg(int fd, char outbuf[], int * length_out){
   char * buf = _calloc(1024, char);
   usleep(10000);
-  recv(fd,buf,1024,0);
+  int32_t recvlength = recv(fd,buf,1024,0);
+
+  printf("websocket_get_msg received %i bytes\n", recvlength);
+
+  if(recvlength <= 0){
+    return -7;
+  }
+
+  print_hex(buf, recvlength);
 
   uint16_t byte = 0;
 
@@ -334,7 +347,7 @@ int websocket_get_msg(int fd, char outbuf[], int * length_out){
 void websocket_create_msg(char * input, int length_in, char * output, int * length_out){
   char buf[10];
   int header_len = 0;
-  buf[0] = 0b10000000 + 0b00000010;
+  buf[0] = WEBSOCKET_FIN | WEBSOCKET_BIN_FRAME;
   if(length_in < 126){
     buf[1] = length_in;
     header_len = 2;

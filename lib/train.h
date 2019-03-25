@@ -12,6 +12,7 @@
   #define CONF_VERSION 1
 
   struct engine_speed_steps;
+  typedef struct trains Trains;
 
   struct train_funcs {
     char type:6;
@@ -34,6 +35,7 @@
 
   typedef struct engine {
     uint16_t DCC_ID;
+    uint16_t id;
     
     uint8_t type;
     uint8_t control;
@@ -41,6 +43,7 @@
     uint8_t halt;
 
     _Bool use;
+    Trains * train;
 
     char speed; // Z21 Speed
     char speed_step_type;
@@ -79,6 +82,7 @@
   struct train_comp_ws;
 
   typedef struct trains {
+    uint16_t id;
     char * name;
 
     uint8_t nr_engines;
@@ -111,6 +115,13 @@
   #define TRAIN_14_FAHR_STUFEN 0
   #define TRAIN_28_FAHR_STUFEN 1
   #define TRAIN_128_FAHR_STUFEN 2
+
+  #define TRAIN_MANUAL 0
+  #define TRAIN_SEMI_AUTO 1
+  #define TRAIN_FULL_AUTO 2
+
+  #define TRAIN_ENGINE_TYPE 0
+  #define TRAIN_TRAIN_TYPE 1
 
   extern Trains ** trains;
   extern int trains_len;
@@ -151,5 +162,6 @@
   void unlink_train(int fid);
 
   void engine_calc_speed(Engines * E);
+  void engine_calc_real_speed(Engines * E);
   void train_calc_speed(Trains * T);
 #endif

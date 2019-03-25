@@ -183,6 +183,7 @@ void create_train(char * name, int nr_stock, struct train_comp_ws * comps, uint8
   int index = find_free_index(trains, trains_len);
 
   trains[index] = Z;
+  Z->id = index;
 
   loggerf(INFO, "Train created at %i",index);
 }
@@ -235,6 +236,7 @@ void create_engine(char * name,int DCC,char * img, char * icon, char type, int l
   int index = find_free_index(engines, engines_len);
 
   engines[index] = Z;
+  Z->id = index;
 
   loggerf(DEBUG, "Engine \"%s\" created", name);
 }
@@ -292,7 +294,7 @@ int train_read_confs(){
   char * buffer_start = &buffer[0];
   fread(buffer, fsize, 1, fp);
 
-  print_hex(buffer, fsize);
+  //print_hex(buffer, fsize);
 
   uint8_t ** buf_ptr = (uint8_t **)&buffer;
 
@@ -577,6 +579,8 @@ void unlink_train(int fid){
   train_link[fid] = NULL;
 }
 
+// Speed
+
 void engine_calc_speed(Engines * E){
   struct engine_speed_steps left;
   struct engine_speed_steps right;
@@ -606,23 +610,36 @@ void engine_calc_real_speed(Engines * E){
   struct engine_speed_steps * left;
   struct engine_speed_steps * right;
 
-  left = 0;
+  struct engine_speed_steps temp;
+  temp.step = 0;
+  temp.speed = 0;
+
+  left = &temp;
   right = 0;
 
   for(int i = 0; i < E->steps_len; i++){
     if(E->steps[i].step < E->speed){
-      left = &E->step[i];
+      left = &E->steps[i];
     }
 
-    if(E->step[i].step >= E->speed && right == 0){
-      right = &E->step[i];
+    if(E->steps[i].step >= E->speed && right == 0){
+      right = &E->steps[i];
     }
   }
 
-  float ratio = ((float)(E->speed - left.step)) / ((float)(right.step - left.step));
-  uint8_t speed = ratio * ((float)(right.speed - left.speed)) + left.speed;
+  float ratio = ((float)(E->speed - left->step)) / ((float)(right->step - left->step));
+  uint8_t speed = ratio * ((float)(right->speed - left->speed)) + left->speed;
 
   E->cur_speed = speed;
+}
+
+void train_set_speed(Trains * T, uint16_t speed){
+  T->cur_speed = speed;
+
+  for(int i = 0; i < T->nr_engines; i++){
+    T->engines[i]->cur_speed = speed;
+    engine_calc_speed(T->engines[i]);
+  }
 }
 
 void train_calc_speed(Trains * T){

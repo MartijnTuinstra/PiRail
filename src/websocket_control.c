@@ -104,6 +104,41 @@ int websocket_client_check(struct web_client_t * client){
   }
 }
 
+int websocket_ping(int fd){
+  loggerf(WARNING, "Websocket ping fd:%i", fd);
+  char buf[10];
+  buf[0] = WEBSOCKET_FIN | WEBSOCKET_PING;
+  buf[1] = 0;
+
+  if(write(fd, buf, 2) == -1){
+    loggerf(WARNING, "socket write error %x", errno);
+  };
+
+  int i = 0;
+  while(i < 5){
+    memset(buf, 0, 10);
+
+    int32_t recvlength = recv(fd, buf, 10, 0);
+
+    if(recvlength <= 0){
+      return 0;
+    }
+
+    print_hex(buf, recvlength);
+
+    //Websocket opcode
+    int opcode = buf[0] & 0b00001111;
+
+    if(opcode == WEBSOCKET_PONG){
+      return 1;
+    }
+
+    i++;
+  }
+
+  return 0;
+}
+
 void * websocket_client_connect(void * p){
   struct web_client_t * client = p;
 
@@ -113,21 +148,56 @@ void * websocket_client_connect(void * p){
     return 0;
   }
 
+  //Set timeout
+  struct timeval tv;
+  tv.tv_sec = WEBSOCKET_CLIENT_TIMEOUT;
+  tv.tv_usec = 0;
+  setsockopt(client->fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
+
+  //Reset Subscribed Trains
+  client->trains[0].id = 0xFFF;
+  client->trains[1].id = 0xFFF;
+
   char * buf = _calloc(WS_BUF_SIZE, char);
   int length = 0;
 
   _SYS->_Clients++;
 
+  int counter = 0;
+
   char data[3];
   if(_SYS->Websocket_State == _SYS_Module_Init){
+    while(1){
     // Require login
     data[0] = WSopc_Admin_Login;
     ws_send(client->fd, data, 1, 0xFF);
 
+    usleep(100000);
+
     int status = websocket_get_msg(client->fd, buf, &length);
+
+    printf("Got websocket_get_msg statues %i\n", status);
 
     if(status == 1){
       websocket_decode((uint8_t *)buf, client);
+    }
+    else if(status == -7){
+      counter++;
+
+      if(counter > 10){
+        if(!websocket_ping(client->fd)){
+          loggerf(INFO, "Client %i timeout", client->fd);
+          close(client->fd);
+          _SYS->_Clients--;
+          client->state = 2;
+          _free(buf);
+          return 0;
+        }
+        else{
+          counter = 0;
+        }
+      }
+      continue;
     }
     else if(status == -8){
       loggerf(INFO, "Client %i disconnected", client->fd);
@@ -145,6 +215,10 @@ void * websocket_client_connect(void * p){
       client->state = 2;
       _free(buf);
       return 0;
+    }
+    else{
+      break;
+    }
     }
   }
 
@@ -197,22 +271,38 @@ void * websocket_client_connect(void * p){
 
   printf("Done\n");
 
-  //Set timeout
-  struct timeval tv;
-  tv.tv_sec = WEBSOCKET_CLIENT_TIMEOUT;
-  tv.tv_usec = 0;
-  setsockopt(client->fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
-
   memset(buf, 0, WS_BUF_SIZE);
+
+  uint8_t timeout_counter = 0;
 
   while(1){
     // If threre is data recieved
-    if(recv(client->fd, buf, WS_BUF_SIZE, MSG_PEEK) > 0){
+    // if(recv(client->fd, buf, WS_BUF_SIZE, MSG_PEEK) > 0){
       memset(buf, 0, WS_BUF_SIZE);
       int status = websocket_get_msg(client->fd, buf, &length);
 
       if(status == 1){
         websocket_decode((uint8_t *)buf, client);
+
+        timeout_counter = 0;
+      }
+      else if(status == -7){
+        timeout_counter++;
+        loggerf(INFO, "%i Time out counter %i", client->id, timeout_counter);
+
+        if(timeout_counter > 20){
+          if(!websocket_ping(client->fd)){
+            loggerf(INFO, "Client %i timed out", client->id);
+            close(client->fd);
+            _SYS->_Clients--;
+            client->state = 2;
+            _free(buf);
+            return 0;
+          }
+          else{
+            timeout_counter = 0;
+          }
+        }
       }
       else if(status == -8){
         loggerf(INFO, "Client %i disconnected", client->id);
@@ -222,7 +312,7 @@ void * websocket_client_connect(void * p){
         _free(buf);
         return 0;
       }
-    }
+    // }
 
     if(client->state == 2){
       _SYS->_Clients--;
@@ -250,7 +340,7 @@ void * websocket_clear_clients(){
   while (_SYS->_STATE & STATE_RUN){
     for(int i = 0; i < MAX_WEB_CLIENTS; i++){
       if(websocket_clients[i].state == 2){
-        loggerf(INFO, "Stopping websocket client thread");
+        loggerf(INFO, "Stopping websocket client %i thread", i);
         pthread_join(websocket_clients[i].thread, NULL);
         websocket_clients[i].fd = 0;
         websocket_clients[i].state = 0;
@@ -361,6 +451,12 @@ void * websocket_server(){
   _SYS->Websocket_State = _SYS_Module_Init;
   _SYS_change(STATE_WebSocket_FLAG, 0);
 
+  //Set server timeout
+  struct timeval tv;
+  tv.tv_sec = WEBSOCKET_CLIENT_TIMEOUT;
+  tv.tv_usec = 0;
+  setsockopt(server, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
+
   loggerf(DEBUG, "Listening for Websocket Clients");
   while((_SYS->_STATE & STATE_RUN) == STATE_RUN){
     // Run until system is stopped, or until client_accept is closed
@@ -368,8 +464,16 @@ void * websocket_server(){
     fd_client = accept(server, (struct sockaddr *)&client_addr, &sin_len);
 
     if(fd_client == -1){
-      loggerf(WARNING, "Failed to connect with client");
-      continue;
+      if(errno == EAGAIN || errno == ETIMEDOUT){
+        continue;
+      }
+      else if(errno == EINTR){
+        break;
+      }
+      else{
+        loggerf(WARNING, "Failed to connect with client %i", errno);
+        continue;
+      }
     }
 
     loggerf(INFO, "New socket client");

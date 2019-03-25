@@ -197,6 +197,7 @@ void clear_Modules(){
         _free(Units[i]->St);
       }
 
+      _free(Units[i]->raw);
       _free(Units[i]->Layout);
 
       printf("- Unit %i\n",i);

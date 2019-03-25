@@ -226,6 +226,121 @@ void WS_stc_SubmoduleState(){
 //Admin Messages
 
 //Train Messages
+void WS_UpdateTrain(void * t, int type){
+  if(!t)
+    return;
+
+  char * buffer = _calloc(7, 1);
+  uint16_t id;
+
+  buffer[0] = WSopc_Z21TrainData;
+
+  //type
+  if(type == 0){ // Engine
+    Engines * E = (Engines *)t;
+
+    id = E->id;
+
+    if(E->dir)
+      buffer[2] |= 0x10;
+
+    buffer[2] |= (E->control & 0x03) << 2;
+    buffer[2] |= (E->cur_speed & 0x0100) >> 7;
+    buffer[3] = (E->cur_speed & 0xFF);
+
+    buffer[4] = 0;
+    buffer[5] = 0;
+  }
+  else{ // Train
+    Trains * T = (Trains *)t;
+
+    id = T->id;
+
+    if(T->dir)
+      buffer[2] |= 0x10;
+
+    buffer[2] |= (T->control & 0x03) << 2;
+    buffer[2] |= (T->cur_speed & 0x0100) >> 7;
+    buffer[3]  = (T->cur_speed & 0xFF);
+
+    buffer[4] = 0;
+    buffer[5] = 0;
+  }
+
+  buffer[1] = id & 0xFF;
+  buffer[2] |= (id & 0x0300) >> 2;
+
+  //Send to subscribed users
+  char * outbuf = _calloc(100, 1);
+  int outlength = 0;
+
+  if(!(_SYS->_STATE & STATE_WebSocket_FLAG)){
+    _free(outbuf);
+    return;
+  }
+
+  websocket_create_msg(buffer, 6, outbuf, &outlength);
+
+  char * log = _calloc(100, 3);
+  sprintf(log, "WS send (sub)\t");
+  for(int zi = 0;zi<(6);zi++){sprintf(log, "%s%02X ", log, buffer[zi]);};
+  loggerf(INFO, "%s", log);
+
+  _free(log);
+
+  pthread_mutex_lock(&m_websocket_send);
+
+  for(int i = 0; i<MAX_WEB_CLIENTS; i++){
+    if(websocket_clients[i].state == 1 && (websocket_clients[i].type & WS_Flag_Trains) != 0){
+      loggerf(INFO, "Client %i, (%i, %i)\t(%i, %i)\t(%i, %i)", i, id, type, websocket_clients[i].trains[0].id, websocket_clients[i].trains[0].type, websocket_clients[i].trains[1].id, websocket_clients[i].trains[1].type);
+      if((websocket_clients[i].trains[0].id == id && websocket_clients[i].trains[0].type == type) || 
+         (websocket_clients[i].trains[1].id == id && websocket_clients[i].trains[1].type == type)){
+        loggerf(INFO, "     write");
+        if(write(websocket_clients[i].fd, outbuf, outlength) == -1){
+          loggerf(WARNING, "socket write error %x", errno); 
+          if(errno == EPIPE){
+            printf("Broken Pipe!!!!!\n\n");
+            close(websocket_clients[i].fd);
+            _SYS->_Clients--;
+            websocket_clients[i].state = 2;
+          }
+          else if(errno == EFAULT){
+            loggerf(ERROR, "EFAULT ERROR");
+          }
+        }
+      }
+    }
+  }
+  pthread_mutex_unlock(&m_websocket_send);
+
+  _free(outbuf);
+
+  ws_send_all(buffer, 6, WS_Flag_Trains);
+}
+
+void WS_TrainSubscribe(uint8_t * data, struct web_client_t * client){
+  client->trains[0].id = data[0] + ((data[1] & 0xC0) << 2);
+  client->trains[0].type = (data[1] & 0x20) > 5;
+  client->trains[1].type = (data[1] & 0x04) > 2;
+  client->trains[1].id = data[2] + ((data[1] & 0x03) << 8);
+
+  if(client->trains[0].id < 0x3FF){
+    if(client->trains[0].type == 0 && client->trains[0].id < engines_len)
+      WS_UpdateTrain((void *)engines[client->trains[0].id], 0);
+    else if(client->trains[0].id < trains_len)
+      WS_UpdateTrain((void *)trains[client->trains[0].id], 1);
+  }
+
+  if(client->trains[1].id < 0x3FF){
+    if(client->trains[1].type == 0 && client->trains[1].id < engines_len)
+      WS_UpdateTrain((void *)engines[client->trains[1].id], 0);
+    else if(client->trains[1].id < trains_len)
+      WS_UpdateTrain((void *)trains[client->trains[1].id], 1);
+  }
+
+  loggerf(INFO, "WS_TrainSubscribe client %i = %i, %i", client->id, client->trains[0].id, client->trains[1].id);
+}
+
 void WS_EnginesLib(int client_fd){
   int buffer_size = 1024;
 
@@ -785,7 +900,6 @@ void WS_cts_AddTraintoLib(struct s_opc_AddNewTraintolib * data, struct web_clien
   char * comps = _calloc(data->nr_stock, 3);
 
   loggerf(DEBUG, "Name:%i\tComp: %i", data->name_len, data->nr_stock);
-  print_hex(&data->strings + data->name_len, data->nr_stock*3);
 
   memcpy(name, &data->strings, data->name_len);
   memcpy(comps, &data->strings + data->name_len, data->nr_stock*3);
@@ -802,26 +916,38 @@ void WS_cts_AddTraintoLib(struct s_opc_AddNewTraintolib * data, struct web_clien
 }
 
 void WS_cts_Edit_Train(Trains * T, struct s_opc_AddNewTraintolib * data, struct web_client_t * client){
-  loggerf(DEBUG, "WS_cts_Edit_Train ");
+  loggerf(ERROR, "WS_cts_Edit_Train ");
   struct s_WS_Data * rdata = _calloc(1, sizeof(struct s_WS_Data));
 
   rdata->opcode = WSopc_AddNewTraintolib;
 
   T->name = _realloc(T->name, data->name_len + 1, 1);
-  T->composition = _realloc(T->composition, data->nr_stock, 3);
+  T->composition = _realloc(T->composition, data->nr_stock, sizeof(struct train_comp));
+  T->nr_stock = data->nr_stock;
 
   loggerf(DEBUG, "Name:%i\tComp: %i", data->name_len, data->nr_stock);
-  print_hex(&data->strings + data->name_len, data->nr_stock*3);
 
   memcpy(T->name, &data->strings, data->name_len);
   T->name[data->name_len] = 0;
-  memcpy(T->composition, &data->strings + data->name_len, data->nr_stock*3);
+
+  //Copy composition
+  struct train_comp_ws * cdata = (void *)&data->strings + data->name_len;
+  for(int c = 0; c<T->nr_stock; c++){
+    T->composition[c].type = cdata[c].type;
+    T->composition[c].id = cdata[c].id;
+    if(cdata[c].type == 0){
+      T->composition[c].p = (void *)engines[T->composition[c].id];
+    }
+    else{
+      T->composition[c].p = (void *)cars[T->composition[c].id];
+    }
+    printf("%x\n", &cdata[c]);
+    printf("%i, %i, %x\n", cdata[c].type, cdata[c].id);
+    printf("%i, %i, %x\n", T->composition[c].type, T->composition[c].id, T->composition[c].p);
+  }
 
   rdata->data.opc_AddNewTraintolib_res.response = 1;
   ws_send(client->fd, (char *)rdata, WSopc_AddNewTraintolib_res_len, 0xff);
-
-  //Update clients Train Library
-  WS_TrainsLib(0);
 }
 
 
@@ -1122,14 +1248,14 @@ void WS_Track_LayoutDataOnly(int unit, int Client_fd){
   data[1] = unit;
   memcpy(&data[2], Units[unit]->Layout, Units[unit]->Layout_length);
 
-  print_hex(data, Units[unit]->Layout_length + 20);
-
 
   if(Client_fd){
     ws_send(Client_fd,data, Units[unit]->Layout_length+2, WS_Flag_Track);
   }else{
     ws_send_all(data, Units[unit]->Layout_length+2, WS_Flag_Track);
   }
+
+  _free(data);
 }
 
 void WS_stc_TrackLayoutRawData(int unit, int Client_fd){

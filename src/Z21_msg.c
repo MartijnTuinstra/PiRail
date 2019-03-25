@@ -51,3 +51,38 @@ void Z21_Set_Loco_Drive_Train(Trains * T){
 	Z21_send_data(data, i);
 	_free(data);
 }
+
+void Z21_LAN_X_LOCO_INFO(uint8_t length, char * data){
+	uint16_t DCC_ID = ((data[0] & 0x3F) << 8) + data[1];
+	uint8_t xbusRegeler = (data[2] & 0x8) >> 3;
+	uint8_t stufen = (data[2] & 0x7);
+	uint8_t forward = (data[3] & 0x80) >> 7;
+	uint8_t speed = (data[3] & 0x7F);
+
+	//Functions ....
+
+	Engines * E = DCC_train[DCC_ID];
+
+	if(!E){
+		loggerf(ERROR, "No train with DCC address %i\n", DCC_ID);
+		return;
+	}
+
+	E->speed = speed;
+	E->dir = forward;
+
+	engine_calc_real_speed(E);
+
+	if(E->train){
+		loggerf(INFO, "Engine part of train");
+
+		train_set_speed(E->train, E->cur_speed);
+
+		WS_UpdateTrain(E->train, TRAIN_TRAIN_TYPE);
+	}
+	else{
+		WS_UpdateTrain(E, TRAIN_ENGINE_TYPE);
+	}
+
+	printf("Adr %i, xbus %i, stufen %i, forward %i, speed %i\n", DCC_ID, xbusRegeler, stufen, forward, speed);
+}

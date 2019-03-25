@@ -3,7 +3,6 @@
 
   #include "websocket_control.h"
 
-
   struct __attribute__((__packed__)) s_opc_AddNewCartolib {
     uint16_t nr;
     uint16_t max_speed;
@@ -98,6 +97,8 @@
     } data;
   };
 
+  extern pthread_mutex_t m_websocket_send;
+
   struct websocket_client_thread_args;
 
   int websocket_get_msg(int fd_client, char outbuf[], int * L);
@@ -150,6 +151,7 @@
   #define WSopc_TrainOperation     0x44
   #define WSopc_Z21TrainData       0x45
   #define WSopc_TrainAddRoute      0x46
+  #define WSopc_TrainSubscribe     0x4F
 
   #define WSopc_AddNewEnginetolib  0x50
   #define WSopc_EditEnginelib      0x51

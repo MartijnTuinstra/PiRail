@@ -1,6 +1,7 @@
 #include "Z21.h"
 #include "mem.h"
 #include "logger.h"
+#include "Z21_msg.h"
 
 #include<stdio.h>
 #include<stdlib.h>
@@ -167,18 +168,23 @@ void Z21_recv(char * data, int length){
     return; // Invalid size
   }
   // TODO Implement
-  loggerf(DEBUG, "Z21 got %d bytes, %d data-size", length, length-4);
+  loggerf(WARNING, "Z21 got %d bytes, %d data-size", length, length-4);
   // char * sdata = _calloc(3, length);
   for(int i = 0; i < length; i++){
     printf("%02X ", data[i]);
   }
+  printf("\n");
+
   uint16_t d_length = data[0] + (data[1] << 8);
   uint16_t header = data[2] + (data[3] << 8);
   uint8_t checksum;
   for(int i = 4; i < (d_length - 1); i++){
     checksum ^= data[i];
   }
-  _Bool check = (checksum != data[d_length-1]);
+  _Bool check = (checksum == data[d_length-1]);
+
+  printf("Header %i\n", header);
+  printf("Checksum %i | %x != %x\n", check, checksum, data[d_length-1]);
 
   switch (header){
     case 0x10: // LAN_GET_SERIAL_NUMBER
@@ -188,6 +194,7 @@ void Z21_recv(char * data, int length){
       if(!check)
         return;
       uint8_t XHeader = data[4];
+      printf("XHeader %i\n", XHeader);
       if(XHeader == 0x63){ // LAN_X_GET_VERSION
         loggerf(TRACE, "LAN_X_GET_VERSION");
       }
@@ -225,7 +232,8 @@ void Z21_recv(char * data, int length){
         loggerf(TRACE, "LAN_X_GET_FIRMWARE_VERSION");
       }
       else if(XHeader == 0xEF){ // LAN_X_LOCO_INFO
-        loggerf(TRACE, "LAN_X_LOCO_INFO");
+        loggerf(INFO, "LAN_X_LOCO_INFO");
+        Z21_LAN_X_LOCO_INFO(length - 6, &data[5]);
       }
       break;
     case 0x51: //LAN_GET_BROADCASTFLAGS

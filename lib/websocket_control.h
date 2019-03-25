@@ -4,7 +4,7 @@
   #include <pthread.h>
 
   #define WEBSOCKET_PORT 9000
-  #define MAX_WEB_CLIENTS 10
+  #define MAX_WEB_CLIENTS 20
   #define WS_BUF_SIZE 1024
 
   struct web_client_t{
@@ -25,6 +25,11 @@
                       0 = free
                       1 = in use
                       2 = stopping / ready to join thread*/
+
+    struct web_client_trains {
+      uint16_t id:12;
+      uint16_t type:4;
+    } trains[2];
   };
 
   #include "websocket.h"
@@ -37,6 +42,17 @@
 
   extern struct web_client_t * websocket_clients;
   extern char * WS_password;
+
+  #define WEBSOCKET_FIN 0x80
+  #define WEBSOCKET_CONT_FRAME 0x00
+  #define WEBSOCKET_TEXT_FRAME 0x01
+  #define WEBSOCKET_BIN_FRAME 0x02
+
+  #define WEBSOCKET_CLOSE 0x08
+  #define WEBSOCKET_PING 0x09
+  #define WEBSOCKET_PONG 0x0A
+
+  int websocket_ping(int fd);
 
   int websocket_client_check(struct web_client_t * C);
 

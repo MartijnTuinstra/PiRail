@@ -3,6 +3,14 @@ var Train = {
   engines: [],
   cars: [],
   cat: {},
+
+  get_engine_from_dcc: function(dcc){
+    for(var i = 0; i<this.engines.length; i++){
+      if(this.engines[i].dcc == dcc){
+        return this.engines[i];
+      }
+    }
+  }
 }
 
 var Train_Control = {
@@ -154,7 +162,9 @@ var Train_Control = {
       list = Train.trains;
     }
 
-    this.train[box] = {type: type, t: list[id]};
+    this.train[box] = {type: type, id: id, t: list[id]};
+
+    websocket.cts_TrainSubscribe(this.train);
 
     $('.header > div', parent).text(list[id].name);
     $('.train-img', parent).css('background-image', "url('./trains_img/"+list[id].img+"')");
@@ -170,6 +180,14 @@ var Train_Control = {
     $('.slider-bar', slider_box).css("height", pos+"px");
 
     $('.train-box.box'+box+' .train-speed > span').text(list[id].speed);    
+
+    var slider_box = $('.train-box.box'+box+' .train-speed-slider');
+    var pageY = slider_box.offset().top + slider_box.height();
+    var ylim = slider_box.height() - $('.slider-handle', slider_box).height();
+
+    var pos = ylim * (this.train[box].t.speed / 128);
+
+    this.set_handle(box, pos);
 
   }
 }

@@ -31,6 +31,7 @@ function ToInt16(value){
 var websocket = {
   connected: false,
   ws: undefined,
+  disconnect_counter: 1,
   recv_cb: {},
   connect: function(url, protocol=undefined){
     this.url = url;
@@ -39,12 +40,13 @@ var websocket = {
     this.__connect__();
   },
   __connect__: function(){
+    console.log("Connect ....");
     this.ws = new WebSocket(this.url, this.protocol);
     this.ws.binaryType = 'arraybuffer';
 
     this.ws.onopen = this.on_connect.bind(this);
     this.ws.onclose = this.on_disconnect.bind(this);
-    this.ws.onerror = this.on_disconnect.bind(this);
+    this.ws.onerror = this.on_error.bind(this);
     this.ws.onmessage = this.__recv__.bind(this);
   },
 
@@ -57,13 +59,24 @@ var websocket = {
   },
   on_disconnect: function(evt){
     if(this.connected == true){
+      this.disconnect_counter = 1;
       this.ws_call_cb("ws_close_cb");
     }
 
-    setTimeout(this.__connect__.bind(this), 1000);
+    this.ws.close();
+
+    setTimeout(this.__connect__.bind(this), this.disconnect_counter * 1000);
+
+    this.disconnect_counter += 1;
+    if(this.disconnect_counter > 20){
+      this.disconnect_counter = 20;
+    }
 
     this.connected = false;
     console.log("Connection lost");
+  },
+  on_error: function(evt){
+    console.warn("Websocket error", evt);
   },
 
   //Callbacks
@@ -345,15 +358,90 @@ websocket.add_opcodes([
     },
     {
       opcode: 0x45,
-      name: "Z21TrainData",
+      name: "TrainData",
       send: function(data){ console.warn("Z21TrainData", data); },
-      recv: function(data){ console.warn("Z21TrainData", data); }
+      recv: function(data){
+
+        var id = data[0] + ((data[1] & 0xC0) << 2);
+        var type = (data[1] & 0x20) >> 5;
+
+        var dir = (data[1] & 0x10) >> 4;
+        var control = (data[1] & 0x0C) >> 2;
+
+        var speed = ((data[1] & 0x01) << 8) + data[2];        
+
+        var ratio = 0;
+
+        if(type == 0){
+          Train.engines[id].speed = speed;
+          ratio = Train.engines[id].speed / Train.engines[id].max_speed;
+        }
+        else{
+          Train.trains[id].speed = speed;
+          ratio = Train.trains[id].speed / Train.trains[id].max_speed;
+        }
+
+        type = type?"T":"E"
+
+        var box = -1;
+
+        if(Train_Control.train[1] != undefined && Train_Control.train[1].id == id && Train_Control.train[1].type == type){
+          box = 1;
+        }
+        else if(Train_Control.train[2] != undefined && Train_Control.train[2].id == id && Train_Control.train[2].type == type){
+          box = 2;
+        }
+
+        if(box == 0){
+          console.warn("No box");
+        }
+
+        if(box >= 0){
+          var slider_box = $('.train-box.box'+box+' .train-speed-slider');
+          var pageY = slider_box.offset().top + slider_box.height();
+          var ylim = slider_box.height() - $('.slider-handle', slider_box).height(); 
+
+          var pos = ylim * ratio;
+
+          $('.train-box.box'+box+' .train-speed > span').text(speed);
+          Train_Control.set_handle(box, pos);
+        }
+
+        console.log(type, id, speed, dir, control);
+      }
     },
     {
       opcode: 0x46,
       name: "TrainAddRoute",
       send: function(data){ console.warn("TrainAddRoute", data); },
       recv: function(data){ console.warn("TrainAddRoute", data); }
+    },
+    {
+      opcode: 0x4F,
+      name: "TrainSubscribe",
+      send: function(data){ 
+        var msg = [];
+        if(data[1] == undefined){
+          msg[0] = 0xFF;
+          msg[1] = 0xC0;
+        }
+        else{
+          msg[0] = data[1].id & 0xFF;
+          msg[1] = (data[1].id & 0x300) >> 2;
+          msg[1] |= (data[1].type=="T")?0x20:0;
+        }
+        if(data[2] == undefined){
+          msg[1] |= 0x03;
+          msg[2] = 0xFF;
+        }
+        else{
+          msg[2] = data[2].id & 0xFF;
+          msg[1] |= data[2].id & 0x300;
+          msg[1] |= (data[2].type=="T")?0x04:0;
+        }
+
+        return msg;
+      }
     },
 
     {

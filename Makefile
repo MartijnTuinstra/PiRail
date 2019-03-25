@@ -85,12 +85,13 @@ $(SRC)/train_sim.c: $(LIB)/train_sim.h $(LIB)/rail.h $(LIB)/train.h $(LIB)/syste
 $(SRC)/websocket.c: $(LIB)/websocket.h
 
 $(LIB)/websocket_control.h: $(LIB)/websocket.h $(LIB)/websocket_msg.h $(LIB)/module.h
+$(SRC)/websocket_control.c: $(LIB)/websocket_control.h
 
 $(LIB)/websocket_msg.h: $(LIB)/websocket.h $(LIB)/train.h
 $(SRC)/websocket_msg.c: $(LIB)/websocket_msg.h $(LIB)/system.h $(LIB)/rail.h $(LIB)/switch.h \
 	                    $(LIB)/train.h $(LIB)/logger.h $(LIB)/module.h $(LIB)/Z21.h
 
-$(SRC)/Z21.c: $(LIB)/Z21.h $(LIB)/logger.h $(LIB)/submodule.h
+$(SRC)/Z21.c: $(LIB)/Z21.h $(LIB)/logger.h $(LIB)/submodule.h $(LIB)/Z21_msg.h
 
 $(SRC)/Z21_msg.c: $(LIB)/Z21.h $(LIB)/Z21_msg.h $(LIB)/train.h
 

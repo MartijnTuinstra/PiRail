@@ -77,6 +77,12 @@ var Menu = {
 		if(this.current.name == "Settings" || this.current.name == "Train"){
 			$('body .sidebar').show();
 		}
+		if(this.current.name == "Train" && this.page_size < 1140){
+			$('.sidebar .emergencybutton').show();
+		}
+		else{
+			$('.sidebar .emergencybutton').hide();
+		}
 
 		$('#menu-box button[target='+page+']').removeClass("btn-outline-primary");
 		$('#menu-box button[target='+page+']').addClass("btn-primary");

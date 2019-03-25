@@ -1022,14 +1022,14 @@ websocket.add_opcodes([
       name: "EmergencyStop",
       send: function(data){ return [] },
       recv: function(data){
-        Emergency.start("Em",false);
+        Emergency.set("Em", false);
       }
     },
     {
       opcode: 0x11,
       name: "ShortCircuitStop",
       recv: function(data){
-        Emergency.start("Es",false);
+        Emergency.set("Es", false);
       }
     },
     {
@@ -1037,7 +1037,7 @@ websocket.add_opcodes([
       name: "ClearEmergency",
       send: function(data){ return [] },
       recv: function(data){
-        Emergency.stop(false);
+        Emergency.unset(false);
       }
     },
     {

@@ -242,6 +242,11 @@ header('Pragma: no-cache');
 
 		/*#moduleconfig table tr:hover {background-color: #fafafa;}*/
 
+		.emergencybutton {width:65px; height:25px; left: 10px; bottom:10px; position: absolute; border: 2px red solid; border-radius: 10px; color: red; font-weight: bold; background: rgba(0,0,0,0); cursor: pointer;}
+
+		.emergencybutton:hover {background: red; color: white;}
+		.emergencybutton > div {margin: auto; margin-top: -2px; width: 60px; text-align: center;}
+
 	</style>
 	<script>
 		var events = {
@@ -450,8 +455,14 @@ header('Pragma: no-cache');
 					</div>
 				</div>
 			</div>
+			<div class="emergencybutton" style="display:hidden;">
+				<div>STOP</div>
+			</div>
 		</div>
-		<div class="main" id="LayoutContainer" style="height: 100%; padding: 0px">
+		<div class="main" id="LayoutContainer" style="height: 100%; padding: 0px; position: relative;">
+			<div class="emergencybutton">
+				<div>STOP</div>
+			</div>
 			<canvas height="300" width="300"/>
 		</div>
 		<div id="menu-box"></div>
@@ -639,6 +650,7 @@ header('Pragma: no-cache');
 		<script src="./scripts/modules.js"></script>
 		<script src="./scripts/menu.js"></script>
 		<script src="./scripts/messages.js"></script>
+		<script src="./scripts/emergency.js"></script>
 		<script src="./scripts/window.js"></script>
 		<script src="./scripts/script.js"></script>
 

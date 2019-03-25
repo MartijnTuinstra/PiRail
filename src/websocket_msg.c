@@ -281,12 +281,8 @@ void WS_UpdateTrain(void * t, int type){
 
   websocket_create_msg(buffer, 6, outbuf, &outlength);
 
-  char * log = _calloc(100, 3);
-  sprintf(log, "WS send (sub)\t");
-  for(int zi = 0;zi<(6);zi++){sprintf(log, "%s%02X ", log, buffer[zi]);};
-  loggerf(INFO, "%s", log);
-
-  _free(log);
+  printf("WS send (sub)\t");
+  print_hex(buffer, 6);
 
   pthread_mutex_lock(&m_websocket_send);
 
@@ -299,7 +295,7 @@ void WS_UpdateTrain(void * t, int type){
         if(write(websocket_clients[i].fd, outbuf, outlength) == -1){
           loggerf(WARNING, "socket write error %x", errno); 
           if(errno == EPIPE){
-            printf("Broken Pipe!!!!!\n\n");
+            loggerf(ERROR, "Broken Pipe!!!!!\n\n");
             close(websocket_clients[i].fd);
             _SYS->_Clients--;
             websocket_clients[i].state = 2;
@@ -391,7 +387,6 @@ void WS_EnginesLib(int client_fd){
       data[len++] = engines[i]->steps[j].speed & 0xFF;
       data[len++] = engines[i]->steps[j].speed >> 8;
       data[len++] = engines[i]->steps[j].step;
-      printf("engine data: %4x %2x -> %2x %2x %2x\n", engines[i]->steps[j].speed, engines[i]->steps[j].step, data[len-3], data[len-2], data[len-1]);
     }
   }
   if(client_fd <= 0){
@@ -472,7 +467,7 @@ void WS_TrainsLib(int client_fd){
       buffer_size += 1024;
       data = _realloc(data, buffer_size, 1);
     }
-    int ilen = len;
+    
     data[len++] = trains[i]->max_speed & 0xFF;
     data[len++] = trains[i]->max_speed >> 8;
 
@@ -495,11 +490,6 @@ void WS_TrainsLib(int client_fd){
       data[len++] = trains[i]->composition[c].id & 0xFF;
       data[len++] = trains[i]->composition[c].id >> 8;
     }
-
-    for(;ilen < len; ilen++){
-      printf("%02X ", data[ilen]);
-    }
-    printf("\n");
   }
   if(client_fd <= 0){
     ws_send_all(data, len, WS_Flag_Trains);
@@ -599,7 +589,7 @@ void WS_TrainSplit(char nr,char M1,char B1,char M2,char B2){
 
 /*
 void Web_Train_Split(int i,char tID,char B[]){
-  printf("\n\nWeb_Train_Split(%i,%i,{%i,%i});\n\n",i,tID,B[0],B[1]);
+  loggerf(DEBUG, "Web_Train_Split(%i,%i,{%i,%i});",i,tID,B[0],B[1]);
   char data[8];
   data[0] = 1;
   if(i == ACTIVATE){
@@ -807,8 +797,6 @@ void WS_cts_Edit_Engine(Engines * E, struct s_opc_AddNewEnginetolib * data, stru
   rdata->opcode = WSopc_AddNewEnginetolib;
   rdata->data.opc_AddNewEnginetolib_res.DCC_ID = data->DCC_ID;
 
-  loggerf(WARNING, "Editing %s", E->name);
-
   if (DCC_train[data->DCC_ID] && data->DCC_ID != E->DCC_ID){
     loggerf(ERROR, "DCC %i (%i) allready in use", data->DCC_ID, E->DCC_ID);
     rdata->data.opc_AddNewEnginetolib_res.response = 255;
@@ -816,23 +804,21 @@ void WS_cts_Edit_Engine(Engines * E, struct s_opc_AddNewEnginetolib * data, stru
     return;
   }
 
+  // Copy name
   E->name = _realloc(E->name, data->name_len + 1, 1);
   memcpy(E->name, &data->strings, data->name_len);
   E->name[data->name_len] = 0;
 
-  loggerf(INFO, "New name: %s", E->name);
-
+  // Copy speedsteps
   E->steps_len = data->steps;
   E->steps = _realloc(E->steps, data->steps, 3);
   memcpy(E->steps, &data->strings + data->name_len, data->steps * 3);
 
-  for(int i = 0; i < E->steps_len; i++){
-    printf("  %d, %d", E->steps[i].step, E->steps[i].speed);
-  }
-
   E->length = data->length;
   E->type = data->type;
 
+
+  // Copy image/icon
   char * simg = _calloc(40, 1); //Source file
   char * sicon = _calloc(40, 1); //Source file
   char * filetype = _calloc(4, 1);
@@ -878,8 +864,7 @@ void WS_cts_Edit_Engine(Engines * E, struct s_opc_AddNewEnginetolib * data, stru
     move_file(sicon, dicon);
   }
 
-  // create_engine(name, data->DCC_ID, img, icon, data->type, data->length, data->steps, (struct engine_speed_steps *)steps);
-
+  // Send succes response
   rdata->data.opc_AddNewEnginetolib_res.response = 1;
   ws_send(client->fd, (char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
 
@@ -899,15 +884,17 @@ void WS_cts_AddTraintoLib(struct s_opc_AddNewTraintolib * data, struct web_clien
   char * name = _calloc(data->name_len + 1, 1);
   char * comps = _calloc(data->nr_stock, 3);
 
-  loggerf(DEBUG, "Name:%i\tComp: %i", data->name_len, data->nr_stock);
-
+  //Copy name
   memcpy(name, &data->strings, data->name_len);
+
+  // Copy configuration
   memcpy(comps, &data->strings + data->name_len, data->nr_stock*3);
 
   create_train(name, data->nr_stock, (struct train_comp_ws *)comps, data->catagory, data->save);
 
   train_write_confs();
 
+  // Send succes response
   rdata->data.opc_AddNewTraintolib_res.response = 1;
   ws_send(client->fd, (char *)rdata, WSopc_AddNewTraintolib_res_len, 0xff);
 
@@ -921,16 +908,15 @@ void WS_cts_Edit_Train(Trains * T, struct s_opc_AddNewTraintolib * data, struct 
 
   rdata->opcode = WSopc_AddNewTraintolib;
 
+  //Copy name
   T->name = _realloc(T->name, data->name_len + 1, 1);
-  T->composition = _realloc(T->composition, data->nr_stock, sizeof(struct train_comp));
-  T->nr_stock = data->nr_stock;
-
-  loggerf(DEBUG, "Name:%i\tComp: %i", data->name_len, data->nr_stock);
-
   memcpy(T->name, &data->strings, data->name_len);
   T->name[data->name_len] = 0;
 
-  //Copy composition
+  // Copy traincomp
+  T->composition = _realloc(T->composition, data->nr_stock, sizeof(struct train_comp));
+  T->nr_stock = data->nr_stock;
+
   struct train_comp_ws * cdata = (void *)&data->strings + data->name_len;
   for(int c = 0; c<T->nr_stock; c++){
     T->composition[c].type = cdata[c].type;
@@ -941,11 +927,9 @@ void WS_cts_Edit_Train(Trains * T, struct s_opc_AddNewTraintolib * data, struct 
     else{
       T->composition[c].p = (void *)cars[T->composition[c].id];
     }
-    printf("%x\n", &cdata[c]);
-    printf("%i, %i, %x\n", cdata[c].type, cdata[c].id);
-    printf("%i, %i, %x\n", T->composition[c].type, T->composition[c].id, T->composition[c].p);
   }
 
+  // Send success response
   rdata->data.opc_AddNewTraintolib_res.response = 1;
   ws_send(client->fd, (char *)rdata, WSopc_AddNewTraintolib_res_len, 0xff);
 }
@@ -1012,7 +996,6 @@ void WS_SwitchesUpdate(int Client_fd){
     _Bool content   = 0;
 
     int q = 1;
-    //printf("\n\n3");
 
     for(int i = 0;i<unit_len;i++){
       if(!Units[i])// || !Units[i]->switch_state_changed)
@@ -1067,10 +1050,8 @@ void WS_SwitchesUpdate(int Client_fd){
   //buf_l += (q-1)*4+1;
   if(content == 1){
     if(Client_fd){
-      printf("ws_send client");
       ws_send(Client_fd, buf, buf_l, WS_Flag_Switches);
     }else{
-      printf("ws_send all");
       ws_send_all(buf, buf_l, WS_Flag_Switches);
     }
   }
@@ -1173,10 +1154,8 @@ void WS_NewClient_track_Switch_Update(int Client_fd){
 
   if(content == 1){
     if(Client_fd){
-      printf("WS_SwitchesUpdate Custom Client");
       ws_send(Client_fd,buf,buf_len,WS_Flag_Switches);
     }else{
-      printf("WS_SwitchesUpdate ALL");
       ws_send_all(buf,buf_len,WS_Flag_Switches);
     }
   }
@@ -1192,7 +1171,6 @@ void WS_NewClient_track_Switch_Update(int Client_fd){
     data = 1;
   }
   for(int i = 0; i<stations_len;i++){
-    printf("entry %i\tStation %i:%i\t%s\tbuf_l: %i\n",i,stations[i]->module,stations[i]->id,stations[i]->name,buf_len);
 
     buf[buf_len]   = stations[i]->module;
     buf[buf_len+1] = stations[i]->id;
@@ -1212,7 +1190,6 @@ void WS_NewClient_track_Switch_Update(int Client_fd){
   for(int i = 1;i<trains_len;i++){
     if(train_link[i]){
       for(int j = 0; j < train_link[i]->nr_engines; j++){
-        printf("Recall #%i\n",train_link[i]->engines[j]->DCC_ID);
         Z21_get_engine(train_link[i]->engines[j]->DCC_ID);
       }
     }
@@ -1302,7 +1279,6 @@ char WS_init_Message(char type){
   }
   while((MessageList[MessageCounter].type & 0x8000) != 0){
     MessageCounter++;
-    printf("Busy Message %i, Skip index %02X\n",MessageCounter,MessageList[MessageCounter].type);
     if(MessageCounter >= 0x1FFF){
       MessageCounter = 0;
     }

@@ -33,7 +33,6 @@ int websocket_client_check(struct web_client_t * client){
 
   if((strstr(buf, Connection) || strstr(buf,Connection2)) &&
         strstr(buf, UpgradeType) && strstr(buf, Key)) {
-    printf("It is a HTML5 WebSocket!!\n");
 
     //Search for the Security Key
     key_s = strstr(buf, Key) + strlen(Key);
@@ -59,7 +58,6 @@ int websocket_client_check(struct web_client_t * client){
       protocol = 0xEF;
       strcpy(_protocol, "239");
     }
-    // printf("Protocol: %s => %d\n", _protocol, protocol);
 
     //Create response Security key by hashing it with SHA1 + base64 encryption
     char hash[SHA_DIGEST_LENGTH];
@@ -75,10 +73,9 @@ int websocket_client_check(struct web_client_t * client){
     strcat(response, _protocol);
 
     strcat(response,"\r\n\r\n");
-    // printf("Sending Response\n\n%s\n\n\n",response);
+    
     write(client->fd, response, strlen(response));
 
-    // printf("Done\n");
     client->type = protocol;
 
     _free(buf);
@@ -90,7 +87,8 @@ int websocket_client_check(struct web_client_t * client){
     return 1;
   }
   else{
-    printf("It's not a HTML5-websocket\n");
+    loggerf(INFO, "It's not a HTML5-websocket\n");
+
     //Server response to the client
     char response[100] = "HTTP/1.1 400 OK\r\n\r\n";
     write(client->fd, response, strlen(response));
@@ -176,8 +174,6 @@ void * websocket_client_connect(void * p){
 
     int status = websocket_get_msg(client->fd, buf, &length);
 
-    printf("Got websocket_get_msg statues %i\n", status);
-
     if(status == 1){
       websocket_decode((uint8_t *)buf, client);
     }
@@ -244,16 +240,16 @@ void * websocket_client_connect(void * p){
     if(_SYS->_STATE & STATE_Modules_Coupled){
       WS_Track_Layout(client->fd);
       
-      printf("Send new client JSON\n");
+      // Send new client JSON
       WS_NewClient_track_Switch_Update(client->fd);
     }
   }
 
-  printf("Send open messages\n");
+  // Send open messages
   WS_send_open_Messages(client->fd);
 
 
-  printf("Send broadcast flags\n");
+  // Send broadcast flags
   ws_send(client->fd, (char [2]){WSopc_ChangeBroadcast,client->type}, 2, 0xFF);
 
   if(_SYS->_STATE & STATE_TRAIN_LOADED){
@@ -269,50 +265,46 @@ void * websocket_client_connect(void * p){
   }
   WS_stc_Z21_IP(client->fd);
 
-  printf("Done\n");
-
   memset(buf, 0, WS_BUF_SIZE);
 
   uint8_t timeout_counter = 0;
 
   while(1){
     // If threre is data recieved
-    // if(recv(client->fd, buf, WS_BUF_SIZE, MSG_PEEK) > 0){
-      memset(buf, 0, WS_BUF_SIZE);
-      int status = websocket_get_msg(client->fd, buf, &length);
+    memset(buf, 0, WS_BUF_SIZE);
+    int status = websocket_get_msg(client->fd, buf, &length);
 
-      if(status == 1){
-        websocket_decode((uint8_t *)buf, client);
+    if(status == 1){
+      websocket_decode((uint8_t *)buf, client);
 
-        timeout_counter = 0;
-      }
-      else if(status == -7){
-        timeout_counter++;
-        loggerf(INFO, "%i Time out counter %i", client->id, timeout_counter);
+      timeout_counter = 0;
+    }
+    else if(status == -7){
+      timeout_counter++;
+      loggerf(INFO, "%i Time out counter %i", client->id, timeout_counter);
 
-        if(timeout_counter > 20){
-          if(!websocket_ping(client->fd)){
-            loggerf(INFO, "Client %i timed out", client->id);
-            close(client->fd);
-            _SYS->_Clients--;
-            client->state = 2;
-            _free(buf);
-            return 0;
-          }
-          else{
-            timeout_counter = 0;
-          }
+      if(timeout_counter > 20){
+        if(!websocket_ping(client->fd)){
+          loggerf(INFO, "Client %i timed out", client->id);
+          close(client->fd);
+          _SYS->_Clients--;
+          client->state = 2;
+          _free(buf);
+          return 0;
+        }
+        else{
+          timeout_counter = 0;
         }
       }
-      else if(status == -8){
-        loggerf(INFO, "Client %i disconnected", client->id);
-        close(client->fd);
-        _SYS->_Clients--;
-        client->state = 2;
-        _free(buf);
-        return 0;
-      }
-    // }
+    }
+    else if(status == -8){
+      loggerf(INFO, "Client %i disconnected", client->id);
+      close(client->fd);
+      _SYS->_Clients--;
+      client->state = 2;
+      _free(buf);
+      return 0;
+    }
 
     if(client->state == 2){
       _SYS->_Clients--;
@@ -369,7 +361,7 @@ void read_password(){
       fread (WS_password, 1, WS_pass_length, f);
     }
     else{
-      printf("PASSWORD: wrong length or unable to allocate memory\n\n");
+      loggerf(ERROR, "PASSWORD: wrong length or unable to allocate memory");
     }
     fclose (f);
   }

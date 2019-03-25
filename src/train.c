@@ -229,9 +229,7 @@ void create_engine(char * name,int DCC,char * img, char * icon, char type, int l
     if(Z->max_speed < steps[i].speed){
       Z->max_speed = steps[i].speed;
     }
-    printf("  %d, %d", steps[i].step, steps[i].speed);
   }
-  printf("\n");
 
   int index = find_free_index(engines, engines_len);
 

@@ -170,10 +170,7 @@ void Z21_recv(char * data, int length){
   // TODO Implement
   loggerf(WARNING, "Z21 got %d bytes, %d data-size", length, length-4);
   // char * sdata = _calloc(3, length);
-  for(int i = 0; i < length; i++){
-    printf("%02X ", data[i]);
-  }
-  printf("\n");
+  print_hex(data, length);
 
   uint16_t d_length = data[0] + (data[1] << 8);
   uint16_t header = data[2] + (data[3] << 8);
@@ -183,8 +180,8 @@ void Z21_recv(char * data, int length){
   }
   _Bool check = (checksum == data[d_length-1]);
 
-  printf("Header %i\n", header);
-  printf("Checksum %i | %x != %x\n", check, checksum, data[d_length-1]);
+  loggerf(INFO, "Header %i\n", header);
+  loggerf(INFO, "Checksum %i | %x != %x\n", check, checksum, data[d_length-1]);
 
   switch (header){
     case 0x10: // LAN_GET_SERIAL_NUMBER
@@ -194,7 +191,7 @@ void Z21_recv(char * data, int length){
       if(!check)
         return;
       uint8_t XHeader = data[4];
-      printf("XHeader %i\n", XHeader);
+      loggerf(INFO, "XHeader %i\n", XHeader);
       if(XHeader == 0x63){ // LAN_X_GET_VERSION
         loggerf(TRACE, "LAN_X_GET_VERSION");
       }

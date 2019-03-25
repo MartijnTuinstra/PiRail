@@ -122,7 +122,7 @@ void print_hex(char * data, int size){
 }
 
 void write_module_from_conf(struct module_config * config, char * filename){
-  printf("write_from_conf\n");
+  loggerf(DEBUG, "write_module_from_conf");
   int size = calc_write_module_size(config);
 
   loggerf(INFO, "Writing %i bytes", size);
@@ -216,7 +216,6 @@ void write_module_from_conf(struct module_config * config, char * filename){
   memcpy(p, &config->Layout_length, sizeof(uint16_t));
   p += sizeof(uint16_t);
 
-  printf("Writing data: \n%s", config->Layout);
   memcpy(p, config->Layout, config->Layout_length);
   p += sizeof(uint16_t);
 
@@ -233,7 +232,7 @@ void write_module_from_conf(struct module_config * config, char * filename){
 }
 
 void write_train_from_conf(struct train_config * config, char * filename){
-  printf("write_from_conf\n");
+  loggerf(DEBUG, "write_train_from_conf");
   int size = calc_write_train_size(config);
 
   loggerf(INFO, "Writing %i bytes", size);

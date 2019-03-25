@@ -19,8 +19,6 @@ int websocket_decode(uint8_t data[1024], struct web_client_t * client){
 
   struct s_WS_Data * d = (struct s_WS_Data *)data;
 
-  printf("Websocket_decode got: %02x %02x %02x %02x\n", data[0], data[1], data[2], data[3]);
-
   if((data[0] & 0xC0) == 0x80){ // System settings
     loggerf(TRACE, "System Settings");
     if(data[0] == WSopc_ClearTrack){
@@ -259,11 +257,11 @@ int websocket_decode(uint8_t data[1024], struct web_client_t * client){
       // clients[client_data->thread_id]->client_type; //current flags
       // data[1]; //new flags
       if(data[1] & 0x10){ //Admin flag
+        loggerf(WARNING, "Changing admin flag: NOT ALLOWED");
         return 0; //Not allowed to set admin flag
-        printf("Changing admin flag: NOT ALLOWED\n");
       }else if(data[1] != 0){
         client->type = data[1];
-        printf("Changing flags\n");
+        loggerf(DEBUG, "Changing flags");
       }
       loggerf(DEBUG,"Websocket:\t%02x - New flag for client %d\n",client->type, client->id);
       ws_send(client->fd,(char [2]){WSopc_ChangeBroadcast,client->type},2,255);
@@ -276,8 +274,6 @@ int websocket_get_msg(int fd, char outbuf[], int * length_out){
   char * buf = _calloc(1024, char);
   usleep(10000);
   int32_t recvlength = recv(fd,buf,1024,0);
-
-  printf("websocket_get_msg received %i bytes\n", recvlength);
 
   if(recvlength <= 0){
     return -7;
@@ -330,10 +326,8 @@ int websocket_get_msg(int fd, char outbuf[], int * length_out){
 
   memcpy(outbuf, output, mes_length);
 
-  for(uint16_t q = 0;q<mes_length;q++){
-    printf("%02x ",output[q]);
-  }
-  printf("\n");
+  printf("websocket recv ");
+  print_hex(output, mes_length);
 
   _free(buf);
 
@@ -375,12 +369,8 @@ void ws_send(int fd, char * data, int length, int flag){
 
   pthread_mutex_lock(&m_websocket_send);
 
-  char * log = _calloc(length + 100, 3);
-  sprintf(log, "WS send (%i)\t",fd);
-  for(int zi = 0;zi<length;zi++){sprintf(log, "%s%02X ", log, data[zi]);};
-  loggerf(DEBUG, "%s", log);
-
-  _free(log);
+  printf("WS send (%i)\t",fd);
+  print_hex(data, length);
 
   if(write(fd, outbuf, outlength) == -1){
     loggerf(WARNING, "socket write error %x", errno);
@@ -402,12 +392,8 @@ void ws_send_all(char * data,int length,int flag){
 
   websocket_create_msg(data, length, outbuf, &outlength);
 
-  char * log = _calloc(length + 100, 3);
-  sprintf(log, "WS send (all)\t");
-  for(int zi = 0;zi<(length);zi++){sprintf(log, "%s%02X ", log, data[zi]);};
-  loggerf(DEBUG, "%s", log);
-
-  _free(log);
+  printf("WS send (all)\t");
+  print_hex(data, length);
 
   pthread_mutex_lock(&m_websocket_send);
 

@@ -12,8 +12,8 @@
 #include "mem.h"
 
 void _SYS_change(int STATE,char send){
-  printf("_SYS_change %x\n",_SYS->_STATE);
-  //printf("%x & %x = %i",_SYS->_STATE &);
+  loggerf(INFO, "_SYS_change %x\n",_SYS->_STATE);
+
   if(_SYS->_STATE & STATE && send & 0x02){
     _SYS->_STATE &= 0xFFFF ^ STATE;
   }else if(!(_SYS->_STATE & STATE)){
@@ -32,8 +32,7 @@ void _SYS_change(int STATE,char send){
 
 void sigint_func(int sig){
   if(sig == SIGINT){
-    printf("-- SIGINT -- STOPPING");
-    logger("-- SIGINT -- STOPPING",INFO);
+    loggerf(WARNING, "-- SIGINT -- STOPPING");
     _SYS_change(STATE_RUN | STATE_Client_Accept, 3);
 
     sem_post(&AlgorQueueNoEmpty);
@@ -78,12 +77,8 @@ void move_file(char * src, char * dest){
     exit(EXIT_FAILURE);
   }
 
-  printf("Start Copying\n");
-
   while ((ch = fgetc(source)) != EOF)
     fputc((char)ch, target);
-
-  printf("Stop Copying\n");
 
   fclose(source);
   fclose(target);

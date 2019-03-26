@@ -22,8 +22,6 @@ int main(){
   _SYS = _calloc(1, struct systemState);
   _SYS->_STATE = STATE_RUN;
   _SYS->_Clients = 0;
-  _SYS->_COM_fd = -1;
-  _SYS->_Z21_fd = -1;
 
   _SYS->Z21_State  = _SYS_Module_Stop;
   _SYS->UART_State = _SYS_Module_Stop;

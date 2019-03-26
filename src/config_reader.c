@@ -135,13 +135,12 @@ void print_Layout(struct module_config * config){
 void print_Cars(struct cars_conf car){
   char debug[200];
 
-  sprintf(debug, "%i\t%x\t%i\t%i\t%-20s\t%-20s\t%-20s",
+  sprintf(debug, "%i\t%x\t%i\t%i\t%-20s\t%-20s",
                 car.nr,
                 car.type & 0x0f,
                 car.max_speed,
                 car.length,
                 car.name,
-                car.img_path,
                 car.icon_path);
 
   printf( "%s\n", debug);
@@ -252,7 +251,7 @@ void print_train_config(struct train_config * config){
   printf("\n\n");
 
   printf( "Cars\n");
-  printf( "id\tNr\tType\tSpeed\tLength\tName\t\t\tImg_path\t\tIcon_path\n");
+  printf( "id\tNr\tType\tSpeed\tLength\tName\t\t\tIcon_path\n");
   for(int i = 0; i < config->header.Cars; i++){
     printf("%i\t", i);
     print_Cars(config->Cars[i]);
@@ -1181,8 +1180,6 @@ void modify_Car(struct train_config * config, char cmd){
     //Set child pointers
     config->Cars[id].name_len = 1;
     config->Cars[id].name = _calloc(1, char);
-    config->Cars[id].img_path_len = 1;
-    config->Cars[id].img_path = _calloc(1, char);
     config->Cars[id].icon_path_len = 1;
     config->Cars[id].icon_path = _calloc(1, char);
   }
@@ -1195,7 +1192,6 @@ void modify_Car(struct train_config * config, char cmd){
 
     if(id == (config->header.Cars - 1) && id >= 0){
       _free(config->Cars[config->header.Cars - 1].name);
-      _free(config->Cars[config->header.Cars - 1].img_path);
       _free(config->Cars[config->header.Cars - 1].icon_path);
 
       memset(&config->Cars[config->header.Cars - 1], 0, sizeof(struct cars_conf));
@@ -1239,16 +1235,6 @@ void modify_Car(struct train_config * config, char cmd){
       memcpy(config->Cars[id].name, _cmd, tmp);
       config->Cars[id].name[tmp] = 0;
       config->Cars[id].name_len = tmp;
-    }
-
-    printf("Image path (%s) | ", config->Cars[id].img_path);
-    fgets(_cmd, 80, stdin);
-    if(sscanf(_cmd, "%s", _cmd) > 0){
-      tmp = strlen(_cmd);
-      config->Cars[id].img_path = _realloc(config->Cars[id].img_path, tmp, char);
-      memcpy(config->Cars[id].img_path, _cmd, tmp);
-      config->Cars[id].img_path[tmp] = 0;
-      config->Cars[id].img_path_len = tmp;
     }
 
     printf("Icon path (%s) | ", config->Cars[id].icon_path);

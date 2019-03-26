@@ -578,14 +578,14 @@ websocket.add_opcodes([
         if(time.length == 3){
           time = time[time.length - 2].split("");
 
-          var time_image = parseInt(time[0]) * 600 + parseInt(time[1]) * 60 + parseInt(time[2]) * 10 + parseInt(time[3]);
+          time_image = parseInt(time[0]) * 600 + parseInt(time[1]) * 60 + parseInt(time[2]) * 10 + parseInt(time[3]);
         }
 
         var time = data.icon_name.split(".");
         if(time.length == 3){
           time = time[time.length - 2].split("");
 
-          var time_icon = parseInt(time[0]) * 600 + parseInt(time[1]) * 60 + parseInt(time[2]) * 10 + parseInt(time[3]);
+          time_icon = parseInt(time[0]) * 600 + parseInt(time[1]) * 60 + parseInt(time[2]) * 10 + parseInt(time[3]);
         }
 
         msg[10] = time_image & 0xFF;
@@ -729,9 +729,13 @@ websocket.add_opcodes([
 
         //Upload timestamps
         var time = data.icon_name.split(".");
-        time = time[time.length - 2].split("");
+        var time_icon = 0xFFF;
 
-        var time_icon = parseInt(time[0]) * 600 + parseInt(time[1]) * 60 + parseInt(time[2]) * 10 + parseInt(time[3]);
+        if(time.length == 3){
+          time = time[time.length - 2].split("");
+
+          time_icon = parseInt(time[0]) * 600 + parseInt(time[1]) * 60 + parseInt(time[2]) * 10 + parseInt(time[3]);
+        }
 
         msg[11] = time_icon & 0x0F;
         msg[12] = time_icon >> 4;
@@ -757,16 +761,13 @@ websocket.add_opcodes([
           i += 2;
           type = data[i++];
 
-          var name = IntArrayToString(data.slice(i+3, i+3+data[i]));
+          var name = IntArrayToString(data.slice(i+2, i+2+data[i]));
           var text_length = data[i++];
-
-          var img = IntArrayToString(data.slice(i+2+text_length, i+2+text_length+data[i]));
-          text_length += data[i++];
 
           var icon = IntArrayToString(data.slice(i+1+text_length, i+1+text_length+data[i]));
           text_length += data[i++];
 
-          Train.cars.push({name: name, nr: nr_id, img: img, icon: icon, max_speed: max_spd, length: length, type: type});
+          Train.cars.push({name: name, nr: nr_id, icon: icon, max_speed: max_spd, length: length, type: type});
           i += text_length;
         }
 

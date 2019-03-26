@@ -213,7 +213,6 @@ struct __attribute__((__packed__)) s_r_car_conf {
   uint16_t length;
   uint8_t type;   //in mm   
   uint8_t name_len;
-  uint8_t img_path_len;
   uint8_t icon_path_len;
 };
 
@@ -223,7 +222,6 @@ struct __attribute__((__packed__)) s_car_conf {
   uint16_t length;
   uint8_t type;   //in mm   
   uint8_t name_len;
-  uint8_t img_path_len;
   uint8_t icon_path_len;
 };
 
@@ -233,10 +231,8 @@ struct cars_conf {
   uint16_t length;
   uint8_t type;   //in mm   
   uint8_t name_len;
-  uint8_t img_path_len;
   uint8_t icon_path_len;
   char * name;
-  char * img_path;
   char * icon_path;
 };
 

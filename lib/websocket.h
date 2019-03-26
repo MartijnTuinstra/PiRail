@@ -40,9 +40,8 @@
     char strings;
   };
 
-  #define WSopc_AddNewEnginetolib_res_len 4
+  #define WSopc_AddNewEnginetolib_res_len 2
   struct __attribute__((__packed__)) s_opc_AddNewEnginetolib_res {
-    uint16_t DCC_ID;
     uint8_t response;
   };
 

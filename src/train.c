@@ -249,11 +249,10 @@ void clear_engine(Engines ** E){
   *E = 0;
 }
 
-void create_car(char * name,int nr,char * img, char * icon, char type, uint16_t length, uint16_t speed){
+void create_car(char * name,int nr, char * icon, char type, uint16_t length, uint16_t speed){
   Cars * Z = _calloc(1, Cars);
 
   Z->name = name;
-  Z->img_path = img;
   Z->icon_path = icon;
 
   Z->nr = nr;
@@ -271,7 +270,6 @@ void create_car(char * name,int nr,char * img, char * icon, char type, uint16_t 
 
 void clear_car(Cars ** C){
   _free((*C)->name);
-  _free((*C)->img_path);
   _free((*C)->icon_path);
   _free((*C)->funcs);
   *C = _free((*C));
@@ -385,7 +383,7 @@ void train_write_confs(){
       continue;
 
     subsize = sizeof(struct s_car_conf) + strlen(cars[i]->name) + 2;
-    subsize += strlen(cars[i]->img_path) + strlen(cars[i]->icon_path) + 2;
+    subsize += strlen(cars[i]->icon_path) + 2;
 
     ca++;
 
@@ -485,7 +483,6 @@ void train_write_confs(){
     c.length = cars[i]->length;
     c.type = cars[i]->type;
     c.name_len = strlen(cars[i]->name);
-    c.img_path_len = strlen(cars[i]->img_path);
     c.icon_path_len = strlen(cars[i]->icon_path);
 
     memcpy(p, &c, sizeof(struct s_car_conf));
@@ -493,9 +490,6 @@ void train_write_confs(){
 
     memcpy(p, cars[i]->name, c.name_len);
     p += c.name_len + 1;
-
-    memcpy(p, cars[i]->img_path, c.img_path_len);
-    p += c.img_path_len + 1;
 
     memcpy(p, cars[i]->icon_path, c.icon_path_len);
     p += c.icon_path_len + 1;

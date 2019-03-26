@@ -75,7 +75,6 @@
 
     uint16_t length;   //in mm
     char * name;
-    char * img_path;
     char * icon_path;
   } Cars;
 
@@ -145,14 +144,14 @@
   void free_trains();
 
   #define create_engine_from_conf(e) create_engine(e.name, e.DCC_ID, e.img_path, e.icon_path, e.type, e.length, e.config_steps, e.speed_steps)
-  #define create_car_from_conf(c) create_car(c.name, c.nr, c.img_path, c.icon_path, c.type, c.length, c.max_speed)
+  #define create_car_from_conf(c) create_car(c.name, c.nr, c.icon_path, c.type, c.length, c.max_speed)
   #define create_train_from_conf(t) create_train(t.name, t.nr_stock, t.composition, t.catagory, 1)
 
   void create_train(char * name, int nr_stock, struct train_comp_ws * comps, uint8_t catagory, uint8_t save);
   void clear_train(Trains ** E);
   void create_engine(char * name,int DCC,char * img, char * icon, char type, int length, int steps_len, struct engine_speed_steps * steps);
   void clear_engine(Engines ** E);
-  void create_car(char * name,int nr,char * img, char * icon, char type, uint16_t length, uint16_t speed);
+  void create_car(char * name,int nr, char * icon, char type, uint16_t length, uint16_t speed);
   void clear_car(Cars ** E);
 
   int train_read_confs();

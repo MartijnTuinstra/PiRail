@@ -86,7 +86,7 @@ int calc_write_train_size(struct train_config * config){
   //Cars
   for(int i = 0; i < config->header.Cars; i++){
     subsize = sizeof(struct s_car_conf) + config->Cars[i].name_len + 2;
-    subsize += config->Cars[i].img_path_len + config->Cars[i].icon_path_len + 2;
+    subsize += config->Cars[i].icon_path_len + 2;
 
     loggerf(INFO, "Car %i bytes\n", subsize);
 
@@ -288,9 +288,6 @@ void write_train_from_conf(struct train_config * config, char * filename){
 
     memcpy(p, config->Cars[i].name, config->Cars[i].name_len);
     p += config->Cars[i].name_len + 1;
-
-    memcpy(p, config->Cars[i].img_path, config->Cars[i].img_path_len);
-    p += config->Cars[i].img_path_len + 1;
 
     memcpy(p, config->Cars[i].icon_path, config->Cars[i].icon_path_len);
     p += config->Cars[i].icon_path_len + 1;
@@ -499,12 +496,6 @@ struct cars_conf read_cars_conf(uint8_t ** p){
   c.name = _calloc(c.name_len+1, char);
   memcpy(c.name, *p, sizeof(char) * c.name_len);
   *p += c.name_len;
-  if(!check_Spacing(p))
-    return c;
-
-  c.img_path = _calloc(c.img_path_len+1, char);
-  memcpy(c.img_path, *p, sizeof(char) * c.img_path_len);
-  *p += c.img_path_len;
   if(!check_Spacing(p))
     return c;
 

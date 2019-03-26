@@ -182,15 +182,7 @@ int websocket_decode(uint8_t data[1024], struct web_client_t * client){
       WS_cts_AddEnginetoLib((void *)&d->data, client);
     }
     else if(data[0] == WSopc_EditEnginelib){ //Edit / Remove Engine
-      uint16_t id = d->data.opc_EditEnginelib.id_l + (d->data.opc_EditEnginelib.id_h << 8);
-      if(d->data.opc_EditEnginelib.remove){
-        clear_engine(&engines[id]);
-      }
-      else{
-        WS_cts_Edit_Engine(engines[id], &(d->data.opc_EditEnginelib.data), client);
-      }
-      train_write_confs();
-      WS_EnginesLib(0);
+      WS_cts_Edit_Engine((void *)&(d->data), client);
     }
 
     else if(data[0] == WSopc_AddNewTraintolib){

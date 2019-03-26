@@ -174,7 +174,7 @@ void Z21_recv(char * data, int length){
 
   uint16_t d_length = data[0] + (data[1] << 8);
   uint16_t header = data[2] + (data[3] << 8);
-  uint8_t checksum;
+  uint8_t checksum = 0;
   for(int i = 4; i < (d_length - 1); i++){
     checksum ^= data[i];
   }
@@ -201,18 +201,18 @@ void Z21_recv(char * data, int length){
                                 // LAN_X_BC_TRACK_SHORT_CIRCUIT 0x08
                                 // LAN_X_UNKNOWN_COMMAND        0x82
         if(data[5] == 0){
-          loggerf(TRACE, "LAN_X_BC_TRACK_POWER_OFF");
+          loggerf(ERROR, "LAN_X_BC_TRACK_POWER_OFF");
           WS_EmergencyStop();
         }
         else if(data[5] == 0x01){
-          loggerf(TRACE, "LAN_X_BC_TRACK_POWER_ON");
+          loggerf(ERROR, "LAN_X_BC_TRACK_POWER_ON");
           WS_ClearEmergency();
         }
         else if(data[5] == 0x02){
-          loggerf(TRACE, "LAN_X_BC_PROGRAMMING_MODE");
+          loggerf(ERROR, "LAN_X_BC_PROGRAMMING_MODE");
         }
         else if(data[5] == 0x08){
-          loggerf(TRACE, "LAN_X_BC_TRACK_SHORT_CIRCUIT");
+          loggerf(ERROR, "LAN_X_BC_TRACK_SHORT_CIRCUIT");
           WS_ShortCircuit();
         }
         else if(data[5] == 0x82){

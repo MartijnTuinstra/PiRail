@@ -25,8 +25,8 @@
   struct systemState{
     uint16_t _STATE;
     uint16_t _Clients;
-    int _COM_fd;
-    int _Z21_fd;
+
+    uint8_t emergency;
 
     volatile uint8_t Z21_State:2;       // Z21  State
     volatile uint8_t UART_State:2;      // UART State

@@ -246,9 +246,11 @@ int websocket_decode(uint8_t data[1024], struct web_client_t * client){
     loggerf(TRACE, "General Settings");
     if(data[0] == WSopc_EmergencyStop){ //Enable Emergency Stop!!
       WS_EmergencyStop();
+      Z21_TRACKPOWER_OFF;
     }
     else if(data[0] == WSopc_ClearEmergency){ //Disable Emergency Stop!!
       WS_ClearEmergency();
+      Z21_TRACKPOWER_ON;
     }
     else if(data[0] == WSopc_ClearMessage){
 

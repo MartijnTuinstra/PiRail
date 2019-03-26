@@ -177,7 +177,7 @@ var Modals = {
             </div>',
       buttons: {
         success: {visible: true, content: "Create", cb: function(data){websocket.cts_AddNewTraintolib(data)}, wait: false},
-        warning: {visible: true, content: "Update", cb: function(data){websocket.cts_EditTrainlib(data)}, wait: false},
+        warning: {visible: true, content: "Update", cb: function(data){data.edit = true; websocket.cts_EditTrainlib(data)}, wait: false},
         danger: {visible: true, content: "Delete", cb: function(data){data.edit = false; websocket.cts_EditTrainlib(data)}, wait: false},
       }
     },
@@ -461,10 +461,10 @@ var Modals = {
               cb: function(data){websocket.cts_AddNewEnginetolib(data)},
               wait: true},
         warning: {visible: true, content: "Update",
-                  cb: function(data){websocket.cts_EditEnginelib(data)},
+                  cb: function(data){data.edit = true; websocket.cts_EditEnginelib(data)},
                   wait: true},
         danger: {visible: true, content: "Delete",
-                 cb: function(){data.edit = false; websocket.cts_EditEnginelib(data)},
+                 cb: function(data){data.edit = false; websocket.cts_EditEnginelib(data)},
                  wait: false},
       }
     },
@@ -572,7 +572,7 @@ var Modals = {
                   </div>',
       buttons: {
         success: {visible: true, content: "Create", cb: function(data){websocket.cts_AddNewCartolib(data)}, wait: false},
-        warning: {visible: true, content: "Update", cb: function(data){websocket.cts_EditCarlib(data)}, wait: false},
+        warning: {visible: true, content: "Update", cb: function(data){data.edit = true; websocket.cts_EditCarlib(data)}, wait: false},
         danger: {visible: true, content: "Delete", cb: function(data){data.edit = false; websocket.cts_EditCarlib(data)}, wait: false},
       }
     },
@@ -1249,7 +1249,7 @@ var Modals = {
         if(type == "number"){
           that.data[name] = parseInt(that.data[name]);
         }
-        else if(isNaN(parseFloat(that.data[name])) == false){
+        else if(isNaN(parseFloat(that.data[name])) == false && parseFloat(that.data[name]).toString() == that.data[name]){
           that.data[name] = parseFloat(that.data[name]);
         }
       }
@@ -1264,7 +1264,7 @@ var Modals = {
         if(type == "number"){
           that.data[name] = parseInt(that.data[name]);
         }
-        else if(isNaN(parseFloat(that.data[name])) == false){
+        else if(isNaN(parseFloat(that.data[name])) == false && parseFloat(that.data[name]).toString() == that.data[name]){
           that.data[name] = parseFloat(that.data[name]);
         }
       }

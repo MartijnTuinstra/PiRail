@@ -102,7 +102,12 @@ var websocket = {
     this["cts_"+name] = function(data){
       var msg = [];
       msg[0] = opcode;
-      msg = msg.concat(send(data));
+      var msg2 = send(data);
+      if(msg2 == undefined || !(typeof msg2 === 'object' && msg2.constructor === Array)){
+        console.log("opcode send function thrown error");
+        return;
+      }
+      msg = msg.concat(msg2);
 
       console.log(msg);
 
@@ -140,7 +145,7 @@ var websocket = {
       console.warn("Unknown opcode "+opcode);
     }
 
-    console.log(opcode, "stc_"+this.opc[opcode]);
+    console.log("0x"+opcode.toString(16)+" stc_"+this.opc[opcode]);
 
     this["stc_"+this.opc[opcode]](msg);
 
@@ -520,13 +525,13 @@ websocket.add_opcodes([
         return msg;
       },
       recv: function(data){
-        if(data[3] == 1){
+        if(data[0] == 1){
           Modals.hide();
         }
-        else if(data[3] == 0){
+        else if(data[0] == 0){
           Modals.call_cb("create_cb", {return_code: 0});
         }
-        else if(data[3] == 255){
+        else if(data[0] == 255){
           Modals.call_cb("create_cb", {return_code: -1});
         }
       }
@@ -686,16 +691,14 @@ websocket.add_opcodes([
         return msg;
       },
       recv: function(data){
-        if(data[3] == 1){
-          if(Train.engine_car_creator.save_cb != undefined){
-            Train.engine_car_creator.save_cb();
-          }
+        if(data[0] == 1){
+          Modals.hide();
         }
-        else if(data[3] == 0){
-          alert("Failed with no reason");
+        else if(data[0] == 0){
+          Modals.call_cb("create_cb", {return_code: 0});
         }
-        else if(data[3] == -1){
-          alert("DCC address is allready in use");
+        else if(data[0] == 255){
+          Modals.call_cb("create_cb", {return_code: -1});
         }
       }
     },

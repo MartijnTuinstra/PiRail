@@ -712,7 +712,7 @@ void WS_cts_Edit_Car(Cars * C, struct s_opc_AddNewCartolib * data, struct web_cl
       sprintf(C->icon_path, "%iC_%s.%s", data->nr, filename, "jpg");
       sprintf(sicon, "%s.%04i.%s", "web/tmp_icon", icon_time, "jpg");
     }
-    dicon = _calloc(strlen(C->icon_path)+10, 1);
+    dicon = _calloc(strlen(C->icon_path)+20, 1);
     sprintf(dicon, "%s%s", "web/trains_img/", C->icon_path);
     move_file(sicon, dicon);
 
@@ -726,7 +726,7 @@ void WS_cts_Edit_Car(Cars * C, struct s_opc_AddNewCartolib * data, struct web_cl
     sprintf(filetype, "%s", &C->icon_path[strlen(C->icon_path)-3]);
 
     sprintf(C->icon_path, "%iC_%s.%s", data->nr, filename, filetype);
-    dicon = _calloc(strlen(C->icon_path)+10, 1);
+    dicon = _calloc(strlen(C->icon_path)+20, 1);
     sprintf(dicon, "%s%s", "web/trains_img/", C->icon_path);
 
     move_file(sicon, dicon);
@@ -799,8 +799,8 @@ void WS_cts_AddEnginetoLib(struct s_opc_AddNewEnginetolib * data, struct web_cli
 
   create_engine(name, data->DCC_ID, img, icon, data->type, data->length, data->steps, (struct engine_speed_steps *)steps);
 
-  char * dimg = _calloc(strlen(img)+10, 1);
-  char * dicon = _calloc(strlen(icon)+10, 1);
+  char * dimg = _calloc(strlen(img)+20, 1);
+  char * dicon = _calloc(strlen(icon)+20, 1);
   sprintf(dimg, "%s%s", "web/trains_img/", img);
   sprintf(dicon, "%s%s", "web/trains_img/", icon);
 
@@ -914,7 +914,7 @@ void WS_cts_Edit_Engine(struct s_opc_EditEnginelib * msg, struct web_client_t * 
         sprintf(simg, "%s.%04i.%s", "web/tmp_img", image_time, "jpg");
       }
 
-      dimg = _calloc(strlen(E->img_path)+10, 1);
+      dimg = _calloc(strlen(E->img_path)+20, 1);
       sprintf(dimg, "%s%s", "web/trains_img/", E->img_path);
       move_file(simg,  dimg);
 
@@ -928,7 +928,7 @@ void WS_cts_Edit_Engine(struct s_opc_EditEnginelib * msg, struct web_client_t * 
       sprintf(filetype, "%s", &E->img_path[strlen(E->img_path)-3]);
 
       sprintf(E->img_path, "%i_%s_im.%s", data->DCC_ID, filename, filetype);
-      dimg = _calloc(strlen(E->img_path)+10, 1);
+      dimg = _calloc(strlen(E->img_path)+20, 1);
       sprintf(dimg, "%s%s", "web/trains_img/", E->img_path);
 
       move_file(simg, dimg);
@@ -949,7 +949,7 @@ void WS_cts_Edit_Engine(struct s_opc_EditEnginelib * msg, struct web_client_t * 
         sprintf(E->icon_path, "%i_%s_ic.%s", data->DCC_ID, filename, "jpg");
         sprintf(sicon, "%s.%04i.%s", "web/tmp_icon", icon_time, "jpg");
       }
-      dicon = _calloc(strlen(E->icon_path)+10, 1);
+      dicon = _calloc(strlen(E->icon_path)+20, 1);
       sprintf(dicon, "%s%s", "web/trains_img/", E->icon_path);
       move_file(sicon, dicon);
 
@@ -963,7 +963,7 @@ void WS_cts_Edit_Engine(struct s_opc_EditEnginelib * msg, struct web_client_t * 
       sprintf(filetype, "%s", &E->icon_path[strlen(E->icon_path)-3]);
 
       sprintf(E->icon_path, "%i_%s_ic.%s", data->DCC_ID, filename, filetype);
-      dicon = _calloc(strlen(E->icon_path)+10, 1);
+      dicon = _calloc(strlen(E->icon_path)+20, 1);
       sprintf(dicon, "%s%s", "web/trains_img/", E->icon_path);
 
       move_file(sicon, dicon);

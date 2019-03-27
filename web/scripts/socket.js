@@ -805,7 +805,6 @@ websocket.add_opcodes([
       name: "EditTrainlib",
       send: function(data){
         msg = [];
-        data.edit = (data.edit == undefined)?true:false;
 
         msg[0] = ((!data.edit) << 7) | (data.id & 0x7f00) >> 8;
         msg[1] = data.id & 0xff;

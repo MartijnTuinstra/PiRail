@@ -166,9 +166,9 @@ var Train_Control = {
 
     websocket.cts_TrainSubscribe(this.train);
 
-    $('.header > div', parent).text(list[id].name);
+    $('.header > div', parent).text(list[id].dcc.toString(10)+" - "+list[id].name);
     $('.train-img', parent).css('background-image', "url('./trains_img/"+list[id].img+"')");
-    $('.train-info-box .description', parent).text(list[id].description);
+    $('.train-info-box .description', parent).text(list[id].name);
     $('.train-info-box .route > span', parent).text(list[id].route);
 
     var slider_box = $('.train-box.box'+box+' .train-speed-slider')

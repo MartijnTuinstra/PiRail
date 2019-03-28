@@ -84,6 +84,28 @@ var Canvas = {
 		this.get_content_box();
 
 		this.update_frame();
+
+		$('.btn-layout-zoom-in').on("click", function(){
+			Canvas.rescale(Canvas.dimensions.scale * 1.2);
+		});
+		$('.btn-layout-zoom-out').on("click", function(){
+			Canvas.rescale(Canvas.dimensions.scale / 1.2);
+		});
+
+		$('.btn-layout-rotate-ccw').on("click", function(){
+			var m = modules[Object.keys(modules)[0]];
+			m.move({r: m.r + 0.25});
+			Canvas.get_content_box();
+			Canvas.center();
+			Canvas.update_frame();
+		});
+		$('.btn-layout-rotate-cw').on("click", function(){
+			var m = modules[Object.keys(modules)[0]];
+			m.move({r: m.r - 0.25});
+			Canvas.get_content_box();
+			Canvas.center();
+			Canvas.update_frame();
+		});
 	},
 
 	get_content_box: function(){
@@ -93,50 +115,34 @@ var Canvas = {
 		var t = 1e100;
 		var b = 0;
 
+		var point = [];
+
 		for(i in modules){
 			if(!modules[i].visible){
 				continue;
 			}
 
-			// console.log("Module "+i, modules[i].width, modules[i].height, modules[i].OffsetX, modules[i].OffsetY, modules[i].r);
-			// console.log([l, r, t, b]);
+			point[0] = rotated_point(modules[i].OffsetX, modules[i].OffsetY, 0);
+			point[1] = rotated_point(modules[i].width, 0, modules[i].r, modules[i].OffsetX, modules[i].OffsetY);
+			point[2] = rotated_point(modules[i].width, modules[i].height, modules[i].r, modules[i].OffsetX, modules[i].OffsetY);
+			point[3] = rotated_point(0, modules[i].height, modules[i].r, modules[i].OffsetX, modules[i].OffsetY);
 
-			if(modules[i].r == 0){
-				if(modules[i].OffsetX < l){
-					l = modules[i].OffsetX - 20;
+			for(var i = 0; i < 4; i++){
+				if(point[i].x < l){
+					l = point[i].x - 20;
 				}
-
-				if((modules[i].OffsetX + modules[i].width) > r){
-					r = modules[i].OffsetX + modules[i].width + 20;
+				if(point[i].x > r){
+					r = point[i].x + 20;
 				}
-
-				if(modules[i].OffsetY < t){
-					t = modules[i].OffsetY - 20;
+				if(point[i].y < t){
+					t = point[i].y - 20;
 				}
-
-				if((modules[i].OffsetY + modules[i].height) > b){
-					b = modules[i].OffsetY + modules[i].height + 20;
-				}
-			}
-			else if(modules[i].r == 1){
-				if((modules[i].OffsetX - modules[i].width) < l){
-					l = modules[i].OffsetX - modules[i].width - 20;
-				}
-
-				if((modules[i].OffsetX) > r){
-					r = modules[i].OffsetX + 20;
-				}
-
-				if((modules[i].OffsetY - modules[i].height) < t){
-					t = modules[i].OffsetY - modules[i].height - 20;
-				}
-
-				if((modules[i].OffsetY) > b){
-					b = modules[i].OffsetY + 20;
+				if(point[i].y > b){
+					b = point[i].y + 20;
 				}
 			}
 
-			// console.log([l, r, t, b]);
+			console.log([l, r, t, b]);
 		}
 
 		this.dimensions.content.width = (r - l)*this.dimensions.scale;
@@ -154,13 +160,16 @@ var Canvas = {
 		this.dimensions.width  = (this.canvas.width  = $('#LayoutContainer').width());
 		
 		//Recenter content
-		this.dimensions.ofX = 0.5*this.dimensions.width/this.dimensions.scale-0.5*this.dimensions.content.width;
-		this.dimensions.ofY = 0;
+		this.center();
 
 		this.get_content_box();
 		this.calc_limits();
 
 		this.update_frame();
+	},
+	center: function(){
+		this.dimensions.ofX = 0.5*this.dimensions.width-0.5*this.dimensions.content.width;
+		this.dimensions.ofY = 0;
 	},
 	rescale: function(new_scale){
 		// console.log("rescale");
@@ -291,7 +300,7 @@ var Canvas = {
 
     update_frame: function(){
     	this.c.setTransform(1, 0, 0, 1, 0, 0);
-		this.c.clearRect(-10, -10, 10 + this.dimensions.width/this.dimensions.scale, 10 + this.dimensions.height/this.dimensions.scale);
+		this.c.clearRect(-10, -10, 10 + this.dimensions.width, 10 + this.dimensions.height);
 		var tmp_this = this;
 
 		this.c.setTransform(1, 0, 0, 1, this.dimensions.ofX, this.dimensions.ofY);
@@ -667,6 +676,31 @@ function equation_tester(equation, values) {
 	}
 }
 
+//Dotmatrix dot
+class dot {
+	constructor(x, y, block){
+		this.x = Math.round(x);
+		this.y = Math.round(y);
+		this.block = [block];
+	}
+
+	equals(dot){
+		return (Math.round(dot.x)==this.x && Math.round(dot.y)==this.y);
+	}
+
+	toString(){
+		return this.x + ", " + this.y + "; "+this.block.toString();
+	}
+
+	combine(dot){
+		for(var i = 0; i < dot.block.length; i++){
+			if(this.block.indexOf(dot.block[i]) < 0){
+				this.block.push(dot.block[i]);
+			}
+		}
+	}
+}
+
 class canvas_line {
 	constructor(module, data){//module_id, block, x1, y1, x2, y2, options){
 		this.type = "line";
@@ -687,17 +721,13 @@ class canvas_line {
 	}
 
 	init(){
-		return;
+		this.m.add_dot(new dot(this.x1, this.y1, this.b));
+		this.m.add_dot(new dot(this.x2, this.y2, this.b));
 	}
 
 	configdata(id){
 		return "<tr><th scope='row'>"+id+"</th><td>"+this.b+"</td><td>Line</td><td>"+round(this.x1, 3)+
 		       ", "+round(this.y1, 3)+"</td><td>"+round(this.x2, 3)+", "+round(this.y2, 3)+"</td><td>-</td><td>-</td><td>"+settings("#ccc", 23)+"</td></tr>";
-	}
-
-	dotmatrix(){
-		var coords = [{x: this.x1, y: this.y1}, {x: this.x2, y: this.y2}];
-		return [coords, this.b]
 	}
 
 	draw_fore(cnvs, stroke, rotation, offset){
@@ -772,18 +802,13 @@ class canvas_arc {
 	}
 
 	init(){
-		return;
+		this.m.add_dot(new dot(this.cx+Math.cos(this.start*Math.PI)*this.r, this.cy+Math.sin(this.start*Math.PI)*this.r, this.b));
+		this.m.add_dot(new dot(this.cx+Math.cos(this.end * Math.PI)*this.r, this.cy+Math.sin(this.end * Math.PI)*this.r, this.b));
 	}
 
 	configdata(id){
 		return "<tr><th scope='row'>"+id+"</th><td>"+this.b+"</td><td>Arc</td><td>"+round(this.cx, 3)+
 		       ", "+round(this.cy, 3)+"</td><td>"+round(this.r, 3)+"</td><td>"+this.start+" - "+this.end+", "+this.cw+", "+"</td><td>-</td><td>"+settings("#ccc", 23)+"</td></tr>";
-	}
-
-	dotmatrix(){
-		var coords = [{x: this.cx+Math.cos(this.start*Math.PI)*this.r, y: this.cy+Math.sin(this.start*Math.PI)*this.r}, 
-					  {x: this.cx+Math.cos(this.end * Math.PI)*this.r, y: this.cy+Math.sin(this.end * Math.PI)*this.r}];
-		return [coords, this.b]
 	}
 
 	draw_back(cnvs, stroke, color, rotation, offset){
@@ -844,6 +869,7 @@ class canvas_switch {
 	}
 
 	init(){
+		this.add_dots();
 		this.m.add_hitbox(this.hit.bind(this));
 
 		this.hit_eqn = [];
@@ -910,7 +936,7 @@ class canvas_switch {
 	draw_back(cnvs, stroke, color, rotation, offset){
 		var x = rotation.X*this.x + rotation.Y_*this.y + offset.X;
 		var y = rotation.Y*this.y + rotation.X_*this.x + offset.Y;
-		var r = this.r - this.m.r
+		var r = this.r - this.m.r;
 
 		if(this.if != undefined){
 			var j = 0;
@@ -955,26 +981,20 @@ class canvas_switch_l extends canvas_switch{
 		super(module, data);
 	}
 
-	dotmatrix(){
-		var coords = [];
+	add_dots(){
+		this.m.add_dot(new dot(this.x, this.y, this.b));
 
-		var rvX = Math.cos(this.r*Math.PI);
-		var rvX_ = Math.cos((this.r+0.5)*Math.PI);
-		var rvY = Math.sin((this.r+0.5)*Math.PI);
-		var rvY_ = Math.sin((this.r)*Math.PI);
-
-		coords.push({x:this.x,y:this.y});
+		var pointA; // Line
+		//Arc
+		var pointB = rotated_point(ro[0].x, -ro[0].y, -this.r, this.x, this.y);
 		if((this.r + 0.25) % 0.5 == 0){
-			coords.push({x: this.x+rvX*(ro[0].x-ds), y: this.y+rvY_*(ro[0].x-ds)});
+			pointA = rotated_point(ro[0].x-ds, 0, -this.r, this.x, this.y);
 		}else if(this.r % 0.5 == 0){
-			coords.push({x: this.x+rvX*ro[0].x, y: this.y+rvY_*ro[0].x});
+			pointA = rotated_point(ro[0].x, 0, -this.r, this.x, this.y);
 		}
 
-		var tx = this.x + rvX * ro[0].x - rvX_ * ro[0].y;
-		var ty = this.y + rvY_* ro[0].x - rvY * ro[0].y;
-		coords.push({x: tx, y: ty});
-
-		return [coords, this.b, this.s];
+		this.m.add_dot(new dot(pointA.x, pointA.y, this.b));
+		this.m.add_dot(new dot(pointB.x, pointB.y, this.b));
 	}
 
 	draw(cnvs, stroke, x,y,r,lr,type,bl,sw){
@@ -989,18 +1009,24 @@ class canvas_switch_l extends canvas_switch{
 			(type == "F")?stroke(bl,0, cnvs):stroke(bl,1, cnvs);
 
 			cnvs.moveTo(x,y);
+			var pointA;
 			if((r + 0.25) % 0.5 == 0){
-				cnvs.lineTo(x+rvX*(ro[0].x-ds),y+rvY_*(ro[0].x-ds));
+				pointA = rotated_point(ro[0].x-ds, 0, -r, x, y);
+				// cnvs.lineTo(x+rvX*(ro[0].x-ds),y+rvY_*(ro[0].x-ds));
 			}else if(r % 0.5 == 0){
-				cnvs.lineTo(x+rvX*ro[0].x,y+rvY_*ro[0].x);
+				// cnvs.lineTo(x+rvX*ro[0].x,y+rvY_*ro[0].x);
+				pointA = rotated_point(ro[0].x, 0, -r, x, y);
 			}
+			cnvs.lineTo(pointA.x, pointA.y);
 		}
 		if((sw == 1 && type == "F") || (sw == 0 && type == "B") || type == "G"){
 			(type == "F")?stroke(bl,0, cnvs):stroke(bl,1, cnvs);
 
-			var tx = x - rvX_ * radia[0];
-			var ty = y - rvY * radia[0];
-			cnvs.arc(tx, ty, radia[0],Math.PI*(r+0.5),Math.PI*(r+0.25),true);
+			var pointB = rotated_point(0, -radia[0], -r, x, y);
+
+			// var tx = x - rvX_ * radia[0];
+			// var ty = y - rvY * radia[0];
+			cnvs.arc(pointB.x, pointB.y, radia[0],Math.PI*(r+0.5),Math.PI*(r+0.25),true);
 		}
 	}
 }
@@ -1009,27 +1035,21 @@ class canvas_switch_r extends canvas_switch{
 	constructor(module, data){
 		super(module, data);
 	}
-	
-	dotmatrix(){
-		var coords = [];
-		
-		var rvX = Math.cos(this.r*Math.PI);
-		var rvX_ = Math.cos((this.r+0.5)*Math.PI);
-		var rvY = Math.sin((this.r+0.5)*Math.PI);
-		var rvY_ = Math.sin((this.r)*Math.PI);
 
-		coords.push({x:this.x,y:this.y});
+	add_dots(){
+		this.m.add_dot(new dot(this.x, this.y, this.b));
+
+		var pointA; //Line
+		// Arc
+		var pointB = rotated_point(ro[0].x, ro[0].y, -this.r, this.x, this.y);
 		if((this.r + 0.25) % 0.5 == 0){
-			coords.push({x: this.x+rvX*(ro[0].x-ds), y: this.y+rvY_*(ro[0].x-ds)});
+			pointA = rotated_point(ro[0].x-ds, 0, -this.r, this.x, this.y);
 		}else if(this.r % 0.5 == 0){
-			coords.push({x: this.x+rvX*ro[0].x, y: this.y+rvY_*ro[0].x});
+			pointA = rotated_point(ro[0].x, 0, -this.r, this.x, this.y);
 		}
 
-		var tx = this.x + rvX * ro[0].x + rvX_ * ro[0].y;
-		var ty = this.y + rvY_* ro[0].x + rvY * ro[0].y;
-		coords.push({x: tx, y: ty});
-
-		return [coords, this.b, this.s];
+		this.m.add_dot(new dot(pointA.x, pointA.y, this.b));
+		this.m.add_dot(new dot(pointB.x, pointB.y, this.b));
 	}
 
 	draw(cnvs, stroke, x,y,r,lr,type,bl,sw){
@@ -1086,7 +1106,7 @@ class canvas_double_slip {
 	}
 
 	init(){
-		this.m = modules[this.module_id]
+		this.add_dots();
 
 		this.m.add_hitbox(this.hit.bind(this));
 
@@ -1214,6 +1234,26 @@ class canvas_dslip extends canvas_double_slip {
 	constructor(module, data){
 		super(module, data);
 	}
+
+	add_dots(){
+		this.m.add_dot(new dot(this.x, this.y, this.b));
+
+		//  A\
+		//  x---B
+		//     \C
+
+		var pointA; // Arc
+		var pointB; // Line
+		var pointC; // Arc
+
+		pointA = rotated_point(-ds, -ro[0].y, -this.r, this.x, this.y);
+		pointB = rotated_point(ro[0].x-ds, 0, -this.r, this.x, this.y);
+		pointC = rotated_point(ro[0].x, ro[0].y, -this.r, this.x, this.y);
+
+		this.m.add_dot(new dot(pointA.x, pointA.y, this.b));
+		this.m.add_dot(new dot(pointB.x, pointB.y, this.b));
+		this.m.add_dot(new dot(pointC.x, pointC.y, this.b));
+	}
 	
 	dotmatrix(){
 		var coords = [];
@@ -1305,6 +1345,26 @@ class canvas_dslip extends canvas_double_slip {
 class canvas_fl_dslip extends canvas_double_slip {
 	constructor(module, data){
 		super(module, data);
+	}
+
+	add_dots(){
+		this.m.add_dot(new dot(this.x, this.y, this.b));
+
+		//     /A
+		//  x---B
+		//  C/
+
+		var pointA; // Arc
+		var pointB; // Line
+		var pointC; // Arc
+
+		pointA = rotated_point(ro[0].x, -ro[0].y, -this.r, this.x, this.y);
+		pointB = rotated_point(ro[0].x-ds, 0, -this.r, this.x, this.y);
+		pointC = rotated_point(-ds, ro[0].y, -this.r, this.x, this.y);
+
+		this.m.add_dot(new dot(pointA.x, pointA.y, this.b));
+		this.m.add_dot(new dot(pointB.x, pointB.y, this.b));
+		this.m.add_dot(new dot(pointC.x, pointC.y, this.b));
 	}
 	
 	dotmatrix(){
@@ -1439,6 +1499,8 @@ class canvas_module {
 					this.data.push(new canvas_fl_dslip(this, data.layout[i]));
 					break;
 			}
+
+			this.data[i].init();
 		}
 	}
 
@@ -1573,6 +1635,23 @@ class canvas_module {
 		this.hitboxes.push(hit);
 	}
 
+	add_dot(dot){
+		for(var i = 0; i < this.dotmatrix.length; i++){
+			if(this.dotmatrix[i].equals(dot)){
+				this.dotmatrix[i].combine(dot);
+				break;
+			}
+
+			if(i == (this.dotmatrix.length-1)){
+				this.dotmatrix.push(dot);
+			}
+		}
+
+		if(this.dotmatrix.length == 0){
+			this.dotmatrix.push(dot);
+		}
+	}
+
 	init(options = {}){
 		if(options.visible != undefined && options.visible){
 			this.visible = true;
@@ -1585,10 +1664,6 @@ class canvas_module {
 		}
 		if(options.r != undefined){
 			this.r = options.r;
-		}
-
-		for(var i = 0; i < this.data.length; i++){
-			this.data[i].init();
 		}
 
 		Canvas.get_content_box();
@@ -1604,26 +1679,24 @@ class canvas_module {
 	}
 
 	draw_dotmatrix(cnvs, stroke, r){
-		var offset = {X: this.OffsetX, Y: this.OffsetY};
-		var rotation = {X: Math.cos(this.r*Math.PI), X_: Math.cos((this.r+0.5)*Math.PI),
-			            Y: Math.sin((this.r+0.5)*Math.PI), Y_: Math.sin((this.r)*Math.PI)};
-
 		for(var i = 0; i < this.dotmatrix.length; i++){
 			cnvs.beginPath();
 
+			var dot = this.dotmatrix[i];
+
 			var block_state = 255;
-			for(var j = 0; j < this.dotmatrix[i].blocks.length; j++){
-				if(this.dotmatrix[i].blocks[j] < block_state){
-					block_state = this.dotmatrix[i].blocks[i];
+			for(var j = 0; j < dot.block.length; j++){
+				if(dot.block[j] < block_state){
+					block_state = dot.block[i];
 				}
 			};
 
 			stroke(block_state, 0, cnvs);
 			cnvs.fillStyle = cnvs.strokeStyle;
 
-			cnvs.arc(offset.X+rotation.X*this.dotmatrix[i].x+rotation.Y_*this.dotmatrix[i].y,
-				  offset.Y+rotation.Y*this.dotmatrix[i].y+rotation.X_*this.dotmatrix[i].x,
-				  r, 0, 2*Math.PI, false);
+			var point = rotated_point(dot.x, dot.y, this.r, this.OffsetX, this.OffsetY);
+
+			cnvs.arc(point.x, point.y, r, 0, 2*Math.PI, false);
 
 			cnvs.fill();
 			cnvs.stroke();
@@ -1771,16 +1844,10 @@ events.add_init(function(){
 });
 
 function conf_modules(){
-	modules[20].move({OffsetX:  50, OffsetY:  0, nonest: true});
-	modules[21].move({OffsetX: 850, OffsetY: 440, r: 1, nonest: true});
-	modules[22].move({OffsetX: 1650, OffsetY:  0, nonest: true});
-	modules[23].move({OffsetX:  50, OffsetY: 440, r: 1, nonest: true});
-	modules[25].move({OffsetX: 850, OffsetY:  0, nonest: true});
-	modules[26].move({OffsetX: 1650, OffsetY: 440, r: 1, nonest: true});
-	Canvas.calc_dotmatrix();
-	Canvas.rescale(Canvas.dimensions.scale);
-	Canvas.update_frame();
+	modules[10].init({visible: true, OffsetX: 0, OffsetY: 0, r: 0});
+	Canvas.rescale(1);
 }
 
 var modules = {};
+
 var modules_data = {}

@@ -195,7 +195,7 @@ websocket.add_opcodes([
     },
     {
       opcode: 0x83,
-      name: "Track_Layout_Update",
+      name: "Track_Layout_Update", // Partial layout
       recv: function(data){
         for(var i = 0;i<data.length;i++){
           var module = modules[data[i]]
@@ -213,7 +213,7 @@ websocket.add_opcodes([
     },
     {
       opcode: 0x84,
-      name: "Track_Layout_Config",
+      name: "Track_Layout_Config", // Full layout
       recv: function(data){
         for(var i = 0;i<data.length;i++){
           var module = modules[data[i]]
@@ -985,7 +985,7 @@ websocket.add_opcodes([
         
         modules[newdata.id] = new canvas_module(newdata);
 
-        modules[newdata.id].init({visible: true, OffsetX: 0, OffsetY: newdata.id*500, r: 0});
+        modules[newdata.id].init({visible: true, OffsetX: 0, OffsetY: newdata.id*300, r: 0});
 
         ModuleEditor.update()
 

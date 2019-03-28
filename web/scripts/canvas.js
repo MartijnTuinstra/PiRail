@@ -1444,6 +1444,20 @@ class canvas_module {
 
 	move(options = {}){
 		console.log("Move module "+this.id, options);
+		if(options.originID != undefined && options.originID == this.id){
+			return;
+		}
+		else if(options.originID == undefined){
+			options.originID = this.id;
+		}
+
+		var depth;
+		if(options.depth == undefined){
+			depth = 0;
+		}
+		else{
+			depth = options.depth + 1;
+		}
 		var dx = 0;
 		var dy = 0;
 		var dr = 0;
@@ -1458,10 +1472,36 @@ class canvas_module {
 		if(options.r != undefined){
 			dr = options.r - this.r;
 			this.r = options.r;
+			if(this.r < 0)
+				this.r += 2;
 			this.r = this.r % 2;
 		}
 
-		console.log("Moved module "+this.id, {x: this.OffsetX, y: this.OffsetY, r:this.r});
+		if(depth > 10){
+			return;
+		}
+
+		for(var i = 0; i < this.connection_link.length; i++){
+			if(this.connection_link[i] == undefined)
+				continue;
+
+			if(!this.connections[i].connected)
+				continue;
+
+			if(this.connection_link[i] == options.prev)
+				continue;
+
+			var m = modules[this.connection_link[i]];
+
+			// Calculate new offset point
+			var j = m.connection_link.indexOf(this.id);
+			var rotation = (this.r + this.connections[i].r + 1);
+			var pointA = rotated_point(this.connections[i].x, this.connections[i].y, this.r, this.OffsetX, this.OffsetY);
+			var pointB = reversed_rotated_point(m.connections[j].x, m.connections[j].y, (rotation+m.connections[j].r)%2, pointA.x, pointA.y);
+
+			m.move({OffsetX: pointB.x, OffsetY: pointB.y, r: (rotation+m.connections[j].r)%2, originID: options.originID, prev: this.id, depth: depth});
+		}
+
 
 		// if((options.nonest == undefined || options.nonest == false) && this.connection_link){
 		// 	for(var i = 0; i < this.connections.length; i++){
@@ -1495,41 +1535,32 @@ class canvas_module {
 			if(this.connections[i].connected){
 				continue;
 			}
-			var aModule = modules[this.connection_link[i]];
+			var module_b = modules[this.connection_link[i]];
 
-			if(!aModule.connection_link.includes(this.id)){
+			if(module_b == undefined || !module_b.connection_link.includes(this.id)){
 				continue;
 			}
 
-			var point = rotated_point(this.connections[i].x, this.connections[i].y, this.r, this.OffsetX, this.OffsetY);
+			var anchor = rotated_point(this.connections[i].x, this.connections[i].y, this.r, this.OffsetX, this.OffsetY)
 
-			var anchorX = point.x;
-			var anchorY = point.y;
+			var rotation = (this.r + this.connections[i].r + 1) % 2;
 
-			var anchorR = (this.connections[i].r + 1) % 2;
+			var j = module_b.connection_link.indexOf(this.id);
 
-			var connect_list = aModule.connection_link.indexOf(this.id);
-
-			console.log("Module "+this.id+" anchor "+i+"=>"+connect_list, aModule.id);
-
-			if(anchorR != aModule.connections[connect_list].r){
-				this.move({r: aModule.r + aModule.connections[connect_list].r - anchorR})
+			if(rotation == (module_b.r + module_b.connections[j].r)){
+				// Just move
+				var newpoint = reversed_rotated_point(module_b.connections[j].x, module_b.connections[j].y, module_b.r, anchor.x, anchor.y);
+				module_b.move({OffsetX: newpoint.x, OffsetY: newpoint.y, originID: this.id});
 			}
 			else{
-				this.move({r: aModule.r});
+				// rotate and move
+				// module_b.move({r: (rotation+module_b.connections[j].r)%2})
+				var newpoint = reversed_rotated_point(module_b.connections[j].x, module_b.connections[j].y, (rotation+module_b.connections[j].r)%2, anchor.x, anchor.y);
+				module_b.move({OffsetX: newpoint.x, OffsetY: newpoint.y, r: (rotation+module_b.connections[j].r)%2, originID: this.id});
 			}
 
-			point = rotated_point(aModule.connections[connect_list].x, aModule.connections[connect_list].y, aModule.r, aModule.OffsetX, aModule.OffsetY);
-			if(this.r == anchorR){
-				point = rotated_point(this.connections[i].x, -this.connections[i].y, this.r, point.x, point.y);
-			}
-			else{
-				point = rotated_point(-this.connections[i].x, -this.connections[i].y, this.r, point.x, point.y);
-			}
-
-			this.move({OffsetX: point.x, OffsetY: point.y});
-
-			aModule.connections[connect_list].connected = true;
+			console.log("Module "+module_b.id+" and "+this.id+" connected");
+			module_b.connections[j].connected = true;
 			this.connections[i].connected = true;
 		}
 	}
@@ -1720,6 +1751,11 @@ function load_module(id){
 function rotated_point(x, y, r, ofX=0, ofY=0){
 	r_ = {X: Math.cos(r*Math.PI), X_: Math.cos((r+0.5)*Math.PI), Y: Math.sin((r+0.5)*Math.PI), Y_: Math.sin((r)*Math.PI)};
 	return {x: ofX + r_.X*x + r_.Y_*y , y: ofY + r_.Y*y + r_.X_*x } ;
+}
+
+function reversed_rotated_point(x, y, r, ofX=0, ofY=0){
+	r_ = {X: Math.cos(r*Math.PI), X_: Math.cos((r+0.5)*Math.PI), Y: Math.sin((r+0.5)*Math.PI), Y_: Math.sin((r)*Math.PI)};
+	return {x: ofX - r_.X*x - r_.Y_*y , y: ofY - r_.Y*y - r_.X_*x } ;
 }
 
 var loading_modules = 0;

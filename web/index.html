@@ -12,6 +12,7 @@ header('Pragma: no-cache');
 	<meta name="mobile-web-app-capable" content="yes">
 	<meta name="apple-mobile-web-app-capable" content="yes">
 	<script src="./scripts/framework/jquery-3.1.1.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
 	<script src="./scripts/framework/bootstrap.min.js"></script>
 	<script src="./scripts/framework/Chart.js"></script>
 	<link rel="stylesheet" href="./styles/bootstrap/bootstrap.min.css" />
@@ -239,6 +240,13 @@ header('Pragma: no-cache');
 		#moduleconfig .modulebox.selected { background: #f0f0f0; }
 		#moduleconfig .modulebox canvas { position:absolute; top:0px;left:0px; width:100%; height:200px;border: 1px solid lightgrey; }
 		#moduleconfig .modulebox .modulename { position:absolute; bottom:5px;left:0px; width:100%; height: 20px; font-weight: bold; text-align: center; }
+
+		#ModuleConfigurator {column-count: 1; column-gap: 0; display:block;}
+		#ModuleConfigurator > .info-box {display: inline-block;}
+
+		@media (min-width: 1140px){
+			#ModuleConfigurator {column-count: 2;}
+		}
 
 		/*#moduleconfig table tr:hover {background-color: #fafafa;}*/
 
@@ -610,26 +618,88 @@ header('Pragma: no-cache');
 				</div>
 			</div>
 		</div>
-		<div class="row">
-			<div class="col">
-				<div class="info-box">
-					<div style="text-align: center; width: 100%; margin-bottom: 0.5em; margin-top: 0.25em; font-weight: bold;">Configurator</div>
-					<table id="ModuleConfigurator" class="table table-striped table-hover">
-					  <thead>
-					    <tr>
-					      <th scope="col">ID</th>
-					      <th scope="col">Block</th>
-					      <th scope="col">Type</th>
-					      <th scope="col">X<sub>1</sub> Y<sub>1</sub></th>
-					      <th scope="col">X<sub>2</sub> Y<sub>2</sub></th>
-					      <th scope="col">Rotation</th>
-					      <th scope="col">Switches</th>
-					      <th scope="col" style="width: 44px"></th>
-					    </tr>
-					  </thead>
-					  <tbody></tbody>
-					</table>
-				</div>
+		<div id="ModuleConfigurator" class="column-count:2;">
+			<div class="info-box">
+				<div style="text-align: center; width: 100%; margin-bottom: 0.5em; margin-top: 0.25em; font-weight: bold;">Block Configurator</div>
+				<table class="table table-striped table-hover blocks">
+				  <thead>
+				    <tr>
+				      <th scope="col">ID</th>
+				      <th scope="col">Type</th>
+				      <th scope="col">Next</th>
+				      <th scope="col">Previous</th>
+				      <th scope="col">IO In</th>
+				      <th scope="col">IO Out</th>
+				      <th scope="col">Speed</th>
+				      <th scope="col">Flags</th>
+				      <th scope="col" style="width: 44px"></th>
+				    </tr>
+				  </thead>
+				  <tbody></tbody>
+				</table>
+			</div>
+			<div class="info-box">
+				<div style="text-align: center; width: 100%; margin-bottom: 0.5em; margin-top: 0.25em; font-weight: bold;">Switches Configurator</div>
+				<table class="table table-striped table-hover switches">
+				  <thead>
+				    <tr>
+				      <th scope="col">ID</th>
+				      <th scope="col">Det block</th>
+				      <th scope="col">App</th>
+				      <th scope="col">Str</th>
+				      <th scope="col">Div</th>
+				      <th scope="col">Speed</th>
+				      <th scope="col">IO</th>
+				      <th scope="col" style="width: 44px"></th>
+				    </tr>
+				  </thead>
+				  <tbody></tbody>
+				</table>
+			</div>
+			<div class="info-box">
+				<div style="text-align: center; width: 100%; margin-bottom: 0.5em; margin-top: 0.25em; font-weight: bold;">Multi State Switches Configurator</div>
+				<table class="table table-striped table-hover msswitches">
+				  <thead>
+				    <tr>
+				      <th scope="col">ID</th>
+				      <th scope="col">Det Block</th>
+				      <th scope="col">States</th>
+				      <th scope="col">IO ports</th>
+				      <th scope="col" style="width: 44px"></th>
+				    </tr>
+				  </thead>
+				  <tbody></tbody>
+				</table>
+			</div>
+			<div class="info-box">
+				<div style="text-align: center; width: 100%; margin-bottom: 0.5em; margin-top: 0.25em; font-weight: bold;">Signals Configurator</div>
+				<table class="table table-striped table-hover signals">
+				  <thead>
+				    <tr>
+				      <th scope="col">ID</th>
+				      <th scope="col">Block</th>
+				      <th scope="col">Side</th>
+				      <th scope="col">IO</th>
+				      <th scope="col" style="width: 44px"></th>
+				    </tr>
+				  </thead>
+				  <tbody></tbody>
+				</table>
+			</div>
+			<div class="info-box">
+				<div style="text-align: center; width: 100%; margin-bottom: 0.5em; margin-top: 0.25em; font-weight: bold;">Stations Configurator</div>
+				<table class="table table-striped table-hover stations">
+				  <thead>
+				    <tr>
+				      <th scope="col">ID</th>
+				      <th scope="col">Name</th>
+				      <th scope="col">Type</th>
+				      <th scope="col">Blocks</th>
+				      <th scope="col" style="width: 44px"></th>
+				    </tr>
+				  </thead>
+				  <tbody></tbody>
+				</table>
 			</div>
 		</div>
 	</div>

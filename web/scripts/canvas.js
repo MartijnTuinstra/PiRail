@@ -494,17 +494,12 @@ var Canvas = {
 			var ofX = module_v.OffsetX;
 			var ofY = module_v.OffsetY;
 
-			var rvX = Math.cos(module_v.r*Math.PI);
-			var rvX_ = Math.cos((module_v.r+0.5)*Math.PI);
-			var rvY = Math.sin((module_v.r+0.5)*Math.PI);
-			var rvY_ = Math.sin((module_v.r)*Math.PI);
-
 			_x = click_x - ofX;
 			_y = click_y - ofY;
 
 			_l = Math.sqrt(Math.pow(_x,2)+Math.pow(_y,2));
 			_r = Math.atan2(_y, _x);
-			_r -= module_v.r*Math.PI;
+			_r += module_v.r*Math.PI;
 			_x = _l*Math.cos(_r);
 			_y = _l*Math.sin(_r);
 
@@ -1254,34 +1249,6 @@ class canvas_dslip extends canvas_double_slip {
 		this.m.add_dot(new dot(pointB.x, pointB.y, this.b));
 		this.m.add_dot(new dot(pointC.x, pointC.y, this.b));
 	}
-	
-	dotmatrix(){
-		var coords = [];
-
-		var rvX = Math.cos(this.r*Math.PI);
-		var rvX_ = -Math.cos((this.r+0.5)*Math.PI);
-		var rvY = Math.sin((this.r+0.5)*Math.PI);
-		var rvY_ = -Math.sin((this.r)*Math.PI);
-		var tx, ty, dis_X, dis_Y;
-
-		tx = this.x - rvX*ds - rvY_*ro[0].y;
-		ty = this.y - rvX_*ds - rvY*ro[0].y;
-		coords.push({x: tx, y: ty});
-
-		dis_X = ro[0].x+ds;
-		dis_Y = 2 * ro[0].y;
-		coords.push({x: tx+rvX*dis_X+rvY_*dis_Y, y: ty+rvX_*dis_X+rvY*dis_Y});
-
-		tx = this.x;
-		ty = this.y;
-		coords.push({x: tx, y: ty});
-
-		dis_X = ro[0].x - ds;
-		dis_Y = 0;
-		coords.push({x: tx+rvX*dis_X+rvY_*dis_Y, y: ty+rvX_*dis_X+rvY*dis_Y});
-
-		return [coords, this.b, [this.sA, this.sB]];
-	}
 
 	draw(cnvs, stroke, x,y,r,type,bl,swA,swB){
 		if(r >  1){r -= 2;}
@@ -1366,34 +1333,6 @@ class canvas_fl_dslip extends canvas_double_slip {
 		this.m.add_dot(new dot(pointB.x, pointB.y, this.b));
 		this.m.add_dot(new dot(pointC.x, pointC.y, this.b));
 	}
-	
-	dotmatrix(){
-		var coords = [];
-
-		var rvX = Math.cos(this.r*Math.PI);
-		var rvX_ = -Math.cos((this.r+0.5)*Math.PI);
-		var rvY = Math.sin((this.r+0.5)*Math.PI);
-		var rvY_ = -Math.sin((this.r)*Math.PI);
-		var tx, ty, dis_X, dis_Y;
-
-		tx = this.x - rvX*ds + rvY_*ro[0].y;
-		ty = this.y - rvX_*ds + rvY*ro[0].y;
-		coords.push({x: tx, y: ty});
-
-		dis_X = ro[0].x+ds;
-		dis_Y = -2 * ro[0].y;
-		coords.push({x: tx+rvX*dis_X+rvY_*dis_Y, y: ty+rvX_*dis_X+rvY*dis_Y});
-
-		tx = this.x;
-		ty = this.y;
-		coords.push({x: tx, y: ty});
-
-		dis_X = ro[0].x - ds;
-		dis_Y = 0;
-		coords.push({x: tx+rvX*dis_X+rvY_*dis_Y, y: ty+rvX_*dis_X+rvY*dis_Y});
-
-		return [coords, this.b, [this.sA, this.sB]];
-	}
 
 	draw(cnvs, stroke, x,y,r,type,bl,swA,swB){
 		if(r >  1){r -= 2;}
@@ -1466,6 +1405,8 @@ class canvas_module {
 		this.visible = false;
 		this.connections = data.anchors;
 		this.connection_link = [];
+
+		this.config = {};
 		
 		for(var i = 0; i < this.connections.length; i++){
 			this.connections[i].connected = false;

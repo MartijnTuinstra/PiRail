@@ -999,7 +999,150 @@ websocket.add_opcodes([
         return [data.module];
       },
       recv: function(data){
-        console.warn("TrackLayoutRawData", data);
+        console.log("TrackLayoutRawData", data);
+
+        var moduleid = data[0];
+        var connections = data[1];
+        var nodes = data[2];
+        var nr_blocks = data[3] + (data[4] << 8);
+        var nr_switches = data[5] + (data[6] << 8);
+        var nr_msswitches = data[7] + (data[8] << 8);
+        var nr_signals = data[9] + (data[10] << 8);
+        var nr_stations = data[11];
+
+        modules[moduleid].config = {};
+        var conf = modules[moduleid].config;
+        conf.nodes = [];
+        conf.blocks = [];
+        conf.switches = [];
+        conf.msswitches = [];
+        conf.signals = [];
+        conf.stations = [];
+
+        console.log(moduleid, connections, nodes, nr_blocks, nr_switches, nr_msswitches, nr_signals, nr_stations);
+
+        var i = 13;
+
+        for(var j = 0; j < nodes; j++){
+          conf.nodes.push({id: data[i++], size: data[i++]});
+
+          i++;
+        }
+
+        for(var j = 0; j < nr_blocks; j++){
+          var b = {id: data[i++],
+                  type: data[i++],
+                  next: {m: data[i++], id: data[i++] + (data[i++]<<8), type: data[i++]},
+                  prev: {m: data[i++], id: data[i++] + (data[i++]<<8), type: data[i++]},
+                  io_in: {n: data[i++], p: data[i++] + (data[i++]<<8)},
+                  io_out: {n: data[i++], p: data[i++] + (data[i++]<<8)},
+                  speed: data[i++],
+                  length: data[i++] + (data[i++] << 8),
+                  flags: data[i++]};
+
+          conf.blocks.push(b);
+
+          i++;
+        }
+
+        for(var j = 0; j < nr_switches; j++){
+          var sw =  {id: data[i++],
+                     det_block: data[i++],
+                     app: {m: data[i++], id: data[i++] + (data[i++]<<8), type: data[i++]},
+                     str: {m: data[i++], id: data[i++] + (data[i++]<<8), type: data[i++]},
+                     div: {m: data[i++], id: data[i++] + (data[i++]<<8), type: data[i++]},
+                     iolen: data[i++],
+                     speed: {str: data[i++], div: data[i++]},
+                     ports: []};
+
+          i++;
+
+          for(var k = 0; k < sw.iolen; k++){
+            sw.ports.push({m: data[i++], id: data[i++] + (data[i++]<<8)})
+          }
+
+          i++;
+
+          conf.switches.push(sw);
+        }
+
+        for(var j = 0; j < nr_msswitches; j++){
+          var mssw =  {id: data[i++],
+                     det_block: data[i++],
+                     stateslen: data[i++],
+                     iolen: data[i++],
+                     states: [],
+                     ports: []};
+
+          i++;
+
+          for(var k = 0; k < mssw.stateslen; k++){
+            mssw.states.push({A: {m: data[i++], id: data[i++] + (data[i++]<<8), type: data[i++]},
+                              B: {m: data[i++], id: data[i++] + (data[i++]<<8), type: data[i++]},
+                              speed: data[i++],
+                              io_out: data[i++] + (data[i++] << 8)});
+          }
+
+          i++;
+
+          for(var k = 0; k < mssw.iolen; k++){
+            mssw.ports.push({m: data[i++], id: data[i++] + (data[i++]<<8)})
+          }
+
+          i++;
+
+          conf.msswitches.push(mssw);
+        }
+
+        for(var j = 0; j < nr_signals; j++){
+          var sig =  {side: data[i] & 0x01,
+                     id: (data[i++] >> 1) + (data[i++] << 7),
+                     block: data[i++] + (data[i++] << 8),
+                     outlen: data[i++],
+                     ports: [],
+                     stating: []};
+
+          i++;
+
+          for(var k = 0; k < sig.outlen; k++){
+            sig.ports.push({m: data[i++], id: data[i++] + (data[i++]<<8)})
+          }
+
+          i++;
+
+          for(var k = 0; k < sig.outlen; k++){
+            sig.stating.push([data[i++],data[i++],data[i++],data[i++],data[i++],data[i++],data[i++],data[i++]]);
+          }
+
+          i++;
+
+          conf.signals.push(sig);
+        }
+
+        for(var j = 0; j < nr_stations; j++){
+          var st =  {type: data[i++],
+                     blocklen: data[i++],
+                     blocks: [],
+                     namelen: data[i++],
+                     name: ""};
+
+          i++;
+
+          for(var k = 0; k < st.blocklen; k++){
+            st.blocks.push(data[i++]);
+          }
+
+          i++;
+
+          st.name =  String.fromCharCode.apply(null, data.slice(i, i+st.namelen));
+          i += st.namelen;
+
+          i++;
+
+          conf.stations.push(st);
+        }
+
+        ModuleEditor.update_config(moduleid);
       }
     },
     {

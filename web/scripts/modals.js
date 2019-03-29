@@ -1211,7 +1211,6 @@ var Modals = {
                     <button type="number" name="type" class="modal-form btn-toggle btn-cleartoggle btn btn-xs btn-outline-primary" value="2">Shunting</button>\
                     <button type="number" name="type" class="modal-form btn-toggle btn-cleartoggle btn btn-xs btn-outline-primary" value="3">Siding</button>\
                     <button type="number" name="type" class="modal-form btn-toggle btn-cleartoggle btn btn-xs btn-outline-primary" value="4">Special</button>\
-                    <button type="number" name="type" class="modal-form btn-toggle btn-cleartoggle btn btn-xs btn-outline-primary" value="5">Depot</button>\
                   </div>\
                 </div>\
                 <div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
@@ -1301,27 +1300,56 @@ var Modals = {
     "module.switch":{
       link: "",
       open_cb: function(data, ref){
+        var sw = modules[data.module].config.switches[data.id];
+
+        console.log(sw);
+
+        $("input[name=ID]", ref).val(data.id);
+
+        if(sw.app.type != 0xFF){
+          $("input[name=app_m]", ref).val(sw.app.m);
+          $("input[name=app_id]", ref).val(sw.app.id);
+        }
+        $("button[name=app_t][value="+sw.app.type+"]", ref).removeClass("btn-outline-primary").addClass("btn-primary");
+
+        if(sw.str.type != 0xFF){
+          $("input[name=str_m]", ref).val(sw.str.m);
+          $("input[name=str_id]", ref).val(sw.str.id);
+        }
+        $("button[name=str_t][value="+sw.str.type+"]", ref).removeClass("btn-outline-primary").addClass("btn-primary");
+
+        if(sw.div.type != 0xFF){
+          $("input[name=div_m]", ref).val(sw.div.m);
+          $("input[name=div_id]", ref).val(sw.div.id);
+        }
+        $("button[name=div_t][value="+sw.div.type+"]", ref).removeClass("btn-outline-primary").addClass("btn-primary");
+
+        $("input[name=speed_str]", ref).val(sw.speed.str);
+        $("input[name=speed_div]", ref).val(sw.speed.div);
+
+        //TODO
+        // IO
       },
       title: "Edit Switch",
       content: '<div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
                   <div class="col-4 control-label"><span style="line-height: 38px;vertical-align:middle">ID</span></div>\
-                  <div class="col-8"><input name="ID" type="text" class="modal-form form-control input-sm"></div>\
+                  <div class="col-8"><input name="ID" type="number" class="modal-form form-control input-sm"></div>\
                 </div>\
                 <div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
                   <div class="col-4 control-label"><span style="line-height: 38px;vertical-align:middle">Approach</span></div>\
                   <div class="col-8">\
                     <div class="btn-toggle-group" style="width:100%; text-align: center;">\
                       <table style="margin:auto; margin-bottom: 0.5em"><tr><td>\
-                      <button type="number" name="speedstep" class="modal-form btn-toggle btn-cleartoggle btn btn-xs btn-outline-primary" value="0">Connection</button></td><td>\
-                      <button type="number" name="speedstep" class="modal-form btn-toggle btn-cleartoggle btn btn-xs btn-outline-primary" value="1">Switch App</button></td><td>\
-                      <button type="number" name="speedstep" class="modal-form btn-toggle btn-cleartoggle btn btn-xs btn-outline-primary" value="2">Switch Div/Str</button></td></tr><tr><td>\
-                      <button type="number" name="speedstep" class="modal-form btn-toggle btn-cleartoggle btn btn-xs btn-outline-primary" value="3">Block</button></td><td>\
-                      <button type="number" name="speedstep" class="modal-form btn-toggle btn-cleartoggle btn btn-xs btn-outline-primary" value="4">MSwitch A</button></td><td>\
-                      <button type="number" name="speedstep" class="modal-form btn-toggle btn-cleartoggle btn btn-xs btn-outline-primary" value="5">MSwitch B</button></td></tr></table>\
+                      <button type="number" name="app_t" class="modal-form btn-toggle btn-cleartoggle btn btn-xs btn-outline-primary" value="254">Connection</button></td><td>\
+                      <button type="number" name="app_t" class="modal-form btn-toggle btn-cleartoggle btn btn-xs btn-outline-primary" value="1">Switch App</button></td><td>\
+                      <button type="number" name="app_t" class="modal-form btn-toggle btn-cleartoggle btn btn-xs btn-outline-primary" value="2">Switch Div/Str</button></td></tr><tr><td>\
+                      <button type="number" name="app_t" class="modal-form btn-toggle btn-cleartoggle btn btn-xs btn-outline-primary" value="0">Block</button></td><td>\
+                      <button type="number" name="app_t" class="modal-form btn-toggle btn-cleartoggle btn btn-xs btn-outline-primary" value="3">MSwitch A</button></td><td>\
+                      <button type="number" name="app_t" class="modal-form btn-toggle btn-cleartoggle btn btn-xs btn-outline-primary" value="4">MSwitch B</button></td></tr></table>\
                     </div>\
                     <div style="width: 100%;">\
-                      <input name="type" type="text" style="width: 49%; float: left;" class="modal-form form-control input-sm" placeholder="Module">\
-                      <input name="type" type="text" style="width: 49%; float:right;" class="modal-form form-control input-sm" placeholder="ID">\
+                      <input name="app_m" type="number" style="width: 49%; float: left;" class="modal-form form-control input-sm" placeholder="Module">\
+                      <input name="app_id" type="number" style="width: 49%; float:right;" class="modal-form form-control input-sm" placeholder="ID">\
                     </div>\
                   </div>\
                 </div>\
@@ -1330,16 +1358,16 @@ var Modals = {
                   <div class="col-8">\
                     <div class="btn-toggle-group" style="width:100%; text-align: center;">\
                       <table style="margin:auto; margin-bottom: 0.5em"><tr><td>\
-                      <button type="number" name="speedstep" class="modal-form btn-toggle btn-cleartoggle btn btn-xs btn-outline-primary" value="14">Connection</button></td><td>\
-                      <button type="number" name="speedstep" class="modal-form btn-toggle btn-cleartoggle btn btn-xs btn-outline-primary" value="28">Switch App</button></td><td>\
-                      <button type="number" name="speedstep" class="modal-form btn-toggle btn-cleartoggle btn btn-xs btn-outline-primary" value="28">Switch Div/Str</button></td></tr><tr><td>\
-                      <button type="number" name="speedstep" class="modal-form btn-toggle btn-cleartoggle btn btn-xs btn-outline-primary" value="128">Block</button></td><td>\
-                      <button type="number" name="speedstep" class="modal-form btn-toggle btn-cleartoggle btn btn-xs btn-outline-primary" value="28">MSwitch A</button></td><td>\
-                      <button type="number" name="speedstep" class="modal-form btn-toggle btn-cleartoggle btn btn-xs btn-outline-primary" value="28">MSwitch B</button></td></tr></table>\
+                      <button type="number" name="str_t" class="modal-form btn-toggle btn-cleartoggle btn btn-xs btn-outline-primary" value="254">Connection</button></td><td>\
+                      <button type="number" name="str_t" class="modal-form btn-toggle btn-cleartoggle btn btn-xs btn-outline-primary" value="1">Switch App</button></td><td>\
+                      <button type="number" name="str_t" class="modal-form btn-toggle btn-cleartoggle btn btn-xs btn-outline-primary" value="2">Switch Div/Str</button></td></tr><tr><td>\
+                      <button type="number" name="str_t" class="modal-form btn-toggle btn-cleartoggle btn btn-xs btn-outline-primary" value="0">Block</button></td><td>\
+                      <button type="number" name="str_t" class="modal-form btn-toggle btn-cleartoggle btn btn-xs btn-outline-primary" value="3">MSwitch A</button></td><td>\
+                      <button type="number" name="str_t" class="modal-form btn-toggle btn-cleartoggle btn btn-xs btn-outline-primary" value="4">MSwitch B</button></td></tr></table>\
                     </div>\
                     <div style="width: 100%;">\
-                      <input name="type" type="text" style="width: 49%; float: left;" class="modal-form form-control input-sm" placeholder="Module">\
-                      <input name="type" type="text" style="width: 49%; float:right;" class="modal-form form-control input-sm" placeholder="ID">\
+                      <input name="str_m" type="number" style="width: 49%; float: left;" class="modal-form form-control input-sm" placeholder="Module">\
+                      <input name="str_id" type="number" style="width: 49%; float:right;" class="modal-form form-control input-sm" placeholder="ID">\
                     </div>\
                   </div>\
                 </div>\
@@ -1348,30 +1376,30 @@ var Modals = {
                   <div class="col-8">\
                     <div class="btn-toggle-group" style="width:100%; text-align: center;">\
                       <table style="margin:auto; margin-bottom: 0.5em"><tr><td>\
-                      <button type="number" name="speedstep" class="modal-form btn-toggle btn-cleartoggle btn btn-xs btn-outline-primary" value="14">Connection</button></td><td>\
-                      <button type="number" name="speedstep" class="modal-form btn-toggle btn-cleartoggle btn btn-xs btn-outline-primary" value="28">Switch App</button></td><td>\
-                      <button type="number" name="speedstep" class="modal-form btn-toggle btn-cleartoggle btn btn-xs btn-outline-primary" value="28">Switch Div/Str</button></td></tr><tr><td>\
-                      <button type="number" name="speedstep" class="modal-form btn-toggle btn-cleartoggle btn btn-xs btn-outline-primary" value="128">Block</button></td><td>\
-                      <button type="number" name="speedstep" class="modal-form btn-toggle btn-cleartoggle btn btn-xs btn-outline-primary" value="28">MSwitch A</button></td><td>\
-                      <button type="number" name="speedstep" class="modal-form btn-toggle btn-cleartoggle btn btn-xs btn-outline-primary" value="28">MSwitch B</button></td></tr></table>\
+                      <button type="number" name="div_t" class="modal-form btn-toggle btn-cleartoggle btn btn-xs btn-outline-primary" value="254">Connection</button></td><td>\
+                      <button type="number" name="div_t" class="modal-form btn-toggle btn-cleartoggle btn btn-xs btn-outline-primary" value="1">Switch App</button></td><td>\
+                      <button type="number" name="div_t" class="modal-form btn-toggle btn-cleartoggle btn btn-xs btn-outline-primary" value="2">Switch Div/Str</button></td></tr><tr><td>\
+                      <button type="number" name="div_t" class="modal-form btn-toggle btn-cleartoggle btn btn-xs btn-outline-primary" value="0">Block</button></td><td>\
+                      <button type="number" name="div_t" class="modal-form btn-toggle btn-cleartoggle btn btn-xs btn-outline-primary" value="3">MSwitch A</button></td><td>\
+                      <button type="number" name="div_t" class="modal-form btn-toggle btn-cleartoggle btn btn-xs btn-outline-primary" value="4">MSwitch B</button></td></tr></table>\
                     </div>\
                     <div style="width: 100%;">\
-                      <input name="type" type="text" style="width: 49%; float: left;" class="modal-form form-control input-sm" placeholder="Module">\
-                      <input name="type" type="text" style="width: 49%; float:right;" class="modal-form form-control input-sm" placeholder="ID">\
+                      <input name="div_m" type="number" style="width: 49%; float: left;" class="modal-form form-control input-sm" placeholder="Module">\
+                      <input name="div_id" type="number" style="width: 49%; float:right;" class="modal-form form-control input-sm" placeholder="ID">\
                     </div>\
                   </div>\
                 </div>\
                 <div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
                   <div class="col-4 control-label"><span style="line-height: 38px;vertical-align:middle">Speed</span></div>\
-                  <div class="col-4"><input name="speed_str" type="text" class="modal-form form-control input-sm" placeholder="Straight"></div>\
-                  <div class="col-4"><input name="speed_div" type="text" class="modal-form form-control input-sm" placeholder="Diverging"></div>\
+                  <div class="col-4"><input name="speed_str" type="number" class="modal-form form-control input-sm" placeholder="Straight"></div>\
+                  <div class="col-4"><input name="speed_div" type="number" class="modal-form form-control input-sm" placeholder="Diverging"></div>\
                 </div>\
                 <div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
                   <div class="col-4 control-label"><span style="line-height: 38px;vertical-align:middle">IO In</span></div>\
                   <div class="col-8">\
                     <div style="width: 80%; float:right">\
-                      <input name="type" type="text" style="width: 49%; float: left;" placeholder="Node" class="modal-form form-control input-sm">\
-                      <input name="type" type="text" style="width: 49%; float:right;" placeholder="Port" class="modal-form form-control input-sm">\
+                      <input name="type" type="number" style="width: 49%; float: left;" placeholder="Node" class="modal-form form-control input-sm">\
+                      <input name="type" type="number" style="width: 49%; float:right;" placeholder="Port" class="modal-form form-control input-sm">\
                     </div>\
                   </div>\
                 </div>\
@@ -1382,8 +1410,8 @@ var Modals = {
                       <button type="number" name="IO_out_enable" class="modal-form btn-toggle btn btn-xs btn-outline-primary" value="1">Enable</button>\
                     </div>\
                     <div style="width: 80%; float:right">\
-                      <input name="type" type="text" style="width: 49%; float: left;" placeholder="Node" class="modal-form form-control input-sm">\
-                      <input name="type" type="text" style="width: 49%; float:right;" placeholder="Port" class="modal-form form-control input-sm">\
+                      <input name="type" type="number" style="width: 49%; float: left;" placeholder="Node" class="modal-form form-control input-sm">\
+                      <input name="type" type="number" style="width: 49%; float:right;" placeholder="Port" class="modal-form form-control input-sm">\
                     </div>\
                   </div>\
                 </div>',
@@ -1502,18 +1530,19 @@ var Modals = {
       link: "",
       open_cb: function(data, ref){
 
-        $(".dropdown-menu", ref).append('<a class="dropdown-item" href="#">High</a>\
-                            <a class="dropdown-item" href="#">Low</a>\
-                            <a class="dropdown-item" href="#">Blinking 1</a>\
-                            <a class="dropdown-item" href="#">Blinking 2</a>\
-                            <a class="dropdown-item" href="#">Servo 1</a>\
-                            <a class="dropdown-item" href="#">Servo 2</a>\
-                            <a class="dropdown-item" href="#">Servo 3</a>\
-                            <a class="dropdown-item" href="#">Servo 4</a>\
-                            <a class="dropdown-item" href="#">PWM 1</a>\
-                            <a class="dropdown-item" href="#">PWM 2</a>\
-                            <a class="dropdown-item" href="#">PWM 3</a>\
-                            <a class="dropdown-item" href="#">PWM 4</a>');
+        $(".dropdown-menu", ref).append('<a class="dropdown-item" value="0" href="#">High</a>\
+                            <a class="dropdown-item" value="1" href="#">Low</a>\
+                            <a class="dropdown-item" value="2" href="#">Pulse</a>\
+                            <a class="dropdown-item" value="3" href="#">Blinking 1</a>\
+                            <a class="dropdown-item" value="4" href="#">Blinking 2</a>\
+                            <a class="dropdown-item" value="5" href="#">Servo 1</a>\
+                            <a class="dropdown-item" value="6" href="#">Servo 2</a>\
+                            <a class="dropdown-item" value="7" href="#">Servo 3</a>\
+                            <a class="dropdown-item" value="8" href="#">Servo 4</a>\
+                            <a class="dropdown-item" value="9" href="#">PWM 1</a>\
+                            <a class="dropdown-item" value="10" href="#">PWM 2</a>\
+                            <a class="dropdown-item" value="11" href="#">PWM 3</a>\
+                            <a class="dropdown-item" value="12" href="#">PWM 4</a>');
       },
       title: "Edit Signal",
       content: '<div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
@@ -1602,6 +1631,16 @@ var Modals = {
     "module.station":{
       link: "",
       open_cb: function(data, ref){
+        var st = modules[data.module].config.stations[data.id];
+
+        console.log(st);
+
+        $("input[name=ID]", ref).val(data.id);
+        $("button[name=type][value="+st.type+"]", ref).removeClass("btn-outline-primary").addClass("btn-primary");
+
+        $("input[name=name]", ref).val(st.name);
+
+        $("input[name=blocklist]", ref).val(st.blocks.join(","));
       },
       title: "Edit Station",
       content: '<div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
@@ -1610,7 +1649,13 @@ var Modals = {
                 </div>\
                 <div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
                   <div class="col-4 control-label"><span style="line-height: 38px;vertical-align:middle">Type</span></div>\
-                  <div class="col-8"><input name="type" type="text" class="modal-form form-control input-sm"></div>\
+                  <div class="col-8 btn-toggle-group" style="padding-top: 0.4em">\
+                    <button type="number" name="type" class="modal-form btn-toggle btn-cleartoggle btn btn-xs btn-outline-primary" value="0">Person</button>\
+                    <button type="number" name="type" class="modal-form btn-toggle btn-cleartoggle btn btn-xs btn-outline-primary" value="1">Cargo</button>\
+                    <button type="number" name="type" class="modal-form btn-toggle btn-cleartoggle btn btn-xs btn-outline-primary" value="2">Person Yard</button>\
+                    <button type="number" name="type" class="modal-form btn-toggle btn-cleartoggle btn btn-xs btn-outline-primary" value="3">Cargo Yard</button>\
+                    <button type="number" name="type" class="modal-form btn-toggle btn-cleartoggle btn btn-xs btn-outline-primary" value="4">Yard</button>\
+                  </div>\
                 </div>\
                 <div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
                   <div class="col-4 control-label"><span style="line-height: 38px;vertical-align:middle">Name</span></div>\

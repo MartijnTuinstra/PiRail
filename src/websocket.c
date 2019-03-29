@@ -270,6 +270,7 @@ int websocket_get_msg(int fd, char outbuf[], int * length_out){
   int32_t recvlength = recv(fd,buf,1024,0);
 
   if(recvlength <= 0){
+    _free(buf);
     return -7;
   }
 

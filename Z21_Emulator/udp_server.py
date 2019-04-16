@@ -302,7 +302,6 @@ class Z21:
 
 
     def run(self):
-        print("run", flush=True )
         (data, addr) = self.read()
 
     def start_broadcast(self):

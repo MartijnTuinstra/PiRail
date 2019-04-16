@@ -1,7 +1,7 @@
 programs=main test
 File_main=main_node.o eeprom_layout.o RNet.o IO.o
 File_test=test.o
-dev=atmega328 atmega328p atmega64a atmega2560
+dev=atmega328 atmega328p# atmega64a atmega2560
 #dev=atmega2560
 
 avr_gcc_args=-g -Wall -Os -Werror -Wextra
@@ -25,12 +25,23 @@ build/$(1)/$(2).elf: $$(addprefix build/$(1)/$(2).bin.d/,$$(File_$(1)))
 
 endef
 
-.PHONY: all
+.PHONY: all flash
 
 $(foreach d, $(dev), $(foreach p, $(programs), $(eval TARGETS+= build/$(p)/$(d).elf)))
 $(foreach d, $(dev), $(foreach p, $(programs), $(eval $(call compile,$(p),$(d)))))
 
 all: $(TARGETS)
+
+null  :=
+space := $(null) $(null)
+comma := , 
+
+flash_programs := $(subst $(space),$(comma),$(strip $(programs)))
+flash_dev := $(subst $(space),$(comma),$(strip $(dev)))
+
+flash: all
+	@python3 flash.py -p $(flash_programs) -d $(flash_dev)
+#	@make -f make-avr flash dir=$(DIR) dev=$(DEV) prog=$(PROG) baud=$(BAUD) prot=$(PROT)
 
 %_clean:
 	@echo "  [ CLEAN ] build/$(subst _clean,,$@)"

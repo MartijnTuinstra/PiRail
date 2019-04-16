@@ -93,11 +93,25 @@ int main(){
 
   RNet_init();
 
+  uart_putchar('T');
+  uart_putchar('X');
+  uart_putchar('\n');
+
+  // _delay_ms(5000);
+
   while (1){
-    if(BusSt != RX && BusSt != TX){
-      readRXBuf();
+    if(BusSt == IDLE && RNet_rx_buffer.read_index != RNet_rx_buffer.write_index){
+     readRXBuf();
     }
-    //TX_try(25);
+    // if(BusSt == IDLE){
+    //   TX_try(25);
+    // }
+
+    _delay_ms(500);
+    // _delay_ms(5000);
+    // _delay_ms(5000);
+    // _delay_ms(5000);
+    // _delay_ms(5000);
   }
   return 0;
 }

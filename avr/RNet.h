@@ -6,7 +6,7 @@
 #define RNET_BROADCAST_MODULE 0xFF
 #define RNET_MASTER 0x0
 
-#define RNET_MAX_BUFFER 255
+#define RNET_MAX_BUFFER 40
 
 #if defined(__AVR_ATmega328__) || defined(__AVR_ATmega328P__)
 
@@ -29,7 +29,7 @@
 #define _TIM_ISR_MSK TIMSK1
 #define _TIM_ISR_FLAGS TIFR1
 #define _TIM_CTC (1 << WGM12)
-#define _TIM_PRESCALER (1 << CS12) | (0 << CS11) | (1 << CS10)
+#define _TIM_PRESCALER (0 << CS12) | (1 << CS11) | (1 << CS10)
 #define _TIM_EN_ISR (1 << OCIE1A) | (1 << ICIE1)
 
 #elif defined(__AVR_ATmega64A__)
@@ -53,7 +53,7 @@
 #define _TIM_ISR_MSK TIMSK
 #define _TIM_ISR_FLAGS TIFR
 #define _TIM_CTC (1 << WGM12)
-#define _TIM_PRESCALER (1 << CS12) | (0 << CS11) | (1 << CS10)
+#define _TIM_PRESCALER (0 << CS12) | (1 << CS11) | (1 << CS10)
 #define _TIM_EN_ISR (1 << OCIE1A) | (1 << ICIE1)
 
 #elif defined(__AVR_ATmega2560__)
@@ -77,7 +77,7 @@
 #define _TIM_ISR_MSK TIMSK1
 #define _TIM_ISR_FLAGS TIFR1
 #define _TIM_CTC (1 << WGM12)
-#define _TIM_PRESCALER (1 << CS12) | (0 << CS11) | (1 << CS10)
+#define _TIM_PRESCALER (0 << CS12) | (1 << CS11) | (1 << CS10)
 #define _TIM_EN_ISR (1 << OCIE1A) | (1 << ICIE1)
 
 #endif
@@ -108,9 +108,9 @@
 
 #endif
 
-#define RNET_TX_START_DELAY 2500
-#define RNET_RX_START_DELAY 5000
-#define RNET_TX_TICK 8000
+#define RNET_TX_START_DELAY 200
+#define RNET_RX_START_DELAY 400
+#define RNET_TX_TICK 400
 #define RNET_RX_TICK RNET_TX_TICK
 #define RNET_COLLISION_TICKS 20
 #define RNET_HOLDOFF_TICKS 25

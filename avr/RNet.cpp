@@ -25,6 +25,94 @@ int i = 0;
 
 // #define RNET_DEBUG
 
+void RNet::RNet (){
+  RNET_TX_SET_HIGH; // Write pull up and will become high output HIGH
+  _set_out(DDR(RNET_TX_PORT), RNET_TX_pin); //Set as output
+
+  _set_in(DDR(RNET_RX_PORT), RNET_RX_pin);   //Set as input
+  //_set_low(PORT(RNET_RX_PORT), RNET_TX_pin); //Disable pull-resistor
+  // _set_high(PORT(RNET_RX_PORT), RNET_RX_pin); //Enable pull-resistor for debug
+
+  _set_out(PORT(RNET_DUPLEX_PORT), RNET_DUPLEX_pin); //Set as output
+  RNET_DUPLEX_SET_RX;
+
+  this.state = IDLE;
+
+  cli(); //Disable interupts
+
+  _TIM_CRA = 0;
+  _TIM_CRB = _TIM_CTC | _TIM_PRESCALER;
+
+  RNET_ENABLE_ISR_CAPT;
+
+  sei(); //Enable interupts
+}
+
+status RNet::transmit(uint8_t PrioDelay){
+  msgLen = getMsgSize(&RNet_tx_buffer);         //Get size of message
+  msg = currentMsg(&RNet_tx_buffer); //Get index of message
+
+  cDBy = msg[0];
+
+  if(state == HOLDOFF && cBi >= PrioDelay){
+    cli();
+    #ifdef RNET_DEBUG
+    uart_putchar('+');
+    #endif
+    state = IDLE;
+    sei();
+  }
+
+  if(state == HOLDOFF){
+    #ifdef RNET_DEBUG
+    uart_putchar('=');
+    #endif
+    return HOFF;
+  }
+
+
+  //Check if Bus is IDLE (Last check)
+  if(state != IDLE){
+    #ifdef RNET_DEBUG
+    uart_putchar('-');
+    #endif
+    return BUSY;
+  }
+
+  cBy = 0;
+  cBi = 0;
+
+  //Disable ICP ISR
+  cli();
+
+  RNET_DISABLE_ISR_CAPT;
+
+  _TIM_COUNTER = 0;
+  _TIM_COMPA = RNET_TX_START_DELAY;
+
+  RNET_ENABLE_ISR_COMPA;
+
+  //Start sending
+  RNET_DUPLEX_SET_TX;
+  RNET_TX_SET_LOW; //Start-bit
+
+  sei(); //Enable Interrupts
+
+  #ifdef RNET_DEBUG
+  uart_putchar('S');
+  #endif
+  state = TX;
+  #ifdef RNET_DEBUG
+  uart_putchar(state + 0x30);
+  uart_putchar('\n');
+  #endif
+
+  while(state == TX){}
+
+  return OK;
+
+}
+
 void printHex(uint8_t x){
   if((x >> 4) >= 0xa){
     uart_putchar(0x37 + (x >> 4));

@@ -91,7 +91,7 @@ int main(){
 
   _delay_ms(800);
 
-  RNet_init();
+  RNet net;
 
   uart_putchar('T');
   uart_putchar('X');
@@ -100,7 +100,7 @@ int main(){
   // _delay_ms(5000);
 
   while (1){
-    if(BusSt == IDLE && RNet_rx_buffer.read_index != RNet_rx_buffer.write_index){
+    if(net.state == IDLE && RNet_rx_buffer.read_index != RNet_rx_buffer.write_index){
      readRXBuf();
     }
     // if(BusSt == IDLE){

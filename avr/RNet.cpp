@@ -25,7 +25,31 @@ int i = 0;
 
 // #define RNET_DEBUG
 
-void RNet::RNet (){
+
+
+int getMsgSize(struct _RNet_buffer * msg){
+  msg->read_index++;
+  return 12;
+}
+
+uint8_t * currentMsg(struct _RNet_buffer * msg){
+  msg->buf[0] = 'H';
+  msg->buf[1] = 'e';
+  msg->buf[2] = 'l';
+  msg->buf[3] = 'l';
+  msg->buf[4] = 'o';
+  msg->buf[5] = ' ';
+  msg->buf[6] = 'W';
+  msg->buf[7] = 'o';
+  msg->buf[8] = 'r';
+  msg->buf[9] = 'l';
+  msg->buf[10] = 'd';
+  msg->buf[11] = '!';
+
+  return msg->buf;
+}
+
+RNet::RNet (){
   RNET_TX_SET_HIGH; // Write pull up and will become high output HIGH
   _set_out(DDR(RNET_TX_PORT), RNET_TX_pin); //Set as output
 
@@ -36,7 +60,7 @@ void RNet::RNet (){
   _set_out(PORT(RNET_DUPLEX_PORT), RNET_DUPLEX_pin); //Set as output
   RNET_DUPLEX_SET_RX;
 
-  this.state = IDLE;
+  state = IDLE;
 
   cli(); //Disable interupts
 
@@ -47,6 +71,14 @@ void RNet::RNet (){
 
   sei(); //Enable interupts
 }
+
+uint8_t * msg;
+uint8_t msgLen = 10;
+uint8_t cDBy = 0; //CurrentDataByte
+uint8_t cBy = 0; //currentByte
+uint8_t cBi = 0; //currentBit
+bool cont = false;
+
 
 status RNet::transmit(uint8_t PrioDelay){
   msgLen = getMsgSize(&RNet_tx_buffer);         //Get size of message
@@ -142,123 +174,12 @@ void RNet_add_char_to_buf(uint8_t data, struct _RNet_buffer * buffer){
   }
 }
 
-void RNet_init(){
-  RNET_TX_SET_HIGH; // Write pull up and will become high output HIGH
-  _set_out(DDR(RNET_TX_PORT), RNET_TX_pin); //Set as output
-
-  _set_in(DDR(RNET_RX_PORT), RNET_RX_pin);   //Set as input
-  //_set_low(PORT(RNET_RX_PORT), RNET_TX_pin); //Disable pull-resistor
-  // _set_high(PORT(RNET_RX_PORT), RNET_RX_pin); //Enable pull-resistor for debug
-
-  _set_out(PORT(RNET_DUPLEX_PORT), RNET_DUPLEX_pin); //Set as output
-  RNET_DUPLEX_SET_RX;
-
-  BusSt = IDLE;
-
-  cli(); //Disable interupts
-
-  _TIM_CRA = 0;
-  _TIM_CRB = _TIM_CTC | _TIM_PRESCALER;
-
-  RNET_ENABLE_ISR_CAPT;
-
-  sei(); //Enable interupts
-}
-
 void add_to_RX_buf(uint8_t b){
   // printHex(RNet_rx_buffer.write_index);
   RNet_rx_buffer.buf[RNet_rx_buffer.write_index++] = b;
   if(RNet_rx_buffer.write_index > RNET_MAX_BUFFER){
     RNet_rx_buffer.write_index = 0;
   }
-}
-
-int getMsgSize(struct _RNet_buffer * msg){
-  msg->read_index++;
-  return 12;
-}
-
-uint8_t * currentMsg(struct _RNet_buffer * msg){
-  msg->buf[0] = 'H';
-  msg->buf[1] = 'e';
-  msg->buf[2] = 'l';
-  msg->buf[3] = 'l';
-  msg->buf[4] = 'o';
-  msg->buf[5] = ' ';
-  msg->buf[6] = 'W';
-  msg->buf[7] = 'o';
-  msg->buf[8] = 'r';
-  msg->buf[9] = 'l';
-  msg->buf[10] = 'd';
-  msg->buf[11] = '!';
-
-  return msg->buf;
-}
-
-uint8_t * msg;
-uint8_t msgLen = 10;
-uint8_t cDBy = 0; //CurrentDataByte
-uint8_t cBy = 0; //currentByte
-uint8_t cBi = 0; //currentBit
-bool cont = false;
-
-status TX_try(uint8_t PrioDelay){
-  msgLen = getMsgSize(&RNet_tx_buffer);         //Get size of message
-  msg = currentMsg(&RNet_tx_buffer); //Get index of message
-
-  cDBy = msg[0];
-
-  uart_putchar('T');
-  uart_putchar('r');
-  uart_putchar('y');
-  uart_putchar('\n');
-
-  if(BusSt == HOLDOFF && cBi >= PrioDelay){
-    cli();
-    uart_putchar('+');
-    BusSt = IDLE;
-    sei();
-  }
-
-  if(BusSt == HOLDOFF){
-    uart_putchar('=');
-    return HOFF;
-  }
-
-
-  //Check if Bus is IDLE (Last check)
-  if(BusSt != IDLE){
-    uart_putchar('-');
-    return BUSY;
-  }
-
-  cBy = 0;
-  cBi = 0;
-
-  //Disable ICP ISR
-  cli();
-
-  RNET_DISABLE_ISR_CAPT;
-
-  _TIM_COUNTER = 0;
-  _TIM_COMPA = RNET_TX_START_DELAY;
-
-  RNET_ENABLE_ISR_COMPA;
-
-  //Start sending
-  RNET_DUPLEX_SET_TX;
-  RNET_TX_SET_LOW; //Start-bit
-
-  sei(); //Enable Interrupts
-
-  uart_putchar('S');
-  BusSt = TX;
-  uart_putchar(BusSt + 0x30);
-  uart_putchar('\n');
-
-  while(BusSt == TX){}
-
-  return OK;
 }
 
 void readRXBuf(){

@@ -144,6 +144,13 @@ enum status {
 extern struct _RNet_buffer RNet_rx_buffer;
 extern struct _RNet_buffer RNet_tx_buffer;
 
+class RNet {
+  public:
+    volatile enum BusState state;
+    RNet();
+    status transmit(uint8_t PrioDelay);
+};
+
 void RNet_add_to_buf(uint8_t * data, uint8_t len, struct _RNet_buffer * buffer);
 void RNet_add_char_to_buf(uint8_t data, struct _RNet_buffer * buffer);
 void readRXBuf();

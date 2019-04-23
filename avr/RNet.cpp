@@ -6,6 +6,7 @@
 
 #include "IO.h"
 #include "RNet.h"
+#include "RNet_msg.h"
 
 #include "util/delay.h"
 
@@ -19,17 +20,60 @@
 
 struct _RNet_buffer RNet_rx_buffer;
 struct _RNet_buffer RNet_tx_buffer;
-volatile enum BusState BusSt;
 
-int i = 0;
+#define RNET_DEBUG
 
-// #define RNET_DEBUG
+void RNet::add_to_rx_buf(uint8_t data){
+  tx.buf[tx.write_index++] = data;
+  if(tx.write_index >= RNET_MAX_BUFFER){
+    tx.write_index = 0;
+  }
+}
 
+void RNet::add_to_tx_buf(uint8_t data){
+  rx.buf[rx.write_index++] = data;
+  if(rx.write_index >= RNET_MAX_BUFFER){
+    rx.write_index = 0;
+  }
+}
 
+void RNet::checkReceived(){
+  if (rx.read_index < rx.write_index && getMsgSize(&rx)){
+  }
+  else if(rx.read_index - RNET_MAX_BUFFER < rx.write_index){
 
-int getMsgSize(struct _RNet_buffer * msg){
-  msg->read_index++;
-  return 12;
+  }
+}
+
+int RNet::getMsgSize(struct _RNet_buffer * msg){
+  if(msg->buf[msg->read_index] == RNet_OPC_SetEmergency ||
+     msg->buf[msg->read_index] == RNet_OPC_RelEmergency ||
+     msg->buf[msg->read_index] == RNet_OPC_PowerON ||
+     msg->buf[msg->read_index] == RNet_OPC_PowerOFF ||
+     msg->buf[msg->read_index] == RNet_OPC_ResetALL){
+    return 1;
+  }
+  else if (msg->buf[msg->read_index] == RNet_OPC_DEV_ID ||
+           msg->buf[msg->read_index] == RNet_OPC_ACK){
+    return 3;
+  }
+  else if(msg->buf[msg->read_index] == RNet_OPC_ChangeID ||
+          msg->buf[msg->read_index] == RNet_OPC_SetPulse ||
+          msg->buf[msg->read_index] == RNet_OPC_SetCheck){
+    return 4;
+  }
+  else if (msg->buf[msg->read_index] == RNet_OPC_SetOutput ||
+           msg->buf[msg->read_index] == RNet_OPC_ReadInput ||
+           msg->buf[msg->read_index] == RNet_OPC_ChangeNode){
+    return 5;
+  }
+  else if(msg->buf[msg->read_index] == RNet_OPC_SetBlink){
+    return 8;
+  }
+  else if(msg->buf[msg->read_index] == RNet_OPC_ReadAll){
+    return 4+msg->buf[1];
+  }
+  return 1;
 }
 
 uint8_t * currentMsg(struct _RNet_buffer * msg){
@@ -49,7 +93,7 @@ uint8_t * currentMsg(struct _RNet_buffer * msg){
   return msg->buf;
 }
 
-RNet::RNet (){
+void RNet::init (){
   RNET_TX_SET_HIGH; // Write pull up and will become high output HIGH
   _set_out(DDR(RNET_TX_PORT), RNET_TX_pin); //Set as output
 
@@ -81,8 +125,8 @@ bool cont = false;
 
 
 status RNet::transmit(uint8_t PrioDelay){
-  msgLen = getMsgSize(&RNet_tx_buffer);         //Get size of message
-  msg = currentMsg(&RNet_tx_buffer); //Get index of message
+  msgLen = getMsgSize(&tx);         //Get size of message
+  msg = currentMsg(&tx); //Get index of message
 
   cDBy = msg[0];
 
@@ -207,7 +251,7 @@ void readRXBuf(){
 ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
   _TIM_COMPA = RNET_TX_TICK;
   set_toggle(LED);
-  if(BusSt == RX){
+  if(net.state == RX){
     if(cBi == 0){ // Start-bit
       if(!RNET_READ_RX){
         //Framing ERROR
@@ -236,7 +280,7 @@ ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
           uart_putchar('C');
         #endif
         cBi = 0;
-        add_to_RX_buf(cDBy);
+        net.add_to_rx_buf(cDBy);
         cDBy = 0;
       }
     }
@@ -252,13 +296,13 @@ ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
         #ifdef RNET_DEBUG
           uart_putchar('#');
         #endif
-        add_to_RX_buf(cDBy);
+        net.add_to_rx_buf(cDBy);
       }
       cBi = 0;
       cDBy = 0;
 
       //Stop receiving
-      BusSt = HOLDOFF;
+      net.state = HOLDOFF;
 
       return;
     }
@@ -271,43 +315,40 @@ ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
         #endif
         cDBy |= 0x80;
       }
+      #ifdef RNET_DEBUG
       else{
-        #ifdef RNET_DEBUG
 	        uart_putchar('0');
-        #endif
       }
-      // if(cDBy & _BV(cBi))
-      //   RNET_TX_HIGH;
-      // else
-      //   RNET_TX_LOW;
+      #endif
+
       cBi++;
 
       return;
     }
   }
-  else if(BusSt == TX){
+  else if(net.state == TX){
     // if(RNET_CHECK_COLLISION){
-      // BusSt = COLLISION;
+      // net.state = COLLISION;
     // }
     if(cBi == 0){ // Start-bit
-  #ifdef RNET_DEBUG
-      uart_putchar('S');
-  #endif
+      #ifdef RNET_DEBUG
+        uart_putchar('S');
+      #endif
       RNET_TX_SET_LOW;
       cBi++;
       return;
     }
     else if(cBi < 9){ // Data
       if(cDBy & _BV(cBi - 1)){
-    #ifdef RNET_DEBUG
-        uart_putchar('1');
-    #endif
+        #ifdef RNET_DEBUG
+          uart_putchar('1');
+        #endif
         RNET_TX_SET_HIGH;
       }
       else{
-    #ifdef RNET_DEBUG
-        uart_putchar('0');
-    #endif
+        #ifdef RNET_DEBUG
+          uart_putchar('0');
+        #endif
         RNET_TX_SET_LOW;
       }
       cBi++;
@@ -319,49 +360,49 @@ ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
         cBi = 0;
         cDBy = msg[cBy];
         RNET_TX_SET_LOW;
-    #ifdef RNET_DEBUG
-        uart_putchar('C');
-    #endif
+        #ifdef RNET_DEBUG
+          uart_putchar('C');
+        #endif
       }
       else{
         RNET_TX_SET_HIGH;
-    #ifdef RNET_DEBUG
-        uart_putchar('s');
-    #endif
+        #ifdef RNET_DEBUG
+          uart_putchar('s');
+        #endif
         cBi++;
       }
     }
     else{ //Stop-bit 2
       //Whole message transmitted
       RNET_TX_SET_HIGH;
-  #ifdef RNET_DEBUG
-      uart_putchar('s');
-      uart_putchar('\n');
-  #endif
+      #ifdef RNET_DEBUG
+        uart_putchar('s');
+        uart_putchar('\n');
+      #endif
 
       cBi = 0;
 
       cBy = 0;
-      BusSt = HOLDOFF;
+      net.state = HOLDOFF;
     }
   }
 
-  if(BusSt == COLLISION){
-#ifdef RNET_DEBUG
-    uart_putchar('X');
-#endif
+  if(net.state == COLLISION){
+    #ifdef RNET_DEBUG
+      uart_putchar('X');
+    #endif
     if(cBi++ < RNET_COLLISION_TICKS){
       RNET_TX_SET_LOW;
     }
     else{
-      BusSt = HOLDOFF;
+      net.state = HOLDOFF;
     }
   }
 
-  if(BusSt == HOLDOFF){
-#ifdef RNET_DEBUG
-    uart_putchar('H');
-#endif
+  if(net.state == HOLDOFF){
+    #ifdef RNET_DEBUG
+      uart_putchar('H');
+    #endif
     if(cBi == 0){
       RNET_TX_SET_HIGH;
       RNET_DUPLEX_SET_RX;
@@ -373,7 +414,7 @@ ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
       cBi = 0;
       RNET_DISABLE_ISR_COMPA;
 
-      BusSt = IDLE;
+      net.state = IDLE;
       return;
     }
     cBi++;
@@ -381,21 +422,19 @@ ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
 }
 
 ISR(RNET_RX_ICP_ISR_vect){
-  _TIM_COUNTER = 0;
 
   RNET_DISABLE_ISR_CAPT;
+
+  _TIM_COUNTER = 0;
+  _TIM_COMPA = RNET_RX_START_DELAY;
 
   _TIM_ISR_FLAGS |= _BV(OCF1A);
   RNET_ENABLE_ISR_COMPA;
 
-  _TIM_COMPA = RNET_RX_START_DELAY;
-
-  BusSt = RX;
+  net.state = RX;
 
   cBi = 0;
   cBy = 0;
-
-  i = 0;
 
 
   uart_putchar('\n');

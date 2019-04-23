@@ -1,8 +1,9 @@
-programs=main test
+programs=main_spi# test
 File_main=main_node.o eeprom_layout.o RNet.o IO.o
+File_main_spi=main_node.o eeprom_layout.o RNet.o IO_SPI.o
 File_test=test.o
-dev=atmega328 atmega328p# atmega64a atmega2560
-#dev=atmega2560
+#dev=atmega328 atmega328p atmega64a atmega2560
+dev=atmega328p atmega2560
 
 avr_gcc_args=-g -Wall -Os -Werror -Wextra
 

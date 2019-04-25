@@ -29,15 +29,20 @@ void setup(){
   pinMode(11,OUTPUT );
   pinMode(12,OUTPUT );
   pinMode(13,OUTPUT );
+  
+  pinMode(latchPinOut,OUTPUT ); // Latch pin
+  pinMode(latchPinIn ,OUTPUT ); // Latch pin
+  pinMode(dataLoad   ,OUTPUT ); // Data load pin
+
 
   /*First Boot*/
   //if(EEPROM.read(0) == 0){
     EEPROM.write(0,1);
 
-    EEPROM.write(1,23); //Address 8
+    EEPROM.write(1,10); //Address 8
 
-    EEPROM.write(2,1); //1 Input  Registers
-    EEPROM.write(3,0); //0 Output Register
+    EEPROM.write(2,3); //1 Input  Registers
+    EEPROM.write(3,6); //0 Output Register
 
     EEPROM.write(4,50); //Blink interval scaler
     EEPROM.write(5,20); //Pulse_interval
@@ -54,7 +59,7 @@ void setup(){
 
   //Reset inputs and outputs
   digitalWrite(latchPinOut, LOW);
-  for(int i = 0;i<InputRegisters;i++){
+  for(int i = 0;i<OutputRegisters;i++){
     SPI.transfer(0);
   }
   digitalWrite(latchPinOut, HIGH);
@@ -88,10 +93,6 @@ void setup(){
     BlinkMask[i] = 0;
     PulseMask[i] = 0;
   }
-
-  pinMode(latchPinOut,OUTPUT ); // Latch pin
-  pinMode(latchPinIn ,OUTPUT ); // Latch pin
-  pinMode(dataLoad   ,OUTPUT ); // Data load pin
 
   for(int i = 0;i<InputRegisters;i++){
     InputRegs[i] = SPI.transfer(0);

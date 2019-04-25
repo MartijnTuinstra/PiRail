@@ -25,8 +25,14 @@ i = int(input("Which project? "))
 print(projects[i-1])
 f = projects[i-1]
 
-_pdev = os.listdir("/dev/")
-_pdev = [d for d in _pdev if fnmatch.fnmatch(d, "ttyUSB*")]
+import sys
+import serial.tools.list_ports
+
+if sys.platform.startswith("win"):
+    _pdev = serial.tools.list_ports.comports()
+else:
+    _pdev = os.listdir("/dev/")
+    _pdev = [d for d in _pdev if fnmatch.fnmatch(d, "ttyUSB*")]
 
 i = 1
 for d in _pdev:

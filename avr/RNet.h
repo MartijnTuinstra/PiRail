@@ -160,6 +160,7 @@ enum status {
 
 extern struct _RNet_buffer RNet_rx_buffer;
 extern struct _RNet_buffer RNet_tx_buffer;
+extern uint8_t tmp_rx_msg[RNET_MAX_BUFFER];
 
 class RNet {
   public:
@@ -167,6 +168,7 @@ class RNet {
     void init(uint8_t dev, uint8_t node);
     status transmit(uint8_t PrioDelay);
     uint8_t getMsgSize(struct _RNet_buffer * msg);
+    uint8_t getMsgSize(uint8_t * buf);
     bool checkReceived();
     void executeMessage();
 

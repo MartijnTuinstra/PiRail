@@ -1,8 +1,11 @@
-programs=main_spi main #test
+programs=main_spi main net_buffer #test
 File_main=main_node.o eeprom_layout.o RNet.o IO.o
 args_main=
 File_main_spi=main_node.o eeprom_layout.o RNet.o IO.o
 args_main_spi=-D IO_SPI
+
+File_net_buffer=main_node.o eeprom_layout.o RNet.o
+args_net_buffer=-D _BUFFER
 File_test=test.o
 #dev=atmega328 atmega328p atmega64a atmega2560
 dev=atmega328p atmega2560

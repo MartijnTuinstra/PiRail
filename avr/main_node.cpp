@@ -43,10 +43,14 @@ UCSR0A &= ~(1 << U2X0);
 
 void flash_number(uint8_t number){
   for(int i = 0; i < number; i++){
+    #ifdef _BUFFER
+
+    #else
     io.blink1();
     _delay_ms(150);
     io.blink1();
     _delay_ms(150);
+    #endif
   }
   return;
 }
@@ -67,6 +71,7 @@ int main(){
 
   // _delay_ms(1000);
   uart_38400();
+  #ifndef _BUFFER  
   io.init();
 
 
@@ -77,6 +82,7 @@ int main(){
   io.set_blink1(1);
   io.set_blink2(0);
   io.set_blink2(2);
+  #endif
 
   UCSR0C = _BV(UCSZ01) | _BV(UCSZ00); /* 8-bit data */
   UCSR0B = _BV(TXEN0);   /* Enable TX */
@@ -125,7 +131,14 @@ int main(){
     if(net.checkReceived()){
       // Message is copied to temp buffer
       // ready to be executed
+      #ifndef _BUFFER
       net.executeMessage();
+      #else
+      uint8_t size = net.getMsgSize(tmp_rx_msg);
+      for(uint8_t i = 0; i < size; i++){
+        uart_putchar(tmp_rx_msg[i]);
+      }
+      #endif
     }
     #ifdef IO_SPI
     // uart_putchar('.');

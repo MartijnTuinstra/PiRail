@@ -66,6 +66,7 @@ bool RNet::checkReceived(){
   return false;
 }
 
+#ifndef _BUFFER
 void RNet::executeMessage(){
   if(tmp_rx_msg[0] == RNet_OPC_SetEmergency){
     uart_putchar('S');
@@ -127,33 +128,38 @@ void RNet::executeMessage(){
     //End SetOutput message
   }
 }
+#endif
 
 uint8_t RNet::getMsgSize(struct _RNet_buffer * msg){
-  if(msg->buf[msg->read_index] == RNet_OPC_SetEmergency ||
-     msg->buf[msg->read_index] == RNet_OPC_RelEmergency ||
-     msg->buf[msg->read_index] == RNet_OPC_PowerON ||
-     msg->buf[msg->read_index] == RNet_OPC_PowerOFF ||
-     msg->buf[msg->read_index] == RNet_OPC_ResetALL){
+  return getMsgSize(&msg->buf[msg->read_index]);
+}
+
+uint8_t RNet::getMsgSize(uint8_t * buf){
+  if(buf[0] == RNet_OPC_SetEmergency ||
+     buf[0] == RNet_OPC_RelEmergency ||
+     buf[0] == RNet_OPC_PowerON ||
+     buf[0] == RNet_OPC_PowerOFF ||
+     buf[0] == RNet_OPC_ResetALL){
     return 1;
   }
-  else if (msg->buf[msg->read_index] == RNet_OPC_DEV_ID ||
-           msg->buf[msg->read_index] == RNet_OPC_ACK){
+  else if (buf[0] == RNet_OPC_DEV_ID ||
+           buf[0] == RNet_OPC_ACK){
     return 3;
   }
-  else if(msg->buf[msg->read_index] == RNet_OPC_ChangeID ||
-          msg->buf[msg->read_index] == RNet_OPC_SetCheck){
+  else if(buf[0] == RNet_OPC_ChangeID ||
+          buf[0] == RNet_OPC_SetCheck){
     return 4;
   }
-  else if (msg->buf[msg->read_index] == RNet_OPC_SetOutput ||
-           msg->buf[msg->read_index] == RNet_OPC_ReadInput ||
-           msg->buf[msg->read_index] == RNet_OPC_ChangeNode){
+  else if (buf[0] == RNet_OPC_SetOutput ||
+           buf[0] == RNet_OPC_ReadInput ||
+           buf[0] == RNet_OPC_ChangeNode){
     return 5;
   }
-  else if(msg->buf[msg->read_index] == RNet_OPC_SetBlink){
+  else if(buf[0] == RNet_OPC_SetBlink){
     return 8;
   }
-  else if(msg->buf[msg->read_index] == RNet_OPC_ReadAll){
-    return 4+msg->buf[1];
+  else if(buf[0] == RNet_OPC_ReadAll){
+    return 4+buf[1];
   }
   return 1;
 }
@@ -336,7 +342,7 @@ void readRXBuf(){
 
 ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
   _TIM_COMPA = RNET_TX_TICK;
-  set_toggle(LED);
+  // set_toggle(LED);
   if(net.state == RX){
     if(cBi == 0){ // Start-bit
       if(!RNET_READ_RX){

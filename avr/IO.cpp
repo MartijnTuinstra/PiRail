@@ -1,10 +1,12 @@
 #include <string.h>
 
 #include "avr/io.h"
+#include "avr/interrupt.h"
 #include "IO.h"
 
 #include "RNet.h"
 #include "main_node.h"
+#include "eeprom_layout.h"
 
 #include "util/delay.h"
 
@@ -220,30 +222,57 @@ uint8_t read(uint8_t pin){
 	return 0;
 }
 
-#ifdef IO_SPI
-
 
 void IO::high(uint8_t pin){
+	#ifdef IO_SPI
 	writeData[pin/8] |= 1 << (pin % 8);
+	#else
+	*portOutputRegister(list[pin]/8) |= 1 << (list[pin] % 8);
+	#endif
 }
 
 void IO::low(uint8_t pin){
+	#ifdef IO_SPI
 	writeData[pin/8] &= ~(1 << (pin % 8));
+	#else
+	*portOutputRegister(list[pin]/8) &= ~(1 << (list[pin] % 8));
+	#endif
 }
 
 void IO::toggle(uint8_t pin){
+	#ifdef IO_SPI
 	writeData[pin/8] ^= 1 << (pin % 8);
+	#else
+	*portOutputRegister(list[pin]/8) ^= 1 << (list[pin] % 8);
+	#endif
 }
 
-void IO::out(uint8_t pin){return (void)pin;}
 
-void IO::in(uint8_t pin){return (void)pin;}
+void IO::out(uint8_t pin){
+	#ifdef IO_SPI
+	return (void)pin;
+	#else
+	*portModeRegister(list[pin]/8) |= 1 << (list[pin] % 8);
+	#endif
+}
+
+void IO::in(uint8_t pin){
+	#ifdef IO_SPI
+	return (void)pin;
+	#else
+	*portModeRegister(list[pin]/8) &= ~(1 << (list[pin] % 8));
+	#endif
+}
 
 uint8_t IO::read(uint8_t pin){
+	#ifdef IO_SPI
+	return readData[pin/8] & (1 << (pin % 8));
+	#else
 	return (*(volatile uint8_t *)pinlist[list[pin]/8] & (1 << (list[pin] % 8)));
-	// if (portInputRegister(pin_to_Port[pin])) return 1;
-	// return 0;
+	#endif
 }
+
+#ifdef IO_SPI
 
 #define LATCH_OUT_ENABLE  PORTD &= ~(1 << 3)
 #define LATCH_OUT_DISABLE PORTD |=  (1 << 3)
@@ -253,6 +282,8 @@ uint8_t IO::read(uint8_t pin){
 #define IN_LOAD           PORTC &= ~(1 << 2); \
                           _delay_ms(1); \
                           PORTC |=  (1 << 2)
+
+#endif
 
 void IO::init(){
 	memset(blink1Mask, 0, MAX_PORTS);
@@ -265,6 +296,9 @@ void IO::init(){
 
 	memset(readMask, 0, MAX_PORTS);
 	memset(readData, 0, MAX_PORTS);
+
+	#ifdef IO_SPI
+
 	memset(writeData, 0, MAX_PORTS);
 
 	#if defined(__AVR_ATmega328__) || defined(__AVR_ATmega328P__)
@@ -287,13 +321,25 @@ void IO::init(){
 	LATCH_IN_DISABLE;
 
 	writeOutput();
+
+	#endif
+
+	//Init blink timer
+	blink1_period = calculateTimer(eeprom_read_word(&EE_Mem.settings.blink1));
+	blink1_counter = blink1_period;
+	blink2_period = calculateTimer(eeprom_read_word(&EE_Mem.settings.blink2));
+	blink2_counter = blink1_period;
+
+	pulse_length = calculateTimer((uint16_t)eeprom_read_byte(&EE_Mem.settings.pulse));
+
+	IO_TIMER_REG = 0;
+	IO_TIMER = IO_TIMER_PRESCALER;
+	IO_TIMER_INT = IO_TIMER_OVERFLOW_INT_REG;
 }
+
 
 void IO::set_blink1(uint8_t pin){
 	blink1Mask[list[pin]/8] |= 1 << (list[pin] % 8);
-	uart_putchar('b');
-	printHex(blink1Mask[list[pin]/8]);
-	uart_putchar('\n');
 }
 void IO::set_blink2(uint8_t pin){
 	blink2Mask[list[pin]/8] |= 1 << (list[pin] % 8);
@@ -307,21 +353,61 @@ void IO::unset_blink2(uint8_t pin){
 
 void IO::blink1(){
 	for(int i = 0; i < MAX_PORTS; i++){
+		#ifdef IO_SPI
 		writeData[i] = writeData[i] ^ blink1Mask[i];
+		#else
+		*portOutputRegister(i) ^= blink1Mask[i];
+		#endif
 	}
 }
 
 void IO::blink2(){
 	for(int i = 0; i < MAX_PORTS; i++){
+		#ifdef IO_SPI
 		writeData[i] = writeData[i] ^ blink2Mask[i];
+		#else
+		*portOutputRegister(i) ^= blink2Mask[i];
+		#endif
 	}
 }
 
-/*
 
-int latchPinOut = 3;
-int dataLoad = A2, latchPinIn = A0;
-*/
+void IO::pulse_set(uint8_t pin){
+	pulseMask[list[pin]/8] |= 1 << (list[pin] % 8);
+}
+void IO::pulse_high(){
+	for(int i = 0; i < MAX_PORTS; i++){
+		#ifdef IO_SPI
+		writeData[i] = writeData[i] ^ pulseMask[i];
+		#else
+		*portOutputRegister(i) ^= pulseMask[i];
+		#endif
+	}
+
+	//Set pulse period into timer
+	io.pulse_counter = (0xFF - IO_TIMER_REG) + io.pulse_length;
+
+	if(io.pulse_counter < 0x100){
+		IO_TIMER_COMPA_REG = io.blink1_counter;
+		IO_TIMER_INT |= IO_TIMER_COMPA_INT_REG;
+	}
+}
+void IO::pulse_low(){
+	for(int i = 0; i < MAX_PORTS; i++){
+		#ifdef IO_SPI
+		writeData[i] = writeData[i] ^ pulseMask[i];
+		#else
+		*portOutputRegister(i) ^= pulseMask[i];
+		#endif
+		pulseMask[i] = 0;
+	}
+}
+
+uint16_t IO::calculateTimer(uint16_t mseconds){
+	return ((mseconds * (F_CPU/1000)) / 1024);
+}
+
+#ifdef IO_SPI
 
 void IO::writeOutput(){
 	LATCH_OUT_ENABLE; 
@@ -361,70 +447,6 @@ void IO::readInput(){
 
 #else
 
-void IO::high(uint8_t pin){
-	*portOutputRegister(list[pin]/8) |= 1 << (list[pin] % 8);
-}
-
-void IO::low(uint8_t pin){
-	*portOutputRegister(list[pin]/8) &= ~(1 << (list[pin] % 8));
-}
-
-void IO::toggle(uint8_t pin){
-	*portOutputRegister(list[pin]/8) ^= 1 << (list[pin] % 8);
-}
-
-void IO::out(uint8_t pin){
-	*portModeRegister(list[pin]/8) |= 1 << (list[pin] % 8);
-}
-
-void IO::in(uint8_t pin){
-	*portModeRegister(list[pin]/8) &= ~(1 << (list[pin] % 8));
-}
-
-uint8_t IO::read(uint8_t pin){
-	return (*(volatile uint8_t *)pinlist[list[pin]/8] & (1 << (list[pin] % 8)));
-	// if (portInputRegister(pin_to_Port[pin])) return 1;
-	// return 0;
-}
-
-void IO::init(){
-	memset(blink1Mask, 0, MAX_PORTS);
-	memset(blink2Mask, 0, MAX_PORTS);
-
-	memset(servo1Mask, 0, MAX_PORTS);
-	memset(servo2Mask, 0, MAX_PORTS);
-	memset(servo3Mask, 0, MAX_PORTS);
-	memset(servo4Mask, 0, MAX_PORTS);
-
-	memset(readMask, 0, MAX_PORTS);
-	memset(readData, 0, MAX_PORTS);
-}
-
-void IO::set_blink1(uint8_t pin){
-	blink1Mask[list[pin]/8] |= 1 << (list[pin] % 8);
-}
-void IO::set_blink2(uint8_t pin){
-	blink2Mask[list[pin]/8] |= 1 << (list[pin] % 8);
-}
-void IO::unset_blink1(uint8_t pin){
-	blink1Mask[list[pin]/8] &= ~(1 << (list[pin] % 8));
-}
-void IO::unset_blink2(uint8_t pin){
-	blink2Mask[list[pin]/8] &= ~(1 << (list[pin] % 8));
-}
-
-void IO::blink1(){
-	for(int i = 0; i < MAX_PORTS; i++){
-		*portOutputRegister(i) ^= blink1Mask[i];
-	}
-}
-
-void IO::blink2(){
-	for(int i = 0; i < MAX_PORTS; i++){
-		*portOutputRegister(i) ^= blink2Mask[i];
-	}
-}
-
 void IO::readInput(){
 
 }
@@ -452,8 +474,109 @@ void IO::set(uint8_t pin, enum IO_event func){
 		case IO_event_Blink2:
 			set_blink2(pin);
 			break;
+		case IO_event_Pulse:
+			pulse_set(pin);
+			break;
 
 		default:
 			break;
 	}
+}
+
+ISR(IO_TIMER_OVERFLOW_INT){
+	io.blink1_counter -= 0x100;
+	io.blink2_counter -= 0x100;
+
+	if(io.pulse_counter != 0){
+		io.pulse_counter -= 0x100;
+	}
+
+	if(io.blink1_counter < 0x100){
+		//Enable Comparator and set to counter & 0xFF
+		IO_TIMER_COMPA_REG = io.blink1_counter;
+		IO_TIMER_INT |= IO_TIMER_COMPA_INT_REG;
+	}
+	if(io.blink2_counter < 0x100){
+		//Enable Comparator and set to counter & 0xFF
+		//Check if Interrupt is allready set
+		if(!(IO_TIMER_INT & IO_TIMER_COMPA_INT_REG)){
+			IO_TIMER_COMPA_REG = io.blink2_counter;
+		}
+		else if(IO_TIMER_COMPA_REG > io.blink2_counter){
+			IO_TIMER_COMPA_REG = io.blink2_counter;
+		}
+		IO_TIMER_INT |= IO_TIMER_COMPA_INT_REG;
+	}
+	if(io.pulse_counter < 0x100 && io.pulse_counter != 0xFFFF){
+		//Check if Interrupt is allready set
+		if(!(IO_TIMER_INT & IO_TIMER_COMPA_INT_REG)){
+			IO_TIMER_COMPA_REG = io.pulse_counter;
+		}
+		else if(IO_TIMER_COMPA_REG > io.pulse_counter){
+			IO_TIMER_COMPA_REG = io.pulse_counter;
+		}
+		IO_TIMER_INT |= IO_TIMER_COMPA_INT_REG;
+	}
+}
+
+ISR(IO_TIMER_COMPA_INT){
+	if(io.blink1_counter <= IO_TIMER_REG){
+		io.blink1();
+		io.blink1_counter = (0xFF - IO_TIMER_REG) + io.blink1_period;
+
+		// Disable compa if no other counter is needing compa
+		// Otherwise set OCRA0 to the counter
+		if(io.blink2_counter > 0xFF && io.pulse_counter > 0xFF){
+			IO_TIMER_INT &= ~(IO_TIMER_COMPA_INT_REG);
+		}
+		else{
+			if(io.blink2_counter < io.pulse_counter){
+				IO_TIMER_COMPA_REG = io.blink2_counter;
+			}
+			else{
+				IO_TIMER_COMPA_REG = io.pulse_counter;
+			}
+		}
+		return;
+	}
+	if(io.blink2_counter <= IO_TIMER_REG){
+		io.blink2();
+		io.blink2_counter = (0xFF - IO_TIMER_REG) + io.blink2_period;
+
+		// Disable compa if no other counter is needing compa
+		// Otherwise set OCRA0 to the counter
+		if(io.blink1_counter > 0xFF && io.pulse_counter > 0xFF){
+			IO_TIMER_INT &= ~(IO_TIMER_COMPA_INT_REG);
+		}
+		else{
+			if(io.blink1_counter < io.pulse_counter){
+				IO_TIMER_COMPA_REG = io.blink1_counter;
+			}
+			else{
+				IO_TIMER_COMPA_REG = io.pulse_counter;
+			}
+		}
+		return;
+	}
+
+	if(io.pulse_counter <= IO_TIMER_REG){
+		io.pulse_low();
+		io.pulse_counter = 0xFFFF;
+
+		// Disable compa if no other counter is needing compa
+		// Otherwise set OCRA0 to the counter
+		if(io.blink1_counter > 0xFF && io.blink2_counter > 0xFF){
+			IO_TIMER_INT &= ~(IO_TIMER_COMPA_INT_REG);
+		}
+		else{
+			if(io.blink1_counter < io.blink2_counter){
+				IO_TIMER_COMPA_REG = io.blink1_counter;
+			}
+			else{
+				IO_TIMER_COMPA_REG = io.blink2_counter;
+			}
+		}
+		return;
+	}
+	IO_TIMER_INT &= ~(IO_TIMER_COMPA_INT_REG);
 }

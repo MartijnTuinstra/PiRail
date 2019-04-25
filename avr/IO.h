@@ -2,6 +2,7 @@
 #define INCLUDED_IO_H
 
 #include "prgmem.h"
+#include "avr/interrupt.h"
 
 #define PORT_(port) PORT ## port
 #define DDR_(port)  DDR  ## port
@@ -258,14 +259,29 @@ class IO {
 		void blink1();
 		void blink2();
 
+		void pulse_set(uint8_t pin);
+		void pulse_high();
+		void pulse_low();
+
 		void readInput();
 		#ifdef IO_SPI
 		void writeOutput();
 		#endif
 
+		uint16_t calculateTimer(uint16_t mseconds);
+
+		uint16_t blink1_period;
+		uint16_t blink1_counter;
+		uint16_t blink2_period;
+		uint16_t blink2_counter;
+		uint16_t pulse_counter;
+		uint8_t pulse_length;
+
 	private:
 		uint8_t blink1Mask[MAX_PORTS];
 		uint8_t blink2Mask[MAX_PORTS];
+
+		uint8_t pulseMask[MAX_PORTS];
 
 		uint8_t servo1Mask[MAX_PORTS];
 		uint8_t servo2Mask[MAX_PORTS];
@@ -282,3 +298,15 @@ class IO {
 
 
 extern IO io;
+
+#define IO_TIMER TCCR0B
+#define IO_TIMER_PRESCALER (1 << CS02) | (1 << CS00)
+#define IO_TIMER_INT TIMSK0
+#define IO_TIMER_OVERFLOW_INT_REG 1 //TOIE
+#define IO_TIMER_COMPA_INT_REG 2 //OCIEA
+
+#define IO_TIMER_REG TCNT0
+#define IO_TIMER_COMPA_REG OCR0A
+
+#define IO_TIMER_OVERFLOW_INT TIMER0_OVF_vect
+#define IO_TIMER_COMPA_INT TIMER0_COMPA_vect

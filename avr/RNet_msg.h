@@ -1,3 +1,7 @@
+
+#define RNET_CHECKSUM_SEED 0b10101010
+
+// General
 #define RNet_OPC_DEV_ID        0x00
 #define RNet_OPC_SetEmergency  0x01
 #define RNet_OPC_RelEmergency  0x02

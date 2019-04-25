@@ -6,7 +6,7 @@
 #define RNET_BROADCAST_MODULE 0xFF
 #define RNET_MASTER 0x0
 
-#define RNET_MAX_BUFFER 40
+#define RNET_MAX_BUFFER 64
 
 #if defined(__AVR_ATmega328__) || defined(__AVR_ATmega328P__)
 
@@ -164,14 +164,18 @@ extern struct _RNet_buffer RNet_tx_buffer;
 class RNet {
   public:
     volatile enum BusState state;
-    void init();
+    void init(uint8_t dev, uint8_t node);
     status transmit(uint8_t PrioDelay);
-    int getMsgSize(struct _RNet_buffer * msg);
-    void checkReceived();
+    uint8_t getMsgSize(struct _RNet_buffer * msg);
+    bool checkReceived();
+    void executeMessage();
 
     void add_to_tx_buf(uint8_t data);
     void add_to_rx_buf(uint8_t data);
   private:
+    uint8_t dev_id;
+    uint8_t node_id;
+
     struct _RNet_buffer rx;
     struct _RNet_buffer tx;
 };

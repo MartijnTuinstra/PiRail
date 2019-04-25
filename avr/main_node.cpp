@@ -83,6 +83,8 @@ int main(){
 
   eeprom_write_byte(&EE_Mem.ModuleID, 3);
   eeprom_write_byte(&EE_Mem.NodeID, 2);
+  
+  eeprom_write_byte(&EE_Mem.NodeID, 2);
 
   _delay_ms(1000);
 
@@ -101,7 +103,7 @@ int main(){
 
   _delay_ms(800);
 
-  #if defined(SPI)
+  #if defined(IO_SPI)
 
   #else
   net.init(eeprom_read_byte(&EE_Mem.ModuleID), eeprom_read_byte(&EE_Mem.NodeID));
@@ -121,6 +123,8 @@ int main(){
     //   net.transmit(5);
     // }
     if(net.checkReceived()){
+      // Message is copied to temp buffer
+      // ready to be executed
       net.executeMessage();
     }
     #ifdef IO_SPI

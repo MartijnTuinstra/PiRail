@@ -1,8 +1,8 @@
 #include "avr/eeprom.h"
 
 struct _EE_Settings {
-	uint8_t blink0[4];
-	uint8_t blink1[4];
+	uint16_t blink1;
+	uint16_t blink2;
 	uint8_t pulse;
 	uint8_t poll;
 };

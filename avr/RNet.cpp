@@ -20,6 +20,7 @@
 
 struct _RNet_buffer RNet_rx_buffer;
 struct _RNet_buffer RNet_tx_buffer;
+uint8_t tmp_rx_msg[RNET_MAX_BUFFER];
 
 #define RNET_DEBUG
 
@@ -37,15 +38,97 @@ void RNet::add_to_tx_buf(uint8_t data){
   }
 }
 
-void RNet::checkReceived(){
-  if (rx.read_index < rx.write_index && getMsgSize(&rx)){
-  }
-  else if(rx.read_index - RNET_MAX_BUFFER < rx.write_index){
+bool RNet::checkReceived(){
+  if (rx.read_index != rx.write_index){
+    uint8_t size = getMsgSize(&rx);
+    if (rx.write_index >= (rx.read_index + size) % RNET_MAX_BUFFER){
+      //Copy message and check checksum
+      uint8_t checksum = RNET_CHECKSUM_SEED;
+      for(uint8_t i = 0; i < (size - 1); i++){
+        tmp_rx_msg[i] = rx.buf[rx.read_index+i];
+        checksum ^= rx.buf[rx.read_index+i];
+      }
 
+      // If wrong checksum discard message
+      if(rx.buf[rx.read_index+size-1] != checksum){
+        uart_putchar('W');
+        uart_putchar('C');
+        uart_putchar('S');
+        uart_putchar('\n');
+        return false;
+      }
+      rx.read_index += size;
+
+      return true;
+    }
+  }
+
+  return false;
+}
+
+void RNet::executeMessage(){
+  if(tmp_rx_msg[0] == RNet_OPC_SetEmergency){
+    uart_putchar('S');
+    uart_putchar('E');
+    uart_putchar('m');
+    uart_putchar('\n');
+  }
+  else if(tmp_rx_msg[0] == RNet_OPC_RelEmergency){
+    uart_putchar('R');
+    uart_putchar('E');
+    uart_putchar('m');
+    uart_putchar('\n');
+  }
+  else if(tmp_rx_msg[0] == RNet_OPC_PowerON){
+    uart_putchar('P');
+    uart_putchar('O');
+    uart_putchar('n');
+    uart_putchar('\n');
+  }
+  else if(tmp_rx_msg[0] == RNet_OPC_PowerOFF){
+    uart_putchar('P');
+    uart_putchar('O');
+    uart_putchar('f');
+    uart_putchar('f');
+    uart_putchar('\n');
+  }
+  else if(tmp_rx_msg[0] == RNet_OPC_ResetALL){
+    uart_putchar('R');
+    uart_putchar('A');
+    uart_putchar('l');
+    uart_putchar('l');
+    uart_putchar('\n');
+  }
+
+  //Check dev ID in header
+  if(tmp_rx_msg[1] != dev_id){
+    return;
+  }
+
+  if(tmp_rx_msg[0] == RNet_OPC_SetOutput){
+    if(tmp_rx_msg[2] & 0x80){ // Only one address
+      io.set(tmp_rx_msg[2] & 0x7F, (enum IO_event)(tmp_rx_msg[3] & 0xF));
+    }
+    else{ // More than one
+      uint8_t length = tmp_rx_msg[2] & 0x7F;
+
+      uint8_t j = 0;
+      for(uint8_t i = 0; i < length; i+= 2, j+=3){
+        io.set(tmp_rx_msg[2+j] & 0x7F, (enum IO_event)(tmp_rx_msg[2+j+1] >> 4));
+
+        if(tmp_rx_msg[2+j+2] & 0x80){
+          break;
+        }
+
+        io.set(tmp_rx_msg[2+j+2] & 0x7F, (enum IO_event)(tmp_rx_msg[2+j+1] & 0xF));
+      }
+
+    }
+    //End SetOutput message
   }
 }
 
-int RNet::getMsgSize(struct _RNet_buffer * msg){
+uint8_t RNet::getMsgSize(struct _RNet_buffer * msg){
   if(msg->buf[msg->read_index] == RNet_OPC_SetEmergency ||
      msg->buf[msg->read_index] == RNet_OPC_RelEmergency ||
      msg->buf[msg->read_index] == RNet_OPC_PowerON ||
@@ -58,7 +141,6 @@ int RNet::getMsgSize(struct _RNet_buffer * msg){
     return 3;
   }
   else if(msg->buf[msg->read_index] == RNet_OPC_ChangeID ||
-          msg->buf[msg->read_index] == RNet_OPC_SetPulse ||
           msg->buf[msg->read_index] == RNet_OPC_SetCheck){
     return 4;
   }
@@ -93,7 +175,11 @@ uint8_t * currentMsg(struct _RNet_buffer * msg){
   return msg->buf;
 }
 
-void RNet::init (){
+void RNet::init (uint8_t dev, uint8_t node){
+  dev_id = dev;
+  node_id = node;
+
+
   RNET_TX_SET_HIGH; // Write pull up and will become high output HIGH
   _set_out(DDR(RNET_TX_PORT), RNET_TX_pin); //Set as output
 

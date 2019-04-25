@@ -14,8 +14,7 @@ endif
 .PHONY: all avr
 
 avr:
-	make -C avr all
-
+	$(MAKE) -C avr all
 
 all: config_reader baan avr
 
@@ -105,6 +104,7 @@ $(SRC)/IO.c: $(LIB)/IO.h
 .PHONY: clean
 
 clean:
+	$(MAKE) -C avr clean
 	@echo "CLEAN"
 	@rm -f baan
 	@rm bin/*

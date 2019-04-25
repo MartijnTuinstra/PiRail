@@ -22,7 +22,7 @@ build/$(1)/$(2).bin.d/%.o: %.cpp %.h build/$(1)/$(2).bin.d/stamp
 
 build/$(1)/$(2).elf: $$(addprefix build/$(1)/$(2).bin.d/,$$(File_$(1)))
 	@echo "  [  AVR  ] $(2) $(1)"
-	@make -f make-avr hex dev=$(2) dir=build/$(1) --no-print-directory
+	@+$(MAKE) -f make-avr hex dev=$(2) dir=build/$(1) --no-print-directory
 
 endef
 

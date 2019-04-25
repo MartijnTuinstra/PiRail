@@ -28,6 +28,24 @@ void set_toggle(uint8_t pin);
 
 uint8_t read(uint8_t pin);
 
+
+enum IO_event {
+  IO_event_High,
+  IO_event_Low,
+  IO_event_Pulse,
+  IO_event_Blink1,
+  IO_event_Blink2,
+
+  IO_event_Servo1,
+  IO_event_Servo2,
+  IO_event_Servo3,
+  IO_event_Servo4,
+  IO_event_PWM1,
+  IO_event_PWM2,
+  IO_event_PWM3,
+  IO_event_PWM4
+};
+
 #define PA 0
 #define PB 1
 #define PC 2
@@ -96,11 +114,9 @@ extern uint8_t pin_to_BIT[];
 	};
 	const uint8_t list[] = {
 		// 0, 1, 2, 3, 4, 5
-		20,19,21,18,17,16,
-		// 6, 7, 8, 9
-		13, 12, 11, 10,
-		// 10, 11
-		9, 8,
+		20, 19, 21, 18, 17, 16,
+		// 6, 7, 8, 9, 10, 11
+		13, 12, 11, 10, 9, 8,
 
 		// 12 // DEBUG
 		5
@@ -223,6 +239,8 @@ extern uint8_t pin_to_BIT[];
 
 class IO {
 	public:
+		void set(uint8_t pin, enum IO_event func);
+
 		void high(uint8_t pin);
 		void low(uint8_t pin);
 		void toggle(uint8_t pin);

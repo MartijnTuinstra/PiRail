@@ -14,7 +14,7 @@ endif
 .PHONY: all avr
 
 avr:
-	$(MAKE) -C avr all
+	$(MAKE) -C avr all -O
 
 all: config_reader baan avr
 

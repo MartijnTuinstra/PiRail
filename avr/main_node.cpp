@@ -17,13 +17,7 @@ FUSES = {0xC2, 0x99, 0xFF};
 
 #include "util/delay.h"
 
-#define SPI
-
-#ifdef SPI
-#include "IO_SPI.h"
-#else
 #include "IO.h"
-#endif
 
 #include "eeprom_layout.h"
 #include "RNet.h"
@@ -92,22 +86,25 @@ int main(){
 
   _delay_ms(1000);
 
-  //Blink master ID
-  uint8_t ID = eeprom_read_byte(&EE_Mem.ModuleID);
-  flash_number(ID);
+  //Scope for ID
+  {
+    //Blink master ID
+    uint8_t ID = eeprom_read_byte(&EE_Mem.ModuleID);
+    flash_number(ID);
 
-  _delay_ms(800);
+    _delay_ms(800);
 
-  //Blink slave ID
-  ID = eeprom_read_byte(&EE_Mem.NodeID);
-  flash_number(ID);
+    //Blink slave ID
+    ID = eeprom_read_byte(&EE_Mem.NodeID);
+    flash_number(ID);
+  }
 
   _delay_ms(800);
 
   #if defined(SPI)
 
   #else
-  net.init();
+  net.init(eeprom_read_byte(&EE_Mem.ModuleID), eeprom_read_byte(&EE_Mem.NodeID));
   #endif
 
   uart_putchar('R');
@@ -123,7 +120,10 @@ int main(){
     // if(net.state == IDLE || net.state == HOLDOFF){
     //   net.transmit(5);
     // }
-    #ifdef SPI
+    if(net.checkReceived()){
+      net.executeMessage();
+    }
+    #ifdef IO_SPI
     // uart_putchar('.');
     // io.blink1();
     // io.blink2();

@@ -3,6 +3,11 @@
 #include "avr/io.h"
 #include "IO.h"
 
+#include "RNet.h"
+#include "main_node.h"
+
+#include "util/delay.h"
+
 IO io;
 
 #if defined(__AVR_ATmega328__) || defined(__AVR_ATmega328P__)
@@ -215,6 +220,147 @@ uint8_t read(uint8_t pin){
 	return 0;
 }
 
+#ifdef IO_SPI
+
+
+void IO::high(uint8_t pin){
+	writeData[pin/8] |= 1 << (pin % 8);
+}
+
+void IO::low(uint8_t pin){
+	writeData[pin/8] &= ~(1 << (pin % 8));
+}
+
+void IO::toggle(uint8_t pin){
+	writeData[pin/8] ^= 1 << (pin % 8);
+}
+
+void IO::out(uint8_t pin){return (void)pin;}
+
+void IO::in(uint8_t pin){return (void)pin;}
+
+uint8_t IO::read(uint8_t pin){
+	return (*(volatile uint8_t *)pinlist[list[pin]/8] & (1 << (list[pin] % 8)));
+	// if (portInputRegister(pin_to_Port[pin])) return 1;
+	// return 0;
+}
+
+#define LATCH_OUT_ENABLE  PORTD &= ~(1 << 3)
+#define LATCH_OUT_DISABLE PORTD |=  (1 << 3)
+
+#define LATCH_IN_ENABLE   PORTC &= ~(1 << 0)
+#define LATCH_IN_DISABLE  PORTC |=  (1 << 0)
+#define IN_LOAD           PORTC &= ~(1 << 2); \
+                          _delay_ms(1); \
+                          PORTC |=  (1 << 2)
+
+void IO::init(){
+	memset(blink1Mask, 0, MAX_PORTS);
+	memset(blink2Mask, 0, MAX_PORTS);
+
+	memset(servo1Mask, 0, MAX_PORTS);
+	memset(servo2Mask, 0, MAX_PORTS);
+	memset(servo3Mask, 0, MAX_PORTS);
+	memset(servo4Mask, 0, MAX_PORTS);
+
+	memset(readMask, 0, MAX_PORTS);
+	memset(readData, 0, MAX_PORTS);
+	memset(writeData, 0, MAX_PORTS);
+
+	#if defined(__AVR_ATmega328__) || defined(__AVR_ATmega328P__)
+	// set mosi and sck output
+	// DDRB = (1<<DDB2)|(1<<DDB3)|(1<<DDB5);
+	_set_out(PORTB, 5); //SCK
+	_set_out(PORTB, 3); //MOSI
+	_set_in(PORTB, 4);  //MISO
+	_set_out(PORTB, 2); //SS
+
+	_set_high(PORTB, 2);
+	_set_high(PORTC, 2);
+
+	#endif
+
+	// enable SPI at fsck/128
+	SPCR = (1<<SPE)|(1<<MSTR)|(1<<SPR0)|(1<<SPR1);
+
+	LATCH_OUT_DISABLE;
+	LATCH_IN_DISABLE;
+
+	writeOutput();
+}
+
+void IO::set_blink1(uint8_t pin){
+	blink1Mask[list[pin]/8] |= 1 << (list[pin] % 8);
+	uart_putchar('b');
+	printHex(blink1Mask[list[pin]/8]);
+	uart_putchar('\n');
+}
+void IO::set_blink2(uint8_t pin){
+	blink2Mask[list[pin]/8] |= 1 << (list[pin] % 8);
+}
+void IO::unset_blink1(uint8_t pin){
+	blink1Mask[list[pin]/8] &= ~(1 << (list[pin] % 8));
+}
+void IO::unset_blink2(uint8_t pin){
+	blink2Mask[list[pin]/8] &= ~(1 << (list[pin] % 8));
+}
+
+void IO::blink1(){
+	for(int i = 0; i < MAX_PORTS; i++){
+		writeData[i] = writeData[i] ^ blink1Mask[i];
+	}
+}
+
+void IO::blink2(){
+	for(int i = 0; i < MAX_PORTS; i++){
+		writeData[i] = writeData[i] ^ blink2Mask[i];
+	}
+}
+
+/*
+
+int latchPinOut = 3;
+int dataLoad = A2, latchPinIn = A0;
+*/
+
+void IO::writeOutput(){
+	LATCH_OUT_ENABLE; 
+
+	for(int i = 0; i < MAX_PORTS; i++){
+		/* Start transmission */
+		SPCR = (1<<SPE)|(1<<MSTR)|(1<<SPR0)|(1<<SPR1);
+		SPDR = writeData[i];
+		printHex(writeData[i]);
+		/* Wait for transmission complete */
+		while(!(SPSR & (1<<SPIF)));
+	}
+
+	uart_putchar('\n');
+	LATCH_OUT_DISABLE;
+}
+
+void IO::readInput(){
+	IN_LOAD;
+	_delay_ms(1);
+	LATCH_IN_ENABLE;
+
+	for(int i = 0; i < MAX_PORTS; i++){
+		/* Start transmission */
+		SPCR = (1<<SPE)|(1<<MSTR)|(1<<SPR0)|(1<<SPR1);
+		SPDR = 0;
+		/* Wait for transmission complete */
+		while(!(SPSR & (1<<SPIF)));
+
+		readData[i] = SPDR; 
+		printHex(readData[i]);
+	}
+
+	uart_putchar('\n');
+	LATCH_IN_DISABLE;
+}
+
+#else
+
 void IO::high(uint8_t pin){
 	*portOutputRegister(list[pin]/8) |= 1 << (list[pin] % 8);
 }
@@ -281,4 +427,33 @@ void IO::blink2(){
 
 void IO::readInput(){
 
+}
+
+#endif
+
+
+void IO::set(uint8_t pin, enum IO_event func){
+	if(func != IO_event_Blink1){
+		unset_blink1(pin);
+	}
+	if(func != IO_event_Blink2){
+		unset_blink2(pin);
+	}
+	switch(func){
+		case IO_event_High:
+			high(pin);
+			break;
+		case IO_event_Low:
+			low(pin);
+			break;
+		case IO_event_Blink1:
+			set_blink1(pin);
+			break;
+		case IO_event_Blink2:
+			set_blink2(pin);
+			break;
+
+		default:
+			break;
+	}
 }

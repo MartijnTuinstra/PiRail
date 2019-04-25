@@ -1,6 +1,8 @@
-programs=main_spi# test
+programs=main_spi main #test
 File_main=main_node.o eeprom_layout.o RNet.o IO.o
-File_main_spi=main_node.o eeprom_layout.o RNet.o IO_SPI.o
+args_main=
+File_main_spi=main_node.o eeprom_layout.o RNet.o IO.o
+args_main_spi=-D IO_SPI
 File_test=test.o
 #dev=atmega328 atmega328p atmega64a atmega2560
 dev=atmega328p atmega2560
@@ -18,7 +20,7 @@ build/$(1)/$(2).bin.d/stamp:
 
 build/$(1)/$(2).bin.d/%.o: %.cpp %.h build/$(1)/$(2).bin.d/stamp
 	@echo "  [AVR-GCC] $$@ ($$^)"
-	@avr-gcc -mmcu=$(2) -Wa,-ahlmns=$$(basename $$@).lst -c -o $$@ $$(word 1,$$^) $$(avr_gcc_args)
+	@avr-gcc -mmcu=$(2) -Wa,-ahlmns=$$(basename $$@).lst -c -o $$@ $$(word 1,$$^) $$(avr_gcc_args) $$(args_$(1))
 
 build/$(1)/$(2).elf: $$(addprefix build/$(1)/$(2).bin.d/,$$(File_$(1)))
 	@echo "  [  AVR  ] $(2) $(1)"

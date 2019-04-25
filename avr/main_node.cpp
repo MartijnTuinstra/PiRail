@@ -24,21 +24,7 @@ FUSES = {0xC2, 0x99, 0xFF};
 
 uint8_t test = 4;
 
-#define USE_2X 0
-
-static void
-uart_38400(void)
-{
-#define BAUD 38400
-#include <util/setbaud.h>
-UBRR0H = UBRRH_VALUE;
-UBRR0L = UBRRL_VALUE;
-#if USE_2X
-UCSR0A |= (1 << U2X0);
-#else
-UCSR0A &= ~(1 << U2X0);
-#endif
-}
+#include "uart.h"
 
 
 void flash_number(uint8_t number){
@@ -70,7 +56,7 @@ int main(){
   // eeprom_update_byte(&EE_Mem.NodeID, 2);
 
   // _delay_ms(1000);
-  uart_38400();
+  uart.init();
   #ifndef _BUFFER  
   io.init();
 
@@ -115,9 +101,7 @@ int main(){
   net.init(eeprom_read_byte(&EE_Mem.ModuleID), eeprom_read_byte(&EE_Mem.NodeID));
   #endif
 
-  uart_putchar('R');
-  uart_putchar('X');
-  uart_putchar('\n');
+  uart.transmit("RX\n", 3);
 
   // _delay_ms(5000);
 
@@ -128,16 +112,23 @@ int main(){
     // if(net.state == IDLE || net.state == HOLDOFF){
     //   net.transmit(5);
     // }
+    #ifdef _BUFFER
+    // Receive from UART
+    if(uart.available()){
+
+    }
+    #endif
+
+    //Receive from Net
     if(net.checkReceived()){
+      #ifndef _BUFFER
       // Message is copied to temp buffer
       // ready to be executed
-      #ifndef _BUFFER
       net.executeMessage();
       #else
+      // Message is pass through to UART
       uint8_t size = net.getMsgSize(tmp_rx_msg);
-      for(uint8_t i = 0; i < size; i++){
-        uart_putchar(tmp_rx_msg[i]);
-      }
+      uart.transmit(tmp_rx_msg, size);
       #endif
     }
     #ifdef IO_SPI
@@ -171,9 +162,4 @@ int main(){
     // _delay_ms(5000);
   }
   return 0;
-}
-
-void uart_putchar(char c) {
-    loop_until_bit_is_set(UCSR0A, UDRE0); /* Wait until data register empty. */
-    UDR0 = c;
 }

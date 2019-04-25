@@ -13,6 +13,4 @@
 #error "Device not supported"
 #endif
 
-void uart_putchar(char c);
-
 #endif

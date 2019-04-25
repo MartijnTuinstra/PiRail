@@ -6,6 +6,7 @@
 
 #include "RNet.h"
 #include "main_node.h"
+#include "uart.h"
 #include "eeprom_layout.h"
 
 #include "util/delay.h"
@@ -421,7 +422,7 @@ void IO::writeOutput(){
 		while(!(SPSR & (1<<SPIF)));
 	}
 
-	uart_putchar('\n');
+	uart.transmit('\n');
 	LATCH_OUT_DISABLE;
 }
 
@@ -441,7 +442,7 @@ void IO::readInput(){
 		printHex(readData[i]);
 	}
 
-	uart_putchar('\n');
+	uart.transmit('\n');
 	LATCH_IN_DISABLE;
 }
 

@@ -1,81 +1,110 @@
 BIN=./bin
 SRC=./src
 LIB=./lib
-ARGS=-std=c99 -lpthread -lssl -lcrypto -lwiringPi -lm -g
+INCLUDE = -I $(LIB) -I $(SRC)
+ARGS=-std=c99 -lpthread -lssl -lcrypto -lwiringPi -lm -g3 $(INCLUDE) -Wall -W -Werror=unused-variable -Wno-packed-bitfield-compat -Wno-unused-parameter
+
+GCC = gcc $(ARGS)
+GCC_SIMPLE = gcc -g -Wall -W -Werror=unused-variable $(INCLUDE) -std=c99
 
 ifndef VERBOSE
 .SILENT:
 endif
 
-.PHONY: avr
+.PHONY: all avr
 
 avr:
 	make -C avr all
 
-baan: baan.o $(BIN)/algorithm.o $(BIN)/com.o $(BIN)/encryption.o $(BIN)/modules.o $(BIN)/pathfinding.o $(BIN)/rail.o $(BIN)/signals.o $(BIN)/status.o $(BIN)/switch.o $(BIN)/train_control.o $(BIN)/train_sim.o $(BIN)/trains.o $(BIN)/websocket.o $(BIN)/Z21.o
-	gcc $(ARGS) -o baan $(wildcard $(BIN)/*.o) baan.o
 
-baan.o: baan.c $(LIB)/system.h $(LIB)/train_sim.h $(LIB)/websocket.h $(LIB)/status.h $(LIB)/Z21.h $(LIB)/com.h $(LIB)/rail.h $(LIB)/switch.h $(LIB)/signals.h $(LIB)/trains.h $(LIB)/modules.h $(LIB)/algorithm.h $(LIB)/pathfinding.h
-	gcc $(ARGS) baan.c -c -o baan.o
+all: config_reader baan avr
 
-$(BIN)/algorithm.o : $(SRC)/algorithm.c $(LIB)/system.h $(LIB)/algorithm.h $(LIB)/rail.h $(LIB)/trains.h $(LIB)/switch.h $(LIB)/signals.h $(LIB)/modules.h $(LIB)/com.h $(LIB)/status.h
-	@echo Algorithm.o
-	gcc $(SRC)/algorithm.c -c -o $(BIN)/algorithm.o $(ARGS)
+$(BIN)/%.o: $(SRC)/%.c
+	@echo $@
+	@$(GCC) -c -o $@ $^
 
-$(BIN)/com.o : $(SRC)/com.c $(LIB)/com.h $(LIB)/system.h $(LIB)/rail.h $(LIB)/switch.h $(LIB)/signals.h $(LIB)/trains.h $(LIB)/modules.h
-	@echo COM.o
-	gcc $(SRC)/com.c -c -o $(BIN)/com.o $(ARGS)
+config_reader: $(BIN)/config_reader.o $(BIN)/config.o $(BIN)/logger.o $(BIN)/mem.o
+	@echo config_reader
+	@$(GCC_SIMPLE) -o $@ $(BIN)/config_reader.o $(BIN)/config.o $(BIN)/logger.o $(BIN)/mem.o
 
-$(BIN)/encryption.o : $(SRC)/encryption.c $(LIB)/encryption.h
-	@echo encryption.o
-	gcc $(SRC)/encryption.c -c -o $(BIN)/encryption.o $(ARGS)
+$(SRC)/config_reader.c: $(LIB)/config.h $(LIB)/logger.h
 
-$(BIN)/modules.o : $(SRC)/modules.c $(LIB)/system.h $(LIB)/rail.h $(LIB)/switch.h $(LIB)/signals.h $(LIB)/trains.h $(LIB)/modules.h $(LIB)/algorithm.h $(LIB)/websocket.h
-	@echo modules.o
-	gcc $(SRC)/modules.c -c -o $(BIN)/modules.o $(ARGS)
+$(LIB)/config.h: $(LIB)/rail.h $(LIB)/IO.h $(LIB)/config_data.h
+$(SRC)/config.c: $(LIB)/config.h $(LIB)/logger.h
 
-$(BIN)/pathfinding.o : $(SRC)/pathfinding.c $(LIB)/system.h $(LIB)/rail.h $(LIB)/switch.h $(LIB)/trains.h $(LIB)/pathfinding.h
-	@echo pathfinding.o
-	gcc $(SRC)/pathfinding.c -c -o $(BIN)/pathfinding.o $(ARGS)
+baan: $(BIN)/baan.o $(BIN)/logger.o $(BIN)/rail.o $(BIN)/train.o $(BIN)/system.o $(BIN)/websocket_control.o $(BIN)/websocket_msg.o $(BIN)/module.o \
+		$(BIN)/train_sim.o $(BIN)/com.o $(BIN)/algorithm.o $(BIN)/signals.o $(BIN)/switch.o $(BIN)/Z21.o $(BIN)/Z21_msg.o $(BIN)/websocket.o $(BIN)/encryption.o $(BIN)/IO.o \
+		$(BIN)/config.o $(BIN)/mem.o $(BIN)/submodule.o
+	@echo baan
+	$(GCC) -o baan $(BIN)/baan.o $(BIN)/logger.o $(BIN)/rail.o $(BIN)/train.o $(BIN)/system.o $(BIN)/websocket_control.o $(BIN)/websocket_msg.o $(BIN)/module.o \
+	$(BIN)/train_sim.o $(BIN)/com.o $(BIN)/algorithm.o $(BIN)/signals.o $(BIN)/switch.o $(BIN)/Z21.o $(BIN)/Z21_msg.o $(BIN)/websocket.o $(BIN)/encryption.o $(BIN)/IO.o \
+	$(BIN)/config.o $(BIN)/mem.o $(BIN)/submodule.o
 
-$(BIN)/rail.o : $(SRC)/rail.c $(LIB)/system.h $(LIB)/rail.h $(LIB)/modules.h $(LIB)/switch.h
-	@echo rail.o
-	gcc $(SRC)/rail.c -c -o $(BIN)/rail.o $(ARGS)
+baan.c: $(LIB)/logger.h $(LIB)/train.h $(LIB)/rail.h $(LIB)/switch.h $(LIB)/com.h $(LIB)/websocket_control.h $(LIB)/system.h $(LIB)/mem.h
+$(BIN)/baan.o: baan.c
+	@echo baan.o
+	$(GCC) baan.c -c -o $(BIN)/baan.o
 
-$(BIN)/signals.o : $(SRC)/signals.c $(LIB)/system.h $(LIB)/signals.h $(LIB)/rail.h $(LIB)/modules.h $(LIB)/com.h
-	@echo signals.o
-	gcc $(SRC)/signals.c -c -o $(BIN)/signals.o $(ARGS)
+$(SRC)/mem.c: $(LIB)/mem.h $(LIB)/logger.h
 
-$(BIN)/status.o : $(SRC)/status.c $(LIB)/websocket.h $(LIB)/system.h $(LIB)/rail.h $(LIB)/switch.h $(LIB)/trains.h $(LIB)/modules.h $(LIB)/Z21.h
-	@echo status.o
-	gcc $(SRC)/status.c -c -o $(BIN)/status.o $(ARGS)
+$(LIB)/algorithm.h: $(LIB)/rail.h
+$(SRC)/algorithm.c: $(LIB)/algorithm.h $(LIB)/system.h \
+		$(LIB)/logger.h $(LIB)/train.h $(LIB)/switch.h $(LIB)/signals.h \
+		$(LIB)/module.h $(LIB)/com.h $(LIB)/websocket_msg.h $(LIB)/submodule.h
 
-$(BIN)/switch.o : $(SRC)/switch.c $(LIB)/system.h $(LIB)/rail.h $(LIB)/switch.h $(LIB)/trains.h $(LIB)/websocket.h $(LIB)/pathfinding.h $(LIB)/modules.h $(LIB)/com.h
-	@echo switch.o
-	gcc $(SRC)/switch.c -c -o $(BIN)/switch.o $(ARGS)
+$(LIB)/com.h: $(LIB)/signals.h
+$(SRC)/com.c: $(LIB)/com.h $(LIB)/system.h $(LIB)/rail.h \
+		$(LIB)/switch.h $(LIB)/signals.h $(LIB)/train.h $(LIB)/logger.h \
+		$(LIB)/module.h $(LIB)/submodule.h
 
-$(BIN)/train_control.o : $(SRC)/train_control.c $(LIB)/trains.h
-	@echo train_control.o
-	gcc $(SRC)/train_control.c -c -o $(BIN)/train_control.o $(ARGS)
+$(SRC)/encryption.c: $(LIB)/encryption.h
 
-$(BIN)/train_sim.o : $(SRC)/train_sim.c $(LIB)/system.h $(LIB)/rail.h $(LIB)/trains.h $(LIB)/modules.h
-	@echo train_sim.o
-	gcc $(SRC)/train_sim.c -c -o $(BIN)/train_sim.o $(ARGS)
+$(SRC)/logger.c: $(LIB)/logger.h $(LIB)/mem.h
 
-$(BIN)/trains.o : $(SRC)/trains.c $(LIB)/system.h $(LIB)/rail.h $(LIB)/switch.h $(LIB)/trains.h $(LIB)/pathfinding.h $(LIB)/com.h $(LIB)/Z21.h
-	@echo trains.o
-	gcc $(SRC)/trains.c -c -o $(BIN)/trains.o $(ARGS)
+$(LIB)/module.h: $(LIB)/rail.h $(LIB)/switch.h $(LIB)/signals.h
+$(SRC)/module.c: $(LIB)/module.h $(LIB)/system.h \
+		$(LIB)/logger.h $(LIB)/train.h $(LIB)/algorithm.h \
+		$(LIB)/websocket_msg.h $(LIB)/websocket_control.h
 
-$(BIN)/websocket.o : $(SRC)/websocket.c $(LIB)/system.h $(LIB)/rail.h $(LIB)/switch.h $(LIB)/trains.h $(LIB)/websocket.h $(LIB)/status.h $(LIB)/encryption.h $(LIB)/modules.h $(LIB)/Z21.h
-	@echo websocket.o
-	gcc $(SRC)/websocket.c -c -o $(BIN)/websocket.o $(ARGS)
+$(LIB)/rail.h: $(LIB)/config_data.h
+$(SRC)/rail.c: $(LIB)/rail.h $(LIB)/system.h $(LIB)/module.h $(LIB)/switch.h $(LIB)/logger.h $(LIB)/algorithm.h
 
-$(BIN)/Z21.o : $(SRC)/Z21.c $(LIB)/Z21.h $(LIB)/status.h $(LIB)/trains.h
-	@echo Z21.o
-	gcc $(SRC)/Z21.c -c -o $(BIN)/Z21.o $(ARGS)
+$(LIB)/route.h: $(LIB)/rail.h #$(LIB)/switch.h
 
+$(LIB)/signals.h: $(LIB)/rail.h
+$(SRC)/signals.c: $(LIB)/signals.h $(LIB)/system.h $(LIB)/mem.h $(LIB)/config_data.h $(LIB)/module.h $(LIB)/logger.h
 
-clean: a.out
-	rm baan
-	rm bin -rf
-	mkdir bin
+$(LIB)/switch.h: $(LIB)/rail.h $(LIB)/train.h
+$(SRC)/switch.c: $(LIB)/switch.h $(LIB)/logger.h
+
+$(SRC)/submodule.c: $(LIB)/algorithm.h $(LIB)/com.h $(LIB)/train_sim.h $(LIB)/Z21.h $(LIB)/logger.h
+
+$(SRC)/system.c: $(LIB)/system.h $(LIB)/websocket_control.h $(LIB)/logger.h $(LIB)/algorithm.h
+
+$(LIB)/train.h: $(LIB)/rail.h $(LIB)/route.h
+$(SRC)/train.c: $(LIB)/train.h $(LIB)/system.h $(LIB)/logger.h $(LIB)/switch.h
+
+$(SRC)/train_sim.c: $(LIB)/train_sim.h $(LIB)/rail.h $(LIB)/train.h $(LIB)/system.h $(LIB)/module.h $(LIB)/submodule.h
+
+$(SRC)/websocket.c: $(LIB)/websocket.h
+
+$(LIB)/websocket_control.h: $(LIB)/websocket.h $(LIB)/websocket_msg.h $(LIB)/module.h
+$(SRC)/websocket_control.c: $(LIB)/websocket_control.h
+
+$(LIB)/websocket_msg.h: $(LIB)/websocket.h $(LIB)/train.h
+$(SRC)/websocket_msg.c: $(LIB)/websocket_msg.h $(LIB)/system.h $(LIB)/rail.h $(LIB)/switch.h \
+	                    $(LIB)/train.h $(LIB)/logger.h $(LIB)/module.h $(LIB)/Z21.h
+
+$(SRC)/Z21.c: $(LIB)/Z21.h $(LIB)/logger.h $(LIB)/submodule.h $(LIB)/Z21_msg.h
+
+$(SRC)/Z21_msg.c: $(LIB)/Z21.h $(LIB)/Z21_msg.h $(LIB)/train.h
+
+$(LIB)/IO.h: $(LIB)/module.h
+$(SRC)/IO.c: $(LIB)/IO.h
+
+.PHONY: clean
+
+clean:
+	@echo "CLEAN"
+	@rm -f baan
+	@rm bin/*

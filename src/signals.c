@@ -1,126 +1,153 @@
-#define _BSD_SOURCE
-// #define _GNU_SOURCE
+#include "signals.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <unistd.h>
-#include <string.h>
+#include "system.h"
+#include "mem.h"
 
-#include "./../lib/system.h"
+#include "config_data.h"
+#include "module.h"
+#include "logger.h"
 
-#include "./../lib/signals.h"
+void create_signal(uint8_t module, uint8_t blockId, uint16_t signalId, _Bool side, char output_len, struct s_IO_port_conf * output, struct s_IO_signal_event_conf * stating){
+  Signal * Z = _calloc(1, Signal);
 
-#include "./../lib/rail.h"
+  Block * B = U_B(module, blockId);
+  
+  Z->B = B;
+  if(side == NEXT)
+    B->NextSignal = Z;
+  else
+    B->PrevSignal = Z;
 
-#include "./../lib/modules.h"
-#include "./../lib/com.h"
+  Z->id = signalId;
+  Z->module = module;
+  Z->state = PROCEED;
+  Z->output_len = output_len;
+  
+  Z->output = _calloc(output_len, IO_Port *);
+  Z->output_stating = _calloc(output_len, struct _signal_stating);
 
-/*
-void create_signal(int Unit_Adr,struct Seg * B,int type, int side){ //Side = 0 => NSi, 1 => PSi
-  struct signal *Z = (struct signal*)malloc(sizeof(struct signal));
+  for(int i = 0; i<output_len; i++){
+    if(Units[module]->Node[output[i].Node].io_ports <= output[i].Adr){
+      if(Z->output_len == output_len){
+        Z->output_len = i;
+        loggerf(ERROR, "Failed to link IO to Signal %02i:%02i", module, signalId);
+      }
+      loggerf(WARNING, "IO outside range (Port %02i:%02i:%02i)", module, output[i].Node, output[i].Adr);
+      continue;
+    }
+    Z->output[i] = U_IO(module, output[i].Node, output[i].Adr);
+    for(int j = 0; j <= UNKNOWN; j++){
+      Z->output_stating[i].state[j] = stating[i].event[j];
+    }
+    struct s_node_adr out;
+    out.Node = output[i].Node;
+    out.io = output[i].Adr;
 
-  Z->state = 0;
-  Z->id = Unit_Adr;
-  Z->MAdr = B->Adr.M;
-  Z->type = type;
-
-  printf("Signal #%i\n",Si_list_i);
-
-  signals[Si_list_i] = Z;
-
-  if(side == 0){
-    B->NSi = Z;
-  }else if(side == 1){
-    B->PSi = Z;
+    Init_IO(Units[module], out, IO_Output);
   }
 
-  if(Units[B->Adr.M]->Signals[Unit_Adr] == NULL){
-    Units[B->Adr.M]->Signals[Unit_Adr] = Z;
-    Z->UAdr = Unit_Adr;
-    if(Unit_Adr > Units[B->Adr.M]->Si_L){
-      Units[B->Adr.M]->Si_L = Unit_Adr;
-    };
-  }else{
-    printf("Double signal adress %i in Module %i\n",Unit_Adr,B->Adr.M);
+  if(Units[module]->Sig[Z->id]){
+    loggerf(WARNING, "Duplicate signal id %02i:%02i, overwriting ... ", module, Z->id);
+    Units[module]->Sig[Z->id] = clear_Signal(Units[module]->Sig[Z->id]);
   }
+  Units[B->module]->Sig[Z->id] = Z;
+  
+  char sidos = 0;
+  if(side == NEXT)
+    sidos = 'N';
+  else
+    sidos = 'P';
+  
+  loggerf(DEBUG, "Create signal %02i:%02i, side %c, block %02i:%02i", Z->module, Z->id, sidos, B->module, B->id);
 
-
-  Si_list_i++;
+  set_signal(Z, UNKNOWN);
 }
-*/
 
-void create_signal2(struct Seg * B,char adr_nr, uint8_t addresses[adr_nr], char state[BLOCK_STATES], char flash[BLOCK_STATES], char side){
-  /*Block*/
-  /*Number of output pins/addresses*/
-  /*State output relation*/
-  /*Side*/
+void * clear_Signal(Signal * Sig){
 
-  struct signal *Z = (struct signal*)malloc(sizeof(struct signal));
+  _free(Sig->output);
+  _free(Sig->output_stating);
 
-  Z->state = 0;
+  _free(Sig);
 
-  Z->id = Units[B->Module]->Signal_nr;
-  long Unit_Adr = Units[B->Module]->Signal_nr++;
+  return 0;
+}
 
-  Z->MAdr = B->Module;
-  Z->type = 1;
-  Z->length = adr_nr;
+void check_Signal(Signal * Si){
+  if(!Si->B->Alg.B)
+    return;
 
-  for(char i = 0;i<adr_nr;i++){
-    if(Units[Z->MAdr]->OutRegisters*8 < addresses[i]){
-      printf("Expansion needed\t");
-      printf("Address %i doesn't fit\n",addresses[i]);
-
-      //Expand range
-      Units[Z->MAdr]->OutRegisters++;
-
-      printf("Expanded to: %i bytes\n",Units[Z->MAdr]->OutRegisters);
-
-      //Realloc Input array, lenght: Inregisters * sizeof()
-      Units[Z->MAdr]->Out = (struct Rail_link **)realloc(Units[Z->MAdr]->Out,8*Units[Z->MAdr]->OutRegisters*sizeof(struct Rail_link *));
-
-      //Clear new spaces
-      for(int i = 8*Units[Z->MAdr]->OutRegisters-8;i<8*Units[Z->MAdr]->OutRegisters;i++){
-        Units[Z->MAdr]->Out[i] = 0;
+  if(Si->B->NextSignal == Si){
+    if(Si->B->dir == 0 || Si->B->dir == 2 || Si->B->dir == 3){
+      if(Si->B->Alg.BN->blocks == 0){
+        set_signal(Si, DANGER);
+      }
+      else{
+        set_signal(Si, Si->B->Alg.BN->B[0]->state);
       }
     }
-    Z->adr[i] = addresses[i];
-  }
-
-  memcpy(Z->states,state,BLOCK_STATES);
-  memcpy(Z->flash,flash,BLOCK_STATES);
-
-  if(side == 0){
-    B->NSi = Z;
-  }else if(side == 1){
-    B->PSi = Z;
-  }
-
-  if(!Units[B->Module]->Signals[Unit_Adr]){
-    Units[B->Module]->Signals[Unit_Adr] = Z;
-    Z->UAdr = Unit_Adr;
-    if(Unit_Adr > (Units[B->Module]->Si_L-1)){
-      Units[B->Module]->Si_L = Unit_Adr + 1;
+    else{
+      if(Si->B->Alg.BP->blocks == 0){
+        set_signal(Si, DANGER);
+      }
+      else{
+        set_signal(Si, Si->B->Alg.BP->B[0]->reverse_state);
+      }
     }
-  }else{
-    printf("Double signal adress %i in Module %i\n",Unit_Adr,B->Module);
+  }
+  else{
+    if(Si->B->dir == 1 || Si->B->dir == 4 || Si->B->dir == 6){
+      if(Si->B->Alg.BN->blocks == 0){
+        set_signal(Si, DANGER);
+      }
+      else{
+        set_signal(Si, Si->B->Alg.BN->B[0]->state);
+      }
+    }
+    else{
+      if(Si->B->Alg.BP->blocks == 0){
+        set_signal(Si, DANGER);
+      }
+      else{
+        set_signal(Si, Si->B->Alg.BP->B[0]->reverse_state);
+      }
+    }
   }
 }
 
-void set_signal(struct signal *Si,int state){
-  if(!(Si->state == state || Si->state == (0x80 + state))){
-    /*printf("Module %i Signal #%i change from %x to ",Si->MAdr,Si->id,Si->state);
+void set_signal(Signal * Si, enum Rail_states state){
+  char out[200];
+  if(Si->state != state){
+    sprintf(out, "%02i:%02i Sig %i:%i %i", Si->B->module, Si->B->id, Si->module, Si->id, Si->state);
+    if(Si->state == BLOCKED || Si->state == DANGER)
+      sprintf(out, "%s DANGER", out);
+    else if(Si->state == RESTRICTED)
+      sprintf(out, "%s RESTRICTED", out);
+    else if(Si->state == CAUTION)
+      sprintf(out, "%s CAUTION", out);
+    else if(Si->state == PROCEED)
+      sprintf(out, "%s PROCEED", out);
+    else
+      sprintf(out, "%s STATE", out);
 
-    if(state == SIG_RED){
-      printf("SIG_RED");
-    }else if(state == SIG_AMBER){
-      printf("SIG_AMBER");
-    }else if(state == SIG_GREEN){
-      printf("SIG_GREEN");
+    if(state == BLOCKED || state == DANGER)
+      sprintf(out, "%s->%i DANGER", out, state);
+    else if(state == RESTRICTED)
+      sprintf(out, "%s->%i RESTRICTED", out, state);
+    else if(state == CAUTION)
+      sprintf(out, "%s->%i CAUTION", out, state);
+    else if(state == PROCEED)
+      sprintf(out, "%s->%i PROCEED", out, state);
+    else
+      sprintf(out, "%s->%i STATE", out, state);
+    loggerf(INFO, "%s", out);
+    // Update state
+    Si->state = state;
+    
+    //Update IO
+    for(int i = 0; i < Si->output_len; i++){
+      Si->output[i]->w_state = Si->output_stating[i].state[Si->state];
     }
-
-    printf("  (%x)\n",state);*/
-    Si->state = 0x80 + state;
+    Units[Si->module]->io_out_changed |= 1;
   }
 }

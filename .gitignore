@@ -1,5 +1,13 @@
 *.tmp
+log.txt
+log_config.txt
 bin/
-sublime.sublime-project
 avr/build/*
-
+baan
+config_reader
+configs/*
+web/trains_img/*
+!web/trains_img/.gitkeep
+web/tmp_*
+*.~vsdx
+*.~docx

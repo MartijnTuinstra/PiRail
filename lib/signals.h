@@ -1,36 +1,43 @@
-/**///Signal passing speed
-//Flashing Red speed
-#define RED_F_SPEED 20
-//Flashing Amber speed
-#define AMBER_F_SPEED 30
-//Amber speed
-#define AMBER_SPEED 40
+#ifndef _INCLUDE_SIGNALS_H
+  #define _INCLUDE_SIGNALS_H
 
+  #include "IO.h"
 
+  /**///Signal passing speed
+  //Flashing Red speed
+  #define RED_F_SPEED 20
+  //Flashing Amber speed
+  #define AMBER_F_SPEED 30
+  //Amber speed
+  #define AMBER_SPEED 40
 
-struct signal{
-  int id;
-  int MAdr;
-  int UAdr;
-  int state;
-  int type; // 0 = 2-state / 1 = 4-state / 2 = 8-state
-  uint8_t length;
+  #include "rail.h"
 
-  short adr[6];
-  char states[BLOCK_STATES];
-  char flash[BLOCK_STATES];
-};
+  struct _signal_stating {
+    enum IO_event state[8];
+  };
+  
+  typedef struct _signal{
+    uint16_t id;
+    uint8_t module;
+    Block * B;
+    enum Rail_states state;
 
-struct Seg;
+    uint8_t output_len;
 
-struct Unit;
+    IO_Port ** output;
+    struct _signal_stating * output_stating;
 
-void create_signal2(struct Seg * B,char adr_nr, uint8_t addresses[adr_nr], char state[BLOCK_STATES], char flash[BLOCK_STATES], char side);
+  } Signal;
 
-void set_signal(struct signal *Si,int state);
+  #define U_Sig(M, S) Units[M]->Sig[S]
+  
+  #define create_signal_from_conf(module, data) create_signal(module, data.blockId, data.id, data.side, data.output_len, data.output, data.stating)
+  void create_signal(uint8_t module, uint8_t blockId, uint16_t signalId, _Bool side, char output_len, struct s_IO_port_conf * output, struct s_IO_signal_event_conf * stating);
+  
+  void * clear_Signal(Signal * Sig);
 
-#define SIG_GREEN      0
-#define SIG_AMBER      1
-#define SIG_RED        2
-#define SIG_RESTRICTED 3
-#define SIG_CAUTION    4
+  void check_Signal(Signal * Si);
+  void set_signal(Signal *Si, enum Rail_states state);
+#endif
+

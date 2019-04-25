@@ -1,80 +1,127 @@
-#define MAX_SW 8
-#define MAX_SWITCH_LINK 5
-#define MAX_SWITCH_PREFFERENCE 5
+#ifndef _INCLUDE_SWITCH_H
+  #define _INCLUDE_SWITCH_H
+  
+  #include "rail.h"
+  #include "train.h"
 
-struct L_Swi_t{
-	struct SegC Adr;
-	int states[5];
-};
+  #define U_Sw(U, A) Units[U]->Sw[A]
+  #define U_MSSw(U, A) Units[U]->MSSw[A]
 
-struct P_Swi_t{
-	char type;
-	char state;
-};
+  struct switch_link {
+    char type;
+    void * p;
+    uint8_t states_len;
+    uint8_t * states;
+  };
 
-typedef struct Swi{
-	int Module;
-	int id;
+  struct switch_preference {
+    char type;
+    uint8_t state;
+  };
 
-	struct Rail_link div;
-	struct Rail_link str;
-	struct Rail_link app;
+  typedef struct _switch {
+    uint8_t  module;
+    uint16_t id;
 
-	struct SegC DivC;
-	struct SegC StrC;
-	struct SegC AppC;
+    _Bool hold;
 
-	char state;	//0 = Straight, 1 = Diverging / 0x80 is change bit
-	char default_state;
-	char len;
+    _Bool feedback_en;
+    uint8_t feedback_len;
+    IO_Port ** feedback;
+    char * feedback_states;
 
-	char UAdr; //Unit Address
-	char Out[5]; //Output Addresses
+    uint8_t IO_len;
+    IO_Port ** IO;
+    uint8_t * IO_states;
 
-	struct Seg * Detection_Block;
+    struct rail_link div;
+    struct rail_link str;
+    struct rail_link app;
 
-	struct L_Swi_t * L_Swi[MAX_SWITCH_LINK]; //Linked switches
+    uint8_t state;
+    uint8_t default_state;
 
-	struct P_Swi_t * pref[MAX_SWITCH_PREFFERENCE];//Switch preference
-} Switch;
+    Block * Detection;
 
-typedef struct Mod{
-	int Module;
-	int id;
-	struct adr Adr;
+    uint8_t links_len;
+    struct switch_link * links;
 
-	struct Seg * Detection_Block;
+    uint8_t pref_len;
+    struct switch_preference * preferences;
+  } Switch;
 
-	struct adr mAdr[10];
-	struct adr MAdr[10];
+  typedef struct _msswitch {
+    uint8_t  module;
+    uint16_t id;
 
-	struct Rail_link m_Adr[10];
-	struct Rail_link M_Adr[10];
+    _Bool hold;
 
-	struct SegC m_AdrC[10];
-	struct SegC M_AdrC[10];
+    _Bool feedback_en;
+    uint8_t feedback_len;
+    IO_Port ** feedback;
+    char * feedback_states;
 
-	char length;
-	char s_length;
-	char state;
-} mswitch;
+    uint8_t IO_len;
+    IO_Port ** IO;
+    uint16_t * IO_states;
 
-struct train;
+    struct rail_link * sideA;
+    struct rail_link * sideB;
 
-int throw_switch(struct Swi * S);
+    uint8_t state_len;
+    uint8_t default_state;
+    uint8_t state;
 
-int set_switch(struct Swi * S,char state);
+    Block * Detection;
 
-int throw_ms_switch(struct Mod * M, char c);
+    uint8_t links_len;
+    struct switch_link * links;
 
-void Create_Switch(struct SegC Adr,struct SegC App,struct SegC Div,struct SegC Str,int * adr,char state);
+    uint8_t pref_len;
+    struct switch_preference * preferences;
+  } MSSwitch;
 
-void Create_Moduls(int Unit_Adr, struct adr Adr,struct adr mAdr[10],struct adr MAdr[10],char length);
+  struct switch_connect {
+    uint8_t  module;
+    uint16_t id;
 
-int check_Switch_state(struct Rail_link NAdr);
+    struct rail_link app;
+    struct rail_link str;
+    struct rail_link div;
+  };
 
-int check_Switch(struct Seg * B, int direct, _Bool incl_pref);
+  struct msswitch_connect {
+    uint8_t  module;
+    uint16_t id;
 
-int free_Switch(struct Seg *B, int direct);
+    struct rail_link * sideA;
+    struct rail_link * sideB;
+  };
 
-int free_Route_Switch(struct Seg *B, int direct, struct train * T);
+  struct switch_list {
+    uint8_t len;
+    char * type;
+    void ** p;
+  };
+
+  void throw_switch(Switch * S, uint8_t state, uint8_t lock);
+  void throw_msswitch(MSSwitch * S, uint8_t state, uint8_t lock);
+
+  int set_switch(Switch * S, uint8_t state);
+  int set_msswitch(MSSwitch * S, uint8_t state);
+
+  int throw_multiple_switches(uint8_t len, char * data);
+
+  int set_switch_path(void * p, struct rail_link link, int flags);
+  int reserve_switch_path(void * p, struct rail_link link, int flags);
+
+  void Create_Switch(struct switch_connect connect, uint8_t block_id, uint8_t output_len, Node_adr * output_pins, uint8_t * output_states);
+  void Create_MSSwitch(struct msswitch_connect connect, uint8_t block_id, uint8_t output_len, Node_adr * output_pins, uint16_t * output_states);
+
+  int check_Switch(struct rail_link link, _Bool pref);
+  int check_Switch_State(struct rail_link adr);
+
+  int free_Switch(Block * B, int dir);
+
+  int free_Route_Switch(Block * B, int dir, Trains * T);
+#endif

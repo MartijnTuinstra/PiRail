@@ -1,671 +1,5 @@
 
 
-
-//Opcodes
-var WSopc_Track_Scan         = 0x82;
-var WSopc_Track_PUp_Layout   = 0x83;
-var WSopc_Track_Info         = 0x84;
-
-
-var WSopc_AddNewTrain        = 0x40;
-var WSopc_LinkTrain          = 0x41;
-var WSopc_TrainSpeed         = 0x42;
-var WSopc_TrainFunction      = 0x43;
-var WSopc_TrainOperation     = 0x44;
-var WSopc_Z21TrainData       = 0x45;
-var WSopc_TrainAddRoute      = 0x46;
-var WSopc_TrainClearRoute    = 0x47;
-
-var WSopc_SetSwitch       = 0x20;
-
-var WSopc_SetSwitchReserved  = 0x24;
-var WSopc_BroadTrack         = 0x26;
-var WSopc_BroadSwitch        = 0x27;
-var WSopc_Track_Layout       = 0x30;
-
-var WSopc_EmergencyStop      = 0x10;
-var WSopc_ShortCircuitStop   = 0x11;
-var WSopc_ClearEmergency     = 0x12;
-var WSopc_NewMessage         = 0x13;
-var WSopc_ChangeMessage      = 0x14;
-var WSopc_ClearMessage       = 0x15;
-var WSopc_ChangeBroadcast    = 0x16;
-var WSopc_Service_State      = 0x17;
-
-
-//Service States
-
-var STATE_Z21_FLAG        = 0x8000;
-var STATE_WebSocket_FLAG  = 0x4000;
-var STATE_COM_FLAG        = 0x2000;
-var STATE_Client_Accept   = 0x1000;
-
-var STATE_TRACK_DIGITAL   = 0x0200;
-var STATE_RUN             = 0x0100;
-
-var STATE_Modules_Loaded  = 0x0002;
-var STATE_Modules_Coupled = 0x0004;
-
-var admin;
-
-var active_trains = []; //Trains that were active on the layout.
-var broadcastFlags = 0xFF;
-
-var Track_Layout_data;
-var blocks_load = 0;
-
-/*Client to Server*/
-  function ev_set_switch(m,s,st){ //Module, Switch, NewState
-    console.log("Set switch "+m+":"+s+"=>"+st);
-    ws.send(String.fromCharCode(WSopc_SetSwitch)+String.fromCharCode(m)+String.fromCharCode(s)+String.fromCharCode(st));
-  }
-
-  function ev_release_Emergency(evt){
-    ws.send(String.fromCharCode(WSopc_ClearEmergency));
-  }
-
-  function ev_Emergency(evt){
-    ws.send(String.fromCharCode(WSopc_EmergencyStop));
-  }
-
-  function ev_Toggle_Broadcast_Flag(evt){
-    console.log(evt);
-    if($(evt.target).attr("nr") != undefined){
-      console.log(parseInt($(evt.target).attr("nr")));
-      broadcastFlags ^= 1 << parseInt($(evt.target).attr("nr"));
-
-      if($(evt.target).attr("nr") == "4"){
-        if(broadcastFlags & 0x10){
-          //LOGIN
-          var passphrase = $.md5(prompt("Please enter your password", "password"));
-
-          $.post('./login.php', {'pass':passphrase}, function(response) {
-              // Log the response to the console
-              console.log("Response: "+response);
-              if(response == "LOGIN SUCCESFULL"){
-                //PHP succesfull
-                //now websocket
-                var data = [];
-                data[0] = 0xFF; //Admin login opcode
-                for(var i = 0;i<passphrase.length;i++){
-                  data[i+1] = passphrase.charCodeAt(i);
-                }
-
-                var data = new Uint8Array(data);
-
-                ws.send(data);
-              }else{
-                alert("WRONG PASSWORD\n"+response);
-              }
-          });
-        }else{
-          //Logout
-          $.post('./login.php', {'pass':''}, function(response) {
-              // Log the response to the console
-              console.log("Response: "+response);
-              if(response == "LOGIN SUCCESFULL"){
-                alert("SUCCESFULL LOGIN");
-              }else{
-                alert("WRONG PASSWORD");
-              }
-          });
-        }
-      }
-
-
-      console.log("New broadcast flag: "+broadcastFlags);
-      ws.send(new Uint8Array([WSopc_ChangeBroadcast,broadcastFlags]));
-    }
-  }
-
-  function ev_Stop_Scan(){
-    if(admin){
-      var data = [];
-
-      data[0] = WSopc_Track_Scan;
-      data[1] = 1;
-
-      ws.send(new Int8Array(data));
-    }else{
-      console.log("No Admin");
-    }
-  }
-/**/
-/*Server to Client*/
-  function ws_switch_update(data){
-    for(var i = 1;i<data.length;){
-      var M = data[i];
-
-      if(data[i+1] & 0x80){ //MSSwitch
-        var len   = data[i+3];
-
-        modules[M].switches[data[i+1]&0x7F] = data[i+2] & 0x7F;
-
-        i += 4;
-      }else{ //Switch
-        modules[M].switches[data[i+1]] = data[i+2] & 0x7F;
-
-        i += 3;
-      }
-    }
-
-    update_frame();
-  }
-
-  function ws_track_update(data){
-    for(var i = 1;i<data.length;i+=4){
-      var m = data[i];
-      var B = data[i+1];
-
-      var D = data[i+2] >> 7;
-      var blocked = (data[i+2] & 0b00010000) >> 4;
-      var state = (data[i+2] & 0xF);
-      var tID = data[i+3];
-
-      console.log("Block "+m+":"+B+"\tdir: "+D+"\tBlocked: "+blocked+"\tstate: "+state+"\tTrain: "+tID);
-
-      if(blocked == 1){
-        modules[m].blocks[B] = 0;
-      }else{
-        if(state == 0){ //No train / Grey
-          modules[m].blocks[B] = 5;
-        }else if(state == 1){ //SLOW
-          modules[m].blocks[B] = 2;
-        }else if(state == 2){ //Red
-          modules[m].blocks[B] = 1;
-        }else if(state == 3){ //UNKOWN
-          modules[m].blocks[B] = 6;
-        }else if(state == 4){ //GHOST
-          modules[m].blocks[B] = 3;
-        }else if(state == 5){ //RESERVED
-          modules[m].blocks[B] = 4;
-        }
-      }
-    }
-
-    update_frame();
-  }
-
-  function ws_partial_layout(data){
-    console.warn("TODO: implement");return;
-    // for(var i = 1;i<data.length;i++){
-    //   for(var j = 1;j<=Track_Layout_data[data[i]].anchor_len;j++){
-    //     Track_Layout_data[data[i]].anchors[j-1] = data[i+j];
-    //   }
-    //   i += Track_Layout_data[data[i]].anchor_len;
-    // }
-  }
-
-  function ws_layout(data){
-    console.warn("TODO: implement");return;
-    // for(var i = 1;i<data.length;i++){
-    //   for(var j = 1;j<=Track_Layout_data[data[i]].anchor_len;j++){
-    //     Track_Layout_data[data[i]].anchors[j-1] = data[i+j];
-    //   }
-    //   i += Track_Layout_data[data[i]].anchor_len;
-    // }
-
-    // console.log("Finding first module");
-    // $.each(Track_Layout_data, function(i,v){
-    //   console.log("Module "+i);
-    //   if(Track_Layout_data[i] != [] && Track_Layout_data[i].anchors.length != 0 && i == 20){
-    //     Track_Layout_data[i].x = 0;
-    //     Track_Layout_data[i].y = 0;
-    //     Track_Layout_data[i].r = 0;
-
-    //     $('#Modules').append("<div class=\"M"+i+" Module M"+i+"b\"></div>");
-    //     blocks_load++;
-    //     console.log("Load: "+'./../modules/'+i+'/layout.svg');
-    //     $('.M'+i+'b').load('./../modules/'+i+'/layout.svg',function (evt){
-    //       blocks_load--;
-    //       if(blocks_load == 0){ //Done loading all modules?
-    //         $('#Modules').css('display','block');
-    //         ws.send("Ready");
-    //         $('g.SwGroup','.Module').on("click",ev_throw_switch);  //Attach click event to all switch and mswitches
-    //       }
-    //     });
-
-    //     Track_Layout_data[i].done = true;
-
-    //     for(var j = 0;j<Track_Layout_data[i].anchor_len;j++){
-    //       if(Track_Layout_data[i].anchors[j] != 0){
-    //         console.log("=============== "+j+" ===============");
-    //         track_layout(Track_Layout_data[i].anchors[j],i);
-    //       }
-    //     }
-    //     return false;
-    //   }
-    // });
-  }
-
-  function ws_emergency(type){
-    console.warn("TODO: reimplement");return;
-    if(type == 0){ //Emergency stop
-      if($('#warning_list #W_EmS').length == 0){
-        var text = "<div id=\"W_EmS\" class=\"warning\"><div class=\"photobox l\"><img src=\"./img/stop.png\"/></div>";
-        text += "<div class=\"photobox r\"><img src=\"./img/stop.png\"/></div><center><h2>EMERGENCY STOP</h2><br/><but onClick=\"ev_release_Emergency()\">";
-        text += "<b>Resume</b></but></center></div>";
-        $('#warning_list').prepend(text);
-        $('#warning_list').css("display","block");
-      }
-
-    }else if(type == 1){ //Short Circuit
-      if($('#warning_list #W_EsS').length == 0){
-        var text = "<div id=\"W_EsS\" class=\"warning\"><div class=\"photobox l\"><img src=\"./img/shortcircuit.png\"/></div>";
-        text += "<div class=\"photobox r\"><img src=\"./img/shortcircuit.png\"/></div><center><h2>SHORT CICRUIT</h2><br/><but onClick=\"ev_release_Emergency()\">";
-        text += "<b>Resume</b></but></center></div>";
-        $('#warning_list').prepend(text);
-        $('#warning_list').css("display","block");
-      }
-
-    }else if(type == 2){ //Release
-      if($('#warning_list #W_EmS').length != 0){
-        $('#warning_list #W_EmS').remove();
-      }
-      if($('#warning_list #W_EsS').length != 0){
-        $('#warning_list #W_EsS').remove();
-      }
-    }
-  }
-
-  function ws_message(data){
-    console.warn("TODO: reimplement");return;
-    var msgID = data[2] + ((data[1] & 0x1F) << 8);
-
-    //Check type
-    if((data[1] & 0xE0) == 0){ //New train
-
-      //Check if message is not used
-      if($('#warning_list #W'+msgID+"_11").length == 0){
-        var text = "<div id=\"W"+msgID+"\" class=\"warning\" style=\"background-color:grey;\"><div class=\"photobox l\"><img src=\"./img/train.png\"/></div>";
-        text += "<div class=\"photobox r\"><img src=\"./img/train.png\"/></div><center><h2>New Train</h2> at "+data[4]+":"+data[5];
-        text += "<div style=\"width:calc(100% - 100px);height:40px;\"><div style=\"float:left;color:black;width:300px\"><select class=\"cs-selectn cs-select cs-skin-rotate\"><option value=\"\" disabled selected>Select train</option>";
-        text += train_option+"</select></div><but style=\"float:right;position:relative;top:6px\"";
-        text += "Mid=\""+msgID+"\" fID=\""+data[3]+"\">";
-        text += "<b>Link</b></but></div></center></div>";
-        $('#warning_list').append(text);
-        $('but','#warning_list #W'+msgID).on('click',ev_LinkTrain);
-        if(tablet == 0){
-          redraw_selects('#W'+msgID);
-        }
-      }
-
-    }
-    else if((data[1] & 0xE0) == 0x20){ //Split train
-
-      //Check if message is not used
-      if($('#warning_list #W'+msgID).length == 0){
-        var text = "<div id=\"W"+msgID+"\" class=\"warning\" style=\"background-color:light-red;\"><div class=\"photobox l\"><img src=\"./img/train.png\"/></div>";
-        text += "<div class=\"photobox r\"><img src=\"./img/train.png\"/></div><center><h2>A Train ("+data[3]+") has split</h2><br/>One part is at "+data[4]+":"+data[5]+", the other part is in "+data[6]+":"+data[7];
-        text += "<br/><but onClick=\"remote_request('Ec')\">";
-        text += "<b>Resume</b></but></center></div>";
-        $('#warning_list').append(text);
-      }
-    }
-
-
-    //Set bell icon
-    if($("#warning_list").html() == ""){
-      $('#warning_list').css("display","none");
-      $('#notify').attr('src','./img/notification.png');
-    }else{
-      $('#notify').attr('src','./img/notification_y.png');
-    } 
-  }
-
-  function ws_clearmessage(data){
-    console.warn("TODO: reimplement");return;
-    var msgID = data[2] + ((data[1] & 0x1F) << 8);
-    $('#warning_list #W'+msgID).remove();
-    //Set bell icon
-    if($("#warning_list").html() == ""){
-      $('#warning_list').css("display","none");
-      $('#notify').attr('src','./img/notification.png');
-    }else{
-      $('#notify').attr('src','./img/notification_y.png');
-    } 
-  }
-
-  function ws_full_train_data(data){
-    console.warn("TODO: reimplement");return;
-    console.log('Train_Data_Update');
-    console.log(active_trains);
-    if(data.length > 5){
-      var train_ID = data[1];
-      var DCC_ID = (data[2] << 8) + data[3];
-
-      if($('#T'+DCC_ID).length != 0){
-        console.log('Known');
-        console.log(DCC_ID);
-
-        var speed_step = (data[5] & 0x7F);
-        var max_speed = parseInt(train_list[train_ID][4]);
-
-        console.log('Speed: '+speed_step);
-
-        $("#T"+DCC_ID+" .slider" ).slider('value',((speed_step / 127)*max_speed));
-        $("#T"+DCC_ID+" .slider-handle" ).html(Math.round((speed_step / 127)*max_speed));
-        train_list[train_ID].data.speed = speed_step;
-
-        if((data[5] & 0x80) == 0){
-          train_list[train_ID].data.direction = 0x0;
-          //Reverse
-          console.log("Reverse");
-          $('#T'+DCC_ID+" .dir_right").addClass('selected');
-          $('#T'+DCC_ID+" .dir_left").removeClass('selected');
-        }else{
-          //Forward
-          train_list[train_ID].data.direction = 0x80;
-          console.log("Forward");
-          $('#T'+DCC_ID+" .dir_left").addClass('selected');
-          $('#T'+DCC_ID+" .dir_right").removeClass('selected');
-        }
-
-      }
-      else{
-        //console.log(data[6]+'<<+'+data[7]+'=='+DCC_ID);
-        console.log("New train");
-        console.log(train_list[train_ID]);
-        var train_info = train_list[train_ID];
-        var text = "";
-        try{
-          text += '<div id="T'+DCC_ID+'" class="trainbox">';
-          text += '<div style="width:calc(100% - 60px);height:250px;float:left;">';
-          text += '<div class="image_box">';
-          text += '<img src="./../trains/'+train_info[0]+'.jpg">';
-          text += '</div>';
-          text += '<div class="name_tag">';
-          text += '<span class="title">'+train_info[1]+'</span>';
-          text += '<span class="value">#'+DCC_ID+'</span>';
-          text += '<br/></div>';
-          text += '<div class="control_tag">';
-          text += '<span class="title">Control</span>';
-          text += '<span class="value">Manual</span>';
-          text += '<br/></div>';
-          text += '<div class="route_tag">';
-          text += '<span class="title">Route</span>';
-          text += '<span class="value">None</span>';
-          text += '<svg viewBox="0 0 16 16" class="route_plus" onClick="open_Route(this);"><circle fill="#bbb" cx="8" cy="8" r="6.11"/><path d="M8,0a8,8,0,1,0,8,8A8,8,0,0,0,8,0Zm4,8.8H8.8V12H7.2V8.8H4V7.2H7.2V4H8.8V7.2H12Zm0,0"/></svg>';
-          text += '<br/></div>';
-          text += '<div class="dir_tag">';
-          train_list[train_ID].data.direction = (data[5] & 0x80);
-          text += '<svg viewBox="0 0 830.48 233.25" class="dir_arrow">';
-          text +=   '<path onClick="ev_Train_direction('+train_ID+',1)" class="dir_left';
-          if((data[5] & 0x80) == 0){text += ' selected';}
-          text +=            '" d="M385.87,60.27h-238V5.07a2.14,2.14,0,0,0-3.44-1.62L3.79,115a2.07,2.07,0,0,0,0,3.24L144.44,229.8a2.09,2.09,0,0,0,1.29.45,2.33,2.33,0,0,0,1-.2,2.13,2.13,0,0,0,1.23-1.87V173H385.8a2.05,2.05,0,0,0,2.14-2V62.52a2.35,2.35,0,0,0-2.2-2.26"/>';
-          text +=   '<path onClick="ev_Train_direction('+train_ID+',0)" class="dir_right';
-          if(data[5] & 0x80){text += ' selected';}
-          text +=            '" d="M444.62,173h238v55.2A2.14,2.14,0,0,0,686,229.8L826.7,118.25a2.07,2.07,0,0,0,0-3.24L686,3.45A2.09,2.09,0,0,0,684.75,3a2.33,2.33,0,0,0-1,.2,2.13,2.13,0,0,0-1.23,1.87v55.2H444.69a2.05,2.05,0,0,0-2.14,2V170.73a2.35,2.35,0,0,0,2.2,2.26"/>'
-          text += '</svg>';
-          text += '</div>';
-
-          if((data[4] & 0b1000) != 0){
-            text += 'Andere X-BUS Handregler<br/>';
-          }
-          if((data[4] & 0b111) == 0){
-            text += '14 steps<br/>';
-          }
-          else if((data[4] & 0b111) == 2){
-            text += '28 steps<br/>';
-          }
-          else if((data[4] & 0b111) == 4){
-            text += '128 steps<br/>';
-          }
-
-          text += 'Fahrstufen KKK: ' + (data[6] & 0x7F) + '<br/>'
-
-          text += 'Options active:<br/>';
-
-          if((data[6] & 0x40) == 1){
-            text += 'Doppeltraktion<br/>';
-          }
-
-          if((data[6] & 0x20) == 1){
-            text += 'Smartsearch<br/>';
-          }
-
-          if((data[6] & 0x10) == 1){
-            text += 'F0<br/>';
-          }
-
-          if((data[6] & 0x8) == 1){
-            text += 'F4<br/>';
-          }
-
-          if((data[6] & 0x4) == 1){
-            text += 'F3<br/>';
-          }
-
-          if((data[6] & 0x2) == 1){
-            text += 'F2<br/>';
-          }
-
-          if((data[6] & 0x1) == 1){
-            text += 'F1<br/>';
-          }
-
-          text += '<br/></div>';
-
-          text += '<div style="width:50px;margin-left:10px;height:250px;float:left;">';
-          text += '<div class="slider" tid="'+train_ID+'" style="height:210px;margin:0px auto;margin-top:20px;">';
-          text += '<div class="ui-slider-handle slider-handle"></div></div></div>';
-          text += '<div class="prim_fn">';
-
-          text += train_funtion_svg("D_light",0);
-          text += train_funtion_svg("D_Cab_light",1);
-          text += train_funtion_svg("D_Cab_light",2);
-          text += train_funtion_svg("D_default",3);
-          text += train_funtion_svg("D_default",4);
-          text += train_funtion_svg("D_default",5);
-
-          text += '</div><div class="secu_fn"><div class="D1"><div class="D2">';
-          for(var i = 6;i<29;i++){
-            text += train_funtion_svg("U_default",i);
-          }
-          text += '</div></div></div></div>';
-
-          $('#CTrain').append(text);
-
-          var speed_step = (data[4] & 0x7F);
-          train_list[train_ID].data.speed = speed_step;
-          var max_speed = parseInt(train_info[4]);
-
-        }catch(e){
-          
-        }
-        create_train_slider(DCC_ID,max_speed,speed_step);
-
-      }
-    }
-  }
-
-  function ws_Set_Broadcast_Flags(data){
-    console.warn("TODO: reimplement");return;
-    $('#status .broad').each(function(i,v){
-      v.style['background'] = 'red';
-    })
-    if(data[1] & 0x80){
-      $('#status .broad')[0].style['background'] = 'green';
-    }
-    if(data[1] & 0x40){
-      $('#status .broad')[1].style['background'] = 'green';
-    }
-    if(data[1] & 0x20){
-      $('#status .broad')[2].style['background'] = 'green';
-    }
-    if(data[1] & 0x10){
-      $('#status .broad')[3].style['background'] = 'green';
-      admin = 1;
-      change_admin();
-    }else{
-      //Admin unset: logout
-      $.post('./login.php', {'pass':''});
-      admin = 0;
-      change_admin();
-    }
-    if(data[1] & 0x8){
-      $('#status .broad')[4].style['background'] = 'green';
-    }
-    if(data[1] & 0x4){
-      $('#status .broad')[5].style['background'] = 'green';
-    }
-    if(data[1] & 0x2){
-      $('#status .broad')[6].style['background'] = 'green';
-    }
-    if(data[1] & 0x1){
-      $('#status .broad')[7].style['background'] = 'green';
-    }
-    broadcastFlags = data[1];
-  }
-
-  function ws_scan_progress(data){
-    console.warn("TODO: reimplement");return;
-    $('#Modules_scan .progress').html(data[1]+'/'+data[2]+' connections');
-    $('#Modules_scan .found_modules').html("");
-    var i = 3;
-    for(i;i<data.length;i++){
-      text = data[i] + "<br/>"
-
-      $('#Modules_scan .found_modules').append(text);
-    }
-  }
-
-  function ws_service_state(data){
-    console.warn("TODO: reimplement");return;
-    state = (data[1] << 8) + data[2];
-    if(state & STATE_Modules_Coupled){
-      $('#Modules_scan').css('display','none');
-    }else{
-      $('#Modules_scan').css('display','block');
-    }
-
-    if(state & STATE_Modules_Loaded && state & STATE_Modules_Coupled){
-      $('#Modules_wrapper').css('display','block');
-    }else{
-      $('#Modules_wrapper').css('display','none');
-    }
-    console.log("service State: "+state);
-  }
-/**/
-
-function track_layout(module,prev){
-  console.log("At "+module+" from "+prev);
-
-  //Check if the recursive function hasn't allready passed this node.
-  if(Track_Layout_data[module].done){
-    console.log("Allready done");
-    return;
-  }else{
-    Track_Layout_data[module].done = true;
-  }
-
-
-
-
-  //Add Module to the HTML page
-  $('#Modules').append("<div class=\"M"+module+" Module M"+module+"b\"></div>");
-  blocks_load++;
-  console.log("Load: "+'./../modules/'+module+'/layout.svg');
-  $('.M'+module+'b').load('./../modules/'+module+'/layout.svg',function (evt){
-    blocks_load--;
-    if(blocks_load == 0){ //Done loading all modules?
-      $('#Modules').css('display','block');
-      ws.send("Ready");
-      $('g.SwGroup','.Module').on("click",ev_throw_switch);  //Attach click event to all switch and mswitches
-      $('.L:not(.LSwO)','.Module').attr("stroke","#555555");
-      $('.L.LSwO','.Module').attr("stroke","lightgrey");
-      $('.L.LSwS1','.Module').css("display","none");
-    }
-  });
-
-  var anchor_id;
-  $.each(Track_Layout_data[prev].anchors,function(i,v){
-    if(v == module){
-      anchor_id = i;
-      return false;
-    }
-  });
-
-  var id;
-  $.each(Track_Layout_data[module].anchors,function(i,v){
-    if(v == prev){
-      id = i;
-      return false;
-    }
-  });
-
-  var x = Track_Layout_data[prev].x;
-  var y = Track_Layout_data[prev].y;
-  var r = Track_Layout_data[prev].r;
-
-  //                                                                               dX                                                                             dY
-  x = x + Math.cos(Math.PI * r/180) * Track_Layout_data[prev].anchor_pos[anchor_id][0] + Math.sin(Math.PI * r/180) * Track_Layout_data[prev].anchor_pos[anchor_id][1];
-  y = y + Math.sin(Math.PI * r/180) * Track_Layout_data[prev].anchor_pos[anchor_id][0] + Math.cos(Math.PI * r/180) * Track_Layout_data[prev].anchor_pos[anchor_id][1];
-  
-  r = r + Track_Layout_data[prev].anchor_pos[anchor_id][2] + Track_Layout_data[module].anchor_pos[id][2] + 180; //dR
-  r = r % 360;
-
-  //                                                                          dX                                                                        dY
-  x = x - Math.cos(Math.PI * r/180) * Track_Layout_data[module].anchor_pos[id][0] - Math.sin(Math.PI * r/180) * Track_Layout_data[module].anchor_pos[id][1];
-  y = y - Math.sin(Math.PI * r/180) * Track_Layout_data[module].anchor_pos[id][0] - Math.cos(Math.PI * r/180) * Track_Layout_data[module].anchor_pos[id][1];
-
-  var ma_x = Math.max(parseInt($("#Modules").css("width").slice(0,-2)),  x + Math.cos(Math.PI * r/180) * Track_Layout_data[module].width + Math.sin(Math.PI * r/180) * Track_Layout_data[module].height);
-  var ma_y = Math.max(parseInt($("#Modules").css("height").slice(0,-2)), y + Math.sin(Math.PI * r/180) * Track_Layout_data[module].width + Math.cos(Math.PI * r/180) * Track_Layout_data[module].height);
-
-  var mi_x = Math.min(-parseInt($("#Modules").css("margin-left").slice(0,-2)), x + Math.cos(Math.PI * r/180) * Track_Layout_data[module].width + Math.sin(Math.PI * r/180) * Track_Layout_data[module].height);
-  var mi_y = Math.min(-parseInt($("#Modules").css("margin-top").slice(0,-2)),  y + Math.sin(Math.PI * r/180) * Track_Layout_data[module].width + Math.cos(Math.PI * r/180) * Track_Layout_data[module].height);
-  mi_x = Math.min(mi_x,x);
-  mi_y = Math.min(mi_y,y);
-
-  $("#Modules").css("height",(ma_y)+"px");
-  $("#Modules").css("width",ma_x+"px");
-  $("#Modules").css("margin-top",(-mi_y)+"px");
-  $("#Modules").css("margin-left",(-mi_x)+"px");
-
-  /*if(rotate == 0){
-    x -= segments[M]['anchors'][0][0];
-    y -= segments[M]['anchors'][0][1];
-    max_x = Math.max(max_x,x+segments[M]['width']);
-    max_y = Math.max(max_y,y+segments[M]['height']);
-    min_x = Math.min(min_x,x);
-    min_y = Math.min(min_y,y);
-  }else if(r == 90){
-    x -= segments[M]['anchors'][0][1];
-    y += segments[M]['anchors'][0][0];
-    max_x = Math.max(max_x,x);
-    max_y = Math.max(max_y,y+segments[M]['width']);
-    min_x = Math.min(min_x,x-segments[M]['height']);
-    min_y = Math.min(min_y,y);
-  }else if(r == 180){
-    x += segments[M]['anchors'][0][0];
-    y += segments[M]['anchors'][0][1];
-    max_x = Math.max(max_x,x);
-    max_y = Math.max(max_y,y);
-    min_x = Math.min(min_x,x-segments[M]['width']);
-    min_y = Math.min(min_y,y-segments[M]['height']);
-  }*/
-  //console.log("M"+setup[i]+" x:"+x+", y:"+y+", R:"+r);
-  //console.log("MAX_X: "+max_x+"MAX_Y: "+max_y+":MIN_X "+min_x+"MIN_Y "+min_y);
-  $(".M"+module+"b","#Modules").css("left",x+"px");
-  $(".M"+module+"b","#Modules").css("top",y+"px");
-  $(".M"+module+"b","#Modules").css("-ms-transform","rotate("+r+"deg)");
-  $(".M"+module+"b","#Modules").css("-webkit-transform","rotate("+r+"deg)");
-  $(".M"+module+"b","#Modules").css("transform","rotate("+r+"deg)");
-  $(".M"+module+"b","#Modules").css("transform-origin","0px 0px");
-
-
-  Track_Layout_data[module].x = x;
-  Track_Layout_data[module].y = y;
-  Track_Layout_data[module].r = r;
-
-  //Go recursivly to the next
-  $.each(Track_Layout_data[module].anchors, function(i,v){
-    if(v != prev && v != 0){
-      track_layout(v,module);
-    }
-  });
-}
-
 function change_admin(){
   if(admin){
     $('#Modules_scan .admin').css('display','block');
@@ -673,176 +7,1351 @@ function change_admin(){
     $('#Modules_scan .admin').css('display','none');
   }
 }
+function IntArrayToString(data){
+  var i, str = '';
 
-var ws;
-var socket_tries = 0;
+  for (i = 0; i < data.length; i++) {
+      str += String.fromCharCode(data[i]);
+  }
 
-function WebSocket_handler(adress){
-    // Let us open a web socket
-    ws = new WebSocket("ws://"+adress+"/",broadcastFlags);
-    ws.binaryType = 'arraybuffer';
-
-    ws.onopen = function(){
-      socket_tries = 0;
-    };
-
-    ws.onmessage = function (evt){
-      var received_msg = evt.data;
-      var data = new Uint8Array(received_msg);
-      console.log("Package length: "+data.length);
-      console.log(data);
-
-
-
-
-      //New Opcodes
-      if(data[0] == WSopc_Track_Scan){
-        console.log("Scan Progress");
-        ws_scan_progress(data);
-      }
-      else if(data[0] == WSopc_Track_PUp_Layout){
-        console.log("Partial Track Layout");
-        ws_partial_layout(data);
-      }
-
-
-      else if(data[0] == WSopc_Z21TrainData){
-        console.log("Z21 Train data");
-        ws_full_train_data(data);
-      }
-      else if(data[0] == WSopc_LinkTrain){
-        console.log("Link train");
-        train_follow[data[1]] = data[2]; // Link the follow ID to the train ID
-      }
-
-      else if(data[0] == WSopc_BroadTrack){
-        console.log("Update for the track");
-        ws_track_update(data);
-      }else if(data[0] == WSopc_BroadSwitch){
-        console.log("Update for the Switches");
-        ws_switch_update(data);
-      }
-      else if(data[0] == WSopc_Track_Layout){
-        console.log("Track Layout");
-        ws_layout(data);
-      }
-
-      else if(data[0] == WSopc_EmergencyStop){
-        console.warn("Emergency Stop enabled");
-        ws_emergency(0);
-      }
-      else if(data[0] == WSopc_ShortCircuitStop){
-        console.warn("Short Circuit enabled");
-        ws_emergency(1);
-      }
-      else if(data[0] == WSopc_ClearEmergency){
-        console.warn("Emergency released");
-        ws_emergency(2);
-      }
-      else if(data[0] == WSopc_NewMessage){
-        console.log("New Message");
-        ws_message(data);
-      }
-      else if(data[0] == WSopc_ClearMessage){
-        console.log("Clear Message");
-        ws_clearmessage(data);
-      }
-
-      else if(data[0] == WSopc_ChangeBroadcast){
-        console.log("New Broadcast Flags");
-        ws_Set_Broadcast_Flags(data);
-      }
-      else if(data[0] == WSopc_Service_State){
-        console.log("Service State");
-        ws_service_state(data);
-      }
-
-      /* Old Opcodes */
-      /* Deprecated  */
-      if(data[0] == 0){
-        //Track style
-        console.error("OLD OPCODE: Track style");
-        // console.log(data);
-        // if(data[1] == 1){
-        //   console.log("It is a digital track");
-        //   $("#digital").attr("onClick","ws.send(\"tA\");");
-        //   $("#digital").attr("src","./img/Digital_y.svg");
-        //   $("#digital").attr("title","Switch to DC");
-        // }else if(data[1] == 0){
-        //   console.log("It is a analog track");
-        //   $("#digital").attr("onClick","ws.send(\"tD\");");
-        //   $("#digital").attr("src","./img/Digital_n.svg");
-        //   $("#digital").attr("title","Switch to DCC");
-        // }
-      }
-      else if(data[0] == 2){
-        //Track setup
-        console.error("OLD OPCODE: Setup update");
-        // console.warn("create_track(data) is disable. It is going to be depricated")
-        //create_track(data);
-      }
-      else if(data[0] == 6){
-        //Station list
-        console.error("OLD OPCODE: Station List");
-        // console.log(data);
-        // station_list_update(data);
-      }
-      else if(data[0] == 8){
-        //Request New Train
-        console.error("OLD OPCODE: Request for new train");
-        // if(data[1] == 2){
-        //   //Start upload file and reload list
-        //   if(data.length == 3){
-        //     succ_add_train(data[2]);
-        //     train_option += "<option value=\""+data[2]+"\">#"+$('#train_dcc').val();+"&nbsp;&nbsp;&nbsp;"+$('#train_name').val();+"</option>";
-        //   }else{
-        //     succ_add_train(data[2],data[3]);
-        //     train_option += "<option value=\""+(data[2]+(data[3] << 8))+"\">#"+$('#train_dcc').val();+"&nbsp;&nbsp;&nbsp;"+$('#train_name').val();+"</option>";
-        //   }
-        // }
-        // else if(data[1] == 1){
-        //   alert("DCC address allready in use");
-        //   fail_add_train();
-        // }
-        // else{
-        //   alert("Error code:"+data[1]+"\n");
-        //   fail_add_train();
-        // }
-      }
-    };
-
-    ws.onclose = function(event){
-      // websocket is closed.
-      console.log("Connection closed" + event.code);
-      if(socket_tries == 0){
-        console.log("Connection Closed\nRetrying....");
-      }
-      if(socket_tries != 5){
-        setTimeout(function(){
-          console.log("Reconnecting...");
-          WebSocket_handler(adress);
-          socket_tries++;
-        }, 5000);
-      }else{
-        console.log("No Connection posseble\nIs the server on?");
-      }
-    };
-
+  return str;
 }
 
+function ToInt16(value){
+  // If a positive value, return it
+  if ((value & 0x8000) == 0)
+  {
+    return value;
+  }
+  else{
+    return value | 0xffff0000;
+  }
+}
+
+var websocket = {
+  connected: false,
+  ws: undefined,
+  disconnect_counter: 1,
+  recv_cb: {},
+  connect: function(url, protocol=undefined){
+    this.url = url;
+    this.protocol = protocol;
+
+    this.__connect__();
+  },
+  __connect__: function(){
+    console.log("Connect ....");
+    this.ws = new WebSocket(this.url, this.protocol);
+    this.ws.binaryType = 'arraybuffer';
+
+    this.ws.onopen = this.on_connect.bind(this);
+    this.ws.onclose = this.on_disconnect.bind(this);
+    this.ws.onerror = this.on_error.bind(this);
+    this.ws.onmessage = this.__recv__.bind(this);
+  },
+
+  on_connect: function(evt){
+    this.connected = true;
+
+    this.ws_call_cb("ws_open_cb");
+
+    console.log("Connected");
+  },
+  on_disconnect: function(evt){
+    if(this.connected == true){
+      this.disconnect_counter = 1;
+      this.ws_call_cb("ws_close_cb");
+    }
+
+    this.ws.close();
+
+    setTimeout(this.__connect__.bind(this), this.disconnect_counter * 1000);
+
+    this.disconnect_counter += 1;
+    if(this.disconnect_counter > 20){
+      this.disconnect_counter = 20;
+    }
+
+    this.connected = false;
+    console.log("Connection lost");
+  },
+  on_error: function(evt){
+    console.warn("Websocket error", evt);
+  },
+
+  //Callbacks
+  ws_close_cb: [],
+  ws_open_cb: [],
+  ws_add_cb: function(list, f){
+    this[list].push(f);
+  },
+  ws_call_cb: function(cb){
+    for(var i = 0; i < this[cb].length; i++){
+      this[cb][i]();
+    }
+  },
+
+  //Messages
+  opc: {},
+  add_opcodes: function(configuration){
+    for(var i = 0; i < configuration.length; i++){
+      this.add_opcode(configuration[i].opcode, configuration[i].name, configuration[i].send, configuration[i].recv);
+    }
+  },
+  add_opcode: function(opcode, name, send, recv){
+    this["cts_"+name] = function(data){
+      var msg = [];
+      msg[0] = opcode;
+      var msg2 = send(data);
+      if(msg2 == undefined || !(typeof msg2 === 'object' && msg2.constructor === Array)){
+        console.log("opcode send function thrown error");
+        return;
+      }
+      msg = msg.concat(msg2);
+
+      console.log(msg);
+
+      if(!this.__send__(msg)){
+        console.log("Failed to send");
+      }
+    };
+    this["stc_"+name] = recv;
+
+    this.opc[opcode] = name;
+    this.opc[name] = opcode;
+  },
+
+  __send__: function(data){
+    if(this.connected){
+      console.log(new Int8Array(data));
+      websocket.ws.send(new Int8Array(data));
+      return 1;
+    }
+    else{
+      return 0;
+    }
+  },
+
+  __recv__: function(evt){
+    var rmsg = evt.data;
+    var msg = new Uint8Array(rmsg);
+    var opcode = msg[0];
+
+    if(msg.length > 0){
+      msg = msg.slice(1);
+    }
+
+    if(this.opc[opcode] == undefined){
+      console.warn("Unknown opcode "+opcode);
+    }
+
+    console.log("0x"+opcode.toString(16)+" stc_"+this.opc[opcode]);
+
+    this["stc_"+this.opc[opcode]](msg);
+
+    if(this.recv_cb["stc_"+name] != undefined){
+      this.recv_cb["stc_"+name](msg);
+    }
+  }
+};
+
 $(document).ready(function(){
-  //Open websocket or fail on unsupported browsers
-  if ("WebSocket" in window){
-  try{
-      setTimeout(WebSocket_handler(window.location.host+':9000'),5000);
-  }
-  catch(e){
-    console.error(e);
-  }
-  }else{
-    // The browser doesn't support WebSocket
-    alert("WebSocket NOT supported by your Browser!\nBIG PROBLEM!!\n\nPlease use the latest version of Chrome/FireFox/Safari, IE/Edge not supported");
-    $('body').html("<h2>No Websocket support</h2><i>Use latest version of Chrome, FireFox or Safari</i>");
-  }
+  Messages.add({type:0xff,id:0});
 });
 
+websocket.ws_add_cb("ws_close_cb", function(){
+  $('.info-box .connection_state .indicator').removeClass("bg-success");
+  $('.info-box .connection_state .indicator').addClass("bg-danger");
+
+  Messages.clear();
+  Messages.add({type:0xff,id:0});
+});
+websocket.ws_add_cb("ws_open_cb", function(){
+  $('.info-box .connection_state .indicator').removeClass("bg-danger");
+  $('.info-box .connection_state .indicator').addClass("bg-success");
+
+  Messages.clear();
+});
+
+websocket.add_opcodes([
+  //Settings / Admin
+    // {
+    //   opcode: 0x80,
+    //   name: "ClearTrack",
+    //   send: function(data){ return [data.name, data.nr];},
+    //   recv: function(data){ console.log("Recv Name");}
+    // },
+    // {
+    //   opcode: 0x81,
+    //   name: "ReloadTrack",
+    //   send: function(data){ return [data.name, data.nr];},
+    //   recv: function(data){ console.log("Recv Name");}
+    // },
+    {
+      opcode: 0x82,
+      name: "Track_Scan_Progress",
+      // send: function(data){ return [data.name, data.nr];},
+      recv: function(data){ console.warn("Track_Scan_Progress", data);}
+    },
+    {
+      opcode: 0x83,
+      name: "Track_Layout_Update", // Partial layout
+      recv: function(data){
+        for(var i = 0;i<data.length;i++){
+          var module = modules[data[i]]
+          for(var j = 1;j<= module.connections.length; j++){
+            module.connection_link[j-1] = data[i+j];
+          }
+          console.log("Module "+data[i]+" connect ", module.connection_link, {x: module.OffsetX, y:module.OffsetY, r:module.r});
+          i += module.connections.length;
+
+          module.connect();
+        }
+
+        Canvas.rescale(1);
+      }
+    },
+    {
+      opcode: 0x84,
+      name: "Track_Layout_Config", // Full layout
+      recv: function(data){
+        for(var i = 0;i<data.length;i++){
+          var module = modules[data[i]]
+          for(var j = 1;j<= module.connections.length; j++){
+            module.connection_link[j-1] = data[i+j];
+          }
+          console.log("Module "+data[i]+" connect ", module.connection_link, {x: module.OffsetX, y:module.OffsetY, r:module.r});
+          i += module.connections.length;
+
+          module.connect();
+        }
+
+        Canvas.rescale(1);
+      }
+    },
+    {
+      opcode: 0x86,
+      name: "Z21_Track_Info",
+      send: function(data){ return []; },
+      recv: function(data){
+        var i=0;
+        var mcur = ToInt16(data[i++] + (data[i++] << 8));
+        var mfcur = ToInt16(data[i++] + (data[i++] << 8));
+        var pcur = ToInt16(data[i++] + (data[i++] << 8));
+        var vcc = data[i++] + (data[i++] << 8);
+        var sup = data[i++] + (data[i++] << 8);
+        var temp = ToInt16(data[i++] + (data[i++] << 8));
+        var flags = data[i++] + (data[i++] << 8);
+        Z21.update({"tcur": mcur, "tfcur": mfcur, "pcur": pcur, "svol": sup, "tvol": vcc, "temp": temp, "flags": flags});
+      }
+    },
+    {
+      opcode: 0x87,
+      name: "Z21_Settings",
+      send: function(ip){
+        return [parseInt(ip.ip1),
+                parseInt(ip.ip2),
+                parseInt(ip.ip3),
+                parseInt(ip.ip4)];
+      },
+      recv: function(data){
+        var i = 0;
+        var ip = data[i++] + "." + data[i++] + "." + data[i++] + "." + data[i++];
+        var fw = data[i++] + "." + data[i++];
+        Z21.update({"ip-addr": ip, "fw-version": fw});
+      }
+    },
+    {
+      opcode: 0x8C,
+      name: "Reset_Switches",
+      send: function(data){ return [];},
+    },
+    {
+      opcode: 0x8F,
+      name: "TrainsToDepot",
+      send: function(data){ return [];},
+      // recv: function(data){ console.log("Recv Name");}
+    },
+
+    {
+      opcode: 0x90,
+      name: "EnableSubModule",
+      send: function(module){ return [1 << module] },
+    },
+    {
+      opcode: 0x91,
+      name: "DisableSubModule",
+      send: function(module){ return [1 << module] },
+    },
+    {
+      opcode: 0x92,
+      name: "SubModuleState",
+      recv: function(data){
+        Submodules.update([data[0], data[1]])
+      }
+    },
+    {
+      opcode: 0x9F,
+      name: "RestartApplication",
+      send: function(data){ return []; },
+    },
+
+    {
+      opcode: 0xC0,
+      name: "AdminEmergency",
+      send: function(data){ return [data[0], data[1]];},
+      // recv: function(data){ console.log("Recv Name");}
+    },
+    {
+      opcode: 0xC1,
+      name: "AdminEmergencyRelease",
+      send: function(data){ return [data[0], data[1]];},
+      // recv: function(data){ console.log("Recv Name");}
+    },
+    {
+      opcode: 0xCE,
+      name: "AdminLogout",
+      send: function(data){ return [];},
+      // recv: function(data){ console.log("Recv Name");}
+    },
+    {
+      opcode: 0xCF,
+      name: "AdminLogin",
+      send: function(passphrase){
+        var data = [];
+        for(var i = 0;i<passphrase.length;i++){
+          data[i] = passphrase.charCodeAt(i);
+        }
+        return data;
+      },
+      recv: function(data){
+        // var passphrase = $.md5(prompt("Please enter your password", "password"));
+        var passphrase = $.md5("password");
+        websocket.cts_AdminLogin(passphrase);
+      }
+    },
+
+  //Trains
+    {
+      opcode: 0x41,
+      name: "LinkTrain",
+      send: function(data){
+        return [data.fid, data.rid, ((type == "E")?0x80:0) + ((mid & 0x1F) >> 8)];
+      },
+    },
+    {
+      opcode: 0x42,
+      name: "TrainSpeed",
+      send: function(data){
+        return [data.train.id & 0xFF,
+                (data.train.id & 0x300) >> 2 | (data.type == "T")?0x20:0 | 
+                  (data.train.dir & 1) << 4 | (data.train.speed & 0xF00) >> 8,
+                data.train.speed & 0xFF];
+      },
+    },
+    {
+      opcode: 0x43,
+      name: "TrainFunction",
+      send: function(data){ console.warn("TrainFunction", data); },
+      recv: function(data){ console.warn("TrainFunction", data); }
+    },
+    {
+      opcode: 0x44,
+      name: "TrainOperation",
+      send: function(data){ console.warn("TrainOperation", data); },
+      recv: function(data){ console.warn("TrainOperation", data); }
+    },
+    {
+      opcode: 0x45,
+      name: "TrainData",
+      send: function(data){ console.warn("Z21TrainData", data); },
+      recv: function(data){
+
+        var id = data[0] + ((data[1] & 0xC0) << 2);
+        var type = (data[1] & 0x20) >> 5;
+
+        var dir = (data[1] & 0x10) >> 4;
+        var control = (data[1] & 0x0C) >> 2;
+
+        var speed = ((data[1] & 0x01) << 8) + data[2];        
+
+        var ratio = 0;
+
+        if(type == 0){
+          Train.engines[id].speed = speed;
+          ratio = Train.engines[id].speed / Train.engines[id].max_speed;
+        }
+        else{
+          Train.trains[id].speed = speed;
+          ratio = Train.trains[id].speed / Train.trains[id].max_speed;
+        }
+
+        type = type?"T":"E"
+
+        var box = -1;
+
+        if(Train_Control.train[1] != undefined && Train_Control.train[1].id == id && Train_Control.train[1].type == type){
+          box = 1;
+        }
+        else if(Train_Control.train[2] != undefined && Train_Control.train[2].id == id && Train_Control.train[2].type == type){
+          box = 2;
+        }
+
+        if(box == 0){
+          console.warn("No box");
+        }
+
+        if(box >= 0){
+          var slider_box = $('.train-box.box'+box+' .train-speed-slider');
+          var pageY = slider_box.offset().top + slider_box.height();
+          var ylim = slider_box.height() - $('.slider-handle', slider_box).height(); 
+
+          var pos = ylim * ratio;
+
+          $('.train-box.box'+box+' .train-speed > span').text(speed);
+          Train_Control.set_handle(box, pos);
+        }
+
+        console.log(type, id, speed, dir, control);
+      }
+    },
+    {
+      opcode: 0x46,
+      name: "TrainAddRoute",
+      send: function(data){ console.warn("TrainAddRoute", data); },
+      recv: function(data){ console.warn("TrainAddRoute", data); }
+    },
+    {
+      opcode: 0x4F,
+      name: "TrainSubscribe",
+      send: function(data){ 
+        var msg = [];
+        if(data[1] == undefined){
+          msg[0] = 0xFF;
+          msg[1] = 0xC0;
+        }
+        else{
+          msg[0] = data[1].id & 0xFF;
+          msg[1] = (data[1].id & 0x300) >> 2;
+          msg[1] |= (data[1].type=="T")?0x20:0;
+        }
+        if(data[2] == undefined){
+          msg[1] |= 0x03;
+          msg[2] = 0xFF;
+        }
+        else{
+          msg[2] = data[2].id & 0xFF;
+          msg[1] |= data[2].id & 0x300;
+          msg[1] |= (data[2].type=="T")?0x04:0;
+        }
+
+        return msg;
+      }
+    },
+
+    {
+      opcode: 0x50,
+      name: "AddNewEnginetolib",
+      send: function(data){
+        var req_keys = ["icon_name", "image_name", "name", "dcc", "length", "type", "speedstep"];
+        var missing_data = [];
+        for(var i = 0; i < req_keys.length; i++){
+          if(data[ req_keys[i] ] == undefined){
+            missing_data.push( req_keys[i] );
+          }
+          else if(typeof data[ req_keys[i] ] == "number" && isNaN(data[ req_keys[i] ])){
+            missing_data.push( req_keys[i] );
+          }
+          else if(typeof data[ req_keys[i] ] == "string" && data[ req_keys[i] ] == ""){
+            missing_data.push( req_keys[i] );
+          }
+        }
+        if(missing_data.length > 0){
+          Modals.call_cb("create_cb", {return_code: -2, data: missing_data});
+          return undefined;
+        }
+
+        msg = [];
+        msg[0] = (data.dcc & 0x00ff);
+        msg[1] = (data.dcc & 0xff00) >> 8;
+        msg[2] = (data.length & 0x00ff);
+        msg[3] = (data.length & 0xff00) >> 8;
+        msg[4] = data.type;
+
+        if(data.speedstep == 28){
+          msg[5] |= 0b0100;
+        }
+        else if(data.speedstep == 128){
+          msg[5] |= 0b1000;
+        }
+
+        if(data.image_name.endsWith('jpg')){
+          msg[5] |= 0b10;
+        }
+        if(data.icon_name.endsWith('jpg')){
+          msg[5] |= 0b01;
+        }
+
+        msg[6] = data.name.length;
+
+        msg[7] = data.speedsteps.length;
+
+        //Upload timestamps
+        var time = data.image_name.split(".");
+        time = time[time.length - 2].split("");
+
+        var time_image = parseInt(time[0]) * 600 + parseInt(time[1]) * 60 + parseInt(time[2]) * 10 + parseInt(time[3]);
+
+        var time = data.icon_name.split(".");
+        time = time[time.length - 2].split("");
+
+        var time_icon = parseInt(time[0]) * 600 + parseInt(time[1]) * 60 + parseInt(time[2]) * 10 + parseInt(time[3]);
+
+        msg[8] = time_image & 0xFF;
+        msg[9] = ((time_image >> 4) & 0xF0) | (time_icon & 0x0F);
+        msg[10] = (time_icon >> 4);
+
+        for (var i = 0; i < data.name.length; i++) {
+          msg.push(data.name.charCodeAt(i));
+        }
+
+        for (var i = 0; i < data.speedsteps.length; i++){
+          console.log(data.speedsteps[i]);
+          msg.push(data.speedsteps[i].speed);
+          msg.push(data.speedsteps[i].speed >> 8);
+          msg.push(data.speedsteps[i].step);
+        }
+
+        return msg;
+      },
+      recv: function(data){
+        if(data[0] == 1){
+          Modals.hide();
+        }
+        else if(data[0] == 0){
+          Modals.call_cb("create_cb", {return_code: 0});
+        }
+        else if(data[0] == 255){
+          Modals.call_cb("create_cb", {return_code: -1});
+        }
+      }
+    },
+    {
+      opcode: 0x51,
+      name: "EditEnginelib",
+      send: function(data){
+        msg = [];
+        msg[0] = ((!data.edit) << 7) | (data.id & 0x7f00) >> 8;
+        msg[1] = data.id & 0x7fff;
+
+        if(!data.edit){ //Remove
+          return msg;
+        }
+
+        msg[2] = (data.dcc & 0x00ff);
+        msg[3] = (data.dcc & 0xff00) >> 8;
+        msg[4] = (data.length & 0x00ff);
+        msg[5] = (data.length & 0xff00) >> 8;
+        msg[6] = data.type;
+
+        if(data.speedstep == 28){
+          msg[7] |= 0b0100;
+        }
+        else if(data.speedstep == 128){
+          msg[7] |= 0b1000;
+        }
+        if(data.image_name.endsWith('jpg')){
+          msg[7] |= 0b10;
+        }
+        if(data.icon_name.endsWith('jpg')){
+          msg[7] |= 0b1;
+        }
+
+        msg[8] = data.name.length;
+        msg[9] = data.speedsteps.length;
+
+        //Upload timestamps
+        var time = data.image_name.split(".");
+        var time_image = 0xFFF;
+        var time_icon = 0xFFF;
+
+        if(time.length == 3){
+          time = time[time.length - 2].split("");
+
+          time_image = parseInt(time[0]) * 600 + parseInt(time[1]) * 60 + parseInt(time[2]) * 10 + parseInt(time[3]);
+        }
+
+        var time = data.icon_name.split(".");
+        if(time.length == 3){
+          time = time[time.length - 2].split("");
+
+          time_icon = parseInt(time[0]) * 600 + parseInt(time[1]) * 60 + parseInt(time[2]) * 10 + parseInt(time[3]);
+        }
+
+        msg[10] = time_image & 0xFF;
+        msg[11] = ((time_image >> 4) & 0xF0) | (time_icon & 0x0F);
+        msg[12] = (time_icon >> 4) & 0xFF;
+
+        for (var i = 0; i < data.name.length; i++) {
+          msg.push(data.name.charCodeAt(i));
+        }
+
+        for (var i = 0; i < data.speedsteps.length; i++){
+          console.log(data.speedsteps[i]);
+          msg.push(data.speedsteps[i].speed);
+          msg.push(data.speedsteps[i].speed >> 8);
+          msg.push(data.speedsteps[i].step);
+        }
+
+        return msg;
+      }
+    },
+    {
+      opcode: 0x52,
+      name: "EnginesLibrary",
+      recv: function(data){
+        Train.engines = [];
+        for(var i = 0;i<data.length;){
+          var dcc_id = (data[i] + (data[i+1] << 8));
+          i += 2;
+          var max_spd = (data[i] + (data[i+1] << 8));
+          i += 2;
+          var length = (data[i] + (data[i+1] << 8));
+          i += 2;
+          type = data[i++];
+          speedsteps = data[i++];
+          steps_len = data[i++];
+
+          var name = IntArrayToString(data.slice(i+3, i+3+data[i]));
+          var text_length = data[i++];
+
+          var img = IntArrayToString(data.slice(i+2+text_length, i+2+text_length+data[i]));
+          text_length += data[i++];
+
+          var icon = IntArrayToString(data.slice(i+1+text_length, i+1+text_length+data[i]));
+          text_length += data[i];
+
+          i += text_length + 1;
+
+          steps = [];
+          for(var j = 0; j < steps_len; j++){
+            steps[j] = {}
+            steps[j].speed = (data[i] + (data[i+1] << 8));
+            i+=2;
+            steps[j].step = data[i++];
+          }
+
+          if(speedsteps == 0){
+            speedsteps = 14;
+          }
+          else if(speedsteps == 1){
+            speedsteps = 28;
+          }
+          else{
+            speedsteps = 128;
+          }
+          
+          Train.engines.push({ontrack: 0, id: Train.engines.length, name: name, dcc: dcc_id, img: img, icon: icon, max_speed: max_spd, length: length, type: type, speedstep: speedsteps, steps: steps});
+        }
+
+        Train_Configurator.update();
+      }
+    },
+
+    {
+      opcode: 0x53,
+      name: "AddNewCartolib",
+      send: function(data){
+        var msg = [];
+        msg[0] = (data.nr & 0x00ff);
+        msg[1] = (data.nr & 0xff00) >> 8;
+        msg[2] = (data.max_speed & 0x00ff);
+        msg[3] = (data.max_speed & 0xff00) >> 8;
+        msg[4] = (data.length & 0x00ff);
+        msg[5] = (data.length & 0xff00) >> 8;
+        msg[6] = data.type;
+
+        if(data.icon_name.endsWith('jpg')){
+          msg[7] |= 0x1;
+        }
+        msg[8] = data.name.length;
+
+        //Upload timestamps
+        var time = data.icon_name.split(".");
+        time = time[time.length - 2].split("");
+
+        var time_icon = parseInt(time[0]) * 600 + parseInt(time[1]) * 60 + parseInt(time[2]) * 10 + parseInt(time[3]);
+
+        msg[9] = time_icon & 0xFF;
+        msg[10] = time_icon >> 8;
+
+        for (var i = 0; i < data.name.length; i++) {
+          msg.push(data.name.charCodeAt(i));
+        }
+        return msg;
+      },
+      recv: function(data){
+        if(data[0] == 1){
+          Modals.hide();
+        }
+        else if(data[0] == 0){
+          Modals.call_cb("create_cb", {return_code: 0});
+        }
+        else if(data[0] == 255){
+          Modals.call_cb("create_cb", {return_code: -1});
+        }
+      }
+    },
+    {
+      opcode: 0x54,
+      name: "EditCarlib",
+      send: function(data){
+        var msg = [];
+        msg[0] = ((!data.edit) << 7) | (data.id & 0x7f00) >> 8;
+        msg[1] = data.id & 0xff;
+
+        if(!data.edit){ //Remove
+          return msg;
+        }
+
+        msg[2] = (data.nr & 0x00ff);
+        msg[3] = (data.nr & 0xff00) >> 8;
+        msg[4] = (data.max_speed & 0x00ff);
+        msg[5] = (data.max_speed & 0xff00) >> 8;
+        msg[6] = (data.length & 0x00ff);
+        msg[7] = (data.length & 0xff00) >> 8;
+        msg[8] = data.type;
+
+        if(data.icon_name.endsWith('jpg')){
+          msg[9] |= 0x1;
+        }
+        msg[10] = data.name.length;
+
+        //Upload timestamps
+        var time = data.icon_name.split(".");
+        var time_icon = 0xFFF;
+
+        if(time.length == 3){
+          time = time[time.length - 2].split("");
+
+          time_icon = parseInt(time[0]) * 600 + parseInt(time[1]) * 60 + parseInt(time[2]) * 10 + parseInt(time[3]);
+        }
+
+        msg[11] = time_icon & 0x0F;
+        msg[12] = time_icon >> 4;
+
+        for (var i = 0; i < data.name.length; i++) {
+          msg.push(data.name.charCodeAt(i));
+        }
+
+        return msg;
+      }
+    },
+    {
+      opcode: 0x55,
+      name: "CarsLibrary",
+      recv: function(data){
+        Train.cars = [];
+        for(var i = 0;i<data.length;){
+          var nr_id = (data[i] + (data[i+1] << 8));
+          i += 2;
+          var max_spd = (data[i] + (data[i+1] << 8));
+          i += 2;
+          var length = (data[i] + (data[i+1] << 8));
+          i += 2;
+          type = data[i++];
+
+          var name = IntArrayToString(data.slice(i+2, i+2+data[i]));
+          var text_length = data[i++];
+
+          var icon = IntArrayToString(data.slice(i+1+text_length, i+1+text_length+data[i]));
+          text_length += data[i++];
+
+          Train.cars.push({name: name, nr: nr_id, icon: icon, max_speed: max_spd, length: length, type: type});
+          i += text_length;
+        }
+
+        Train_Configurator.update();
+      }
+    },
+
+    {
+      opcode: 0x56,
+      name: "AddNewTraintolib",
+      send: function(data){
+        msg = [];
+        msg[0] = data.name.length;
+        msg[1] = 0x80 | (data.list.length & 0x7f);
+        msg[2] = data.type;
+
+        for (var i = 0; i < data.name.length; i++) {
+          msg.push(data.name.charCodeAt(i));
+        }
+
+        for (var i = 0; i < data.list.length; i++){
+          msg.push(data.list[i].type);
+          msg.push((data.list[i].id & 0x00ff));
+          msg.push((data.list[i].id & 0xff00) >> 8);
+        }
+
+        return msg;
+      },
+      recv: function(data){
+        console.warn("AddNewTraintolib", data);
+      }
+    },
+    {
+      opcode: 0x57,
+      name: "EditTrainlib",
+      send: function(data){
+        msg = [];
+
+        msg[0] = ((!data.edit) << 7) | (data.id & 0x7f00) >> 8;
+        msg[1] = data.id & 0xff;
+
+        if(!data.edit){ //Remove
+          return msg;
+        }
+
+        msg[2] = data.name.length;
+        msg[3] = data.list.length;
+        msg[4] = data.type;
+
+        for (var i = 0; i < data.name.length; i++) {
+          msg.push(data.name.charCodeAt(i));
+        }
+
+        for (var i = 0; i < data.list.length; i++){
+          msg.push(data.list[i].type);
+          msg.push((data.list[i].id & 0x00ff));
+          msg.push((data.list[i].id & 0xff00) >> 8);
+        }
+
+        return msg;
+      }
+    },
+    {
+      opcode: 0x58,
+      name: "TrainsLibrary",
+      recv: function(data){
+        Train.trains = [];
+        for(var i = 0;i<data.length;){
+          var max_spd = (data[i] + (data[i+1] << 8));
+          var length = (data[i+2] + (data[i+3] << 8));
+          i += 4;
+          var type = data[i] >> 1;
+
+          var use = data[i++] & 0b1;
+
+          var name = IntArrayToString(data.slice(i+2, i+2+data[i]));
+          var data_len = data[i++];
+
+          var links = data.slice(i+1+data_len, i+1+data_len+3*data[i]);
+          data_len += data[i++]*3;
+
+          var link_list = [];
+          var dcc = [];
+          
+          for(var j = 0; j<links.length; j+=3){
+            link_list.push([links[j], links[j+1]+ (links[j+2] << 8)]);
+
+            if(links[j] == 0 && Train.engines[links[j+1]+ (links[j+2] << 8)] != undefined){
+              dcc.push(Train.engines[links[j+1]+ (links[j+2] << 8)].dcc);
+            }
+          }
+
+          Train.trains.push({ontrack: 0, id: Train.trains.length, name: name, dcc: dcc, max_speed: max_spd, length: length, type: type, link: link_list, use: use});
+          i += data_len;
+        }
+
+        Train_Configurator.update();
+      }
+    },
+
+    {
+      opcode: 0x5A,
+      name: "TrainCategories",
+      recv: function(data){
+        Train.cat = {};
+        for(var i = 0;i<data.length;){
+          var id = data[i++];
+
+          var name = IntArrayToString(data.slice(i+1, i+1+data[i]));
+
+          Train.cat[id] = name;
+          i += data[i]+1;
+        }
+      }
+    },
+
+  // Track and switches
+    {
+      opcode: 0x20,
+      name: "SetSwitch",
+      send: function(data){
+        return data;
+      }
+    },
+    {
+      opcode: 0x21,
+      name: "SetMultiSwitch",
+      send: function(data){
+        var msg = [];
+        var di = 1;
+
+        msg[0] = data.length;
+        for (var i = 0; i < data.length; i++) {
+          msg[di++] = data[i][0]
+          msg[di++] = data[i][1]
+          msg[di++] = data[i][2]
+        }
+
+        return msg;
+      }
+    },
+    {
+      opcode: 0x22,
+      name: "SetSwitchReserved",
+      send: function(data){}
+    },
+    {
+      opcode: 0x23,
+      name: "ChangeReservedSwitch",
+      send: function(data){}
+    },
+    {
+      opcode: 0x25,
+      name: "SetSwitchRoute",
+      send: function(data){}
+    },
+
+    {
+      opcode: 0x26,
+      name: "BroadTrack",
+      recv: function(data){
+        for(var i = 0;i<data.length;i+=4){
+          var m = data[i];
+          var B = data[i+1];
+
+          var D = data[i+2] >> 7;
+          var state = (data[i+2] & 0x7F);
+          var tID = data[i+3];
+
+          modules[m].blocks[B] = state;
+        }
+
+        Canvas.update_frame();
+      }
+    },
+    {
+      opcode: 0x27,
+      name: "BroadSwitch",
+      recv: function(data){
+        for(var i = 0;i<data.length;){
+          var M = data[i];
+
+          if(data[i+1] & 0x80){ //MSSwitch
+            var len   = data[i+3];
+
+            modules[M].switches[data[i+1]&0x7F] = data[i+2] & 0x7F;
+
+            i += 4;
+          }else{ //Switch
+            try{
+              modules[M].switches[data[i+1]] = data[i+2] & 0x7F;
+            }
+            catch(e){
+              console.error(e);
+            }
+
+            i += 3;
+          }
+        }
+
+        Canvas.update_frame();
+      }
+    },
+
+    {
+      opcode: 0x30,
+      name: "TrackLayoutOnlyRawData",
+      recv: function(data){
+        console.log(data);
+        function JsonParse(obj){
+          return Function('"use strict";return (' + obj + ')')();
+        };
+
+        var newdata = JsonParse(String.fromCharCode.apply(null, data.slice(1)));
+        
+        modules[newdata.id] = new canvas_module(newdata);
+
+        modules[newdata.id].init({visible: true, OffsetX: 0, OffsetY: newdata.id*300, r: 0});
+
+        ModuleEditor.update()
+
+        Canvas.resize();
+      }
+    },
+    {
+      opcode: 0x31,
+      name: "TrackLayoutRawData",
+      send: function(data){
+        return [data.module];
+      },
+      recv: function(data){
+        console.log("TrackLayoutRawData", data);
+
+        var moduleid = data[0];
+        var connections = data[1];
+        var nodes = data[2];
+        var nr_blocks = data[3] + (data[4] << 8);
+        var nr_switches = data[5] + (data[6] << 8);
+        var nr_msswitches = data[7] + (data[8] << 8);
+        var nr_signals = data[9] + (data[10] << 8);
+        var nr_stations = data[11];
+
+        modules[moduleid].config = {};
+        var conf = modules[moduleid].config;
+        conf.nodes = [];
+        conf.blocks = [];
+        conf.switches = [];
+        conf.msswitches = [];
+        conf.signals = [];
+        conf.stations = [];
+
+        console.log(moduleid, connections, nodes, nr_blocks, nr_switches, nr_msswitches, nr_signals, nr_stations);
+
+        var i = 13;
+
+        for(var j = 0; j < nodes; j++){
+          conf.nodes.push({id: data[i++], size: data[i++]});
+
+          i++;
+        }
+
+        for(var j = 0; j < nr_blocks; j++){
+          var b = {id: data[i++],
+                  type: data[i++],
+                  next: {m: data[i++], id: data[i++] + (data[i++]<<8), type: data[i++]},
+                  prev: {m: data[i++], id: data[i++] + (data[i++]<<8), type: data[i++]},
+                  io_in: {n: data[i++], p: data[i++] + (data[i++]<<8)},
+                  io_out: {n: data[i++], p: data[i++] + (data[i++]<<8)},
+                  speed: data[i++],
+                  length: data[i++] + (data[i++] << 8),
+                  flags: data[i++]};
+
+          conf.blocks.push(b);
+
+          i++;
+        }
+
+        for(var j = 0; j < nr_switches; j++){
+          var sw =  {id: data[i++],
+                     det_block: data[i++],
+                     app: {m: data[i++], id: data[i++] + (data[i++]<<8), type: data[i++]},
+                     str: {m: data[i++], id: data[i++] + (data[i++]<<8), type: data[i++]},
+                     div: {m: data[i++], id: data[i++] + (data[i++]<<8), type: data[i++]},
+                     iolen: data[i++],
+                     speed: {str: data[i++], div: data[i++]},
+                     ports: []};
+
+          i++;
+
+          for(var k = 0; k < sw.iolen; k++){
+            sw.ports.push({m: data[i++], id: data[i++] + (data[i++]<<8)})
+          }
+
+          i++;
+
+          conf.switches.push(sw);
+        }
+
+        for(var j = 0; j < nr_msswitches; j++){
+          var mssw =  {id: data[i++],
+                     det_block: data[i++],
+                     stateslen: data[i++],
+                     iolen: data[i++],
+                     states: [],
+                     ports: []};
+
+          i++;
+
+          for(var k = 0; k < mssw.stateslen; k++){
+            mssw.states.push({A: {m: data[i++], id: data[i++] + (data[i++]<<8), type: data[i++]},
+                              B: {m: data[i++], id: data[i++] + (data[i++]<<8), type: data[i++]},
+                              speed: data[i++],
+                              io_out: data[i++] + (data[i++] << 8)});
+          }
+
+          i++;
+
+          for(var k = 0; k < mssw.iolen; k++){
+            mssw.ports.push({m: data[i++], id: data[i++] + (data[i++]<<8)})
+          }
+
+          i++;
+
+          conf.msswitches.push(mssw);
+        }
+
+        for(var j = 0; j < nr_signals; j++){
+          var sig =  {side: data[i] & 0x01,
+                     id: (data[i++] >> 1) + (data[i++] << 7),
+                     block: data[i++] + (data[i++] << 8),
+                     outlen: data[i++],
+                     ports: [],
+                     stating: []};
+
+          i++;
+
+          for(var k = 0; k < sig.outlen; k++){
+            sig.ports.push({m: data[i++], id: data[i++] + (data[i++]<<8)})
+          }
+
+          i++;
+
+          for(var k = 0; k < sig.outlen; k++){
+            sig.stating.push([data[i++],data[i++],data[i++],data[i++],data[i++],data[i++],data[i++],data[i++]]);
+          }
+
+          i++;
+
+          conf.signals.push(sig);
+        }
+
+        for(var j = 0; j < nr_stations; j++){
+          var st =  {type: data[i++],
+                     blocklen: data[i++],
+                     blocks: [],
+                     namelen: data[i++],
+                     name: ""};
+
+          i++;
+
+          for(var k = 0; k < st.blocklen; k++){
+            st.blocks.push(data[i++]);
+          }
+
+          i++;
+
+          st.name =  String.fromCharCode.apply(null, data.slice(i, i+st.namelen));
+          i += st.namelen;
+
+          i++;
+
+          conf.stations.push(st);
+        }
+
+        ModuleEditor.update_config(moduleid);
+      }
+    },
+    {
+      opcode: 0x33,
+      name: "TrackLayoutUpdateRaw",
+      send: function(data){
+        console.warn("TrackLayoutUpdateRaw", data);
+      },
+      recv: function(data){
+        console.warn("TrackLayoutUpdateRaw", data);
+      }
+    },
+    {
+      opcode: 0x36,
+      name: "StationLibrary",
+      send: function(data){},
+      recv: function(data){}
+    },
+
+  // Client / General
+    {
+      opcode: 0x10,
+      name: "EmergencyStop",
+      send: function(data){ return [] },
+      recv: function(data){
+        Emergency.set("Em", false);
+      }
+    },
+    {
+      opcode: 0x11,
+      name: "ShortCircuitStop",
+      recv: function(data){
+        Emergency.set("Es", false);
+      }
+    },
+    {
+      opcode: 0x12,
+      name: "ClearEmergency",
+      send: function(data){ return [] },
+      recv: function(data){
+        Emergency.unset(false);
+      }
+    },
+    {
+      opcode: 0x13,
+      name: "NewMessage",
+      recv: function(data){
+        var msg = {};
+        msg.id = data[1] + ((data[0] & 0x1F) << 8);
+        msg.type = (data[1] & 0xE0);
+        msg.data = data.slice(2);
+
+        Messages.add(msg);
+      }
+    },
+    {
+      opcode: 0x14,
+      name: "UpdateMessage",
+      recv: function(data){
+        console.log("UpdateMessage", data);
+      }
+    },
+    {
+      opcode: 0x15,
+      name: "ClearMessage",
+      recv: function(data){
+        var msgID = data[1] + ((data[0] & 0x1F) << 8);
+        Messages.remove(msgID, data[0] >> 5);
+      }
+    },
+    {
+      opcode: 0x16,
+      name: "ChangeBroadcast",
+      send: function(data){
+        console.warn("ChangeBroadcast", data);
+        var name = evt.currentTarget.classList[1];
+        broadcastFlags ^= parseInt(name.slice(2),16);
+
+        if($(evt.target).attr("nr") == "4"){
+          if(broadcastFlags & 0x10){
+            var passphrase = $.md5(prompt("Please enter your password", "password"));
+
+            //LOGIN
+            websocket.cts_login(passphrase);
+          }else{
+            websocket.cts_logout();
+          }
+        }
+
+        return [broadcastFlags];
+      },
+      recv: function(data){
+        $('#Broadcastflags .checkbox input[type="checkbox"]:checked').prop("checked",false);
+
+        if(data[0] & 0x80){
+          $('#Broadcastflags .checkbox.bf80 input[type="checkbox"]').prop("checked",true);
+        }
+        if(data[0] & 0x40){
+          $('#Broadcastflags .checkbox.bf40 input[type="checkbox"]').prop("checked",true);
+        }
+        if(data[0] & 0x20){
+          $('#Broadcastflags .checkbox.bf20 input[type="checkbox"]').prop("checked",true);
+        }
+        if(data[0] & 0x10){
+          $('#Broadcastflags .checkbox.bf10 input[type="checkbox"]').prop("checked",true);
+          admin = 1;
+          change_admin();
+        }else{
+          //Admin unset: logout
+          admin = 0;
+          change_admin();
+        }
+
+        if(data[0] & 0x8){
+          $('#Broadcastflags .checkbox.bf08 input[type="checkbox"]').prop("checked",true);
+        }
+        if(data[0] & 0x4){
+          $('#Broadcastflags .checkbox.bf04 input[type="checkbox"]').prop("checked",true);
+        }
+        if(data[0] & 0x2){
+          $('#Broadcastflags .checkbox.bf02 input[type="checkbox"]').prop("checked",true);
+        }
+        if(data[0] & 0x1){
+          $('#Broadcastflags .checkbox.bf01 input[type="checkbox"]').prop("checked",true);
+        }
+        broadcastFlags = data[0];
+      }
+    },
+    {
+      opcode: 0x17,
+      name: "Service_State",
+      send: function(data){},
+      recv: function(data){
+        state = (data[0] << 8) + data[1];
+      
+        $('#status_flags .green').toggleClass("red");
+        $('#status_flags .green').toggleClass("green");
+
+        if(state & 0x8000){
+            $('.f8000','#status_flags').toggleClass("green");
+            $('.f8000','#status_flags').toggleClass("red");
+        }
+        if(state & 0x4000){
+            $('.f4000','#status_flags').toggleClass("green");
+            $('.f4000','#status_flags').toggleClass("red");
+        }
+        if(state & 0x2000){
+            $('.f2000','#status_flags').toggleClass("green");
+            $('.f2000','#status_flags').toggleClass("red");
+        }
+        if(state & 0x1000){
+            $('.f1000','#status_flags').toggleClass("green");
+            $('.f1000','#status_flags').toggleClass("red");
+        }
+
+        if(state & 0x0800){
+            $('.f0800','#status_flags').toggleClass("green");
+            $('.f0800','#status_flags').toggleClass("red");
+        }
+        if(state & 0x0400){
+            $('.f0400','#status_flags').toggleClass("green");
+            $('.f0400','#status_flags').toggleClass("red");
+        }
+        if(state & 0x0200){
+            $('.f0200','#status_flags').toggleClass("green");
+            $('.f0200','#status_flags').toggleClass("red");
+        }
+        if(state & 0x0100){
+            $('.f0100','#status_flags').toggleClass("green");
+            $('.f0100','#status_flags').toggleClass("red");
+        }
+
+        if(state & 0x0080){
+            $('.f0080','#status_flags').toggleClass("green");
+            $('.f0080','#status_flags').toggleClass("red");
+        }
+        if(state & 0x0040){
+            $('.f0040','#status_flags').toggleClass("green");
+            $('.f0040','#status_flags').toggleClass("red");
+        }
+        if(state & 0x0020){
+            $('.f0020','#status_flags').toggleClass("green");
+            $('.f0020','#status_flags').toggleClass("red");
+        }
+        if(state & 0x0010){
+            $('.f0010','#status_flags').toggleClass("green");
+            $('.f0010','#status_flags').toggleClass("red");
+        }
+
+        if(state & 0x0008){
+            $('.f0008','#status_flags').toggleClass("green");
+            $('.f0008','#status_flags').toggleClass("red");
+        }
+        if(state & 0x0004){
+            $('.f0004','#status_flags').toggleClass("green");
+            $('.f0004','#status_flags').toggleClass("red");
+        }
+        if(state & 0x0002){
+            $('.f0002','#status_flags').toggleClass("green");
+            $('.f0002','#status_flags').toggleClass("red");
+        }
+        if(state & 0x0001){
+            $('.f0001','#status_flags').toggleClass("green");
+            $('.f0001','#status_flags').toggleClass("red");
+        }
+      }
+    }
+]);
+
+$(document).ready(function(){
+  websocket.connect("ws://192.168.2.92:9000/", 0xFF);
+});

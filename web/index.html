@@ -1,1001 +1,866 @@
 <!DOCTYPE html>
-<!DOCTYPE html>
+<?php
+header('Expires: Sun, 01 Jan 2014 00:00:00 GMT');
+header('Cache-Control: no-store, no-cache, must-revalidate');
+header('Cache-Control: post-check=0, pre-check=0', FALSE);
+header('Pragma: no-cache');
+?>
 <html>
 <head>
- <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=2.0, minimum-scale=1.0, user-scalable=0">
- <meta name="mobile-web-app-capable" content="yes">
-	<title>Canvas</title>
-    <script src="./scripts/framework/jquery-3.1.1.js"></script>
+	<title>PiRail</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=2.0, minimum-scale=1.0, user-scalable=0">
+	<meta name="mobile-web-app-capable" content="yes">
+	<meta name="apple-mobile-web-app-capable" content="yes">
+	<script src="./scripts/framework/jquery-3.1.1.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+	<script src="./scripts/framework/bootstrap.min.js"></script>
+	<script src="./scripts/framework/Chart.js"></script>
+	<link rel="stylesheet" href="./styles/bootstrap/bootstrap.min.css" />
 	<style type="text/css">
-		* {
+		html, body, .full-height {
+			height: 100%;
+		}
+
+		body {
+			overflow: hidden;
+		}
+
+		.blink {
+			animation: blinker 1s cubic-bezier(.77,0,.18,1) infinite;
+		}
+
+		@keyframes blinker {  
+			50% { opacity: 0; }
+		}
+
+		.info-box {
+			width: calc(100% - 20px);
+			margin: 10px;
+			box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+			background-color: #fff;
+			padding: 10px 30px;
+		}
+
+		.info-box > div > .header,.info-box > .header , .forceheader{
+			margin:auto;
+			width: calc(100% + 60px);
+			margin-left: -30px;
+			text-align:center;
+			text-transform: uppercase;
+			display: block;
+			font-size: 0.8em;
+			white-space: nowrap;
+			text-overflow: ellipsis;
+			border-bottom: 1px solid #ddd;
+			font-weight: bold;
+		}
+
+		.info-box > div > .header > div,.info-box > .header > div , .forceheader > div{
+			overflow: hidden;
+			display: inline-block;
+			width: 100%;
+		}
+
+		.fieldvalue>small {
+				margin-left: 0.25em;
+		}
+
+		.info-box .box-row, .info-box .box-trow {
+			text-align: center;
+			border-bottom: 1px solid #ddd;
+		}
+
+		.info-box .box-row {display:block;}
+
+		.info-box .box-trow {display:table-row;}
+		.info-box table:not(#ModuleConfigurator,#ModuleLayoutConfigurator) {display: inline-table;}
+		.info-box table:not(#ModuleConfigurator,#ModuleLayoutConfigurator) {width: 80%;margin: 0px 10%;}
+		@media (min-width: 1140px) {
+			.info-box table {width: 100%;margin: 0;}
+			.info-box table > tr > td:nth-child(1) {font-size: small;}
+		}
+		.info-box table > tr > td {display:table-cell;}
+		.info-box table > tr:not(:last-child) {border-bottom: 1px solid #eee;}
+		.info-box table > tr > td:nth-child(1) {text-align: left;}
+		.info-box table > tr > td:not([colspan]):nth-child(2) {text-align: right;min-width:60px;}
+		.info-box table > tr > td[colspan]:nth-child(2) {text-align: center;}
+		.info-box table > tr > td:nth-child(3) {text-align: left;}
+
+		.info-box .box-row:last-child {
+			border-bottom: 0px;
+		}
+
+		.settings-group, .train-group {
+			column-gap: 0;
+			column-count: 2;
 			margin: 0px;
+			padding: 0px;
+			width: 100%;
+			display: block;
 		}
-		body,html {
-			overflow:hidden;
+		.train-group {display: flex;}
+		.settings-group > .info-box, .train-group > .info-box {
+			display: inline-block;
+			width: calc(100% - 34px);
 		}
-		canvas {
-			display:inline;
+
+		.settings-group > .info-box, .train-group > .info-box {width: calc(100% - 20px);}
+
+		@media (min-width: 1140px) {
+			.settings-group {column-count: 1;}
+			.train-group {column-count: 1;display:block;}
 		}
+
+		@media (min-width: 576px; max-width: 992px) {
+			.settings-group {column-count: 2;}
+			.train-group {column-count: 2;}
+		}
+
+		@media (max-width: 576px) {
+			.settings-group {column-count: 1;}
+			.train-group {column-count: 1;}
+		}
+
+		.sidebar {
+			width: 100%;
+			display: block;
+			float: left;
+			position: relative;
+			border-right: 1px solid lightgrey;
+			background: #ecf0f5;
+			overflow: hidden;
+		}
+
+		.main {
+			float: left;
+			width: 100%;
+		}
+
+		@media(min-width: 1140px){
+			.sidebar {
+				width: 280px;
+			}
+
+			.main {
+				width: calc(100% - 280px);
+			}
+		}
+
+		.info-box .media:hover {
+			background: #ecf0f5;
+			cursor: pointer;
+		}
+
+		.scrollcontainer {
+			position: relative;
+			min-height: 100%;
+		}
+
+		.messages {margin: 0px -30px; max-height: 300px; overflow-y: auto; overflow-x: hidden;}
+		.messages li.message {border-bottom:1px solid #ddd; padding: 0px 30px}
+		.messages .message-mbox {width:32px;height:16px;border-radius: 3px;}
+		.messages .message-header {position: relative; top: 0.2em}
+		.messages .message-content {position:relative; top:-0.3em}
+
+		#subsystems ul {margin: 0px -30px;}
+		#subsystems li {border-bottom: 1px solid #ddd; padding: 0px 30px;}
+		#subsystems .indicator {width:16px;height:16px;border-radius: 3px;}
+		#subsystems .media-body:first-child() {position: relative; top: 0.2em; font-weight: bold;}
+		#subsystems .media-body small {position: relative; top: -0.3em; font-style: italic;}
+
+		#menu-box {position: fixed; right: 10px; bottom:10px; width:200px; height:22px; text-align: right;}
+		#menu-box button {width: 60px;margin: 0.2em;}
+
+		button.mini-btn {width: 55px;font-weight: bold}
+
+		button.btn-xs {padding: .125rem .25rem;font-size: .7rem;line-height: 0.8rem;}
+		:not(.btn-group) > button.btn-xs{margin-right: 0.1rem;margin-left: 0.1rem;}
+
+		input.ip-input {display:inline-block;width:3em;border:none;outline:none;text-align: center; background:#f5f5f5}
+
+		.train-box {height: calc(100vh - 80px);}
+
+		@media (min-width: 1140px) {
+			.train-box {height: calc(50vh - 40px);}
+		}
+
+		#modal ul > li:not(:last-child) {border-bottom: 1px solid #eee;}
+
+		.settings-group > div.info-box:last-child {margin-bottom: 40px;}
+
+
+		.train-box {padding-left:0px;padding-right:0px}
+		.train-box .header {width:100%; margin-left:0px; position: relative;}
+		.train-box .select-train {position: absolute;right: 5px; bottom:5px}
+		.train-box > div.row {height: calc(100% - 1em); margin: 0}
+		.train-box > div.row > div {padding: 0}
+
+		.train-img-container, .train-icon-container, .car-img.container, .car-icon-container {width: 100%; padding-top: 50%; position: relative;}
+		.train-img, .train-icon, .car-img, .car-icon {position: absolute; top:0;left:0;right:0;bottom:0;overflow: hidden;background-repeat: no-repeat;background-position: 50% 50%;}
+		.train-img, .car-img {background-size: cover}
+		.train-icon, .car-icon {background-size: 100%}
+
+		.train-box .train-info-box {padding: 0.5em;}
+		.train-box .route > button {float: right;}
+		.train-box .control {text-align: center;}
+		.train-box .control button {white-space: nowrap}
+
+		.train-box .train-function-box {text-align: center; column-count: 3; padding: 5px}
+		.train-box .train-function-box button {margin:0.3em}
+
+		.train-box .train-speed {width: 100%; height:30px; text-align: center;}
+		.train-box .train-speed-slider {width: 100%; height: 100%;position: relative;touch-action: none;}
+		.train-box .slider-handle {height: 1em; width:3em; position: absolute; left:50%; transform: translate(-1.5em, 0.5em);background: #ddd;border:1px solid #bbb;border-radius:3px;touch-action: none;}
+		.train-box .slider-handle:hover {background: #aaa; cursor: grab;}
+		.train-box .slider-handle:active {cursor: grabbing;}
+
+		.train-box .slider-bar {position: absolute; bottom:0px; margin-left:calc(50% - 6px);margin-right:calc(50% - 6px);width:12px; background: #eee;border:1px solid #dadada;touch-action: none;}
+
+		.train-box .train-dir-box {width: 80%; position: absolute; bottom: 10px; margin: 0 10%;}
+		.train-box .train-dir-box .btn-group.btn-toggle-group {display: block; text-align: center; width: 100%}
+		.train-box .train-dir-box .btn-group.btn-toggle-group div.btn-toggle {display: block; padding: 0.1em 0.4em; width:50%; line-height:0; 
+			margin-bottom: 0px; }
+
+		.train-box div.btn-toggle > svg {width:100%; max-width: 20px;} 
+		.train-box div.btn-secondary > svg > path {fill: #fff;}
+		.train-box div.btn-outline-secondary > svg > path {fill: #6c757d;transition: fill 0.15s ease-in-out}
+		.train-box div.btn-outline-secondary:hover > svg > path {fill: #fff;}
+
+		.train-box .train-stop {display: block; text-align: center; width: 100%}
+		.train-box .train-stop > button.btn {width: 100%; border-top-left-radius: 0px;border-top-right-radius: 0px; font-weight: bold;}
+
+		#modal ul.engine-list .empty,
+		#modal ul.train-list .empty {display: none;text-align: center;}
+
+		.window {width: 100%; height: 100%;}
+
+		#moduleconfig {overflow-x: hidden; overflow-y: auto;}
+		#moduleconfig .modulebox { position:relative; height:225px; float:left; margin-right: 5px; display: inline-block; }
+		#moduleconfig .modulebox:hover { background: #fafafa; cursor: pointer; }
+		#moduleconfig .modulebox.selected { background: #f0f0f0; }
+		#moduleconfig .modulebox canvas { position:absolute; top:0px;left:0px; width:100%; height:200px;border: 1px solid lightgrey; }
+		#moduleconfig .modulebox .modulename { position:absolute; bottom:5px;left:0px; width:100%; height: 20px; font-weight: bold; text-align: center; }
+
+		#ModuleConfigurator {column-count: 1; column-gap: 0; display:block;}
+		#ModuleConfigurator > .info-box {display: inline-block;}
+
+		@media (min-width: 1140px){
+			#ModuleConfigurator {column-count: 2;}
+		}
+
+		/*#moduleconfig table tr:hover {background-color: #fafafa;}*/
+
+		.emergencybutton {width:65px; height:25px; left: 10px; bottom:10px; position: absolute; border: 2px red solid; border-radius: 10px; color: red; font-weight: bold; background: rgba(0,0,0,0); cursor: pointer;}
+
+		.emergencybutton:hover {background: red; color: white;}
+		.emergencybutton > div {margin: auto; margin-top: -2px; width: 60px; text-align: center;}
+
 	</style>
+	<script>
+		var events = {
+			init: function(){
+				for(var i = 0; i < this._init.length; i++){
+					this._init[i]();
+				}
+			},
+			add_init: function(callback){
+				this._init.push(callback)
+			},
+			_init: [],
+
+			resize: function(){
+				for(var i = 0; i < this._resize.length; i++){
+					this._resize[i]();
+				}
+			},
+			add_resize: function(callback){
+				this._resize.push(callback)
+			},
+			_resize: [],
+		};
+	</script>
 </head>
 <body>
-	<canvas></canvas>
-	<div style="position: absolute;right: 0px;bottom: 0px;height: 50px;width: 50px;background: red" onClick='window.location.replace("");'></div>
-	<script type="text/javascript">
 
-		var radia = [68.2843]
-		var ds = -8.28;
-		var ro = [{x:radia[0]*Math.cos(Math.PI*0.25),y:radia[0] - radia[0]*Math.sin(Math.PI*0.25),yr:radia[0]*Math.sin(Math.PI*0.25)}];
-		ro[0].l = Math.sqrt(Math.pow(ro[0].x-ds,2)+Math.pow(ro[0].y,2));
+	<div id="main" class="window" style="display:block;">
+		<div class="sidebar full-height">
+			<div style="width: 125%; overflow-y: overlay; overflow-x:hidden; height: 100%">
+				<div class="scrollcontainer" style="width: 80%;">
+					<div class="train-group active">
+						<div class="info-box train-box box1">
+							<span class="header">
+								<div>No train</div>
+								<button class="select-train btn btn-xs btn-outline-primary">Select</button>
+							</span>
+							<div class="row">
+								<div class="col-8">
+									<div class="train-img-container bg-light">
+										<div class="train-img" style="background-image: url('./trains_img/NoTrain.jpg');"></div>
+									</div>
+									<div class="train-info-box">
+										<div class="description">No train</div>
+										<div class="route">
+											<span>No Route</span>
+											<button class="set-route btn btn-xs btn-outline-primary">Set</button>
+										</div>
+										<div class="control">
+											<div class="btn-group" role="group" aria-label="Basic example">
+												<button type="button" class="btn btn-xs btn-secondary">Manual</button>
+												<button type="button" class="btn btn-xs btn-secondary">
+													Semi<span class="d-none d-sm-inline-block d-xl-none">&nbsp;Auto</span>
+												</button>
+												<button type="button" class="btn btn-xs btn-secondary">
+													Full<span class="d-none d-sm-inline-block d-xl-none">&nbsp;Auto</span>
+												</button>
+											</div>
+										</div>
+									</div>
+									<div class="train-function-box">
+										<div><button class="btn btn-sm btn-outline-primary">F1</button></div>
+										<div><button class="btn btn-sm btn-outline-primary">F2</button></div>
+										<div><button class="btn btn-sm btn-outline-primary">F3</button></div>
+										<div><button class="btn btn-sm btn-outline-primary">F4</button></div>
+										<div><button class="btn btn-sm btn-outline-primary">F5</button></div>
+										<div><button class="btn btn-sm btn-outline-primary">F6</button></div>
+										<div><button class="btn btn-sm btn-outline-primary">F7</button></div>
+										<div><button class="btn btn-sm btn-outline-primary">F8</button></div>
+									</div>
+								</div>
+								<div class="col-4">
+									<div style="height:100%; position: relative;">
+										<div style="height: calc(100% - 110px); width:100%;">
+											<div class="train-speed"><span>145</span> <small>km/h</small></div>
+											<div class="train-speed-slider">
+												<div class="slider-bar" style="height:40px; "></div>
+												<div class="slider-handle" style="bottom:40px;"></div>
+											</div>
+										</div>
+										<div class="train-dir-box">
+											<div class="btn-group btn-toggle-group">
+												<div class="btn btn-toggle btn-sm btn-secondary" value="R" style="border-bottom-left-radius: 0px">
+													<svg x="0px" y="0px" viewBox="0 0 492 492">
+														<path d="M464.344,207.418l0.768,0.168H135.888l103.496-103.724c5.068-5.064,7.848-11.924,7.848-19.124    c0-7.2-2.78-14.012-7.848-19.088L223.28,49.538c-5.064-5.064-11.812-7.864-19.008-7.864c-7.2,0-13.952,2.78-19.016,7.844    L7.844,226.914C2.76,231.998-0.02,238.77,0,245.974c-0.02,7.244,2.76,14.02,7.844,19.096l177.412,177.412    c5.064,5.06,11.812,7.844,19.016,7.844c7.196,0,13.944-2.788,19.008-7.844l16.104-16.112c5.068-5.056,7.848-11.808,7.848-19.008    c0-7.196-2.78-13.592-7.848-18.652L134.72,284.406h329.992c14.828,0,27.288-12.78,27.288-27.6v-22.788    C492,219.198,479.172,207.418,464.344,207.418z" fill="#FFFFFF"/>
+													</svg>
+												</div>
+												<div class="btn btn-toggle btn-sm btn-outline-secondary" value="F" style="border-bottom-right-radius: 0px; position: absolute; right: 0px; top:0px">
+													<svg x="0px" y="0px" viewBox="0 0 492 492">
+														<path d="M464.344,207.418l0.768,0.168H135.888l103.496-103.724c5.068-5.064,7.848-11.924,7.848-19.124    c0-7.2-2.78-14.012-7.848-19.088L223.28,49.538c-5.064-5.064-11.812-7.864-19.008-7.864c-7.2,0-13.952,2.78-19.016,7.844    L7.844,226.914C2.76,231.998-0.02,238.77,0,245.974c-0.02,7.244,2.76,14.02,7.844,19.096l177.412,177.412    c5.064,5.06,11.812,7.844,19.016,7.844c7.196,0,13.944-2.788,19.008-7.844l16.104-16.112c5.068-5.056,7.848-11.808,7.848-19.008    c0-7.196-2.78-13.592-7.848-18.652L134.72,284.406h329.992c14.828,0,27.288-12.78,27.288-27.6v-22.788    C492,219.198,479.172,207.418,464.344,207.418z" transform="rotate(180 246 246)"/>
+													</svg>
+												</div>
+											</div>
+											<div class="train-stop btn-group">
+												<button type="button" class="btn btn-sm btn-danger" style="">STOP</button>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div class="info-box train-box box2">
+							<span class="header">
+								<div>No Train</div>
+								<button class="select-train btn btn-xs btn-outline-primary">Select</button>
+							</span>
+							<div class="row">
+								<div class="col-8">
+									<div class="train-img-container bg-light">
+										<div class="train-img" style="background-image: url('./trains_img/NoTrain.jpg');"></div>
+									</div>
+									<div class="train-info-box">
+										<div class="description">No Train</div>
+										<div class="route">
+											<span>No Route</span>
+											<button class="set-route btn btn-xs btn-outline-primary">Set</button>
+										</div>
+										<div class="control">
+											<div class="btn-group" role="group" aria-label="Basic example">
+												<button type="button" class="btn btn-xs btn-secondary">Manual</button>
+												<button type="button" class="btn btn-xs btn-secondary">
+													Semi<span class="d-none d-sm-inline-block d-xl-none">&nbsp;Auto</span>
+												</button>
+												<button type="button" class="btn btn-xs btn-secondary">
+													Full<span class="d-none d-sm-inline-block d-xl-none">&nbsp;Auto</span>
+												</button>
+											</div>
+										</div>
+									</div>
+									<div class="train-function-box">
+										<div><button class="btn btn-sm btn-outline-primary">F1</button></div>
+										<div><button class="btn btn-sm btn-outline-primary">F2</button></div>
+										<div><button class="btn btn-sm btn-outline-primary">F3</button></div>
+										<div><button class="btn btn-sm btn-outline-primary">F4</button></div>
+										<div><button class="btn btn-sm btn-outline-primary">F5</button></div>
+										<div><button class="btn btn-sm btn-outline-primary">F6</button></div>
+										<div><button class="btn btn-sm btn-outline-primary">F7</button></div>
+										<div><button class="btn btn-sm btn-outline-primary">F8</button></div>
+									</div>
+								</div>
+								<div class="col-4">
+									<div style="height:100%; position: relative;">
+										<div style="height: calc(100% - 110px); width:100%;">
+											<div class="train-speed"><span>145</span> <small>km/h</small></div>
+											<div class="train-speed-slider">
+												<div class="slider-bar" style="height:40px; "></div>
+												<div class="slider-handle" style="bottom:40px;"></div>
+											</div>
+										</div>
+										<div class="train-dir-box">
+											<div class="btn-group btn-toggle-group">
+												<div class="btn btn-toggle btn-sm btn-secondary" value="R" style="border-bottom-left-radius: 0px">
+													<svg x="0px" y="0px" viewBox="0 0 492 492">
+														<path d="M464.344,207.418l0.768,0.168H135.888l103.496-103.724c5.068-5.064,7.848-11.924,7.848-19.124    c0-7.2-2.78-14.012-7.848-19.088L223.28,49.538c-5.064-5.064-11.812-7.864-19.008-7.864c-7.2,0-13.952,2.78-19.016,7.844    L7.844,226.914C2.76,231.998-0.02,238.77,0,245.974c-0.02,7.244,2.76,14.02,7.844,19.096l177.412,177.412    c5.064,5.06,11.812,7.844,19.016,7.844c7.196,0,13.944-2.788,19.008-7.844l16.104-16.112c5.068-5.056,7.848-11.808,7.848-19.008    c0-7.196-2.78-13.592-7.848-18.652L134.72,284.406h329.992c14.828,0,27.288-12.78,27.288-27.6v-22.788    C492,219.198,479.172,207.418,464.344,207.418z" fill="#FFFFFF"/>
+													</svg>
+												</div>
+												<div class="btn btn-toggle btn-sm btn-outline-secondary" value="F" style="border-bottom-right-radius: 0px; position: absolute; right: 0px; top:0px">
+													<svg x="0px" y="0px" viewBox="0 0 492 492">
+														<path d="M464.344,207.418l0.768,0.168H135.888l103.496-103.724c5.068-5.064,7.848-11.924,7.848-19.124    c0-7.2-2.78-14.012-7.848-19.088L223.28,49.538c-5.064-5.064-11.812-7.864-19.008-7.864c-7.2,0-13.952,2.78-19.016,7.844    L7.844,226.914C2.76,231.998-0.02,238.77,0,245.974c-0.02,7.244,2.76,14.02,7.844,19.096l177.412,177.412    c5.064,5.06,11.812,7.844,19.016,7.844c7.196,0,13.944-2.788,19.008-7.844l16.104-16.112c5.068-5.056,7.848-11.808,7.848-19.008    c0-7.196-2.78-13.592-7.848-18.652L134.72,284.406h329.992c14.828,0,27.288-12.78,27.288-27.6v-22.788    C492,219.198,479.172,207.418,464.344,207.418z" transform="rotate(180 246 246)"/>
+													</svg>
+												</div>
+											</div>
+											<div class="train-stop btn-group">
+												<button type="button" class="btn btn-sm btn-danger">STOP</button>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="settings-group" style="">
+						<div id="subsystems" class="info-box">
+							<span class="header">Sub Systems</span>
+							<ul class="list-unstyled">
+							</ul>
+							<div class="box-row">
+								<button type="button" class="btn btn-sm btn-xs mini-btn btn-warning" onClick='window.location.replace("");'>Reload</button>
+								<button type="button" class="btn-hard-reset btn btn-sm btn-xs mini-btn btn-danger">Restart</button></div>
+						</div>
+						<div id="Z21-settings" class="info-box">
+							<span class="header">Z21 Status</span>
+							<div class="box-row"><button type="button" class="btn-Z21-settings btn btn-sm btn-xs mini-btn btn-warning">Settings</button></div>
+						</div>
+						<div id="layout-settings" class="info-box">
+							<span class="header">Layout</span>
+							<div class="box-row">
+								<button type="button" class="btn-layout-zoom-out btn btn-sm btn-xs mini-btn btn-warning">Zoom -</button>
+								<button type="button" class="btn-layout-zoom-in  btn btn-sm btn-xs mini-btn btn-warning">Zoom +</button>
+								<br/>
+								<button type="button" class="btn-layout-rotate-ccw btn btn-sm btn-xs mini-btn btn-warning" style="width: 80px">Rotate CCW</button>
+								<button type="button" class="btn-layout-rotate-cw  btn btn-sm btn-xs mini-btn btn-warning" style="width: 80px">Rotate CW</button>
+							</div>
+						</div>
+						<div class="info-box">
+							<span class="header">Configure</span>
+							<span class="box-row">Reload Layout</span>
+							<div class="box-row "> <!-- d-none d-sm-block -->
+								<div style="margin-bottom: 5px">
+									<button type="button" class="btn btn-sm btn-xs mini-btn btn-warning" style="width:150px" onClick='windows.switch("moduleconfig");'>Configure Modules</button>
+								</div>
+							</div>
+							<div class="box-row">
+								<div style="margin-bottom: 5px">
+									<button type="button" class="btn btn-sm btn-xs mini-btn btn-warning" style="width:150px" onClick='windows.switch("rollingstock");'>Configure Rolling Stock</button>
+								</div>
+							</div>
+						</div>
+						<div class="info-box message-box">
+							<span class="header">Messages</span>
+							<div class="messages">
+								<ul class="list-unstyled">
+								</ul>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="emergencybutton" style="display:hidden;">
+				<div>STOP</div>
+			</div>
+		</div>
+		<div class="main" id="LayoutContainer" style="height: 100%; padding: 0px; position: relative;">
+			<div class="emergencybutton">
+				<div>STOP</div>
+			</div>
+			<canvas height="300" width="300"/>
+		</div>
+		<div id="menu-box"></div>
+	</div>
+	<div id="rollingstock" class="window" style="display:none;background-color:#ecf0f5;">
+		<div style="width: 125%; overflow-y: overlay; overflow-x:hidden; height: 100%">
+			<div class="scrollcontainer" style="width: 80%;">
+				<div style="">
+					<div class="row">
+						<div class="col-3 d-xs-none d-md-block"></div>
+						<div class="col-12 col-md-6">
+							<div class="info-box" style="max-width: 300px; margin-left: auto; margin-right: auto;">
+								<ul class="list-unstyled">
+									<li class="media connection_state" style="padding: 0px 30px">
+										<div class="indicator align-self-center mr-3 bg-danger" style="width:16px;height:16px;border-radius: 3px;"></div>
+										<div class="media-body" style="margin-top: 0.2em; margin-bottom: 0.2em">
+											<div class="mt-0 mb-0" style="position: relative; font-weight: bold;">Connected</div>
+										</div>
+									</li>
+								</ul>
+								<div class="box-row">
+									<button type="button" class="btn btn-sm btn-xs mini-btn btn-warning" onClick='window.location.replace("");'>Reload</button>
+									<button type="button" class="btn btn-sm btn-xs mini-btn btn-success" onClick='windows.switch("main");'>Close</button>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="row">
+						<div class="col-12 col-lg-4">
+							<div class="info-box trains">
+								<span class="header">Trains</span>
+								<div class="box-container"></div>
+								<div style="margin-bottom: 5px">
+									<button type="button" class="btn-trains-new  btn btn-success" onClick="Modals.open('trains.edit');">Add</button>
+								</div>
+							</div>
+						</div>
+						<div class="col-12 col-lg-4">
+							<div class="info-box engines">
+								<span class="header">Engines</span>
+								<div class="box-container"></div>
+								<div style="margin-bottom: 5px">
+									<button type="button" class="btn-engines-new  btn btn-success" onClick="Modals.open('engines.edit');">Add</button>
+								</div>
+							</div>
+						</div>
+						<div class="col-12 col-lg-4">
+							<div class="info-box cars">
+								<span class="header">Cars</span>
+								<div class="box-container"></div>
+								<div style="margin-bottom: 5px">
+									<button type="button" class="btn-cars-new  btn btn-success" onClick="Modals.open('cars.edit');">Add</button>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div id="moduleconfig" class="window" style="display:none;background-color:#ecf0f5">
+		<div class="row">
+			<div class="col-12">
+				<div class="info-box">
+					<div class="row">
+						<div class="col-sm-4 col-lg-2">
+							<ul class="list-unstyled">
+								<li class="media connection_state" style="padding: 0px 30px">
+									<div class="indicator align-self-center mr-3 bg-danger" style="width:16px;height:16px;border-radius: 3px;"></div>
+									<div class="media-body" style="margin-top: 0.2em; margin-bottom: 0.2em">
+										<div class="mt-0 mb-0" style="position: relative; font-weight: bold;">Connected</div>
+									</div>
+								</li>
+							</ul>
+							<div class="box-row">
+								<button type="button" class="btn btn-sm btn-xs mini-btn btn-warning" onClick='window.location.replace("");'>Reload</button>
+								<button type="button" class="btn btn-sm btn-xs mini-btn btn-success" onClick='windows.switch("main");'>Close</button>
+							</div>
+						</div>
+						<div class="col-sm-8 col-lg-10"></div>
+					</div>
+					<div class="row">
+						<div calss="col" style="height: 265px; overflow-y:hidden;">
+							<div style="overflow-x:scroll; overflow-y:hidden; height: 320px;padding:20px;width:100%">
+								<div class="moduleContainer" style="height:265px; width:2800px; white-space: nowrap; overflow: hidden;"></div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="row">
+			<div class="col">
+				<div class="info-box">
+					<div style="text-align: center; width: 100%; margin: 0.5em auto; font-weight: bold;">Layout Configurator</div>
+					<table id="ModuleSettings" class="table table-border" style="border-bottom: 1px solid #dee2e6">
+						<tbody>
+							<tr>
+								<th>Name</th>
+								<td name="name">Station</td>
+								<td style="width:10px"></td>
+								<th>Blocks</th>
+								<td name="blocks">19</td>
+								<td style="width:10px; border-right: 1px solid #dee2e6;"></td>
+								<th rowspan="2">Anchors</th>
+								<td rowspan="2" name="anchor">{x:0, y:20, r:1}<br/>{x:800, y:20, r:0}</td>
+								<td rowspan="2" name="cog" style="width: 44px"></td>
+							</tr>
+							<tr>
+								<th>Dimensions</th>
+								<td name="dim">100 / 400</td>
+								<td style="width:10px"></td>
+								<th>Switches</th>
+								<td name="switches">6</td>
+								<td style="width:10px; border-right: 1px solid #dee2e6;"></td>
+							</tr>
+						</tbody>
+					</table>
+					<div style="width:100%; margin: 0.5em auto;"></div>
+					<table id="ModuleLayoutConfigurator" class="table table-striped table-hover">
+					  <thead>
+					    <tr>
+					      <th scope="col">ID</th>
+					      <th scope="col">Block</th>
+					      <th scope="col">Type</th>
+					      <th scope="col">X<sub>1</sub> Y<sub>1</sub></th>
+					      <th scope="col">X<sub>2</sub> Y<sub>2</sub></th>
+					      <th scope="col">Rotation</th>
+					      <th scope="col">Switches</th>
+					      <th scope="col" style="width: 44px"></th>
+					    </tr>
+					  </thead>
+					  <tbody></tbody>
+					</table>
+				</div>
+			</div>
+		</div>
+		<div id="ModuleConfigurator" class="column-count:2;">
+			<div class="info-box">
+				<div style="text-align: center; width: 100%; margin-bottom: 0.5em; margin-top: 0.25em; font-weight: bold;">Block Configurator</div>
+				<table class="table table-striped table-hover blocks">
+				  <thead>
+				    <tr>
+				      <th scope="col">ID</th>
+				      <th scope="col">Type</th>
+				      <th scope="col">Next</th>
+				      <th scope="col">Previous</th>
+				      <th scope="col">IO In</th>
+				      <th scope="col">IO Out</th>
+				      <th scope="col">Speed</th>
+				      <th scope="col">Flags</th>
+				      <th scope="col" style="width: 44px"></th>
+				    </tr>
+				  </thead>
+				  <tbody></tbody>
+				</table>
+			</div>
+			<div class="info-box">
+				<div style="text-align: center; width: 100%; margin-bottom: 0.5em; margin-top: 0.25em; font-weight: bold;">Switches Configurator</div>
+				<table class="table table-striped table-hover switches">
+				  <thead>
+				    <tr>
+				      <th scope="col">ID</th>
+				      <th scope="col">Det block</th>
+				      <th scope="col">App</th>
+				      <th scope="col">Str</th>
+				      <th scope="col">Div</th>
+				      <th scope="col">Speed</th>
+				      <th scope="col">IO</th>
+				      <th scope="col" style="width: 44px"></th>
+				    </tr>
+				  </thead>
+				  <tbody></tbody>
+				</table>
+			</div>
+			<div class="info-box">
+				<div style="text-align: center; width: 100%; margin-bottom: 0.5em; margin-top: 0.25em; font-weight: bold;">Multi State Switches Configurator</div>
+				<table class="table table-striped table-hover msswitches">
+				  <thead>
+				    <tr>
+				      <th scope="col">ID</th>
+				      <th scope="col">Det Block</th>
+				      <th scope="col">States</th>
+				      <th scope="col">IO ports</th>
+				      <th scope="col" style="width: 44px"></th>
+				    </tr>
+				  </thead>
+				  <tbody></tbody>
+				</table>
+			</div>
+			<div class="info-box">
+				<div style="text-align: center; width: 100%; margin-bottom: 0.5em; margin-top: 0.25em; font-weight: bold;">Signals Configurator</div>
+				<table class="table table-striped table-hover signals">
+				  <thead>
+				    <tr>
+				      <th scope="col">ID</th>
+				      <th scope="col">Block</th>
+				      <th scope="col">Side</th>
+				      <th scope="col">IO</th>
+				      <th scope="col" style="width: 44px"></th>
+				    </tr>
+				  </thead>
+				  <tbody></tbody>
+				</table>
+			</div>
+			<div class="info-box">
+				<div style="text-align: center; width: 100%; margin-bottom: 0.5em; margin-top: 0.25em; font-weight: bold;">Stations Configurator</div>
+				<table class="table table-striped table-hover stations">
+				  <thead>
+				    <tr>
+				      <th scope="col">ID</th>
+				      <th scope="col">Name</th>
+				      <th scope="col">Type</th>
+				      <th scope="col">Blocks</th>
+				      <th scope="col" style="width: 44px"></th>
+				    </tr>
+				  </thead>
+				  <tbody></tbody>
+				</table>
+			</div>
+		</div>
+	</div>
+	<div class="modal" id="modal" tabindex="-1" role="dialog">
+		<div class="modal-dialog" role="document">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title" id="label"></h5>
+					<button type="button" class="close" data-dismiss="modal">
+						<span>&times;</span>
+					</button>
+				</div>
+				<div class="modal-body"></div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-success"></button>
+					<button type="button" class="btn btn-warning"></button>
+					<button type="button" class="btn btn-danger"></button>
+				</div>
+			</div>
+		</div>
+	</div>
+		<script src="./scripts/Sortable.js"></script>
 
-		var modules = {
-			20:{Name: "Straight",OffsetX:250,OffsetY:20,width:800,height:160,r:0,blocks:[5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5],switches:[],dotmatrix:[],data:[
-				{type:"line",block:0,   x:0,y:20,          x2:5,y2:20},
-				{type:"swr" ,block:0,   x:5,y:20,          x2:5,y2:20,r:0,switch:0},
-				{type:"line",block:6,   x:0,y:20+2*ro[0].y,x2:5+ro[0].x+ds,y2:20+2*ro[0].y},
-				{type:"ds"  ,block:6, xtl:5+ro[0].x,ytl:20+ro[0].y,switchA:1,switchB:2},
-				{type:"swl" ,block:6,   x:5+ds+2*ro[0].x,y:20+3*ro[0].y,switch:3,r:0.25},
-				{type:"arc" ,block:6,  cx:5+2*ds+4*ro[0].x,cy:20+6*ro[0].y-radia[0],r:radia[0],start:0.75,end:0.5,CW:true},
+		<script src="./scripts/canvas.js"></script>
+		<script src="./scripts/socket.js"></script>
+		<script src="./scripts/train.js"></script>
+		<script src="./scripts/modals.js"></script>
+		<script src="./scripts/modules.js"></script>
+		<script src="./scripts/menu.js"></script>
+		<script src="./scripts/messages.js"></script>
+		<script src="./scripts/emergency.js"></script>
+		<script src="./scripts/window.js"></script>
+		<script src="./scripts/script.js"></script>
 
-				{type:"line",block:1,   x:5+ro[0].x,y:20,x2:250,y2:20},
-				{type:"line",block:7,   x:5+2*ro[0].x,y:20+2*ro[0].y,x2:250,y2:20+2*ro[0].y},
-				
-				{type:"line",block:2,   x:250,y:20,                       x2:400,y2:20},
-				{type:"line",block:8,   x:250,y:20+2*ro[0].y,             x2:400,y2:20+2*ro[0].y},
-				{type:"line",block:12,  x:5+3*ro[0].x+ds  ,y:20+4*ro[0].y,x2:400,y2:20+4*ro[0].y},
-				{type:"line",block:15,  x:5+4*ro[0].x+2*ds,y:20+6*ro[0].y,x2:400,y2:20+6*ro[0].y},
+	<script>
 
-				{type:"line",block:3,   x:400,y:20,          x2:550,y2:20},
-				{type:"line",block:9,   x:400,y:20+2*ro[0].y,x2:550,y2:20+2*ro[0].y},
-				{type:"line",block:13,  x:400,y:20+4*ro[0].y,x2:550,y2:20+4*ro[0].y},
-				{type:"line",block:16,  x:400,y:20+6*ro[0].y,x2:550,y2:20+6*ro[0].y},
-
-				{type:"line",block:4,   x:550,y:20,x2:795-ro[0].x,y2:20},
-				{type:"line",block:10,  x:550,y:20+2*ro[0].y,x2:795-2*ro[0].x,y2:20+2*ro[0].y},
-				{type:"line",block:14,  x:550,y:20+4*ro[0].y,x2:795-3*ro[0].x-ds,y2:20+4*ro[0].y},
-				{type:"arc" ,block:14,  cx:795-3*ro[0].x-ds,cy:20+4*ro[0].y-radia[0],r:radia[0],start:0.5,end:0.25,CW:true},
-				{type:"line",block:17,  x:550,y:20+6*ro[0].y,x2:800-3*ro[0].x-ds,y2:20+6*ro[0].y},
-				{type:"line",block:18,  x:800-3*ro[0].x-ds,y:20+6*ro[0].y,x2:700,y2:20+6*ro[0].y},
-
-
-				{type:"swl" ,block:5,  x:795,y:20,r:1,switch:6},
-				{type:"line",block:5,  x:800,y:20,x2:795,y2:20},
-				{type:"line",block:11, x:800,y:20+2*ro[0].y,x2:795-ro[0].x-ds,y2:20+2*ro[0].y},
-				{type:"ds"  ,block:11, xtr:795-ro[0].x,ytr:20+ro[0].y,switchA:4,switchB:5},
-			],hitboxes:[
-				{eval_code:"(_x > 2.5 && _x < 52.5 && _y > 15 && _y < 40)?1:0;",name:"Switch 1",action:"tSw",switch:0},
-				{eval_code:"(_x > 42.5 && _x < 97.5 && _y > 40 && _y < 80)?1:0;",name:"Switch 2&3",action:"tDS",switch:[1,2]},
-				{eval_code:"(_x > 90 && _x < 150 && _y > 80 && _y < 120)?1:0;",name:"Switch 4",action:"tSw",switch:3},
-				{eval_code:"(_x > 702.5 && _x < 757.5 && _y > 40 && _y < 80)?1:0;",name:"Switch 5&6",action:"tDS",switch:[4,5]},
-				{eval_code:"(_x > 748.5 && _x < 797.5 && _y > 15 && _y < 40)?1:0;",name:"Switch 6",action:"tSw",switch:6},
-			]},
-			21:{Name: "Straight",OffsetX:1050,OffsetY:460,width:800,height:160,r:1,blocks:[5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5],switches:[],dotmatrix:[],data:[
-				{type:"line",block:0,   x:0,y:20,          x2:200,y2:20},
-				{type:"line",block:1,   x:200,y:20,        x2:400,y2:20},
-				{type:"line",block:2,   x:400,y:20,        x2:600,y2:20},
-				{type:"line",block:3,   x:600,y:20,        x2:800,y2:20},
-
-				{type:"line",block:4,   x:0,y:20+2*ro[0].y,x2:5,y2:20+2*ro[0].y},
-				{type:"swr" ,block:4,   x:5,y:20+2*ro[0].y,r:0,switch:0},
-
-				{type:"line",block:5,   x:5+ro[0].x,y:20+2*ro[0].y,x2:200,y2:20+2*ro[0].y},
-				{type:"line",block:6,   x:200,y:20+2*ro[0].y,x2:400,y2:20+2*ro[0].y},
-				{type:"line",block:7,   x:400,y:20+2*ro[0].y,x2:600,y2:20+2*ro[0].y},
-				{type:"line",block:8,   x:795-ro[0].x,y:20+2*ro[0].y,x2:600,y2:20+2*ro[0].y},
-
-				{type:"swl" ,block:9,   x:795,y:20+2*ro[0].y,r:0,r:-1,switch:1},
-				{type:"line",block:9,   x:800,y:20+2*ro[0].y,x2:795,y2:20+2*ro[0].y},
-				
-				{type:"arc" ,block:10, cx:5+2*ro[0].x,cy:20+4*ro[0].y-radia[0],r:radia[0],start:0.75,end:0.5,CW:true},
-				{type:"line",block:10,  x:5+2*ro[0].x,y:20+4*ro[0].y,x2:200,y2:20+4*ro[0].y},
-				{type:"line",block:11,  x:200,y:20+4*ro[0].y,x2:400,y2:20+4*ro[0].y},
-				{type:"line",block:12,  x:400,y:20+4*ro[0].y,x2:600,y2:20+4*ro[0].y},
-				{type:"line",block:13,  x:795-2*ro[0].x,y:20+4*ro[0].y,x2:600,y2:20+4*ro[0].y},
-				{type:"arc" ,block:13, cx:795-2*ro[0].x,cy:20+4*ro[0].y-radia[0],r:radia[0],start:0.5,end:0.25,CW:true},
-			],hitboxes:[
-				{eval_code:"(_x > 2.5 && _x < 52.5 && _y > 45 && _y < 70)?1:0;",name:"Switch 1",action:"tSw",switch:0},
-				{eval_code:"(_x > 748.5 && _x < 797.5 && _y > 45 && _y < 70)?1:0;",name:"Switch 2",action:"tSw",switch:1},
-			]},
-			22:{Name: "Bocht",OffsetX:1050,OffsetY:20,width:250,height:440,r:0,blocks:[5,5,5,5],switches:[],dotmatrix:[],data:[
-				{type:"arc",block:0,cx:0,cy:220,r:200,start:-0.5,end:0,CW:false},
-				{type:"arc",block:1,cx:0,cy:220,r:200-2*ro[0].y,start:-0.5,end:0,CW:false},
-				{type:"arc",block:2,cx:0,cy:220,r:200,start:0,end:0.5,CW:false},
-				{type:"arc",block:3,cx:0,cy:220,r:200-2*ro[0].y,start:0,end:0.5,CW:false}
-			]},
-			23:{Name: "Bocht",OffsetX:250,OffsetY:460,width:250,height:440,r:1,blocks:[5,5,5,5],switches:[],dotmatrix:[],data:[
-				{type:"arc",block:0,cx:0,cy:220,r:200,start:-0.5,end:0,CW:false},
-				{type:"arc",block:1,cx:0,cy:220,r:200-2*ro[0].y,start:-0.5,end:0,CW:false},
-				{type:"arc",block:2,cx:0,cy:220,r:200,start:0,end:0.5,CW:false},
-				{type:"arc",block:3,cx:0,cy:220,r:200-2*ro[0].y,start:0,end:0.5,CW:false}
-			]},
-		}
-
-
-		var canvas = document.querySelector('canvas');
-		var c = canvas.getContext('2d');
-
-		canvas.height = window.innerHeight;
-		canvas.width = window.innerWidth;
-
-		var view = {scale:1,
-			resize: function(){
-				console.log("resize");
-			    document.querySelector('canvas').height = window.innerHeight
-				document.querySelector('canvas').width = window.innerWidth;
-
-				view.width = window.innerWidth/view.scale;
-				view.height= window.innerHeight/view.scale;
-				view.ofX = 0.5*view.width/view.scale-0.5*box.width
-				view.ofY = 0;
-
-				update_frame();
-			},
-			rescale: function(new_scale){
-				c.scale(1/view.scale,1/view.scale);
-				view.scale = new_scale;
-				c.scale(view.scale,view.scale);
-
-				view.width = window.innerWidth/view.scale;
-				view.height= window.innerHeight/view.scale;
-				view.ofX = 0.5*view.width-0.5*box.width;
-				view.ofY = 0;
-
-				update_frame();
-			}
-		}
-
-		if(window.innerWidth < 764){
-			view.scale = 0.5;
-		}
-
-		// if(window.innerWidth < 764 && window.innerWidth/window.innerHeight < 1){
-			//Small Portrait window
+		// var TestObj = {
+		// 	list = {
+		// 		pizza: 1,
+		// 		taart: 2,
+		// 		fiets: 10,
+		// 		auto:  11,
+		// 		laptop: 192
+		// 	},
+		// 	(this.list.pizza): function(){
+		// 		console.log("pizza");
+		// 	},
+		// 	this.list.taart: function(){
+		// 		console.log("taart");
+		// 	},
+		// 	this.list.fiets: function(){
+		// 		console.log("fiets");
+		// 	},
+		// 	this.list.auto: function(){
+		// 		console.log("auto");
+		// 	}
 		// }
 
-		
-		var rotate_timeout;
-		function rotate(){
-			console.log("rotate");
-			rotate_timeout = setTimeout(function(){view.resize()},1000);
+		var Z21 = {
+			init: function(){
+				$('.sidebar #Z21-settings span').after('<table></table>');
+
+				for(var i = 0; i < this.values.length; i++){
+					if(this.values[i].unit != undefined){
+						$('.sidebar #Z21-settings > table').append('<tr><td>'+this.values[i].name+'</td>\
+															  <td class="'+this.values[i].identifier+'"></td><td>'+
+															  this.values[i].unit+'</td></tr>');
+					}
+					else{
+						$('.sidebar #Z21-settings > table').append('<tr><td>'+this.values[i].name+'</td>\
+															  <td colspan="2" class="'+this.values[i].identifier+'"></td></tr>');
+					}
+				}
+
+				// websocket.ws_close_add(this.ws_close.bind(this));
+			},
+			update: function(data){
+				var keys = Object.keys(data);
+				for(var i = 0; i < keys.length; i++){
+					$('.sidebar #Z21-settings td.'+keys[i]).html(data[keys[i]])
+				}
+			},
+			ws_close: function(){
+				for(var i = 0; i < this.values.length; i++){
+					if(this.values[i].unit != undefined){
+						$('.sidebar #Z21-settings td.'+this.values[i].identifier).html("");
+					}
+				}
+			},
+			values: [
+				{name: "Track Current", unit: "mA", identifier: "tcur"},
+				{name: "Prog. Current", unit: "mA", identifier: "pcur"},
+				{name: "Track Voltage", unit: "mA", identifier: "tvol"},
+				{name: "Supply Voltage", unit: "mV", identifier: "svol"},
+				{name: "Temp", unit: "&deg;C", identifier: "temp"},
+				{name: "IP-Address", identifier: "ip-addr"},
+				{name: "<small>Firmware version</small>", identifier: "fw-version"},
+			]
 		}
 
-		
-	    if("onorientationchange" in window){
-	    	window.addEventListener("orientationchange", rotate, false);
-	    }else{
-	    	window.addEventListener("resize", view.resize, false);
-	    }
+		events.add_init(Z21.init.bind(Z21));
 
-		
-		// window.addEventListener("resize", view.resize, false);
+		$( window ).resize(events.resize.bind(events));
 
-		// c.scale(0.8,0.8)
-		c.lineWidth = 6;
+		// function resize(){
+		// 	if($("html").width() < 1140){
+		// 		$(".sidebar .sidebar").css("width", $("html").width()+"px");
+		// 	}
+		// 	else{
+		// 		$(".sidebar .sidebar").css("width", 300+"px");
+		// 	}
+		// }
 
-		//Calculate dotmatrix
-		$.each(modules,function(module,module_v){
-			$.each(module_v.data,function(i,v){
-				var coords = [];
-				var block_list = [];
-				var switch_list = [];
-				if(v.type == "line"){
-					coords.push({x:v.x,y:v.y});
-					coords.push({x:v.x2,y:v.y2});
-					block_list.push(v.block);
-				}
-				else if(v.type == "arc"){
-					coords.push({x:v.cx+Math.cos(v.start*Math.PI)*v.r,y:v.cy+Math.sin(v.start*Math.PI)*v.r});
-					coords.push({x:v.cx+Math.cos(v.end*Math.PI)*v.r,y:v.cy+Math.sin(v.end*Math.PI)*v.r});
-					block_list.push(v.block);
-				}
-				else if(v.type == "swl"){
-					coords.push({x:v.x,y:v.y});
-					if(v.r == 0.25){
-						coords.push({x:v.x+ro[0].x+ds,y:v.y+2*ro[0].y});
-						coords.push({x:v.x+ro[0].x,y:v.y+ro[0].y});
-					}else if(v.r == -0.25){
-						coords.push({x:v.x+ro[0].x+ds,y:v.y-2*ro[0].y});
-						coords.push({x:v.x+ro[0].y,y:v.y-ro[0].x});
-					}
-					else if(v.r == 0){
-						coords.push({x:v.x+ro[0].x,y:v.y});
-						coords.push({x:v.x+ro[0].x,y:v.y-ro[0].y});
-					}
-					else if(v.r == 1 || v.r == -1){
-						coords.push({x:v.x-ro[0].x,y:v.y});
-						coords.push({x:v.x-ro[0].x,y:v.y+ro[0].y});
-					}
-					block_list.push(v.block);
-					switch_list.push(v.switch);
-				}
-				else if(v.type == "swr"){
-					coords.push({x:v.x,y:v.y});
-					if(v.r == 0.25){
-						coords.push({x:v.x+ro[0].x+ds,y:v.y+2*ro[0].y});
-						coords.push({x:v.x+ro[0].y,y:v.y+ro[0].x});
-					}else if(v.r == -0.25){
-						coords.push({x:v.x+ro[0].x+ds,y:v.y-2*ro[0].y});
-						coords.push({x:v.x+ro[0].y,y:v.y-ro[0].x});
-					}
-					else if(v.r == 0){
-						coords.push({x:v.x+ro[0].x,y:v.y});
-						coords.push({x:v.x+ro[0].x,y:v.y+ro[0].y});
-					}
-					else if(v.r == -1 || v.r == 1){
-						coords.push({x:v.x-ro[0].x,y:v.y});
-						coords.push({x:v.x-ro[0].x,y:v.y-ro[0].y});
-					}
-					block_list.push(v.block);
-					switch_list.push(v.switch);
-				}
-				else if(v.type == "ds"){
-					if(v.xtl != undefined && v.ytl != undefined){
-						coords.push({x:v.xtl,y:v.ytl});
-						coords.push({x:v.xtl+ds,y:v.ytl+ro[0].y});
-						coords.push({x:v.xtl+ro[0].x,y:v.ytl+ro[0].y});
-						coords.push({x:v.xtl+ro[0].x+ds,y:v.ytl+2*ro[0].y});
-					}else{
-						coords.push({x:v.xtr,y:v.ytr});
-						coords.push({x:v.xtr-ds,y:v.ytr+ro[0].y});
-						coords.push({x:v.xtr-ro[0].x,y:v.ytr+ro[0].y});
-						coords.push({x:v.xtr-ro[0].x-ds,y:v.ytr+2*ro[0].y});
-					}
-					block_list.push(v.block);
-					switch_list.push(v.switchA);
-					switch_list.push(v.switchB);
-				}
-				else if(v.type == "dc"){
-					block_list.push(v.blockA);
-					block_list.push(v.blockB);
-
-					coords.push({x:v.xtl,y:v.ytl});
-					coords.push({x:v.xtl+ro[0].x,y:v.ytl});
-					coords.push({x:v.xtl+2*ro[0].x,y:v.ytl});
-					coords.push({x:v.xtl+ro[0].x,y:v.ytl+ro[0].y});
-					coords.push({x:v.xtl,y:v.ytl+2*ro[0].y});
-					coords.push({x:v.xtl+ro[0].x,y:v.ytl+2*ro[0].y});
-					coords.push({x:v.xtl+2*ro[0].x,y:v.ytl+2*ro[0].y});
-
-					switch_list.push(v.switchA);
-					switch_list.push(v.switchB);
-					switch_list.push(v.switchC);
-					switch_list.push(v.switchD);
-				}
-
-				$.each(coords,function(i,v){
-					for(var j = 0;j<=module_v.dotmatrix.length;j++){
-						if(j == module_v.dotmatrix.length){
-							module_v.dotmatrix.push({x:v.x,y:v.y,blocks:block_list});
-							break;
-						}
-						if(Math.pow(v.x - module_v.dotmatrix[j].x,2)+Math.pow(v.y - module_v.dotmatrix[j].y,2) < 4){
-							module_v.dotmatrix[j].blocks = module_v.dotmatrix[j].blocks.concat(block_list);
-							break;
-						}
-					}
-				});
-
-				if(Math.max(...block_list) > module_v.blocks.length-1){
-					for(0;(Math.max(...block_list) - module_v.blocks.length) > -1;0){
-						module_v.blocks.push(10);
-					}
-				}
-
-				if(Math.max(...switch_list) > module_v.switches.length-1){
-					for(0;(Math.max(...switch_list) - module_v.switches.length) > -1;0){
-						module_v.switches.push(1);
-					}
-				}
-			});
-		});
-
-		var box = {width:1300,height:460}
-
-		view.width = window.innerWidth/view.scale;
-		view.height= window.innerHeight/view.scale;
-		view.ofX = 0.5*view.width/view.scale-0.5*box.width
-		view.ofY = 0;
-
-		var window_limits = {center_x:0.5*view.width,x_left:-20,x_right:1320,y_top:0,y_bottom:480};
-
-		c.scale(view.scale,view.scale);
-
-		function setStrokeColor(b, s = 0){
-			if(b == 0){ // Blocked
-				(s == 0)?c.strokeStyle = "#900":c.strokeStyle = "#b66";
-		   	}
-		   	else if(b == 1){ // Red
-		    	(s == 0)?c.strokeStyle = "#f00":c.strokeStyle = "#f66";
-		    }
-		    else if(b == 2){ // Slow
-		    	(s == 0)?c.strokeStyle = "#f70":c.strokeStyle = "#fd6";
-		    }
-		    else if(b == 3){ // Ghost
-		    	(s == 0)?c.strokeStyle = "#f5f":c.strokeStyle = "#fbf";
-		    }
-		    else if(b == 4){ // Reserved
-		    	(s == 0)?c.strokeStyle = "#00f":c.strokeStyle = "#66f";
-		    }
-		    else if(b == 5){ // Free
-		    	(s == 0)?c.strokeStyle = "#777":c.strokeStyle = "#bbb";
-		    }
-		    else{ //Unknown
-		    	(s == 0)?c.strokeStyle = "#ddd":c.strokeStyle = "#eee";
-		    }
-		}
-
-		function update_frame(){
-			console.log("Clear\t"+view.width+"\t",view.height);
-			c.clearRect(0, 0, view.width, view.height);
-			c.lineWidth = 6;
-			//Draw background lines
-			$.each(modules,function(module,module_v){
-				var ofX = module_v.OffsetX + view.ofX;
-				var ofY = module_v.OffsetY + view.ofY;
-				var rvX = Math.cos(module_v.r*Math.PI);
-				var rvX_ = Math.cos((module_v.r+0.5)*Math.PI);
-				var rvY = Math.sin((module_v.r+0.5)*Math.PI);
-				var rvY_ = Math.sin((module_v.r)*Math.PI);
-				$.each(module_v.data,function(i,v){
-					c.beginPath();
-					c.strokeStyle = v.stroke;
-					if(v.type == "swr"){ // Switch Right
-						cv_Draw_SW(rvX*v.x +rvY_*v.y +ofX,rvY*v.y +rvX_*v.x +ofY,v.r-module_v.r,"swr","B",module_v.blocks[v.block],module_v.switches[v.switch]);
-					}
-					else if(v.type == "swl"){ // Switch Left
-						cv_Draw_SW(rvX*v.x +rvY_*v.y +ofX,rvY*v.y +rvX_*v.x +ofY,v.r-module_v.r,"swl","B",module_v.blocks[v.block],module_v.switches[v.switch]);
-					}else if(v.type == "ds"){ //Double slip
-						if(v.xtl != undefined && v.ytl != undefined){
-							setStrokeColor(module_v.blocks[v.block],1)
-							if(module_v.switches[v.switchA] == 0){
-								if(module_v.switches[v.switchB] == 0){
-									c.moveTo(v.xtl+ofX,v.ytl+ofY);
-									c.lineTo(v.xtl+ofX+ro[0].x+ds,v.ytl+ofY+2*ro[0].y);
-									c.stroke();c.beginPath();
-								}else{
-									c.arc(v.xtl+ofX+ro[0].x,v.ytl+ofY-ro[0].yr,radia[0],Math.PI* 0.75,Math.PI* 0.50,true);
-									c.stroke();c.beginPath();
-								}
-								c.moveTo(v.xtl+ofX+ds,v.ytl+ofY+ro[0].y);
-								c.lineTo(v.xtl+ofX+ro[0].x,v.ytl+ofY+ro[0].y);
-								c.stroke();c.beginPath();
-								c.arc(v.xtl+ofX-8.28,v.ytl+ofY+radia[0]+ro[0].y,radia[0],Math.PI*-0.50,Math.PI*-0.25,false);
-								c.stroke();c.beginPath();
-							}else{
-								if(module_v.switches[v.switchB] == 0){
-									c.arc(v.xtl+ofX-8.28,v.ytl+ofY+radia[0]+ro[0].y,radia[0],Math.PI*-0.50,Math.PI*-0.25,false);
-									c.stroke();c.beginPath();
-								}
-								else{
-									c.moveTo(v.xtl+ofX+ds,v.ytl+ofY+ro[0].y);
-									c.lineTo(v.xtl+ofX+ro[0].x,v.ytl+ofY+ro[0].y);
-									c.stroke();c.beginPath();
-								}
-								c.arc(v.xtl+ofX+ro[0].x,v.ytl+ofY-ro[0].yr,radia[0],Math.PI* 0.75,Math.PI* 0.50,true);
-								c.stroke();c.beginPath();
-								c.moveTo(v.xtl+ofX,v.ytl+ofY);
-								c.lineTo(v.xtl+ofX+ro[0].x+ds,v.ytl+ofY+2*ro[0].y);
-								c.stroke();c.beginPath();
-							}
-						}
-						else{
-							setStrokeColor(module_v.blocks[v.block],1)
-							if(module_v.switches[v.switchA] == 0){
-								if(module_v.switches[v.switchB] == 0){
-									c.arc(v.xtr+ofX-ro[0].x,v.ytr+ofY-ro[0].yr,radia[0],Math.PI*0.25,Math.PI*0.50,false);
-									c.stroke();c.beginPath();
-								}else{
-									c.moveTo(v.xtr+ofX-ds,v.ytr+ofY+ro[0].y);
-									c.lineTo(v.xtr+ofX-ro[0].x,v.ytr+ofY+ro[0].y);
-									c.stroke();c.beginPath();
-								}
-								c.arc(v.xtr+ofX+8.28,v.ytr+ofY+radia[0]+ro[0].y,radia[0],Math.PI*-0.50,Math.PI*-0.75,true);
-								c.stroke();c.beginPath();
-								c.moveTo(v.xtr+ofX,v.ytr+ofY);
-								c.lineTo(v.xtr+ofX-ro[0].x-ds,v.ytr+ofY+2*ro[0].y);
-								c.stroke();c.beginPath();
-							}else{
-								if(module_v.switches[v.switchB] == 0){
-									c.moveTo(v.xtr+ofX,v.ytr+ofY);
-									c.lineTo(v.xtr+ofX-ro[0].x-ds,v.ytr+ofY+2*ro[0].y);
-									c.stroke();c.beginPath();
-								}else{
-									c.arc(v.xtr+ofX+8.28,v.ytr+ofY+radia[0]+ro[0].y,radia[0],Math.PI*-0.50,Math.PI*-0.75,true);
-									c.stroke();c.beginPath();	
-								}
-								c.arc(v.xtr+ofX-ro[0].x,v.ytr+ofY-ro[0].yr,radia[0],Math.PI*0.25,Math.PI*0.50,false);
-								c.stroke();c.beginPath();
-								c.moveTo(v.xtr+ofX-ds,v.ytr+ofY+ro[0].y);
-								c.lineTo(v.xtr+ofX-ro[0].x,v.ytr+ofY+ro[0].y);
-								c.stroke();c.beginPath();
-							}
-						}
-					}
-					else if(v.type == "dc"){ //Double crossover
-						if(v.xtl != undefined && v.ytl != undefined){
-							setStrokeColor(module_v.blocks[v.blockA],1);
-							if(module_v.switches[v.switchA] == 1 || module_v.switches[v.switchB] == 1){
-								c.moveTo(v.xtl+ofX,v.ytl+ofY);
-								c.lineTo(v.xtl+ofX+1*ro[0].x,v.ytl+ofY);
-								c.stroke();c.beginPath();
-								c.moveTo(v.xtl+ofX+1*ro[0].x,v.ytl+ofY);
-								c.lineTo(v.xtl+ofX+2*ro[0].x,v.ytl+ofY);
-								c.stroke();c.beginPath();
-							}
-							if(module_v.switches[v.switchA] == 0){
-								c.arc(v.xtl+ofX,v.ytl+ofY+radia[0],radia[0],Math.PI*-0.5+0.05,Math.PI*-0.25,false);
-								c.stroke();c.beginPath();
-							}
-
-							if(module_v.switches[v.switchB] == 0){
-								c.arc(v.xtl+ofX+2*ro[0].x,v.ytl+ofY+radia[0],radia[0],Math.PI*-0.5-0.05,Math.PI*-0.75,true);
-								c.stroke();c.beginPath();
-							}
-
-							setStrokeColor(module_v.blocks[v.blockB],1);
-							if(module_v.switches[v.switchC] == 1 || module_v.switches[v.switchD] == 1){
-								c.moveTo(v.xtl+ofX,v.ytl+ofY+2*ro[0].y);
-								c.lineTo(v.xtl+ofX+1*ro[0].x,v.ytl+ofY+2*ro[0].y);
-								c.stroke();c.beginPath();
-								c.moveTo(v.xtl+ofX+1*ro[0].x,v.ytl+ofY+2*ro[0].y);
-								c.lineTo(v.xtl+ofX+2*ro[0].x,v.ytl+ofY+2*ro[0].y);
-								c.stroke();c.beginPath();
-							}
-							if(module_v.switches[v.switchC] == 0){
-								c.arc(v.xtl+ofX,v.ytl+ofY+2*ro[0].y-radia[0],radia[0],Math.PI*0.5-0.05,Math.PI*0.25,true);
-								c.stroke();c.beginPath();
-							}
-
-							if(module_v.switches[v.switchD] == 0){
-								c.arc(v.xtl+ofX+2*ro[0].x,v.ytl+ofY+2*ro[0].y-radia[0],radia[0],Math.PI*0.5+0.05,Math.PI*0.75,false);
-								c.stroke();c.beginPath();
-							}
-
-						}
-					}
-					c.stroke();
-				});
-			});
-
-			c.lineWidth = 0.1;
-			//Draw dots
-			var dot_radius = Math.min(2.8*view.scale,2.8);
-			$.each(modules,function(module,module_v){
-				var ofX = module_v.OffsetX + view.ofX;
-				var ofY = module_v.OffsetY + view.ofY;
-				var rvX = Math.cos(module_v.r*Math.PI);
-				var rvX_ = Math.cos((module_v.r+0.5)*Math.PI);
-				var rvY = Math.sin((module_v.r+0.5)*Math.PI);
-				var rvY_ = Math.sin((module_v.r)*Math.PI);
-				$.each(module_v.dotmatrix,function(i,v){
-					c.beginPath();
-					var block_state = 255;
-					$.each(v.blocks,function(i2,v2){
-						if(module_v.blocks[v2] < block_state){
-							block_state = module_v.blocks[v2];
-						}
-					});
-					c.arc(ofX+rvX*v.x+rvY_*v.y,ofY+rvY*v.y+rvX_*v.x,dot_radius,0,2*Math.PI,false);
-					setStrokeColor(block_state,0);
-					c.fillStyle = c.strokeStyle;
-					c.fill();
-					c.stroke();
-				});
-			});
-
-			//Draw lines
-			c.lineWidth = 6;
-			$.each(modules,function(module,module_v){
-				var ofX = module_v.OffsetX + view.ofX;
-				var ofY = module_v.OffsetY + view.ofY;
-				var rvX = Math.cos(module_v.r*Math.PI);
-				var rvX_ = Math.cos((module_v.r+0.5)*Math.PI);
-				var rvY = Math.sin((module_v.r+0.5)*Math.PI);
-				var rvY_ = Math.sin((module_v.r)*Math.PI);
-				$.each(module_v.data,function(i,v){
-					c.beginPath();
-					c.strokeStyle = v.stroke;
-					if(v.type == "line"){
-						setStrokeColor(module_v.blocks[v.block]);
-						c.moveTo(rvX*v.x +rvY_*v.y +ofX,rvY*v.y +rvX_*v.x +ofY);
-						c.lineTo(rvX*v.x2+rvY_*v.y2+ofX,rvY*v.y2+rvX_*v.x2+ofY);
-					}
-					else if(v.type == "arc"){
-						setStrokeColor(module_v.blocks[v.block]);
-						c.arc(rvX*v.cx+rvY_*v.cy+ofX,rvY*v.cy+rvX_*v.cx+ofY,v.r,Math.PI*(-module_v.r+v.start),Math.PI*(-module_v.r+v.end),v.CW);
-					}
-					else if(v.type == "swr"){ // Switch Right
-						cv_Draw_SW(rvX*v.x +rvY_*v.y +ofX,rvY*v.y +rvX_*v.x +ofY,v.r-module_v.r,"swr","P",module_v.blocks[v.block],module_v.switches[v.switch]);
-					}
-					else if(v.type == "swl"){ // Switch Left
-						cv_Draw_SW(rvX*v.x +rvY_*v.y +ofX,rvY*v.y +rvX_*v.x +ofY,v.r-module_v.r,"swl","P",module_v.blocks[v.block],module_v.switches[v.switch]);
-					}
-					else if(v.type == "ds"){ //Double slip
-						if(v.xtl != undefined && v.ytl != undefined){
-							setStrokeColor(module_v.blocks[v.block],0)
-							if(module_v.switches[v.switchA] == 0){
-								if(module_v.switches[v.switchB] == 0){
-									c.arc(v.xtl+ofX+ro[0].x,v.ytl+ofY-ro[0].yr,radia[0],Math.PI* 0.75,Math.PI* 0.50,true);
-									c.stroke();c.beginPath();
-								}else{
-									c.moveTo(v.xtl+ofX,v.ytl+ofY);
-									c.lineTo(v.xtl+ofX+ro[0].x+ds,v.ytl+ofY+2*ro[0].y);
-									c.stroke();c.beginPath();
-								}
-							}else{
-								if(module_v.switches[v.switchB] == 0){
-									c.moveTo(v.xtl+ofX+ds,v.ytl+ofY+ro[0].y);
-									c.lineTo(v.xtl+ofX+ro[0].x,v.ytl+ofY+ro[0].y);
-									c.stroke();c.beginPath();
-								}
-								else{
-									c.arc(v.xtl+ofX-8.28,v.ytl+ofY+radia[0]+ro[0].y,radia[0],Math.PI*-0.50,Math.PI*-0.25,false);
-									c.stroke();c.beginPath();
-								}
-							}
-						}
-						else{
-							setStrokeColor(module_v.blocks[v.block],0)
-							if(module_v.switches[v.switchA] == 0){
-								if(module_v.switches[v.switchB] == 0){
-									c.moveTo(v.xtr+ofX-ds,v.ytr+ofY+ro[0].y);
-									c.lineTo(v.xtr+ofX-ro[0].x,v.ytr+ofY+ro[0].y);
-									c.stroke();c.beginPath();
-								}else{
-									c.arc(v.xtr+ofX-ro[0].x,v.ytr+ofY-ro[0].yr,radia[0],Math.PI*0.25,Math.PI*0.50,false);
-									c.stroke();c.beginPath();
-								}
-							}else{
-								if(module_v.switches[v.switchB] == 0){
-									c.arc(v.xtr+ofX+8.28,v.ytr+ofY+radia[0]+ro[0].y,radia[0],Math.PI*-0.50,Math.PI*-0.75,true);
-									c.stroke();c.beginPath();
-								}else{
-									c.moveTo(v.xtr+ofX,v.ytr+ofY);
-									c.lineTo(v.xtr+ofX-ro[0].x-ds,v.ytr+ofY+2*ro[0].y);
-									c.stroke();c.beginPath();	
-								}
-							}
-						}
-					}
-					else if(v.type == "dc"){
-						if(v.xtl != undefined && v.ytl != undefined){
-							setStrokeColor(module_v.blocks[v.blockA],0);
-							if(module_v.switches[v.switchA] == 0 && module_v.switches[v.switchB] == 0){
-								c.moveTo(v.xtl+ofX,v.ytl+ofY);
-								c.lineTo(v.xtl+ofX+1*ro[0].x,v.ytl+ofY);
-								c.stroke();c.beginPath();
-								c.moveTo(v.xtl+ofX+1*ro[0].x,v.ytl+ofY);
-								c.lineTo(v.xtl+ofX+2*ro[0].x,v.ytl+ofY);
-								c.stroke();c.beginPath();
-							}
-							else{
-								if(module_v.switches[v.switchA] == 1){
-									c.arc(v.xtl+ofX,v.ytl+ofY+radia[0],radia[0],Math.PI*-0.5,Math.PI*-0.25,false);
-									c.stroke();c.beginPath();
-								}
-
-								if(module_v.switches[v.switchB] == 1){
-									c.arc(v.xtl+ofX+2*ro[0].x,v.ytl+ofY+radia[0],radia[0],Math.PI*-0.5,Math.PI*-0.75,true);
-									c.stroke();c.beginPath();
-								}
-							}
-
-							setStrokeColor(module_v.blocks[v.blockB],0);
-							if(module_v.switches[v.switchC] == 0 && module_v.switches[v.switchD] == 0){
-								c.moveTo(v.xtl+ofX,v.ytl+ofY+2*ro[0].y);
-								c.lineTo(v.xtl+ofX+1*ro[0].x,v.ytl+ofY+2*ro[0].y);
-								c.stroke();c.beginPath();
-								c.moveTo(v.xtl+ofX+1*ro[0].x,v.ytl+ofY+2*ro[0].y);
-								c.lineTo(v.xtl+ofX+2*ro[0].x,v.ytl+ofY+2*ro[0].y);
-								c.stroke();c.beginPath();
-							}
-							else{
-								if(module_v.switches[v.switchC] == 1){
-									c.arc(v.xtl+ofX,v.ytl+ofY+2*ro[0].y-radia[0],radia[0],Math.PI*0.5,Math.PI*0.25,true);
-									c.stroke();c.beginPath();
-								}
-
-								if(module_v.switches[v.switchD] == 1){
-									c.arc(v.xtl+ofX+2*ro[0].x,v.ytl+ofY+2*ro[0].y-radia[0],radia[0],Math.PI*0.5,Math.PI*0.75,false);
-									c.stroke();c.beginPath();
-								}
-							}
-
-						}
-					}
-					c.stroke();
-				});
-			});
-
-			//Draw Tooltips
-			$.each(modules,function(module,module_v){
-				var ofX = module_v.OffsetX + view.ofX;
-				var ofY = module_v.OffsetY + view.ofY;
-				var rvX = Math.cos(module_v.r*Math.PI);
-				var rvX_ = Math.cos((module_v.r+0.5)*Math.PI);
-				var rvY = Math.sin((module_v.r+0.5)*Math.PI);
-				var rvY_ = Math.sin((module_v.r)*Math.PI);
-				c.beginPath();
-				c.moveTo(ofX,ofY);
-				c.lineTo(rvX*module_v.width+ofX,rvX_*module_v.width+ofY);
-				c.lineTo(rvX*module_v.width+rvY_*module_v.height+ofX,rvY*module_v.height+rvX_*module_v.width+ofY);
-				c.lineTo(rvY_*module_v.height+ofX,rvY*module_v.height+ofY);
-				c.lineTo(ofX,ofY);
-				c.lineWidth = 0.5;
-				c.strokeStyle = "#000";
-				c.stroke();
-				// $.each(module_v.data,function(i,v){
-				// 	if(v.tooltip){
-				// 		if(v.type == "dc"){
-				// 			c.lineWidth = 1;
-				// 			c.beginPath();
-				// 			c.rect(v.xtl+ofX,v.ytl+ofY+3*ro[0].y,2*ro[0].x,(1.6+0.5+0.5+2.5)*ro[0].y);
-				// 			c.strokeStyle = "#000";
-				// 			c.fillStyle = "#fff";
-				// 			c.fill();
-				// 			c.stroke(); 
-
-				// 			var mid = v.xtl+ofX+ro[0].x;
-
-				// 			c.strokeStyle = "#ddd";
-				// 			// c.lineWidth = 0.5;
-				// 			c.beginPath();
-				// 			c.moveTo(mid-ro[0].x,v.ytl+ofY+(3+1.75)*ro[0].y);
-				// 			c.lineTo(mid+ro[0].x,v.ytl+ofY+(3+1.75)*ro[0].y);
-				// 			c.stroke();c.beginPath();
-				// 			c.moveTo(mid-ro[0].x,v.ytl+ofY+(3+3.25)*ro[0].y);
-				// 			c.lineTo(mid+ro[0].x,v.ytl+ofY+(3+3.25)*ro[0].y);
-				// 			c.stroke();
-				// 			var y_top = v.ytl+ofY+3.5*ro[0].y;
-				// 			//Write all options
-				// 			//A
-				// 			c.strokeStyle = "#ddd";
-				// 			c.lineWidth = 0.5*6;
-				// 			c.beginPath();
-				// 			c.arc(mid-0.5*ro[0].x,y_top+0.5*radia[0],0.5*radia[0],Math.PI*-0.5,Math.PI*-0.25,false);
-				// 			c.stroke();c.beginPath();
-				// 			c.arc(mid+0.5*ro[0].x,y_top+0.5*radia[0],0.5*radia[0],Math.PI*-0.5,Math.PI*-0.75,true);
-				// 			c.stroke();c.beginPath();
-				// 			c.arc(mid-0.5*ro[0].x,y_top+ro[0].y-0.5*radia[0],0.5*radia[0],Math.PI*0.5,Math.PI*0.25,true);
-				// 			c.stroke();c.beginPath();
-				// 			c.arc(mid+0.5*ro[0].x,y_top+ro[0].y-0.5*radia[0],0.5*radia[0],Math.PI*0.5,Math.PI*0.75,false);
-				// 			c.stroke();c.beginPath();
-				// 			c.strokeStyle = "#aaa";
-				// 			c.moveTo(mid-0.5*ro[0].x,y_top);
-				// 			c.lineTo(mid+0.5*ro[0].x,y_top);
-				// 			c.stroke();
-				// 			c.beginPath();
-				// 			c.moveTo(mid-0.5*ro[0].x,y_top+ro[0].y);
-				// 			c.lineTo(mid+0.5*ro[0].x,y_top+ro[0].y);
-				// 			c.stroke();
-				// 			//B
-				// 			y_top += 1.5*ro[0].y;
-
-				// 			c.strokeStyle = "#ddd";
-				// 			c.lineWidth = 0.5*6;
-				// 			c.beginPath();
-				// 			c.arc(mid+0.5*ro[0].x,y_top+0.5*radia[0],0.5*radia[0],Math.PI*-0.5,Math.PI*-0.75,true);
-				// 			c.stroke();c.beginPath();
-				// 			c.arc(mid-0.5*ro[0].x,y_top+ro[0].y-0.5*radia[0],0.5*radia[0],Math.PI*0.5,Math.PI*0.25,true);
-				// 			c.stroke();c.beginPath();
-				// 			c.moveTo(mid-0.5*ro[0].x,y_top);
-				// 			c.lineTo(mid+0.5*ro[0].x,y_top);
-				// 			c.stroke();
-				// 			c.beginPath();
-				// 			c.moveTo(mid-0.5*ro[0].x,y_top+ro[0].y);
-				// 			c.lineTo(mid+0.5*ro[0].x,y_top+ro[0].y);
-				// 			c.stroke();c.beginPath();
-				// 			c.strokeStyle = "#aaa";
-				// 			c.arc(mid+0.5*ro[0].x,y_top+ro[0].y-0.5*radia[0],0.5*radia[0],Math.PI*0.5,Math.PI*0.75,false);
-				// 			c.stroke();c.beginPath();
-				// 			c.arc(mid-0.5*ro[0].x,y_top+0.5*radia[0],0.5*radia[0],Math.PI*-0.5,Math.PI*-0.25,false);
-				// 			c.stroke();c.beginPath();
-				// 			//C
-				// 			y_top += 1.5*ro[0].y;
-
-				// 			c.strokeStyle = "#ddd";
-				// 			c.lineWidth = 0.5*6;
-				// 			c.beginPath();
-				// 			c.arc(mid+0.5*ro[0].x,y_top+ro[0].y-0.5*radia[0],0.5*radia[0],Math.PI*0.5,Math.PI*0.75,false);
-				// 			c.stroke();c.beginPath();
-				// 			c.arc(mid-0.5*ro[0].x,y_top+0.5*radia[0],0.5*radia[0],Math.PI*-0.5,Math.PI*-0.25,false);
-				// 			c.stroke();c.beginPath();
-				// 			c.moveTo(mid-0.5*ro[0].x,y_top);
-				// 			c.lineTo(mid+0.5*ro[0].x,y_top);
-				// 			c.stroke();
-				// 			c.beginPath();
-				// 			c.moveTo(mid-0.5*ro[0].x,y_top+ro[0].y);
-				// 			c.lineTo(mid+0.5*ro[0].x,y_top+ro[0].y);
-				// 			c.stroke();c.beginPath();
-				// 			c.strokeStyle = "#aaa";
-				// 			c.arc(mid+0.5*ro[0].x,y_top+0.5*radia[0],0.5*radia[0],Math.PI*-0.5,Math.PI*-0.75,true);
-				// 			c.stroke();c.beginPath();
-				// 			c.arc(mid-0.5*ro[0].x,y_top+ro[0].y-0.5*radia[0],0.5*radia[0],Math.PI*0.5,Math.PI*0.25,true);
-				// 			c.stroke();c.beginPath();
-				// 		}
-				// 	}
-				// });
-			});
-		}
-
-		update_frame();
-
-		var LongclickTimer;
-		var Longclick = false;
-
-		$('canvas').on('mousedown',function(evt){
-			Longclick = false;
-			LongclickTimer = setTimeout(function(){longClick(evt)},400);
-		});
-
-		function longClick(evt){
-			alert("Long Click");
-			Longclick = true;
-		}
-
-		$('canvas').on('mouseup',function(evt){
-			clearTimeout(LongclickTimer);
-			if(!touchClicked && !Longclick)
-				canvas_hit(evt.offsetX,evt.offsetY);
-			else
-				touchClicked = false;
-		});
-
-		function cv_Draw_SW(x,y,r,lr,type,bl,sw){
-			if(r >=  2){r -= 2;}
-			if(r <= -2){r += 2;}
-			var rvX = Math.cos(r*Math.PI);
-			var rvX_ = Math.cos((r+0.5)*Math.PI);
-			var rvY = Math.sin((r+0.5)*Math.PI);
-			var rvY_ = Math.sin((r)*Math.PI);
-			if((sw == 0 && type == "P") || (sw == 1 && type == "B")){
-				(type == "P")?setStrokeColor(bl,0):setStrokeColor(bl,1);
-				if(r == 0.25 || r == 0.75 || r == 1.25 || r == 1.75 || r == -0.25 || r == -0.75 || r == -1.25 || r == -1.75){
-					c.moveTo(x,y);
-					if(r == -0.25 || r == 1.75){
-						c.lineTo(x+ro[0].x+ds,y-2*ro[0].y);
-					}else if(r == -0.75 || r == 1.25){
-						c.lineTo(x-ro[0].x-ds,y-2*ro[0].y);
-					}else if(r == -1.25 || r == 0.75){
-						c.lineTo(x-ro[0].x-ds,y+2*ro[0].y);
-					}else if(r == -1.75 || r == 0.25){
-						c.lineTo(x+ro[0].x+ds,y+2*ro[0].y);
-					}
-				}else if(r == 0 || r == 0.5 || r == 1 || r == 1.5 || r == 2 || r == -0.5 || r == -1 || r == -1.5 || r == -2){
-					c.moveTo(x,y);
-					c.lineTo(x+rvX*ro[0].x,y+rvY_*ro[0].x);
-				}
-			}
-			else{
-				(type == "P")?setStrokeColor(bl,0):setStrokeColor(bl,1);
-				if(lr == "swr"){
-					if(r == 0.25 || r == -1.75){
-						c.arc(x-rvX*radia[0],y+rvY*radia[0],radia[0],Math.PI*(r-0.25),Math.PI*(r-0.5),true);
-					}else if(r == -0.25 || r == 1.75){
-						c.arc(x+rvX*radia[0],y+rvY*radia[0],radia[0],Math.PI*(r-0.25),Math.PI*(r-0.5),true);
-					}else if(r == 0.75 || r == -1.25){
-						c.arc(x+rvX*radia[0],y+rvY*radia[0],radia[0],Math.PI*(r-0.25),Math.PI*(r-0.5),true);
-					}else if(r == -0.75 || r == 1.25){
-						c.arc(x-rvX*radia[0],y+rvY*radia[0],radia[0],Math.PI*(r-0.25),Math.PI*(r-0.5),true);
-					}else if(r == 0){
-						c.arc(x,y+radia[0],radia[0],Math.PI*(r-0.25),Math.PI*(r-0.5),true);
-					}else{
-						c.arc(x,y-radia[0],radia[0],Math.PI*(r-0.25),Math.PI*(r-0.5),true);
-					}
-				}
-				else{
-					if(r == 0.25 || r == -1.75){
-						c.arc(x+rvX*radia[0],y-rvY*radia[0],radia[0],Math.PI*(r+0.5),Math.PI*(r+0.25),true);//
-					}else if(r == -0.25 || r == 1.75){
-						c.arc(x-rvX*radia[0],y-rvY*radia[0],radia[0],Math.PI*(r+0.5),Math.PI*(r+0.25),true);//
-					}else if(r == 0.75 || r == -1.25){
-						c.arc(x-rvX*radia[0],y-rvY*radia[0],radia[0],Math.PI*(r+0.5),Math.PI*(r+0.25),true);//
-					}else if(r == -0.75 || r == 1.25){
-						c.arc(x+rvX*radia[0],y-rvY*radia[0],radia[0],Math.PI*(r+0.5),Math.PI*(r+0.25),true);
-					}else if(r == 0){
-						c.arc(x,y-radia[0],radia[0],Math.PI*(r+0.5),Math.PI*(r+0.25),true);
-					}else if(r == -1 || r == 1){
-						c.arc(x,y+radia[0],radia[0],Math.PI*(r+0.5),Math.PI*(r+0.25),true);
-					}
-				}
-			}
-		}
-
-		$('canvas').on("mousewheel",function(evt){
-			console.log("Scroll");
-
-			if(view.width < box.width){
-				view.ofX -= evt.originalEvent.deltaX/10;
-				//Scroll limiter
-				if(window_limits.x_left > -view.ofX){
-					view.ofX = -window_limits.x_left;
-				}
-				if(window_limits.x_right < -view.ofX+view.width){
-					view.ofX = -(window_limits.x_right - view.width);
-				}
-			}
-			if(view.height < box.height){
-				view.ofY -= evt.originalEvent.deltaY/10;
-				//Scroll limiter
-				if(window_limits.y_top > -view.ofY){
-					view.ofY = window_limits.y_top;
-				}
-				if(window_limits.y_bottom < -view.ofY+view.height){
-					view.ofY = -(window_limits.y_bottom - view.height);
-				}
+		$(document).ready(function(){
+			// resize();
+			if(window.innerWidth < 350){
+				$('head meta[name=viewport]').attr('content','width=350');
 			}
 
-			update_frame();
-		})
+			events.init();
 
-		var touchStart = {x:0,y:0};
-		var touchMove = {x:0,y:0};
-		var touchMoved = false;
-		var touchClicked = false;
+			// Stations.init();
 
-		$('canvas').on("touchstart",function(evt){
-			touchStart.x = (touchMove.x = evt.touches[0].pageX);
-			touchStart.y = (touchMove.y = evt.touches[0].pageY);
-			touchMoved = false;
-
-			LongclickTimer = setTimeout(function(){longClick(evt)},600);
-		});
-
-		$('canvas').on("touchmove",function(evt){
-			if(touchMoved == true){
-				if(view.width < box.width){
-					view.ofX += (evt.touches[0].pageX - touchMove.x)/view.scale;
-					//Scroll limiter
-					if((window_limits.x_left) > -view.ofX){
-						view.ofX = -window_limits.x_left;
-					}
-					if((window_limits.x_right) < -view.ofX+view.width){
-						view.ofX = -(window_limits.x_right - view.width);
-					}
-					console.log(view.ofX+"\t"+(window_limits.x_left)+">"+(-view.ofX)+"\t"+(window_limits.x_right)+"<"+(-view.ofX+view.width));
-				}
-				if(view.height < box.height){
-					view.ofY += (evt.touches[0].pageY - touchMove.y)/view.scale;
-					//Scroll limiter
-					if((window_limits.y_top) > -view.ofY){
-						view.ofY = window_limits.y_top;
-					}
-					if((window_limits.y_bottom) < -view.ofY-view.height){
-						view.ofY = -(window_limits.y_bottom - view.height);
-					}
-				}
-
-				touchMove.x = evt.touches[0].pageX;
-				touchMove.y = evt.touches[0].pageY;
-
-				update_frame();
-
-				return false;
-			}else{
-				if(Math.sqrt(Math.pow(touchStart.x - evt.touches[0].pageX,2)+Math.pow(touchStart.y - evt.touches[0].pageY,2)) >= 10){
-					touchMoved = true;
-					clearTimeout(LongclickTimer);
-					console.log("Touch Moved");
-				}
-			}
-		});
-
-		$('canvas').on("touchend",function(evt){
-			if(touchMoved == false){
-				touchClicked = true;
-				canvas_hit(touchStart.x,touchStart.y);
-				clearTimeout(LongclickTimer);
-			}
-		});
-
-		function canvas_hit(x,y){
-			var update = false;
-			$.each(modules,function(module,module_v){
-				var ofX = module_v.OffsetX;
-				var ofY = module_v.OffsetY;
-				var rvX = Math.cos(module_v.r*Math.PI);
-				var rvX_ = Math.cos((module_v.r+0.5)*Math.PI);
-				var rvY = Math.sin((module_v.r+0.5)*Math.PI);
-				var rvY_ = Math.sin((module_v.r)*Math.PI);
-				_x = x/view.scale - ofX - view.ofX;
-				_y = y/view.scale - ofY - view.ofY;
-				_l = Math.sqrt(Math.pow(_x,2)+Math.pow(_y,2));
-				_r = Math.atan(_y/_x);
-				(_x<0&&_y<0)?_r=-(Math.PI-_r):1;
-				_r -= module_v.r*Math.PI;
-				_x = _l*Math.cos(_r);
-				_y = _l*Math.sin(_r);
-				console.log(_x,_y);
-				$.each(module_v.hitboxes,function(i,box){
-					if(eval(box.eval_code) == 1){
-						if(box.action == "tSw"){ // Throw switch
-							throw_Switch(module,box.switch);
-						}
-						else if(box.action == "tDS"){
-							throw_doubleSlib(module,box.switch);
-						}
-						else if(box.action == "tDC"){
-							throw_doubleCrossover(module,box.switch);
-						}
-						else{
-							alert("Hit " + box.name + "\n with no action");
-						}
-						update = true
-					}
-				});
+			$('.settings-toggle').on("click", function(){
+				$('.top-group').toggleClass('active');
+				$('.bottom-group').toggleClass('active');
 			});
-			if(update)
-				update_frame();
-		}
+		});
 
 		function throw_Switch(m,s){
-			if(modules[m].switches[s] == 0){
-				modules[m].switches[s] = 1;
-			}else{
-				modules[m].switches[s] = 0;
+			if(!websocket.connected){
+				console.error("Throw_switchc: not connected");
 			}
-			ev_set_switch(m,s,modules[m].switches[s]);
+
+			if(modules[m].switches[s] == 0){
+				websocket.cts_SetSwitch([m,s,1]);
+			}else{
+				websocket.cts_SetSwitch([m,s,0]);
+			}
 		}
 
 		function throw_doubleSlib(m,sw){
+			if(!websocket.connected){
+				console.error("Not connected");
+				return;
+			}
+
 			if(modules[m].switches[sw[0]] == 0){
 				if(modules[m].switches[sw[1]] == 0){
-					modules[m].switches[sw[1]] = 1;
+					websocket.cts_SetMultiSwitch([[m,sw[0],0],[m,sw[1],1]]);
 				}else{
-					modules[m].switches[sw[0]] = 1;
+					websocket.cts_SetMultiSwitch([[m,sw[0],1],[m,sw[1],1]]);
 				}
 			}else{
 				if(modules[m].switches[sw[1]] == 1){
-					modules[m].switches[sw[1]] = 0;
+					websocket.cts_SetMultiSwitch([[m,sw[0],1],[m,sw[1],0]]);
 				}else{
-					modules[m].switches[sw[0]] = 0;
+					websocket.cts_SetMultiSwitch([[m,sw[0],0],[m,sw[1],0]]);
 				}
 			}
-			ev_set_switch(m,sw[0],modules[m].switches[sw[0]]);
-			ev_set_switch(m,sw[1],modules[m].switches[sw[1]]);
 		}
-
-		function throw_doubleCrossover(m,sw){
-			if(modules[m].switches[sw[0]] == 0 && modules[m].switches[sw[1]] == 0 && modules[m].switches[sw[2]] == 0 && modules[m].switches[sw[3]] == 0){
-				modules[m].switches[sw[0]] = 1;
-				modules[m].switches[sw[3]] = 1;
-			}
-			else if(modules[m].switches[sw[0]] == 1 && modules[m].switches[sw[1]] == 0 && modules[m].switches[sw[2]] == 0 && modules[m].switches[sw[3]] == 1){
-				modules[m].switches[sw[0]] = 0;
-				modules[m].switches[sw[3]] = 0;
-				modules[m].switches[sw[1]] = 1;
-				modules[m].switches[sw[2]] = 1;
-			}
-			else{
-				modules[m].switches[sw[0]] = 0;
-				modules[m].switches[sw[1]] = 0;
-				modules[m].switches[sw[2]] = 0;
-				modules[m].switches[sw[3]] = 0;
-			}
-			ev_set_switch(m,sw[0],modules[m].switches[sw[0]]);
-			ev_set_switch(m,sw[1],modules[m].switches[sw[1]]);
-			ev_set_switch(m,sw[2],modules[m].switches[sw[2]]);
-			ev_set_switch(m,sw[3],modules[m].switches[sw[3]]);
-		}
-		// c.strokeStyle = "#aaaaaa";
-		// c.lineWidth = 6;
-
-		// c.beginPath();
-		// c.moveTo(50,100);
-		// c.lineTo(150,100);
-		// c.stroke();
-		// c.strokeStyle = "#dddddd";
-
-		// c.beginPath();
-		// c.arc(50,150,50,-0.5*Math.PI,-0.25*Math.PI,false);
-		// c.stroke();
-
-		// c.beginPath();
-		// c.arc(50 - 2*50*Math.cos(-0.75*Math.PI),150 + 2*50*Math.sin(-0.75*Math.PI),50,0.75*Math.PI,0.5*Math.PI,true);
-		// c.stroke();
 	</script>
-
-    <script src="./scripts/socket.js">
-    </script>
 </body>
 </html>

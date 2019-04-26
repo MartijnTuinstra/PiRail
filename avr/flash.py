@@ -5,7 +5,7 @@ import argparse
 import fnmatch
 
 devices = ["atmega328p", "atmega64a", "atmega2560"]
-projects = ["main", "test"]
+projects = ["main", "main_spi", "net_buffer", "test"]
 
 i = 1
 for dev in devices:
@@ -43,5 +43,9 @@ i = int(input("Which device? "))
 print(_pdev[i-1])
 pdev = _pdev[i-1]
 
-os.system("avrdude -p "+dev+" -P /dev/"+pdev+" -c arduino -b 57600 -v -U flash:w:build/"+f+"/"+dev+".flash.hex") 
+c = ""
+
+while(c != "n" and c != "N"):
+	os.system("avrdude -p "+dev+" -P /dev/"+pdev+" -c arduino -b 57600 -v -U flash:w:build/"+f+"/"+dev+".flash.hex") 
+	c = input("Again (y/n)? ")
 

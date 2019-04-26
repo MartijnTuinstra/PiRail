@@ -7,8 +7,8 @@ args_main_spi=-D IO_SPI
 File_net_buffer=main_node.o eeprom_layout.o RNet.o uart.o
 args_net_buffer=-D _BUFFER
 File_test=test.o
-#dev=atmega328 atmega328p atmega64a atmega2560
-dev=atmega328p atmega2560
+dev=atmega328 atmega328p atmega64a atmega2560
+#dev=atmega328p atmega2560
 
 avr_gcc_args=-g -Wall -Os -Werror -Wextra
 

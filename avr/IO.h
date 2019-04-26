@@ -299,14 +299,31 @@ class IO {
 
 extern IO io;
 
-#define IO_TIMER TCCR0B
+#define IO_TIMER_REG TCNT0
 #define IO_TIMER_PRESCALER (1 << CS02) | (1 << CS00)
+#define IO_TIMER_OVERFLOW_INT TIMER0_OVF_vect
+
+#if defined(__AVR_ATmega328__) || defined(__AVR_ATmega328P__) || defined(__AVR_ATmega2560__)
+
+#define IO_TIMER TCCR0B
 #define IO_TIMER_INT TIMSK0
 #define IO_TIMER_OVERFLOW_INT_REG 1 //TOIE
 #define IO_TIMER_COMPA_INT_REG 2 //OCIEA
 
-#define IO_TIMER_REG TCNT0
+
 #define IO_TIMER_COMPA_REG OCR0A
 
-#define IO_TIMER_OVERFLOW_INT TIMER0_OVF_vect
 #define IO_TIMER_COMPA_INT TIMER0_COMPA_vect
+
+#else // __AVR_ATmega64A
+
+#define IO_TIMER TCCR0
+#define IO_TIMER_INT TIMSK
+#define IO_TIMER_OVERFLOW_INT_REG (1 << TOIE0)
+#define IO_TIMER_COMPA_INT_REG (1 << OCIE0)
+
+#define IO_TIMER_COMPA_REG OCR0
+
+#define IO_TIMER_COMPA_INT TIMER0_COMP_vect
+
+#endif

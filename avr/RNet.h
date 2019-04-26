@@ -172,6 +172,8 @@ class RNet {
     bool checkReceived();
     void executeMessage();
 
+    bool checkTxReady();
+
     void add_to_tx_buf(uint8_t data);
     void add_to_rx_buf(uint8_t data);
   private:

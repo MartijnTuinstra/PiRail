@@ -196,6 +196,20 @@ uint8_t cBy = 0; //currentByte
 uint8_t cBi = 0; //currentBit
 bool cont = false;
 
+bool RNet::checkTxReady(){
+  uint8_t size = getMsgSize(&tx);
+  if((tx.read_index + size) % RNET_MAX_BUFFER == tx.write_index){
+    //Check checksum
+    uint8_t checksum = RNET_CHECKSUM_SEED;
+    for(uint8_t i = 0; i < (size-1); i++){
+      checksum ^= tx.buf[tx.read_index+i];
+    }
+    if(checksum == tx.buf[tx.write_index-1]){
+      return true;
+    }
+  }
+  return false;
+}
 
 status RNet::transmit(uint8_t PrioDelay){
   msgLen = getMsgSize(&tx);         //Get size of message

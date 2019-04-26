@@ -20,7 +20,7 @@ UART uart;
 
 void UART::init(){
   UCSR0B |= (1 << TXEN0) || (1 << RXEN0); // Enable TX and RX
-  UCSR0C |= (1 << UMSEL00) | (1 << UCSZ00) | (1 << UCSZ01); 
+  UCSR0C = (1 << UCSZ00) | (1 << UCSZ01); // 8-bit uart
   uart_38400();
 }
 

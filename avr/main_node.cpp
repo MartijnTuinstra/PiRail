@@ -115,7 +115,12 @@ int main(){
     #ifdef _BUFFER
     // Receive from UART
     if(uart.available()){
-
+      //receive byte
+      uint8_t c = uart.receive();
+      net.add_to_tx_buf(c);
+      if(net.checkTxReady()){
+        net.transmit(20);
+      }
     }
     #endif
 

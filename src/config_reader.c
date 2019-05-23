@@ -1644,7 +1644,7 @@ int edit_module(){
   }
   else{
     if(read_module_config(&config, fp) == -1){
-      return;
+      return 0;
     };
     if(config.header.module != file){
       loggerf(CRITICAL, "INVALID MODULE ID");

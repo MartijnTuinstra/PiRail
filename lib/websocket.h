@@ -1,6 +1,8 @@
 #ifndef _INCLUDE_WEBSOCKET_H
   #define _INCLUDE_WEBSOCKET_H
 
+  struct web_client_t;
+
   #include "websocket_control.h"
 
   struct __attribute__((__packed__)) s_opc_AddNewCartolib {
@@ -101,6 +103,8 @@
   struct websocket_client_thread_args;
 
   int websocket_get_msg(int fd_client, char outbuf[], int * L);
+
+  void websocket_create_msg(char * input, int length_in, char * output, int * length_out);
 
   void ws_send(int fd_client, char data[],int length,int flag);
 

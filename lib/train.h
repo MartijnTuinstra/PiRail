@@ -160,6 +160,9 @@
   int link_train(int fid, int tid, char type);
   void unlink_train(int fid);
 
+  void train_set_speed(Trains * T, uint16_t speed);
+  void train_calc_speed(Trains * T);
+
   void engine_calc_speed(Engines * E);
   void engine_calc_real_speed(Engines * E);
   void train_calc_speed(Trains * T);

@@ -37,6 +37,8 @@
 
   void COM_DevReset();
 
+  void UART_stop();
+
   #define COMopc_ReportID     0x00
   #define COMopc_EmergencyEn  0x01
   #define COMopc_EmergencyDis 0x02

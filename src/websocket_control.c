@@ -3,6 +3,7 @@
 
 #include "encryption.h"
 #include "module.h"
+#include "config.h"
 
 #include "websocket_control.h"
 #include "logger.h"
@@ -166,56 +167,57 @@ void * websocket_client_connect(void * p){
   char data[3];
   if(_SYS->Websocket_State == _SYS_Module_Init){
     while(1){
-    // Require login
-    data[0] = WSopc_Admin_Login;
-    ws_send(client->fd, data, 1, 0xFF);
+      // Require login
+      data[0] = WSopc_Admin_Login;
+      ws_send(client->fd, data, 1, 0xFF);
 
-    usleep(100000);
+      usleep(100000);
 
-    int status = websocket_get_msg(client->fd, buf, &length);
+      int status = websocket_get_msg(client->fd, buf, &length);
 
-    if(status == 1){
-      websocket_decode((uint8_t *)buf, client);
-    }
-    else if(status == -7){
-      counter++;
-
-      if(counter > 10){
-        if(!websocket_ping(client->fd)){
-          loggerf(INFO, "Client %i timeout", client->fd);
-          close(client->fd);
-          _SYS->_Clients--;
-          client->state = 2;
-          _free(buf);
-          return 0;
-        }
-        else{
-          counter = 0;
-        }
+      if(status == 1){
+        websocket_decode((uint8_t *)buf, client);
       }
-      continue;
-    }
-    else if(status == -8){
-      loggerf(INFO, "Client %i disconnected", client->fd);
-      close(client->fd);
-      _SYS->_Clients--;
-      client->state = 2;
-      _free(buf);
-      return 0;
-    }
+      else if(status == -7){
+        counter++;
 
-    if((client->type & 0x10) == 0){
-      loggerf(ERROR, "Client not authenticated");
-      close(client->fd);
-      _SYS->_Clients--;
-      client->state = 2;
-      _free(buf);
-      return 0;
+        if(counter > 10){
+          if(!websocket_ping(client->fd)){
+            loggerf(INFO, "Client %i timeout", client->fd);
+            close(client->fd);
+            _SYS->_Clients--;
+            client->state = 2;
+            _free(buf);
+            return 0;
+          }
+          else{
+            counter = 0;
+          }
+        }
+        continue;
+      }
+      else if(status == -8){
+        loggerf(INFO, "Client %i disconnected", client->fd);
+        close(client->fd);
+        _SYS->_Clients--;
+        client->state = 2;
+        _free(buf);
+        return 0;
+      }
+
+      if((client->type & 0x10) == 0){
+        loggerf(ERROR, "Client not authenticated");
+        close(client->fd);
+        _SYS->_Clients--;
+        client->state = 2;
+        _free(buf);
+        return 0;
+      }
+      else{
+        break;
+      }
     }
-    else{
-      break;
-    }
-    }
+    _free(buf);
   }
 
   // Send Enabled options

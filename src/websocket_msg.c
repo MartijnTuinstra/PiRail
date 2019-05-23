@@ -21,6 +21,7 @@
 #include "switch.h"
 #include "train.h"
 #include "logger.h"
+#include "config.h"
 
 #include "module.h"
 #include "Z21.h"
@@ -181,8 +182,8 @@ void WS_cts_Enable_Disable_SubmoduleState(uint8_t opcode, uint8_t flags){
     }
     else if(flags & 0x04){ //SimA
       SimA_start();
-    // }
-    // else if(flags & 0x02){ //SimB
+    }
+    else if(flags & 0x02){ //SimB
       SimB_start();
     }
     WS_stc_SubmoduleState();

@@ -11,6 +11,7 @@
 #include<arpa/inet.h>
 #include<sys/socket.h>
 
+#include "config.h"
 #include "websocket_msg.h"
 #include "submodule.h"
 

@@ -7,6 +7,8 @@
   #define MAX_WEB_CLIENTS 20
   #define WS_BUF_SIZE 1024
 
+  #include "websocket.h"
+
   struct web_client_t{
     int fd;
     int type; /*Flags for client type
@@ -32,11 +34,8 @@
     } trains[2];
   };
 
-  #include "websocket.h"
-
   extern char * WS_password;
 
-  #include "websocket_control.h"
   #include "system.h"
   #include "logger.h"
 

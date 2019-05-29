@@ -58,7 +58,7 @@ void *TRAIN_SIMA(){
     N = B->Alg.BN->B[0];
     if(!N){
       loggerf(WARNING, "Sim A reached end of the line");
-      usleep(1000000);
+      return 0;
     }
     loggerf(INFO, "Sim A step %i:%i", N->module, N->id);
     change_Block(N, BLOCKED);
@@ -69,9 +69,7 @@ void *TRAIN_SIMA(){
       N2 = N->Alg.BN->B[0];
       if(!N2){
         loggerf(WARNING, "Sim A reached end of the line");
-        while(1){
-          usleep(100000);
-        }
+        return 0;
       }
       loggerf(DEBUG, "Sim A substep %i:%i", N2->module, N2->id);
 
@@ -130,7 +128,7 @@ void *TRAIN_SIMB(){
     N = B->Alg.BN->B[0];
     if(!N){
       loggerf(WARNING, "Sim B reached end of the line");
-      usleep(1000000);
+      return 0;
     }
     loggerf(INFO, "Sim B step %i:%i", N->module, N->id);
     change_Block(N, BLOCKED);
@@ -141,9 +139,7 @@ void *TRAIN_SIMB(){
       N2 = N->Alg.BN->B[0];
       if(!N2){
         loggerf(WARNING, "Sim B reached end of the line");
-        while(1){
-          usleep(100000);
-        }
+        return 0;
       }
       loggerf(DEBUG, "Sim B substep %i:%i", N2->module, N2->id);
 

@@ -295,7 +295,12 @@ void process(Block * B,int flags){
     return;
   }
 
-  B->changed &= ~(IO_Changed);
+  // Find all surrounding blocks only if direction has changed or nearby switches
+  if(B->changed & (Block_Algor_Changed | IO_Changed)){
+    Algor_search_Blocks(&B->Alg, debug);
+    B->changed &= ~(Block_Algor_Changed | IO_Changed);
+  }
+
   B->changed |= State_Changed;
 
   if(B->train && !B->blocked){
@@ -305,12 +310,6 @@ void process(Block * B,int flags){
     else if(B->Alg.BP->blocks > 0 && B->Alg.BP->B[0]->blocked){
       putAlgorQueue(B->Alg.BP->B[0], 1);
     }
-  }
-
-  // Find all surrounding blocks only if direction has changed or nearby switches
-  if(B->changed & Block_Algor_Changed){
-    Algor_search_Blocks(&B->Alg, debug);
-    B->changed &= ~Block_Algor_Changed;
   }
 
   Algor_GetBlocked_Blocks(B->Alg);
@@ -602,53 +601,50 @@ void Algor_Switch_Checker(struct algor_blocks AllBlocks, int debug){
   //Algor_Block BP   = *AllBlocks.BP;
   Block * B        =  AllBlocks.B;
   Algor_Block BN   = *AllBlocks.BN;
-  // Algor_Block BNN  = *AllBlocks.BNN;
+  Algor_Block BNN  = *AllBlocks.BNN;
   //Algor_Block BNNN = *AllBlocks.BNNN;
 
   //Check Next 1
-  if(B->blocked && BN.switches > 0 && BN.blocks > 0){
-    loggerf(ERROR, "\nNext block switches\n");
+  if(B->blocked && (((BN.switches || BNN.switches) && BN.blocks > 0) || (BN.blocks == 0 || BNN.blocks == 0))){
+    Block * tmp;
+    for(int i = 0; i <= BN.blocks; i++){
+      if(i == 0){
+        tmp = B;
+      }
+      else{
+        tmp = BN.B[i - 1];
+      }
+
+      // loggerf(DEBUG, "checking block next link %i:%i", tmp->module, tmp->id);
+      if (tmp->type == SPECIAL) {
+        continue;
+      }
+      if (tmp->blocked){
+        continue;
+      }
+
+      struct rail_link * link = Next_link(tmp, NEXT);
+      loggerf(INFO, "Switch_Checker scan block (%i,%i)", tmp->module, tmp->id);
+      if (link->type != RAIL_LINK_R && link->type != RAIL_LINK_E) {
+        if (!Next_check_Switch_Path(tmp, *link, NEXT | SWITCH_CARE)) {
+          loggerf(INFO, "Switch next path!! %02i:%02i", tmp->module, tmp->id);
+
+          if (set_switch_path(tmp, *link, NEXT | SWITCH_CARE)) {
+            B->changed |= IO_Changed; // Recalculate
+            return;
+          }
+        }
+      }
+      // else{
+      //   loggerf(DEBUG, "Link is of type %x", link->type);
+      // }
+
+      if(link->p && (((link->type == RAIL_LINK_S || link->type == RAIL_LINK_s) && (((Switch *)link->p)->Detection->reserved)) || 
+         ((link->type == RAIL_LINK_M || link->type == RAIL_LINK_m) && (((MSSwitch *)link->p)->Detection->reserved)))){
+        reserve_switch_path(tmp, *link, NEXT | SWITCH_CARE);
+      }
+    }
   }
-  // if(B->blocked && (BN.switches > 0 || BNN.switches) && BN.blocks > 0){
-  //   Block * tmp;
-  //   for(int i = 0; i <= BN.blocks; i++){
-  //     if(i == 0){
-  //       tmp = B;
-  //     }
-  //     else{
-  //       tmp = BN.B[i - 1];
-  //     }
-
-  //     // loggerf(DEBUG, "checking block next link %i:%i", tmp->module, tmp->id);
-  //     if (tmp->type == SPECIAL) {
-  //       continue;
-  //     }
-  //     if (tmp->blocked){
-  //       continue;
-  //     }
-
-  //     struct rail_link * link = Next_link(tmp, NEXT);
-  //     loggerf(INFO, "Switch_Checker scan block (%i,%i)", tmp->module, tmp->id);
-  //     if (link->type != RAIL_LINK_R && link->type != RAIL_LINK_E) {
-  //       if (!Next_check_Switch_Path(tmp, *link, NEXT | SWITCH_CARE)) {
-  //         loggerf(INFO, "Switch next path!! %02i:%02i", tmp->module, tmp->id);
-
-  //         if (set_switch_path(tmp, *link, NEXT | SWITCH_CARE)) {
-  //           B->changed |= IO_Changed; // Recalculate
-  //           return;
-  //         }
-  //       }
-  //     }
-  //     // else{
-  //     //   loggerf(DEBUG, "Link is of type %x", link->type);
-  //     // }
-
-  //     if(link->p && (((link->type == RAIL_LINK_S || link->type == RAIL_LINK_s) && (((Switch *)link->p)->Detection->reserved)) || 
-  //        ((link->type == RAIL_LINK_M || link->type == RAIL_LINK_m) && (((MSSwitch *)link->p)->Detection->reserved)))){
-  //       reserve_switch_path(tmp, *link, NEXT | SWITCH_CARE);
-  //     }
-  //   }
-  // }
 }
 
 void Algor_special_search_Blocks(struct algor_blocks * Blocks, int flags){
@@ -893,6 +889,8 @@ void Algor_search_Blocks(struct algor_blocks * AllBlocks, int debug){
     Algor_special_search_Blocks(AllBlocks, debug);
     return;
   }
+
+  loggerf(INFO, "Search blocks %02i:%02i", B->module, B->id);
 
   int next_level = 1;
   int prev_level = 1;

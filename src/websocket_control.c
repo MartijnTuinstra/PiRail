@@ -217,7 +217,6 @@ void * websocket_client_connect(void * p){
         break;
       }
     }
-    _free(buf);
   }
 
   // Send Enabled options

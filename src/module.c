@@ -256,9 +256,10 @@ void LoadModuleFromConfig(int M){
   Create_Unit(M, config->header.IO_Nodes, config->header.connections);
 
   //Raw copy
-  Units[M]->raw_length = fsize-1;
+  Units[M]->raw_length = fsize-2;
   Units[M]->raw = _calloc(fsize+5, char);
-  memcpy(Units[M]->raw, raw, fsize-1);
+  loggerf(ERROR, "Reading %d bytes", fsize);
+  memcpy(Units[M]->raw, raw, fsize-2);
 
   for(int i = 0; i < config->header.IO_Nodes; i++){
     struct s_node_conf node = read_s_node_conf(buf_ptr);
@@ -516,6 +517,17 @@ void JoinModules(){
     _free(List.R_L[i]);
   }
   _free(List.R_L);
+
+  for(uint8_t i = 0; i < unit_len; i++){
+    if(!Units[i])
+      continue;
+
+    for(uint8_t j = 0; j < Units[i]->block_len; j++){
+      if(Units[i]->B[j]){
+        Units[i]->B[j]->blocked = 0;
+      }
+    }
+  }
 
   // WS_Track_Layout();
 

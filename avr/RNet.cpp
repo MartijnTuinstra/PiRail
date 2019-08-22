@@ -152,7 +152,7 @@ uint8_t RNet::getMsgSize(uint8_t * buf){
   else if(buf[0] == RNet_OPC_ReadAll){
     return 4+buf[1];
   }
-  return 1;
+  return -1;
 }
 
 uint8_t * currentMsg(struct _RNet_buffer * msg){
@@ -200,7 +200,7 @@ void RNet::init (uint8_t dev, uint8_t node){
 }
 
 uint8_t * msg;
-uint8_t msgLen = 10;
+int8_t msgLen = -1;
 uint8_t cDBy = 0; //CurrentDataByte
 uint8_t cBy = 0; //currentByte
 uint8_t cBi = 0; //currentBit
@@ -223,7 +223,16 @@ bool RNet::checkTxReady(){
 
 status RNet::transmit(uint8_t PrioDelay){
   msgLen = getMsgSize(&tx);         //Get size of message
+
+  if(msgLen < 0){
+    uart.transmit("No Message", 10);
+    return FAILED;
+  }
+
   msg = currentMsg(&tx); //Get index of message
+
+  uart.transmit("msglen: ", 8);
+  uart.transmit((long)msgLen, HEX);
 
   cDBy = msg[0];
 
@@ -447,6 +456,7 @@ ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
       if(++cBy < msgLen){
         //Data available
         cBi = 0;
+	msg[cBy-1] = 0;
         cDBy = msg[cBy];
         RNET_TX_SET_LOW;
         #ifdef RNET_DEBUG

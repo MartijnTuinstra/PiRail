@@ -5,7 +5,7 @@
 
 static void uart_38400(void)
 {
-#define BAUD 74880
+#define BAUD 38400
 #include <util/setbaud.h>
 UBRR0H = UBRRH_VALUE;
 UBRR0L = UBRRL_VALUE;
@@ -46,5 +46,19 @@ void UART::transmit(uint8_t * data, uint8_t length){
 void UART::transmit(const char * data, uint8_t length){
 	for(uint8_t i = 0; i < length; i++){
 		transmit(data[i]);
+	}
+}
+
+void UART::transmit(long i, enum UART_transmit_type t){
+	if(t == HEX){
+		long q = i;
+		while(q != 0){
+			long r = q % 16;
+			if(r < 10)
+				uart.transmit(r + 48);
+			else
+				uart.transmit(r + 55);
+			q = q / 16;
+		}
 	}
 }

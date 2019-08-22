@@ -2,12 +2,12 @@
 #define RNET_CHECKSUM_SEED 0b10101010
 
 // General
-#define RNet_OPC_DEV_ID        0x00
-#define RNet_OPC_SetEmergency  0x01
-#define RNet_OPC_RelEmergency  0x02
-#define RNet_OPC_PowerOFF      0x03
-#define RNet_OPC_PowerON       0x04
-#define RNet_OPC_ResetALL      0x05
+#define RNet_OPC_DEV_ID        0x01
+#define RNet_OPC_SetEmergency  0x02
+#define RNet_OPC_RelEmergency  0x03
+#define RNet_OPC_PowerOFF      0x04
+#define RNet_OPC_PowerON       0x05
+#define RNet_OPC_ResetALL      0x06
 #define RNet_OPC_ACK           0x7F
 
 //IO

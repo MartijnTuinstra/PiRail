@@ -395,7 +395,9 @@ void IO::pulse_high(){
 		#endif
 	}
 
+	#ifdef IO_SPI
 	writeOutput();
+	#endif
 
 	//Set pulse period into timer
 	cli();

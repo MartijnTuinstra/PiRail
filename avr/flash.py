@@ -36,7 +36,7 @@ else:
 
 i = 1
 for d in _pdev:
-  print("["+str(i)+"]  "+d+"\t", end="")
+  print("["+str(i)+"]  "+str(d)+"\t", end="")
   i += 1
 print("")
 i = int(input("Which device? "))
@@ -46,6 +46,9 @@ pdev = _pdev[i-1]
 c = ""
 
 while(c != "n" and c != "N"):
-	os.system("avrdude -p "+dev+" -P /dev/"+pdev+" -c arduino -b 57600 -v -U flash:w:build/"+f+"/"+dev+".flash.hex") 
-	c = input("Again (y/n)? ")
+  if sys.platform.startswith("win"):
+    os.system("\"C:\\Program Files (x86)\\Arduino\\hardware\\tools\\avr\\bin\\avrdude.exe\" -C \"C:\\Program Files (x86)\\Arduino\\hardware\\tools\\avr\\etc\\avrdude.conf\" -p "+dev+" -P "+pdev.device+" -c arduino -b 57600 -v -U flash:w:build/"+f+"/"+dev+".flash.hex")
+  else:
+    os.system("avrdude -p "+dev+" -P /dev/"+pdev+" -c arduino -b 57600 -v -U flash:w:build/"+f+"/"+dev+".flash.hex") 
+  c = input("Again (y/n)? ")
 

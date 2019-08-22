@@ -251,19 +251,20 @@ class IO {
 
 		void init();
 
-		void set_blink1(uint8_t pin);
-		void set_blink2(uint8_t pin);
-		void unset_blink1(uint8_t pin);
-		void unset_blink2(uint8_t pin);
-
 		void blink1();
 		void blink2();
 
-		void pulse_set(uint8_t pin);
 		void pulse_high();
 		void pulse_low();
 
+		void servo_low();
+		void servo_high(uint8_t * mask);
+
+		void set_mask(uint8_t pin, enum IO_event type);
+		void unset_mask(uint8_t pin, enum IO_event type);
+
 		void readInput();
+		void copyInput();
 		#ifdef IO_SPI
 		void writeOutput();
 		#endif
@@ -271,11 +272,25 @@ class IO {
 		uint16_t calculateTimer(uint16_t mseconds);
 
 		uint16_t blink1_period;
-		uint16_t blink1_counter;
+		volatile uint16_t blink1_counter;
 		uint16_t blink2_period;
-		uint16_t blink2_counter;
-		uint16_t pulse_counter;
+		volatile uint16_t blink2_counter;
+		volatile uint16_t pulse_counter;
 		uint8_t pulse_length;
+
+		uint8_t servo1Pulse;
+		volatile uint16_t servo1counter;
+		uint8_t servo2Pulse;
+		volatile uint16_t servo2counter;
+
+		volatile uint8_t compareInt;
+		// uint8_t servo3Pulse;
+		// uint16_t servo3counter;
+		// uint8_t servo4Pulse;
+		// uint16_t servo4counter;
+		
+		uint8_t readData[MAX_PORTS];
+		uint8_t oldreadData[MAX_PORTS];
 
 	private:
 		uint8_t blink1Mask[MAX_PORTS];
@@ -289,7 +304,6 @@ class IO {
 		uint8_t servo4Mask[MAX_PORTS];
 
 		uint8_t readMask[MAX_PORTS];
-		uint8_t readData[MAX_PORTS];
 
 		#ifdef IO_SPI
 		uint8_t writeData[MAX_PORTS];
@@ -307,8 +321,8 @@ extern IO io;
 
 #define IO_TIMER TCCR0B
 #define IO_TIMER_INT TIMSK0
-#define IO_TIMER_OVERFLOW_INT_REG 1 //TOIE
-#define IO_TIMER_COMPA_INT_REG 2 //OCIEA
+#define IO_TIMER_OVERFLOW_INT_REG (1<<0) //TOIE
+#define IO_TIMER_COMPA_INT_REG (1<<1) //OCIEA
 
 
 #define IO_TIMER_COMPA_REG OCR0A
@@ -327,3 +341,19 @@ extern IO io;
 #define IO_TIMER_COMPA_INT TIMER0_COMP_vect
 
 #endif
+
+#define IO_Enable_COMPA_INT IO_TIMER_INT |= IO_TIMER_COMPA_INT_REG
+#define IO_Disable_COMPA_INT IO_TIMER_INT &= ~(IO_TIMER_COMPA_INT_REG)
+
+#define IO_SERVO_MIN 15
+#define IO_SERVO_MAX 32
+#define IO_SERVO_PERIOD 313
+
+#define IO_INT_BlinkA 0x01
+#define IO_INT_BlinkB 0x02
+#define IO_INT_Pulse  0x04
+#define IO_INT_Servo  0x08
+#define IO_INT_Servo1 0x10
+#define IO_INT_Servo2 0x20
+#define IO_INT_Servo3 0x40
+#define IO_INT_Servo4 0x80

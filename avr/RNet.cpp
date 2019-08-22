@@ -26,17 +26,27 @@ uint8_t tmp_rx_msg[RNET_MAX_BUFFER];
 #define RNET_DEBUG
 
 void RNet::add_to_rx_buf(uint8_t data){
+  rx.buf[rx.write_index++] = data;
+  if(rx.write_index >= RNET_MAX_BUFFER){
+    rx.write_index = 0;
+  }
+}
+
+void RNet::add_to_tx_buf(uint8_t data){
   tx.buf[tx.write_index++] = data;
   if(tx.write_index >= RNET_MAX_BUFFER){
     tx.write_index = 0;
   }
 }
 
-void RNet::add_to_tx_buf(uint8_t data){
-  rx.buf[rx.write_index++] = data;
-  if(rx.write_index >= RNET_MAX_BUFFER){
-    rx.write_index = 0;
+void RNet::calculateTxChecksum(){
+  uint8_t checksum = RNET_CHECKSUM_SEED;
+  for(uint8_t i = tx.read_index; i != tx.write_index; i = (i+1)%RNET_MAX_BUFFER){
+    checksum ^= tx.buf[i];
+    printHex(tx.buf[i]);
   }
+  printHex(checksum);
+  add_to_tx_buf(checksum);
 }
 
 bool RNet::checkReceived(){

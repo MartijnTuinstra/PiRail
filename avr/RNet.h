@@ -6,7 +6,7 @@
 #define RNET_BROADCAST_MODULE 0xFF
 #define RNET_MASTER 0x0
 
-#define RNET_MAX_BUFFER 64
+#define RNET_MAX_BUFFER 128
 
 #if defined(__AVR_ATmega328__) || defined(__AVR_ATmega328P__)
 
@@ -176,6 +176,8 @@ class RNet {
 
     void add_to_tx_buf(uint8_t data);
     void add_to_rx_buf(uint8_t data);
+
+    void calculateTxChecksum();
   private:
     uint8_t dev_id;
     uint8_t node_id;

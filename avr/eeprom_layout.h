@@ -5,6 +5,9 @@ struct _EE_Settings {
 	uint16_t blink2;
 	uint8_t pulse;
 	uint8_t poll;
+	uint8_t servo1;
+	uint8_t servo2;
+
 };
 
 struct _EE_IO_Port {

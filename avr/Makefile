@@ -7,7 +7,7 @@ args_main_spi=-D IO_SPI
 File_net_buffer=main_node.o eeprom_layout.o RNet.o uart.o
 args_net_buffer=-D _BUFFER
 File_test=test.o
-dev=atmega328 atmega328p atmega64a atmega2560
+dev=atmega328 atmega328p #atmega64a atmega2560
 #dev=atmega328p atmega2560
 
 avr_gcc_args=-g -Wall -Os -Werror -Wextra
@@ -16,6 +16,9 @@ TARGETS=
 
 # 1 = program, 2 = device
 define compile
+$(1): build/$(1)/$(2).elf
+$(2): build/$(1)/$(2).elf
+
 build/$(1)/$(2).bin.d/stamp:
 	@echo "  [  DIR  ] build/$1/$2.bin.d"
 	@mkdir -p build/$(1)/$(2).bin.d
@@ -31,7 +34,7 @@ build/$(1)/$(2).elf: $$(addprefix build/$(1)/$(2).bin.d/,$$(File_$(1)))
 
 endef
 
-.PHONY: all flash
+.PHONY: all flash $(programs) $(dev)
 
 $(foreach d, $(dev), $(foreach p, $(programs), $(eval TARGETS+= build/$(p)/$(d).elf)))
 $(foreach d, $(dev), $(foreach p, $(programs), $(eval $(call compile,$(p),$(d)))))

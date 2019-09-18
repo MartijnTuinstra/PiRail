@@ -30,7 +30,7 @@ $(SRC)/config.c: $(LIB)/config.h $(LIB)/logger.h
 
 baan: $(BIN)/baan.o $(BIN)/logger.o $(BIN)/rail.o $(BIN)/train.o $(BIN)/system.o $(BIN)/websocket_control.o $(BIN)/websocket_msg.o $(BIN)/module.o \
 		$(BIN)/train_sim.o $(BIN)/com.o $(BIN)/algorithm.o $(BIN)/signals.o $(BIN)/switch.o $(BIN)/Z21.o $(BIN)/Z21_msg.o $(BIN)/websocket.o $(BIN)/encryption.o $(BIN)/IO.o \
-		$(BIN)/config.o $(BIN)/mem.o $(BIN)/submodule.o
+		$(BIN)/config.o $(BIN)/mem.o $(BIN)/submodule.o $(BIN)/pathfinding.o
 	@echo baan
 	$(GCC) -o baan $^
 
@@ -59,6 +59,9 @@ $(LIB)/module.h: $(LIB)/rail.h $(LIB)/switch.h $(LIB)/signals.h
 $(SRC)/module.c: $(LIB)/module.h $(LIB)/system.h \
 		$(LIB)/logger.h $(LIB)/train.h $(LIB)/algorithm.h \
 		$(LIB)/websocket_msg.h $(LIB)/websocket_control.h
+
+$(LIB)/pathfinding.h: $(LIB)/rail.h
+$(SRC)/pathfinding.c: $(LIB)/pathfinding.h $(LIB)/logger.h $(LIB)/switch.h
 
 $(LIB)/rail.h: $(LIB)/config_data.h
 $(SRC)/rail.c: $(LIB)/rail.h $(LIB)/system.h $(LIB)/module.h $(LIB)/switch.h $(LIB)/logger.h $(LIB)/algorithm.h

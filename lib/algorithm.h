@@ -9,14 +9,19 @@
 
   #define AlgorQueueLength 100
 
-
-  extern pthread_mutex_t algor_mutex;
-
   struct s_AlgorQueue {
     Block * B[AlgorQueueLength];
     uint16_t writeIndex;
     uint16_t readIndex;
   };
+
+  struct ConnectList {
+    int length;
+    int list_index;
+    struct rail_link ** R_L;
+  };
+
+  extern pthread_mutex_t algor_mutex;
 
   extern pthread_mutex_t AlgorQueueMutex;
   extern sem_t AlgorQueueNoEmpty;
@@ -58,12 +63,6 @@
   void Algor_train_control(struct algor_blocks AllBlocks, int debug);
 
   void procces_accessoire();
-
-  struct ConnectList {
-    int length;
-    int list_index;
-    struct rail_link ** R_L;
-  };
 
   int init_connect_Algor(struct ConnectList * List);
 

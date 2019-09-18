@@ -2,7 +2,7 @@ BIN=./bin
 SRC=./src
 LIB=./lib
 INCLUDE = -I $(LIB) -I $(SRC)
-ARGS=-std=c99 -lpthread -lssl -lcrypto -lwiringPi -lm -g3 $(INCLUDE) -Werror=unused-variable -Wno-packed-bitfield-compat -Wno-unused-parameter
+ARGS=-std=c99 -lpthread -lssl -lcrypto -lwiringPi -lm -g3 $(INCLUDE) -Werror=unused-variable -Wno-packed-bitfield-compat -Wno-unused-parameter -D _DEFAULT_SOURCE
 
 GCC = gcc $(ARGS)
 GCC_SIMPLE = gcc -g -Wall -W -Werror=unused-variable $(INCLUDE) -std=c99
@@ -32,9 +32,7 @@ baan: $(BIN)/baan.o $(BIN)/logger.o $(BIN)/rail.o $(BIN)/train.o $(BIN)/system.o
 		$(BIN)/train_sim.o $(BIN)/com.o $(BIN)/algorithm.o $(BIN)/signals.o $(BIN)/switch.o $(BIN)/Z21.o $(BIN)/Z21_msg.o $(BIN)/websocket.o $(BIN)/encryption.o $(BIN)/IO.o \
 		$(BIN)/config.o $(BIN)/mem.o $(BIN)/submodule.o
 	@echo baan
-	$(GCC) -o baan $(BIN)/baan.o $(BIN)/logger.o $(BIN)/rail.o $(BIN)/train.o $(BIN)/system.o $(BIN)/websocket_control.o $(BIN)/websocket_msg.o $(BIN)/module.o \
-	$(BIN)/train_sim.o $(BIN)/com.o $(BIN)/algorithm.o $(BIN)/signals.o $(BIN)/switch.o $(BIN)/Z21.o $(BIN)/Z21_msg.o $(BIN)/websocket.o $(BIN)/encryption.o $(BIN)/IO.o \
-	$(BIN)/config.o $(BIN)/mem.o $(BIN)/submodule.o
+	$(GCC) -o baan $^
 
 baan.c: $(LIB)/logger.h $(LIB)/train.h $(LIB)/rail.h $(LIB)/switch.h $(LIB)/com.h $(LIB)/websocket_control.h $(LIB)/system.h $(LIB)/mem.h
 $(BIN)/baan.o: baan.c

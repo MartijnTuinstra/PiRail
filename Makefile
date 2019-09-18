@@ -2,7 +2,7 @@ BIN=./bin
 SRC=./src
 LIB=./lib
 INCLUDE = -I $(LIB) -I $(SRC)
-ARGS=-std=c99 -lpthread -lssl -lcrypto -lwiringPi -lm -g3 $(INCLUDE) -Wall -W -Werror=unused-variable -Wno-packed-bitfield-compat -Wno-unused-parameter
+ARGS=-std=c99 -lpthread -lssl -lcrypto -lwiringPi -lm -g3 $(INCLUDE) -Werror=unused-variable -Wno-packed-bitfield-compat -Wno-unused-parameter
 
 GCC = gcc $(ARGS)
 GCC_SIMPLE = gcc -g -Wall -W -Werror=unused-variable $(INCLUDE) -std=c99
@@ -44,7 +44,7 @@ $(BIN)/baan.o: baan.c
 $(SRC)/mem.c: $(LIB)/mem.h $(LIB)/logger.h
 
 $(LIB)/algorithm.h: $(LIB)/rail.h
-$(SRC)/algorithm.c: $(LIB)/algorithm.h $(LIB)/system.h \
+$(SRC)/algorithm.c: $(LIB)/algorithm.h $(LIB)/system.h $(LIB)/mem.h \
 		$(LIB)/logger.h $(LIB)/train.h $(LIB)/switch.h $(LIB)/signals.h \
 		$(LIB)/module.h $(LIB)/com.h $(LIB)/websocket_msg.h $(LIB)/submodule.h
 

@@ -72,7 +72,7 @@ void Z21_LAN_X_LOCO_INFO(uint8_t length, char * data){
 	E->speed = speed;
 	E->dir = dir;
 
-	engine_calc_real_speed(E);
+	engine_read_speed(E);
 
 	if(E->train){
 		loggerf(INFO, "Engine part of train");

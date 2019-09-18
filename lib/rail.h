@@ -18,6 +18,7 @@
   struct _station;
   struct rail_segment;
 
+  // rail.h
   typedef struct rail_segment Block;
 
   typedef struct _station Station;
@@ -25,8 +26,12 @@
   typedef struct _msswitch MSSwitch;
   typedef struct _signal Signal;
 
+  // IO.h
   typedef struct s_IO_Port IO_Port;
   typedef struct s_node_adr Node_adr;
+
+  // Train.h
+  typedef struct rail_train RailTrain;
 
   typedef struct proces_block {
     uint8_t blocked:1;
@@ -74,7 +79,8 @@
     RESERVED_SWITCH,  // 6
     UNKNOWN           // 7
   };
-
+#define RESTRICTED_SPEED 40
+#define CAUTION_SPEED 90
 
 
 #ifndef RAIL_LINK_TYPES
@@ -111,14 +117,14 @@ enum link_types {
 
     Station * station;
 
-    uint8_t max_speed;
+    uint16_t max_speed;
 
     enum Rail_states state;
     enum Rail_states reverse_state;
     uint8_t reserved:4;
     uint8_t blocked:1;
 
-    uint8_t train; //Follow id
+    RailTrain * train; //Follow id
     uint8_t changed; // 0x1 = IO changed, 0x2 = state changed, 0x4 = Algor blocks changed
     _Bool oneWay;
 

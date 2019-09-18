@@ -40,8 +40,8 @@ void WS_cts_Enable_Disable_SubmoduleState(uint8_t opcode, uint8_t flags);
   void WS_TrainsLib(int client_fd);
   void WS_stc_TrainCategories(int client_fd);
 
-  void WS_NewTrain(char nr,char M,char B);
-  void WS_TrainSplit(char nr,char M1,char B1,char M2,char B2);
+  void WS_NewTrain(RailTrain * T,char M,char B);
+  void WS_TrainSplit(RailTrain * T, char M1,char B1,char M2,char B2);
   void WS_LinkTrain(uint8_t fID, uint8_t tID);
   void WS_TrainData(char data[14]);
 

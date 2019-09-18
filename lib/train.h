@@ -2,6 +2,7 @@
   #define INCLUDE_TRAINS_H
 
   #include <signal.h>
+  #include <pthread.h>
   #include "rail.h"
   #include "route.h"
   #include "config_data.h"
@@ -111,6 +112,35 @@
     int timer_id;
   } Trains;
 
+  typedef struct rail_train {
+    void * p;
+    char type;
+
+    uint8_t link_id;
+
+    uint16_t speed;
+    uint16_t max_speed;
+
+    uint16_t target_speed;
+    uint16_t target_distance;
+
+    uint8_t changing_speed:3;
+
+    pthread_t speed_thread;
+
+    uint8_t category;
+  } RailTrain;
+
+  #define RAILTRAIN_SPEED_T_INIT 0
+  #define RAILTRAIN_SPEED_T_CHANGING 1
+  #define RAILTRAIN_SPEED_T_UPDATE 2
+  #define RAILTRAIN_SPEED_T_DONE 3
+  #define RAILTRAIN_SPEED_T_FAIL 4
+
+  #define IMMEDIATE_SPEED 0
+  #define GRADUAL_FAST_SPEED 1
+  #define GRADUAL_SLOW_SPEED 2
+
   #define TRAIN_14_FAHR_STUFEN 0
   #define TRAIN_28_FAHR_STUFEN 1
   #define TRAIN_128_FAHR_STUFEN 2
@@ -130,7 +160,7 @@
   extern int cars_len;
   extern struct train_composition ** trains_comp;
   extern int trains_comp_len;
-  extern Trains ** train_link;
+  extern RailTrain ** train_link;
   extern int train_link_len;
   extern Engines * DCC_train[9999];
 
@@ -154,16 +184,27 @@
   void create_car(char * name,int nr, char * icon, char type, uint16_t length, uint16_t speed);
   void clear_car(Cars ** E);
 
+  RailTrain * new_railTrain();
+
   int train_read_confs();
   void train_write_confs();
 
   int link_train(int fid, int tid, char type);
   void unlink_train(int fid);
 
+  void engine_set_speed(Engines * E, uint16_t speed);
+  void engine_read_speed(Engines * E);
+
   void train_set_speed(Trains * T, uint16_t speed);
   void train_calc_speed(Trains * T);
+  void train_change_speed(RailTrain * T, uint16_t target_speed, uint8_t type);
 
-  void engine_calc_speed(Engines * E);
-  void engine_calc_real_speed(Engines * E);
-  void train_calc_speed(Trains * T);
+  struct train_speed_timer {
+    RailTrain * T;
+    uint16_t target_speed;
+    uint16_t length;
+  };
+
+  void train_speed_timer_create(RailTrain * T, uint16_t target, uint16_t length);
+  void * train_speed_timer_run(void * args);
 #endif

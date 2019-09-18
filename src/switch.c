@@ -278,11 +278,17 @@ int set_switch_path(void * p, struct rail_link link, int flags){
       if(N->str.p != p)
         set_switch(N, 1);
 
+      if(N->str.p != p)
+        return 0; // Failed to set switch
+
       return set_switch_path(N, N->app, flags);
     }
     else if((N->state & 0x7F) == 1){
       if(N->div.p != p)
         set_switch(N, 0);
+
+      if(N->div.p != p)
+        return 0; // Failed to set switch
 
       return set_switch_path(N, N->app, flags);
     }

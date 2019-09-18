@@ -545,7 +545,7 @@ void WS_stc_TrainCategories(int client_fd){
   _free(data);
 }
 
-void WS_NewTrain(char nr,char M,char B){
+void WS_NewTrain(RailTrain * T,char M,char B){
   //Nr:   follow id of train
   //M,B:  module nr and block nr
   uint16_t msg_ID = WS_init_Message(0);
@@ -556,14 +556,14 @@ void WS_NewTrain(char nr,char M,char B){
   data[0] = WSopc_NewMessage;
   data[1] = ((msg_ID >> 8) & 0x1F) + 0; //type = 0
   data[2] = (msg_ID & 0xFF);
-  data[3] = nr;
+  data[3] = T->link_id;
   data[4] = M;
   data[5] = B;
   ws_send_all(data,6,WS_Flag_Messages);
   WS_add_Message(msg_ID,6,data);
 }
 
-void WS_TrainSplit(char nr,char M1,char B1,char M2,char B2){
+void WS_TrainSplit(RailTrain * T, char M1,char B1,char M2,char B2){
   //Nr:   follow id of train
   //M,B:  module nr and block nr
   uint16_t msg_ID = WS_init_Message(1);
@@ -574,7 +574,7 @@ void WS_TrainSplit(char nr,char M1,char B1,char M2,char B2){
   data[0] = WSopc_NewMessage;
   data[1] = ((msg_ID >> 8) & 0x1F) + 0x20; //type = 1
   data[2] = (msg_ID & 0xFF);
-  data[3] = nr;
+  data[3] = T->link_id;
   data[4] = M1;
   data[5] = B1;
   data[6] = M2;
@@ -1077,7 +1077,7 @@ void WS_trackUpdate(int Client_fd){
         data[(q-1)*4+1] = B->module;
         data[(q-1)*4+2] = B->id;
         data[(q-1)*4+3] = (B->dir << 7) + B->state;
-        data[(q-1)*4+4] = B->train;
+        data[(q-1)*4+4] = 0;//B->train;
         q++;
 
         B->changed &= ~(State_Changed);
@@ -1197,7 +1197,7 @@ void WS_NewClient_track_Switch_Update(int Client_fd){
           buf[(q-1)*4+1] = B->module;
           buf[(q-1)*4+2] = B->id;
           buf[(q-1)*4+3] = (B->dir << 7) + B->state;
-          buf[(q-1)*4+4] = B->train;
+          buf[(q-1)*4+4] = 0;//B->train;
           q++;
 
           B->changed &= ~(State_Changed);
@@ -1302,9 +1302,10 @@ void WS_NewClient_track_Switch_Update(int Client_fd){
   loggerf(INFO, "Z21_GET_LOCO_INFO check");
   for(int i = 1;i<trains_len;i++){
     if(train_link[i]){
-      for(int j = 0; j < train_link[i]->nr_engines; j++){
-        Z21_get_engine(train_link[i]->engines[j]->DCC_ID);
-      }
+      //TODO fix for RailTrain
+      //for(int j = 0; j < train_link[i]->nr_engines; j++){
+      //  Z21_get_engine(train_link[i]->engines[j]->DCC_ID);
+      //}
     }
   }
 

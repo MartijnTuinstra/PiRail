@@ -54,6 +54,7 @@
   void Algor_rail_state(struct algor_blocks AllBlocks, int debug);
   void Algor_apply_rail_state(Algor_Block blocks, enum Rail_states state);
   void Algor_signal_state(struct algor_blocks AllBlocks, int debug);
+  void Algor_train_control(struct algor_blocks AllBlocks, int debug);
 
   void procces_accessoire();
 

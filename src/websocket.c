@@ -120,7 +120,8 @@ int websocket_decode(uint8_t data[1024], struct web_client_t * client){
       loggerf(INFO, "Linking train %i with %s\n",fID,trains[tID]->name);
       #warning FIX
       if((return_value = link_train(fID,tID,data[3] & 0x80)) == 1){
-        WS_clear_message(mID, 1);
+        // WS_clear_message(mID, 1);
+        ws_send(client->fd,(char *)data,5,255);
 
         Z21_get_train(trains[tID]);
       }
@@ -142,10 +143,9 @@ int websocket_decode(uint8_t data[1024], struct web_client_t * client){
         Z21_Set_Loco_Drive_Train(trains[id]);
       }
       else if(id < engines_len){ //Engine
-        engines[id]->cur_speed = speed;
         engines[id]->dir = (data[2] & 0x10) >> 4;
 
-        engine_calc_speed(engines[id]);
+        engine_set_speed(engines[id], speed);
 
         Z21_Set_Loco_Drive_Engine(engines[id]);
       }
@@ -387,8 +387,8 @@ void ws_send_all(char * data,int length,int flag){
 
   websocket_create_msg(data, length, outbuf, &outlength);
 
-  printf("WS send (all)\t");
-  print_hex(data, length);
+  // printf("WS send (all)\t");
+  // print_hex(data, length);
 
   pthread_mutex_lock(&m_websocket_send);
 

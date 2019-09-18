@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <pthread.h>
+#include <math.h>
 
 #include "system.h"
 #include "mem.h"
@@ -36,7 +37,7 @@ Cars ** cars;
 int cars_len = 0;
 struct train_composition ** trains_comp;
 int trains_comp_len = 0;
-Trains ** train_link;
+RailTrain ** train_link;
 int train_link_len;
 
 struct cat_conf * train_P_cat;
@@ -61,9 +62,8 @@ void alloc_trains(){
   cars_len = 10;
   trains_comp = _calloc(10, struct train_composition *);
   trains_comp_len = 10;
-  train_link = _calloc(10,Trains *);
+  train_link = _calloc(10,RailTrain *);
   train_link_len = 10;
-  train_link[0] = (Trains *)1;
 }
 
 void free_trains(){
@@ -102,6 +102,15 @@ void free_trains(){
   engines = _free(engines);
   cars = _free(cars);
   trains_comp = _free(trains_comp);
+
+  for(int i = 0; i < train_link_len; i++){
+    if(!train_link[i])
+      continue;
+
+    _free(train_link[i]);
+    train_link[i] = 0;
+  }
+
   train_link = _free(train_link);
 
   for(int i = 0; i < train_P_cat_len; i++){
@@ -273,6 +282,14 @@ void clear_car(Cars ** C){
   _free((*C)->icon_path);
   _free((*C)->funcs);
   *C = _free((*C));
+}
+
+RailTrain * new_railTrain(){
+  RailTrain * T = _calloc(1, RailTrain);
+  uint16_t id = find_free_index(train_link, train_link_len);
+  T->link_id = id;
+  train_link[id] = T;
+  return T;
 }
 
 int train_read_confs(){
@@ -532,50 +549,75 @@ void train_write_confs(){
 int link_train(int fid, int tid, char type){
   //Link = follow ID / train_link id
   //train = tID
+  RailTrain * RT = train_link[fid];
+
+  if(!RT){
+    loggerf(ERROR, "No RailTrain found");
+    return 1;
+  }
 
   // If it is only a engine -> make it a train
   if(type){
-    // Create train from engine
-    loggerf(CRITICAL, "CREATE TRAIN FROM ENGINE, NOT IMPLEMENTED");
-    return 0;
-  }
+    if(engines[tid]->use){
+      loggerf(ERROR, "Engine allready used");
+      _free(RT);
+      return 3;
+    }
 
-  //Check if all engines are available
-  for(int i = 0; i < trains[tid]->nr_engines; i++){
-    if(trains[tid]->engines[i]->use){
-      return 2; //Engine not available
+    // Create train from engine
+    RT->type = TRAIN_ENGINE_TYPE;
+    RT->p = engines[tid];
+    RT->max_speed = engines[tid]->max_speed;
+
+    //Lock engines
+    engines[tid]->use = 1;
+  }
+  else{
+    for(int  i = 0; i < trains[tid]->nr_engines; i++){
+      if(trains[tid]->engines[i]->use){
+        loggerf(ERROR, "Enging of Trian allready used");
+        _free(RT);
+        return 3;
+      }
+    }
+
+    // Crate Rail Train
+    RT->type = TRAIN_TRAIN_TYPE;
+    RT->p = trains[tid];
+    RT->max_speed = trains[tid]->max_speed;
+
+    //Lock all engines    
+    for(int i = 0; i < trains[tid]->nr_engines; i++){
+      trains[tid]->engines[i]->use = 1;
     }
   }
 
-  //Link train
-  if(train_link[fid] == NULL){
-    train_link[fid] = trains[tid];
-  }else{
-    printf("Train_link[%i] not empty (%x)\n", fid, (unsigned int)train_link[fid]);
-    return 3; //Train allready occupied
-  }
-
-  //Lock all engines
-  for(int i = 0; i < trains[tid]->nr_engines; i++){
-    trains[tid]->engines[i]->use = 1;
-  }
   return 1;
 }
 
-void unlink_train(int fid){
+void unlink_train(int id){
+  //TODO implement RailTrain type
   //Unlock all engines
-  for(int i = 0; i < train_link[fid]->nr_engines; i++){
-    train_link[fid]->engines[i]->use = 0;
-  }
+  //for(int i = 0; i < train_link[fid]->nr_engines; i++){
+  //  train_link[fid]->engines[i]->use = 0;
+  //}
   //Reset link
-  train_link[fid] = NULL;
+  _free(train_link[id]);
+  train_link[id] = NULL;
 }
 
 // Speed
 
-void engine_calc_speed(Engines * E){
+void engine_set_speed(Engines * E, uint16_t speed){
+  if(!E){
+    loggerf(ERROR, "No Engine");
+    return;
+  }
+  // Convert from speed to steps
   struct engine_speed_steps left;
   struct engine_speed_steps right;
+
+  E->cur_speed = speed;
 
   left.speed = 0; left.step = 0;
   right.speed = 0; right.step = 0;
@@ -598,7 +640,12 @@ void engine_calc_speed(Engines * E){
   E->speed = step;
 }
 
-void engine_calc_real_speed(Engines * E){
+void engine_read_speed(Engines * E){
+  if(!E){
+    loggerf(ERROR, "No Engine");
+    return;
+  }
+  // Convert from steps to speed
   struct engine_speed_steps * left;
   struct engine_speed_steps * right;
 
@@ -626,17 +673,122 @@ void engine_calc_real_speed(Engines * E){
 }
 
 void train_set_speed(Trains * T, uint16_t speed){
+  if(!T){
+    loggerf(ERROR, "No Train");
+    return;
+  }
   T->cur_speed = speed;
 
   for(int i = 0; i < T->nr_engines; i++){
-    T->engines[i]->cur_speed = speed;
-    engine_calc_speed(T->engines[i]);
+    engine_set_speed(T->engines[i], speed);
   }
 }
 
 void train_calc_speed(Trains * T){
-  for(int i = 0; i < T->nr_engines; i++){
-    T->engines[i]->cur_speed = T->cur_speed;
-    engine_calc_speed(T->engines[i]);
+  if(!T){
+    loggerf(ERROR, "No Train");
+    return;
   }
+  for(int i = 0; i < T->nr_engines; i++){
+    engine_set_speed(T->engines[i], T->cur_speed);
+  }
+}
+
+void train_change_speed(RailTrain * T, uint16_t target_speed, uint8_t type){
+  if(!T || !T->p){
+    loggerf(ERROR, "No Train");
+    return;
+  }
+  loggerf(INFO, "train_change_speed -> %i", target_speed);
+  //T->target_speed = target_speed;
+
+  if(type == IMMEDIATE_SPEED){
+    if(T->type == TRAIN_TRAIN_TYPE){
+      train_set_speed(T->p, target_speed);
+    }
+    else{
+      engine_set_speed(T->p, target_speed);
+    }
+  }
+  else if(type == GRADUAL_SLOW_SPEED){
+    train_speed_timer_create(T, target_speed, 150);
+  }
+  else if(type == GRADUAL_FAST_SPEED){
+    train_speed_timer_create(T, target_speed, 50);
+  }
+}
+
+
+
+void train_speed_timer_create(RailTrain * T, uint16_t target, uint16_t length){
+  if(!T){
+    loggerf(ERROR, "No Train");
+    return;
+  }
+
+  if (T->changing_speed == RAILTRAIN_SPEED_T_DONE ||
+      T->changing_speed == RAILTRAIN_SPEED_T_FAIL){
+    pthread_join(T->speed_thread, NULL);
+  }
+
+  if (T->speed == target){
+    return;
+  }
+
+  if (T->changing_speed == RAILTRAIN_SPEED_T_INIT ||
+      T->changing_speed == RAILTRAIN_SPEED_T_DONE){
+
+    T->target_speed = target;
+    T->target_distance = length;
+    pthread_create(&T->speed_thread, NULL, train_speed_timer_run, (void *)T);
+    T->changing_speed = RAILTRAIN_SPEED_T_CHANGING;
+  }
+  else if(T->changing_speed == RAILTRAIN_SPEED_T_CHANGING){
+    T->target_speed = target;
+    T->target_distance = length;
+    T->changing_speed = RAILTRAIN_SPEED_T_UPDATE;
+  }
+}
+void * train_speed_timer_run(void * args){
+  RailTrain * T = ((RailTrain *)args);
+  printf("Train_speed_timer_run (%i -> %ikm/h, %icm)\n", T->speed, T->target_speed, T->target_distance);
+  // v = v0 + at;
+  // x = v0 + 0.5at^2;
+  // a = 0.5/x * (v^2 - v0^2);
+  // t = (v - v0) / a
+  float real_distance = 160.0 * 0.00001 * T->target_distance;
+  float acceleration = (1 / (2 * real_distance));
+  acceleration *= (T->target_speed - T->speed) * (T->target_speed + T->speed);
+  uint16_t start_speed = T->speed;
+
+  printf("Train_speed_timer_run (accel at %f km/h^2)\n", acceleration);
+  if (acceleration > 64800.0){ // 5 m/s^2
+    printf("Accel to large, reduced to 5.0m/s^2)\n");
+    acceleration = 64800.0;
+  }
+  else if (acceleration < -129600.0){
+    printf("Deccell to large, reduced to 10.0m/s^2)\n");
+    acceleration = -129600.0;
+  }
+
+  if (acceleration == 0 || acceleration == 0.0){
+    T->changing_speed = RAILTRAIN_SPEED_T_DONE;
+    return NULL;
+  }
+
+  float time = sqrt(2 * acceleration * real_distance + start_speed * start_speed) - start_speed;
+  time /= acceleration;
+  time *= 3600; // convert to seconds
+
+  printf("Takes %f seconds\n", time);
+  uint16_t steps = (uint16_t)(time / 0.5);
+  uint32_t steptime = ((time / steps) * 1000000); // convert to usec
+
+  for(uint16_t i = 0; i <= steps; i++){
+    usleep(steptime);
+    T->speed = (start_speed + acceleration * ((steptime * i) / 1000000.0 / 3600.0)) + 0.01; // hours
+    printf("%ikm/h\n", T->speed);
+  }
+  T->changing_speed = RAILTRAIN_SPEED_T_DONE;
+  return NULL;
 }

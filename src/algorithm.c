@@ -276,7 +276,6 @@ void Algor_Set_Changed(struct algor_blocks * blocks){
       AB->B[j]->changed |= Block_Algor_Changed;
     }
   }
-  printf("\n");
 }
 
 void process(Block * B,int flags){
@@ -347,6 +346,20 @@ void process(Block * B,int flags){
   // Algor_print_block_debug(B->Alg);
 
   Algor_signal_state(B->Alg, debug);
+
+  // Apply train algorithm only if there is a train on the block and is the front of the train
+  if(B->train){
+    if(B->Alg.BN->B[0]){
+      if(!B->Alg.BN->B[0]->train)
+        Algor_train_control(B->Alg, debug);
+    }
+    else{
+      // Stop train no next block!!
+      loggerf(INFO, "EMEG BRAKE, NO BLOCK");
+      train_change_speed(B->train, 0, IMMEDIATE_SPEED);
+    }
+
+  }
 
   //Train Control
 
@@ -513,7 +526,15 @@ void Algor_print_block_debug(struct algor_blocks AllBlocks){
   }else{
     sprintf(output, "%s                            ", output);
   }
-  sprintf(output, "%sA%3i %2x%02i:%02i;T%-2iD%-2iS%-2i", output,B->length,B->type,B->module,B->id,B->train,B->dir,B->state);
+  sprintf(output, "%sA%3i %2x%02i:%02i;",output,B->length,B->type,B->module,B->id);
+  if(B->train){
+    sprintf(output, "T");
+  }
+  else{
+    sprintf(output, " ");
+  }
+  sprintf(output, "D%-2iS%-2i", B->dir,B->state);
+
   if(B->blocked){
     sprintf(output, "%sB", output);
   }
@@ -1094,7 +1115,7 @@ void Algor_train_following(struct algor_blocks AllBlocks, int debug){
     //NEW TRAIN
     // find a new follow id
     // loggerf(ERROR, "FOLLOW ID INCREMENT, bTrain");
-    B->train = find_free_index(train_link, train_link_len);
+    B->train = new_railTrain();
 
 
     if(B->reserved){
@@ -1197,6 +1218,7 @@ void Algor_rail_state(struct algor_blocks AllBlocks, int debug){
     }
     //B->type == SPECIAL
     else{
+      loggerf(INFO, "DANGER switch block %i:%i", B->module, B->id);
       B->state = DANGER;
       B->changed |= State_Changed;
 
@@ -1221,7 +1243,8 @@ void Algor_rail_state(struct algor_blocks AllBlocks, int debug){
       BP.B[0]->changed |= State_Changed;
     }
   }
-  else if(!B->blocked && !BN.blocked && !BNN.blocked && !BP.blocked && !BPP.blocked && B->state != RESERVED && B->state != RESERVED_SWITCH){
+  else if(!B->blocked && !BN.blocked && !BNN.blocked && !BP.blocked && !BPP.blocked && BN.blocks > 0 && BP.blocks > 0 && B->state != RESERVED && B->state != RESERVED_SWITCH && BN.B[0]->state == PROCEED){
+    // Algor_print_block_debug(AllBlocks);
     B->state = PROCEED;
     B->changed |= State_Changed;
   }
@@ -1331,7 +1354,41 @@ void Algor_signal_state(struct algor_blocks AllBlocks, int debug){
   //     }
   //   }
   // }
+}
 
+void Algor_train_control(struct algor_blocks AllBlocks, int debug){
+  loggerf(TRACE, "Algor_train_control");
+  //Unpack AllBlocks
+  Block * B        =  AllBlocks.B;
+  Algor_Block BN   = *AllBlocks.BN;
+  Algor_Block BNN  = *AllBlocks.BNN;
+
+  RailTrain * T = B->train;
+
+  if(T->target_speed > BN.B[0]->max_speed || T->speed > BN.B[0]->max_speed){
+    loggerf(WARNING, "Next block speed limit");
+    train_change_speed(T, BN.B[0]->max_speed, GRADUAL_SLOW_SPEED);
+  }
+  else if(BN.blocked){
+    loggerf(WARNING, "Train Next block Blocked");
+    train_change_speed(T, 0, IMMEDIATE_SPEED);
+  }
+  else if(BN.B[0]->state == DANGER){
+    loggerf(WARNING, "Train Next block Blocked");
+    train_change_speed(T, 0, GRADUAL_FAST_SPEED);
+  }
+  else if(BN.B[0]->state == CAUTION){
+    if(T->speed > CAUTION_SPEED){
+      loggerf(WARNING, "Train Next block Caution");
+      train_change_speed(T, CAUTION_SPEED, GRADUAL_FAST_SPEED);
+    }
+  }
+  else if(BN.B[0]->max_speed > T->speed && 
+          ((BN.blocks > 1 && BN.B[1]->max_speed >= BN.B[0]->max_speed) || 
+           (BN.blocks == 1 &&  BNN.blocks > 0 && BNN.B[0]->max_speed >= BN.B[0]->max_speed))) {
+    loggerf(WARNING, "Train Speed Up");
+    train_change_speed(T, BN.B[0]->max_speed, GRADUAL_FAST_SPEED);
+  }
 
 }
 
@@ -1341,9 +1398,9 @@ void procces_accessoire(){
   //TODO FIX, Output_changed into Node_changed
   /*
   if(Units[i] && Units[i]->output_changed){
-    printf("Signals of module %i changed\n",i);
-    for(int j = 0;j<Units[i]->signal_len;j++){
-    if(Units[i]->Sig[j]){
+    printf("Output of module %i changed\n",i);
+    for(int j = 0;j<Units[i]->IO_Nodes;j++){
+    for(int k = 0;k < Units[i]->Node[j].ioports; k++){
       printf("Signal id: %i\n",Units[i]->Sig[j]->id);
     }
     }
@@ -1351,6 +1408,7 @@ void procces_accessoire(){
     Units[i]->output_changed = FALSE;
   }
   */
+  Units[i]->io_out_changed = FALSE;
   }
 }
 

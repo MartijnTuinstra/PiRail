@@ -2,10 +2,6 @@
 #ifndef _INCLUDE_system_H
   #define _INCLUDE_system_H
 
-  
-  #define _BSD_SOURCE
-  #define _GNU_SOURCE
-
   #include <stdio.h>
   #include <stdlib.h>
   #include <stdint.h>

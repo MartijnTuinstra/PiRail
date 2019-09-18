@@ -9,6 +9,7 @@
 
   #define AlgorQueueLength 100
 
+
   extern pthread_mutex_t algor_mutex;
 
   struct s_AlgorQueue {

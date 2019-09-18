@@ -1,5 +1,3 @@
-#define _BSD_SOURCE 
-
 #include <dirent.h>
 #include <unistd.h>
 

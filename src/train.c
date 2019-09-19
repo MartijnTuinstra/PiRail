@@ -15,6 +15,8 @@
 #include "logger.h"
 #include "config.h"
 
+#include "pathfinding.h"
+
 // #include "./../lib/pathfinding.h"
 // #include "./../lib/com.h"
 // #include "./../lib/Z21.h"
@@ -572,7 +574,7 @@ int link_train(int fid, int tid, char type){
   else{
     for(int  i = 0; i < trains[tid]->nr_engines; i++){
       if(trains[tid]->engines[i]->use){
-        loggerf(ERROR, "Enging of Trian allready used");
+        loggerf(ERROR, "Engine of Train allready used");
         _free(RT);
         return 3;
       }
@@ -788,4 +790,13 @@ void * train_speed_timer_run(void * args){
   }
   T->changing_speed = RAILTRAIN_SPEED_T_DONE;
   return NULL;
+}
+
+void train_set_route(RailTrain * T, Block * dest){
+  struct pathfindingstep path = pathfinding(T->B, dest);
+
+  if(path.found){
+    T->route = 1;
+    T->instructions = path.instructions;
+  }
 }

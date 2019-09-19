@@ -28,6 +28,8 @@ struct pathfindingstep pathfinding(Block * start, Block * end){
 
   t = clock() - t;
   printf ("It took me %d clicks (%f seconds).\n",t,((float)t)/CLOCKS_PER_SEC);
+
+  return result;
 }
 
 // Recursive Function (tree search)
@@ -153,4 +155,16 @@ void pathfinding_print(struct pathinstruction * instr){
       instr = 0;
     }
   }
+}
+
+void free_pathinstructions(struct pathinstruction * instr){
+  if(instr->next_instruction){
+    for(uint8_t i = 0; i < instr->states; i++){
+      if(instr->optionalstates[i])
+        free_pathinstructions(instr->next_instruction[i]);
+    }
+    _free(instr->next_instruction);
+  }
+  _free(instr->optionalstates);
+  _free(instr);
 }

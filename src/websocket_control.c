@@ -6,6 +6,7 @@
 #include "config.h"
 
 #include "websocket_control.h"
+#include "websocket_msg.h"
 #include "logger.h"
 
 char websocket_magic_string[] = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
@@ -238,6 +239,8 @@ void * websocket_client_connect(void * p){
       WS_Track_LayoutDataOnly(i, client->fd);
     }
 
+    WS_stc_StationLib(client->fd);
+
     if(_SYS->_STATE & STATE_Modules_Coupled){
       WS_Track_Layout(client->fd);
       
@@ -259,6 +262,29 @@ void * websocket_client_connect(void * p){
     WS_CarsLib(client->fd);
     WS_TrainsLib(client->fd);
     WS_stc_TrainCategories(client->fd);
+
+    //train_link, train_link_lenlink_id
+    // Send all linked trains
+    for(uint8_t i = 0; i < train_link_len; i++){
+      if(!train_link[i])
+        continue;
+
+      struct s_opc_LinkTrain msg;
+      msg.follow_id = i;
+      if(train_link[i]->type){
+        loggerf(WARNING, "Sending railtrain T %i\t(%i) %s", i, ((Trains *)train_link[i]->p)->id, ((Trains *)train_link[i]->p)->name);
+        msg.real_id = ((Trains *)train_link[i]->p)->id;
+        msg.type = 0;
+      }
+      else{
+        loggerf(WARNING, "Sending railtrain E %i\t(%i) %s", i, ((Engines *)train_link[i]->p)->id, ((Engines *)train_link[i]->p)->name);
+        msg.real_id = ((Engines *)train_link[i]->p)->id;
+        msg.type = 1;
+      }
+      msg.message_id = 0;
+
+      WS_stc_LinkTrain(&msg);
+    }
   }
 
   if(_SYS->Z21_State & _SYS_Module_Run){
@@ -282,7 +308,7 @@ void * websocket_client_connect(void * p){
     }
     else if(status == -7){
       timeout_counter++;
-      loggerf(INFO, "%i Time out counter %i", client->id, timeout_counter);
+      loggerf(DEBUG, "%i Time out counter %i", client->id, timeout_counter);
 
       if(timeout_counter > 20){
         if(!websocket_ping(client->fd)){

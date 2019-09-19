@@ -122,7 +122,7 @@ void * clear_Block(Block * B){
   return 0;
 }
 
-void Create_Station(int module, int id, char * name, char name_len, enum Station_types type, int len, Block ** blocks){
+void Create_Station(int module, int id, char * name, char name_len, enum Station_types type, int len, uint8_t * blocks){
   Station * Z = _calloc(1, Station);
   Z->module = module;
   Z->id = id;
@@ -143,8 +143,17 @@ void Create_Station(int module, int id, char * name, char name_len, enum Station
     Units[Z->module]->station_len += 8;
   }
 
+  Units[Z->module]->St[Z->id] = Z;
+
+  Z->blocks = _calloc(Z->blocks_len, void *);
+
   for(int i = 0; i < len; i++){
-    Z->blocks[find_free_index(Z->blocks, Z->blocks_len)] = blocks[i];
+    Z->blocks[i] = U_B(module, blocks[i]);
+  }
+
+  if(!stations){
+    stations = _calloc(1, void *);
+    stations_len = 1;
   }
 
   Z->uid = find_free_index(stations, stations_len);

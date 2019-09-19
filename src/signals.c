@@ -140,7 +140,7 @@ void set_signal(Signal * Si, enum Rail_states state){
       sprintf(out, "%s->%i PROCEED", out, state);
     else
       sprintf(out, "%s->%i STATE", out, state);
-    loggerf(INFO, "%s", out);
+    loggerf(DEBUG, "%s", out);
     // Update state
     Si->state = state;
     

@@ -5,6 +5,20 @@
 
   #include "websocket_control.h"
 
+
+  struct __attribute__((__packed__)) s_opc_LinkTrain {
+    uint8_t follow_id;
+    uint8_t real_id;
+    uint16_t type:1;
+    uint16_t message_id:15;
+  };
+
+  struct __attribute__((__packed__)) s_opc_TrainRoute {
+    uint8_t train_id;
+    uint8_t station_id;
+    uint8_t module_id;
+  };// * data
+
   struct __attribute__((__packed__)) s_opc_AddNewCartolib {
     uint16_t nr;
     uint16_t max_speed;
@@ -80,10 +94,13 @@
 
 
 
-
   struct s_WS_Data {
     uint8_t opcode;
     union {
+      struct s_opc_LinkTrain             opc_LinkTrain;
+
+      struct s_opc_TrainRoute            opc_TrainRoute;
+
       struct s_opc_AddNewCartolib        opc_AddNewCartolib;
       struct s_opc_AddNewCartolib_res    opc_AddNewCartolib_res;
       struct s_opc_EditCarlib            opc_EditCarlib;

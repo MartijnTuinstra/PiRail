@@ -314,6 +314,163 @@ int set_switch_path(void * p, struct rail_link link, int flags){
   return 0;
 }
 
+int Next_check_Switch_Route(void * p, struct rail_link link, int flags, struct pathinstruction * route, struct pathinstruction * instr){
+  loggerf(INFO, "Next_check_Switch_Route (%x, %i, %x)", (unsigned int)&link, flags, (unsigned int)route);
+
+  uint8_t return_state = 1;
+
+  //Check if switch is occupied
+  if (link.type == RAIL_LINK_S || link.type == RAIL_LINK_s) {
+    if(((Switch *)link.p)->Detection && ((Switch *)link.p)->Detection->state == RESERVED_SWITCH)
+      return 0;
+  }
+  else if (link.type == RAIL_LINK_M || link.type == RAIL_LINK_m) {
+    if(((MSSwitch *)link.p)->Detection && ((Switch *)link.p)->Detection->state == RESERVED_SWITCH)
+      return 0;
+  }
+
+  if(link.type == RAIL_LINK_S){
+    Switch * Sw = link.p;
+    loggerf(INFO, " S (state: %i, str.p: %x, div.p: %x)", (Sw->state & 0x7F), (unsigned int)Sw->str.p, (unsigned int)Sw->div.p);
+
+    if(Sw != route->p){
+      loggerf(ERROR, "Switch not in instrutions %x!=%x", (unsigned int)Sw, (unsigned int)route->p);
+      return 0;
+    }
+
+    if(route->states == 1){
+      // Only one possible route
+      instr->states = 1;
+      instr->optionalstates = _calloc(1, uint8_t);
+      instr->next_instruction = _calloc(1, void *);
+      instr->next_instruction[0] = _calloc(1, struct pathinstruction);
+      instr->optionalstates[0] = route->optionalstates[0];
+      instr->p = route->p;
+      instr->type = route->type;
+
+      if(instr->optionalstates[0]){
+        if((Sw->state & 0x7F) == 0)
+          return_state = 0; // wrong state
+        Next_check_Switch_Route(Sw, Sw->div, flags, route, instr->next_instruction[0]);
+      }
+      else{
+        if((Sw->state & 0x7F) == 1)
+          return_state = 0; // wrong state
+        Next_check_Switch_Route(Sw, Sw->str, flags, route, instr->next_instruction[0]);
+      }
+    }
+  }
+  else if(link.type == RAIL_LINK_s){
+    // Check if switch is in correct state
+    // and continue to next switch
+    Switch * Sw = link.p;
+    loggerf(INFO, " s (state: %i, str.p: %x, div.p: %x)", (Sw->state & 0x7F), (unsigned int)Sw->str.p, (unsigned int)Sw->div.p);
+    if((Sw->state & 0x7F) == 0){
+      return_state = Next_check_Switch_Route(Sw, Sw->app, flags, route, instr);
+      
+      if(Sw->str.p != p)
+        return_state = 0;
+    }
+    else if((Sw->state & 0x7F) == 1){
+      return_state = set_switch_path(Sw, Sw->app, flags);
+
+      if(Sw->div.p != p)
+        return_state = 0; // Failed to set switch
+    }
+
+  }
+  else if(link.type == RAIL_LINK_R){
+    Block * B = link.p;
+    if(B->type == STATION && B->station->state){
+      loggerf(WARNING, "Block is blocked station");
+    }
+  }
+
+  return return_state;
+}
+
+int set_switch_route(void * p, struct rail_link link, int flags, struct pathinstruction * instr){
+  loggerf(INFO, "set_switch_route (%x, %x, %i, %x)", (unsigned int)p, (unsigned int)&link, flags, (unsigned int)instr);
+
+  //Check if switch is occupied
+  if (link.type == RAIL_LINK_S || link.type == RAIL_LINK_s) {
+    if(((Switch *)link.p)->Detection && ((Switch *)link.p)->Detection->state == RESERVED_SWITCH)
+      return 0;
+  }
+  else if (link.type == RAIL_LINK_M || link.type == RAIL_LINK_m) {
+    if(((MSSwitch *)link.p)->Detection && ((Switch *)link.p)->Detection->state == RESERVED_SWITCH)
+      return 0;
+  }
+
+
+  if(link.type == RAIL_LINK_S){
+    // Go to next switch
+    Switch * Sw = link.p;
+
+    if(Sw != instr->p){
+      loggerf(ERROR, "Wrong Switch");
+    }
+
+    if(instr->states == 1){
+      set_switch(Sw, instr->optionalstates[0]);
+
+      void * tmp = instr->next_instruction[0];
+      // _free(instr->optionalstates);
+      // _free(instr->next_instruction);
+      // _free(instr);
+
+      if((Sw->state & 0x7F) == 0)
+        return set_switch_route(Sw, Sw->str, flags, tmp);
+      else
+        return set_switch_route(Sw, Sw->div, flags, tmp);
+    }
+    
+  }
+  else if(link.type == RAIL_LINK_s){
+    // Check if switch is in correct state
+    // and continue to next switch
+    Switch * Sw = link.p;
+    loggerf(TRACE, "set s (state: %i, str.p: %x, div.p: %x)", (Sw->state & 0x7F), (unsigned int)Sw->str.p, (unsigned int)Sw->div.p);
+    if((Sw->state & 0x7F) == 0){
+      if(Sw->str.p != p)
+        set_switch(Sw, 1);
+
+      if(Sw->str.p != p)
+        return 0; // Failed to set switch
+
+      return set_switch_route(Sw, Sw->app, flags, instr);
+    }
+    else if((Sw->state & 0x7F) == 1){
+      if(Sw->div.p != p)
+        set_switch(Sw, 0);
+
+      if(Sw->div.p != p)
+        return 0; // Failed to set switch
+
+      return set_switch_route(Sw, Sw->app, flags, instr);
+    }
+  }
+  else if(link.type == RAIL_LINK_M){
+    loggerf(ERROR, "IMPLEMENT");
+    MSSwitch * N = link.p;
+    if(N->sideB[N->state].p == p){
+      return 1;
+    }
+  }
+  else if(link.type == RAIL_LINK_m){
+    loggerf(ERROR, "IMPLEMENT");
+    MSSwitch * N = link.p;
+    if(N->sideA[N->state].p == p){
+      return 1;
+    }
+  }
+
+  else if (link.type == RAIL_LINK_R || link.type == 'D'){
+    return 1;
+  }
+  return 1;
+}
+
 int reserve_switch_path(void * p, struct rail_link link, int flags){
   loggerf(TRACE, "reserve_switch_path (%x, %x, %i)", (unsigned int)p, (unsigned int)&link, flags);
   if((flags & 0x80) == 0){

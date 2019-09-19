@@ -3,6 +3,7 @@
   
   #include "rail.h"
   #include "train.h"
+  #include "pathfinding.h"
 
   #define U_Sw(U, A) Units[U]->Sw[A]
   #define U_MSSw(U, A) Units[U]->MSSw[A]
@@ -111,6 +112,9 @@
   int set_msswitch(MSSwitch * S, uint8_t state);
 
   int throw_multiple_switches(uint8_t len, char * data);
+
+  int Next_check_Switch_Route(void * p, struct rail_link link, int flags, struct pathinstruction * route, struct pathinstruction * instr);
+  int set_switch_route(void * p, struct rail_link link, int flags, struct pathinstruction * instr);
 
   int set_switch_path(void * p, struct rail_link link, int flags);
   int reserve_switch_path(void * p, struct rail_link link, int flags);

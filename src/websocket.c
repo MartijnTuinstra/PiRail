@@ -67,7 +67,7 @@ int websocket_decode(uint8_t data[1024], struct web_client_t * client){
 
   }else if((data[0] & 0xC0) == 0xC0){ //Admin settings
     loggerf(TRACE, "Admin Settings  %02X", data[0]);
-    if(data[0] == WSopc_Admin_Login){ //Admin login
+    if(d->opcode == WSopc_Admin_Login){ //Admin login
       if(strcmp((char *)&data[1],WS_password) == 0){
         loggerf(INFO, "SUCCESSFULL LOGIN");
         //0xc3,0xbf,0x35,0x66,0x34,0x64,0x63,0x63,0x33,0x62,0x35,0x61,0x61,0x37,0x36,0x35,0x64,0x36,0x31,0x64,0x38,0x33,0x32,0x37,0x64,0x65,0x62,0x38,0x38,0x32,0x63,0x66,0x39,0x39
@@ -112,23 +112,8 @@ int websocket_decode(uint8_t data[1024], struct web_client_t * client){
   }
   else if(data[0] & 0x40){ //Train stuff
     loggerf(TRACE, "Train Settings");
-    if(data[0] == WSopc_LinkTrain){ //Link train
-      uint8_t fID = data[1]; //follow ID
-      uint8_t tID = data[2]; //TrainID
-      uint16_t mID = ((data[3] & 0x1F) << 8)+data[4];
-      char return_value;
-      loggerf(INFO, "Linking train %i with %s\n",fID,trains[tID]->name);
-      #warning FIX
-      if((return_value = link_train(fID,tID,data[3] & 0x80)) == 1){
-        // WS_clear_message(mID, 1);
-        ws_send(client->fd,(char *)data,5,255);
-
-        Z21_get_train(trains[tID]);
-      }
-      else{
-        loggerf(WARNING, "Failed link_train()\n");
-        WS_clear_message(mID, return_value); //Failed
-      }
+    if(d->opcode == WSopc_LinkTrain){ //Link train
+      WS_cts_LinkTrain((void *)&d->data, client);
     }
     else if(data[0] == WSopc_TrainSpeed){ //Train speed control
       uint16_t id = data[1] + ((data[2] & 0xC0) << 2);
@@ -157,7 +142,7 @@ int websocket_decode(uint8_t data[1024], struct web_client_t * client){
 
     }
     else if(data[0] == WSopc_TrainAddRoute){ //Add route to train
-
+      WS_cts_TrainRoute(&d->data.opc_TrainRoute, client);
     }
     else if(data[0] == WSopc_TrainSubscribe){
       WS_TrainSubscribe(&data[1], client);

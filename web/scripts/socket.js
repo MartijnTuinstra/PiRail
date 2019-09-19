@@ -336,8 +336,17 @@ websocket.add_opcodes([
       opcode: 0x41,
       name: "LinkTrain",
       send: function(data){
-        return [data.fid, data.rid, ((type == "E")?0x80:0) + ((mid & 0x1F) >> 8)];
+        return [data.fid, data.real_id, ((data.type == "E")?1:0) + ((data.msg_id & 0x7F00) >> 7), data.msg_id & 0xFF];
       },
+      recv: function(data){
+        var follow_id = data[0];
+        var train_id = data[1];
+        var type = (data[2] & 0x1);
+
+        var msg_id = ((data[2] & 0xFE) << 7) + data[3];
+
+        Train_Control.link({fid: follow_id, tid: train_id, type:type, msg_id: msg_id});
+      }
     },
     {
       opcode: 0x42,
@@ -418,7 +427,15 @@ websocket.add_opcodes([
     {
       opcode: 0x46,
       name: "TrainAddRoute",
-      send: function(data){ console.warn("TrainAddRoute", data); },
+      send: function(data){ 
+        var msg = [];
+
+        msg[0] = data.train_id;
+        msg[1] = data.station_id;
+        msg[2] = data.station_module;
+
+        return msg;
+      },
       recv: function(data){ console.warn("TrainAddRoute", data); }
     },
     {
@@ -1159,7 +1176,30 @@ websocket.add_opcodes([
       opcode: 0x36,
       name: "StationLibrary",
       send: function(data){},
-      recv: function(data){}
+      recv: function(data){
+        nr = data[0];
+
+        stations = {};
+
+        $.each(modules, function(){
+          this.stations = {};
+        });
+        
+        var i = 1;
+        for(var j = 0; j < nr; j++){
+          st = {module: data[i++],
+                id: data[i++],
+                type: data[i++],
+                name_len: data[i++],
+                name: ""};
+          st.name = String.fromCharCode.apply(null, data.slice(i, i+st.name_len));
+
+          i += st.name_len;
+
+          stations[j] = st;
+          modules[st.module].stations[st.id] = st;
+        }
+      }
     },
 
   // Client / General

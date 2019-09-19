@@ -224,6 +224,39 @@ void WS_stc_SubmoduleState(){
 //Admin Messages
 
 //Train Messages
+void WS_cts_LinkTrain(struct s_opc_LinkTrain * msg, struct web_client_t * client){
+  // uint8_t * data = (uint8_t *)msg;
+  // uint8_t fID = data[0]; //follow ID
+  // uint8_t tID = data[1]; //TrainID
+  // uint16_t mID = ((data[2] & 0x1F) << 8)+data[3];
+  char return_value;
+  if(msg->type == 0)
+    loggerf(INFO, "Linking train %i with T-%s\n",msg->follow_id, trains[msg->real_id]->name);
+  else
+    loggerf(INFO, "Linking train %i with E-%s\n",msg->follow_id, engines[msg->real_id]->name);
+
+  if((return_value = link_train(msg->follow_id, msg->real_id, msg->type)) == 1){
+    WS_stc_LinkTrain(msg);
+
+    WS_clear_message(msg->message_id, 1);
+
+    Z21_get_train(trains[msg->real_id]);
+  }
+  else{
+    loggerf(WARNING, "Failed link_train()\n");
+    WS_clear_message(msg->message_id, 0); //Failed
+  }
+}
+
+void WS_stc_LinkTrain(struct s_opc_LinkTrain * msg){
+  struct s_WS_Data return_msg;
+  return_msg.opcode = WSopc_LinkTrain;
+  memcpy(&return_msg.data, msg, sizeof(struct s_opc_LinkTrain));
+  return_msg.data.opc_LinkTrain.message_id = 0;
+  
+  ws_send_all((char *)&return_msg, 5, 0xFF);
+}
+
 void WS_UpdateTrain(void * t, int type){
   if(!t)
     return;
@@ -600,9 +633,16 @@ void Web_Train_Split(int i,char tID,char B[]){
   }
 }
 */
-void WS_LinkTrain(uint8_t fID, uint8_t tID){
-  ws_send_all((char []){WSopc_LinkTrain,fID,tID},3,0xFF);
+
+void WS_cts_TrainRoute(struct s_opc_TrainRoute * data, struct web_client_t * client){
+  RailTrain * T = train_link[data->train_id];
+
+  Station * St = Units[data->module_id]->St[data->station_id];
+
+  train_set_route(T, St->blocks[0]);
 }
+
+void WS_stc_TrainRoute(){}
 
 void WS_TrainData(char data[14]){
   loggerf(TRACE,"WS_TrainData");
@@ -1360,6 +1400,38 @@ void WS_stc_TrackLayoutRawData(int unit, int Client_fd){
   else{
     ws_send_all(data, U->raw_length+2, WS_Flag_Track);
   }
+
+  _free(data);
+}
+
+void WS_stc_StationLib(int Client_fd){
+  uint8_t * data = _calloc(stations_len, Station);
+  data[0] = WSopc_StationLibrary;
+  uint8_t * length = &data[1];
+  uint8_t * d = &data[2];
+
+  for(uint8_t i = 0; i < stations_len; i++){
+    if(!stations[i])
+      continue;
+
+    (*length)++;
+    d[0] = stations[i]->module;
+    d[1] = stations[i]->id;
+    d[2] = stations[i]->type;
+    d[3] = strlen(stations[i]->name);
+    memcpy(&d[4], stations[i]->name, d[3]);
+
+    d += d[3] + 4;
+  }
+
+  if(Client_fd){
+    ws_send(Client_fd, data, d - data, WS_Flag_Track);
+  }
+  else{
+    ws_send_all(data, d - data, WS_Flag_Track);
+  }
+
+  _free(data);
 }
 
 //General Messages

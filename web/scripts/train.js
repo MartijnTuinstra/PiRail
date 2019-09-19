@@ -2,6 +2,7 @@ var Train = {
   trains: [], //Train compositions
   engines: [],
   cars: [],
+  railtrain: [],
   cat: {},
 
   get_engine_from_dcc: function(dcc){
@@ -188,6 +189,37 @@ var Train_Control = {
     var pos = ylim * (this.train[box].t.speed / 128);
 
     this.set_handle(box, pos);
+
+  },
+
+  link_request: function(data){
+    websocket.cts_LinkTrain({fid: data.fid, real_id: data.id, type: data.type, msg_id: data.msg_id});
+  },
+  link: function(data){
+    if(Modals.frame != undefined && Modals.frame.title == "Link Train"){
+      Modals.hide();
+    }
+
+    if(data.type == 0){
+      Train.trains[data.tid].ontrack = 1;
+      Train.trains[data.tid].railtrainid = data.fid;
+
+      for(var i = 0; i < Train.trains[data.tid].link.length; i++){
+        if(Train.trains[data.tid].link[i][0] == 0){
+          Train.engines[Train.trains[data.tid].link[i][1]].ontrack = 2;
+        }
+      }
+
+      Train.railtrain[data.fid] = Train.trains[data.tid];
+    }
+    else{
+      Train.engines[data.tid].ontrack = 1;
+      Train.engines[data.tid].railtrainid = data.fid;
+      
+      Train.railtrain[data.fid] = Train.engines[data.tid];
+    }
+
+    // Messages.remove(data.msg_id, 1);
 
   }
 }

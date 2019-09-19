@@ -56,7 +56,7 @@ void update_IO(){
           char output[200];
           sprintf(output, "Update io %02i:%02i:%02i", u, n, io);
           str_IO_event(U_IO(u, n, io)->w_state, output);
-          loggerf(WARNING, "%s", output);
+          loggerf(DEBUG, "%s", output);
           U_IO(u, n, io)->r_state = U_IO(u, n, io)->w_state;
         }
       }

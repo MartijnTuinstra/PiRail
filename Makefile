@@ -79,7 +79,7 @@ $(SRC)/submodule.c: $(LIB)/algorithm.h $(LIB)/com.h $(LIB)/train_sim.h $(LIB)/Z2
 $(SRC)/system.c: $(LIB)/system.h $(LIB)/websocket_control.h $(LIB)/logger.h $(LIB)/algorithm.h
 
 $(LIB)/train.h: $(LIB)/rail.h $(LIB)/route.h
-$(SRC)/train.c: $(LIB)/train.h $(LIB)/system.h $(LIB)/logger.h $(LIB)/switch.h
+$(SRC)/train.c: $(LIB)/train.h $(LIB)/system.h $(LIB)/logger.h $(LIB)/switch.h $(LIB)/pathfinding.h
 
 $(SRC)/train_sim.c: $(LIB)/train_sim.h $(LIB)/rail.h $(LIB)/train.h $(LIB)/system.h $(LIB)/module.h $(LIB)/submodule.h
 

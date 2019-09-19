@@ -79,6 +79,9 @@ void Create_Unit(int module, uint8_t Nodes, char points){
 
   Z->signal_len = 8;
   Z->Sig = _calloc(Z->signal_len, Signal);
+
+  Z->station_len = 8;
+  Z->St = _calloc(Z->station_len, Station);
 }
 
 // void Unit_expand_IO(_Bool type, Unit * U){
@@ -302,7 +305,7 @@ void LoadModuleFromConfig(int M){
   
   for(int i = 0; i < config->header.Signals; i++){
     struct signal_conf sig = read_s_signal_conf(buf_ptr);
-    
+
     create_signal_from_conf(M, sig);
 
     _free(sig.stating);
@@ -311,6 +314,17 @@ void LoadModuleFromConfig(int M){
 
   for(int i = 0; i < config->header.Stations; i++){
     struct station_conf st = read_s_station_conf(buf_ptr);
+
+    // struct station_conf {
+    //     uint8_t type;
+    //     uint8_t nr_blocks;
+    //     uint8_t name_len;
+    //     uint8_t * blocks;
+    //     char * name;
+    // };
+
+    Create_Station(M, i, st.name, st.name_len, (enum Station_types)st.type, st.nr_blocks, st.blocks);
+    // create_station_from_conf(M, st);
 
     _free(st.name);
     _free(st.blocks);
@@ -433,11 +447,11 @@ void JoinModules(){
       ws_send_all(data,k,0x10);
     }
     i++;
-    usleep(10000);
+    usleep(1000);
     prev_j = cur_j;
 
     if(i == 15){
-    usleep(500000);
+    usleep(5000);
     if(x == 1){
       Units[20]->B[5]->blocked = 1;
       Units[25]->B[0]->blocked = 1;

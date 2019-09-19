@@ -20,6 +20,7 @@
 #include "websocket_msg.h"
 
 #include "submodule.h"
+#include "pathfinding.h"
 
 pthread_mutex_t mutex_lockA;
 pthread_mutex_t algor_mutex;
@@ -341,7 +342,9 @@ void process(Block * B,int flags){
   //Check Switch
 
   // Print all found blocks to stdout
-  // Algor_print_block_debug(B->Alg);
+  if(B->module == 20 && B->id == 1){
+    Algor_print_block_debug(B->Alg);
+  }
 
   Algor_signal_state(B->Alg, debug);
 
@@ -526,12 +529,12 @@ void Algor_print_block_debug(struct algor_blocks AllBlocks){
   }
   sprintf(output, "%sA%3i %2x%02i:%02i;",output,B->length,B->type,B->module,B->id);
   if(B->train){
-    sprintf(output, "T");
+    sprintf(output, "%sT", output);
   }
   else{
-    sprintf(output, " ");
+    sprintf(output, "%s ", output);
   }
-  sprintf(output, "D%-2iS%-2i", B->dir,B->state);
+  sprintf(output, "%sD%-2iS%-2i", output, B->dir,B->state);
 
   if(B->blocked){
     sprintf(output, "%sB", output);
@@ -645,23 +648,45 @@ void Algor_Switch_Checker(struct algor_blocks AllBlocks, int debug){
       struct rail_link * link = Next_link(tmp, NEXT);
       loggerf(INFO, "Switch_Checker scan block (%i,%i)", tmp->module, tmp->id);
       if (link->type != RAIL_LINK_R && link->type != RAIL_LINK_E) {
-        if (!Next_check_Switch_Path(tmp, *link, NEXT | SWITCH_CARE)) {
+        if(B->train && B->train->route == 1){
+          struct pathinstruction temp;
+          if(!Next_check_Switch_Route(tmp, *link, NEXT, B->train->instructions, &temp)){
+            if(set_switch_route(tmp, *link, NEXT | SWITCH_CARE, &temp)){
+              B->changed |= IO_Changed; // Recalculate
+              free_pathinstruction(&temp);
+              return;
+            }
+            else{
+              loggerf(WARNING, "Stop Train on Route");
+            }
+          }
+          else{
+            loggerf(INFO, "Path applied");
+            if(i == 0){
+              //clear instructions from train
+              remove_pathinstructions(*link, B->train->instructions);
+            }
+          }
+          free_pathinstructions(&temp);
+        }
+        else if (!Next_check_Switch_Path(tmp, *link, NEXT | SWITCH_CARE)) {
           loggerf(INFO, "Switch next path!! %02i:%02i", tmp->module, tmp->id);
 
-          if (set_switch_path(tmp, *link, NEXT | SWITCH_CARE)) {
+          if(set_switch_path(tmp, *link, NEXT | SWITCH_CARE)) {
             B->changed |= IO_Changed; // Recalculate
             return;
           }
         }
+
+        // if(((link->type == RAIL_LINK_S || link->type == RAIL_LINK_s) && (((Switch *)link->p)->Detection->reserved)) || 
+           // ((link->type == RAIL_LINK_M || link->type == RAIL_LINK_m) && (((MSSwitch *)link->p)->Detection->reserved))){
+        loggerf(WARNING, "reserve_switch_path");
+        reserve_switch_path(tmp, *link, NEXT | SWITCH_CARE);
+        // }
       }
       // else{
       //   loggerf(DEBUG, "Link is of type %x", link->type);
       // }
-
-      if(link->p && (((link->type == RAIL_LINK_S || link->type == RAIL_LINK_s) && (((Switch *)link->p)->Detection->reserved)) || 
-         ((link->type == RAIL_LINK_M || link->type == RAIL_LINK_m) && (((MSSwitch *)link->p)->Detection->reserved)))){
-        reserve_switch_path(tmp, *link, NEXT | SWITCH_CARE);
-      }
     }
   }
 }
@@ -909,7 +934,7 @@ void Algor_search_Blocks(struct algor_blocks * AllBlocks, int debug){
     return;
   }
 
-  loggerf(INFO, "Search blocks %02i:%02i", B->module, B->id);
+  loggerf(DEBUG, "Search blocks %02i:%02i", B->module, B->id);
 
   int next_level = 1;
   int prev_level = 1;
@@ -1114,6 +1139,7 @@ void Algor_train_following(struct algor_blocks AllBlocks, int debug){
     // find a new follow id
     // loggerf(ERROR, "FOLLOW ID INCREMENT, bTrain");
     B->train = new_railTrain();
+    B->train->B = B;
 
 
     if(B->reserved){
@@ -1144,13 +1170,14 @@ void Algor_train_following(struct algor_blocks AllBlocks, int debug){
   if(BP.blocks > 0 && BP.blocked && B->blocked && B->train == 0 && BP.B[0]->train != 0){
     // Copy train id from previous block
     B->train = BP.B[0]->train;
+    B->train->B = B;
 
     if(B->reserved){
       Block_dereserve(B);
     }
     // if(train_link[B->train])
     //   train_link[B->train]->Block = B;
-    loggerf(INFO, "COPY_TRAIN from %i:%i to %i:%i", BP.B[0]->module, BP.B[0]->id, B->module, B->id);
+    loggerf(DEBUG, "COPY_TRAIN from %i:%i to %i:%i", BP.B[0]->module, BP.B[0]->id, B->module, B->id);
   }
 }
 
@@ -1243,6 +1270,10 @@ void Algor_rail_state(struct algor_blocks AllBlocks, int debug){
   }
   else if(!B->blocked && !BN.blocked && !BNN.blocked && !BP.blocked && !BPP.blocked && BN.blocks > 0 && BP.blocks > 0 && B->state != RESERVED && B->state != RESERVED_SWITCH && BN.B[0]->state == PROCEED){
     // Algor_print_block_debug(AllBlocks);
+    B->state = PROCEED;
+    B->changed |= State_Changed;
+  }
+  else if(!B->blocked && !BN.blocked && !BNN.blocked && BP.blocked){
     B->state = PROCEED;
     B->changed |= State_Changed;
   }

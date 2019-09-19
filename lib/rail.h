@@ -64,8 +64,6 @@
   enum Rail_types {
     MAIN,
     STATION,
-    SHUNTING,
-    SIDING,
     SPECIAL
   };
 
@@ -165,6 +163,8 @@ enum link_types {
     int uid;
     char * name;
 
+    uint8_t state;
+
     Block ** blocks;
     int blocks_len;
 
@@ -183,7 +183,7 @@ enum link_types {
   void create_block(uint8_t module, struct s_block_conf block);
   void * clear_Block(Block * B);
   // void Create_Segment(Node_adr IO_Adr, struct block_connect connect ,char max_speed, char dir,char len);
-  void Create_Station(int module, int id, char * name, char name_len, enum Station_types type, int len, Block ** blocks);
+  void Create_Station(int module, int id, char * name, char name_len, enum Station_types type, int len, uint8_t * blocks);
 
   void Connect_Rail_links();
 
@@ -207,9 +207,9 @@ enum link_types {
 
   void Reserve_To_Next_Switch(Block * B);
 
-  #define Block_reserve(B) loggerf(INFO, "RESERVE BLOCK %02i:%02i", B->module, B->id);\
+  #define Block_reserve(B) loggerf(DEBUG, "RESERVE BLOCK %02i:%02i", B->module, B->id);\
                             B->reserved++
-  #define Block_dereserve(B) loggerf(INFO, "deRESERVE BLOCK %02i:%02i", B->module, B->id);\
+  #define Block_dereserve(B) loggerf(DEBUG, "deRESERVE BLOCK %02i:%02i", B->module, B->id);\
                             B->reserved--
 
   void Block_Reverse(Block * B);

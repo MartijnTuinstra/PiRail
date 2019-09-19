@@ -567,3 +567,10 @@
 #LayoutContainer .up_downButton:hover {
 	color: lightgrey;
 }
+
+/* Signals modal */
+
+.signaldropdown::after {
+	text-align: 0.655em;
+	left-margin: 0.255em;
+}

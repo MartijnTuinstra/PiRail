@@ -38,8 +38,8 @@ void *TRAIN_SIMA(){
   while(_SYS->LC_State != _SYS_Module_Run){
     usleep(10000);
   }
-  Block *B = Units[20]->B[4];
-  Block *N = Units[20]->B[4];
+  Block *B = Units[21]->B[1];
+  Block *N = Units[21]->B[1];
   Block *N2 = 0;
 
   B->state = BLOCKED;
@@ -49,6 +49,12 @@ void *TRAIN_SIMA(){
   putAlgorQueue(B, 1);
 
   usleep(100000);
+
+  if(B->train){
+    while(!B->train->p){
+      usleep(1000);
+    }
+  }
 
   _SYS->SimA_State = _SYS_Module_Run;
   WS_stc_SubmoduleState();

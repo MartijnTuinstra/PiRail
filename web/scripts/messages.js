@@ -1,9 +1,10 @@
 
 class message {
-	constructor(id, type, data){
+	constructor(id, type, data={}){
 		this.id = id;
 		this.type = type;
 		this.data = data;
+		this.data['msg_id'] = this.id;
 		this.modal = undefined;
 	}
 

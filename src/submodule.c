@@ -8,6 +8,7 @@
 #include "com.h"
 #include "train_sim.h"
 #include "Z21.h"
+#include "pathfinding.h"
 
 
 pthread_t Algor_thread;
@@ -76,8 +77,18 @@ void SimB_start(){
     usleep(10000);
   }
 
-  _SYS->SimB_State = _SYS_Module_Init;
-  pthread_create(&pt_train_simB, NULL, TRAIN_SIMB, NULL);
+  usleep(100000);
+
+  Block * start = Units[22]->B[1];
+  Block * end   = Units[26]->B[5];
+
+  struct pathfindingstep path = pathfinding(start, end);
+  if(path.found){
+    printf("f");
+  }
+
+  // _SYS->SimB_State = _SYS_Module_Init;
+  // pthread_create(&pt_train_simB, NULL, TRAIN_SIMB, NULL);
 }
 
 pthread_t z21_thread;

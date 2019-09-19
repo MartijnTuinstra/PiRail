@@ -116,6 +116,8 @@
     void * p;
     char type;
 
+    Block * B;
+
     uint8_t link_id;
 
     uint16_t speed;
@@ -125,11 +127,22 @@
     uint16_t target_distance;
 
     uint8_t changing_speed:3;
+    uint8_t control:2;
+    uint8_t route:1;
+    uint8_t stop:1;
 
     pthread_t speed_thread;
 
     uint8_t category;
+
+    struct pathinstruction * instructions;
   } RailTrain;
+
+  struct train_speed_timer {
+    RailTrain * T;
+    uint16_t target_speed;
+    uint16_t length;
+  };
 
   #define RAILTRAIN_SPEED_T_INIT 0
   #define RAILTRAIN_SPEED_T_CHANGING 1
@@ -199,12 +212,8 @@
   void train_calc_speed(Trains * T);
   void train_change_speed(RailTrain * T, uint16_t target_speed, uint8_t type);
 
-  struct train_speed_timer {
-    RailTrain * T;
-    uint16_t target_speed;
-    uint16_t length;
-  };
-
   void train_speed_timer_create(RailTrain * T, uint16_t target, uint16_t length);
   void * train_speed_timer_run(void * args);
+
+  void train_set_route(RailTrain * T, Block * dest);
 #endif

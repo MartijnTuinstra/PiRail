@@ -34,5 +34,7 @@ struct pathfindingstep {
 struct pathfindingstep pathfinding(Block * start, Block * end);
 struct pathfindingstep _pathfinding_step(struct pathfindingconfig c);
 void pathfinding_print(struct pathinstruction * instr);
+void free_pathinstructions(struct pathinstruction * instr);
+void remove_pathinstructions(struct rail_link link, struct pathinstruction * instr);
 
 #endif

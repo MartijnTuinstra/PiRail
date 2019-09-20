@@ -1,0 +1,83 @@
+#include <stdio.h>
+#include <stdlib.h>
+
+#include <signal.h>
+#include <errno.h>
+#include <semaphore.h>
+
+#include "system.h"
+#include "logger.h"
+#include "mem.h"
+
+sem_t AlgorQueueNoEmpty;
+
+void sigint_func(int sig){
+  if(sig == SIGINT){
+    loggerf(WARNING, "-- SIGINT -- STOPPING");
+    SYS->WebSocket.accept_clients = 0;
+
+    // Request Stop
+    SYS->stop = 1;
+
+    sem_post(&AlgorQueueNoEmpty);
+  }
+}
+
+int _find_free_index(void *** list, int * length){
+  if(!(*list)){
+    logger("LIST DOESNT EXIST",CRITICAL);
+    return -1;
+  }
+  for(int i = 0;i<(*length);i++){
+    if(!(*list)[i]){
+      return i;
+    }
+  }
+
+  *list = _realloc(*list, (*length)+1, void *);
+  for(int i = *length; i < (*length)+1; i++){
+    (*list)[i] = 0;
+  }
+  *length += 1;
+  return _find_free_index(list, length);
+}
+
+void move_file(char * src, char * dest){
+  int ch;
+  FILE *source, *target;
+
+  source = fopen(src, "r");
+
+  if (source == NULL){
+    loggerf(ERROR, "Could not open source file (%s)", src);
+    exit(EXIT_FAILURE);
+  }
+
+  target = fopen(dest, "w");
+
+  if (target == NULL){
+    fclose(source);
+    loggerf(ERROR, "Could not create destination file (%s)", dest);
+    exit(EXIT_FAILURE);
+  }
+
+  while ((ch = fgetc(source)) != EOF)
+    fputc((char)ch, target);
+
+  fclose(source);
+  fclose(target);
+}
+
+void system_init(struct s_systemState * S){
+  S->stop = 0;
+  S->Clients = 0;
+
+  S->Z21.state  = Module_STOP;
+  S->UART.state = Module_STOP;
+  S->TC.state   = Module_STOP;
+  S->LC.state   = Module_STOP;
+  S->WebSocket.state = Module_STOP;
+
+  S->SimA.state = Module_STOP;
+  S->SimB.state = Module_STOP;
+}

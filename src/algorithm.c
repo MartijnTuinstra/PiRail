@@ -200,7 +200,7 @@ void Algor_process(Block * B, int flags){
   loggerf(TRACE, "process %02i:%02i, flags %x", B->module, B->id, flags);
 
   if((B->IOchanged == 0 && B->algorchanged == 0) && (flags & _FORCE) == 0){
-    loggerf(INFO, "No changes");
+    loggerf(TRACE, "No changes");
     return;
   }
 
@@ -220,14 +220,12 @@ void Algor_process(Block * B, int flags){
 
   if(!B->blocked && B->train){
     if(B->Alg.next > 0 && B->Alg.N[0]->blocked){
-      loggerf(INFO, "Put Queue");
       _ALGOR_BLOCK_APPLY(B->Alg.N[0], i,
         B->Alg.N[0]->p.B->algorchanged = 1; putAlgorQueue(B->Alg.N[0]->p.B, 1);,
         ,
         B->Alg.N[0]->p.SB[i]->algorchanged = 1; putAlgorQueue(B->Alg.N[0]->p.SB[i], 1);)
     }
     else if(B->Alg.prev > 0 && B->Alg.P[0]->blocked){
-      loggerf(INFO, "Put Queue");
       _ALGOR_BLOCK_APPLY(B->Alg.N[0], i,
         B->Alg.P[0]->p.B->algorchanged = 1; putAlgorQueue(B->Alg.P[0]->p.B, 1);,
         ,
@@ -281,7 +279,7 @@ void Algor_process(Block * B, int flags){
   //Follow the train arround the layout
   Algor_train_following(&B->Alg, flags);
   if (B->IOchanged){
-    printf("Block Train ReProcess\n");
+    loggerf(DEBUG, "Block Train ReProcess");
     Algor_clear_Blocks(&B->Alg);
     if(flags & _LOCK){
       loggerf(WARNING, "UNLOCK");
@@ -293,23 +291,24 @@ void Algor_process(Block * B, int flags){
   //Set oncomming switch to correct state
   Algor_Switch_Checker(&B->Alg, flags);
   if (B->IOchanged){
-    printf("Block Switch ReProcess\n");
+    loggerf(DEBUG, "Block Switch ReProcess");
     Algor_clear_Blocks(&B->Alg);
     if(flags & _LOCK)
       unlock_Algor_process();
     return;
   }
-  // if(B->module == 20 && (B->id == 0 || B->id == 5 || B->id == 6 || B->id == 11)){
+  
+  // Print all found blocks
+  if(flags & _DEBUG)
     Algor_print_block_debug(B);
-  // }
 
   //Apply block stating
   Algor_rail_state(B->Alg, flags);
 
-  // Print all found blocks to stdout
-
+  //Update signal stating
   Algor_signal_state(B->Alg, flags);
 
+  //Train Control
   // Apply train algorithm only if there is a train on the block and is the front of the train
   if(B->train){
     if(B->Alg.N[0]){
@@ -321,10 +320,7 @@ void Algor_process(Block * B, int flags){
       loggerf(INFO, "EMEG BRAKE, NO B_LOCK");
       train_change_speed(B->train, 0, IMMEDIATE_SPEED);
     }
-
   }
-
-  //Train Control
 
   if(flags & _LOCK){
     loggerf(WARNING, "UNLOCK");
@@ -364,14 +360,11 @@ void Algor_Unset_Special_Block(Algor_Blocks * ABs, Block * B){
     _Bool moving = 0;
     for(uint8_t i = 0; i < ABs->B->len; i++){
       if(moving){
-        printf("<");
         ABs->B->p.SB[i-1] = ABs->B->p.SB[i];
       }
       else if(ABs->B->p.SB[i] == B){
-        printf("x");
         moving = 1;
       }
-      printf(" %x\n", (unsigned int)ABs->B->p.SB[i]);
     }
     if(moving){
       ABs->B->len--;
@@ -632,7 +625,7 @@ int Switch_to_rail(Block ** B, void * Sw, enum link_types type, uint8_t counter)
 }
 
 void Algor_special_search_Blocks(Block * B, int flags){
-  loggerf(INFO, "Algor_special_search_Blocks %02i:%02i", B->module, B->id);
+  loggerf(TRACE, "Algor_special_search_Blocks %02i:%02i", B->module, B->id);
   struct next_prev_Block {
     Block * prev;
     uint8_t prev_l;
@@ -1215,7 +1208,7 @@ void Algor_set_block_state(Algor_Block * B, enum Rail_states state){
       tB->state = state;
       tB->statechanged = 1;
       Units[tB->module]->block_state_changed |= 1;
-      loggerf(INFO, "%02i:%02i -> %s", tB->module, tB->id, rail_states_string[state]);
+      // loggerf(INFO, "%02i:%02i -> %s", tB->module, tB->id, rail_states_string[state]);
     }
   }
 }
@@ -1256,10 +1249,6 @@ void Algor_rail_state(Algor_Blocks AllBlocks, int debug){
   }
   else{
     Algor_set_block_state(B, BLOCKED);
-  }
-
-  if(B->len == 0 && B->p.B->module == 20 && B->p.B->id == 10){
-    loggerf(ERROR, "EHLP");
   }
 
   if(B->blocked && prev > 0 && !BP[0]->blocked){

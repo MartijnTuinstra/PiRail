@@ -155,7 +155,6 @@ void * Clear_Station(Station * St){
 }
 
 int dircmp(Block *A, Block *B){
-  loggerf(INFO, "DIRCMP: %02i:%02i %03x | %02i:%02i %03x", A->module, A->id, A->dir, B->module, B->id, B->dir);
   if((A->dir == 2 && (B->dir == 1 || B->dir == 0)) || ((A->dir == 1 || A->dir == 0) && B->dir == 2)){
     return 1;
   }else if(A->dir == B->dir){
@@ -265,7 +264,7 @@ Block * _Next(Block * B, int flags, int level){
   // printf("Next     : dir:%i/%x\t%i:%i => %i:%i:%i\t%i\n", B->dir, dir, B->module, B->id, next.module, next.id, next.type, level);
 
   if(!next.p){
-    if(next.type != RAIL_LINK_E)
+    if(next.type != RAIL_LINK_E && next.type != RAIL_LINK_C)
       loggerf(ERROR, "NO POINTERS %i:%i", B->module, B->id);
     return 0;
   }

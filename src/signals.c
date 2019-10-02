@@ -92,7 +92,7 @@ void set_signal(Signal * Si, enum Rail_states state){
 }
 
 void check_Signal(Signal * Si){
-  loggerf(INFO, "check_Signal %x", (unsigned int)Si);
+  loggerf(TRACE, "check_Signal %x", (unsigned int)Si);
   if(!Si->B->Alg.B)
     return;
 

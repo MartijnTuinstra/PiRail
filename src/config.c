@@ -389,16 +389,12 @@ struct ms_switch_conf read_s_ms_switch_conf(uint8_t ** p){
 
   print_hex((char *)*p, 16);
 
-  loggerf(INFO, "Basics");
-
   memcpy(&s, *p, sizeof(struct s_ms_switch_conf));
 
   *p += sizeof(struct s_ms_switch_conf);
 
   if(!check_Spacing(p))
     return s;
-
-  loggerf(INFO, "States");
 
   s.states = _calloc(s.nr_states, struct s_ms_switch_state_conf);
 
@@ -409,8 +405,6 @@ struct ms_switch_conf read_s_ms_switch_conf(uint8_t ** p){
 
   if(!check_Spacing(p))
     return s;
-
-  loggerf(INFO, "IO Ports");
 
   s.IO_Ports = _calloc(s.IO, struct s_IO_port_conf);
 

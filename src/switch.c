@@ -82,10 +82,12 @@ void create_msswitch_from_conf(uint8_t module, struct ms_switch_conf conf){
     connect.sideB[i].type = conf.states[i].sideB.type;
   }
 
-  Create_MSSwitch(connect, conf.det_block, 0, 0, 0);
+  _free(conf.states);
+
+  Create_MSSwitch(connect, conf.det_block, conf.IO, conf.IO_Ports, 0);
 }
 
-void Create_MSSwitch(struct s_msswitch_connect connect, uint8_t block_id, uint8_t output_len, Node_adr * output_pins, uint16_t * output_states){
+void Create_MSSwitch(struct s_msswitch_connect connect, uint8_t block_id, uint8_t output_len, struct s_IO_port_conf * output_pins, uint16_t * output_states){
   loggerf(DEBUG, "Create MSSw %i:%i", connect.module, connect.id);
   MSSwitch * Z = _calloc(1, MSSwitch);
 
@@ -100,9 +102,9 @@ void Create_MSSwitch(struct s_msswitch_connect connect, uint8_t block_id, uint8_
   Z->IO = _calloc(output_len, IO_Port *);
 
   for(int i = 0; i < output_len; i++){
-    Init_IO(Units[connect.module], output_pins[i], IO_Output);
+    Init_IO(Units[connect.module], *(Node_adr *)&output_pins[i], IO_Output);
 
-    Z->IO[i] = Units[connect.module]->Node[output_pins[i].Node].io[output_pins[i].io];
+    Z->IO[i] = Units[connect.module]->Node[output_pins[i].Node].io[output_pins[i].Adr];
   }
   if(output_pins)
     _free(output_pins);
@@ -141,6 +143,13 @@ void * Clear_Switch(Switch * Sw){
 }
 
 void * Clear_MSSwitch(MSSwitch * MSSw){
+  _free(MSSw->sideA);
+  _free(MSSw->sideB);
+  _free(MSSw->IO);
+  _free(MSSw->IO_states);
+  // _free(MSSw->links);
+  // _free(MSSw->preferences);
+
   _free(MSSw);
   return NULL;
 }

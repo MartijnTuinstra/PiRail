@@ -194,7 +194,6 @@ void read_module_Config(uint16_t M){
   }
 
   for(int i = 0; i < config->header.Switches; i++){
-    loggerf(INFO, "Reading Sw");
     struct switch_conf s = read_s_switch_conf(buf_ptr);
     struct s_switch_connect connect;
 
@@ -221,14 +220,12 @@ void read_module_Config(uint16_t M){
   }
 
   for(int i = 0; i < config->header.MSSwitches; i++){
-    loggerf(INFO, "Reading MSSw");
     struct ms_switch_conf s = read_s_ms_switch_conf(buf_ptr);
 
     create_msswitch_from_conf(M, s);
   }
   
   for(int i = 0; i < config->header.Signals; i++){
-    loggerf(INFO, "Reading Signal");
     struct signal_conf sig = read_s_signal_conf(buf_ptr);
 
     create_signal_from_conf(M, sig);
@@ -240,16 +237,7 @@ void read_module_Config(uint16_t M){
   for(int i = 0; i < config->header.Stations; i++){
     struct station_conf st = read_s_station_conf(buf_ptr);
 
-    // struct station_conf {
-    //     uint8_t type;
-    //     uint8_t nr_blocks;
-    //     uint8_t name_len;
-    //     uint8_t * blocks;
-    //     char * name;
-    // };
-
     Create_Station(M, i, st.name, st.name_len, (enum Station_types)st.type, st.nr_blocks, st.blocks);
-    // create_station_from_conf(M, st);
 
     _free(st.name);
     _free(st.blocks);

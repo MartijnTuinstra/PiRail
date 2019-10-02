@@ -118,7 +118,7 @@ struct switch_list {
 // int reserve_switch_path(void * p, struct rail_link link, int flags);
 
 void Create_Switch(struct s_switch_connect connect, uint8_t block_id, uint8_t output_len, Node_adr * output_pins, uint8_t * output_states);
-void Create_MSSwitch(struct s_msswitch_connect connect, uint8_t block_id, uint8_t output_len, Node_adr * output_pins, uint16_t * output_states);
+void Create_MSSwitch(struct s_msswitch_connect connect, uint8_t block_id, uint8_t output_len, struct s_IO_port_conf * output_pins, uint16_t * output_states);
 void * Clear_Switch(Switch * Sw);
 void * Clear_MSSwitch(MSSwitch * Sw);
 

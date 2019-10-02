@@ -841,6 +841,14 @@ header('Pragma: no-cache');
 			}
 		}
 
+		function throw_MSSwitch(m,sw,s){
+			if(!websocket.connected){
+				console.error("Throw_msswitchc: not connected");
+			}
+
+			websocket.cts_SetSwitch([m, 0x80 | sw, s]);
+		}
+
 		function throw_doubleSlib(m,sw){
 			if(!websocket.connected){
 				console.error("Not connected");

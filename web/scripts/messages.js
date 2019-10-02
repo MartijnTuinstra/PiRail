@@ -185,7 +185,7 @@ class submodule {
 		this.title = title;
 		this.state = 0;
 		this.description = description;
-		this.colors = ["danger", "warning", "success", "danger", "warning", "success"];
+		this.colors = ["danger", "warning", "warning", "success", "danger", "warning", "success"];
 		this.create();
 	}
 
@@ -208,7 +208,7 @@ class submodule {
 	}
 
 	hit(evt){
-		if(this.state == 0 || this.state == 1){
+		if(this.state == 0 || this.state == 1 || this.state == 2){
 			websocket.cts_EnableSubModule(this.enable_bit);
 		}
 		else{
@@ -217,7 +217,7 @@ class submodule {
 	}
 
 	update(flags){
-		flags = (flags[0] << 8) + flags[1];
+		flags = (flags[0] << 24) + (flags[1] << 16) + (flags[2] << 8) + flags[3];
 		if(!this.check_flag(flags)){
 			return;
 		}
@@ -227,7 +227,7 @@ class submodule {
 		$('.indicator', box).removeClass("blink");
 		this.state = (flags >> this.offset) & this.mask;
 		$('.indicator', box).addClass("bg-"+this.colors[this.state]);
-		if(this.state == 3 || this.state == 5){
+		if(this.state == 1 || this.state == 4 || this.state == 6){
 			$('.indicator', box).addClass("blink");
 		}
 		$('small', box).html(this.description[this.state]);
@@ -237,13 +237,13 @@ class submodule {
 var Submodules = {
 	modules: [],
 	init: function(){
-		this.modules.push(new submodule(14, 2, 7, "Websocket", ["Stopped", "Admin only", "Running", "Failure"]));
-		this.modules.push(new submodule(12, 2, 6, "Z21", ["Stopped", "Initializing", "Running", "Failure"]));
-		this.modules.push(new submodule(10, 2, 5, "UART", ["Stopped", "Initializing", "Running", "Failure"]));
-		this.modules.push(new submodule( 5, 3, 4, "LayoutControl", ["Stopped", "Initializing", "Running", "Failure", "Finding rails", "Connecting rails"]));
-		this.modules.push(new submodule( 8, 2, 3, "TrainControl", ["Stopped", "Initializing", "Running", "Failure"]));
-		this.modules.push(new submodule( 3, 2, 2, "SimA", ["Stopped", "Initializing", "Running", "Failure"]));
-		this.modules.push(new submodule( 1, 2, 1, "SimB", ["Stopped", "Initializing", "Running", "Failure"]));
+		this.modules.push(new submodule(28, 4, 7, "Websocket", ["Stopped", "", "Admin only", "Running", "Failure"]));
+		this.modules.push(new submodule(24, 4, 6, "Z21", ["Stopped", "Waiting to start", "Initializing", "Running", "Failure"]));
+		this.modules.push(new submodule(20, 4, 5, "UART", ["Stopped", "Waiting to start", "Initializing", "Running", "Failure"]));
+		this.modules.push(new submodule(16, 4, 4, "LayoutControl", ["Stopped", "Waiting to start", "Initializing", "Running", "Failure", "Finding rails", "Connecting rails"]));
+		this.modules.push(new submodule(12, 4, 3, "TrainControl", ["Stopped", "Waiting to start", "Initializing", "Running", "Failure"]));
+		this.modules.push(new submodule( 4, 4, 2, "SimA", ["Stopped", "Waiting to start", "Initializing", "Running", "Failure"]));
+		this.modules.push(new submodule( 0, 4, 1, "SimB", ["Stopped", "Waiting to start", "Initializing", "Running", "Failure"]));
 
 		websocket.ws_add_cb("ws_close_cb", function(){
 			Submodules.update(0);

@@ -129,16 +129,16 @@ var Canvas = {
 
 			for(var i = 0; i < 4; i++){
 				if(point[i].x < l){
-					l = point[i].x - 20;
+					l = point[i].x - 100;
 				}
 				if(point[i].x > r){
-					r = point[i].x + 20;
+					r = point[i].x + 100;
 				}
 				if(point[i].y < t){
-					t = point[i].y - 20;
+					t = point[i].y - 100;
 				}
 				if(point[i].y > b){
-					b = point[i].y + 20;
+					b = point[i].y + 100;
 				}
 			}
 
@@ -294,7 +294,7 @@ var Canvas = {
 	    	(s == 0)?cnvs.strokeStyle = "#aaa":cnvs.strokeStyle = "#fcc";
 	    }
 	    else{ //Unknown
-	    	(s == 0)?cnvs.strokeStyle = "#ddd":cnvs.strokeStyle = "#eee";
+	    	(s == 0)?cnvs.strokeStyle = "#ddd":cnvs.strokeStyle = "#ddd";
 	    }
 	},
 
@@ -316,13 +316,13 @@ var Canvas = {
 
 		for (var w = this.dimensions.content.ofX; w < (this.dimensions.content.ofX + this.dimensions.content.width/this.dimensions.scale) + 50; w += 100) {
 		    for (var h = this.dimensions.content.ofY; h < (this.dimensions.content.ofY + this.dimensions.content.height/this.dimensions.scale) + 50; h += 100) {
-		      var x = Math.round((w) / 100) * 100;
-		      var y = Math.round((h) / 100) * 100;
+		        var x = Math.round((w) / 100) * 100;
+		        var y = Math.round((h) / 100) * 100;
 
-		      this.c.beginPath();
+		        this.c.beginPath();
 
-		      this.c.strokeStyle = "#ff0000";
-		      this.c.lineWidth = 0;
+		        this.c.strokeStyle = "#ff0000";
+		        this.c.lineWidth = 0;
 				this.c.fillStyle = "#ff0000";
 
 				this.c.arc(x, y, 1, 0, 2*Math.PI, false);
@@ -330,7 +330,7 @@ var Canvas = {
 				this.c.fill();
 				this.c.stroke();
 
-		      this.c.fillText(x + ',' + y, x, y+20);
+		        this.c.fillText(x + ',' + y, x, y+20);
 		    }
 		  }
 
@@ -339,6 +339,36 @@ var Canvas = {
 		this.draw_foreground();
 
 		
+		if(this.fitlist != undefined){
+			for(var i = 0; i < this.fitlist.length; i++){
+		        this.c.strokeStyle = "#0000ff";
+		        this.c.lineWidth = 0;
+				this.c.fillStyle = "#0000ff";
+				this.c.beginPath();
+
+				this.c.arc(this.fitlist[i].originX, this.fitlist[i].originY, 1, 0, 2*Math.PI, false);
+
+				this.c.fill();
+				this.c.stroke();
+				this.c.fillText(i, this.fitlist[i].originX, this.fitlist[i].originY+20);
+				this.c.beginPath();
+
+				this.c.arc(this.fitlist[i].originX+this.fitlist[i].w, this.fitlist[i].originY+this.fitlist[i].h, 1, 0, 2*Math.PI, false);
+
+				this.c.fill();
+				this.c.stroke();
+				this.c.fillText(i, this.fitlist[i].originX+this.fitlist[i].w, this.fitlist[i].originY+this.fitlist[i].h+20);
+		        this.c.strokeStyle = "#00ffff";
+		        this.c.lineWidth = 0;
+				this.c.fillStyle = "#00ffff";
+				this.c.beginPath();
+
+				this.c.arc(this.fitlist[i].originX+this.fitlist[i].dx, this.fitlist[i].originY+this.fitlist[i].dy, 2, 0, 2*Math.PI, false);
+
+				this.c.fill();
+				this.c.stroke();
+			}
+		}
 
 		//Draw Tooltips
 		$.each(modules,function(module,module_v){
@@ -351,25 +381,25 @@ var Canvas = {
 			var rvX_ = Math.cos((module_v.r+0.5)*Math.PI);
 			var rvY = Math.sin((module_v.r+0.5)*Math.PI);
 			var rvY_ = Math.sin((module_v.r)*Math.PI);
-
-			c.beginPath();
 			c.lineWidth = 0;
 
-		      c.strokeStyle = "#00FF00";
-				c.fillStyle = "#00ff00";
+			c.stokeStyle = "#00FF00";
+			c.fillStyle = "#00ff00";
 
-				c.arc(ofX, ofY, 2, 0, 2*Math.PI, false);
+			c.beginPath();
 
-				c.fill();
-				c.stroke();
+			c.arc(ofX, ofY, 2, 0, 2*Math.PI, false);
 
-				c.fillStyle = "black";
-				if(this.r == 0){
-		      		c.fillText(ofX + ',' + ofY+' '+this.id, ofX+5, ofY+10);
-				}
-				else{
-					c.fillText(ofX + ',' + ofY+' '+this.id, ofX-40, ofY+10);
-				}
+			c.fill();
+			c.stroke();
+
+			c.fillStyle = "black";
+			if(this.r == 0){
+	      		c.fillText(ofX + ',' + ofY+' '+this.id, ofX+5, ofY+10);
+			}
+			else{
+				c.fillText(ofX + ',' + ofY+' '+this.id, ofX-40, ofY+10);
+			}
 			c.beginPath();
 			c.moveTo(ofX,ofY);
 			c.lineTo(rvX*module_v.width+ofX,rvX_*module_v.width+ofY);
@@ -634,6 +664,181 @@ var Canvas = {
 		}
 
 		this.moved();
+	},
+
+	fit: function(){
+		var reference = {w:0, h:0};
+		var blocks = [];
+		var m = [];
+
+		function fit_func(module, prev, depth, origin, blocks, blockid, module_list){
+			console.log(["test", module, prev]);
+			for(var i = 0; i < module.connection_link.length; i++){
+				if(module.connection_link[i] == undefined)
+					continue;
+
+				if(!module.connections[i].connected)
+					continue;
+
+				if(module.connection_link[i] == prev || module.connection_link[i] == origin.id)
+					continue;
+
+				// Neighbournode
+				var m = modules[module.connection_link[i]];
+
+				if(module_list.includes(m.id))
+					continue;
+
+				module_list.push(m.id);
+				blocks[blockid].m.push(m.id);
+
+				// rotated_point(x, y, r, ofX=0, ofY=0)
+				pos = rotated_point(m.width, m.height, m.r, m.OffsetX, m.OffsetY);
+
+				if(m.OffsetX < blocks[blockid].originX){
+					console.log(m.id + " -> oX " + (blocks[blockid].originX - m.OffsetX));
+					blocks[blockid].dx += blocks[blockid].originX - m.OffsetX;
+					blocks[blockid].w += blocks[blockid].originX - m.OffsetX;
+					blocks[blockid].originX = m.OffsetX;
+				}
+				else if(m.OffsetX > blocks[blockid].originX + blocks[blockid].w){
+					console.log(m.id + " -> wX " + (m.OffsetX - blocks[blockid].originX));
+					blocks[blockid].w = m.OffsetX - blocks[blockid].originX;
+				}
+				if(m.OffsetY < blocks[blockid].originY){
+					console.log(m.id + " -> oY " + (blocks[blockid].originY - m.OffsetY));
+					blocks[blockid].dy += blocks[blockid].originY - m.OffsetY;
+					blocks[blockid].h += blocks[blockid].originY - m.OffsetY;
+					blocks[blockid].originY = m.OffsetY;
+				}
+				else if(m.OffsetY > blocks[blockid].originY + blocks[blockid].h){
+					console.log(m.id + " -> hY " + (m.OffsetX - blocks[blockid].originX));
+					blocks[blockid].h = m.OffsetY - blocks[blockid].originY;
+				}
+
+				if(pos.y > blocks[blockid].originY + blocks[blockid].h){
+					console.log(m.id + " -> h " + (pos.y - blocks[blockid].originY));
+					blocks[blockid].h = pos.y - blocks[blockid].originY;
+				}
+				else if(pos.y < blocks[blockid].originY){
+					console.log(m.id + " -> oh " + (blocks[blockid].originY - pos.y));
+					blocks[blockid].dy += blocks[blockid].originY - pos.y;
+					blocks[blockid].h += blocks[blockid].originY - pos.y;
+					blocks[blockid].originY = pos.y;
+				}
+				if(pos.x > blocks[blockid].originX + blocks[blockid].w){
+					console.log(m.id + " -> w " + (pos.x - blocks[blockid].originX));
+					blocks[blockid].w = pos.x - blocks[blockid].originX;
+				}
+				else if(pos.x < blocks[blockid].originX){
+					console.log(m.id + " -> ow " + (blocks[blockid].originX - pos.x));
+					blocks[blockid].dx += blocks[blockid].originX - pos.x;
+					blocks[blockid].w += blocks[blockid].originX - pos.x;
+					blocks[blockid].originX = pos.x;
+				}
+
+				// Calculate new offset point
+				fit_func(m, module.id, depth+1, origin, blocks, blockid, module_list);
+			}
+		}
+
+		var module_keys = Object.keys(modules);
+		for(var i = 0; i < module_keys.length; i++){
+			var this_module = modules[module_keys[i]];
+			if(!m.includes(parseInt(module_keys[i]))){
+				m.push(parseInt(module_keys[i]));
+				var block_id = blocks.length;
+				var obj = {};
+				pos = rotated_point(this_module.width, this_module.height, this_module.r, this_module.OffsetX, this_module.OffsetY);
+				pos = {x: round(pos.x, 2), y: round(pos.y, 2)};
+
+				obj.dx = 0;
+				obj.dy = 0;
+
+				if(pos.x < this_module.OffsetX){
+					obj.originX = pos.x;
+					obj.w = this_module.OffsetX - pos.x;
+					obj.dx += obj.w;
+				}else{
+					obj.originX = this_module.OffsetX;
+					obj.w = pos.x - this_module.OffsetX;
+				}
+				if(pos.y < this_module.OffsetY){
+					obj.originY = pos.y;
+					obj.h = this_module.OffsetY - pos.y;
+					obj.dy += obj.h;
+				}else{
+					obj.originY = this_module.OffsetY;
+					obj.h = pos.y - this_module.OffsetY;
+				}
+
+				obj.m = [parseInt(module_keys[i])];
+				obj.widest = 0;
+
+				blocks.push(obj);
+
+				fit_func(this_module, undefined, 0, this_module, blocks, block_id, m);
+
+				blocks[block_id].originX -= 50;
+				blocks[block_id].originY -= 50;
+				blocks[block_id].w += 100;
+				blocks[block_id].h += 100;
+				blocks[block_id].dx += 50;
+				blocks[block_id].dy += 50;
+			}
+		}
+		this.fitlist = blocks;
+	},
+	fitOptimize: function(){
+		var fitObj = {width: this.canvas.width, height: 0, y: 0, spaces: []};
+
+		function findWidest(){
+			var w = 0;
+			var x = -1;
+			for(var n = 0; n < Canvas.fitlist.length; n++){
+				if(Canvas.fitlist[n].widest == 0 && Canvas.fitlist[n].w > w){
+					w = Canvas.fitlist[n].w;
+					x = n;
+				}
+			}
+
+			Canvas.fitlist[x].widest = 1;
+			return x;
+		}
+
+		function findRoom(obj, block){
+			for(var i = 0; i < obj.spaces.length; i++){
+				if(obj.spaces[i].w > block.w){
+					var pos = {x: obj.spaces[i].x, y: obj.spaces[i].y};
+					obj.spaces[i].x += block.w;
+					obj.spaces[i].w -= block.w;
+					return pos;
+				}
+			}
+
+			var y = obj.height;
+			obj.height += block.h;
+			obj.y = obj.height;
+
+			if(block.w < obj.width)
+				obj.spaces.push({x: block.w, w: obj.width - block.w, y: y, h: obj.height - y});
+
+			return {x: 0, y: y};
+		}
+
+		for(var i = 0; i < this.fitlist.length; i++){
+			var n = findWidest();
+			if (n == -1)
+				continue;
+			var pos = findRoom(fitObj, this.fitlist[n]);
+
+			console.log("Move "+n + " to "+pos.x+", "+pos.y);
+
+			this.fitlist[n].originX = pos.x;
+			this.fitlist[n].originY = pos.y;
+
+			modules[this.fitlist[n].m[0]].move({OffsetX: pos.x+this.fitlist[n].dx, OffsetY: pos.y+this.fitlist[n].dy});
+		}
 	}
 }
 
@@ -871,20 +1076,20 @@ class canvas_switch {
 
 		//Calculate hitboxes
 		//arc hit box
-		// (x-a)^2+(y-b)^2 = r^2
+		// (x-a)^2+(y-b)^2 >= r^2
 		// x^2-2ax+a^2+y^2-2b^2+b^2 = r^2
 		// x^2 - 2ax + y^2 - 2b^2 = r^2 - a^2 - b^2
-		this.hit_eqn.push({x:[1], y:[], op:"gt", v:0});
+		this.hit_eqn.push({x:[1], y:[], op:"gt", v:0});  // x > 0
 		if((this.r % 0.5) == 0){
-			this.hit_eqn.push({x:[1], y:[], op:"lt", v:ro[0].x});
+			this.hit_eqn.push({x:[1], y:[], op:"lt", v:ro[0].x}); // x < ro[0].x
 		}
 		else{
-			this.hit_eqn.push({x:[1], y:[], op:"lt", v:(ro[0].x+ds)/Math.cos(Math.PI/4)})
+			this.hit_eqn.push({x:[1], y:[], op:"lt", v:(ro[0].x+ds)/Math.cos(Math.PI/4)}) // x < (ro[0].x+ds)/cos(pi/4)
 		}
 		var a = 0;
 		if(this.type == "swr"){
-			this.hit_eqn.push({x:[], y:[1], op:"gt", v:-hit_radius});
-			this.hit_eqn.push({x:[1], y:[1], op:"lt", v:(ro[0].x+ro[0].y)});
+			this.hit_eqn.push({x:[], y:[1], op:"gt", v:-hit_radius});         // y > -hitradius
+			this.hit_eqn.push({x:[1], y:[1], op:"lt", v:(ro[0].x+ro[0].y)});  // x + y < (ro[0].x+ro[0].y)
 			var b = radia[0];
 		}
 		else{
@@ -892,7 +1097,7 @@ class canvas_switch {
 			this.hit_eqn.push({x:[1], y:[-1], op:"lt", v:(ro[0].x+ro[0].y)});
 			var b = -radia[0];
 		}
-		this.hit_eqn.push({x:[-2*a, 1], y:[-2*b, 1], v:(Math.pow(radia[0]-hit_radius, 2)-(a*a)-(b*b)), op:"gt"})
+		this.hit_eqn.push({x:[-2*a, 1], y:[-2*b, 1], v:(Math.pow(radia[0]-hit_radius, 2)-(a*a)-(b*b)), op:"gt"}) // -2ax^2+x -2by^2+y > (r-hr)^2
 	}
 
 	configdata(id){
@@ -1393,6 +1598,271 @@ class canvas_fl_dslip extends canvas_double_slip {
 	}
 }
 
+class canvas_turntable {
+	constructor(module, data){
+		this.type = "turntable";
+		this.edit_type = "turntable";
+		this.module_id = module.id;
+		this.m = module;
+		this.b = data.b;
+		this.cx = data.cx;
+		this.cy = data.cy;
+		this.r = data.r;
+		this.pos = data.pos;
+		this.mssw = data.mssw;
+
+		this.posxy = [];
+
+		if (data.options == undefined) { data.options = {}; }
+
+		if (data.options.if != undefined){
+			this.if = data.options.if;
+		}
+	}
+
+	init(){
+		for(var i = 0; i < this.pos.length; i++){
+
+			this.posxy[i] = {x1: this.cx+Math.cos(this.pos[i]*Math.PI)*this.r, y1: this.cy+Math.sin(this.pos[i]*Math.PI)*this.r, x2:this.cx-Math.cos(this.pos[i]*Math.PI)*this.r, y2: this.cy-Math.sin(this.pos[i]*Math.PI)*this.r}
+			this.m.add_dot(new dot(this.posxy[i].x1, this.posxy[i].y1, this.b));
+			this.m.add_dot(new dot(this.posxy[i].x2, this.posxy[i].y2, this.b));
+		}
+
+		this.m.add_hitbox(this.hit_eval.bind(this));
+
+		this.hit_eqn = [];
+
+		//Calculate hitboxes
+		//arc hit box
+		// x^2+y^2 <= r^2
+
+		this.hit_eqn.push({x:[0, 1], y:[0, 1], op: "lt", v: Math.pow(Math.ceil(this.r/10)*10, 2)});
+
+		// this.hit_eqn.push({x:[1], y:[], op:"gt", v:0});  // x > 0
+		// if((this.r % 0.5) == 0){
+		// 	this.hit_eqn.push({x:[1], y:[], op:"lt", v:ro[0].x}); // x < ro[0].x
+		// }
+		// else{
+		// 	this.hit_eqn.push({x:[1], y:[], op:"lt", v:(ro[0].x+ds)/Math.cos(Math.PI/4)}) // x < (ro[0].x+ds)/cos(pi/4)
+		// }
+		// var a = 0;
+		// if(this.type == "swr"){
+		// 	this.hit_eqn.push({x:[], y:[1], op:"gt", v:-hit_radius});         // y > -hitradius
+		// 	this.hit_eqn.push({x:[1], y:[1], op:"lt", v:(ro[0].x+ro[0].y)});  // x + y < (ro[0].x+ro[0].y)
+		// 	var b = radia[0];
+		// }
+		// else{
+		// 	this.hit_eqn.push({x:[], y:[1], op:"lt", v:hit_radius});
+		// 	this.hit_eqn.push({x:[1], y:[-1], op:"lt", v:(ro[0].x+ro[0].y)});
+		// 	var b = -radia[0];
+		// }
+		// this.
+	}
+
+	hit_eval(x, y){
+		console.log("Check hit turntable "+this.mssw);
+
+		var _l = Math.sqrt(Math.pow(x-this.cx, 2)+Math.pow(y-this.cy, 2));
+		var _r = Math.atan2((y-this.cy), (x-this.cx));
+		x = _l*Math.cos(_r);
+		y = _l*Math.sin(_r);
+
+		if(!equation_tester(this.hit_eqn[0], {x:x, y:y})){
+			console.log("Not in circle");
+			return false;
+		}
+
+		this.hit_eqn_cw1 = [];
+		this.hit_eqn_cw2 = [];
+		this.hit_eqn_ccw1 = [];
+		this.hit_eqn_ccw2 = [];
+
+		var r = this.m.r - this.pos[this.m.msswitches[this.mssw]];
+
+		var a = Math.sin(r * Math.PI);
+		var b = Math.cos(r * Math.PI);
+
+		this.hit_eqn_cw1.push({x:[b], y:[-a], op: "lt", v:0});
+		this.hit_eqn_cw1.push({x:[a], y:[b],  op: "lt", v:0});
+
+		this.hit_eqn_cw2.push({x:[b], y:[-a], op: "gt", v:0});
+		this.hit_eqn_cw2.push({x:[a], y:[b],  op: "gt", v:0});
+
+		this.hit_eqn_ccw1.push({x:[b], y:[-a], op: "lt", v:0});
+		this.hit_eqn_ccw1.push({x:[a], y:[b],  op: "gt", v:0});
+
+		this.hit_eqn_ccw2.push({x:[b], y:[-a], op: "gt", v:0});
+		this.hit_eqn_ccw2.push({x:[a], y:[b],  op: "lt", v:0});
+
+		var hit = 0;
+
+		for(var i = 0; i < this.hit_eqn_cw1.length; i++){
+			if(equation_tester(this.hit_eqn_cw1[i], {x:x, y:y})){
+				hit++;
+			}
+		}
+		if(this.hit_eqn_cw1.length == hit){
+			// console.log("CW1");
+			this.hit_cw();
+			return;
+		}
+
+		hit = 0;
+
+		for(var i = 0; i < this.hit_eqn_cw2.length; i++){
+			if(equation_tester(this.hit_eqn_cw2[i], {x:x, y:y})){
+				hit++;
+			}
+		}
+		if(this.hit_eqn_cw2.length == hit){
+			// console.log("CW2");
+			this.hit_cw();
+			return;
+		}
+
+		hit = 0;
+
+		for(var i = 0; i < this.hit_eqn_ccw1.length; i++){
+			if(equation_tester(this.hit_eqn_ccw1[i], {x:x, y:y})){
+				hit++;
+			}
+		}
+		if(this.hit_eqn_ccw1.length == hit){
+			// console.log("CCW1");
+			this.hit_ccw();
+			return;
+		}
+		// console.log("Not in CCW1");
+
+		hit = 0;
+
+		for(var i = 0; i < this.hit_eqn_ccw2.length; i++){
+			if(equation_tester(this.hit_eqn_ccw2[i], {x:x, y:y})){
+				hit++;
+			}
+		}
+		if(this.hit_eqn_ccw2.length == hit){
+			// console.log("CCW2");
+			this.hit_ccw();
+			return;
+		}
+		// console.log("Not in CCW2");
+	}
+
+	hit_cw(){
+		console.log("Hit CW");
+		throw_MSSwitch(this.m.id, this.mssw, (this.m.msswitches[this.mssw] + 1) % this.pos.length);
+	}
+	hit_ccw(){
+		console.log("Hit CCW");
+		throw_MSSwitch(this.m.id, this.mssw, (this.m.msswitches[this.mssw] + this.pos.length - 1) % this.pos.length);
+	}
+
+	configdata(id){
+		return "<tr><th scope='row'>"+id+"</th><td>"+this.b+"</td><td>TT</td><td>"+round(this.cx, 3)+
+		       ", "+round(this.cy, 3)+"</td><td>"+round(this.r, 3)+"</td><td>"+this.pos+"</td><td>-</td><td>"+settings("#ccc", 23)+"</td></tr>";
+	}
+
+	draw_back(cnvs, stroke, color, rotation, offset){
+		var pos = rotated_point(this.cx, this.cy, this.m.r, offset.X, offset.Y);
+		cnvs.arc(pos.x, pos.y, this.r, 0, 2 * Math.PI, false);
+		cnvs.strokeStyle = "#000";
+		cnvs.lineWidth = 0.5;
+		cnvs.stroke();
+		cnvs.lineWidth = 6;
+		cnvs.beginPath();
+
+		stroke(this.m.blocks[this.b], color, cnvs);
+		cnvs.beginPath();
+		for(var i = 0; i < this.pos.length; i++){
+			if(i != this.m.msswitches[this.mssw]){
+				var x1 = rotation.X*this.posxy[i].x1 + rotation.Y_*this.posxy[i].y1 + offset.X;
+				var y1 = rotation.Y*this.posxy[i].y1 + rotation.X_*this.posxy[i].x1 + offset.Y;
+
+				var x2 = rotation.X*this.posxy[i].x2 + rotation.Y_*this.posxy[i].y2 + offset.X;
+				var y2 = rotation.Y*this.posxy[i].y2 + rotation.X_*this.posxy[i].x2 + offset.Y;
+
+				cnvs.moveTo(x1, y1);
+				cnvs.lineTo(x2, y2);
+				cnvs.stroke();cnvs.beginPath();
+			}
+		}
+	}
+
+	draw_fore(cnvs, stroke, rotation, offset){
+		stroke(this.m.blocks[this.b], 0, cnvs);
+		cnvs.beginPath();
+
+		var i = this.m.msswitches[this.mssw];
+
+		var centerpos = rotated_point(this.cx, this.cy, this.m.r);
+
+		var pos1 = rotated_point( this.r, 0, this.m.r - this.pos[i], offset.X + centerpos.x, offset.Y + centerpos.y);
+		var pos2 = rotated_point(-this.r, 0, this.m.r - this.pos[i], offset.X + centerpos.x, offset.Y + centerpos.y);
+
+		// var x1 = rotation.X*this.posxy[i].x1 + rotation.Y_*this.posxy[i].y1 + offset.X;
+		// var y1 = rotation.Y*this.posxy[i].y1 + rotation.X_*this.posxy[i].x1 + offset.Y;
+
+		// var x2 = rotation.X*this.posxy[i].x2 + rotation.Y_*this.posxy[i].y2 + offset.X;
+		// var y2 = rotation.Y*this.posxy[i].y2 + rotation.X_*this.posxy[i].x2 + offset.Y;
+
+		cnvs.moveTo(pos1.x, pos1.y);
+		cnvs.lineTo(pos2.x, pos2.y);
+		cnvs.stroke();cnvs.beginPath();
+
+		cnvs.fillStyle = cnvs.strokeStyle;
+
+		cnvs.arc(pos1.x, pos1.y, 3, 0, 2 * Math.PI, true);
+
+
+		// var a = Math.sin((this.m.r-this.pos[i]) * Math.PI) * this.r / 2;
+		// var b = Math.cos((this.m.r-this.pos[i]) * Math.PI) * this.r / 2;
+
+		// var c = Math.sin((this.m.r-this.pos[i]+0.5) * Math.PI) * this.r / 2;
+		// var d = Math.cos((this.m.r-this.pos[i]+0.5) * Math.PI) * this.r / 2;
+
+		// var pos1 = rotated_point(a, b, this.m.r, offset.X + centerpos.x, offset.Y + centerpos.y);
+		// var pos2 = rotated_point(a, b, this.m.r + 1, offset.X + centerpos.x, offset.Y + centerpos.y);
+
+		// var pos3 = rotated_point(c, d, this.m.r, offset.X + centerpos.x, offset.Y + centerpos.y);
+		// var pos4 = rotated_point(c, d, this.m.r + 1, offset.X + centerpos.x, offset.Y + centerpos.y);
+
+		// cnvs.strokeStyle = "#0f0";
+		// cnvs.moveTo(pos1.x, pos1.y);
+		// cnvs.lineTo(pos2.x, pos2.y);
+		// cnvs.stroke();cnvs.beginPath();
+		// cnvs.strokeStyle = "#0ff";
+		// cnvs.moveTo(pos3.x, pos3.y);
+		// cnvs.lineTo(pos4.x, pos4.y);
+		cnvs.stroke();cnvs.beginPath();
+	}
+}
+
+class canvas_parallelogram {
+	constructor(data){
+		this.x = data.x;
+		this.y = data.y;
+		this.w = data.w;
+		this.h = data.h;
+		this.s = data.s;
+	}
+
+	init(){}
+
+	draw_back(cnvs, stroke, color, rotation, offset){}
+
+	draw_fore(cnvs, stroke, rotation, offset){
+		cnvs.moveTo(offset.X+this.x, offset.Y+this.y);
+		cnvs.lineTo(offset.X+this.x+this.w, offset.Y+this.y);
+		cnvs.lineTo(offset.X+this.x+this.w+this.s, offset.Y+this.y+this.h);
+		cnvs.lineTo(offset.X+this.x+this.s, offset.Y+this.y+this.h);
+		cnvs.fillStyle = "rgba(1,1,1,0.5)";
+		cnvs.lineWidth = 0;
+		cnvs.stroke();
+		cnvs.lineWidth = 6;
+	}
+}
+
 class canvas_module {
 	constructor(data){
 		this.id = data.id;
@@ -1414,6 +1884,12 @@ class canvas_module {
 
 		this.blocks = Array.apply(null, Array(data.blocks)).map(function (){return 7});
 		this.switches = Array.apply(null, Array(data.switches)).map(function (){return 0});
+		if(data.msswitches != undefined){
+			this.msswitches = Array.apply(null, Array(data.msswitches)).map(function (){return 0});
+		}
+		else{
+			this.msswitches = [];
+		}
 
 		this.dotmatrix = [];
 		this.data = [];
@@ -1438,6 +1914,12 @@ class canvas_module {
 					break;
 				case "dsf":
 					this.data.push(new canvas_fl_dslip(this, data.layout[i]));
+					break;
+				case "turntable":
+					this.data.push(new canvas_turntable(this, data.layout[i]));
+					break;
+				case "parallelogram":
+					this.data.push(new canvas_parallelogram(this, data.layout[i]));
 					break;
 			}
 

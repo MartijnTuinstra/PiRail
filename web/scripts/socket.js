@@ -208,6 +208,9 @@ websocket.add_opcodes([
           module.connect();
         }
 
+        Canvas.fit();
+        Canvas.fitOptimize();
+
         Canvas.rescale(1);
       }
     },
@@ -225,6 +228,9 @@ websocket.add_opcodes([
 
           module.connect();
         }
+
+        Canvas.fit();
+        Canvas.fitOptimize();
 
         Canvas.rescale(1);
       }
@@ -287,7 +293,7 @@ websocket.add_opcodes([
       opcode: 0x92,
       name: "SubModuleState",
       recv: function(data){
-        Submodules.update([data[0], data[1]])
+        Submodules.update([data[0], data[1], data[2], data[3]])
       }
     },
     {
@@ -970,7 +976,7 @@ websocket.add_opcodes([
           if(data[i+1] & 0x80){ //MSSwitch
             var len   = data[i+3];
 
-            modules[M].switches[data[i+1]&0x7F] = data[i+2] & 0x7F;
+            modules[M].msswitches[data[i+1]&0x7F] = data[i+2] & 0x7F;
 
             i += 4;
           }else{ //Switch

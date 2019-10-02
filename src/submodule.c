@@ -6,7 +6,7 @@
 
 #include "algorithm.h"
 #include "com.h"
-// #include "train_sim.h"
+#include "sim.h"
 #include "Z21.h"
 // #include "pathfinding.h"
 
@@ -17,7 +17,7 @@ void Algor_start(){
   if(SYS->UART.state == Module_STOP)
     UART_start();
 
-  SYS->LC.state = Module_Init;
+  SYS_set_state(&SYS->LC.state, Module_Init);
   pthread_create(&SYS->LC.th, NULL, Algor_Run, NULL);
 }
 
@@ -40,38 +40,42 @@ void UART_start(){
 
 void UART_stop(){
   Algor_stop();
-  SYS->UART.state = Module_STOP;
+  SYS_set_state(&SYS->UART.state, Module_STOP);
 }
 
 pthread_t pt_train_simA;
 
 void SimA_start(){
-  // pthread_join(SYS->SimA.th, NULL);
+  pthread_join(SYS->SimA.th, NULL);
 
-  // if(SYS->LC.state == Module_STOP){
-  //   Algor_start();
-  // }
+  SYS_set_state(&SYS->SimA.state, Module_Init_Parent);
 
-  // while(SYS->LC.state != Module_Run){
-  //   usleep(10000);
-  // }
+  if(SYS->LC.state == Module_STOP){
+    Algor_start();
+  }
 
-  // SYS->SimA.state = Module_Init;
-  // pthread_create(&SYS->SimA.th, NULL, TRAIN_SIMA, NULL);
+  while(SYS->LC.state != Module_Run){
+    usleep(10000);
+  }
+
+  SYS_set_state(&SYS->SimA.state, Module_Init);
+  pthread_create(&SYS->SimA.th, NULL, TRAIN_SIMA, NULL);
 }
 
 void SimB_start(){
-  // pthread_join(SYS->SimB.th, NULL);
+  pthread_join(SYS->SimB.th, NULL);
 
-  // if(SYS->LC.state == Module_STOP){
-  //   Algor_start();
-  // }
+  SYS_set_state(&SYS->SimB.state, Module_Init_Parent);
 
-  // while(SYS->LC.state != Module_Run){
-  //   usleep(10000);
-  // }
+  if(SYS->LC.state == Module_STOP){
+    Algor_start();
+  }
 
-  // usleep(100000);
+  while(SYS->LC.state != Module_Run){
+    usleep(10000);
+  }
+
+  usleep(100000);
 
   // Block * start = Units[22]->B[1];
   // Block * end   = Units[26]->B[5];
@@ -81,8 +85,8 @@ void SimB_start(){
   //   printf("f");
   // }
 
-  // // SYS->SimB.state = Module_Init;
-  // // pthread_create(&SYS->SimB.th, NULL, TRAIN_SIMB, NULL);
+  SYS_set_state(&SYS->SimB.state, Module_Init);
+  pthread_create(&SYS->SimB.th, NULL, TRAIN_SIMB, NULL);
 }
 
 void Z21_start(){

@@ -24,10 +24,10 @@ pthread_mutex_t mutex_lockA;
 #define TRAIN_B_LEN   5 //cm
 #define TRAIN_B_SPEED 5 //cm/s
 
-
 void change_Block(Block * B, enum Rail_states state){
   B->IOchanged = 1;
-  B->state = state;
+  B->statechanged = 1;
+  Units[B->module]->block_state_changed = 1;
   if (state == BLOCKED)
     B->blocked = 1;
   else
@@ -41,15 +41,11 @@ void *TRAIN_SIMA(){
   while(SYS->LC.state != Module_Run){
     usleep(10000);
   }
-  Block *B = Units[21]->B[1];
-  Block *N = Units[21]->B[1];
+  Block *B = Units[25]->B[3];
+  Block *N = Units[25]->B[3];
   Block *N2 = 0;
 
-  B->state = BLOCKED;
-  B->blocked = 1;
-  B->IOchanged = 1;
-
-  putAlgorQueue(B, 1);
+  change_Block(B, BLOCKED);
 
   usleep(100000);
 
@@ -59,53 +55,45 @@ void *TRAIN_SIMA(){
     }
   }
 
-  SYS->SimA.state = Module_Run;
-  WS_stc_SubmoduleState();
+  SYS_set_state(&SYS->SimA.state, Module_Run);
 
   while(SYS->SimA.state & Module_Run){
 
-    N = B->Alg.N[0];
+    if(N2){
+      N = N2;
+      loggerf(INFO, "Using saved next block %02i:%02i", N2->module, N2->id);
+      N2 = 0;
+    }
+    else if(B->Alg.next == 0){
+      N = 0;
+    }
+    else if(B->Alg.N[0]->len == 0)
+      N = B->Alg.N[0]->p.B;
+    else{
+      N = B->Alg.N[0]->p.SB[0];
+      if(B->Alg.next > 1){
+        N2 = B->Alg.N[1]->p.B;
+        loggerf(INFO, "Saving next block %02i:%02i", N2->module, N2->id);
+      }
+    }
+
     if(!N){
       loggerf(WARNING, "Sim A reached end of the line");
+      SYS_set_state(&SYS->SimA.state, Module_Fail);
       return 0;
     }
     loggerf(INFO, "Sim A step %i:%i", N->module, N->id);
     change_Block(N, BLOCKED);
 
     // IF len(N) < len(TRAIN)
-    if(N->length < TRAIN_A_LEN){
-      usleep((N->length/TRAIN_A_SPEED) * OneSec);
-      N2 = N->Alg.N[0];
-      if(!N2){
-        loggerf(WARNING, "Sim A reached end of the line");
-        return 0;
-      }
-      loggerf(DEBUG, "Sim A substep %i:%i", N2->module, N2->id);
+    
+    usleep((TRAIN_A_LEN/TRAIN_A_SPEED) * OneSec);
 
-      change_Block(N2, BLOCKED);
-      usleep(((TRAIN_A_LEN - N->length)/TRAIN_A_SPEED) * OneSec);
-      change_Block(B, PROCEED);
-      if(N2 && N2->length > TRAIN_A_LEN){
-        usleep(((N2->length - (TRAIN_A_LEN - N->length))/TRAIN_A_SPEED) * OneSec);
-        change_Block(N, PROCEED);
-        usleep(((N2->length - TRAIN_A_LEN)/TRAIN_A_SPEED) * OneSec);
+    loggerf(INFO, "Sim A clear step %i:%i", B->module, B->id);
+    change_Block(B, PROCEED);
+    usleep(((N->length - TRAIN_A_LEN)/TRAIN_A_SPEED) * OneSec);
 
-        B = N2;
-      }
-      else{
-        loggerf(WARNING, "Two short blocks smaller than train A");
-        change_Block(N, PROCEED);
-        usleep(OneSec);
-        B = N2;
-      }
-    }
-    else{
-      usleep((TRAIN_A_LEN/TRAIN_A_SPEED) * OneSec);
-      change_Block(B, PROCEED);
-      usleep(((N->length - TRAIN_A_LEN)/TRAIN_A_SPEED) * OneSec);
-
-      B = N;
-    }
+    B = N;
   }
 
   return 0;
@@ -129,27 +117,39 @@ void *TRAIN_SIMB(){
 
   usleep(100000);
 
-  SYS->SimB.state = Module_Run;
-  WS_stc_SubmoduleState();
+  SYS_set_state(&SYS->SimB.state, Module_Run);
 
   while(SYS->SimB.state & Module_Run){
 
-    N = B->Alg.N[0];
-    if(!N){
+    if(B->Alg.next == 0){
       loggerf(WARNING, "Sim B reached end of the line");
+      SYS_set_state(&SYS->SimB.state, Module_Fail);
       return 0;
     }
+
+    if(B->Alg.N[0]->len == 0)
+      N = B->Alg.N[0]->p.B;
+    else
+      N = B->Alg.N[0]->p.SB[0];
+
     loggerf(INFO, "Sim B step %i:%i", N->module, N->id);
     change_Block(N, BLOCKED);
 
     // IF len(N) < len(TRAIN)
     if(N->length < TRAIN_B_LEN){
       usleep((N->length/TRAIN_B_SPEED) * OneSec);
-      N2 = N->Alg.N[0];
-      if(!N2){
+
+      if(N->Alg.next == 0){
         loggerf(WARNING, "Sim B reached end of the line");
+        SYS_set_state(&SYS->SimB.state, Module_Fail);
         return 0;
       }
+
+      if(N->Alg.N[0]->len == 0)
+        N2 = N->Alg.N[0]->p.B;
+      else
+        N2 = N->Alg.N[0]->p.SB[0];
+      
       loggerf(DEBUG, "Sim B substep %i:%i", N2->module, N2->id);
 
       change_Block(N2, BLOCKED);
@@ -198,7 +198,7 @@ int init_connect_Algor(struct ConnectList * List){
       if(List->list_index <= List->length + 1){
         struct rail_link ** temp = _calloc(List->list_index+8, struct rail_link *);
         for(int q = 0;q < List->list_index;q++){
-        temp[q] = List->R_L[q];
+          temp[q] = List->R_L[q];
         }
         _free(List->R_L);
         List->R_L = temp;
@@ -220,7 +220,7 @@ int init_connect_Algor(struct ConnectList * List){
       if(List->list_index <= List->length + 1){
         struct rail_link ** temp = _calloc(List->list_index+8, struct rail_link *);
         for(int q = 0;q < List->list_index;q++){
-        temp[q] = List->R_L[q];
+          temp[q] = List->R_L[q];
         }
         _free(List->R_L);
         List->R_L = temp;
@@ -653,7 +653,7 @@ void SIM_JoinModules(){
       ws_send_all(data,k,0x10);
     }
     i++;
-    usleep(1000);
+    usleep(10000);
     prev_j = cur_j;
 
     if(i == 15){
@@ -671,23 +671,23 @@ void SIM_JoinModules(){
       printf("\n2\n");
     }else if(x == 3){
       Units[22]->B[1]->blocked = 1;
-      Units[26]->B[0]->blocked = 1;
+      Units[10]->B[0]->blocked = 1;
 
       Units[25]->B[3]->blocked = 1;
       Units[22]->B[0]->blocked = 1;
       printf("\n3\n");
     }else if(x == 4){
-      Units[26]->B[3]->blocked = 1;
+      Units[10]->B[3]->blocked = 1;
       Units[21]->B[0]->blocked = 1;
 
       Units[22]->B[1]->blocked = 0;
-      Units[26]->B[0]->blocked = 0;
+      Units[10]->B[0]->blocked = 0;
       printf("\n4\n");
     }else if(x == 5){
       Units[21]->B[3]->blocked = 1;
       Units[23]->B[0]->blocked = 1;
 
-      Units[26]->B[3]->blocked = 0;
+      Units[10]->B[3]->blocked = 0;
       Units[21]->B[0]->blocked = 0;
       printf("\n5\n");
     }else if(x == 6){
@@ -706,6 +706,7 @@ void SIM_JoinModules(){
     }
     else if(x == 10){
       // _SYS_change(STATE_Modules_Coupled,1);
+      SYS->modules_linked = 1;
     }
     }
     //IF ALL JOINED
@@ -716,21 +717,21 @@ void SIM_JoinModules(){
   Units[22]->B[1]->blocked = 0;
 
   for(int i = 0;i<List.length;i++){
-    if(List.R_L[i]->type == 'S'){
-      if(((Switch *)List.R_L[i]->p)->app.type == RAIL_LINK_C){
-        ((Switch *)List.R_L[i]->p)->app.type = 0;
-      }else if(((Switch *)List.R_L[i]->p)->str.type == RAIL_LINK_C){
-        ((Switch *)List.R_L[i]->p)->str.type = 0;
-      }else if(((Switch *)List.R_L[i]->p)->div.type == RAIL_LINK_C){
-        ((Switch *)List.R_L[i]->p)->div.type = 0;
-      }
-    }else if(((Block *)List.R_L[i]->p)){
-      if(((Block *)List.R_L[i]->p)->next.type == RAIL_LINK_C){
-        ((Block *)List.R_L[i]->p)->next.type = 0;
-      }else if(((Block *)List.R_L[i]->p)->prev.type == RAIL_LINK_C){
-        ((Block *)List.R_L[i]->p)->prev.type = 0;
-      }
-    }
+    // if(List.R_L[i]->type == 'S'){
+    //   if(((Switch *)List.R_L[i]->p)->app.type == RAIL_LINK_C){
+    //     ((Switch *)List.R_L[i]->p)->app.type = 0;
+    //   }else if(((Switch *)List.R_L[i]->p)->str.type == RAIL_LINK_C){
+    //     ((Switch *)List.R_L[i]->p)->str.type = 0;
+    //   }else if(((Switch *)List.R_L[i]->p)->div.type == RAIL_LINK_C){
+    //     ((Switch *)List.R_L[i]->p)->div.type = 0;
+    //   }
+    // }else if(((Block *)List.R_L[i]->p)){
+    //   if(((Block *)List.R_L[i]->p)->next.type == RAIL_LINK_C){
+    //     ((Block *)List.R_L[i]->p)->next.type = 0;
+    //   }else if(((Block *)List.R_L[i]->p)->prev.type == RAIL_LINK_C){
+    //     ((Block *)List.R_L[i]->p)->prev.type = 0;
+    //   }
+    // }
 
     _free(List.R_L[i]);
   }
@@ -748,7 +749,6 @@ void SIM_JoinModules(){
   }
 
   // WS_Track_Layout();
-
 }
 
 void SIM_Connect_Rail_links(){
@@ -769,6 +769,8 @@ void SIM_Connect_Rail_links(){
 
       Block * tB = tU->B[i];
 
+      printf("LINKING block %i\n", i);
+
       tB->next.p = rail_link_pointer(tB->next);
       tB->prev.p = rail_link_pointer(tB->prev);
     }
@@ -779,6 +781,8 @@ void SIM_Connect_Rail_links(){
       }
 
       Switch * tSw = tU->Sw[i];
+
+      printf("LINKING switch %i\n", i);
 
       tSw->app.p = rail_link_pointer(tSw->app);
       tSw->str.p = rail_link_pointer(tSw->str);
@@ -792,10 +796,16 @@ void SIM_Connect_Rail_links(){
 
       MSSwitch * tMSSw = tU->MSSw[i];
 
+      printf("LINKING msswitch %i\n", i);
+
       for(int s = 0; s < tMSSw->state_len; s++){
         tMSSw->sideA[s].p = rail_link_pointer(tMSSw->sideA[s]);
         tMSSw->sideB[s].p = rail_link_pointer(tMSSw->sideB[s]);
       }
     }
   }
+}
+
+void SIM_Client_Connect_cb(){
+  Algor_start();
 }

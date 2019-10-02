@@ -99,6 +99,8 @@ void system_init(struct s_systemState * S);
 
 extern struct s_systemState * SYS; 
 
+void SYS_set_state(volatile enum e_SYS_Module_State * system, enum e_SYS_Module_State state);
+
 #ifndef TRUE
 #define FALSE 0
 #define TRUE  1

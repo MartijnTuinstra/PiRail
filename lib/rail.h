@@ -30,25 +30,53 @@ typedef struct rail_train RailTrain;
 
 #define U_B(U, A) Units[U]->B[A]
 
+#ifndef RAIL_LINK_TYPES
+#define RAIL_LINK_TYPES
+enum link_types {
+  RAIL_LINK_R,
+  RAIL_LINK_S,
+  RAIL_LINK_s,
+  RAIL_LINK_M,
+  RAIL_LINK_m,
+  RAIL_LINK_TT = 0x10, // Turntable
+  RAIL_LINK_C  = 0xfe,
+  RAIL_LINK_E  = 0xff
+};
+#endif
+
+typedef struct s_algor_block {
+  union {
+    Block * B;
+    Block * SB[5];
+  } p;
+  uint8_t len; // 0 = one block, 1 or more is Switch Blocks
+
+  RailTrain * train;
+
+  uint8_t blocked;
+  uint8_t reserved;
+} Algor_Block;
+
 typedef struct algor_blocks {
   uint8_t prev;
-  Block ** P;
-  Block * B;
-  Block ** N;
+  Algor_Block * P[10];
+  Algor_Block * B;
+  Algor_Block * N[10];
   uint8_t next;
 } Algor_Blocks;
 
 struct rail_link {
   uint8_t  module;
   uint16_t id;
-  uint8_t type;
+  enum link_types type;
   void * p;
 };
 
 enum Rail_types {
   MAIN,
   STATION,
-  SPECIAL
+  SPECIAL,
+  TURNTABLE
 };
 
 enum Rail_states {
@@ -62,18 +90,7 @@ enum Rail_states {
   UNKNOWN           // 7
 };
 
-#ifndef RAIL_LINK_TYPES
-#define RAIL_LINK_TYPES
-enum link_types {
-  RAIL_LINK_R,
-  RAIL_LINK_S,
-  RAIL_LINK_s,
-  RAIL_LINK_M,
-  RAIL_LINK_m,
-  RAIL_LINK_C = 0xfe,
-  RAIL_LINK_E = 0xff
-};
-#endif
+extern char * rail_states_string[8];
 
 typedef struct s_Block {
   uint8_t  module;
@@ -157,6 +174,9 @@ typedef struct s_Station {
 extern Station ** stations;
 extern int stations_len;
 
+#define RESTRICTED_SPEED 40
+#define CAUTION_SPEED 90
+
 // void init_rail();
 
 void Create_Block(uint8_t module, struct s_block_conf block);
@@ -165,34 +185,40 @@ void * Clear_Block(Block * B);
 void Create_Station(int module, int id, char * name, char name_len, enum Station_types type, int len, uint8_t * blocks);
 void * Clear_Station(Station * St);
 
+int dircmp(Block *A, Block *B);
+int dircmp_algor(Algor_Block * A, Algor_Block * B);
+
 // void Connect_Rail_links();
 
-// int dircmp(Block *A, Block *B);
 // int block_cmp(Block *A, Block *B);
 
-// Block * Next_Switch_Block(Switch * S, char type, int flags, int level);
-// Block * Next_MSSwitch_Block(MSSwitch * S, char type, int flags, int level);
-// Block * Next_Special_Block(Block * B, int flags, int level);
+Block * Next_Switch_Block(Switch * S, enum link_types type, int flags, int level);
+Block * Next_MSSwitch_Block(MSSwitch * S, enum link_types type, int flags, int level);
+Block * Next_Special_Block(Block * B, int flags, int level);
 
-// #define Next(B, f, l) _Next(B, (f) | 0b1110, l)
-// Block * _Next(Block * B, int flags, int level);
+#define Next(B, f, l) _Next(B, (f) | 0b1110, l)
+Block * _Next(Block * B, int flags, int level);
+
+#define _ALGOR_BLOCK_APPLY(_ABl, _c, _A, _B, _C) if(_ABl->len == 0){_A}else{_B;for(uint8_t _c = 0; _c < _ABl->len; _c++){_C}}
 
 // int Next_check_Switch(void * p, struct rail_link link, int flags);
 // int Next_check_Switch_Path(void * p, struct rail_link link, int flags);
 // int Next_check_Switch_Path_one_block(Block * B, void * p, struct rail_link link, int flags);
 // int Switch_to_rail(Block ** B, void * Sw, char type, uint8_t counter);
 
-// struct rail_link * Next_link(Block * B, int flags);
+struct rail_link * Next_link(Block * B, int flags);
 // // struct rail_link Prev_link(Block * B);
 
-// void Reserve_To_Next_Switch(Block * B);
+void Reserve_To_Next_Switch(Block * B);
 
-// #define Block_reserve(B) loggerf(DEBUG, "RESERVE BLOCK %02i:%02i", B->module, B->id);\
-//                           B->reserved++
-// #define Block_dereserve(B) loggerf(DEBUG, "deRESERVE BLOCK %02i:%02i", B->module, B->id);\
-//                           B->reserved--
+#define BLOCK_RESERVE(B) loggerf(DEBUG, "RESERVE BLOCK %02i:%02i", B->module, B->id);\
+                          B->reserved++
+#define BLOCK_DERESERVE(B) loggerf(DEBUG, "deRESERVE BLOCK %02i:%02i", B->module, B->id);\
+                          B->reserved--
 
-// void Block_Reverse(Block * B);
-// int Block_Reverse_To_Next_Switch(Block * B);
+void Block_reserve(Block * B);
+
+void Block_Reverse(Algor_Blocks * AB);
+int Block_Reverse_To_Next_Switch(Block * B);
 
 #endif

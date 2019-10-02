@@ -23,6 +23,8 @@ void print_link(char * debug, struct s_link_conf link){
       sprintf(debug, "%s%c  \t", debug, 'M');
     else if(link.type == RAIL_LINK_m)
       sprintf(debug, "%s%c  \t", debug, 'm');
+    else if(link.type == RAIL_LINK_TT)
+      sprintf(debug, "%s%c%c \t", debug, 'T', 'T');
     else
       sprintf(debug, "%s%i  \t", debug, link.type);
   }
@@ -35,11 +37,18 @@ void print_Node(struct s_node_conf node){
 }
 
 void print_Block(struct s_block_conf block){
+  const char * rail_types_string[4] = {
+    "MAIN",
+    "STATION",
+    "SWITCHBLOCK",
+    "TURNTABLE"
+  };
+
   char debug[200];
 
-  sprintf(debug, "%i\t%i\t",
+  sprintf(debug, "%i\t%11s\t",
                 block.id,
-                block.type);
+                rail_types_string[block.type]);
   print_link(debug, block.next);
   print_link(debug, block.prev);
   sprintf(debug, "%s%i\t%i\t%i\t%i\t%i\t%i:%i\t%i:%i",
@@ -79,25 +88,26 @@ void print_Switch(struct switch_conf Switch){
 void print_MSSwitch(struct ms_switch_conf Switch){
   char debug[400];
 
-  sprintf(debug, "%i\t%i\t%i\n\t",
+  sprintf(debug, "%i\t%i\t%i\t%2i -> [%2i:%2i",
+                Switch.id,
                 Switch.det_block,
                 Switch.nr_states,
-                Switch.IO);
+                Switch.IO,
+                Switch.IO_Ports[0].Node, Switch.IO_Ports[0].Adr);
+
+  for(int i = 1; i < Switch.IO; i++){
+    sprintf(debug, "%s, %2i:%2i", debug, Switch.IO_Ports[i].Node, Switch.IO_Ports[i].Adr);
+  }
+  sprintf(debug, "%s]\n", debug);
+
   for(int i = 0; i < Switch.nr_states; i++){
-    sprintf(debug, "%s\t%2i:%2i:%2i\t%2i:%2i:%2i\t%i\t%x",
-                debug,
-                Switch.states[i].sideA.module, Switch.states[i].sideA.id, Switch.states[i].sideA.type,
-                Switch.states[i].sideB.module, Switch.states[i].sideB.id, Switch.states[i].sideB.type,
-                Switch.states[i].speed, Switch.states[i].output_sequence);
+    sprintf(debug, "%s\t\t\t%2i >\t", debug, i);
+    print_link(debug, Switch.states[i].sideA);
+    print_link(debug, Switch.states[i].sideB);
+    sprintf(debug, "%s%i\t%x\n", debug, Switch.states[i].speed, Switch.states[i].output_sequence);
   }
 
-  sprintf(debug, "%s\n\t", debug);
-
-  for(int i = 0; i < Switch.IO; i++){
-    sprintf(debug, "%s\t%i:%i", debug, Switch.IO_Ports[i].Node, Switch.IO_Ports[i].Adr);
-  }
-
-  printf( "%s\n", debug);
+  printf( "%s", debug);
 }
 
 void print_Signals(struct signal_conf signal){
@@ -224,7 +234,7 @@ void print_module_config(struct module_config * config){
   }
 
   printf( "MSSwitch\n");
-  printf( "id\tblock\tSideA     \tSideB     \tSpeed\tSequence\t...\n");
+  printf( "id\tblock\tstates\tIO\tSideA     \tSideB     \tSpeed\tSequence\t...\n");
   for(int i = 0; i < config->header.MSSwitches; i++){
     print_MSSwitch(config->MSSwitches[i]);
   }
@@ -284,7 +294,7 @@ int read_module_config(struct module_config * config, FILE * fp){
   long fsize = ftell(fp);
   fseek(fp, 0, SEEK_SET);
 
-  char * buffer = _calloc(fsize, char);
+  char * buffer = _calloc(fsize + 10, char);
   char * buffer_start = &buffer[0];
   fread(buffer, fsize, 1, fp);
 
@@ -338,9 +348,9 @@ int read_module_config(struct module_config * config, FILE * fp){
 
   //Layout
   memcpy(&config->Layout_length, *buf_ptr, sizeof(uint16_t));
-  *buf_ptr += 2;
+  *buf_ptr += sizeof(uint16_t) + 1;
 
-  config->Layout = _calloc(config->Layout_length + 1, 1);
+  config->Layout = _calloc(config->Layout_length + 1, uint8_t);
   memcpy(config->Layout, *buf_ptr, config->Layout_length);
 
   _free(header);
@@ -1128,7 +1138,7 @@ void import_Layout(struct module_config * config){
   printf("Location: ");
   fgets(src, 80, stdin);
   sscanf(src, "%s", src);
-  /* open the file for writing*/
+  /* open the file for reading*/
   fp = fopen (src,"r");
 
   if(!fp){
@@ -1137,13 +1147,13 @@ void import_Layout(struct module_config * config){
   }
 
   fseek(fp, 0, SEEK_END);
-  long fsize = ftell(fp) - 1;
+  long fsize = ftell(fp);
   fseek(fp, 0, SEEK_SET);
 
-  config->Layout = _realloc(config->Layout, fsize, 1);
+  config->Layout = _realloc(config->Layout, fsize, uint8_t);
 
   fread(config->Layout, fsize, 1, fp);
-  config->Layout[fsize] = 0;
+  // config->Layout[fsize] = 0;
 
   config->Layout_length = fsize;
 
@@ -1825,7 +1835,7 @@ int edit_rolling_stock(){
 
 int main(){
   init_logger("log_config.txt");
-  set_level(INFO);
+  set_level(MEMORY);
 
   printf("Edit module or rolling stock? ");
 

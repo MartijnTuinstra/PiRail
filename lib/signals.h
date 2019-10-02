@@ -36,7 +36,7 @@ typedef struct s_Signal{
 void Create_Signal(uint8_t module, uint8_t blockId, uint16_t signalId, _Bool side, char output_len, struct s_IO_port_conf * output, struct s_IO_signal_event_conf * stating);
 void * Clear_Signal(Signal * Sig);
 
-// void check_Signal(Signal * Si);
+void check_Signal(Signal * Si);
 void set_signal(Signal *Si, enum Rail_states state);
 #endif
 

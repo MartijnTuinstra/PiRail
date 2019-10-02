@@ -191,14 +191,27 @@ int websocket_decode(uint8_t data[1024], struct web_client_t * client){
     }
   }
   else if(data[0] & 0x20){ //Track stuff
-    loggerf(TRACE, "Track Settings");
-    if(data[0] == WSopc_SetSwitch){ //Toggle switch
-      if(Units[data[1]] && U_Sw(data[1], data[2])){ //Check if switch exists
-        loggerf(INFO, "throw switch %i:%i to state: \t%i->%i",
-                data[1], data[2], U_Sw(data[1], data[2])->state, !U_Sw(data[1], data[2])->state);
-        lock_Algor_process();
-        throw_switch(U_Sw(data[1], data[2]), data[3], 1);
-        unlock_Algor_process();
+    loggerf(INFO, "Track Settings");
+    if(d->opcode == WSopc_SetSwitch){ //Toggle switch
+      if(d->data.opc_SetSwitch.mssw){
+        loggerf(INFO, "SetMSSw %2x %2x", d->data.opc_SetSwitch.module, d->data.opc_SetSwitch.id);
+        if(Units[d->data.opc_SetSwitch.module] && U_MSSw(d->data.opc_SetSwitch.module, d->data.opc_SetSwitch.id)){
+          loggerf(INFO, "throw msswitch %i:%i to state: \t%i->%i",
+                  d->data.opc_SetSwitch.module, d->data.opc_SetSwitch.id, U_MSSw(d->data.opc_SetSwitch.module, d->data.opc_SetSwitch.id)->state, d->data.opc_SetSwitch.state);
+          lock_Algor_process();
+          throw_msswitch(U_MSSw(d->data.opc_SetSwitch.module, d->data.opc_SetSwitch.id), d->data.opc_SetSwitch.state, 1);
+          unlock_Algor_process();
+        }
+      }
+      else{
+        loggerf(INFO, "SetSw %2x %2x", d->data.opc_SetSwitch.module, d->data.opc_SetSwitch.id);
+        if(Units[data[1]] && U_Sw(d->data.opc_SetSwitch.module, d->data.opc_SetSwitch.id)){ //Check if switch exists
+          loggerf(INFO, "throw switch %i:%i to state: \t%i->%i",
+                  d->data.opc_SetSwitch.module, d->data.opc_SetSwitch.id, U_Sw(d->data.opc_SetSwitch.module, d->data.opc_SetSwitch.id)->state, !U_Sw(d->data.opc_SetSwitch.module, d->data.opc_SetSwitch.id)->state);
+          lock_Algor_process();
+          throw_switch(U_Sw(d->data.opc_SetSwitch.module, d->data.opc_SetSwitch.id), d->data.opc_SetSwitch.state, 1);
+          unlock_Algor_process();
+        }
       }
     }
     else if(data[0] == WSopc_SetMultiSwitch){ // Set mulitple switches at once
@@ -351,7 +364,12 @@ void ws_send(int fd, char * data, int length, int flag){
   pthread_mutex_lock(&m_websocket_send);
 
   printf("WS send (%i)\t",fd);
-  print_hex(data, length);
+  if(length < 32)
+    print_hex(data, length);
+  else{
+    print_hex(data, 32);
+    printf("...\n");
+  }
 
   if(write(fd, outbuf, outlength) == -1){
     loggerf(WARNING, "socket write error %x", errno);

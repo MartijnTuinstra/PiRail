@@ -229,6 +229,8 @@ void * websocket_client_connect(void * p){
 
   //Send submodule status
   WS_stc_SubmoduleState();
+
+  // SIM_Client_Connect_cb();
   
   //Send track layout and data
   if(SYS->modules_loaded){
@@ -438,7 +440,7 @@ void * websocket_server(){
   if(server < 0){
     loggerf(CRITICAL, "SOCKET ERROR");
     SYS->stop = 1;
-    SYS->WebSocket.state = Module_Fail;
+    SYS_set_state(&SYS->WebSocket.state, Module_Fail);
     return 0;
   }
 
@@ -453,7 +455,7 @@ void * websocket_server(){
     close(server);
     _free(websocket_clients);
     SYS->stop = 1;
-    SYS->WebSocket.state = Module_Fail;
+    SYS_set_state(&SYS->WebSocket.state, Module_Fail);
     return 0;
   }
 
@@ -462,7 +464,7 @@ void * websocket_server(){
     close(server);
     _free(websocket_clients);
     SYS->stop = 1;
-    SYS->WebSocket.state = Module_Fail;
+    SYS_set_state(&SYS->WebSocket.state, Module_Fail);
     return 0;
   }
 
@@ -471,7 +473,7 @@ void * websocket_server(){
 
   WS_init_Message_List();
   
-  SYS->WebSocket.state = Module_Init;
+  SYS_set_state(&SYS->WebSocket.state, Module_Init);
 
   //Set server timeout
   struct timeval tv;
@@ -507,7 +509,7 @@ void * websocket_server(){
   loggerf(INFO, "Stopping websocket_clear_clients");
   pthread_join(websocket_clear_thread, NULL);
 
-  SYS->WebSocket.state = Module_STOP;
+  SYS_set_state(&SYS->WebSocket.state, Module_STOP);
 
   _free(websocket_clients);
   _free(WS_password);

@@ -179,7 +179,7 @@ void read_module_Config(uint16_t M){
   //Raw copy
   Units[M]->raw_length = fsize-2;
   Units[M]->raw = _calloc(fsize+5, char);
-  loggerf(ERROR, "Reading %d bytes", fsize);
+  loggerf(INFO, "Reading Module %i (%d b)", M, fsize);
   memcpy(Units[M]->raw, raw, fsize-2);
 
   for(int i = 0; i < config->header.IO_Nodes; i++){
@@ -194,6 +194,7 @@ void read_module_Config(uint16_t M){
   }
 
   for(int i = 0; i < config->header.Switches; i++){
+    loggerf(INFO, "Reading Sw");
     struct switch_conf s = read_s_switch_conf(buf_ptr);
     struct s_switch_connect connect;
 
@@ -220,10 +221,14 @@ void read_module_Config(uint16_t M){
   }
 
   for(int i = 0; i < config->header.MSSwitches; i++){
-    config->MSSwitches[i]  = read_s_ms_switch_conf(buf_ptr);
+    loggerf(INFO, "Reading MSSw");
+    struct ms_switch_conf s = read_s_ms_switch_conf(buf_ptr);
+
+    create_msswitch_from_conf(M, s);
   }
   
   for(int i = 0; i < config->header.Signals; i++){
+    loggerf(INFO, "Reading Signal");
     struct signal_conf sig = read_s_signal_conf(buf_ptr);
 
     create_signal_from_conf(M, sig);
@@ -253,9 +258,9 @@ void read_module_Config(uint16_t M){
   //Layout
   memcpy(&config->Layout_length, *buf_ptr, sizeof(uint16_t));
   Units[M]->Layout_length = config->Layout_length;
-  *buf_ptr += 2;
+  *buf_ptr += sizeof(uint16_t) + 1;
 
-  config->Layout = _calloc(config->Layout_length + 1, 1);
+  config->Layout = _calloc(config->Layout_length + 1, uint8_t);
   memcpy(config->Layout, *buf_ptr, config->Layout_length);
   Units[M]->Layout = config->Layout;
 

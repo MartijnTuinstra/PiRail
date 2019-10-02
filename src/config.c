@@ -51,7 +51,7 @@ int calc_write_module_size(struct module_config * config){
 
   //Layout
 
-  size += 2 + config->Layout_length;
+  size += 3 + config->Layout_length+3;
 
   return size;
 }
@@ -181,8 +181,8 @@ void write_module_from_conf(struct module_config * config, char * filename){
     p += 1;
 
     for(int j = 0; j < config->MSSwitches[i].IO; j++){
-      memcpy(p, &config->MSSwitches[i].IO_Ports[j], 2);
-      p += 2;
+      memcpy(p, &config->MSSwitches[i].IO_Ports[j], sizeof(struct s_IO_port_conf));
+      p += sizeof(struct s_IO_port_conf);
     }
 
     p += 1;
@@ -216,10 +216,10 @@ void write_module_from_conf(struct module_config * config, char * filename){
 
   //Copy Layout
   memcpy(p, &config->Layout_length, sizeof(uint16_t));
-  p += sizeof(uint16_t);
+  p += sizeof(uint16_t) + 1;
 
   memcpy(p, config->Layout, config->Layout_length);
-  p += sizeof(uint16_t);
+  p += config->Layout_length + 1;
 
   //Print output
   // print_hex(data, size);
@@ -389,12 +389,16 @@ struct ms_switch_conf read_s_ms_switch_conf(uint8_t ** p){
 
   print_hex((char *)*p, 16);
 
+  loggerf(INFO, "Basics");
+
   memcpy(&s, *p, sizeof(struct s_ms_switch_conf));
 
   *p += sizeof(struct s_ms_switch_conf);
 
   if(!check_Spacing(p))
     return s;
+
+  loggerf(INFO, "States");
 
   s.states = _calloc(s.nr_states, struct s_ms_switch_state_conf);
 
@@ -406,10 +410,12 @@ struct ms_switch_conf read_s_ms_switch_conf(uint8_t ** p){
   if(!check_Spacing(p))
     return s;
 
+  loggerf(INFO, "IO Ports");
+
   s.IO_Ports = _calloc(s.IO, struct s_IO_port_conf);
 
   for(int i = 0; i < s.IO; i++){
-    memcpy(&s.IO_Ports[i], *p, 2);
+    memcpy(&s.IO_Ports[i], *p, sizeof(struct s_IO_port_conf));
     *p += sizeof(struct s_IO_port_conf);
   }
 

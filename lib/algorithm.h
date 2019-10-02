@@ -28,6 +28,7 @@ extern sem_t AlgorQueueNoEmpty;
 extern struct s_AlgorQueue AlgorQueue;
 
 void putAlgorQueue(Block * B, int enableQueue);
+void putAlgorQueue_Algor_Block(Algor_Block * B, int enable);
 void putList_AlgorQueue(struct algor_blocks AllBlocks, int enable);
 Block * getAlgorQueue();
 void processAlgorQueue();
@@ -41,20 +42,27 @@ void * Algor_Run();
                               sem_getvalue(&AlgorQueueNoEmpty, &val); \
                               if(val == 0 && enable){sem_post(&AlgorQueueNoEmpty);}
 
-// void process(Block * B,int debug);
+#define _DEBUG 1
+#define _FORCE 2
+#define _LOCK  0x80
+
+void Algor_process(Block * B,int flags);
+
 void Algor_Set_Changed(struct algor_blocks * blocks);
-void Algor_init_Blocks(struct algor_blocks * AllBlocks, Block * B);
-void Algor_free_Blocks(struct algor_blocks * AllBlocks);
-void Algor_clear_Blocks(struct algor_blocks * AllBlocks);
-// void Algor_print_block_debug(struct algor_blocks AllBlocks);
-void Algor_search_Blocks(struct algor_blocks * AllBlocks, int debug);
-// void Algor_Switch_Checker(struct algor_blocks AllBlocks, int debug);
-// void Algor_train_following(struct algor_blocks AllBlocks, int debug);
+void Algor_init_Blocks(Algor_Blocks * ABs, Block * B);
+void Algor_free_Blocks(Algor_Blocks * ABs);
+void Algor_clear_Blocks(Algor_Blocks * ABs);
+void Algor_print_block_debug(Block * B);
+void Algor_search_Blocks(Block * B, int debug);
+void Algor_special_search_Blocks(Block * B, int flags);
+void Algor_turntable_search_Blocks(Block * B, int debug);
+void Algor_Switch_Checker(Algor_Blocks * ABs, int debug);
+void Algor_train_following(Algor_Blocks * ABs, int debug);
 // void Algor_GetBlocked_Blocks(struct algor_blocks AllBlocks);
-// void Algor_rail_state(struct algor_blocks AllBlocks, int debug);
+void Algor_rail_state(struct algor_blocks AllBlocks, int debug);
 // void Algor_apply_rail_state(Algor_Block blocks, enum Rail_states state);
-// void Algor_signal_state(struct algor_blocks AllBlocks, int debug);
-// void Algor_train_control(struct algor_blocks AllBlocks, int debug);
+void Algor_signal_state(Algor_Blocks AB, int debug);
+void Algor_train_control(Algor_Blocks * ABs, int debug);
 
 // void procces_accessoire();
 

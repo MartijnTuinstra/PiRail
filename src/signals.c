@@ -20,7 +20,7 @@ void Create_Signal(uint8_t module, uint8_t blockId, uint16_t signalId, _Bool sid
 
   Z->id = signalId;
   Z->module = module;
-  Z->state = PROCEED;
+  Z->state = UNKNOWN;
   Z->output_len = output_len;
   
   Z->output = _calloc(output_len, IO_Port *);
@@ -74,30 +74,7 @@ void * Clear_Signal(Signal * Sig){
 }
 
 void print_signal_state(Signal * Si, enum Rail_states state){
-  char out[200];
-  sprintf(out, "%02i:%02i Sig %i:%i %i", Si->B->module, Si->B->id, Si->module, Si->id, Si->state);
-  if(Si->state == BLOCKED || Si->state == DANGER)
-    sprintf(out, "%s DANGER", out);
-  else if(Si->state == RESTRICTED)
-    sprintf(out, "%s RESTRICTED", out);
-  else if(Si->state == CAUTION)
-    sprintf(out, "%s CAUTION", out);
-  else if(Si->state == PROCEED)
-    sprintf(out, "%s PROCEED", out);
-  else
-    sprintf(out, "%s STATE", out);
-
-  if(state == BLOCKED || state == DANGER)
-    sprintf(out, "%s->%i DANGER", out, state);
-  else if(state == RESTRICTED)
-    sprintf(out, "%s->%i RESTRICTED", out, state);
-  else if(state == CAUTION)
-    sprintf(out, "%s->%i CAUTION", out, state);
-  else if(state == PROCEED)
-    sprintf(out, "%s->%i PROCEED", out, state);
-  else
-    sprintf(out, "%s->%i STATE", out, state);
-  loggerf(DEBUG, "%s", out);
+  loggerf(INFO, "%02i:%02i Sig %i  %i %s -> %i %s", Si->B->module, Si->B->id, Si->id, Si->state, rail_states_string[Si->state], state, rail_states_string[state]);
 }
 
 void set_signal(Signal * Si, enum Rail_states state){
@@ -111,5 +88,48 @@ void set_signal(Signal * Si, enum Rail_states state){
       Si->output[i]->w_state = Si->output_stating[i].state[Si->state];
     }
     Units[Si->module]->io_out_changed |= 1;
+  }
+}
+
+void check_Signal(Signal * Si){
+  loggerf(INFO, "check_Signal %x", (unsigned int)Si);
+  if(!Si->B->Alg.B)
+    return;
+
+  if(Si->B->NextSignal == Si){
+    if(Si->B->dir == 0 || Si->B->dir == 2 || Si->B->dir == 3){
+      if(Si->B->Alg.next == 0){
+        set_signal(Si, DANGER);
+      }
+      else{
+        set_signal(Si, Si->B->Alg.N[0]->p.B->state);
+      }
+    }
+    else{
+      if(Si->B->Alg.prev == 0){
+        set_signal(Si, DANGER);
+      }
+      else{
+        set_signal(Si, Si->B->Alg.P[0]->p.B->reverse_state);
+      }
+    }
+  }
+  else{
+    if(Si->B->dir == 1 || Si->B->dir == 4 || Si->B->dir == 6){
+      if(Si->B->Alg.next == 0){
+        set_signal(Si, DANGER);
+      }
+      else{
+        set_signal(Si, Si->B->Alg.N[0]->p.B->state);
+      }
+    }
+    else{
+      if(Si->B->Alg.prev == 0){
+        set_signal(Si, DANGER);
+      }
+      else{
+        set_signal(Si, Si->B->Alg.P[0]->p.B->reverse_state);
+      }
+    }
   }
 }

@@ -9,6 +9,8 @@
 #include "logger.h"
 #include "mem.h"
 
+#include "websocket_msg.h"
+
 sem_t AlgorQueueNoEmpty;
 
 void sigint_func(int sig){
@@ -80,4 +82,9 @@ void system_init(struct s_systemState * S){
 
   S->SimA.state = Module_STOP;
   S->SimB.state = Module_STOP;
+}
+
+void SYS_set_state(volatile enum e_SYS_Module_State * system, enum e_SYS_Module_State state){
+  *system = state;
+  WS_stc_SubmoduleState();
 }

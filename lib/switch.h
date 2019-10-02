@@ -95,6 +95,8 @@ struct s_msswitch_connect {
   uint8_t  module;
   uint16_t id;
 
+  uint8_t states;
+
   struct rail_link * sideA;
   struct rail_link * sideB;
 };
@@ -104,10 +106,6 @@ struct switch_list {
   char * type;
   void ** p;
 };
-
-void throw_switch(Switch * S, uint8_t state, uint8_t lock);
-void throw_msswitch(MSSwitch * S, uint8_t state, uint8_t lock);
-int throw_multiple_switches(uint8_t len, char * data);
 
 // int set_switch(Switch * S, uint8_t state);
 // int set_msswitch(MSSwitch * S, uint8_t state);
@@ -123,6 +121,15 @@ void Create_Switch(struct s_switch_connect connect, uint8_t block_id, uint8_t ou
 void Create_MSSwitch(struct s_msswitch_connect connect, uint8_t block_id, uint8_t output_len, Node_adr * output_pins, uint16_t * output_states);
 void * Clear_Switch(Switch * Sw);
 void * Clear_MSSwitch(MSSwitch * Sw);
+
+void throw_switch(Switch * S, uint8_t state, uint8_t lock);
+void throw_msswitch(MSSwitch * S, uint8_t state, uint8_t lock);
+int throw_multiple_switches(uint8_t len, char * data);
+
+int Next_check_Switch(void * p, struct rail_link link, int flags);
+int Switch_Check_Path(void * p, struct rail_link link, int flags);
+int Switch_Reserve_Path(void * p, struct rail_link link, int flags);
+int Switch_Set_Path(void * p, struct rail_link link, int flags);
 
 // int check_Switch(struct rail_link link, _Bool pref);
 // int check_Switch_State(struct rail_link adr);

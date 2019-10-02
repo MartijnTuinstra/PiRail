@@ -1100,17 +1100,15 @@ void WS_trackUpdate(int Client_fd){
 
   int q = 1;
 
-  loggerf(TRACE, "WS_trackUpdate");
-
   for(int i = 0;i<unit_len;i++){
-    if(!Units[i])// || (Units[i]->changed & Unit_Blocks_changed) == 0)
+    if(!Units[i] || Units[i]->block_state_changed == 0)
       continue;
 
-    Units[i]->changed &= ~Unit_Blocks_changed;
+    Units[i]->block_state_changed = 0;
 
     for(int j = 0;j<Units[i]->block_len;j++){
       Block * B = Units[i]->B[j];
-      if(B && B->IOchanged){
+      if(B && (B->statechanged || B->IOchanged)){
         content = 1;
 
         data[(q-1)*4+1] = B->module;
@@ -1119,7 +1117,7 @@ void WS_trackUpdate(int Client_fd){
         data[(q-1)*4+4] = 0;//B->train;
         q++;
 
-        B->IOchanged = 0;
+        B->statechanged = 0;
       }
     }
   }
@@ -1177,29 +1175,32 @@ void WS_SwitchesUpdate(int Client_fd){
       }
     }
 
-    buf_l = (q-1)*3+1;
+    buf_l = (q-1)*3;
 
-  /*MSSwitches
-    //buf[0] = 5;
-    //buf_l = 0;
-    q = 1;
-    for(int i = 0;i<MAX_Modules;i++){
-      if(!Units[i] && !Units[i]->switch_state_changed)
-        continue;
-      content = 1;
-      for(int j = 0;j<=Units[i]->Mod_nr;j++){
-        struct Mod * M = Units[i]->M[j];
-        if(M){
-          buf[(q-1)*4+1+buf_l] = M->Module;
-          buf[(q-1)*4+2+buf_l] = (M->id & 0x7F) + 0x80;
-          buf[(q-1)*4+3+buf_l] = M->state;
-          buf[(q-1)*4+4+buf_l] = M->length;
-          q++;
-        }
+  // MSSwitches
+  //buf[0] = 5;
+  // buf_l = 0;
+  q = 1;
+  for(int i = 0;i<unit_len;i++){
+    if(!Units[i] || !Units[i]->msswitch_state_changed)
+      continue;
+    content = 1;
+    for(int j = 0;j<=Units[i]->msswitch_len;j++){
+      MSSwitch * Sw = Units[i]->MSSw[j];
+      if(Sw){
+        buf[(q-1)*4+1+buf_l] = Sw->module;
+        buf[(q-1)*4+2+buf_l] = (Sw->id & 0x7F) + 0x80;
+        buf[(q-1)*4+3+buf_l] = Sw->state & 0x7F;
+        buf[(q-1)*4+4+buf_l] = Sw->state_len;
+
+        Sw->state &= ~0x80;
+
+        q++;
       }
     }
-  */
-  //buf_l += (q-1)*4+1;
+  }
+  
+  buf_l += (q-1)*4+1;
   if(content == 1){
     if(Client_fd){
       ws_send(Client_fd, buf, buf_l, WS_Flag_Switches);

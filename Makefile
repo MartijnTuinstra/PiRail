@@ -17,6 +17,8 @@ BAAN_FILES = baan system logger mem modules config rail signals switch IO algori
 
 CONFIG_READER_FILES = config_reader config logger mem
 
+.DEFAULT_GOAL := all
+
 -include $(BIN)/*.d
 
 $(BIN):

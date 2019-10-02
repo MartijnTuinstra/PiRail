@@ -24,7 +24,7 @@ $(BIN):
 
 $(BIN)/%.o: $(SRC)/%.c
 	@echo $@
-	@$(GCC) -c $^ -MP -MMD -MT '$@ $(BIN)/$*.d' -o $@
+	@$(GCC) -c $(SRC)/$*.c -MP -MMD -MT '$@ $(BIN)/$*.d' -o $(BIN)/$*.o
 
 .PHONY: all
 

@@ -52,6 +52,9 @@ void Algor_Set_Changed(struct algor_blocks * blocks);
 void Algor_init_Blocks(Algor_Blocks * ABs, Block * B);
 void Algor_free_Blocks(Algor_Blocks * ABs);
 void Algor_clear_Blocks(Algor_Blocks * ABs);
+
+void Algor_Check_Algor_Stating(Block * B, uint8_t flags);
+
 void Algor_print_block_debug(Block * B);
 void Algor_search_Blocks(Block * B, int debug);
 void Algor_special_search_Blocks(Block * B, int flags);

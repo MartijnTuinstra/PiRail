@@ -15,15 +15,44 @@ struct __attribute__((__packed__)) s_opc_SetSwitch {
 struct __attribute__((__packed__)) s_opc_LinkTrain {
   uint8_t follow_id;
   uint8_t real_id;
-  uint16_t type:1;
-  uint16_t message_id:15;
+  uint8_t message_id_H:7;
+  uint8_t type:1;
+  uint8_t message_id_L;
+};
+
+struct __attribute__((__packed__)) s_opc_SetTrainSpeed {
+  uint8_t follow_id;
+  uint8_t empty1:3;
+  uint8_t dir:1;
+  uint8_t speed_high:4;
+  uint8_t speed_low;
+};
+
+struct __attribute__((__packed__)) s_opc_TrainControl {
+  uint8_t follow_id;
+  uint8_t control;
+};
+
+struct __attribute__((__packed__)) s_opc_UpdateTrain {
+  uint8_t follow_id;
+  uint8_t speed_high:4;
+  uint8_t control:3;
+  uint8_t dir:1;
+  uint8_t speed_low;
+  uint8_t routeStation;
+  uint8_t routeModule;
 };
 
 struct __attribute__((__packed__)) s_opc_TrainRoute {
   uint8_t train_id;
   uint8_t station_id;
   uint8_t module_id;
-};// * data
+};
+
+struct __attribute__((__packed__)) s_opc_SubscribeTrain {
+  uint8_t followA;
+  uint8_t followB;
+};
 
 struct __attribute__((__packed__)) s_opc_AddNewCartolib {
   uint16_t nr;
@@ -106,8 +135,13 @@ struct s_WS_Data {
     struct s_opc_SetSwitch             opc_SetSwitch;
 
     struct s_opc_LinkTrain             opc_LinkTrain;
+    struct s_opc_SetTrainSpeed         opc_SetTrainSpeed;
 
+    struct s_opc_TrainControl          opc_TrainControl;
+
+    struct s_opc_UpdateTrain           opc_UpdateTrain;
     struct s_opc_TrainRoute            opc_TrainRoute;
+    struct s_opc_SubscribeTrain        opc_SubscribeTrain;
 
     struct s_opc_AddNewCartolib        opc_AddNewCartolib;
     struct s_opc_AddNewCartolib_res    opc_AddNewCartolib_res;
@@ -131,9 +165,9 @@ int websocket_get_msg(int fd_client, char outbuf[], int * L);
 
 void websocket_create_msg(char * input, int length_in, char * output, int * length_out);
 
-void ws_send(int fd_client, char data[],int length,int flag);
+void ws_send(struct web_client_t * client, char * data, int length, int flag);
 
-void ws_send_all(char data[],int length,int flag);
+void ws_send_all(char * data,int length,int flag);
 
 int websocket_decode(uint8_t data[1024], struct web_client_t * client);
 
@@ -176,8 +210,8 @@ int websocket_decode(uint8_t data[1024], struct web_client_t * client);
 #define WSopc_LinkTrain          0x41
 #define WSopc_TrainSpeed         0x42
 #define WSopc_TrainFunction      0x43
-#define WSopc_TrainOperation     0x44
-#define WSopc_Z21TrainData       0x45
+#define WSopc_TrainControl       0x44
+#define WSopc_UpdateTrain        0x45
 #define WSopc_TrainAddRoute      0x46
 #define WSopc_TrainSubscribe     0x4F
 

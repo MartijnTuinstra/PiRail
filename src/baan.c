@@ -46,15 +46,16 @@ int main(){
   websocket_server();
 
   // UART_stop();
-  unload_module_Configs();
-  unload_rolling_Configs();
+  loggerf(WARNING, "Shutdown sequence started");
 
   // Stop all
   SYS->stop = 1;
-  _free(SYS);
+  unload_module_Configs();
+  unload_rolling_Configs();
 
   loggerf(INFO, "STOPPED");
   exit_logger(); //Close logger
+  _free(SYS);
 
   print_allocs();
 }

@@ -76,7 +76,7 @@ int websocket_decode(uint8_t data[1024], struct web_client_t * client){
 
 	      loggerf(INFO, "Change client flags to %x", client->type);
 
-        ws_send(client->fd,(char [2]){WSopc_ChangeBroadcast,client->type},2,255);
+        ws_send(client,(char [2]){WSopc_ChangeBroadcast,client->type},2,255);
       }else{
         loggerf(INFO, "FAILED LOGIN!! %d", strcmp((char *)&data[1],WS_password));
         loggerf(INFO, "%s", &data[1]);
@@ -102,7 +102,7 @@ int websocket_decode(uint8_t data[1024], struct web_client_t * client){
     else if(data[0] == WSopc_Admin_Logout){
       client->type &= ~0x10;
 
-      ws_send(client->fd,(char [2]){WSopc_ChangeBroadcast,client->type},2,255);
+      ws_send(client,(char [2]){WSopc_ChangeBroadcast,client->type},2,255);
     }
     else if(data[0] == WSopc_EmergencyStopAdmin){
 
@@ -117,36 +117,19 @@ int websocket_decode(uint8_t data[1024], struct web_client_t * client){
       WS_cts_LinkTrain((void *)&d->data, client);
     }
     else if(data[0] == WSopc_TrainSpeed){ //Train speed control
-      uint16_t id = data[1] + ((data[2] & 0xC0) << 2);
-      uint16_t speed = data[3] + ((data[2] & 0x0F) << 8);
-
-      if(data[2] & 0x20 && id < trains_len){ //Train
-        trains[id]->cur_speed = speed;
-        trains[id]->dir = (data[2] & 0x10) >> 4;
-
-        train_calc_speed(trains[id]);
-
-        Z21_Set_Loco_Drive_Train(trains[id]);
-      }
-      else if(id < engines_len){ //Engine
-        engines[id]->dir = (data[2] & 0x10) >> 4;
-
-        engine_set_speed(engines[id], speed);
-
-        Z21_Set_Loco_Drive_Engine(engines[id]);
-      }
+      WS_cts_SetTrainSpeed((void *)&d->data, client);
     }
     else if(data[0] == WSopc_TrainFunction){ //Train function control
 
     }
-    else if(data[0] == WSopc_TrainOperation){ //Train operation change
-
+    else if(data[0] == WSopc_TrainControl){ //Train operation change
+      WS_cts_TrainControl(&d->data.opc_TrainControl, client);
     }
     else if(data[0] == WSopc_TrainAddRoute){ //Add route to train
       WS_cts_TrainRoute(&d->data.opc_TrainRoute, client);
     }
     else if(data[0] == WSopc_TrainSubscribe){
-      WS_TrainSubscribe(&data[1], client);
+      WS_cts_TrainSubscribe((void *)&d->data, client);
     }
 
     else if(data[0] == WSopc_AddNewCartolib){
@@ -228,7 +211,7 @@ int websocket_decode(uint8_t data[1024], struct web_client_t * client){
     }
 
     else if(data[0] == WSopc_TrackLayoutRawData){
-      WS_stc_TrackLayoutRawData(data[1], client->fd);
+      WS_stc_TrackLayoutRawData(data[1], client);
     }
   }
 
@@ -257,7 +240,7 @@ int websocket_decode(uint8_t data[1024], struct web_client_t * client){
         loggerf(DEBUG, "Changing flags");
       }
       loggerf(DEBUG,"Websocket:\t%02x - New flag for client %d\n",client->type, client->id);
-      ws_send(client->fd,(char [2]){WSopc_ChangeBroadcast,client->type},2,255);
+      ws_send(client,(char [2]){WSopc_ChangeBroadcast,client->type},2,255);
     }
   }
   return 0;
@@ -355,24 +338,32 @@ void websocket_create_msg(char * input, int length_in, char * output, int * leng
   *length_out = header_len + length_in;
 }
 
-void ws_send(int fd, char * data, int length, int flag){
+void ws_send(struct web_client_t * client, char * data, int length, int flag){
   char * outbuf = _calloc(length + 100, 1);
   int outlength = 0;
+
+  if(!(SYS->WebSocket.state == Module_Run || SYS->WebSocket.state == Module_Init)){
+    _free(outbuf);
+    return;
+  }
 
   websocket_create_msg(data, length, outbuf, &outlength);
 
   pthread_mutex_lock(&m_websocket_send);
 
-  printf("WS send (%i)\t",fd);
-  if(length < 32)
-    print_hex(data, length);
-  else{
-    print_hex(data, 32);
-    printf("...\n");
-  }
-
-  if(write(fd, outbuf, outlength) == -1){
-    loggerf(WARNING, "socket write error %x", errno);
+  if(write(client->fd, outbuf, outlength) == -1){
+    if(errno == EPIPE){
+      printf("Broken Pipe!!!!!\n\n");
+    }
+    else if(errno == EFAULT){
+      loggerf(ERROR, "EFAULT ERROR");
+    }
+    else{
+      loggerf(ERROR, "Unknown write error, closing connection");
+    }
+    close(client->fd);
+    SYS->Clients--;
+    client->state = 2;
   };
 
   pthread_mutex_unlock(&m_websocket_send);
@@ -402,13 +393,13 @@ void ws_send_all(char * data,int length,int flag){
         loggerf(WARNING, "socket write error %x", errno); 
         if(errno == EPIPE){
           printf("Broken Pipe!!!!!\n\n");
-          close(websocket_clients[i].fd);
-          SYS->Clients--;
-          websocket_clients[i].state = 2;
         }
         else if(errno == EFAULT){
           loggerf(ERROR, "EFAULT ERROR");
         }
+        close(websocket_clients[i].fd);
+        SYS->Clients--;
+        websocket_clients[i].state = 2;
       }
     }
   }

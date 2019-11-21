@@ -27,6 +27,11 @@ void Add_IO_Node(Unit * U, int Node_nr, int IO){
   return;
 }
 
+void Init_IO_from_conf(Unit * U, struct s_IO_port_conf adr, enum e_IO_type type){
+  Node_adr new_adr = {adr.Node, adr.Adr};
+  Init_IO(U, new_adr, type);
+}
+
 void Init_IO(Unit * U, Node_adr adr, enum e_IO_type type){
   if((adr.Node < U->IO_Nodes) && 
      (adr.io < U->Node[adr.Node].io_ports) &&
@@ -41,7 +46,7 @@ void Init_IO(Unit * U, Node_adr adr, enum e_IO_type type){
     A->id = adr.io;
   }
   else{
-    loggerf(ERROR, "Init_IO Error");
+    loggerf(ERROR, "Init_IO Error, addr %02x:%02x is not in range", adr.Node, adr.io);
   }
 }
 

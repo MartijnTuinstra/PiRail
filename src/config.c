@@ -387,8 +387,6 @@ struct switch_conf read_s_switch_conf(uint8_t ** p){
 struct ms_switch_conf read_s_ms_switch_conf(uint8_t ** p){
   struct ms_switch_conf s;
 
-  print_hex((char *)*p, 16);
-
   memcpy(&s, *p, sizeof(struct s_ms_switch_conf));
 
   *p += sizeof(struct s_ms_switch_conf);

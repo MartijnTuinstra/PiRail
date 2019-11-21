@@ -698,6 +698,7 @@ Block * Next_MSSwitch_Block(MSSwitch * S, enum link_types type, int flags, int l
 void Reserve_To_Next_Switch(Block * B){
   loggerf(WARNING, "Block_Reverse %02i:%02i", B->module, B->id);
   Block * Next_Block = 0;
+  Block * Prev_Block = 0;
 
   if(B->Alg.next > 0 && B->Alg.N[0]->len == 0)
     Next_Block = B->Alg.N[0]->p.B;
@@ -706,16 +707,18 @@ void Reserve_To_Next_Switch(Block * B){
     if(!Next_Block){
       break;
     }
-    // else if(Next_Block->type == SPECIAL){
-    //   putAlgorQueue(Next_Block, 1);
-    //   break;
-    // }
 
-    loggerf(INFO, "%02i:%02i", Next_Block->module, Next_Block->id);
     Block_reserve(Next_Block);
 
-    if(Next_Block->Alg.next > 0 && Next_Block->Alg.N[0]->len == 0)
-      Next_Block = Next_Block->Alg.N[0]->p.B;
+    if(Next_Block->Alg.next > 0 && Next_Block->Alg.N[0]->len == 0){
+      if(Next_Block->Alg.N[0]->p.B == Prev_Block){
+        Next_Block = 0;
+      }
+      else{
+        Prev_Block = Next_Block;
+        Next_Block = Next_Block->Alg.N[0]->p.B;
+      }
+    }
     else
       Next_Block = 0;
 
@@ -784,7 +787,9 @@ void Block_reserve(Block * B){
     B->state = RESERVED;
   B->reverse_state = DANGER;
 
-  BLOCK_RESERVE(B);
+  B->reserved++;
+
+  Algor_Check_Algor_Stating(B, 0);
 
   B->statechanged = 1;
   Units[B->module]->block_state_changed = 1;

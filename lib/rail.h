@@ -213,7 +213,7 @@ void Reserve_To_Next_Switch(Block * B);
 
 #define BLOCK_RESERVE(B) loggerf(DEBUG, "RESERVE BLOCK %02i:%02i", B->module, B->id);\
                           B->reserved++
-#define BLOCK_DERESERVE(B) loggerf(DEBUG, "deRESERVE BLOCK %02i:%02i", B->module, B->id);\
+#define BLOCK_DERESERVE(B) loggerf(INFO, "deRESERVE BLOCK %02i:%02i", B->module, B->id);\
                           B->reserved--
 
 void Block_reserve(Block * B);

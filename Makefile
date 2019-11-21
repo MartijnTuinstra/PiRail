@@ -21,27 +21,27 @@ CONFIG_READER_FILES = config_reader config logger mem
 
 -include $(BIN)/*.d
 
-$(BIN):
-	@mkdir -p ./bin
-
 $(BIN)/%.o: $(SRC)/%.c
 	@echo $@
 	@$(GCC) -c $(SRC)/$*.c -MP -MMD -MT '$@ $(BIN)/$*.d' -o $(BIN)/$*.o
 
 .PHONY: all
 
-all: config_reader baan
+all: config_reader baan _avr
 
-baan: $(BIN) $(addprefix $(BIN)/,$(addsuffix .o, $(BAAN_FILES)))
-	@echo $@
-	@$(GCC) -o $@ $(addprefix $(BIN)/,$(addsuffix .o, $(BAAN_FILES)))
+_avr:
+	@+$(MAKE) -f avr/Makefile all
 
-config_reader: $(BIN) $(addprefix $(BIN)/,$(addsuffix .o, $(CONFIG_READER_FILES)))
+baan: $(addprefix $(BIN)/,$(addsuffix .o, $(BAAN_FILES)))
 	@echo $@
-	@$(GCC) -o $@ $(addprefix $(BIN)/,$(addsuffix .o, $(CONFIG_READER_FILES)))
+	@$(GCC) -o $@ $^
+
+config_reader: $(addprefix $(BIN)/,$(addsuffix .o, $(CONFIG_READER_FILES)))
+	@echo $@
+	@$(GCC) -o $@ $^
 
 clean:
 	@echo "CLEAN"
 	@rm -f baan
 	@rm -f config_reader
-	@rm -rf bin
+	@rm -rf bin/*

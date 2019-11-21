@@ -222,7 +222,7 @@ void print_module_config(struct module_config * config){
   }
 
   printf( "Block\n");
-  printf( "id\ttype\tNext    \tPrev    \tMax_sp\tdir\tlen\tOneWay\tOut en\tIO_in\tIO_out\n");
+  printf( "id\ttype\t\tNext    \tPrev    \tMax_sp\tdir\tlen\tOneWay\tOut en\tIO_in\tIO_out\n");
   for(int i = 0; i < config->header.Blocks; i++){
     print_Block(config->Blocks[i]);
   }

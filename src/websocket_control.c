@@ -155,8 +155,8 @@ void * websocket_client_connect(void * p){
   setsockopt(client->fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
 
   //Reset Subscribed Trains
-  client->trains[0].id = 0xFFF;
-  client->trains[1].id = 0xFFF;
+  client->trains[0] = 0xFF;
+  client->trains[1] = 0xFF;
 
   char * buf = _calloc(WS_BUF_SIZE, char);
   int length = 0;
@@ -171,7 +171,7 @@ void * websocket_client_connect(void * p){
     while(1){
       // Require login
       data[0] = WSopc_Admin_Login;
-      ws_send(client->fd, data, 1, 0xFF);
+      ws_send(client, data, 1, 0xFF);
 
       usleep(100000);
 
@@ -229,8 +229,6 @@ void * websocket_client_connect(void * p){
 
   //Send submodule status
   WS_stc_SubmoduleState();
-
-  // SIM_Client_Connect_cb();
   
   //Send track layout and data
   if(SYS->modules_loaded){
@@ -239,32 +237,32 @@ void * websocket_client_connect(void * p){
       if(!Units[i])
         continue;
 
-      WS_Track_LayoutDataOnly(i, client->fd);
+      WS_Track_LayoutDataOnly(i, client);
     }
 
-    WS_stc_StationLib(client->fd);
+    WS_stc_StationLib(client);
 
     if(SYS->modules_linked){
-      WS_Track_Layout(client->fd);
+      WS_Track_Layout(client);
       
       // Send new client JSON
-      WS_NewClient_track_Switch_Update(client->fd);
+      WS_NewClient_track_Switch_Update(client);
     }
   }
 
   // Send open messages
-  WS_send_open_Messages(client->fd);
+  WS_send_open_Messages(client);
 
 
   // Send broadcast flags
-  ws_send(client->fd, (char [2]){WSopc_ChangeBroadcast,client->type}, 2, 0xFF);
+  ws_send(client, (char [2]){WSopc_ChangeBroadcast,client->type}, 2, 0xFF);
 
   if(SYS->trains_loaded){
     loggerf(INFO, "Update clients libs %i", client->id);
-    WS_EnginesLib(client->fd);
-    WS_CarsLib(client->fd);
-    WS_TrainsLib(client->fd);
-    WS_stc_TrainCategories(client->fd);
+    WS_EnginesLib(client);
+    WS_CarsLib(client);
+    WS_TrainsLib(client);
+    WS_stc_TrainCategories(client);
 
     //train_link, train_link_lenlink_id
     // Send all linked trains
@@ -284,16 +282,19 @@ void * websocket_client_connect(void * p){
         msg.real_id = ((Engines *)train_link[i]->p)->id;
         msg.type = 1;
       }
-      msg.message_id = 0;
+      msg.message_id_H = 0;
+      msg.message_id_L = 0;
 
       WS_stc_LinkTrain(&msg);
     }
   }
 
   if(SYS->Z21.state & Module_Run){
-    WS_stc_Z21_info(client->fd);
+    WS_stc_Z21_info(client);
   }
-  WS_stc_Z21_IP(client->fd);
+  WS_stc_Z21_IP(client);
+
+  SIM_Client_Connect_cb();
 
   memset(buf, 0, WS_BUF_SIZE);
 
@@ -427,6 +428,11 @@ void * websocket_server(){
   //Memory alloc for clients list and thread data
   websocket_clients = _calloc(MAX_WEB_CLIENTS, struct web_client_t);
 
+  for(uint8_t i = 0; i < MAX_WEB_CLIENTS; i++){
+    websocket_clients[i].trains[0] = 0xFF;
+    websocket_clients[i].trains[1] = 0xFF;
+  }
+
   struct sockaddr_in server_addr, client_addr;
 
   socklen_t sin_len = sizeof(client_addr);
@@ -481,7 +487,7 @@ void * websocket_server(){
   tv.tv_usec = 0;
   setsockopt(server, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
 
-  loggerf(DEBUG, "Listening for Websocket Clients");
+  loggerf(INFO, "Listening for Websocket Clients %i", SYS->stop);
   while(SYS->stop == 0){
     // Run until system is stopped, or until client_accept is closed
 
@@ -500,9 +506,12 @@ void * websocket_server(){
       }
     }
 
-    loggerf(INFO, "New socket client");
+    loggerf(INFO, "New socket client %i", SYS->stop);
     new_websocket_client(fd_client);
+    loggerf(INFO, "%i", SYS->stop);
   }
+
+  loggerf(INFO, "Stopping Websocket Server");
 
   close(server);
 

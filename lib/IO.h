@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include "modules.h"
+#include "config_data.h"
 
 typedef struct s_unit Unit;
 
@@ -57,6 +58,7 @@ typedef struct s_IO_Node {
 
 void Add_IO_Node(Unit * U, int Node_nr, int IO);
 
+void Init_IO_from_conf(Unit * U, struct s_IO_port_conf adr, enum e_IO_type type);
 void Init_IO(Unit * U, Node_adr adr, enum e_IO_type type);
 
 void update_IO();

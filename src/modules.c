@@ -54,7 +54,7 @@ void Create_Unit(uint16_t M, uint8_t Nodes, char points){
 }
 
 void * Clear_Unit(Unit * U){
-  printf("Clearing module %i\n", U->module);
+  loggerf(INFO, "Clearing module %i", U->module);
 
   //Clear unit connections array
   _free(U->connection);
@@ -69,23 +69,19 @@ void * Clear_Unit(Unit * U){
   _free(U->Node);
 
   //clear Segments
-  loggerf(DEBUG,"Clear segments (%i)",U->block_len);
   for(int j = 0; j < U->block_len; j++){
     if(!U->B[j])
       continue;
 
-    printf("- Block %i\n",j);
     U->B[j] = Clear_Block(U->B[j]);;
   }
   _free(U->B);
 
   //clear Switches
   if(U->Sw){
-    loggerf(DEBUG,"Clear switches (%i)",U->switch_len);
     for(int j = 0; j <= U->switch_len; j++){
       if(!U->Sw[j])
         continue;
-      printf("- Switch %i\n",j);
 
       U->Sw[j] = Clear_Switch(U->Sw[j]);
     }
@@ -94,7 +90,6 @@ void * Clear_Unit(Unit * U){
   //clear Mods
   for(int j = 0;j<=U->msswitch_len;j++){
     if(U->MSSw[j]){
-      printf("- Mod %i\n",j);
       U->MSSw[j] = Clear_MSSwitch(U->MSSw[j]);
     }
   }
@@ -105,7 +100,6 @@ void * Clear_Unit(Unit * U){
     for(int j = 0;j<=U->signal_len;j++){
       if(!U->Sig[j])
         continue;
-      printf("- Signal %i\n",j);
       U->Sig[j] = Clear_Signal(U->Sig[j]);
     }
   }
@@ -116,7 +110,6 @@ void * Clear_Unit(Unit * U){
     for(int j = 0;j<=U->station_len;j++){
       if(!U->St[j])
         continue;
-      printf("- Station %i\n",j);
       U->St[j] = Clear_Station(U->St[j]);
     }
     _free(U->St);
@@ -125,10 +118,8 @@ void * Clear_Unit(Unit * U){
   _free(U->raw);
   _free(U->Layout);
 
-  printf("- Unit %i\n", U->module);
   _free(U);
   U = 0;
-  printf("\t Cleared!\n");
 }
 
 void read_module_Config(uint16_t M){
@@ -182,16 +173,22 @@ void read_module_Config(uint16_t M){
   loggerf(INFO, "Reading Module %i (%d b)", M, fsize);
   memcpy(Units[M]->raw, raw, fsize-2);
 
+  loggerf(DEBUG, "  Module nodes");
+
   for(int i = 0; i < config->header.IO_Nodes; i++){
     struct s_node_conf node = read_s_node_conf(buf_ptr);
     Add_IO_Node(Units[M], node.Node, node.size);
   }
+
+  loggerf(DEBUG, "  Module Block");
 
   
   for(int i = 0; i < config->header.Blocks; i++){
     struct s_block_conf block = read_s_block_conf(buf_ptr);
     Create_Block(M, block);
   }
+
+  loggerf(DEBUG, "  Module Switch");
 
   for(int i = 0; i < config->header.Switches; i++){
     struct switch_conf s = read_s_switch_conf(buf_ptr);
@@ -219,11 +216,15 @@ void read_module_Config(uint16_t M){
     _free(Adrs);
   }
 
+  loggerf(DEBUG, "  Module MSSwitch");
+
   for(int i = 0; i < config->header.MSSwitches; i++){
     struct ms_switch_conf s = read_s_ms_switch_conf(buf_ptr);
 
     create_msswitch_from_conf(M, s);
   }
+
+  loggerf(DEBUG, "  Module Signals");
   
   for(int i = 0; i < config->header.Signals; i++){
     struct signal_conf sig = read_s_signal_conf(buf_ptr);

@@ -69,7 +69,23 @@ var Train_Control = {
       $('body').on('mouseup mousemove touchmove touchend', handler.bind(this, box));
     }.bind(this));
 
-    $('.train-box .btn-toggle').on("click", function(evt){
+
+    $('.train-box .train-info-box .control .btn-toggle').on("click", function(evt){
+      evt.preventDefault();
+      $('.btn-toggle', $(evt.target).closest(".train-box, .btn-toggle-group")).removeClass('btn-secondary');
+      $('.btn-toggle', $(evt.target).closest(".train-box, .btn-toggle-group")).addClass('btn-outline-secondary');
+      var btn = $(evt.target).closest('.btn-toggle');
+      btn.removeClass('btn-outline-secondary');
+      btn.addClass('btn-secondary');
+
+      var control = parseInt(btn.attr("value"));
+      var box = this.get_box(evt.currentTarget);
+
+      this.set_control(box, control);
+    }.bind(this));
+
+
+    $('.train-box .train-dir-box .btn-toggle').on("click", function(evt){
       evt.preventDefault();
       $('.btn-toggle', $(evt.target).closest(".train-box, .btn-toggle-group")).removeClass('btn-secondary');
       $('.btn-toggle', $(evt.target).closest(".train-box, .btn-toggle-group")).addClass('btn-outline-secondary');
@@ -115,7 +131,7 @@ var Train_Control = {
   },
 
   send_speed: function(box, resend){
-    websocket.cts_TrainSpeed({type: this.train[box].type, train: this.train[box].t});
+    websocket.cts_TrainSpeed({train: this.train[box].t});
     if(resend != undefined && resend){
       this.timer = setTimeout(this.send_speed.bind(this, box, true), 100);
     }
@@ -128,6 +144,18 @@ var Train_Control = {
     this.send_speed(box);
   },
 
+  set_control: function(box, control){
+    this.train[box].t.control = control;
+    websocket.cts_TrainControl({train: this.train[box].t});
+  },
+  apply_control: function(box){
+    $('.train-box.box'+box+' .train-info-box .control .btn-toggle').removeClass('btn-secondary');
+    $('.train-box.box'+box+' .train-info-box .control .btn-toggle').addClass('btn-outline-secondary');
+
+    $('.train-box.box'+box+' .train-info-box .control .btn-toggle[value='+this.train[box].t.control+']').removeClass('btn-outline-secondary');
+    $('.train-box.box'+box+' .train-info-box .control .btn-toggle[value='+this.train[box].t.control+']').addClass('btn-secondary');
+  },
+
   set_dir: function(box, dir){
     if(dir == "F"){
       this.train[box].t.dir = 1;
@@ -136,6 +164,17 @@ var Train_Control = {
     }
 
     websocket.cts_TrainSpeed({type: this.train[box].type, train: this.train[box].t});
+  },
+  apply_dir: function(box){
+    $('.train-box.box'+box+' .train-dir-box .btn-toggle').removeClass('btn-secondary');
+    $('.train-box.box'+box+' .train-dir-box .btn-toggle').addClass('btn-outline-secondary');
+    if(this.train[box].t.dir == 0){
+      $('.train-box.box'+box+' .train-dir-box .btn-toggle[value=R]').removeClass('btn-outline-secondary');
+      $('.train-box.box'+box+' .train-dir-box .btn-toggle[value=R]').addClass('btn-secondary');
+    }else if(this.train[box].t.dir == 1){
+      $('.train-box.box'+box+' .train-dir-box .btn-toggle[value=F]').removeClass('btn-outline-secondary');
+      $('.train-box.box'+box+' .train-dir-box .btn-toggle[value=F]').addClass('btn-secondary');
+    }
   },
   set_stop: function(box){
     this.set_handle(box, 0);

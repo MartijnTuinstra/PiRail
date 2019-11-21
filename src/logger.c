@@ -65,7 +65,7 @@ void floggerf(enum logging_levels level, char * file, int line, char * text, ...
   time(&current_time);
   time_info = localtime(&current_time);
 
-  strftime(c_time, sizeof(c_time), "%H:%M", time_info);
+  strftime(c_time, sizeof(c_time), "%H:%M:%S", time_info);
 
   FILE * fp = fopen(logger_file,"a");
 

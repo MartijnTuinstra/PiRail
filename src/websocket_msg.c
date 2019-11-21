@@ -82,7 +82,7 @@ void WS_Partial_Layout(uint8_t M_A,uint8_t M_B){
   }
 }
 
-void WS_Track_Layout(int Client_fd){
+void WS_Track_Layout(struct web_client_t * client){
 
   char data[100];
   int q = 1;
@@ -113,8 +113,8 @@ void WS_Track_Layout(int Client_fd){
   printf("Send %i\n",q);
 
   if(q > 1){
-    if(Client_fd){
-      ws_send(Client_fd, data,q,WS_Flag_Track);
+    if(client){
+      ws_send(client, data,q,WS_Flag_Track);
     }
     else{
       ws_send_all(data,q,WS_Flag_Track);
@@ -122,7 +122,7 @@ void WS_Track_Layout(int Client_fd){
   }
 }
 
-void WS_stc_Z21_info(int client_fd){
+void WS_stc_Z21_info(struct web_client_t * client){
   uint8_t data[20];
   data[0] = WSopc_Track_Info;
   data[1] = Z21_info.MainCurrent & 0xFF;
@@ -140,26 +140,22 @@ void WS_stc_Z21_info(int client_fd){
   data[13] = Z21_info.CentralState;
   data[14] = Z21_info.CentralStateEx;
 
-  if(client_fd <= 0){
+  if(client)
+    ws_send(client, (char *)data, 15, 0xff);
+  else
     ws_send_all((char *)data, 15, 0xff);
-  }
-  else{
-    ws_send(client_fd, (char *)data, 15, 0xff);
-  }
 }
 
-void WS_stc_Z21_IP(int client_fd){
+void WS_stc_Z21_IP(struct web_client_t * client){
   uint8_t data[10];
   data[0] = WSopc_Z21_Settings;
   memcpy(&data[1], &Z21_info.IP[0], 4);
   memcpy(&data[5], &Z21_info.Firmware[0], 2);
 
-  if(client_fd <= 0){
+  if(client)
+    ws_send(client, (char *)data, 7, 0xff);
+  else
     ws_send_all((char *)data, 7, 0xff);
-  }
-  else{
-    ws_send(client_fd, (char *)data, 7, 0xff);
-  }
 }
 
 void WS_cts_Enable_Disable_SubmoduleState(uint8_t opcode, uint8_t flags){
@@ -240,13 +236,13 @@ void WS_cts_LinkTrain(struct s_opc_LinkTrain * msg, struct web_client_t * client
   if((return_value = link_train(msg->follow_id, msg->real_id, msg->type)) == 1){
     WS_stc_LinkTrain(msg);
 
-    WS_clear_message(msg->message_id, 1);
+    WS_clear_message((msg->message_id_H << 8) + msg->message_id_L, 1);
 
     Z21_get_train(trains[msg->real_id]);
   }
   else{
     loggerf(WARNING, "Failed link_train()\n");
-    WS_clear_message(msg->message_id, 0); //Failed
+    WS_clear_message((msg->message_id_H << 8) + msg->message_id_L, 0); //Failed
   }
 }
 
@@ -254,123 +250,113 @@ void WS_stc_LinkTrain(struct s_opc_LinkTrain * msg){
   struct s_WS_Data return_msg;
   return_msg.opcode = WSopc_LinkTrain;
   memcpy(&return_msg.data, msg, sizeof(struct s_opc_LinkTrain));
-  return_msg.data.opc_LinkTrain.message_id = 0;
+  return_msg.data.opc_LinkTrain.message_id_H = 0;
+  return_msg.data.opc_LinkTrain.message_id_L = 0;
   
   ws_send_all((char *)&return_msg, 5, 0xFF);
 }
 
-void WS_UpdateTrain(void * t, int type){
-  if(!t)
-    return;
+void WS_cts_TrainControl(struct s_opc_TrainControl * m, struct web_client_t * client){
 
-  char * buffer = _calloc(7, 1);
-  uint16_t id;
-
-  buffer[0] = WSopc_Z21TrainData;
-
-  //type
-  if(type == 0){ // Engine
-    Engines * E = (Engines *)t;
-
-    id = E->id;
-
-    if(E->dir)
-      buffer[2] |= 0x10;
-
-    buffer[2] |= (E->control & 0x03) << 2;
-    buffer[2] |= (E->cur_speed & 0x0100) >> 7;
-    buffer[3] = (E->cur_speed & 0xFF);
-
-    buffer[4] = 0;
-    buffer[5] = 0;
-  }
-  else{ // Train
-    Trains * T = (Trains *)t;
-
-    id = T->id;
-
-    if(T->dir)
-      buffer[2] |= 0x10;
-
-    buffer[2] |= (T->control & 0x03) << 2;
-    buffer[2] |= (T->cur_speed & 0x0100) >> 7;
-    buffer[3]  = (T->cur_speed & 0xFF);
-
-    buffer[4] = 0;
-    buffer[5] = 0;
-  }
-
-  buffer[1] = id & 0xFF;
-  buffer[2] |= (id & 0x0300) >> 2;
-
-  //Send to subscribed users
-  char * outbuf = _calloc(100, 1);
-  int outlength = 0;
-
-  if(!(SYS->WebSocket.state == Module_Init || SYS->WebSocket.state == Module_Run)){
-    _free(outbuf);
+  if(!train_link[m->follow_id]){
+    loggerf(WARNING, "Trying to set speed of undefined RailTrain");
     return;
   }
 
-  websocket_create_msg(buffer, 6, outbuf, &outlength);
+  loggerf(INFO, "WS_cts_TrainControl %i -> %i", m->follow_id, m->control);
 
-  printf("WS send (sub)\t");
-  print_hex(buffer, 6);
+  RailTrain * T = train_link[m->follow_id];
 
-  pthread_mutex_lock(&m_websocket_send);
+  T->control = m->control;
+}
+
+void WS_cts_SetTrainSpeed(struct s_opc_SetTrainSpeed * m, struct web_client_t * client){
+  // uint16_t id = m.follow_id;
+  // uint16_t speed = m.speed;
+
+  if(!train_link[m->follow_id]){
+    loggerf(WARNING, "Trying to set speed of undefined RailTrain");
+    return;
+  }
+
+  uint16_t speed = (m->speed_high << 8) + m->speed_low;
+
+  loggerf(INFO, "WS_cts_SetTrainSpeed %i -> %i", m->follow_id, speed);
+
+  RailTrain * T = train_link[m->follow_id];
+
+  T->speed = speed;
+  T->target_speed = speed;
+  T->dir   = m->dir;
+
+  if(T->type == TRAIN_ENGINE_TYPE){
+    ((Engines *)T->p)->dir = m->dir;
+    engine_set_speed(T->p, speed);
+    // Z21_Set_Loco_Drive_Train(T->p);
+  }
+  else{
+    ((Trains *)T->p)->cur_speed = speed;
+    ((Trains *)T->p)->dir = m->dir;
+    train_calc_speed(T->p);
+    // Z21_Set_Loco_Drive_Engine(T->p);
+  }
+
+  loggerf(INFO, "IMPLEMENT Z21");
+  // if(data[2] & 0x20 && id < trains_len){ //Train
+  //   trains[id]->cur_speed = speed;
+  //   trains[id]->dir = (data[2] & 0x10) >> 4;
+
+  //   train_calc_speed(trains[id]);
+
+  // }
+  // else if(id < engines_len){ //Engine
+  //   engines[id]->dir = (data[2] & 0x10) >> 4;
+
+  //   engine_set_speed(engines[id], speed);
+
+  // }
+}
+
+void WS_stc_UpdateTrain(RailTrain * T){
+  if(!T)
+    return;
+
+  struct s_WS_Data return_msg;
+  return_msg.opcode = WSopc_UpdateTrain;
+  struct s_opc_UpdateTrain * msg = &return_msg.data.opc_UpdateTrain;
+
+  msg->follow_id = T->link_id;
+
+  msg->dir = T->dir;
+  msg->control = T->control & 0x03;
+  msg->speed_high = (T->speed & 0x0F00) >> 8;
+  msg->speed_low  = (T->speed & 0xFF);
+
+  loggerf(DEBUG, "train Update_Train id: %i, d: %i, c: %i, sp: %x%02x", msg->follow_id, msg->dir, msg->control, msg->speed_high, msg->speed_low);
 
   for(int i = 0; i<MAX_WEB_CLIENTS; i++){
-    if(websocket_clients[i].state == 1 && (websocket_clients[i].type & WS_Flag_Trains) != 0){
-      loggerf(INFO, "Client %i, (%i, %i)\t(%i, %i)\t(%i, %i)", i, id, type, websocket_clients[i].trains[0].id, websocket_clients[i].trains[0].type, websocket_clients[i].trains[1].id, websocket_clients[i].trains[1].type);
-      if((websocket_clients[i].trains[0].id == id && websocket_clients[i].trains[0].type == type) || 
-         (websocket_clients[i].trains[1].id == id && websocket_clients[i].trains[1].type == type)){
-        loggerf(INFO, "     write");
-        if(write(websocket_clients[i].fd, outbuf, outlength) == -1){
-          loggerf(WARNING, "socket write error %x", errno); 
-          if(errno == EPIPE){
-            loggerf(ERROR, "Broken Pipe!!!!!\n\n");
-            close(websocket_clients[i].fd);
-            SYS->Clients--;
-            websocket_clients[i].state = 2;
-          }
-          else if(errno == EFAULT){
-            loggerf(ERROR, "EFAULT ERROR");
-          }
-        }
-      }
+    if((websocket_clients[i].trains[0] == T->link_id) || 
+       (websocket_clients[i].trains[1] == T->link_id)){
+      ws_send(&websocket_clients[i], (void *)&return_msg, sizeof(struct s_opc_UpdateTrain) + 1, WS_Flag_Trains);
     }
   }
-  pthread_mutex_unlock(&m_websocket_send);
-
-  _free(outbuf);
-
-  ws_send_all(buffer, 6, WS_Flag_Trains);
 }
 
-void WS_TrainSubscribe(uint8_t * data, struct web_client_t * client){
-  client->trains[0].id = data[0] + ((data[1] & 0xC0) << 2);
-  client->trains[0].type = (data[1] & 0x20) > 5;
-  client->trains[1].type = (data[1] & 0x04) > 2;
-  client->trains[1].id = data[2] + ((data[1] & 0x03) << 8);
+void WS_cts_TrainSubscribe(struct s_opc_SubscribeTrain * m, struct web_client_t * client){
+  client->trains[0] = m->followA;
+  client->trains[1] = m->followB;
 
-  if(client->trains[0].id < 0x3FF){
-    if(client->trains[0].type == 0 && client->trains[0].id < engines_len)
-      WS_UpdateTrain((void *)engines[client->trains[0].id], 0);
-    else if(client->trains[0].id < trains_len)
-      WS_UpdateTrain((void *)trains[client->trains[0].id], 1);
+  if(client->trains[0] < 0xFF && train_link[client->trains[0]]){
+    WS_stc_UpdateTrain(train_link[client->trains[0]]);
+  }
+  if(client->trains[1] < 0xFF && train_link[client->trains[1]]){
+    WS_stc_UpdateTrain(train_link[client->trains[1]]);
   }
 
-  if(client->trains[1].id < 0x3FF){
-    if(client->trains[1].type == 0 && client->trains[1].id < engines_len)
-      WS_UpdateTrain((void *)engines[client->trains[1].id], 0);
-    else if(client->trains[1].id < trains_len)
-      WS_UpdateTrain((void *)trains[client->trains[1].id], 1);
-  }
-
-  loggerf(INFO, "WS_TrainSubscribe client %i = %i, %i", client->id, client->trains[0].id, client->trains[1].id);
+  loggerf(INFO, "WS_cts_TrainSubscribe client %i = %i, %i", client->id, client->trains[0], client->trains[1]);
 }
 
-void WS_EnginesLib(int client_fd){
+void WS_EnginesLib(struct web_client_t * client){
   int buffer_size = 1024;
 
   char * data = _calloc(buffer_size, 1);
@@ -422,18 +408,16 @@ void WS_EnginesLib(int client_fd){
       data[len++] = engines[i]->steps[j].step;
     }
   }
-  if(client_fd <= 0){
+  if(client)
+    ws_send(client, data, len, WS_Flag_Trains);
+  else
     ws_send_all(data, len, WS_Flag_Trains);
-  }
-  else{
-    ws_send(client_fd, data, len, WS_Flag_Trains);
-  }
-
+  
   _free(data);
 }
 
-void WS_CarsLib(int client_fd){
-  loggerf(INFO, "CarsLib for client %i", client_fd);
+void WS_CarsLib(struct web_client_t * client){
+  loggerf(INFO, "CarsLib for client %i", client);
   int buffer_size = 1024;
 
   char * data = _calloc(buffer_size, 1);
@@ -467,18 +451,16 @@ void WS_CarsLib(int client_fd){
       len += l;
     }
   }
-  if(client_fd <= 0){
+  if(client)
+    ws_send(client, data, len, WS_Flag_Trains);
+  else
     ws_send_all(data, len, WS_Flag_Trains);
-  }
-  else{
-    ws_send(client_fd, data, len, WS_Flag_Trains);
-  }
-
+  
   _free(data);
 }
 
-void WS_TrainsLib(int client_fd){
-  loggerf(INFO, "TrainsLib for client %i", client_fd);
+void WS_TrainsLib(struct web_client_t * client){
+  loggerf(INFO, "TrainsLib for client %i", client);
   int buffer_size = 1024;
 
   char * data = _calloc(buffer_size, 1);
@@ -519,18 +501,16 @@ void WS_TrainsLib(int client_fd){
       data[len++] = trains[i]->composition[c].id >> 8;
     }
   }
-  if(client_fd <= 0){
+  if(client)
+    ws_send(client, data, len, WS_Flag_Trains);
+  else
     ws_send_all(data, len, WS_Flag_Trains);
-  }
-  else{
-    ws_send(client_fd, data, len, WS_Flag_Trains);
-  }
-
+  
   _free(data);
 }
 
-void WS_stc_TrainCategories(int client_fd){
-  loggerf(INFO, "TrainCategories for client %i", client_fd);
+void WS_stc_TrainCategories(struct web_client_t * client){
+  loggerf(INFO, "TrainCategories for client %i", client);
   int buffer_size = 1024;
 
   char * data = _calloc(buffer_size, 1);
@@ -567,13 +547,11 @@ void WS_stc_TrainCategories(int client_fd){
     len += l;
   }
 
-  if(client_fd <= 0){
+  if(client)
+    ws_send(client, data, len, WS_Flag_Trains);
+  else
     ws_send_all(data, len, WS_Flag_Trains);
-  }
-  else{
-    ws_send(client_fd, data, len, WS_Flag_Trains);
-  }
-
+  
   _free(data);
 }
 
@@ -646,21 +624,21 @@ void WS_cts_TrainRoute(struct s_opc_TrainRoute * data, struct web_client_t * cli
 
 void WS_stc_TrainRoute(){}
 
-void WS_TrainData(char data[14]){
-  loggerf(TRACE,"WS_TrainData");
-  char s_data[20];
-  s_data[0] = WSopc_Z21TrainData;
+// void WS_TrainData(char data[14]){
+//   loggerf(TRACE,"WS_TrainData");
+//   char s_data[20];
+//   s_data[0] = WSopc_Z21TrainData;
 
-  for(int i = 0;i<7;i++){
-    s_data[i+2] = data[i];
-  }
+//   for(int i = 0;i<7;i++){
+//     s_data[i+2] = data[i];
+//   }
 
-  loggerf(ERROR, "FIX ID");
-  return;
-  // s_data[1] = DCC_train[((s_data[2] << 8) + s_data[3])]->ID;
+//   loggerf(ERROR, "FIX ID");
+//   return;
+//   // s_data[1] = DCC_train[((s_data[2] << 8) + s_data[3])]->ID;
 
-  ws_send_all(s_data,9,WS_Flag_Trains);
-}
+//   ws_send_all(s_data,9,WS_Flag_Trains);
+// }
 
 void WS_cts_AddCartoLib(struct s_opc_AddNewCartolib * data, struct web_client_t * client){
   loggerf(DEBUG, "WS_cts_AddCartoLib");
@@ -708,7 +686,7 @@ void WS_cts_AddCartoLib(struct s_opc_AddNewCartolib * data, struct web_client_t 
   remove(sicon);
 
   rdata->data.opc_AddNewCartolib_res.response = 1;
-  ws_send(client->fd, (char *)rdata, WSopc_AddNewCartolib_res_len, 0xff);
+  ws_send(client, (char *)rdata, WSopc_AddNewCartolib_res_len, 0xff);
 
   _free(dicon);
   _free(sicon);
@@ -776,7 +754,7 @@ void WS_cts_Edit_Car(Cars * C, struct s_opc_AddNewCartolib * data, struct web_cl
   }
 
   rdata->data.opc_AddNewCartolib_res.response = 1;
-  ws_send(client->fd, (char *)rdata, WSopc_AddNewCartolib_res_len, 0xff);
+  ws_send(client, (char *)rdata, WSopc_AddNewCartolib_res_len, 0xff);
 
   _free(dicon);
   _free(sicon);
@@ -791,7 +769,7 @@ void WS_cts_AddEnginetoLib(struct s_opc_AddNewEnginetolib * data, struct web_cli
   if (DCC_train[data->DCC_ID]){
     loggerf(ERROR, "DCC %i allready in use", data->DCC_ID);
     rdata->data.opc_AddNewEnginetolib_res.response = 255;
-    ws_send(client->fd, (char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
+    ws_send(client, (char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
     return;
   }
 
@@ -854,7 +832,7 @@ void WS_cts_AddEnginetoLib(struct s_opc_AddNewEnginetolib * data, struct web_cli
   remove(simg);
 
   rdata->data.opc_AddNewEnginetolib_res.response = 1;
-  ws_send(client->fd, (char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
+  ws_send(client, (char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
 
   _free(dimg);
   _free(dicon);
@@ -898,7 +876,7 @@ void WS_cts_Edit_Engine(struct s_opc_EditEnginelib * msg, struct web_client_t * 
     if (DCC_train[data->DCC_ID] && data->DCC_ID != E->DCC_ID){
       loggerf(ERROR, "DCC %i (%i) allready in use", data->DCC_ID, E->DCC_ID);
       rdata->data.opc_AddNewEnginetolib_res.response = 255;
-      ws_send(client->fd, (char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
+      ws_send(client, (char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
       return;
     }
 
@@ -1014,7 +992,7 @@ void WS_cts_Edit_Engine(struct s_opc_EditEnginelib * msg, struct web_client_t * 
 
     // Send succes response
     rdata->data.opc_AddNewEnginetolib_res.response = 1;
-    ws_send(client->fd, (char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
+    ws_send(client, (char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
 
     _free(dimg);
     _free(dicon);
@@ -1048,7 +1026,7 @@ void WS_cts_AddTraintoLib(struct s_opc_AddNewTraintolib * data, struct web_clien
 
   // Send succes response
   rdata->data.opc_AddNewTraintolib_res.response = 1;
-  ws_send(client->fd, (char *)rdata, WSopc_AddNewTraintolib_res_len, 0xff);
+  ws_send(client, (char *)rdata, WSopc_AddNewTraintolib_res_len, 0xff);
 
   //Update clients Train Library
   WS_TrainsLib(0);
@@ -1083,12 +1061,12 @@ void WS_cts_Edit_Train(Trains * T, struct s_opc_AddNewTraintolib * data, struct 
 
   // Send success response
   rdata->data.opc_AddNewTraintolib_res.response = 1;
-  ws_send(client->fd, (char *)rdata, WSopc_AddNewTraintolib_res_len, 0xff);
+  ws_send(client, (char *)rdata, WSopc_AddNewTraintolib_res_len, 0xff);
 }
 
 
 //Track Messages
-void WS_trackUpdate(int Client_fd){
+void WS_trackUpdate(struct web_client_t * client){
   loggerf(TRACE, "WS_trackUpdate");
   mutex_lock(&mutex_lockB, "Lock Mutex B");
   char data[4096];
@@ -1125,17 +1103,17 @@ void WS_trackUpdate(int Client_fd){
   data_len = (q-1)*4+1;
 
   if(content == 1){
-    if(Client_fd){
-      ws_send(Client_fd,data,data_len,WS_Flag_Track);
+    if(client){
+      ws_send(client, data, data_len, WS_Flag_Track);
     }else{
-      ws_send_all(data,data_len,WS_Flag_Track);
+      ws_send_all(data, data_len, WS_Flag_Track);
     }
   }
   mutex_unlock(&mutex_lockB, "UnLock Mutex B");
 }
 
-void WS_SwitchesUpdate(int Client_fd){
-  loggerf(TRACE, "WS_SwitchesUpdate (%i)", Client_fd);
+void WS_SwitchesUpdate(struct web_client_t * client){
+  loggerf(TRACE, "WS_SwitchesUpdate (%x)", (unsigned int)client);
   mutex_lock(&mutex_lockB, "Lock Mutex B");
   char buf[4096];
   memset(buf, 0, 4096);
@@ -1202,8 +1180,8 @@ void WS_SwitchesUpdate(int Client_fd){
   
   buf_l += (q-1)*4+1;
   if(content == 1){
-    if(Client_fd){
-      ws_send(Client_fd, buf, buf_l, WS_Flag_Switches);
+    if(client){
+      ws_send(client, buf, buf_l, WS_Flag_Switches);
     }else{
       ws_send_all(buf, buf_l, WS_Flag_Switches);
     }
@@ -1214,7 +1192,7 @@ void WS_SwitchesUpdate(int Client_fd){
   mutex_unlock(&mutex_lockB, "UnLock Mutex B");
 }
 
-void WS_NewClient_track_Switch_Update(int Client_fd){
+void WS_NewClient_track_Switch_Update(struct web_client_t * client){
   mutex_lock(&mutex_lockB, "Lock Mutex B");
 
   //Track
@@ -1249,10 +1227,10 @@ void WS_NewClient_track_Switch_Update(int Client_fd){
   data_len = (q-1)*4+1;
 
   if(content == 1){
-    if(Client_fd){
-      ws_send(Client_fd,buf,data_len,WS_Flag_Track);
+    if(client){
+      ws_send(client, buf, data_len, WS_Flag_Track);
     }else{
-      ws_send_all(buf,data_len,WS_Flag_Track);
+      ws_send_all(buf, data_len, WS_Flag_Track);
     }
   }
 
@@ -1306,8 +1284,8 @@ void WS_NewClient_track_Switch_Update(int Client_fd){
   //buf_len += (q-1)*4+1;
 
   if(content == 1){
-    if(Client_fd){
-      ws_send(Client_fd,buf,buf_len,WS_Flag_Switches);
+    if(client){
+      ws_send(client,buf,buf_len,WS_Flag_Switches);
     }else{
       ws_send_all(buf,buf_len,WS_Flag_Switches);
     }
@@ -1334,7 +1312,11 @@ void WS_NewClient_track_Switch_Update(int Client_fd){
   }
 
   if(data == 1){
-    ws_send(Client_fd,buf,buf_len,8);
+    if(client){
+      ws_send(client, buf, buf_len, WS_Flag_Switches);
+    }else{
+      ws_send_all(buf, buf_len, WS_Flag_Switches);
+    }
   }
 
   memset(buf,0,4096);
@@ -1352,7 +1334,7 @@ void WS_NewClient_track_Switch_Update(int Client_fd){
   mutex_unlock(&mutex_lockB, "UnLock Mutex B");
 }
 
-void WS_reset_switches(int client_fd){
+void WS_reset_switches(struct web_client_t * client){
   //Check if client has admin rights
   char admin = 1;
   if(admin){
@@ -1366,11 +1348,11 @@ void WS_reset_switches(int client_fd){
     }
 
     //Send all switch updates
-    WS_SwitchesUpdate(client_fd);
+    WS_SwitchesUpdate(client);
   }
 }
 
-void WS_Track_LayoutDataOnly(int unit, int Client_fd){
+void WS_Track_LayoutDataOnly(int unit, struct web_client_t * client){
   loggerf(DEBUG, "WS_Track_LayoutDataOnly");
 
   char * data = _calloc(Units[unit]->Layout_length + 20, 1);
@@ -1380,8 +1362,8 @@ void WS_Track_LayoutDataOnly(int unit, int Client_fd){
   memcpy(&data[2], Units[unit]->Layout, Units[unit]->Layout_length);
 
 
-  if(Client_fd){
-    ws_send(Client_fd,data, Units[unit]->Layout_length+2, WS_Flag_Track);
+  if(client){
+    ws_send(client, data, Units[unit]->Layout_length+2, WS_Flag_Track);
   }else{
     ws_send_all(data, Units[unit]->Layout_length+2, WS_Flag_Track);
   }
@@ -1389,7 +1371,7 @@ void WS_Track_LayoutDataOnly(int unit, int Client_fd){
   _free(data);
 }
 
-void WS_stc_TrackLayoutRawData(int unit, int Client_fd){
+void WS_stc_TrackLayoutRawData(int unit, struct web_client_t * client){
   Unit * U = Units[unit];
   char * data = _calloc(U->raw_length+2, 1);
   data[0] = WSopc_TrackLayoutRawData;
@@ -1397,8 +1379,8 @@ void WS_stc_TrackLayoutRawData(int unit, int Client_fd){
 
   memcpy(&data[2], U->raw, U->raw_length);
 
-  if(Client_fd){
-    ws_send(Client_fd, data, U->raw_length+2, WS_Flag_Track);
+  if(client){
+    ws_send(client, data, U->raw_length+2, WS_Flag_Track);
   }
   else{
     ws_send_all(data, U->raw_length+2, WS_Flag_Track);
@@ -1407,7 +1389,7 @@ void WS_stc_TrackLayoutRawData(int unit, int Client_fd){
   _free(data);
 }
 
-void WS_stc_StationLib(int Client_fd){
+void WS_stc_StationLib(struct web_client_t * client){
   uint8_t * data = _calloc(stations_len, Station);
   data[0] = WSopc_StationLibrary;
   uint8_t * length = &data[1];
@@ -1427,8 +1409,8 @@ void WS_stc_StationLib(int Client_fd){
     d += d[3] + 4;
   }
 
-  if(Client_fd){
-    ws_send(Client_fd, data, d - data, WS_Flag_Track);
+  if(client){
+    ws_send(client, data, d - data, WS_Flag_Track);
   }
   else{
     ws_send_all(data, d - data, WS_Flag_Track);
@@ -1476,12 +1458,14 @@ char WS_init_Message(char type){
 void WS_add_Message(uint16_t ID, char length,char data[16]){
   memcpy(MessageList[ID].data,data,length);
   MessageList[ID].data_length = length;
+
+  loggerf(INFO, "create_message %x", ID);
 }
 
-void WS_send_open_Messages(int Client_fd){
+void WS_send_open_Messages(struct web_client_t * client){
   for(int i = 0;i<=0x1FFF;i++){
     if(MessageList[i].type & 0x8000){
-      ws_send(Client_fd,MessageList[i].data,MessageList[i].data_length,0xFF);
+      ws_send(client, MessageList[i].data, MessageList[i].data_length, 0xFF);
     }
   }
 }
@@ -1489,6 +1473,8 @@ void WS_send_open_Messages(int Client_fd){
 void WS_clear_message(uint16_t ID, char ret_code){
   if(ret_code == 1)
     MessageList[ID].type = 0;
+
+  loggerf(INFO, "clear_message %x", ID);
 
   ws_send_all((char [3]){WSopc_ClearMessage,((ID >> 8) & 0x1F) + (ret_code << 5),ID&0xFF},3,0xFF);
 }

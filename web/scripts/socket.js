@@ -342,7 +342,7 @@ websocket.add_opcodes([
       opcode: 0x41,
       name: "LinkTrain",
       send: function(data){
-        return [data.fid, data.real_id, ((data.type == "E")?1:0) + ((data.msg_id & 0x7F00) >> 7), data.msg_id & 0xFF];
+        return [data.fid, data.real_id, ((data.type == "E")?1:0) + ((data.msg_id >> 8) & 0x7F), data.msg_id & 0xFF];
       },
       recv: function(data){
         var follow_id = data[0];
@@ -358,9 +358,7 @@ websocket.add_opcodes([
       opcode: 0x42,
       name: "TrainSpeed",
       send: function(data){
-        return [data.train.id & 0xFF,
-                (data.train.id & 0x300) >> 2 | (data.type == "T")?0x20:0 | 
-                  (data.train.dir & 1) << 4 | (data.train.speed & 0xF00) >> 8,
+        return [data.train.railtrainid, (data.train.dir & 1) << 4 | (data.train.speed & 0xF00) >> 8,
                 data.train.speed & 0xFF];
       },
     },
@@ -372,62 +370,53 @@ websocket.add_opcodes([
     },
     {
       opcode: 0x44,
-      name: "TrainOperation",
-      send: function(data){ console.warn("TrainOperation", data); },
-      recv: function(data){ console.warn("TrainOperation", data); }
+      name: "TrainControl",
+      send: function(data){
+        if(data.train.railtrainid != undefined && data.train.control != undefined){
+          return [data.train.railtrainid, data.train.control];
+        }
+      },
+      recv: function(data){ console.warn("TrainControl", data); }
     },
     {
       opcode: 0x45,
-      name: "TrainData",
-      send: function(data){ console.warn("Z21TrainData", data); },
+      name: "TrainUpdate",
+      send: function(data){ console.warn("TrainUpdate", data); },
       recv: function(data){
 
-        var id = data[0] + ((data[1] & 0xC0) << 2);
-        var type = (data[1] & 0x20) >> 5;
+        var id = data[0];
 
-        var dir = (data[1] & 0x10) >> 4;
-        var control = (data[1] & 0x0C) >> 2;
+        var box = 0;
 
-        var speed = ((data[1] & 0x01) << 8) + data[2];        
-
-        var ratio = 0;
-
-        if(type == 0){
-          Train.engines[id].speed = speed;
-          ratio = Train.engines[id].speed / Train.engines[id].max_speed;
-        }
-        else{
-          Train.trains[id].speed = speed;
-          ratio = Train.trains[id].speed / Train.trains[id].max_speed;
-        }
-
-        type = type?"T":"E"
-
-        var box = -1;
-
-        if(Train_Control.train[1] != undefined && Train_Control.train[1].id == id && Train_Control.train[1].type == type){
+        if(Train_Control.train[1] != undefined && Train_Control.train[1].t.railtrainid == id){
           box = 1;
         }
-        else if(Train_Control.train[2] != undefined && Train_Control.train[2].id == id && Train_Control.train[2].type == type){
+        else if(Train_Control.train[2] != undefined && Train_Control.train[2].t.railtrainid == id){
           box = 2;
         }
 
         if(box == 0){
           console.warn("No box");
+          return;
         }
 
-        if(box >= 0){
-          var slider_box = $('.train-box.box'+box+' .train-speed-slider');
-          var pageY = slider_box.offset().top + slider_box.height();
-          var ylim = slider_box.height() - $('.slider-handle', slider_box).height(); 
+        Train_Control.train[box].t.control = (data[1] & 0x70) >> 4;
+        Train_Control.train[box].t.dir = (data[1] & 0x80) >> 7;
+        Train_Control.train[box].t.speed = ((data[1] & 0x0F) << 8) + data[2];
+        var ratio = Train_Control.train[box].t.speed / Train_Control.train[box].t.max_speed;
 
-          var pos = ylim * ratio;
+        var slider_box = $('.train-box.box'+box+' .train-speed-slider');
+        var pageY = slider_box.offset().top + slider_box.height();
+        var ylim = slider_box.height() - $('.slider-handle', slider_box).height(); 
 
-          $('.train-box.box'+box+' .train-speed > span').text(speed);
-          Train_Control.set_handle(box, pos);
-        }
+        var pos = ylim * ratio;
 
-        console.log(type, id, speed, dir, control);
+        $('.train-box.box'+box+' .train-speed > span').text(Train_Control.train[box].t.speed);
+        Train_Control.set_handle(box, pos);
+
+        Train_Control.apply_dir(box);
+
+        Train_Control.apply_control(box);
       }
     },
     {
@@ -451,21 +440,15 @@ websocket.add_opcodes([
         var msg = [];
         if(data[1] == undefined){
           msg[0] = 0xFF;
-          msg[1] = 0xC0;
         }
         else{
-          msg[0] = data[1].id & 0xFF;
-          msg[1] = (data[1].id & 0x300) >> 2;
-          msg[1] |= (data[1].type=="T")?0x20:0;
+          msg[0] = data[1].t.railtrainid & 0xFF;
         }
         if(data[2] == undefined){
-          msg[1] |= 0x03;
-          msg[2] = 0xFF;
+          msg[1] = 0xFF;
         }
         else{
-          msg[2] = data[2].id & 0xFF;
-          msg[1] |= data[2].id & 0x300;
-          msg[1] |= (data[2].type=="T")?0x04:0;
+          msg[1] = data[2].t.railtrainid & 0xFF;
         }
 
         return msg;

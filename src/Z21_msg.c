@@ -79,9 +79,9 @@ void Z21_LAN_X_LOCO_INFO(uint8_t length, char * data){
 
 		train_set_speed(E->train, E->cur_speed);
 
-		WS_UpdateTrain(E->train, TRAIN_TRAIN_TYPE);
+		// WS_stc_UpdateTrain(E->train, TRAIN_TRAIN_TYPE);
 	}
-	else{
-		WS_UpdateTrain(E, TRAIN_ENGINE_TYPE);
-	}
+	// else{
+		// WS_stc_UpdateTrain(E, TRAIN_ENGINE_TYPE);
+	// }
 }

@@ -102,7 +102,7 @@ void Create_MSSwitch(struct s_msswitch_connect connect, uint8_t block_id, uint8_
   Z->IO = _calloc(output_len, IO_Port *);
 
   for(int i = 0; i < output_len; i++){
-    Init_IO(Units[connect.module], *(Node_adr *)&output_pins[i], IO_Output);
+    Init_IO_from_conf(Units[connect.module], output_pins[i], IO_Output);
 
     Z->IO[i] = Units[connect.module]->Node[output_pins[i].Node].io[output_pins[i].Adr];
   }

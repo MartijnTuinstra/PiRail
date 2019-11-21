@@ -124,10 +124,11 @@ typedef struct rail_train {
   uint16_t target_speed;
   uint16_t target_distance;
 
-  uint8_t changing_speed:3;
-  uint8_t control:2;
-  uint8_t route:1;
-  uint8_t stop:1;
+  uint8_t changing_speed:3;  // RAILTRAIN_SPEED_T_(INIT / CHANGING / UPDATE / DONE / FAIL)
+  uint8_t control:2;         // TRAIN_(MANUAL / SEMI_AUTO / FULL_AUTO)
+  uint8_t route:1;           //
+  uint8_t stop:1;            // 
+  uint8_t dir:1;             // TRAIN_FORWARD / TRAIN_REVERSE
 
   pthread_t speed_thread;
 
@@ -159,6 +160,9 @@ struct train_speed_timer {
 #define TRAIN_MANUAL 0
 #define TRAIN_SEMI_AUTO 1
 #define TRAIN_FULL_AUTO 2
+
+#define TRAIN_FORWARD 0
+#define TRAIN_REVERSE 1
 
 #define TRAIN_ENGINE_TYPE 0
 #define TRAIN_TRAIN_TYPE 1

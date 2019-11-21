@@ -16,6 +16,10 @@ void Algor_start(){
 
   if(SYS->UART.state == Module_STOP)
     UART_start();
+  else if(SYS->UART.state == Module_Fail){
+    SYS->LC.state = Module_Fail;
+    return;
+  }
 
   SYS_set_state(&SYS->LC.state, Module_Init);
   pthread_create(&SYS->LC.th, NULL, Algor_Run, NULL);
@@ -35,6 +39,7 @@ void UART_start(){
   while(SYS->UART.state == Module_STOP){
     usleep(1000);
   }
+
   loggerf(DEBUG, "Done starting UART");
 }
 
@@ -53,9 +58,9 @@ void SimA_start(){
   if(SYS->LC.state == Module_STOP){
     Algor_start();
   }
-
-  while(SYS->LC.state != Module_Run){
-    usleep(10000);
+  else if(SYS->LC.state == Module_Fail){
+    SYS->SimA.state = Module_Fail;
+    return;
   }
 
   SYS_set_state(&SYS->SimA.state, Module_Init);
@@ -70,9 +75,9 @@ void SimB_start(){
   if(SYS->LC.state == Module_STOP){
     Algor_start();
   }
-
-  while(SYS->LC.state != Module_Run){
-    usleep(10000);
+  else if(SYS->LC.state == Module_Fail){
+    SYS->SimB.state = Module_Fail;
+    return;
   }
 
   usleep(100000);

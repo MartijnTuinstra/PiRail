@@ -24,6 +24,11 @@ pthread_mutex_t mutex_lockA;
 #define TRAIN_B_LEN   5 //cm
 #define TRAIN_B_SPEED 5 //cm/s
 
+#define TRAINSIM_INTERVAL_US 50000
+#define TRAINSIM_INTERVAL_SEC 0.05
+
+#define JOIN_SIM_INTERVAL 1000
+
 void change_Block(Block * B, enum Rail_states state){
   B->IOchanged = 1;
   B->statechanged = 1;
@@ -37,64 +42,156 @@ void change_Block(Block * B, enum Rail_states state){
   // process(B, 3);
 }
 
+struct train_sim {
+  char sim;
+
+  RailTrain * T;
+  uint16_t train_length;
+
+  uint8_t dir;
+  float posFront;
+  float posRear;
+
+  Block * Front;
+  uint8_t FrontSpecialCounter;
+
+  uint8_t blocks;
+  Block ** B;
+};
+
+void train_sim_tick(struct train_sim * t){
+  // loggerf(INFO, "train_sim_tick speed %i\t%f\t%f", t->T->speed,t->posFront, t->posRear);
+
+  if(t->posFront <= 0 && t->blocks < 10){
+    // Add block
+    for(uint8_t i = t->blocks - 1; i >= 0 && i < 10; i--){
+      t->B[i + 1] = t->B[i];
+    }
+    t->blocks++;
+    if(t->FrontSpecialCounter){
+      if(t->FrontSpecialCounter == t->Front->Alg.N[0]->len){
+        t->B[0] = t->B[1]->Alg.N[0]->p.B;
+        t->Front = 0;
+        t->FrontSpecialCounter = 0;
+      }
+      else{
+        t->B[0] = _Next(t->Front, NEXT, ++t->FrontSpecialCounter);
+      }
+    }
+    else if(t->B[1]->Alg.next){
+      if(t->B[1]->Alg.N[0]->len){
+        t->Front = t->B[1];
+        t->B[0] = _Next(t->B[1], NEXT, 1);
+        t->FrontSpecialCounter = 1;
+      }
+      else{
+        t->B[0] = t->B[1]->Alg.N[0]->p.B;
+      }
+    }
+    else{
+      SYS_set_state(&SYS->SimA.state, Module_Fail);
+      return;
+    }
+    loggerf(INFO, "%c  Step %02i:%02i", t->sim, t->B[0]->module, t->B[0]->id);
+    t->posFront += t->B[0]->length;
+    change_Block(t->B[0], BLOCKED);
+  }
+
+  if(t->posRear <= 0){
+    // Remove block
+    t->blocks--;
+    change_Block(t->B[t->blocks], PROCEED);
+    t->B[t->blocks] = 0;
+    t->posRear += t->B[t->blocks - 1]->length;
+  }
+
+  // Advance train (km/h -> cm/s) / scale * tick interval (in sec)
+  t->posFront -= (t->T->speed / 3.6) * 100 / 160 * TRAINSIM_INTERVAL_SEC;
+  t->posRear  -= (t->T->speed / 3.6) * 100 / 160 * TRAINSIM_INTERVAL_SEC;
+}
+
 void *TRAIN_SIMA(){
   while(SYS->LC.state != Module_Run){
     usleep(10000);
+    if(SYS->LC.state == Module_Fail || SYS->LC.state == Module_STOP){
+      SYS_set_state(&SYS->SimA.state, Module_Fail);
+      return NULL;
+    }
   }
+
+  usleep(10000000);
+
   Block *B = Units[25]->B[3];
-  Block *N = Units[25]->B[3];
-  Block *N2 = 0;
+
+  struct train_sim train;
+  train.B = _calloc(10, void *);
+  train.sim = 'A';
+  train.posFront = 0;
+  train.posRear = B->length;
+  train.FrontSpecialCounter = 0;
+  train.Front = 0;
+
+  train.blocks = 0;
+  // train.B[0] = B;
+
+  while(!B->Alg.N[0] || !B->Alg.P[0]){}
+  while(B->Alg.N[0]->blocked || B->blocked || B->Alg.P[0]->blocked){} // Wait for space
 
   change_Block(B, BLOCKED);
 
   usleep(100000);
 
-  if(B->train){
-    while(!B->train->p){
-      usleep(1000);
+  while(!B->train){
+      usleep(10000);
+  }
+
+  B->train->control = TRAIN_SEMI_AUTO;
+
+  while(!B->train->p){
+    usleep(10000);
+  }
+
+  train.T = B->train;
+
+  if(train.T->type == TRAIN_ENGINE_TYPE){
+    //Engine only
+    train.train_length = ((Engines *)train.T->p)->length / 10;
+  }
+  else{
+    //Train
+    train.train_length = ((Trains *)train.T->p)->length / 10;
+  }
+  loggerf(INFO, "train length %icm", train.train_length);
+
+  int32_t len = train.train_length;
+  while(len > 0){
+    len -= B->length;
+
+    for(uint8_t i = train.blocks - 1; i >= 0 && i < 10; i--){
+      train.B[i + 1] = train.B[i];
+    }
+    train.blocks++;
+
+    change_Block(B, BLOCKED);
+    loggerf(INFO, "Add block %i (%02i:%02i)", train.blocks, B->module, B->id);
+
+    if(B->Alg.next){
+      train.B[0] = B;
+      B = B->Alg.N[0]->p.B;
     }
   }
+
+  train.posFront -= len;
 
   SYS_set_state(&SYS->SimA.state, Module_Run);
 
   while(SYS->SimA.state & Module_Run){
-
-    if(N2){
-      N = N2;
-      loggerf(INFO, "Using saved next block %02i:%02i", N2->module, N2->id);
-      N2 = 0;
-    }
-    else if(B->Alg.next == 0){
-      N = 0;
-    }
-    else if(B->Alg.N[0]->len == 0)
-      N = B->Alg.N[0]->p.B;
-    else{
-      N = B->Alg.N[0]->p.SB[0];
-      if(B->Alg.next > 1){
-        N2 = B->Alg.N[1]->p.B;
-        loggerf(INFO, "Saving next block %02i:%02i", N2->module, N2->id);
-      }
-    }
-
-    if(!N){
-      loggerf(WARNING, "Sim A reached end of the line");
-      SYS_set_state(&SYS->SimA.state, Module_Fail);
-      return 0;
-    }
-    loggerf(INFO, "Sim A step %i:%i", N->module, N->id);
-    change_Block(N, BLOCKED);
-
-    // IF len(N) < len(TRAIN)
-    
-    usleep((TRAIN_A_LEN/TRAIN_A_SPEED) * OneSec);
-
-    loggerf(INFO, "Sim A clear step %i:%i", B->module, B->id);
-    change_Block(B, PROCEED);
-    usleep(((N->length - TRAIN_A_LEN)/TRAIN_A_SPEED) * OneSec);
-
-    B = N;
+    train_sim_tick(&train);
+    usleep(TRAINSIM_INTERVAL_US);
   }
+
+  _free(train.B);
+  SYS_set_state(&SYS->SimA.state, Module_STOP);
 
   return 0;
 }
@@ -102,81 +199,84 @@ void *TRAIN_SIMA(){
 void *TRAIN_SIMB(){
   while(SYS->LC.state != Module_Run){
     usleep(10000);
+    if(SYS->LC.state == Module_Fail || SYS->LC.state == Module_STOP){
+      SYS_set_state(&SYS->SimB.state, Module_Fail);
+      return NULL;
+    }
   }
-  Block *B = Units[26]->B[2];
-  Block *N = Units[26]->B[2];
-  Block *N2 = 0;
 
-  // Reserve_To_Next_Switch(B);
+  usleep(11000000);
 
-  B->state = BLOCKED;
-  B->blocked = 1;
-  B->IOchanged = 1;
+  Block *B = Units[25]->B[3];
 
-  putAlgorQueue(B, 1);
+  struct train_sim train;
+  train.B = _calloc(10, void *);
+  train.sim = 'B';
+  train.posFront = 0;
+  train.posRear = B->length;
+  train.FrontSpecialCounter = 0;
+  train.Front = 0;
+
+  train.blocks = 0;
+  // train.B[0] = B;
+
+  while(!B->Alg.N[0] || !B->Alg.P[0]){}
+  while(B->Alg.N[0]->blocked || B->blocked || B->Alg.P[0]->blocked){} // Wait for space
+
+  change_Block(B, BLOCKED);
 
   usleep(100000);
+
+  while(!B->train){
+      usleep(10000);
+  }
+
+  B->train->control = TRAIN_SEMI_AUTO;
+
+  while(!B->train->p){
+    usleep(10000);
+  }
+
+  train.T = B->train;
+
+  if(train.T->type == TRAIN_ENGINE_TYPE){
+    //Engine only
+    train.train_length = ((Engines *)train.T->p)->length / 10;
+  }
+  else{
+    //Train
+    train.train_length = ((Trains *)train.T->p)->length / 10;
+  }
+  loggerf(INFO, "train length %icm", train.train_length);
+
+  int32_t len = train.train_length;
+  while(len > 0){
+    len -= B->length;
+
+    for(uint8_t i = train.blocks - 1; i >= 0 && i < 10; i--){
+      train.B[i + 1] = train.B[i];
+    }
+    train.blocks++;
+
+    change_Block(B, BLOCKED);
+    loggerf(INFO, "Add block %i (%02i:%02i)", train.blocks, B->module, B->id);
+
+    if(B->Alg.next){
+      train.B[0] = B;
+      B = B->Alg.N[0]->p.B;
+    }
+  }
+
+  train.posFront -= len;
 
   SYS_set_state(&SYS->SimB.state, Module_Run);
 
   while(SYS->SimB.state & Module_Run){
-
-    if(B->Alg.next == 0){
-      loggerf(WARNING, "Sim B reached end of the line");
-      SYS_set_state(&SYS->SimB.state, Module_Fail);
-      return 0;
-    }
-
-    if(B->Alg.N[0]->len == 0)
-      N = B->Alg.N[0]->p.B;
-    else
-      N = B->Alg.N[0]->p.SB[0];
-
-    loggerf(INFO, "Sim B step %i:%i", N->module, N->id);
-    change_Block(N, BLOCKED);
-
-    // IF len(N) < len(TRAIN)
-    if(N->length < TRAIN_B_LEN){
-      usleep((N->length/TRAIN_B_SPEED) * OneSec);
-
-      if(N->Alg.next == 0){
-        loggerf(WARNING, "Sim B reached end of the line");
-        SYS_set_state(&SYS->SimB.state, Module_Fail);
-        return 0;
-      }
-
-      if(N->Alg.N[0]->len == 0)
-        N2 = N->Alg.N[0]->p.B;
-      else
-        N2 = N->Alg.N[0]->p.SB[0];
-      
-      loggerf(DEBUG, "Sim B substep %i:%i", N2->module, N2->id);
-
-      change_Block(N2, BLOCKED);
-      usleep(((TRAIN_B_LEN - N->length)/TRAIN_B_SPEED) * OneSec);
-      change_Block(B, PROCEED);
-      if(N2 && N2->length > TRAIN_B_LEN){
-        usleep(((N2->length - (TRAIN_B_LEN - N->length))/TRAIN_B_SPEED) * OneSec);
-        change_Block(N, PROCEED);
-        usleep(((N2->length - TRAIN_B_LEN)/TRAIN_B_SPEED) * OneSec);
-
-        B = N2;
-      }
-      else{
-        loggerf(WARNING, "Two short blocks smaller than train B");
-        change_Block(N, PROCEED);
-        usleep(OneSec);
-        B = N2;
-      }
-    }
-    else{
-      usleep((TRAIN_B_LEN/TRAIN_B_SPEED) * OneSec);
-      change_Block(B, PROCEED);
-      usleep(((N->length - TRAIN_B_LEN)/TRAIN_B_SPEED) * OneSec);
-
-      B = N;
-    }
+    train_sim_tick(&train);
+    usleep(TRAINSIM_INTERVAL_US);
   }
+
+  _free(train.B);
 
   return 0;
 }
@@ -653,7 +753,7 @@ void SIM_JoinModules(){
       ws_send_all(data,k,0x10);
     }
     i++;
-    usleep(10000);
+    usleep(JOIN_SIM_INTERVAL);
     prev_j = cur_j;
 
     if(i == 15){
@@ -807,5 +907,6 @@ void SIM_Connect_Rail_links(){
 }
 
 void SIM_Client_Connect_cb(){
-  Algor_start();
+  // SimA_start();
+  // SimB_start();
 }

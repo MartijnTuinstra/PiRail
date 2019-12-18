@@ -3,9 +3,9 @@
 import os
 import argparse
 import fnmatch
+import subprocess
 
-devices = ["atmega328p", "atmega64a", "atmega2560"]
-projects = ["main", "main_spi", "net_buffer", "test"]
+devices = os.listdir("./build")
 
 i = 1
 for dev in devices:
@@ -15,6 +15,8 @@ print("")
 i = int(input("Which programmer? "))
 print(devices[i-1])
 dev = devices[i-1]
+
+projects = os.listdir("./build/"+dev)
 
 i = 1
 for project in projects:
@@ -47,7 +49,9 @@ c = ""
 
 while(c != "n" and c != "N"):
   if sys.platform.startswith("win"):
-    os.system("\"C:\\Program Files (x86)\\Arduino\\hardware\\tools\\avr\\bin\\avrdude.exe\" -C \"C:\\Program Files (x86)\\Arduino\\hardware\\tools\\avr\\etc\\avrdude.conf\" -p "+dev+" -P "+pdev.device+" -c arduino -b 57600 -v -U flash:w:build/"+f+"/"+dev+".flash.hex")
+    cmd = ['"C:\\Program Files (x86)\\Arduino\\hardware\\tools\\avr\\bin\\avrdude.exe"', '-C', '"C:\\Program Files (x86)\\Arduino\\hardware\\tools\\avr\\etc\\avrdude.conf"', '-p', dev, '-P', pdev.device, '-c', 'arduino',  '-b',  '57600', '-v', '-U', 'flash:w:build/'+dev+'/'+f+'/'+f+'.flash']
+    print(cmd)
+    subprocess.call([cmd])
   else:
     os.system("avrdude -p "+dev+" -P /dev/"+pdev+" -c arduino -b 57600 -v -U flash:w:build/"+f+"/"+dev+".flash.hex") 
   c = input("Again (y/n)? ")

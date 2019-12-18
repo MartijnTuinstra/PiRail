@@ -12,8 +12,10 @@
 
 //IO
 #define RNet_OPC_SetOutput     0x10
-#define RNet_OPC_ReadInput     0x11
-#define RNet_OPC_ReadAll       0x12
+#define RNet_OPC_SetAllOutput  0x11
+#define RNet_OPC_ReadInput     0x13
+#define RNet_OPC_ReqReadInput  0x14
+#define RNet_OPC_ReadAll       0x15
 
 //Settings
 #define RNet_OPC_ChangeID      0x50
@@ -21,3 +23,5 @@
 #define RNet_OPC_SetBlink      0x52
 #define RNet_OPC_SetPulse      0x53
 #define RNet_OPC_SetCheck      0x54
+
+#define RNet_OPC_ReadEEPROM    0x60

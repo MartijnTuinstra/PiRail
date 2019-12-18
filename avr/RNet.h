@@ -4,7 +4,7 @@
 //#include "IO.h"
 
 #define RNET_BROADCAST_MODULE 0xFF
-#define RNET_MASTER 0x0
+// #define RNET_MASTER 0x0
 
 #define RNET_MAX_BUFFER 128
 
@@ -29,7 +29,7 @@
 #define _TIM_ISR_MSK TIMSK1
 #define _TIM_ISR_FLAGS TIFR1
 #define _TIM_CTC (1 << WGM12)
-#define _TIM_PRESCALER (1 << CS12) | (0 << CS11) | (1 << CS10)
+#define _TIM_PRESCALER (1 << CS12) | (0 << CS11) | (0 << CS10)
 #define _TIM_EN_ISR (1 << OCIE1A) | (1 << ICIE1)
 
 #elif defined(__AVR_ATmega64A__)
@@ -88,13 +88,17 @@
 #define RNET_DUPLEX_SET_TX _set_high(PORT(RNET_DUPLEX_PORT), RNET_DUPLEX_pin)
 #define RNET_READ_RX _read_pin(PIN(RNET_RX_PORT), RNET_RX_pin)
 
+#define RNET_TIMER_ENABLE _TIM_CRB |= _TIM_PRESCALER;
+#define RNET_TIMER_DISABLE _TIM_CRB &= ~(0x7);
+
 #define RNET_CHECK_COLLISION (_read_pin(PIN(RNET_RX_PORT), RNET_RX_pin)) & (PORT(RNET_TX_PORT) & _BV(RNET_TX_pin))
 
 #ifdef __AVR_ATmega64A__
 
 #define RNET_ENABLE_ISR_COMPA  _TIM_ISR_MSK |=  (1 << OCIE1A)
 #define RNET_ENABLE_ISR_CAPT   _TIM_ISR_MSK |=  (1 << TICIE1)
-#define RNET_CLEAR_ISR_CAPT    _TIM_ISR_FLAGS |= ICF1
+#define RNET_CLEAR_ISR_CAPT    _TIM_ISR_FLAGS |= (1 << ICF1)
+#define RNET_CLEAR_ISR_COMPA   _TIM_ISR_FLAGS |= (1 << OCFA1)
 #define RNET_DISABLE_ISR_COMPA _TIM_ISR_MSK &= ~(1 << OCIE1A)
 #define RNET_DISABLE_ISR_CAPT  _TIM_ISR_MSK &= ~(1 << TICIE1)
 
@@ -102,7 +106,8 @@
 
 #define RNET_ENABLE_ISR_COMPA  _TIM_ISR_MSK |=  (1 << OCF5A)
 #define RNET_ENABLE_ISR_CAPT   _TIM_ISR_MSK |=  (1 << ICF5)
-#define RNET_CLEAR_ISR_CAPT    _TIM_ISR_FLAGS |=  ICF5
+#define RNET_CLEAR_ISR_CAPT    _TIM_ISR_FLAGS |= (1 << ICF5)
+#define RNET_CLEAR_ISR_COMPA   _TIM_ISR_FLAGS |= (1 << OCFA5)
 #define RNET_DISABLE_ISR_COMPA _TIM_ISR_MSK &=  ~(1 << OCF5A)
 #define RNET_DISABLE_ISR_CAPT  _TIM_ISR_MSK &=  ~(1 << ICF5)
 
@@ -110,7 +115,8 @@
 
 #define RNET_ENABLE_ISR_COMPA  _TIM_ISR_MSK |=  (1 << OCIE1A)
 #define RNET_ENABLE_ISR_CAPT   _TIM_ISR_MSK |=  (1 << ICIE1)
-#define RNET_CLEAR_ISR_CAPT    _TIM_ISR_FLAGS |= ICF1
+#define RNET_CLEAR_ISR_CAPT    _TIM_ISR_FLAGS |= (1 << ICF1)
+#define RNET_CLEAR_ISR_COMPA   _TIM_ISR_FLAGS |= (1 << OCF1A)
 #define RNET_DISABLE_ISR_COMPA _TIM_ISR_MSK &= ~(1 << OCIE1A)
 #define RNET_DISABLE_ISR_CAPT  _TIM_ISR_MSK &= ~(1 << ICIE1)
 
@@ -118,21 +124,22 @@
 
 #if __AVR_ATmega2560__
 
-#define RNET_TX_START_DELAY 1200
-#define RNET_RX_START_DELAY 2400
-#define RNET_TX_TICK 2405
+#define RNET_TX_TICK 48
 
 #else
 
-#define RNET_TX_START_DELAY 600
-#define RNET_RX_START_DELAY 1200
-#define RNET_TX_TICK 1200
+#define RNET_TX_TICK 80
 
 #endif
 
-#define RNET_RX_TICK RNET_TX_TICK
-#define RNET_COLLISION_TICKS 20
-#define RNET_HOLDOFF_TICKS 25
+#define RNET_TICK RNET_TX_TICK
+#define RNET_OFFSET RNET_TX_TICK / 4
+
+#ifdef RNET_MASTER
+#define RNET_TIMEOUT RNET_TX_TICK * 4
+#else
+#define RNET_TIMEOUT RNET_TX_TICK * 1.5
+#endif
 
 struct _RNet_buffer {
     uint8_t buf[RNET_MAX_BUFFER];
@@ -140,13 +147,27 @@ struct _RNet_buffer {
     uint8_t write_index;
 };
 
+#ifdef RNET_MASTER
+
+enum BusState {
+  IDLE,      // Doing nothing
+  ADDR,      // Sending Address
+  TX,        // Transmiting
+  RX,        // Receiving
+  TIMEOUT
+};
+
+#else
+
 enum BusState {
 	IDLE,      // Doing nothing
+  ADDR,      // Receiving Address
 	RX,        // Receiving
 	TX,        // Transmiting
-	HOLDOFF,   // Spacing betwin transmission
-	COLLISION  // Collision Happened
+	OTHER      // Other transmit
 };
+
+#endif
 
 enum status {
   OK,
@@ -165,25 +186,43 @@ extern uint8_t tmp_rx_msg[RNET_MAX_BUFFER];
 class RNet {
   public:
     volatile enum BusState state;
+    #ifdef RNET_MASTER
+    void init();
+    #else
     void init(uint8_t dev, uint8_t node);
-    status transmit(uint8_t PrioDelay);
+    #endif
     uint8_t getMsgSize(struct _RNet_buffer * msg);
     uint8_t getMsgSize(uint8_t * buf);
-    bool checkReceived();
-    void executeMessage();
 
-    bool checkTxReady();
-
-    void add_to_tx_buf(uint8_t data);
-    void add_to_rx_buf(uint8_t data);
+    bool available();
+    void read();
 
     void calculateTxChecksum();
-  private:
-    uint8_t dev_id;
-    uint8_t node_id;
+
+    uint8_t * getBufP(struct _RNet_buffer * buf, uint8_t write);
+
+    #ifdef RNET_MASTER
+    void try_transmit();
+    status transmit(uint8_t addr);
+    status transmit(struct _RNet_buffer * buf);
+    void _transmit();
+
+    void request_all();
+    void request_registered();
+    #else
+    #endif
 
     struct _RNet_buffer rx;
     struct _RNet_buffer tx;
+    #ifdef RNET_MASTER
+    uint8_t devices_list[32]; // 256-bits
+
+    #define RNET_GET_DEVICE(dev) devices_list[dev / 8] & (1 << (dev % 8))
+    #else
+    uint8_t dev_id;
+    uint8_t node_id;
+    volatile uint8_t txdata;
+    #endif
 };
 
 extern RNet net;

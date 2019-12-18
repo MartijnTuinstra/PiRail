@@ -29,10 +29,17 @@ void set_toggle(uint8_t pin);
 
 uint8_t read(uint8_t pin);
 
+enum IO_type {
+	IO_InputToggle,
+	IO_InputRising,
+	IO_InputFalling,
+	IO_Output
+};
 
 enum IO_event {
   IO_event_High,
   IO_event_Low,
+  IO_event_Toggle,
   IO_event_Pulse,
   IO_event_Blink1,
   IO_event_Blink2,
@@ -79,24 +86,9 @@ extern uint8_t pin_to_Port[];
 
 extern uint8_t pin_to_BIT[];
 
-
-#if defined(__AVR_ATmega328__) || defined(__AVR_ATmega328P__)
-
-#define MAX_PINS 13
-
-#elif defined(__AVR_ATmega64A__)
-
-#define MAX_PINS 40
-
-#elif defined(__AVR_ATmega2560__)
-
-#define MAX_PINS 72
-
-#endif
-#endif
-
 #if defined(__AVR_ATmega328__) || defined(__AVR_ATmega328P__)
 	#define MAX_PORTS 3
+	#define MAX_PINS 13
 
 	const uint16_t PROGMEM portlist[] = {
 		(uint16_t) &PORTB,
@@ -108,22 +100,26 @@ extern uint8_t pin_to_BIT[];
 		(uint16_t) &DDRC,
 		(uint16_t) &DDRD,
 	};
-	const uint16_t PROGMEM pinlist[] = {
+	const uint16_t pinlist[] = {
 		(uint16_t) &PINB,
 		(uint16_t) &PINC,
 		(uint16_t) &PIND,
 	};
+	// RNet uses B0,B1,B2 -> 0,1,2
 	const uint8_t list[] = {
 		// 0, 1, 2, 3, 4, 5
-		20, 19, 21, 18, 17, 16,
+		// PD4, PD3, PD5, PD6, PD7, PD2
+		20, 19, 21, 22, 23, 18,
 		// 6, 7, 8, 9, 10, 11
+		// PC5, PC4, PC3, PC2, PC1, PC0
 		13, 12, 11, 10, 9, 8,
-
 		// 12 // DEBUG
+		// PB5
 		5
 	};
 #elif defined(__AVR_ATmega64A__)
 	#define MAX_PORTS 7
+	#define MAX_PINS 40
 
 	const uint16_t PROGMEM portlist[] = {
 		(uint16_t) &PORTA,
@@ -172,6 +168,7 @@ extern uint8_t pin_to_BIT[];
 	};
 #elif defined(__AVR_ATmega2560__)
 	#define MAX_PORTS 10
+	#define MAX_PINS 72
 
 	const uint16_t PROGMEM portlist[] = {
 		(uint16_t) &PORTA,
@@ -291,6 +288,7 @@ class IO {
 		
 		uint8_t readData[MAX_PORTS];
 		uint8_t oldreadData[MAX_PORTS];
+		uint8_t readMask[MAX_PORTS];
 
 	private:
 		uint8_t blink1Mask[MAX_PORTS];
@@ -303,7 +301,6 @@ class IO {
 		uint8_t servo3Mask[MAX_PORTS];
 		uint8_t servo4Mask[MAX_PORTS];
 
-		uint8_t readMask[MAX_PORTS];
 
 		#ifdef IO_SPI
 		uint8_t writeData[MAX_PORTS];
@@ -357,3 +354,5 @@ extern IO io;
 #define IO_INT_Servo2 0x20
 #define IO_INT_Servo3 0x40
 #define IO_INT_Servo4 0x80
+
+#endif

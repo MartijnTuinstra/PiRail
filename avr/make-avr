@@ -1,34 +1,33 @@
-.PHONY: elf hex
+programs=main_csma main main_master main_spi_master main_spi main_spi_csma
 
-OUT_d=$(dir)/$(dev)
-,:=,
-elf:
-	@echo "            - $(OUT_d).elf"
-	@avr-gcc -g -Wall -Os -Werror -Wextra -mmcu=$(dev) $(wildcard $(OUT_d).bin.d/*.o) -o $(OUT_d).elf
+devices=328 328p 64a 2560
 
-hex: elf
-	@echo "            - $(OUT_d).flash.hex"
-	@avr-objcopy -j .text -j .data -O ihex $(OUT_d).elf $(OUT_d).flash.hex
-	@echo "            - $(OUT_d).eeprom.hex"
-	@avr-objcopy -j .eeprom --set-section-flags=.eeprom="alloc,load" --change-section-lma .eeprom=0 -O ihex $(OUT_d).elf $(OUT_d).eeprom.hex
-	@avr-objcopy -j .fuse -O ihex $(OUT_d).elf $(OUT_d).fuses.hex --change-section-lma .fuse=0
-	@echo "            - $(OUT_d).lfuse.hex"
-	@srec_cat $(OUT_d).fuses.hex -Intel -crop 0x00 0x01 -offset  0x00 -O $(OUT_d).lfuse.hex -Intel
-	@echo "            - $(OUT_d).hfuse.hex"
-	@srec_cat $(OUT_d).fuses.hex -Intel -crop 0x01 0x02 -offset -0x01 -O $(OUT_d).hfuse.hex -Intel
-	@echo "            - $(OUT_d).efuse.hex"
-	@srec_cat $(OUT_d).fuses.hex -Intel -crop 0x02 0x03 -offset -0x02 -O $(OUT_d).efuse.hex -Intel
-	@echo ""
-	@echo "            - Size Used   \tProgram\t\t\tEEPROM\t\t\tData"
-	@avr-size $(OUT_d).elf -C --mcu=atmega328 | grep Program | awk ' {printf "                             \t%s %s %s %s\t",$$2$(,)$$3$(,)$$4$(,)$$5} '
-	@avr-size $(OUT_d).elf -C --mcu=atmega328 | grep EEPROM  | awk ' {printf "%s %s %s %s\t",$$2$(,)$$3$(,)$$4$(,)$$5} '
-	@avr-size $(OUT_d).elf -C --mcu=atmega328 | grep Data    | awk ' {printf "%s %s %s %s\n",$$2$(,)$$3$(,)$$4$(,)$$5} '
+MAIN_FILES=main_node RNet uart eeprom_layout IO
 
-flash:
-	@echo "  [FLASH]        $(dev)\t$(OUT_d)"
-	avrdude -p $(dev) -P $(prot) -c $(prog) -b $(baud) -v -U flash:w:$(OUT_d).flash.hex
+bdir=build/$(DEVICE)
 
-flash_eeprom: hex
-	@echo "  [FLASH] EEPROM $(dev)\t$(OUT_d)"
-	@avrdude -p$(dev) -c$(prog) -P$(prot) -b=$(baud) -v -U eeprom:w:$(OUT_d).eeprom.hex
+avr-gcc-args=-g -Wall -Os -Werror -Wextra -mmcu=$(DEVICE)
+avr-gcc=avr-gcc $(avr-gcc-args) $(args)
 
+$(bdir)/$(output)/bin:
+	mkdir -p $@
+
+$(bdir)/$(output)/bin/%.o: %.cpp
+	@echo $@
+	@$(avr-gcc) -c $*.cpp -MP -MMD -MT '$@ $(bdir)/$(output)/bin/$*.d' -o $(bdir)/$(output)/bin/$*.o -Wa,-ahlmns=$(bdir)/$(output)/bin/$*.lst
+
+$(bdir)/$(output)/$(output).elf: $(addsuffix .o,$(addprefix $(bdir)/$(output)/bin/,$(files)))
+	@echo $@
+	@$(avr-gcc) $^ -o $@
+
+$(bdir)/$(output).flash.hex: $(bdir)/$(output)/$(output).elf
+	@echo split $^
+	@avr-objcopy -j .text -j .data -O ihex $^ $(bdir)/$(output).flash.hex
+	@avr-objcopy -j .eeprom --set-section-flags=.eeprom="alloc,load" --change-section-lma .eeprom=0 -O ihex $^ $(bdir)/$(output)/$(output).eeprom
+	@avr-objcopy -j .fuse -O ihex $^ $(bdir)/$(output)/$(output).fuses --change-section-lma .fuse=0
+#	@+$(MAKE) -f make-avr hex dev=$(DEVICE) dir=build/$(DEVICE) --no-print-directory
+
+all: $(bdir)/$(output)/bin $(bdir)/$(output).flash.hex
+
+clean:
+	rm -rf build

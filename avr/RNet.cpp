@@ -12,19 +12,11 @@
 
 #include "util/delay.h"
 
-#if defined(__AVR_ATmega328__) || defined(__AVR_ATmega328P__)
-#define LED 12
-#elif defined(__AVR_ATmega64A__)
-#define LED 0
-#elif defined(__AVR_ATmega2560__)
-#define LED 0x17
-#endif
-
 struct _RNet_buffer RNet_rx_buffer;
 struct _RNet_buffer RNet_tx_buffer;
 uint8_t tmp_rx_msg[RNET_MAX_BUFFER];
 
-#define RNET_DEBUG
+// #define RNET_DEBUG
 
 // void RNet::add_to_rx_buf(uint8_t data){
 //   rx.buf[rx.write_index++] = data;
@@ -60,11 +52,17 @@ bool RNet::available(){
       uint8_t i = 0;
       while(rx.read_index != rx.write_index && i != size){
         tmp_rx_msg[i] = rx.buf[rx.read_index++];
+        uart.transmit(checksum, HEX, 2);
+        uart.transmit(tmp_rx_msg[i], HEX, 2);
+        uart.transmit(' ');
+
         checksum ^= tmp_rx_msg[i++];
 
         if(rx.read_index >= RNET_MAX_BUFFER)
           rx.read_index = 0;
       }
+
+      uart.transmit(checksum, HEX, 2);
 
       // If wrong checksum discard message
       // checksum XOR checksum == 0
@@ -171,7 +169,10 @@ void RNet::read(){
 
 uint8_t RNet::getMsgSize(struct _RNet_buffer * msg){
 #ifdef RNET_MASTER
-  uint8_t r = msg->read_index + 1;
+  uint8_t r = (msg->read_index + 1) % RNET_MAX_BUFFER;
+  if( (uint8_t)(msg->write_index - msg->read_index) % RNET_MAX_BUFFER < 2){
+    return RNet_msg_len_NotWhole;
+  }
 #else
   uint8_t r = msg->read_index;
 #endif
@@ -198,12 +199,21 @@ uint8_t RNet::getMsgSize(struct _RNet_buffer * msg){
     return 8;
   }
   else if(msg->buf[r] == RNet_OPC_ReadAll){
+    if( (uint8_t)(msg->write_index - msg->read_index) % RNET_MAX_BUFFER < 3){
+      return RNet_msg_len_NotWhole; // Not enough bytes
+    }
     return 4+msg->buf[(r+1)%RNET_MAX_BUFFER];
   }
   else if(msg->buf[r] == RNet_OPC_SetAllOutput){
+    if( (uint8_t)(msg->write_index - msg->read_index) % RNET_MAX_BUFFER < 4){
+      return RNet_msg_len_NotWhole; // Not enough bytes
+    }
     return (msg->buf[(r+2)%RNET_MAX_BUFFER] + 1) / 2 + 4;
   }
   else if(msg->buf[r] == RNet_OPC_ReadInput){
+    if( (uint8_t)(msg->write_index - msg->read_index) % RNET_MAX_BUFFER < 4){
+      return RNet_msg_len_NotWhole; // Not enough bytes
+    }
     uart.transmit("ORI\n", 4);
     return msg->buf[(r+2)%RNET_MAX_BUFFER] + 4;
   }
@@ -237,7 +247,7 @@ void RNet::init (uint8_t dev, uint8_t node)
   for(uint8_t i = 0; i < 32; i++)
     devices_list[i] = 0;
 
-  uart.transmit("RNet Master Init\n",17);
+  // uart.transmit("RNet Master Init\n",17);
 #else
   dev_id = dev;
   node_id = node;
@@ -260,12 +270,12 @@ void RNet::init (uint8_t dev, uint8_t node)
   cli(); //Disable interupts
 
   _TIM_CRA = 0;
-  _TIM_CRB = _TIM_CTC;  // Init CTC mode, keep timer halted (no prescaler)
-  RNET_ENABLE_ISR_COMPA;
+  _TIM_CRB = _TIM_CTC;   // Init CTC mode, keep timer halted (no prescaler)
+  RNET_ENABLE_ISR_COMPA; // OCIE1A ISR mask
 
   //Only slaves
   #ifndef RNET_MASTER
-    RNET_ENABLE_ISR_CAPT;
+    RNET_ENABLE_ISR_CAPT; // TICIE1 ISR mask
   #endif
 
   sei(); //Enable interupts
@@ -296,9 +306,12 @@ uint8_t cLen = 0; //current messageLength
 #ifdef RNET_MASTER
 void RNet::try_transmit(){
   if(tx.write_index != tx.read_index){
-
+    uint8_t readlen = (uint8_t)(tx.write_index - tx.read_index) % RNET_MAX_BUFFER;
     uint8_t size = getMsgSize(&tx);
-    if (tx.write_index >= (tx.read_index + size) % RNET_MAX_BUFFER){
+    if(size == RNet_msg_len_NotWhole){
+      return;
+    }
+    if(readlen >= size){
       transmit(&tx);
     }
   }
@@ -384,18 +397,35 @@ status RNet::transmit(struct _RNet_buffer * buf){
   cAddr = buf->buf[buf->read_index];
   cLen = getMsgSize(buf);         //Get size of message
 
-  if(cLen == 0){
-    uart.transmit("No Message", 10);
+  if(cLen == RNet_msg_len_NotWhole){
+    uart.transmit("Message too short ", 17);
+    return FAILED;
+  }
+  else if(cLen == 0){
+    uart.transmit("No Message ", 11);
     return FAILED;
   }
 
+
   #ifdef RNET_DEBUG
+  else{
+    uart.transmit(cLen, HEX, 2);
+  }
+  uart.transmit(buf->read_index, HEX,2);
+  uart.transmit("->", 2);
+  uart.transmit(buf->write_index, HEX,2);
+  uart.transmit('{');
+  for(uint8_t i = buf->read_index; i != buf->write_index; i = (i + 1) % RNET_MAX_BUFFER){
+    uart.transmit(buf->buf[i], HEX, 2);
+  }
+  uart.transmit('}');
+
   uart.transmit("msglen: ", 8);
   uart.transmit((long)cLen, HEX);
   uart.transmit('\n');
   #endif
 
-  cMsg = net.getBufP(buf, 0) + 1; // skip addr
+  cMsg = &buf->buf[(buf->read_index + 1) % RNET_MAX_BUFFER]; // skip addr
   cBy = 0;
   cBi = 0;
 
@@ -427,6 +457,9 @@ void RNet::_transmit(){
   state = ADDR;
 
   sei(); //Enable Interrupts
+
+  // PORTB ^= 0b00100000;
+  // PORTB ^= 0b00100000;
 
   #ifdef RNET_DEBUG
   uart.transmit(':');
@@ -481,8 +514,9 @@ uint8_t * RNet::getBufP(struct _RNet_buffer * buf, uint8_t write){
 #ifdef RNET_MASTER
 
 ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
+  _TIM_COUNTER = 0;
   _TIM_COMPA = RNET_TICK;
-  io.toggle(LED);
+  // PORTB ^= 0b00100000;
   if(net.state == RX){
     if(cBi == 0){ // Start-bit (Acknowledge)
       if(!RNET_READ_RX){
@@ -550,13 +584,17 @@ ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
         net.state = IDLE;
       }
 
+      #ifdef RNET_DEBUG
       uart.transmit('R');
       uart.transmit(cMsg[0], HEX, 2);
+      #endif
 
     }
     else{
       // Timeout
+      #ifdef RNET_DEBUG
       uart.transmit('~');
+      #endif
       RNET_TIMER_DISABLE;
       net.state = TIMEOUT;
     }
@@ -571,7 +609,7 @@ ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
       return;
     }
     else if(cBi < 9){ // Data
-      if(cMsg[cBy] & _BV(cBi - 1)){
+      if(cMsg[0] & _BV(cBi - 1)){
         #ifdef RNET_DEBUG
           uart.transmit('1');
         #endif
@@ -587,6 +625,8 @@ ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
       return;
     }
     else if(cBi == 9){ //Stop bit
+      net.tx.read_index = (net.tx.read_index + 1) % RNET_MAX_BUFFER;
+      cMsg = &net.tx.buf[net.tx.read_index];
       if(++cBy < cLen){
         //Data available
         cBi = 0;
@@ -644,6 +684,9 @@ ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
         #endif
         RNET_TX_SET_HIGH;
         net.state = TX;
+
+        // Address read, increment read_index
+        net.tx.read_index = (net.tx.read_index + 1) % RNET_MAX_BUFFER;
         cBi = 0;
         cBy = 0;
         return;
@@ -682,9 +725,9 @@ ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
       RNET_TIMER_DISABLE;
       net.state = TIMEOUT;
 
-      // #ifdef RNET_DEBUG
+      #ifdef RNET_DEBUG
         uart.transmit('X');
-      // #endif
+      #endif
     }
   }
   else if(net.state == IDLE){
@@ -692,14 +735,17 @@ ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
     RNET_DUPLEX_SET_RX;
     // uart.transmit('I');
     RNET_TIMER_DISABLE;
-  }
+  } 
+  // PORTB ^= 0b00100000;
 }
 
 #else // RNET_SLAVE
 
 ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
+  _TIM_COUNTER = 0;
   _TIM_COMPA = RNET_TICK;
-  io.toggle(LED);
+  _TIM_ICRn  = RNET_TICK;
+  PORTB ^= 0b00100000;
   if(net.state == RX){
     if(cBi == 0){
       #ifdef RNET_DEBUG
@@ -786,21 +832,20 @@ ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
       return;
     }
     else if(cBi == 9){ //Stop bit
-      uart.transmit(net.tx.buf[net.tx.read_index], HEX, 2);
       net.tx.read_index = (net.tx.read_index + 1) % RNET_MAX_BUFFER;
       if(++cBy < cLen){
         //Data available
         RNET_TX_SET_HIGH;
         cBi = 0;
-        // #ifdef RNET_DEBUG
+        #ifdef RNET_DEBUG
           uart.transmit('C');
-        // #endif
+        #endif
       }
       else{
         RNET_TX_SET_LOW;
-        // #ifdef RNET_DEBUG
+        #ifdef RNET_DEBUG
           uart.transmit("s\n", 2);
-        // #endif
+        #endif
         cBi++;
       }
     }
@@ -892,15 +937,19 @@ ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
           RNET_DUPLEX_SET_TX;
           net.state = TX;
 
+          #ifdef RNET_DEBUG
           uart.transmit('L');
           uart.transmit(cLen, HEX);
+          #endif
 
           net.txdata = 0;
         }
         else{
           net.state = IDLE;
 
+          #ifdef RNET_DEBUG
           uart.transmit('-');
+          #endif
 
           // Enable input interrupt to capture start new master transmission
           RNET_CLEAR_ISR_CAPT;
@@ -978,6 +1027,7 @@ ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
     }
     cBi++;
   }
+  PORTB ^= 0b00100000;
 }
 
 #endif
@@ -985,21 +1035,25 @@ ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
 ISR(RNET_RX_ICP_ISR_vect){
 
   RNET_DISABLE_ISR_CAPT;
-  RNET_CLEAR_ISR_CAPT;
 
   _TIM_COUNTER = 0;
   _TIM_COMPA = RNET_OFFSET;
 
-  _TIM_ISR_FLAGS |= _BV(OCF1A);
   RNET_TIMER_ENABLE;
   RNET_CLEAR_ISR_COMPA;
 
+  #ifdef RNET_DEBUG
   uart.transmit('%');
+  #endif
+
+  // PORTB ^= 0b00100000;
 
   #ifdef RNET_MASTER
   if(net.state == ADDR){
     net.rx.buf[net.rx.write_index++] = cAddr;
+    #ifdef RNET_DEBUG
     uart.transmit('$');
+    #endif
     net.state = RX;
   }
   #else

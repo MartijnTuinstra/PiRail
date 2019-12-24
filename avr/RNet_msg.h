@@ -25,3 +25,5 @@
 #define RNet_OPC_SetCheck      0x54
 
 #define RNet_OPC_ReadEEPROM    0x60
+
+#define RNet_msg_len_NotWhole  0xFF

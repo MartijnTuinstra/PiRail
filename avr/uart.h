@@ -23,7 +23,11 @@ class UART{
     // bool available();
 
 
-    void  _rx_complete_irq();
+    void _rx_complete_irq();
+    void _tx_complete_irq();
+
+    void start_tx();
+
     uint8_t available();
     char  read();
 

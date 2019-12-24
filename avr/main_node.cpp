@@ -52,13 +52,6 @@ RNet net;
 
 int main(){
 
-#if defined(__AVR_ATmega328__) || defined(__AVR_ATmega328P__)
-#define LED 13
-#elif defined(__AVR_ATmega64A__)
-#define LED 0
-#elif defined(__AVR_ATmega2560__)
-#define LED 23
-#endif
   // eeprom_update_byte(&EE_Mem.ModuleID, 9);
   // eeprom_update_byte(&EE_Mem.NodeID, 2);
 
@@ -73,31 +66,22 @@ int main(){
   //   }
   // }
 
-  eeprom_write_byte(&EE_Mem.IO[0].type, IO_Output);
-  eeprom_write_byte(&EE_Mem.IO[0].def, IO_event_Blink1);
+  eeprom_write_byte(&EE_Mem.IO[0].type, IO_InputToggle);
+  eeprom_write_byte(&EE_Mem.IO[0].def, IO_event_High);
+
   eeprom_write_byte(&EE_Mem.IO[1].type, IO_Output);
   eeprom_write_byte(&EE_Mem.IO[1].def, IO_event_High);
-  eeprom_write_byte(&EE_Mem.IO[2].type, IO_Output);
-  eeprom_write_byte(&EE_Mem.IO[2].def, IO_event_Blink1);
-  eeprom_write_byte(&EE_Mem.IO[3].type, IO_InputToggle);
-  eeprom_write_byte(&EE_Mem.IO[3].def, IO_event_High);
-  eeprom_write_byte(&EE_Mem.IO[12].type, IO_InputToggle);
-  eeprom_write_byte(&EE_Mem.IO[13].type, IO_Output);
 
-  io.init();
-  // io.out(0);
-  // io.out(1);
-  // io.in(2);
-  // io.in(3);
-  // io.set_mask(LED, IO_event_Blink1);
+  eeprom_write_byte(&EE_Mem.IO[2].type, IO_InputToggle);
+  eeprom_write_byte(&EE_Mem.IO[2].def, IO_event_High);
 
-  for(uint8_t i = 0; i < MAX_PORTS; i++)
-    uart.transmit(io.readMask[i], HEX, 2);
-  uart.transmit('\n');
-  #endif
+  for (uint8_t i = 3; i < 12; i++){
+    eeprom_write_byte(&EE_Mem.IO[i].type, IO_InputToggle);
+    eeprom_write_byte(&EE_Mem.IO[i].def, IO_event_High);
+  }
+  eeprom_write_byte(&EE_Mem.IO[12].type, IO_Output);
+  eeprom_write_byte(&EE_Mem.IO[12].def, IO_event_High);
 
-  UCSR0C = _BV(UCSZ01) | _BV(UCSZ00); /* 8-bit data */
-  UCSR0B = _BV(TXEN0);   /* Enable TX */
 
   eeprom_write_byte(&EE_Mem.ModuleID, 3);
   eeprom_write_byte(&EE_Mem.NodeID, 0);
@@ -105,20 +89,35 @@ int main(){
   eeprom_write_word(&EE_Mem.settings.blink1, 1000);
   eeprom_write_word(&EE_Mem.settings.blink2, 3200);
 
+  io.init();
+  // DDRB |= 0b00100000; // Set LED as output 
+  // io.out(0);
+  // io.out(1);
+  // io.in(2);
+  // io.in(3);
+  // io.set_mask(LED, IO_event_Blink1);
+  io.readInput();
+  io.copyInput();
+
+  for(uint8_t i = 0; i < MAX_PORTS; i++)
+    uart.transmit(io.readMask[i], HEX, 2);
+  uart.transmit('\n');
+  #endif
+
   // _delay_ms(1000);
 
   //Scope for ID
-  {
-    //Blink master ID
-    uint8_t ID = eeprom_read_byte(&EE_Mem.ModuleID);
-    flash_number(ID);
+  // {
+  //   //Blink master ID
+  //   uint8_t ID = eeprom_read_byte(&EE_Mem.ModuleID);
+  //   flash_number(ID);
 
-    _delay_ms(400);
+  //   _delay_ms(400);
 
-    //Blink slave ID
-    ID = eeprom_read_byte(&EE_Mem.NodeID);
-    flash_number(ID);
-  }
+  //   //Blink slave ID
+  //   ID = eeprom_read_byte(&EE_Mem.NodeID);
+  //   flash_number(ID);
+  // }
 
   _delay_ms(400);
 
@@ -137,8 +136,6 @@ int main(){
 
   // _delay_ms(5000);
 
-  uart.transmit("Loop\n", 5);
-
   #ifdef RNET_MASTER
 
   net.tx.buf[0] = 3;
@@ -151,6 +148,8 @@ int main(){
   net.tx.write_index = 6;
   net.tx.read_index = 0;
 
+  _delay_ms(1500);
+
   net.request_all();
 
   _delay_ms(1000);
@@ -159,30 +158,15 @@ int main(){
 
   // Loop
   while(1){
-    // if(uart.available()){
-    //   net.tx.buf[net.tx.write_index++] = uart.read();
-
-    //   if(net.tx.write_index >= RNET_MAX_BUFFER){
-    //     net.tx.write_index = 0;
-    //   }
-    // }
-
     net.try_transmit();
 
     net.request_registered();
 
     if(net.rx.read_index != net.rx.write_index){
-      uart.transmit('!');
-      while(net.rx.read_index != net.rx.write_index){
-        uart.transmit(net.rx.buf[net.rx.read_index], HEX, 2);
-        if(++net.rx.read_index >= RNET_MAX_BUFFER){
-          net.rx.read_index = 0;
-        }
-      }
-      uart.transmit('\n');
+      uart.start_tx();
     }
 
-    _delay_ms(500);
+    _delay_ms(100);
   }
 
   #else // Slave
@@ -197,7 +181,6 @@ int main(){
     while(net.state == IDLE && net.available()){
       net.read();
     }
-    continue;
 
     _delay_ms(10);
     j++;
@@ -217,14 +200,14 @@ int main(){
       j = 0;
     }
 
-
     io.copyInput();
     io.readInput();
 
     uint8_t diff = 0;
 
     for(int i = 0; i < MAX_PORTS; i++){
-      if((io.oldreadData[i] ^ io.readData[i])){
+      if(io.oldreadData[i] ^ io.readData[i]){
+        io.oldreadData[i] = io.readData[i];
         diff = 1;
       }
     }
@@ -240,7 +223,7 @@ int main(){
       uint8_t x = 3;
 
       for(uint8_t i = 0; i < MAX_PORTS; i++){
-        uart.transmit(io.readData[i]);
+        uart.transmit(io.readData[i], HEX, 2);
         net.tx.buf[(net.tx.write_index+(x++))%RNET_MAX_BUFFER] = io.readData[i];
         checksum ^= io.readData[i];
       }
@@ -259,76 +242,23 @@ int main(){
 
   #else
   while (1){
-    // if(net.state == IDLE && RNet_rx_buffer.read_index != RNet_rx_buffer.write_index){
-    //  readRXBuf();
-    // }
-    // if(net.state == IDLE || net.state == HOLDOFF){
-    //   net.transmit(5);
-    // }
-    #ifdef _BUFFER
-    // Receive from UART
-    if(uart.available()){
-      //receive byte
-      uint8_t c = uart.receive();
-      net.add_to_tx_buf(c);
-      if(net.checkTxReady()){
-        net.transmit(20);
-      }
-    }
-    #endif
 
-    #ifndef IO_SPI
-    //Receive from Net
-    if(net.checkReceived()){
-      #ifndef _BUFFER
-      // Message is copied to temp buffer
-      // ready to be executed
-      net.executeMessage();
-      #else
-      // Message is pass through to UART
-      uint8_t size = net.getMsgSize(tmp_rx_msg);
-      uart.transmit(tmp_rx_msg, size);
-      #endif
-    }
-    #endif
+    // #ifndef IO_SPI
+    // //Receive from Net
+    // if(net.checkReceived()){
+    //   #ifndef _BUFFER
+    //   // Message is copied to temp buffer
+    //   // ready to be executed
+    //   net.executeMessage();
+    //   #else
+    //   // Message is pass through to UART
+    //   uint8_t size = net.getMsgSize(tmp_rx_msg);
+    //   uart.transmit(tmp_rx_msg, size);
+    //   #endif
+    // }
+    // #endif
 
     #ifdef IO_SPI
-    // uart_putchar('.');
-    // io.blink1();
-    // io.blink2();
-    // io.writeOutput();
-    // _delay_ms(1000);
-    // io.blink1();
-    // io.writeOutput();
-    // _delay_ms(1000);
-    // io.blink1();
-    // io.blink2();
-    // io.writeOutput();
-    // _delay_ms(1000);
-    // io.blink1();
-    // io.writeOutput();
-    // _delay_ms(1000);
-    // for(int j = 0; j < 10; j++){
-    //   for(int i = 37; i < 40; i++){
-    //     io.toggle(i);
-    //     io.writeOutput();
-    //     _delay_ms(50);
-    //     io.toggle(i);
-    //     io.writeOutput();
-    //     _delay_ms(100);
-    //   }
-    // }
-    // _delay_ms(5000);
-    // io.readInput();
-    // io.set_mask(25, IO_event_Pulse);
-    // uart.transmit("Pulse\n",6);
-    // io.pulse_high();
-    // _delay_ms(5000);
-    // io.readInput();
-    // io.set_mask(24, IO_event_Pulse);
-    // io.pulse_high();
-    // uart.transmit("Pulse\n",6);
-
     io.copyInput();
     io.readInput();
 

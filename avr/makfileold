@@ -1,0 +1,70 @@
+programs=main_csma main main_master main_spi_master main_spi main_spi_csma
+File_main_master=main_node.o eeprom_layout.o RNet.o IO.o uart.o
+args_main_master=-D RNET_MASTER
+File_main_spi_master=main_node.o eeprom_layout.o RNet.o IO.o uart.o
+args_main_spi_master=-D IO_SPI -D RNET_MASTER
+
+File_main=main_node.o eeprom_layout.o RNet.o IO.o uart.o
+args_main=
+File_main_spi=main_node.o eeprom_layout.o RNet.o IO.o uart.o
+args_main_spi=-D IO_SPI
+
+File_main_csma=main_node.o eeprom_layout.o RNet_csma.o IO.o uart.o
+args_main_csma=-D RNET_CSMA
+File_main_spi_csma=main_node.o eeprom_layout.o RNet_csma.o IO.o uart.o
+args_main_spi_csma=-D IO_SPI -D RNET_CSMA
+
+File_net_buffer=main_node.o eeprom_layout.o RNet.o uart.o
+args_net_buffer=-D _BUFFER
+File_test=test.o
+
+dev=atmega328 atmega328p atmega64a atmega2560
+#dev=atmega328p atmega2560
+
+avr_gcc_args=-g -Wall -Os -Werror -Wextra
+
+TARGETS=
+
+# 1 = program, 2 = device
+define compile
+$(1): build/$(1)/$(2).elf
+$(2): build/$(1)/$(2).elf
+
+build/$(1)/$(2).bin.d/stamp:
+	@echo "  [  DIR  ] build/$1/$2.bin.d"
+	@mkdir -p build/$(1)/$(2).bin.d
+	@touch build/$(1)/$(2).bin.d/stamp
+
+build/$(1)/$(2).bin.d/%.o: %.cpp %.h build/$(1)/$(2).bin.d/stamp
+	@echo "  [AVR-GCC] $$@ ($$^)"
+	@avr-gcc -mmcu=$(2) -Wa,-ahlmns=$$(basename $$@).lst -c -o $$@ $$(word 1,$$^) $$(avr_gcc_args) $$(args_$(1))
+
+build/$(1)/$(2).elf: $$(addprefix build/$(1)/$(2).bin.d/,$$(File_$(1)))
+	@echo "  [  AVR  ] $(2) $(1)"
+	@+$(MAKE) -f make-avr hex dev=$(2) dir=build/$(1) --no-print-directory
+
+endef
+
+.PHONY: all flash $(programs) $(dev)
+
+$(foreach d, $(dev), $(foreach p, $(programs), $(eval TARGETS+= build/$(p)/$(d).elf)))
+$(foreach d, $(dev), $(foreach p, $(programs), $(eval $(call compile,$(p),$(d)))))
+
+all: $(TARGETS)
+
+null  :=
+space := $(null) $(null)
+comma := , 
+
+flash_programs := $(subst $(space),$(comma),$(strip $(programs)))
+flash_dev := $(subst $(space),$(comma),$(strip $(dev)))
+
+flash: all
+	@python3 flash.py -p $(flash_programs) -d $(flash_dev)
+#	@make -f make-avr flash dir=$(DIR) dev=$(DEV) prog=$(PROG) baud=$(BAUD) prot=$(PROT)
+
+%_clean:
+	@echo "  [ CLEAN ] build/$(subst _clean,,$@)"
+	@rm -rf build/$(subst _clean,,$@)
+
+clean: $(addsuffix _clean,$(programs))

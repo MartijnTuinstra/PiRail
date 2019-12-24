@@ -86,25 +86,72 @@ extern uint8_t pin_to_Port[];
 
 extern uint8_t pin_to_BIT[];
 
+
+
+const uint16_t PROGMEM portlist[] = {
+	#if defined(__AVR_ATmega64A__) || defined(__AVR_ATmega2560__)
+	(uint16_t) &PORTA,
+	#endif
+	(uint16_t) &PORTB,
+	(uint16_t) &PORTC,
+	(uint16_t) &PORTD,
+	#if defined(__AVR_ATmega64A__) || defined(__AVR_ATmega2560__)
+	(uint16_t) &PORTE,
+	(uint16_t) &PORTF,
+	#endif
+	#if defined(__AVR_ATmega64A__)
+	(uint16_t) &PORTG,
+	#elif defined(__AVR_ATmega2560__)
+	(uint16_t) &PORTH,
+	(uint16_t) &PORTJ,
+	(uint16_t) &PORTK,
+	(uint16_t) &PORTL,
+	#endif
+};
+const uint16_t PROGMEM ddrlist[] = {
+	#if defined(__AVR_ATmega64A__) || defined(__AVR_ATmega2560__)
+	(uint16_t) &DDRA,
+	#endif
+	(uint16_t) &DDRB,
+	(uint16_t) &DDRC,
+	(uint16_t) &DDRD,
+	#if defined(__AVR_ATmega64A__) || defined(__AVR_ATmega2560__)
+	(uint16_t) &DDRE,
+	(uint16_t) &DDRF,
+	#endif
+	#if defined(__AVR_ATmega64A__)
+	(uint16_t) &DDRG,
+	#elif defined(__AVR_ATmega2560__)
+	(uint16_t) &DDRH,
+	(uint16_t) &DDRJ,
+	(uint16_t) &DDRK,
+	(uint16_t) &DDRL,
+	#endif
+};
+const uint16_t PROGMEM pinlist[] = {
+	#if defined(__AVR_ATmega64A__) || defined(__AVR_ATmega2560__)
+	(uint16_t) &PINA,
+	#endif
+	(uint16_t) &PINB,
+	(uint16_t) &PINC,
+	(uint16_t) &PIND,
+	#if defined(__AVR_ATmega64A__) || defined(__AVR_ATmega2560__)
+	(uint16_t) &PINE,
+	(uint16_t) &PINF,
+	#endif
+	#if defined(__AVR_ATmega64A__)
+	(uint16_t) &PING,
+	#elif defined(__AVR_ATmega2560__)
+	(uint16_t) &PINH,
+	(uint16_t) &PINJ,
+	(uint16_t) &PINK,
+	(uint16_t) &PINL,
+	#endif
+};
+
 #if defined(__AVR_ATmega328__) || defined(__AVR_ATmega328P__)
 	#define MAX_PORTS 3
 	#define MAX_PINS 13
-
-	const uint16_t PROGMEM portlist[] = {
-		(uint16_t) &PORTB,
-		(uint16_t) &PORTC,
-		(uint16_t) &PORTD,
-	};
-	const uint16_t PROGMEM ddrlist[] = {
-		(uint16_t) &DDRB,
-		(uint16_t) &DDRC,
-		(uint16_t) &DDRD,
-	};
-	const uint16_t pinlist[] = {
-		(uint16_t) &PINB,
-		(uint16_t) &PINC,
-		(uint16_t) &PIND,
-	};
 	// RNet uses B0,B1,B2 -> 0,1,2
 	const uint8_t list[] = {
 		// 0, 1, 2, 3, 4, 5
@@ -120,34 +167,6 @@ extern uint8_t pin_to_BIT[];
 #elif defined(__AVR_ATmega64A__)
 	#define MAX_PORTS 7
 	#define MAX_PINS 40
-
-	const uint16_t PROGMEM portlist[] = {
-		(uint16_t) &PORTA,
-		(uint16_t) &PORTB,
-		(uint16_t) &PORTC,
-		(uint16_t) &PORTD,
-		(uint16_t) &PORTE,
-		(uint16_t) &PORTF,
-		(uint16_t) &PORTG,
-	};
-	const uint16_t PROGMEM ddrlist[] = {
-		(uint16_t) &DDRA,
-		(uint16_t) &DDRB,
-		(uint16_t) &DDRC,
-		(uint16_t) &DDRD,
-		(uint16_t) &DDRE,
-		(uint16_t) &DDRF,
-		(uint16_t) &DDRG,
-	};
-	const uint16_t PROGMEM pinlist[] = {
-		(uint16_t) &PINA,
-		(uint16_t) &PINB,
-		(uint16_t) &PINC,
-		(uint16_t) &PIND,
-		(uint16_t) &PINE,
-		(uint16_t) &PINF,
-		(uint16_t) &PING,
-	};
 	const uint8_t list[] = {
 		// 0, 1 (PG)
 		52, 51,
@@ -170,42 +189,6 @@ extern uint8_t pin_to_BIT[];
 	#define MAX_PORTS 10
 	#define MAX_PINS 72
 
-	const uint16_t PROGMEM portlist[] = {
-		(uint16_t) &PORTA,
-		(uint16_t) &PORTB,
-		(uint16_t) &PORTC,
-		(uint16_t) &PORTD,
-		(uint16_t) &PORTE,
-		(uint16_t) &PORTF,
-		(uint16_t) &PORTH,
-		(uint16_t) &PORTJ,
-		(uint16_t) &PORTK,
-		(uint16_t) &PORTL,
-	};
-	const uint16_t PROGMEM ddrlist[] = {
-		(uint16_t) &DDRA,
-		(uint16_t) &DDRB,
-		(uint16_t) &DDRC,
-		(uint16_t) &DDRD,
-		(uint16_t) &DDRE,
-		(uint16_t) &DDRF,
-		(uint16_t) &DDRH,
-		(uint16_t) &DDRJ,
-		(uint16_t) &DDRK,
-		(uint16_t) &DDRL,
-	};
-	const uint16_t PROGMEM pinlist[] = {
-		(uint16_t) &PINA,
-		(uint16_t) &PINB,
-		(uint16_t) &PINC,
-		(uint16_t) &PIND,
-		(uint16_t) &PINE,
-		(uint16_t) &PINF,
-		(uint16_t) &PINH,
-		(uint16_t) &PINJ,
-		(uint16_t) &PINK,
-		(uint16_t) &PINL,
-	};
 	const uint8_t list[] = {
 		// 0, 1, 2, 3, 4, 5, 6, 7 (PE)
 		39, 38, 37, 36, 35, 34, 33, 32, 
@@ -318,8 +301,8 @@ extern IO io;
 
 #define IO_TIMER TCCR0B
 #define IO_TIMER_INT TIMSK0
-#define IO_TIMER_OVERFLOW_INT_REG (1<<0) //TOIE
-#define IO_TIMER_COMPA_INT_REG (1<<1) //OCIEA
+#define IO_TIMER_OVERFLOW_INT_REG (1<<TOIE0) //TOIE
+#define IO_TIMER_COMPA_INT_REG (1<<OCIE0A) //OCIEA
 
 
 #define IO_TIMER_COMPA_REG OCR0A

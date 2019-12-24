@@ -1,4 +1,5 @@
 #include "uart.h"
+#include "RNet.h"
 #include "main_node.h"
 #include "avr/interrupt.h"
 
@@ -6,7 +7,7 @@
 
 static void uart_38400(void)
 {
-#define BAUD 38400
+#define BAUD 250000
 #include <util/setbaud.h>
 UBRR0H = UBRRH_VALUE;
 UBRR0L = UBRRL_VALUE;
@@ -17,12 +18,14 @@ UCSR0A &= ~(1 << U2X0);
 #endif
 }
 
+UART uart;
+
 #if defined(USART_RX_vect)
-ISR(USART_RX_vect)
+  SIGNAL(USART_RX_vect)
 #elif defined(USART0_RX_vect)
-  ISR(USART0_RX_vect)
+  SIGNAL(USART0_RX_vect) // ATMega2560
 #elif defined(USART_RXC_vect)
-  ISR(USART_RXC_vect) // ATmega8
+  SIGNAL(USART_RXC_vect) // ATmega8
 #else
   #error "Don't know what the Data Received vector is called for Serial"
 #endif
@@ -31,12 +34,31 @@ uart._rx_complete_irq();
 }
 
 
-UART uart;
+#if defined(USART_UDRE_vect)
+  ISR(USART_UDRE_vect)
+#elif defined(USART0_UDRE_vect)
+  ISR(USART0_UDRE_vect) // ATMega2560
+#elif defined(USART_UDREC_vect)
+  ISR(USART_UDREC_vect) // ATmega8
+#else
+  #error "Don't know what the Data Received vector is called for Serial"
+#endif
+{
+uart._tx_complete_irq();
+}
 
 void UART::init(){
-  UCSR0B |= (1 << TXEN0) || (1 << RXEN0); // Enable TX and RX
-  UCSR0C = (1 << UCSZ00) | (1 << UCSZ01); // 8-bit uart
+  UCSR0B = (1 << TXEN0) | (1 << RXEN0); // Enable TX and RX
+  // UART defaults to 8N1
+  UCSR0C = (1 << UCSZ00) | (1 << UCSZ01); // 8N1 mode
   uart_38400();
+
+  #ifdef RNET_MASTER
+  cli();
+  // Enable interrupts
+  UCSR0B |= (1 << RXCIE0);
+  sei();
+  #endif
 }
 
 // bool UART::available(){
@@ -50,11 +72,39 @@ uint8_t UART::receive(){
 }
 
 void UART::_rx_complete_irq(){
-	buf[w++] = UDR0;
+	net.tx.buf[net.tx.write_index] = UDR0;
 
-	if(w >= UART_BUF_SIZE){
-		w = 0;
-	}
+	if(++net.tx.write_index >= RNET_MAX_BUFFER){
+    net.tx.write_index = 0;
+  }
+}
+
+void UART::start_tx(){
+	UDR0 = net.rx.buf[net.rx.read_index];
+
+	if(++net.rx.read_index >= RNET_MAX_BUFFER){
+    net.rx.read_index = 0;
+  }
+
+  UCSR0B |= (1<<UDRIE0);
+}
+
+void UART::_tx_complete_irq(){
+	#ifdef RNET_MASTER
+    if(net.rx.read_index != net.rx.write_index){
+		UDR0 = net.rx.buf[net.rx.read_index];
+
+		if(++net.rx.read_index >= RNET_MAX_BUFFER){
+          net.rx.read_index = 0;
+        }
+
+    	UCSR0B |= (1<<UDRIE0);
+    	UCSR0A &= ~(1<<UDRE0); // Clear interrupt
+    }
+    else{
+    	UCSR0B &= ~(1<<UDRIE0);
+    }
+	#endif
 }
 
 uint8_t UART::available(){

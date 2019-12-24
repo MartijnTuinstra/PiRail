@@ -29,8 +29,8 @@
 #define _TIM_ISR_MSK TIMSK1
 #define _TIM_ISR_FLAGS TIFR1
 #define _TIM_CTC (1 << WGM12)
-#define _TIM_PRESCALER (1 << CS12) | (0 << CS11) | (0 << CS10)
-#define _TIM_EN_ISR (1 << OCIE1A) | (1 << ICIE1)
+#define _TIM_PRESCALER (0 << CS12) | (1 << CS11) | (0 << CS10)
+#define _TIM_ICRn ICR1
 
 #elif defined(__AVR_ATmega64A__)
 
@@ -54,7 +54,6 @@
 #define _TIM_ISR_FLAGS TIFR
 #define _TIM_CTC (1 << WGM12)
 #define _TIM_PRESCALER (0 << CS12) | (1 << CS11) | (1 << CS10)
-#define _TIM_EN_ISR (1 << OCIE1A) | (1 << ICIE1)
 
 #elif defined(__AVR_ATmega2560__)
 
@@ -78,7 +77,6 @@
 #define _TIM_ISR_FLAGS TIFR5
 #define _TIM_CTC (1 << WGM52)
 #define _TIM_PRESCALER (1 << CS52) | (0 << CS51) | (1 << CS50)
-#define _TIM_EN_ISR (1 << OCIE5A) | (1 << ICIE5)
 
 #endif
 
@@ -143,8 +141,8 @@
 
 struct _RNet_buffer {
     uint8_t buf[RNET_MAX_BUFFER];
-    uint8_t read_index;
-    uint8_t write_index;
+    volatile uint8_t read_index;
+    volatile uint8_t write_index;
 };
 
 #ifdef RNET_MASTER

@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include "com.h"
 #include "logger.h"
 #include "system.h"
 #include "mem.h"

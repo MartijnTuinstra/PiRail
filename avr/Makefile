@@ -25,8 +25,8 @@ dev=atmega328p# atmega64a atmega2560
 define compile
 
 build/$(1)/$(2)/$(2).flash:
-	@echo "$$(args_$(2)) $$(File_$(2))"
-	@+$(MAKE) -f make-avr all DEVICE=$(1) args="$$(args_$(2))" output=$(2) files="$$(File_$(2))" --no-print-directory
+	echo "$$(args_$(2)) $$(File_$(2))"
+	+$(MAKE) -f make-avr all DEVICE=$(1) args="$$(args_$(2))" output=$(2) files="$$(File_$(2))" --no-print-directory
 
 all: build/$(1)/$(2)/$(2).flash
 

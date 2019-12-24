@@ -171,23 +171,27 @@ void IO::init(){
 		uint8_t type = eeprom_read_byte((const uint8_t *)&EE_Mem.IO[i].type);
 		enum IO_event def = (enum IO_event)eeprom_read_byte((const uint8_t *)&EE_Mem.IO[i].def);
 
-		uart.transmit(list[i] / 8, HEX);
+		uart.transmit(list[i] / 8, HEX, 2);
 		uart.transmit('\t');
-		uart.transmit(1 << (list[i] % 8), HEX);
+		uart.transmit(1 << (list[i] % 8), HEX, 2);
 		uart.transmit('\t');
-		uart.transmit(type, HEX);
+		uart.transmit(type, HEX, 2);
 		uart.transmit('\t');
-		uart.transmit(def, HEX);
+		uart.transmit(def, HEX, 2);
 		uart.transmit('\n');
 
-		/*if(type == IO_Output){
+		if(type == IO_Output){
 			out(i);
+			set(i, def);
 		}
 		else{
 			in(i);
+			set(i, IO_event_High);
 		}
+	}
 
-		set(i, def);*/
+	for(uint8_t i = 0; i < MAX_PORTS; i++){
+		uart.transmit(readMask[i], HEX, 2);
 	}
 
 	uart.transmit("DONE\n", 5);

@@ -83,8 +83,8 @@ int main(){
   eeprom_write_byte(&EE_Mem.IO[12].def, IO_event_High);
 
 
-  eeprom_write_byte(&EE_Mem.ModuleID, 3);
-  eeprom_write_byte(&EE_Mem.NodeID, 0);
+  // eeprom_write_byte(&EE_Mem.ModuleID, 5);
+  // eeprom_write_byte(&EE_Mem.NodeID, 0);
   
   eeprom_write_word(&EE_Mem.settings.blink1, 1000);
   eeprom_write_word(&EE_Mem.settings.blink2, 3200);
@@ -123,7 +123,7 @@ int main(){
 
   #if defined(IO_SPI)
   uart.transmit("IO_SPI\n",7);
-  #else
+  #endif
 
   #ifdef RNET_MASTER
   _delay_ms(500);
@@ -132,7 +132,7 @@ int main(){
   net.init(eeprom_read_byte(&EE_Mem.ModuleID), eeprom_read_byte(&EE_Mem.NodeID));
   #endif
 
-  #endif
+  // #endif
 
   // _delay_ms(5000);
 
@@ -166,7 +166,7 @@ int main(){
       uart.start_tx();
     }
 
-    _delay_ms(100);
+    _delay_ms(10);
   }
 
   #else // Slave
@@ -199,6 +199,8 @@ int main(){
       net.txdata = 1;
       j = 0;
     }
+
+
 
     io.copyInput();
     io.readInput();

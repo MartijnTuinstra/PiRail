@@ -10,8 +10,13 @@
 
 #if defined(__AVR_ATmega328__) || defined(__AVR_ATmega328P__)
 
+#ifndef IO_SPI
 #define RNET_TX_pin 2
 #define RNET_TX_PORT B
+#else
+#define RNET_TX_pin 7
+#define RNET_TX_PORT D
+#endif
 
 #define RNET_RX_pin 0
 #define RNET_RX_PORT B
@@ -122,7 +127,7 @@
 
 #if __AVR_ATmega2560__
 
-#define RNET_TX_TICK 48
+#define RNET_TX_TICK 40
 
 #else
 

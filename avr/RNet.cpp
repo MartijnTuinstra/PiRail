@@ -46,6 +46,11 @@ bool RNet::available(){
   if (rx.read_index != rx.write_index){;
     uint8_t size = getMsgSize(&rx);
 
+    uart.transmit(rx.read_index, HEX, 2);
+    uart.transmit("->", 2);
+    uart.transmit(rx.write_index, HEX, 2);
+    uart.transmit('\n');
+
     if (rx.write_index >= (rx.read_index + size) % RNET_MAX_BUFFER){
       //Copy message and check checksum
       uint8_t checksum = RNET_CHECKSUM_SEED;
@@ -252,7 +257,9 @@ void RNet::init (uint8_t dev, uint8_t node)
   dev_id = dev;
   node_id = node;
   txdata = 0;
-  uart.transmit("RNet Slave Init\n",16);
+  uart.transmit("RNet Slave Init\t",16);
+  uart.transmit(dev, HEX, 2);
+  uart.transmit('\n');
 #endif
 
   RNET_TX_SET_HIGH; // Write pull up and will become high output HIGH
@@ -331,14 +338,15 @@ void RNet::request_all(){
 
     if(state != TIMEOUT){
       // Device detected
-      #ifdef RNET_DEBUG
-      uart.transmit('*');
-      uart.transmit(i, HEX);
-      uart.transmit('\n');
-      #endif
+      // #ifdef RNET_DEBUG
+      // uart.transmit('*');
+      // #endif
       devices_list[i / 8] |= 1<<(i % 8);
     }
+    // uart.transmit(i, HEX);
+    // uart.transmit('\n');
     state = IDLE;
+    _delay_ms(10);
   }
 
   uart.transmit(0x01);
@@ -745,7 +753,7 @@ ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
   _TIM_COUNTER = 0;
   _TIM_COMPA = RNET_TICK;
   _TIM_ICRn  = RNET_TICK;
-  PORTB ^= 0b00100000;
+  // PORTB ^= 0b00100000;
   if(net.state == RX){
     if(cBi == 0){
       #ifdef RNET_DEBUG
@@ -896,6 +904,8 @@ ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
           #ifdef RNET_DEBUG
           uart.transmit('w');
           #endif
+          cBi = 0;
+          cBy = 0;
         }
         else{
           #ifdef RNET_DEBUG
@@ -906,6 +916,7 @@ ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
           RNET_ENABLE_ISR_CAPT;
 
           cBi = 10;
+          cBy = 0;
           _TIM_COMPA = RNET_TIMEOUT;
         }
         net.state = OTHER;
@@ -972,35 +983,24 @@ ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
     return;
   }
   else if(net.state == OTHER){
-    #ifdef RNET_DEBUG
     if(cBi == 0){
+      #ifdef RNET_DEBUG
       uart.transmit('S');
+      #endif
     }
     else if(cBi < 9){
-      if(RNET_READ_RX){
-        uart.transmit('1');
-      }
-      else{
-        uart.transmit('0');
-      }
+      #ifdef RNET_DEBUG
+        uart.transmit('d');
+      #endif
     }
-
-
-
     else if(cBi == 9){
-    #else
-    if(cBi == 9){
-    #endif
-
-      // Stop bit
 
       if(RNET_READ_RX){
-        // Continue
         #ifdef RNET_DEBUG
-          uart.transmit('C');
+        uart.transmit('C');
         #endif
 
-        // Enable input interrupt to capture start RX transmission
+        // Enable input interrupt to capture start next RX transmission
         RNET_CLEAR_ISR_CAPT;
         RNET_ENABLE_ISR_CAPT;
         cBi++;
@@ -1008,26 +1008,32 @@ ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
         _TIM_COMPA = RNET_TIMEOUT;
         return;
       }
-      #ifdef RNET_DEBUG
-      // Stop
-      else
+      else{
+        #ifdef RNET_DEBUG
         uart.transmit('S');
-      #endif
+        uart.transmit('\n');
+        #endif
+
+        // Enable input interrupt to capture start next master transmission
+        RNET_CLEAR_ISR_CAPT;
+        RNET_ENABLE_ISR_CAPT;
+
+        RNET_TIMER_DISABLE;
+
+        net.state = IDLE;
+        return;
+      }
     }
     else{
-      // Timeout or after transmission
-      net.state = IDLE;
-
-      RNET_CLEAR_ISR_CAPT;
-      RNET_ENABLE_ISR_CAPT;
-
       #ifdef RNET_DEBUG
-      uart.transmit('E');
+      uart.transmit('T');
       #endif
+      RNET_TIMER_DISABLE;
+      net.state = IDLE;
     }
     cBi++;
   }
-  PORTB ^= 0b00100000;
+  // PORTB ^= 0b00100000;
 }
 
 #endif
@@ -1042,10 +1048,6 @@ ISR(RNET_RX_ICP_ISR_vect){
   RNET_TIMER_ENABLE;
   RNET_CLEAR_ISR_COMPA;
 
-  #ifdef RNET_DEBUG
-  uart.transmit('%');
-  #endif
-
   // PORTB ^= 0b00100000;
 
   #ifdef RNET_MASTER
@@ -1059,7 +1061,14 @@ ISR(RNET_RX_ICP_ISR_vect){
   #else
   if(net.state == IDLE){
     net.state = ADDR;
+    #ifdef RNET_DEBUG
+    uart.transmit('\n');
+    #endif
   }
+  #endif
+
+  #ifdef RNET_DEBUG
+  uart.transmit('%');
   #endif
 
   cBi = 0;

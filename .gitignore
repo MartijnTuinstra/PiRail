@@ -3,6 +3,7 @@ log.txt
 log_config.txt
 bin/
 baan
+baan.so
 config_reader
 configs/*
 web/trains_img/*
@@ -10,3 +11,6 @@ web/trains_img/*
 web/tmp_*
 *.~vsdx
 *.~docx
+test/libbaan.so
+test/test.o
+test/testresults/*

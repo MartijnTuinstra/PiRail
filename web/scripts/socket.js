@@ -141,11 +141,19 @@ var websocket = {
       msg = msg.slice(1);
     }
 
-    if(this.opc[opcode] == undefined){
-      console.warn("Unknown opcode "+opcode);
+    if(opcode == undefined || this.opc[opcode] == undefined){
+      console.warn("Unknown opcode "+opcode, msg);
+      return;
     }
 
-    console.log("0x"+opcode.toString(16)+" stc_"+this.opc[opcode]);
+    text = "0x"+opcode.toString(16);
+    text += " stc_"+this.opc[opcode];
+    console.log(text);
+
+    if(this.opc[opcode] == undefined || (this.opc[opcode] && {}.toString.call(this.opc[opcode]) === '[object Function]')){
+      console.warn("Failure to load opcode "+opcode);
+      return;
+    }
 
     this["stc_"+this.opc[opcode]](msg);
 
@@ -1382,5 +1390,7 @@ websocket.add_opcodes([
 ]);
 
 $(document).ready(function(){
-  websocket.connect("ws://192.168.2.92:9000/", 0xFF);
+  setTimeout(function(){
+    websocket.connect("ws://192.168.2.92:9000/", 0xFF);
+  }, 500);
 });

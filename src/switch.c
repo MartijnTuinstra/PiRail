@@ -158,6 +158,9 @@ void * Clear_MSSwitch(MSSwitch * MSSw){
 void throw_switch(Switch * S, uint8_t state, uint8_t lock){
   loggerf(TRACE, "throw_switch");
 
+  if(S->Detection && (S->Detection->state == BLOCKED || S->Detection->state == RESERVED_SWITCH))
+    return; // Switch is blocked
+
   Algor_Set_Changed(&S->Detection->Alg);
   putList_AlgorQueue(S->Detection->Alg, 0);
 
@@ -178,6 +181,9 @@ void throw_switch(Switch * S, uint8_t state, uint8_t lock){
 
 void throw_msswitch(MSSwitch * S, uint8_t state, uint8_t lock){
   loggerf(TRACE, "throw_msswitch");
+
+  if(S->Detection && (S->Detection->state == BLOCKED || S->Detection->state == RESERVED_SWITCH))
+    return; // Switch is blocked
 
   Algor_Set_Changed(&S->Detection->Alg);
   putList_AlgorQueue(S->Detection->Alg, 0);

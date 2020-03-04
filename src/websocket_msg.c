@@ -866,6 +866,10 @@ void WS_cts_Edit_Engine(struct s_opc_EditEnginelib * msg, struct web_client_t * 
     }
 
     engines_len--;
+
+    // Send succes response
+    rdata->data.opc_AddNewEnginetolib_res.response = 1;
+    ws_send(client, (char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
   }
   else{
     // Edit engine
@@ -919,76 +923,44 @@ void WS_cts_Edit_Engine(struct s_opc_EditEnginelib * msg, struct web_client_t * 
     char * dimg = 0;
     char * dicon = 0;
 
-    if(image_time < 3000){
-      remove(E->img_path); //Remove original
+    remove(E->img_path); //Remove original
 
-      E->img_path = _realloc(E->img_path, data->name_len + 8 + 3 + 20, 1);  //Destination file
-      if((data->flags & 0b10) == 0){
-        sprintf(E->img_path, "%i_%s_im.%s", data->DCC_ID, filename, "png");
-        sprintf(simg, "%s.%04i.%s", "web/tmp_img", image_time, "png");
-      }
-      else{
-        sprintf(E->img_path, "%i_%s_im.%s", data->DCC_ID, filename, "jpg");
-        sprintf(simg, "%s.%04i.%s", "web/tmp_img", image_time, "jpg");
-      }
-
-      dimg = _calloc(strlen(E->img_path)+20, 1);
-      sprintf(dimg, "%s%s", "web/trains_img/", E->img_path);
-      move_file(simg,  dimg);
-
-      // Delete temp file
-      remove(simg);
+    E->img_path = _realloc(E->img_path, data->name_len + 8 + 3 + 20, 1);  //Destination file
+    if((data->flags & 0b10) == 0){
+      sprintf(E->img_path, "%i_%s_im.%s", data->DCC_ID, filename, "png");
+      sprintf(simg, "%s.%04i.%s", "web/tmp_img", image_time, "png");
     }
     else{
-      sprintf(simg, "web/trains_img/%s", E->img_path);
-
-      char filetype[5];
-      sprintf(filetype, "%s", &E->img_path[strlen(E->img_path)-3]);
-
-      sprintf(E->img_path, "%i_%s_im.%s", data->DCC_ID, filename, filetype);
-      dimg = _calloc(strlen(E->img_path)+20, 1);
-      sprintf(dimg, "%s%s", "web/trains_img/", E->img_path);
-
-      move_file(simg, dimg);
-
-      if(strcmp(simg, dimg) != 0)
-        remove(simg);
+      sprintf(E->img_path, "%i_%s_im.%s", data->DCC_ID, filename, "jpg");
+      sprintf(simg, "%s.%04i.%s", "web/tmp_img", image_time, "jpg");
     }
 
-    if(icon_time < 3000){
-      remove(E->icon_path); //Remove original
+    dimg = _calloc(strlen(E->img_path)+20, 1);
+    sprintf(dimg, "%s%s", "web/trains_img/", E->img_path);
+    loggerf(INFO, "remove and move file %s -> %s", simg, dimg);
+    move_file(simg, dimg);
 
-      E->icon_path = _realloc(E->icon_path, data->name_len + 8 + 3 + 20, 1); //Destination file
-      if((data->flags & 0b1) == 0){
-        sprintf(E->icon_path, "%i_%s_ic.%s", data->DCC_ID, filename, "png");
-        sprintf(sicon, "%s.%04i.%s", "web/tmp_icon", icon_time, "png");
-      }
-      else{
-        sprintf(E->icon_path, "%i_%s_ic.%s", data->DCC_ID, filename, "jpg");
-        sprintf(sicon, "%s.%04i.%s", "web/tmp_icon", icon_time, "jpg");
-      }
-      dicon = _calloc(strlen(E->icon_path)+20, 1);
-      sprintf(dicon, "%s%s", "web/trains_img/", E->icon_path);
-      move_file(sicon, dicon);
+    // Delete temp file
+    remove(simg);
 
-      // Delete temp file
-      remove(sicon);
+    remove(E->icon_path); //Remove original
+
+    E->icon_path = _realloc(E->icon_path, data->name_len + 8 + 3 + 20, 1); //Destination file
+    if((data->flags & 0b1) == 0){
+      sprintf(E->icon_path, "%i_%s_ic.%s", data->DCC_ID, filename, "png");
+      sprintf(sicon, "%s.%04i.%s", "web/tmp_icon", icon_time, "png");
     }
     else{
-      sprintf(sicon, "web/trains_img/%s", E->icon_path);
-
-      char filetype[5];
-      sprintf(filetype, "%s", &E->icon_path[strlen(E->icon_path)-3]);
-
-      sprintf(E->icon_path, "%i_%s_ic.%s", data->DCC_ID, filename, filetype);
-      dicon = _calloc(strlen(E->icon_path)+20, 1);
-      sprintf(dicon, "%s%s", "web/trains_img/", E->icon_path);
-
-      move_file(sicon, dicon);
-
-      if(strcmp(sicon, dicon) != 0)
-        remove(sicon);
+      sprintf(E->icon_path, "%i_%s_ic.%s", data->DCC_ID, filename, "jpg");
+      sprintf(sicon, "%s.%04i.%s", "web/tmp_icon", icon_time, "jpg");
     }
+    dicon = _calloc(strlen(E->icon_path)+20, 1);
+    sprintf(dicon, "%s%s", "web/trains_img/", E->icon_path);
+    loggerf(INFO, "remove and move file %s -> %s", simg, dimg);
+    move_file(sicon, dicon);
+
+    // Delete temp file
+    remove(sicon);
 
     // Send succes response
     rdata->data.opc_AddNewEnginetolib_res.response = 1;

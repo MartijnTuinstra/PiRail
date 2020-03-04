@@ -2,7 +2,7 @@
 #include "mem.h"
 
 #include "encryption.h"
-#include "module.h"
+#include "modules.h"
 #include "config.h"
 
 #include "websocket_control.h"
@@ -155,22 +155,23 @@ void * websocket_client_connect(void * p){
   setsockopt(client->fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
 
   //Reset Subscribed Trains
-  client->trains[0].id = 0xFFF;
-  client->trains[1].id = 0xFFF;
+  client->trains[0] = 0xFF;
+  client->trains[1] = 0xFF;
 
   char * buf = _calloc(WS_BUF_SIZE, char);
   int length = 0;
 
-  _SYS->_Clients++;
+  SYS->Clients++;
 
   int counter = 0;
 
   char data[3];
-  if(_SYS->Websocket_State == _SYS_Module_Init){
+  if(SYS->WebSocket.state == Module_Init){
+    loggerf(WARNING, "LOGIN required");
     while(1){
       // Require login
       data[0] = WSopc_Admin_Login;
-      ws_send(client->fd, data, 1, 0xFF);
+      ws_send(client, data, 1, 0xFF);
 
       usleep(100000);
 
@@ -186,7 +187,7 @@ void * websocket_client_connect(void * p){
           if(!websocket_ping(client->fd)){
             loggerf(INFO, "Client %i timeout", client->fd);
             close(client->fd);
-            _SYS->_Clients--;
+            SYS->Clients--;
             client->state = 2;
             _free(buf);
             return 0;
@@ -200,7 +201,7 @@ void * websocket_client_connect(void * p){
       else if(status == -8){
         loggerf(INFO, "Client %i disconnected", client->fd);
         close(client->fd);
-        _SYS->_Clients--;
+        SYS->Clients--;
         client->state = 2;
         _free(buf);
         return 0;
@@ -209,7 +210,7 @@ void * websocket_client_connect(void * p){
       if((client->type & 0x10) == 0){
         loggerf(ERROR, "Client not authenticated");
         close(client->fd);
-        _SYS->_Clients--;
+        SYS->Clients--;
         client->state = 2;
         _free(buf);
         return 0;
@@ -221,47 +222,47 @@ void * websocket_client_connect(void * p){
   }
 
   // Send Enabled options
-  data[0] = WSopc_Service_State;
-  data[1] = _SYS->_STATE >> 8;
-  data[2] = _SYS->_STATE & 0xFF;
-  ws_send(client->fd, data, 3, 0xFF);
+  // data[0] = WSopc_Service_State;
+  // data[1] = SYS->_STATE >> 8;
+  // data[2] = SYS->_STATE & 0xFF;
+  // ws_send(client->fd, data, 3, 0xFF);
 
   //Send submodule status
   WS_stc_SubmoduleState();
   
   //Send track layout and data
-  if(_SYS->_STATE & STATE_Modules_Loaded){
+  if(SYS->modules_loaded){
     // Send Track Layout Data
     for(int i = 0; i < unit_len; i++){
       if(!Units[i])
         continue;
 
-      WS_Track_LayoutDataOnly(i, client->fd);
+      WS_Track_LayoutDataOnly(i, client);
     }
 
-    WS_stc_StationLib(client->fd);
+    WS_stc_StationLib(client);
 
-    if(_SYS->_STATE & STATE_Modules_Coupled){
-      WS_Track_Layout(client->fd);
+    if(SYS->modules_linked){
+      WS_Track_Layout(client);
       
       // Send new client JSON
-      WS_NewClient_track_Switch_Update(client->fd);
+      WS_NewClient_track_Switch_Update(client);
     }
   }
 
   // Send open messages
-  WS_send_open_Messages(client->fd);
+  WS_send_open_Messages(client);
 
 
   // Send broadcast flags
-  ws_send(client->fd, (char [2]){WSopc_ChangeBroadcast,client->type}, 2, 0xFF);
+  ws_send(client, (char [2]){WSopc_ChangeBroadcast,client->type}, 2, 0xFF);
 
-  if(_SYS->_STATE & STATE_TRAIN_LOADED){
+  if(SYS->trains_loaded){
     loggerf(INFO, "Update clients libs %i", client->id);
-    WS_EnginesLib(client->fd);
-    WS_CarsLib(client->fd);
-    WS_TrainsLib(client->fd);
-    WS_stc_TrainCategories(client->fd);
+    WS_EnginesLib(client);
+    WS_CarsLib(client);
+    WS_TrainsLib(client);
+    WS_stc_TrainCategories(client);
 
     //train_link, train_link_lenlink_id
     // Send all linked trains
@@ -281,16 +282,19 @@ void * websocket_client_connect(void * p){
         msg.real_id = ((Engines *)train_link[i]->p)->id;
         msg.type = 1;
       }
-      msg.message_id = 0;
+      msg.message_id_H = 0;
+      msg.message_id_L = 0;
 
       WS_stc_LinkTrain(&msg);
     }
   }
 
-  if(_SYS->Z21_State & _SYS_Module_Run){
-    WS_stc_Z21_info(client->fd);
+  if(SYS->Z21.state & Module_Run){
+    WS_stc_Z21_info(client);
   }
-  WS_stc_Z21_IP(client->fd);
+  WS_stc_Z21_IP(client);
+
+  SIM_Client_Connect_cb();
 
   memset(buf, 0, WS_BUF_SIZE);
 
@@ -314,7 +318,7 @@ void * websocket_client_connect(void * p){
         if(!websocket_ping(client->fd)){
           loggerf(INFO, "Client %i timed out", client->id);
           close(client->fd);
-          _SYS->_Clients--;
+          SYS->Clients--;
           client->state = 2;
           _free(buf);
           return 0;
@@ -327,23 +331,23 @@ void * websocket_client_connect(void * p){
     else if(status == -8){
       loggerf(INFO, "Client %i disconnected", client->id);
       close(client->fd);
-      _SYS->_Clients--;
+      SYS->Clients--;
       client->state = 2;
       _free(buf);
       return 0;
     }
 
     if(client->state == 2){
-      _SYS->_Clients--;
+      SYS->Clients--;
       close(client->fd);
       _free(buf);
       return 0;
     }
 
-    if((_SYS->_STATE & STATE_RUN) == 0){
+    if(SYS->stop){
       loggerf(DEBUG, "Websocket stop client");
       close(client->fd);
-      _SYS->_Clients--;
+      SYS->Clients--;
       client->state = 2;
       _free(buf);
       return 0;
@@ -356,7 +360,7 @@ void * websocket_client_connect(void * p){
 }
 
 void * websocket_clear_clients(){
-  while (_SYS->_STATE & STATE_RUN){
+  while (SYS->stop == 0){
     for(int i = 0; i < MAX_WEB_CLIENTS; i++){
       if(websocket_clients[i].state == 2){
         loggerf(INFO, "Stopping websocket client %i thread", i);
@@ -424,6 +428,11 @@ void * websocket_server(){
   //Memory alloc for clients list and thread data
   websocket_clients = _calloc(MAX_WEB_CLIENTS, struct web_client_t);
 
+  for(uint8_t i = 0; i < MAX_WEB_CLIENTS; i++){
+    websocket_clients[i].trains[0] = 0xFF;
+    websocket_clients[i].trains[1] = 0xFF;
+  }
+
   struct sockaddr_in server_addr, client_addr;
 
   socklen_t sin_len = sizeof(client_addr);
@@ -436,7 +445,8 @@ void * websocket_server(){
   server = socket(AF_INET, SOCK_STREAM, 0);
   if(server < 0){
     loggerf(CRITICAL, "SOCKET ERROR");
-    _SYS_change(STATE_RUN, 2);
+    SYS->stop = 1;
+    SYS_set_state(&SYS->WebSocket.state, Module_Fail);
     return 0;
   }
 
@@ -450,7 +460,8 @@ void * websocket_server(){
     loggerf(CRITICAL, "BIND ERROR");
     close(server);
     _free(websocket_clients);
-    _SYS_change(STATE_RUN, 2);
+    SYS->stop = 1;
+    SYS_set_state(&SYS->WebSocket.state, Module_Fail);
     return 0;
   }
 
@@ -458,7 +469,8 @@ void * websocket_server(){
     loggerf(CRITICAL, "LISTEN ERROR");
     close(server);
     _free(websocket_clients);
-    _SYS_change(STATE_RUN, 2);
+    SYS->stop = 1;
+    SYS_set_state(&SYS->WebSocket.state, Module_Fail);
     return 0;
   }
 
@@ -467,8 +479,7 @@ void * websocket_server(){
 
   WS_init_Message_List();
   
-  _SYS->Websocket_State = _SYS_Module_Init;
-  _SYS_change(STATE_WebSocket_FLAG, 0);
+  SYS_set_state(&SYS->WebSocket.state, Module_Init);
 
   //Set server timeout
   struct timeval tv;
@@ -476,8 +487,8 @@ void * websocket_server(){
   tv.tv_usec = 0;
   setsockopt(server, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
 
-  loggerf(DEBUG, "Listening for Websocket Clients");
-  while((_SYS->_STATE & STATE_RUN) == STATE_RUN){
+  loggerf(INFO, "Listening for Websocket Clients %i", SYS->stop);
+  while(SYS->stop == 0){
     // Run until system is stopped, or until client_accept is closed
 
     fd_client = accept(server, (struct sockaddr *)&client_addr, &sin_len);
@@ -495,17 +506,20 @@ void * websocket_server(){
       }
     }
 
-    loggerf(INFO, "New socket client");
+    unsigned long addr = client_addr.sin_addr.s_addr;
+    loggerf(INFO, "New socket client %i.%i.%i.%i", addr&0xFF, (addr >> 8)&0xFF, (addr >> 16)&0xFF, (addr >> 24)&0xFF);
     new_websocket_client(fd_client);
+    loggerf(INFO, "%i", SYS->stop);
   }
+
+  loggerf(INFO, "Stopping Websocket Server");
 
   close(server);
 
   loggerf(INFO, "Stopping websocket_clear_clients");
   pthread_join(websocket_clear_thread, NULL);
 
-  _SYS_change(STATE_WebSocket_FLAG, 2);
-  _SYS->Websocket_State = _SYS_Module_Stop;
+  SYS_set_state(&SYS->WebSocket.state, Module_STOP);
 
   _free(websocket_clients);
   _free(WS_password);

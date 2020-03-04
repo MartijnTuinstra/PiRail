@@ -1,9 +1,10 @@
-#include <stdlib.h>
-#include <stdint.h>
-#include "module.h"
-
 #ifndef INCLUDE_IO
 #define INCLUDE_IO
+
+#include <stdlib.h>
+#include <stdint.h>
+#include "modules.h"
+#include "config_data.h"
 
 typedef struct s_unit Unit;
 
@@ -12,7 +13,7 @@ typedef struct s_node_adr {
   uint16_t io;
 } Node_adr;
 
-enum IO_type {
+enum e_IO_type {
   IO_Undefined,
   IO_Output,
   IO_Input_Block,
@@ -21,10 +22,11 @@ enum IO_type {
   IO_Input
 };
 
-enum IO_event {
+enum e_IO_event {
   IO_event_High,
   IO_event_Low,
   IO_event_Pulse,
+  IO_event_Toggle,
   IO_event_Blink1,
   IO_event_Blink2,
 
@@ -40,9 +42,9 @@ enum IO_event {
 
 typedef struct s_IO_Port {
   uint8_t id;
-  enum IO_event w_state;
-  enum IO_event r_state;
-  enum IO_type type;
+  enum e_IO_event w_state;
+  enum e_IO_event r_state;
+  enum e_IO_type type;
 
   void * object;
 } IO_Port;
@@ -57,11 +59,12 @@ typedef struct s_IO_Node {
 
 void Add_IO_Node(Unit * U, int Node_nr, int IO);
 
-void Init_IO(Unit * U, Node_adr adr, enum IO_type type);
+void Init_IO_from_conf(Unit * U, struct s_IO_port_conf adr, enum e_IO_type type);
+void Init_IO(Unit * U, Node_adr adr, enum e_IO_type type);
 
 void update_IO();
 
-void str_IO_type(enum IO_type type, char * str);
-void str_IO_event(enum IO_event event, char * str);
+void str_IO_type(enum e_IO_type type, char * str);
+void str_IO_event(enum e_IO_event event, char * str);
 
 #endif

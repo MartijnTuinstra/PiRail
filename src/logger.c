@@ -22,7 +22,16 @@
 #define LOGGER_YELLOW "\x1b[33m"
 #define LOGGER_GREEN  "\x1b[32m"
 
-char * logger_file;
+char * logger_file = 0;
+
+const char * logging_levels_str[7] = {
+  "CRITICAL", "  ERROR ", " WARNING", "  INFO  ", "  DEBUG ", "  TRACE ", " MEMORY "
+};
+const char * logging_levels_colour[8] = {
+  "\x1b[31m", "\x1b[31m", "\x1b[33m", "\x1b[32m", "", "", "", "\x1b[0m"
+};
+
+_Bool stdoutPrint = 1;
 
 void init_logger(char * file_location){
   // Clear log / create log
@@ -31,6 +40,13 @@ void init_logger(char * file_location){
 
   logger_file = _calloc(strlen(file_location) + 1, char);
   strcpy(logger_file,file_location);
+
+  stdoutPrint = 1;
+}
+
+void init_logger_file_only(char * file_location){
+  init_logger(file_location);
+  stdoutPrint = 0;
 }
 
 void exit_logger(){
@@ -65,48 +81,27 @@ void floggerf(enum logging_levels level, char * file, int line, char * text, ...
   time(&current_time);
   time_info = localtime(&current_time);
 
-  strftime(c_time, sizeof(c_time), "%H:%M", time_info);
+  strftime(c_time, sizeof(c_time), "%H:%M:%S", time_info);
+
+  char msg[300];
+  char arg[200];
+
+  vsprintf(arg, text, arglist);
+
+  sprintf(msg, "%s - %s%s - %20s:%4i - %s%s\n",c_time,logging_levels_colour[level], logging_levels_str[level],file,line, arg, logging_levels_colour[7]);
 
   FILE * fp = fopen(logger_file,"a");
 
-  printf("%s - ",c_time);
-  fprintf(fp,"%s - ",c_time);
+  if(stdoutPrint)
+    printf("%s", msg);
 
-  if(level == CRITICAL){
-    printf(LOGGER_RED);
-    log_print(fp,"CRITICAL");
+  if(fp){
+    fprintf(fp, "%s", msg);
+    fclose(fp);
   }
-  else if(level == ERROR){
-    printf(LOGGER_RED);
-    log_print(fp,"  ERROR ");
-  }
-  else if(level == WARNING){
-    printf(LOGGER_YELLOW);
-    log_print(fp," WARNING");
-  }
-  else if(level == INFO){
-    printf(LOGGER_GREEN);
-    log_print(fp,"  INFO  ");
-  }
-  else if(level == DEBUG){
-    log_print(fp,"  DEBUG ");
-  }
-  else if(level == TRACE){
-    log_print(fp,"  TRACE ");
-  }
-  else if(level == MEMORY){
-    log_print(fp," MEMORY ");
-  }
+  else
+    printf("%s%s - Failed to open logger %s\n", logging_levels_colour[0], logging_levels_str[0], logging_levels_colour[7]);
 
-  log_print(fp," - %20s:%4i - ", file, line);
-
-  vlog_print(fp, text, arglist);
-
-
-  printf(LOGGER_RESET);
-  log_print(fp,"\n");
-
-  fclose(fp);
   va_end( arglist );
 
   pthread_mutex_unlock(&logger_mutex);

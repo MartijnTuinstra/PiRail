@@ -4,6 +4,7 @@
 #include "system.h"
 #include "mem.h"
 #include "IO.h"
+#include "com.h"
 
 void Add_IO_Node(Unit * U, int Node_nr, int IO){
   IO_Node Z;
@@ -27,7 +28,12 @@ void Add_IO_Node(Unit * U, int Node_nr, int IO){
   return;
 }
 
-void Init_IO(Unit * U, Node_adr adr, enum IO_type type){
+void Init_IO_from_conf(Unit * U, struct s_IO_port_conf adr, enum e_IO_type type){
+  Node_adr new_adr = {adr.Node, adr.Adr};
+  Init_IO(U, new_adr, type);
+}
+
+void Init_IO(Unit * U, Node_adr adr, enum e_IO_type type){
   if((adr.Node < U->IO_Nodes) && 
      (adr.io < U->Node[adr.Node].io_ports) &&
      U->Node[adr.Node].io[adr.io]){
@@ -41,7 +47,7 @@ void Init_IO(Unit * U, Node_adr adr, enum IO_type type){
     A->id = adr.io;
   }
   else{
-    loggerf(ERROR, "Init_IO Error");
+    loggerf(ERROR, "Init_IO Error, addr %02x:%02x is not in range", adr.Node, adr.io);
   }
 }
 
@@ -51,12 +57,26 @@ void update_IO(){
       continue;
 
     for(int n = 0; n < Units[u]->IO_Nodes; n++){
+      char buf[100];
+      memset(buf, 0, 100);
+      buf[0] = n;
+      buf[1] = COMopc_SetAllOut;
+
       for(int io = 0; io < Units[u]->Node[n].io_ports; io++){
         if(U_IO(u, n, io)->type == IO_Output && U_IO(u, n, io)->w_state != U_IO(u, n, io)->r_state){
           char output[200];
           sprintf(output, "Update io %02i:%02i:%02i", u, n, io);
           str_IO_event(U_IO(u, n, io)->w_state, output);
           loggerf(DEBUG, "%s", output);
+
+	  if(io % 2 == 0){
+            buf[io/2 + 2] = U_IO(u, n, io)->w_state;
+          }
+	  else{ // i% 2 == 1
+            buf[io/2 + 2] |= U_IO(u, n, io)->w_state << 4;
+          }
+	  if(U_IO(u, n, io)->w_state == IO_event_Pulse) // Reset When pulsing output
+            U_IO(u, n, io)->w_state = IO_event_Low;
           U_IO(u, n, io)->r_state = U_IO(u, n, io)->w_state;
         }
       }
@@ -66,7 +86,7 @@ void update_IO(){
 
 
 
-void str_IO_type(enum IO_type type, char * str){
+void str_IO_type(enum e_IO_type type, char * str){
   if(type == IO_Undefined){
     sprintf(str, "%s IO_Undefined", str);
   }
@@ -86,7 +106,7 @@ void str_IO_type(enum IO_type type, char * str){
     sprintf(str, "%s IO_Input", str);
   }
 }
-void str_IO_event(enum IO_event event, char * str){
+void str_IO_event(enum e_IO_event event, char * str){
   if(event == IO_event_High){
     sprintf(str, "%s IO_event_High", str);
   }

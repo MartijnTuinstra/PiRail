@@ -1,8 +1,6 @@
 #ifndef INCLUDE_CONFIG_H
 #define INCLUDE_CONFIG_H
 
-#include "rail.h"
-#include "IO.h"
 #include "config_data.h"
 
 uint8_t read_byte_conf(uint8_t ** p);

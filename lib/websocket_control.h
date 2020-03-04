@@ -28,10 +28,7 @@
                       1 = in use
                       2 = stopping / ready to join thread*/
 
-    struct web_client_trains {
-      uint16_t id:12;
-      uint16_t type:4;
-    } trains[2];
+    uint8_t trains[2];
   };
 
   extern char * WS_password;

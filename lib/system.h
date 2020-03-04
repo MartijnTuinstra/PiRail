@@ -1,89 +1,110 @@
-
 #ifndef _INCLUDE_system_H
-  #define _INCLUDE_system_H
+#define _INCLUDE_system_H
 
-  #include <stdio.h>
-  #include <stdlib.h>
-  #include <stdint.h>
-  #include <unistd.h>
-  #include <string.h>
-  #include <pthread.h>
-  #include <sys/socket.h>
-  #include <sys/time.h>
-  #include <netinet/in.h>
-  #include <openssl/sha.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <unistd.h>
+#include <string.h>
+#include <pthread.h>
+#include <sys/socket.h>
+#include <sys/time.h>
+#include <netinet/in.h>
+#include <openssl/sha.h>
 
-  #include <wiringPi.h>
-  #include <signal.h>
+#include <signal.h>
+#include <errno.h>
 
-  #include <errno.h>
+enum e_SYS_Module_State {
+  Module_STOP,
+  Module_Init_Parent,
+  Module_Init,
+  Module_Run,
+  Module_Fail,
+  Module_LC_Searching,
+  Module_LC_Connecting
+};
 
-  struct systemState{
-    uint16_t _STATE;
-    uint16_t _Clients;
+struct s_SYS_requiredSystem {
+  void (*func)();
+  enum e_SYS_Module_State * state;
+};
 
-    uint8_t emergency;
+struct s_systemState{
+  uint16_t Clients;
 
-    volatile uint8_t Z21_State:2;       // Z21  State
-    volatile uint8_t UART_State:2;      // UART State
-    volatile uint8_t TC_State:2;        // Train Control State
-    volatile uint8_t LC_State:3;        // Layout Control State
-    volatile uint8_t Websocket_State:2; // Websocket State
-    volatile uint8_t SimA_State:2; // SimA State
-    volatile uint8_t SimB_State:2; // SimB State
-  };
+  uint16_t track_scale;
 
-  #define _SYS_Module_Stop 0
-  #define _SYS_Module_Init 1
-  #define _SYS_Module_Run  2
-  #define _SYS_Module_Fail 3
-  #define _SYS_LC_Searching 4
-  #define _SYS_LC_Connecting 5
+  uint8_t emergency;
 
-  struct adr{
-    int M;    // Module
-    int B;    // Block
-    int S;    // Section
-    int type; // Type
-  };
+  uint8_t modules_loaded:1;
+  uint8_t modules_linked:1;
+  uint8_t trains_loaded:1;
+  uint8_t digital:1;
+  uint8_t stop:1;
 
-  void _SYS_change(int STATE, char send);
+  struct {
+    volatile enum e_SYS_Module_State state;
+    pthread_t start_th;
+    pthread_t th;
+  } Z21;
 
-  void sigint_func(int sig);
+  struct {
+    volatile enum e_SYS_Module_State state;
+    uint8_t modules_coupled:1;
+    pthread_t th;
+  } UART;
 
-  #define find_free_index(list, length) _find_free_index((void ***)&list, (int *)&length)
+  struct {
+    volatile enum e_SYS_Module_State state;
+    pthread_t th;
+  } TC;
 
-  int _find_free_index(void *** list, int * length);
+  struct {
+    volatile enum e_SYS_Module_State state;
+    pthread_t th;
+  } LC;
 
-  void move_file(char * src, char * dest);
+  struct {
+    volatile enum e_SYS_Module_State state;
+    uint8_t accept_clients:1;
+  } WebSocket;
 
-  #define mutex_lock(mutex, name) loggerf(TRACE, "  Lock mutex %s", name);\
-                                  pthread_mutex_lock(mutex);
-  #define mutex_unlock(mutex, name) loggerf(TRACE, "unLock mutex %s", name);\
-                                    pthread_mutex_unlock(mutex);
+  struct {
+    volatile enum e_SYS_Module_State state;
+    pthread_t th;
+  } SimA;
+
+  struct {
+    volatile enum e_SYS_Module_State state;
+    pthread_t th;
+  } SimB;
+};
+
+void sigint_func(int sig);
+
+#define find_free_index(list, length) _find_free_index((void ***)&list, (int *)&length)
+
+int _find_free_index(void *** list, int * length);
+
+void move_file(char * src, char * dest);
+
+void system_init(struct s_systemState * S);
+void init_main();
+
+#define mutex_lock(mutex, name) loggerf(TRACE, "  Lock mutex %s", name);\
+                                pthread_mutex_lock(mutex);
+#define mutex_unlock(mutex, name) loggerf(TRACE, "unLock mutex %s", name);\
+                                  pthread_mutex_unlock(mutex);
 
 
-  extern struct systemState * _SYS; 
+extern struct s_systemState * SYS; 
 
-  #ifndef TRUE
-    #define FALSE 0
-    #define TRUE  1
-  #endif
+void SYS_set_state(volatile enum e_SYS_Module_State * system, enum e_SYS_Module_State state);
 
-  #define NO_LOCK 0x80
+#ifndef TRUE
+#define FALSE 0
+#define TRUE  1
+#endif
 
-  #define TRACK_SCALE 160
-
-  #define STATE_Z21_FLAG        0x8000
-  #define STATE_WebSocket_FLAG  0x4000
-  #define STATE_COM_FLAG        0x2000
-  #define STATE_Client_Accept   0x1000
-
-  #define STATE_TRACK_DIGITAL   0x0200
-  #define STATE_RUN             0x0100
-
-  #define STATE_Modules_Coupled 0x0008
-  #define STATE_Modules_Loaded  0x0004
-
-  #define STATE_TRAIN_LOADED    0x0001
 #endif

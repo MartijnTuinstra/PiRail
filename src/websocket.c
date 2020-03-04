@@ -2,7 +2,8 @@
 #include "config.h"
 #include "mem.h"
 #include "train.h"
-#include "module.h"
+#include "switch.h"
+#include "modules.h"
 #include "Z21.h"
 #include "Z21_msg.h"
 #include "websocket.h"
@@ -75,7 +76,7 @@ int websocket_decode(uint8_t data[1024], struct web_client_t * client){
 
 	      loggerf(INFO, "Change client flags to %x", client->type);
 
-        ws_send(client->fd,(char [2]){WSopc_ChangeBroadcast,client->type},2,255);
+        ws_send(client,(char [2]){WSopc_ChangeBroadcast,client->type},2,255);
       }else{
         loggerf(INFO, "FAILED LOGIN!! %d", strcmp((char *)&data[1],WS_password));
         loggerf(INFO, "%s", &data[1]);
@@ -92,7 +93,7 @@ int websocket_decode(uint8_t data[1024], struct web_client_t * client){
     if(data[0] == WSopc_Track_Scan_Progress){
       if(data[1] == 1){
         //Stop connecting
-        _SYS_change(STATE_Modules_Coupled,1);
+        SYS->modules_linked = 1;
       }else if(data[1] == 2){
         //reload setup
         loggerf(ERROR, "Reload setup not implemented");
@@ -101,7 +102,7 @@ int websocket_decode(uint8_t data[1024], struct web_client_t * client){
     else if(data[0] == WSopc_Admin_Logout){
       client->type &= ~0x10;
 
-      ws_send(client->fd,(char [2]){WSopc_ChangeBroadcast,client->type},2,255);
+      ws_send(client,(char [2]){WSopc_ChangeBroadcast,client->type},2,255);
     }
     else if(data[0] == WSopc_EmergencyStopAdmin){
 
@@ -116,36 +117,19 @@ int websocket_decode(uint8_t data[1024], struct web_client_t * client){
       WS_cts_LinkTrain((void *)&d->data, client);
     }
     else if(data[0] == WSopc_TrainSpeed){ //Train speed control
-      uint16_t id = data[1] + ((data[2] & 0xC0) << 2);
-      uint16_t speed = data[3] + ((data[2] & 0x0F) << 8);
-
-      if(data[2] & 0x20 && id < trains_len){ //Train
-        trains[id]->cur_speed = speed;
-        trains[id]->dir = (data[2] & 0x10) >> 4;
-
-        train_calc_speed(trains[id]);
-
-        Z21_Set_Loco_Drive_Train(trains[id]);
-      }
-      else if(id < engines_len){ //Engine
-        engines[id]->dir = (data[2] & 0x10) >> 4;
-
-        engine_set_speed(engines[id], speed);
-
-        Z21_Set_Loco_Drive_Engine(engines[id]);
-      }
+      WS_cts_SetTrainSpeed((void *)&d->data, client);
     }
     else if(data[0] == WSopc_TrainFunction){ //Train function control
 
     }
-    else if(data[0] == WSopc_TrainOperation){ //Train operation change
-
+    else if(data[0] == WSopc_TrainControl){ //Train operation change
+      WS_cts_TrainControl(&d->data.opc_TrainControl, client);
     }
     else if(data[0] == WSopc_TrainAddRoute){ //Add route to train
       WS_cts_TrainRoute(&d->data.opc_TrainRoute, client);
     }
     else if(data[0] == WSopc_TrainSubscribe){
-      WS_TrainSubscribe(&data[1], client);
+      WS_cts_TrainSubscribe((void *)&d->data, client);
     }
 
     else if(data[0] == WSopc_AddNewCartolib){
@@ -154,12 +138,12 @@ int websocket_decode(uint8_t data[1024], struct web_client_t * client){
     else if(d->opcode == WSopc_EditCarlib){
       uint16_t id = d->data.opc_EditCarlib.id_l + (d->data.opc_EditCarlib.id_h << 8);
       if(d->data.opc_EditCarlib.remove && cars[id]){
-        clear_car(&cars[id]);
+        Clear_Car(&cars[id]);
       }
       else{
         WS_cts_Edit_Car(cars[id], &(d->data.opc_EditCarlib.data), client);
       }
-      train_write_confs();
+      write_rolling_Configs();
       WS_CarsLib(0);
     }
 
@@ -176,12 +160,12 @@ int websocket_decode(uint8_t data[1024], struct web_client_t * client){
     else if(d->opcode == WSopc_EditTrainlib){
       uint16_t id = d->data.opc_EditTrainlib.id_l + (d->data.opc_EditTrainlib.id_h << 8);
       if(d->data.opc_EditTrainlib.remove){
-        clear_train(&trains[id]);
+        Clear_Train(&trains[id]);
       }
       else{
         WS_cts_Edit_Train(trains[id], &(d->data.opc_EditTrainlib.data), client);
       }
-      train_write_confs();
+      write_rolling_Configs();
       WS_TrainsLib(0);
     }
 
@@ -190,14 +174,27 @@ int websocket_decode(uint8_t data[1024], struct web_client_t * client){
     }
   }
   else if(data[0] & 0x20){ //Track stuff
-    loggerf(TRACE, "Track Settings");
-    if(data[0] == WSopc_SetSwitch){ //Toggle switch
-      if(Units[data[1]] && U_Sw(data[1], data[2])){ //Check if switch exists
-        loggerf(INFO, "throw switch %i:%i to state: \t%i->%i",
-                data[1], data[2], U_Sw(data[1], data[2])->state, !U_Sw(data[1], data[2])->state);
-        lock_Algor_process();
-        throw_switch(U_Sw(data[1], data[2]), data[3], 1);
-        unlock_Algor_process();
+    loggerf(INFO, "Track Settings");
+    if(d->opcode == WSopc_SetSwitch){ //Toggle switch
+      if(d->data.opc_SetSwitch.mssw){
+        loggerf(INFO, "SetMSSw %2x %2x", d->data.opc_SetSwitch.module, d->data.opc_SetSwitch.id);
+        if(Units[d->data.opc_SetSwitch.module] && U_MSSw(d->data.opc_SetSwitch.module, d->data.opc_SetSwitch.id)){
+          loggerf(INFO, "throw msswitch %i:%i to state: \t%i->%i",
+                  d->data.opc_SetSwitch.module, d->data.opc_SetSwitch.id, U_MSSw(d->data.opc_SetSwitch.module, d->data.opc_SetSwitch.id)->state, d->data.opc_SetSwitch.state);
+          lock_Algor_process();
+          throw_msswitch(U_MSSw(d->data.opc_SetSwitch.module, d->data.opc_SetSwitch.id), d->data.opc_SetSwitch.state, 1);
+          unlock_Algor_process();
+        }
+      }
+      else{
+        loggerf(INFO, "SetSw %2x %2x", d->data.opc_SetSwitch.module, d->data.opc_SetSwitch.id);
+        if(Units[data[1]] && U_Sw(d->data.opc_SetSwitch.module, d->data.opc_SetSwitch.id)){ //Check if switch exists
+          loggerf(INFO, "throw switch %i:%i to state: \t%i->%i",
+                  d->data.opc_SetSwitch.module, d->data.opc_SetSwitch.id, U_Sw(d->data.opc_SetSwitch.module, d->data.opc_SetSwitch.id)->state, !U_Sw(d->data.opc_SetSwitch.module, d->data.opc_SetSwitch.id)->state);
+          lock_Algor_process();
+          throw_switch(U_Sw(d->data.opc_SetSwitch.module, d->data.opc_SetSwitch.id), d->data.opc_SetSwitch.state, 1);
+          unlock_Algor_process();
+        }
       }
     }
     else if(data[0] == WSopc_SetMultiSwitch){ // Set mulitple switches at once
@@ -214,7 +211,7 @@ int websocket_decode(uint8_t data[1024], struct web_client_t * client){
     }
 
     else if(data[0] == WSopc_TrackLayoutRawData){
-      WS_stc_TrackLayoutRawData(data[1], client->fd);
+      WS_stc_TrackLayoutRawData(data[1], client);
     }
   }
 
@@ -243,7 +240,7 @@ int websocket_decode(uint8_t data[1024], struct web_client_t * client){
         loggerf(DEBUG, "Changing flags");
       }
       loggerf(DEBUG,"Websocket:\t%02x - New flag for client %d\n",client->type, client->id);
-      ws_send(client->fd,(char [2]){WSopc_ChangeBroadcast,client->type},2,255);
+      ws_send(client,(char [2]){WSopc_ChangeBroadcast,client->type},2,255);
     }
   }
   return 0;
@@ -341,19 +338,32 @@ void websocket_create_msg(char * input, int length_in, char * output, int * leng
   *length_out = header_len + length_in;
 }
 
-void ws_send(int fd, char * data, int length, int flag){
+void ws_send(struct web_client_t * client, char * data, int length, int flag){
   char * outbuf = _calloc(length + 100, 1);
   int outlength = 0;
+
+  if(!(SYS->WebSocket.state == Module_Run || SYS->WebSocket.state == Module_Init)){
+    _free(outbuf);
+    return;
+  }
 
   websocket_create_msg(data, length, outbuf, &outlength);
 
   pthread_mutex_lock(&m_websocket_send);
 
-  printf("WS send (%i)\t",fd);
-  print_hex(data, length);
-
-  if(write(fd, outbuf, outlength) == -1){
-    loggerf(WARNING, "socket write error %x", errno);
+  if(write(client->fd, outbuf, outlength) == -1){
+    if(errno == EPIPE){
+      printf("Broken Pipe!!!!!\n\n");
+    }
+    else if(errno == EFAULT){
+      loggerf(ERROR, "EFAULT ERROR");
+    }
+    else{
+      loggerf(ERROR, "Unknown write error, closing connection");
+    }
+    close(client->fd);
+    SYS->Clients--;
+    client->state = 2;
   };
 
   pthread_mutex_unlock(&m_websocket_send);
@@ -365,7 +375,7 @@ void ws_send_all(char * data,int length,int flag){
   char * outbuf = _calloc(length + 100, 1);
   int outlength = 0;
 
-  if(!(_SYS->_STATE & STATE_WebSocket_FLAG)){
+  if(!(SYS->WebSocket.state == Module_Run || SYS->WebSocket.state == Module_Init)){
     _free(outbuf);
     return;
   }
@@ -383,13 +393,13 @@ void ws_send_all(char * data,int length,int flag){
         loggerf(WARNING, "socket write error %x", errno); 
         if(errno == EPIPE){
           printf("Broken Pipe!!!!!\n\n");
-          close(websocket_clients[i].fd);
-          _SYS->_Clients--;
-          websocket_clients[i].state = 2;
         }
         else if(errno == EFAULT){
           loggerf(ERROR, "EFAULT ERROR");
         }
+        close(websocket_clients[i].fd);
+        SYS->Clients--;
+        websocket_clients[i].state = 2;
       }
     }
   }

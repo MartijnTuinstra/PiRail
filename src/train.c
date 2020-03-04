@@ -15,7 +15,9 @@
 #include "logger.h"
 #include "config.h"
 
-#include "pathfinding.h"
+#include "websocket.h"
+
+// #include "pathfinding.h"
 
 // #include "./../lib/pathfinding.h"
 // #include "./../lib/com.h"
@@ -46,89 +48,8 @@ int train_C_cat_len = 0;
 
 Engines * DCC_train[9999];
 
-void init_trains(){
-  loggerf(INFO, "Initializing cars/engines/trains");
-  alloc_trains();
-  train_read_confs();
-}
 
-void alloc_trains(){
-  trains = _calloc(10, Trains *);
-  trains_len = 10;
-  engines = _calloc(10, Engines *);
-  engines_len = 10;
-  cars = _calloc(10, Cars *);
-  cars_len = 10;
-  trains_comp = _calloc(10, struct train_composition *);
-  trains_comp_len = 10;
-  train_link = _calloc(10,RailTrain *);
-  train_link_len = 10;
-}
-
-void free_trains(){
-  logger("Clearing trains memory",INFO);
-
-  for(int i = 0;i<trains_len;i++){
-    if(!trains[i])
-      continue;
-
-    clear_train(&trains[i]);
-  }
-
-  for(int i = 0;i<engines_len;i++){
-    if(!engines[i])
-      continue;
-
-    clear_engine(&engines[i]);
-  }
-
-  for(int i = 0;i<cars_len;i++){
-    if(!cars[i])
-      continue;
-
-    clear_car(&cars[i]);
-  }
-
-  for(int i = 0;i<trains_comp_len;i++){
-    if(trains_comp[i]){
-      trains_comp[i]->name = _free(trains_comp[i]->name);
-      trains_comp[i]->composition = _free(trains_comp[i]->composition);
-      trains_comp[i] = _free(trains_comp[i]);
-    }
-  }
-
-  trains = _free(trains);
-  engines = _free(engines);
-  cars = _free(cars);
-  trains_comp = _free(trains_comp);
-
-  for(int i = 0; i < train_link_len; i++){
-    if(!train_link[i])
-      continue;
-
-    _free(train_link[i]);
-    train_link[i] = 0;
-  }
-
-  train_link = _free(train_link);
-
-  for(int i = 0; i < train_P_cat_len; i++){
-    _free(train_P_cat[i].name);
-  }
-  for(int i = 0; i < train_C_cat_len; i++){
-    _free(train_C_cat[i].name);
-  }
-
-  _free(train_P_cat);
-  _free(train_C_cat);
-
-  trains_len = 0;
-  engines_len = 0;
-  cars_len = 0;
-  trains_comp_len = 0;
-}
-
-void create_train(char * name, int nr_stock, struct train_comp_ws * comps, uint8_t catagory, uint8_t save){
+void Create_Train(char * name, int nr_stock, struct train_comp_ws * comps, uint8_t catagory, uint8_t save){
   Trains * Z = _calloc(1, Trains);
 
   Z->nr_stock = nr_stock;
@@ -193,10 +114,10 @@ void create_train(char * name, int nr_stock, struct train_comp_ws * comps, uint8
   trains[index] = Z;
   Z->id = index;
 
-  loggerf(INFO, "Train created at %i",index);
+  loggerf(DEBUG, "Train created at %i",index);
 }
 
-void clear_train(Trains ** T){
+void Clear_Train(Trains ** T){
   _free((*T)->name);
   _free((*T)->engines);
   _free((*T)->composition);
@@ -204,11 +125,7 @@ void clear_train(Trains ** T){
   *T = 0;
 }
 
-void create_train_from_comp(){
-  loggerf(CRITICAL, "NOT IMPLEMENTED");
-}
-
-void create_engine(char * name,int DCC,char * img, char * icon, char type, int length, int steps_len, struct engine_speed_steps * steps){
+void Create_Engine(char * name,int DCC,char * img, char * icon, char type, int length, int steps_len, struct engine_speed_steps * steps){
   //DCC cant be used twice
   for(int i = 0;i<engines_len;i++){
     if(engines[i] && engines[i]->DCC_ID == DCC){
@@ -247,7 +164,7 @@ void create_engine(char * name,int DCC,char * img, char * icon, char type, int l
   loggerf(DEBUG, "Engine \"%s\" created", name);
 }
 
-void clear_engine(Engines ** E){
+void Clear_Engine(Engines ** E){
   _free((*E)->name);
   _free((*E)->img_path);
   _free((*E)->icon_path);
@@ -257,7 +174,7 @@ void clear_engine(Engines ** E){
   *E = 0;
 }
 
-void create_car(char * name,int nr, char * icon, char type, uint16_t length, uint16_t speed){
+void Create_Car(char * name,int nr, char * icon, char type, uint16_t length, uint16_t speed){
   Cars * Z = _calloc(1, Cars);
 
   Z->name = name;
@@ -273,10 +190,10 @@ void create_car(char * name,int nr, char * icon, char type, uint16_t length, uin
 
   cars[index] = Z;
 
-  loggerf(INFO, "Car \"%s\" created",name);
+  loggerf(DEBUG, "Car \"%s\" created",name);
 }
 
-void clear_car(Cars ** C){
+void Clear_Car(Cars ** C){
   _free((*C)->name);
   _free((*C)->icon_path);
   _free((*C)->funcs);
@@ -291,7 +208,27 @@ RailTrain * new_railTrain(){
   return T;
 }
 
-int train_read_confs(){
+int load_rolling_Configs(){
+  loggerf(INFO, "Initializing cars/engines/trains");
+
+  // Allocation Basic Space
+  trains = _calloc(10, Trains *);
+  trains_len = 10;
+  engines = _calloc(10, Engines *);
+  engines_len = 10;
+  cars = _calloc(10, Cars *);
+  cars_len = 10;
+  trains_comp = _calloc(10, struct train_composition *);
+  trains_comp_len = 10;
+  train_link = _calloc(10,RailTrain *);
+  train_link_len = 10;
+
+  read_rolling_Configs();
+
+  SYS->trains_loaded = 1;
+}
+
+int read_rolling_Configs(){
   FILE * fp = fopen("configs/stock.bin", "rb");
 
   char * header = _calloc(2, char);
@@ -354,12 +291,10 @@ int train_read_confs(){
   _free(header);
   _free(buffer_start);
   fclose(fp);
-
-  _SYS_change(STATE_TRAIN_LOADED, 1);
   return 1;
 }
 
-void train_write_confs(){
+void write_rolling_Configs(){
   //Calculate size
   int size = 1; //header
   size += sizeof(struct s_train_header_conf) + 1;
@@ -545,6 +480,72 @@ void train_write_confs(){
   free(data);
 }
 
+void unload_rolling_Configs(){
+  logger("Clearing trains memory",INFO);
+
+  for(int i = 0;i<trains_len;i++){
+    if(!trains[i])
+      continue;
+
+    Clear_Train(&trains[i]);
+  }
+
+  for(int i = 0;i<engines_len;i++){
+    if(!engines[i])
+      continue;
+
+    Clear_Engine(&engines[i]);
+  }
+
+  for(int i = 0;i<cars_len;i++){
+    if(!cars[i])
+      continue;
+
+    Clear_Car(&cars[i]);
+  }
+
+  for(int i = 0;i<trains_comp_len;i++){
+    if(trains_comp[i]){
+      trains_comp[i]->name = _free(trains_comp[i]->name);
+      trains_comp[i]->composition = _free(trains_comp[i]->composition);
+      trains_comp[i] = _free(trains_comp[i]);
+    }
+  }
+
+  trains = _free(trains);
+  engines = _free(engines);
+  cars = _free(cars);
+  trains_comp = _free(trains_comp);
+
+  for(int i = 0; i < train_link_len; i++){
+    if(!train_link[i])
+      continue;
+
+    _free(train_link[i]);
+    train_link[i] = 0;
+  }
+
+  train_link = _free(train_link);
+
+  for(int i = 0; i < train_P_cat_len; i++){
+    _free(train_P_cat[i].name);
+  }
+  for(int i = 0; i < train_C_cat_len; i++){
+    _free(train_C_cat[i].name);
+  }
+
+  _free(train_P_cat);
+  _free(train_C_cat);
+
+  trains_len = 0;
+  engines_len = 0;
+  cars_len = 0;
+  trains_comp_len = 0;
+
+  SYS->trains_loaded = 0;
+}
+
+
 int link_train(int fid, int tid, char type){
   //Link = follow ID / train_link id
   //train = tID
@@ -606,6 +607,10 @@ void unlink_train(int id){
 }
 
 // Speed
+
+// void Train_Set_Speed(RailTrain * T){
+
+// }
 
 void engine_set_speed(Engines * E, uint16_t speed){
   if(!E){
@@ -698,22 +703,27 @@ void train_change_speed(RailTrain * T, uint16_t target_speed, uint8_t type){
     loggerf(ERROR, "No Train");
     return;
   }
-  loggerf(INFO, "train_change_speed -> %i", target_speed);
+  loggerf(INFO, "train_change_speed %i -> %i", T->link_id, target_speed);
   //T->target_speed = target_speed;
 
   if(type == IMMEDIATE_SPEED){
-    if(T->type == TRAIN_TRAIN_TYPE){
-      train_set_speed(T->p, target_speed);
-    }
-    else{
-      engine_set_speed(T->p, target_speed);
-    }
+    // if(T->type == TRAIN_TRAIN_TYPE){
+      T->changing_speed = RAILTRAIN_SPEED_T_DONE;
+      T->speed = target_speed;
+      WS_stc_UpdateTrain(T);
+      // train_set_speed(T->p, target_speed);
+    // }
+    // else{
+      // T->changing_speed = RAILTRAIN_SPEED_T_DONE;
+      // T->speed = target_speed;
+      // engine_set_speed(T->p, target_speed);
+    // }
   }
   else if(type == GRADUAL_SLOW_SPEED){
-    train_speed_timer_create(T, target_speed, 150);
+    train_speed_timer_create(T, target_speed, T->B->length*2);
   }
   else if(type == GRADUAL_FAST_SPEED){
-    train_speed_timer_create(T, target_speed, 50);
+    train_speed_timer_create(T, target_speed, T->B->length);
   }
 }
 
@@ -724,6 +734,16 @@ void train_speed_timer_create(RailTrain * T, uint16_t target, uint16_t length){
     loggerf(ERROR, "No Train");
     return;
   }
+
+  const char * speed_String[9] = {
+    "INIT",
+    "CHANGING",
+    "UPDATE",
+    "DONE",
+    "FAIL"
+  };
+
+  loggerf(INFO, "train_speed_timer_create %s", speed_String[T->changing_speed]);
 
   if (T->changing_speed == RAILTRAIN_SPEED_T_DONE ||
       T->changing_speed == RAILTRAIN_SPEED_T_FAIL){
@@ -739,64 +759,120 @@ void train_speed_timer_create(RailTrain * T, uint16_t target, uint16_t length){
 
     T->target_speed = target;
     T->target_distance = length;
-    pthread_create(&T->speed_thread, NULL, train_speed_timer_run, (void *)T);
     T->changing_speed = RAILTRAIN_SPEED_T_CHANGING;
+    if(pthread_create(&T->speed_thread, NULL, train_speed_timer_run, (void *)T) != 0)
+      loggerf(ERROR, "Error while creating train_speed_timer");
   }
-  else if(T->changing_speed == RAILTRAIN_SPEED_T_CHANGING){
+  else if(T->changing_speed == RAILTRAIN_SPEED_T_CHANGING && T->target_speed != target){
     T->target_speed = target;
     T->target_distance = length;
     T->changing_speed = RAILTRAIN_SPEED_T_UPDATE;
   }
 }
+
+void train_speed_timer_calc(float * accel, float * time, RailTrain * T){
+  // v = v0 + at;
+  // x = v0*t + 0.5at^2;
+  // a = 0.5/x * (v^2 - v0^2);
+  // t = sqrt((x - v0) / (0.5a))
+  float start_speed = T->speed * 1.0;
+
+  loggerf(INFO, "train_speed_timer_calc %i %i %f", T->target_distance, T->target_speed, start_speed);
+
+  float real_distance = 160.0 * 0.00001 * (T->target_distance - 5); // km
+  *accel = (1 / (2 * real_distance));
+  *accel *= (T->target_speed - start_speed) * (T->target_speed + start_speed);
+  // accel == km/h/h
+
+  loggerf(DEBUG, "Train_speed_timer_run (accel at %f km/h^2)", *accel);
+  if (*accel > 64800.0){ // 5 m/s^2
+    loggerf(INFO, "Accel to large, reduced to 5.0m/s^2)");
+    *accel = 64800.0;
+  }
+  else if (*accel < -129600.0){
+    loggerf(INFO, "Deccell to large, reduced to 10.0m/s^2)");
+    *accel = -129600.0;
+  }
+
+  if (*accel == 0 || *accel == 0.0){
+    loggerf(INFO, "No speed difference");
+    T->changing_speed = RAILTRAIN_SPEED_T_DONE;
+    return;
+  }
+
+  loggerf(INFO, "train_speed  sqrt((2 * (%f - %f)) / (%f))", real_distance, start_speed, *accel);
+
+  *time = sqrt(2 * (*accel) * real_distance + T->speed * T->speed) - T->speed;
+  *time /= *accel;
+  *time *= 3600; // convert to seconds
+
+  if(*time < 0.0){
+    *time *= -1.0;
+  }
+
+  loggerf(INFO, "train_speed time %f", *time);
+}
+
 void * train_speed_timer_run(void * args){
   RailTrain * T = ((RailTrain *)args);
-  printf("Train_speed_timer_run (%i -> %ikm/h, %icm)\n", T->speed, T->target_speed, T->target_distance);
-  // v = v0 + at;
-  // x = v0 + 0.5at^2;
-  // a = 0.5/x * (v^2 - v0^2);
-  // t = (v - v0) / a
-  float real_distance = 160.0 * 0.00001 * T->target_distance;
-  float acceleration = (1 / (2 * real_distance));
-  acceleration *= (T->target_speed - T->speed) * (T->target_speed + T->speed);
-  uint16_t start_speed = T->speed;
+  loggerf(INFO, "Train_speed_timer_run (%i -> %ikm/h, %icm)\n", T->speed, T->target_speed, T->target_distance);
 
-  printf("Train_speed_timer_run (accel at %f km/h^2)\n", acceleration);
-  if (acceleration > 64800.0){ // 5 m/s^2
-    printf("Accel to large, reduced to 5.0m/s^2)\n");
-    acceleration = 64800.0;
-  }
-  else if (acceleration < -129600.0){
-    printf("Deccell to large, reduced to 10.0m/s^2)\n");
-    acceleration = -129600.0;
-  }
+  float acceleration = 0;
+  float time = 0;
 
-  if (acceleration == 0 || acceleration == 0.0){
-    T->changing_speed = RAILTRAIN_SPEED_T_DONE;
+  train_speed_timer_calc(&acceleration, &time, T);
+
+  if(T->changing_speed == RAILTRAIN_SPEED_T_DONE){
+    loggerf(INFO, "return");
     return NULL;
   }
 
-  float time = sqrt(2 * acceleration * real_distance + start_speed * start_speed) - start_speed;
-  time /= acceleration;
-  time *= 3600; // convert to seconds
-
-  printf("Takes %f seconds\n", time);
   uint16_t steps = (uint16_t)(time / 0.5);
   uint32_t steptime = ((time / steps) * 1000000); // convert to usec
 
+  uint16_t start_speed = T->speed;
+
+  loggerf(INFO, "train_speed_timer_run start %i a:%f, s:%i, t:%i", T->speed, acceleration, steps, steptime);
+
   for(uint16_t i = 0; i <= steps; i++){
     usleep(steptime);
+    if(T->changing_speed == RAILTRAIN_SPEED_T_DONE){
+      loggerf(INFO, "return");
+      return NULL;
+    }
+
     T->speed = (start_speed + acceleration * ((steptime * i) / 1000000.0 / 3600.0)) + 0.01; // hours
-    printf("%ikm/h\n", T->speed);
+
+    loggerf(INFO, "train_speed_timer_run %i %f", T->speed, acceleration);
+
+    WS_stc_UpdateTrain(T);
+
+    if(T->changing_speed == RAILTRAIN_SPEED_T_DONE){
+      loggerf(INFO, "return");
+      return NULL;
+    }
+    else if(T->changing_speed == RAILTRAIN_SPEED_T_UPDATE){
+      loggerf(INFO, "train_speed_timer_run UPDATE");
+      train_speed_timer_calc(&acceleration, &time, T);
+      if(T->changing_speed == RAILTRAIN_SPEED_T_DONE)
+        return NULL;
+      steps = (uint16_t)(time / 0.5);
+      steptime = ((time / steps) * 1000000); // convert to usec
+      T->changing_speed = RAILTRAIN_SPEED_T_CHANGING;
+
+      start_speed = T->speed;
+      i = 0;
+    }
   }
   T->changing_speed = RAILTRAIN_SPEED_T_DONE;
   return NULL;
 }
 
 void train_set_route(RailTrain * T, Block * dest){
-  struct pathfindingstep path = pathfinding(T->B, dest);
+  // struct pathfindingstep path = pathfinding(T->B, dest);
 
-  if(path.found){
-    T->route = 1;
-    T->instructions = path.instructions;
-  }
+  // if(path.found){
+  //   T->route = 1;
+  //   T->instructions = path.instructions;
+  // }
 }

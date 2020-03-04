@@ -7,23 +7,19 @@
 #include "train.h"
 #include "modules.h"
 
-// #include "algorithm.h"
 
 // #include "com.h"
 
 #include "websocket_control.h"
 
+#include "pathfinding.h"
 // #include "train_sim.h"
 // #include "Z21.h"
 
 struct s_systemState * SYS;
 
 int main(){
-  SYS = _calloc(1, struct s_systemState);
-  system_init(SYS);
-
-  init_allocs();
-
+  init_main();
   init_logger("log.txt");
   set_level(INFO);
 
@@ -42,7 +38,6 @@ int main(){
   load_rolling_Configs();
 
   // Z21_boot();
-
   websocket_server();
 
   // UART_stop();

@@ -19,10 +19,14 @@ void print_link(char * debug, struct s_link_conf link){
       sprintf(debug, "%s%c  \t", debug, 'S');
     else if(link.type == RAIL_LINK_s)
       sprintf(debug, "%s%c  \t", debug, 's');
-    else if(link.type == RAIL_LINK_M)
-      sprintf(debug, "%s%c  \t", debug, 'M');
-    else if(link.type == RAIL_LINK_m)
-      sprintf(debug, "%s%c  \t", debug, 'm');
+    else if(link.type == RAIL_LINK_MA)
+      sprintf(debug, "%s%s  \t", debug, "MB");
+    else if(link.type == RAIL_LINK_MB)
+      sprintf(debug, "%s%s  \t", debug, "MB");
+    else if(link.type == RAIL_LINK_ma)
+      sprintf(debug, "%s%s  \t", debug, "ma");
+    else if(link.type == RAIL_LINK_mb)
+      sprintf(debug, "%s%s  \t", debug, "mb");
     else if(link.type == RAIL_LINK_TT)
       sprintf(debug, "%s%c%c \t", debug, 'T', 'T');
     else
@@ -1630,14 +1634,24 @@ int edit_module(){
 
   struct module_config config;
 
+  if(file <= 0 || file > 254){
+    loggerf(ERROR, "Only module numbers between 1-254 supportede");
+
+    if(file == 0){
+      printf("Open Test Module? ");
+      char c;
+      scanf("%c", &c);
+      scanf("%c", &c);
+      printf("%c",c);
+      if(c != 'y')
+        return -1;
+    }
+    else
+      return -1;
+  }
+
   if(!fp){
     loggerf(ERROR, "Failed to open file");
-
-    if(file <= 0 || file > 254){
-      loggerf(ERROR, "Only module numbers between 1-254 supportede");
-      return -1;
-    }
-
     loggerf(INFO,  "Creating New File");
     
     int connections;

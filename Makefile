@@ -13,7 +13,7 @@ GCC_FLAGS = -D _DEFAULT_SOURCE
 GCC = gcc -std=c99 -g3 $(GCC_INCLUDE) $(GCC_ERROR_FLAGS) $(GCC_LIBS) $(GCC_FLAGS)
 
 BAAN_FILES = baan system logger mem modules config rail signals switch IO algorithm encryption \
-             websocket websocket_msg websocket_control Z21 Z21_msg train submodule com sim
+             websocket websocket_msg websocket_control Z21 Z21_msg train submodule com sim pathfinding
 
 CONFIG_READER_FILES = config_reader config logger mem
 
@@ -22,12 +22,22 @@ CONFIG_READER_FILES = config_reader config logger mem
 -include $(BIN)/*.d
 
 $(BIN)/%.o: $(SRC)/%.c
-	@echo $@
+	@echo ' '-$@
 	@$(GCC) -c $(SRC)/$*.c -MP -MMD -MT '$@ $(BIN)/$*.d' -o $(BIN)/$*.o
+	@$(GCC) -shared -o $(SRC)/$*.c -o $(BIN)/$*.so
 
-.PHONY: all
+.PHONY: all test run debug
 
-all: config_reader baan _avr
+all: config_reader baan
+
+run: all
+	./baan
+
+debug: all
+	gdb ./baan
+
+test: all
+	@+$(MAKE) -sC test
 
 _avr:
 	@+$(MAKE) -f avr/Makefile all
@@ -35,6 +45,7 @@ _avr:
 baan: $(addprefix $(BIN)/,$(addsuffix .o, $(BAAN_FILES)))
 	@echo $@
 	@$(GCC) -o $@ $^
+	@$(GCC) -shared -o $@.so $^
 
 config_reader: $(addprefix $(BIN)/,$(addsuffix .o, $(CONFIG_READER_FILES)))
 	@echo $@
@@ -43,5 +54,6 @@ config_reader: $(addprefix $(BIN)/,$(addsuffix .o, $(CONFIG_READER_FILES)))
 clean:
 	@echo "CLEAN"
 	@rm -f baan
+	@rm -f baan.so
 	@rm -f config_reader
 	@rm -rf bin/*

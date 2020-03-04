@@ -4,6 +4,7 @@
 #include "system.h"
 #include "mem.h"
 #include "IO.h"
+#include "com.h"
 
 void Add_IO_Node(Unit * U, int Node_nr, int IO){
   IO_Node Z;
@@ -56,12 +57,26 @@ void update_IO(){
       continue;
 
     for(int n = 0; n < Units[u]->IO_Nodes; n++){
+      char buf[100];
+      memset(buf, 0, 100);
+      buf[0] = n;
+      buf[1] = COMopc_SetAllOut;
+
       for(int io = 0; io < Units[u]->Node[n].io_ports; io++){
         if(U_IO(u, n, io)->type == IO_Output && U_IO(u, n, io)->w_state != U_IO(u, n, io)->r_state){
           char output[200];
           sprintf(output, "Update io %02i:%02i:%02i", u, n, io);
           str_IO_event(U_IO(u, n, io)->w_state, output);
           loggerf(DEBUG, "%s", output);
+
+	  if(io % 2 == 0){
+            buf[io/2 + 2] = U_IO(u, n, io)->w_state;
+          }
+	  else{ // i% 2 == 1
+            buf[io/2 + 2] |= U_IO(u, n, io)->w_state << 4;
+          }
+	  if(U_IO(u, n, io)->w_state == IO_event_Pulse) // Reset When pulsing output
+            U_IO(u, n, io)->w_state = IO_event_Low;
           U_IO(u, n, io)->r_state = U_IO(u, n, io)->w_state;
         }
       }

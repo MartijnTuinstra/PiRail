@@ -26,6 +26,7 @@ enum e_IO_event {
   IO_event_High,
   IO_event_Low,
   IO_event_Pulse,
+  IO_event_Toggle,
   IO_event_Blink1,
   IO_event_Blink2,
 

@@ -12,8 +12,8 @@ struct allocations * allocations;
 pthread_mutex_t mem_lock;
 
 void init_allocs(){
-  allocations = _calloc(1000, struct allocations);
-  allocs = 1000;
+  allocations = _calloc(2048, struct allocations);
+  allocs = 2048;
 }
 
 void * my_calloc(int elements, int size, char * file, int line){

@@ -90,6 +90,7 @@ int _find_free_index(void *** list, int * length);
 void move_file(char * src, char * dest);
 
 void system_init(struct s_systemState * S);
+void init_main();
 
 #define mutex_lock(mutex, name) loggerf(TRACE, "  Lock mutex %s", name);\
                                 pthread_mutex_lock(mutex);

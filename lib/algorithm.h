@@ -28,7 +28,6 @@ extern sem_t AlgorQueueNoEmpty;
 extern struct s_AlgorQueue AlgorQueue;
 
 void putAlgorQueue(Block * B, int enableQueue);
-void putAlgorQueue_Algor_Block(Algor_Block * B, int enable);
 void putList_AlgorQueue(struct algor_blocks AllBlocks, int enable);
 Block * getAlgorQueue();
 void processAlgorQueue();

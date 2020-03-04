@@ -84,6 +84,14 @@ void system_init(struct s_systemState * S){
   S->SimB.state = Module_STOP;
 }
 
+void init_main(){
+  SYS = _calloc(1, struct s_systemState);
+  system_init(SYS);
+
+  init_allocs();
+}
+
+
 void SYS_set_state(volatile enum e_SYS_Module_State * system, enum e_SYS_Module_State state){
   *system = state;
   WS_stc_SubmoduleState();

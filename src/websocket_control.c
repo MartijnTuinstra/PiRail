@@ -506,7 +506,8 @@ void * websocket_server(){
       }
     }
 
-    loggerf(INFO, "New socket client %i", SYS->stop);
+    unsigned long addr = client_addr.sin_addr.s_addr;
+    loggerf(INFO, "New socket client %i.%i.%i.%i", addr&0xFF, (addr >> 8)&0xFF, (addr >> 16)&0xFF, (addr >> 24)&0xFF);
     new_websocket_client(fd_client);
     loggerf(INFO, "%i", SYS->stop);
   }

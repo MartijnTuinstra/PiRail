@@ -78,6 +78,7 @@ void print_signal_state(Signal * Si, enum Rail_states state){
 }
 
 void set_signal(Signal * Si, enum Rail_states state){
+  loggerf(TRACE, "set_signal %x, %i", (unsigned int)Si, (unsigned int)state);
   if(Si->state != state){
     print_signal_state(Si, state);
     // Update state
@@ -93,7 +94,7 @@ void set_signal(Signal * Si, enum Rail_states state){
 
 void check_Signal(Signal * Si){
   loggerf(TRACE, "check_Signal %x", (unsigned int)Si);
-  if(!Si->B->Alg.B)
+  if(!Si->B)
     return;
 
   if(Si->B->NextSignal == Si){
@@ -102,7 +103,7 @@ void check_Signal(Signal * Si){
         set_signal(Si, DANGER);
       }
       else{
-        set_signal(Si, Si->B->Alg.N[0]->p.B->state);
+        set_signal(Si, Si->B->Alg.N[0]->state);
       }
     }
     else{
@@ -110,7 +111,7 @@ void check_Signal(Signal * Si){
         set_signal(Si, DANGER);
       }
       else{
-        set_signal(Si, Si->B->Alg.P[0]->p.B->reverse_state);
+        set_signal(Si, Si->B->Alg.P[0]->reverse_state);
       }
     }
   }
@@ -120,7 +121,7 @@ void check_Signal(Signal * Si){
         set_signal(Si, DANGER);
       }
       else{
-        set_signal(Si, Si->B->Alg.N[0]->p.B->state);
+        set_signal(Si, Si->B->Alg.N[0]->state);
       }
     }
     else{
@@ -128,7 +129,7 @@ void check_Signal(Signal * Si){
         set_signal(Si, DANGER);
       }
       else{
-        set_signal(Si, Si->B->Alg.P[0]->p.B->reverse_state);
+        set_signal(Si, Si->B->Alg.P[0]->reverse_state);
       }
     }
   }

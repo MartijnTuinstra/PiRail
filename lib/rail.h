@@ -29,6 +29,7 @@ typedef struct s_node_adr Node_adr;
 typedef struct rail_train RailTrain;
 
 #define U_B(U, A) Units[U]->B[A]
+#define U_St(U,A) Units[U]->St[A]
 
 #ifndef RAIL_LINK_TYPES
 #define RAIL_LINK_TYPES
@@ -36,32 +37,40 @@ enum link_types {
   RAIL_LINK_R,
   RAIL_LINK_S,
   RAIL_LINK_s,
-  RAIL_LINK_M,
-  RAIL_LINK_m,
+  RAIL_LINK_MA,
+  RAIL_LINK_MB,
+  RAIL_LINK_ma,
+  RAIL_LINK_mb
   RAIL_LINK_TT = 0x10, // Turntable
   RAIL_LINK_C  = 0xfe,
   RAIL_LINK_E  = 0xff
 };
 #endif
 
-typedef struct s_algor_block {
-  union {
-    Block * B;
-    Block * SB[5];
-  } p;
-  uint8_t len; // 0 = one block, 1 or more is Switch Blocks
+// typedef struct s_algor_block {
+//   union {
+//     Block * B;
+//     Block * SB[5];
+//   } p;
+//   uint8_t len; // 0 = one block, 1 or more is Switch Blocks
 
-  RailTrain * train;
+//   RailTrain * train;
 
-  uint8_t blocked;
-  uint8_t reserved;
-} Algor_Block;
+//   uint8_t blocked;
+//   uint8_t reserved;
+// } Algor_Block;
 
 typedef struct algor_blocks {
   uint8_t prev;
-  Algor_Block * P[10];
-  Algor_Block * B;
-  Algor_Block * N[10];
+  uint8_t prev3;
+  uint8_t prev2;
+  uint8_t prev1;
+  Block * P[10];
+  Block * B;
+  Block * N[10];
+  uint8_t next1;
+  uint8_t next2;
+  uint8_t next3;
   uint8_t next;
 } Algor_Blocks;
 
@@ -186,7 +195,6 @@ void Create_Station(int module, int id, char * name, char name_len, enum Station
 void * Clear_Station(Station * St);
 
 int dircmp(Block *A, Block *B);
-int dircmp_algor(Algor_Block * A, Algor_Block * B);
 
 // void Connect_Rail_links();
 
@@ -194,12 +202,12 @@ int dircmp_algor(Algor_Block * A, Algor_Block * B);
 
 Block * Next_Switch_Block(Switch * S, enum link_types type, int flags, int level);
 Block * Next_MSSwitch_Block(MSSwitch * S, enum link_types type, int flags, int level);
-Block * Next_Special_Block(Block * B, int flags, int level);
 
 #define Next(B, f, l) _Next(B, (f) | 0b1110, l)
 Block * _Next(Block * B, int flags, int level);
 
-#define _ALGOR_BLOCK_APPLY(_ABl, _c, _A, _B, _C) if(_ABl->len == 0){_A}else{_B;for(uint8_t _c = 0; _c < _ABl->len; _c++){_C}}
+// #define _ALGOR_BLOCK_APPLY(_ABl, _c, _A, _B, _C) _A
+#define _ALGOR_BLOCK_APPLY(_A) _A
 
 // int Next_check_Switch(void * p, struct rail_link link, int flags);
 // int Next_check_Switch_Path(void * p, struct rail_link link, int flags);

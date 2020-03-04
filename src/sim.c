@@ -11,6 +11,7 @@
 #include "submodule.h"
 #include "algorithm.h"
 #include "websocket_msg.h"
+#include "pathfinding.h"
 
 pthread_mutex_t mutex_lockA;
 
@@ -69,24 +70,10 @@ void train_sim_tick(struct train_sim * t){
     }
     t->blocks++;
     if(t->FrontSpecialCounter){
-      if(t->FrontSpecialCounter == t->Front->Alg.N[0]->len){
-        t->B[0] = t->B[1]->Alg.N[0]->p.B;
-        t->Front = 0;
-        t->FrontSpecialCounter = 0;
-      }
-      else{
-        t->B[0] = _Next(t->Front, NEXT, ++t->FrontSpecialCounter);
-      }
+      t->B[0] = _Next(t->Front, NEXT, ++t->FrontSpecialCounter);
     }
     else if(t->B[1]->Alg.next){
-      if(t->B[1]->Alg.N[0]->len){
-        t->Front = t->B[1];
-        t->B[0] = _Next(t->B[1], NEXT, 1);
-        t->FrontSpecialCounter = 1;
-      }
-      else{
-        t->B[0] = t->B[1]->Alg.N[0]->p.B;
-      }
+      t->B[0] = t->B[1]->Alg.N[0];
     }
     else{
       SYS_set_state(&SYS->SimA.state, Module_Fail);
@@ -177,7 +164,7 @@ void *TRAIN_SIMA(){
 
     if(B->Alg.next){
       train.B[0] = B;
-      B = B->Alg.N[0]->p.B;
+      B = B->Alg.N[0];
     }
   }
 
@@ -263,7 +250,7 @@ void *TRAIN_SIMB(){
 
     if(B->Alg.next){
       train.B[0] = B;
-      B = B->Alg.N[0]->p.B;
+      B = B->Alg.N[0];
     }
   }
 
@@ -346,7 +333,7 @@ _Bool find_and_connect(uint8_t ModuleA, char anchor_A, uint8_t ModuleB, char anc
 
   _Bool connected = FALSE;
 
-  // printf("find_and_connect: %i:%i\t\t%i:%i\n",ModuleA,anchor_A,ModuleB,anchor_B);
+  printf("find_and_connect: %i:%i\t\t%i:%i\n",ModuleA,anchor_A,ModuleB,anchor_B);
 
   for(int Rail = 1;Rail<3;Rail++){
     struct rail_link A;A.p = 0;
@@ -356,27 +343,23 @@ _Bool find_and_connect(uint8_t ModuleA, char anchor_A, uint8_t ModuleB, char anc
     // - Find a Block
       for(int k = 0;k<Units[ModuleA]->block_len;k++){
       if(Units[ModuleA]->B[k]){
-          if(Units[ModuleA]->B[k]->prev.type == RAIL_LINK_C){
-          // printf(" - A block Prev %i:%i",ModuleA,k);
-          if(Units[ModuleA]->B[k]->prev.module == anchor_A && Units[ModuleA]->B[k]->prev.id == Rail){
-            // printf("++++++\n");
+        Block * Bl = Units[ModuleA]->B[k];
+          // printf(" - A block %i:%i p%x:%x:%x n%x:%x:%x\n",ModuleA,k, Bl->prev.type, Bl->prev.module, Bl->prev.id, Bl->next.type, Bl->next.module, Bl->next.id);
+          if(Bl->prev.type == RAIL_LINK_C && Bl->prev.module == anchor_A && Bl->prev.id == Rail){
+            printf("++++++\n");
             A.type = RAIL_LINK_R;
             typeA  = 'P';
-            A.p = Units[ModuleA]->B[k];
+            A.p = Bl;
+            printf("\n");
             break;
           }
-          // printf("\n");
-          }
-          else if(Units[ModuleA]->B[k]->next.type == RAIL_LINK_C){
-          // printf(" - A block Next %i:%i",ModuleA,k);
-          if(Units[ModuleA]->B[k]->next.module == anchor_A && Units[ModuleA]->B[k]->next.id == Rail){
+          else if(Bl->next.type == RAIL_LINK_C && Bl->next.module == anchor_A && Bl->next.id == Rail){
             // printf("++++++\n");
             A.type = RAIL_LINK_R;
             typeA  = 'N';
-            A.p = Units[ModuleA]->B[k];
+            A.p = Bl;
+            printf("\n");
             break;
-          }
-          // printf("\n");
           }
         }
       }
@@ -384,38 +367,37 @@ _Bool find_and_connect(uint8_t ModuleA, char anchor_A, uint8_t ModuleB, char anc
       if(!A.p){
         for(int k = 0;k<Units[ModuleA]->switch_len;k++){
           if(Units[ModuleA]->Sw[k]){
-            if(Units[ModuleA]->Sw[k]->app.type == RAIL_LINK_C){
-              // printf(" - A Switch App %i:%i",ModuleA,k);
-              if(Units[ModuleA]->Sw[k]->app.module == anchor_A && Units[ModuleA]->Sw[k]->app.id == Rail){
+            Switch * Sw = Units[ModuleA]->Sw[k];
+              // printf(" - A Switch %i:%i A%x:%x:%x S%x:%x:%x D%x:%x:%x\n",ModuleA,k, Sw->app.type, Sw->app.module, Sw->app.id, Sw->str.type, Sw->str.module, Sw->str.id, Sw->div.type, Sw->div.module, Sw->div.id);
+            if(Sw->app.type == RAIL_LINK_C){
+              if(Sw->app.module == anchor_A && Sw->app.id == Rail){
                 // printf("++++++\n");
                 A.type = RAIL_LINK_S;
                 typeA  = 'A';
-                A.p = Units[ModuleA]->Sw[k];
+                A.p = Sw;
                 break;
               }
-              // printf("\n");
+              printf("\n");
             }
-            else if(Units[ModuleA]->Sw[k]->str.type == RAIL_LINK_C){
-              // printf(" - A Switch Str %i:%i",ModuleA,k);
-              if(Units[ModuleA]->Sw[k]->str.module == anchor_A && Units[ModuleA]->Sw[k]->str.id == Rail){
+            else if(Sw->str.type == RAIL_LINK_C){
+              if(Sw->str.module == anchor_A && Sw->str.id == Rail){
                 // printf("++++++\n");
                 A.type = RAIL_LINK_S;
                 typeA  = 'S';
-                A.p = Units[ModuleA]->Sw[k];
-                break;
+                A.p = Sw;
+                break;//dsafas
               }
-              // printf("\n");
+              printf("\n");
             }
-            else if(Units[ModuleA]->Sw[k]->div.type == RAIL_LINK_C){
-              // printf(" - A Switch Div %i:%i",ModuleA,k);
-              if(Units[ModuleA]->Sw[k]->div.module == anchor_A && Units[ModuleA]->Sw[k]->div.id == Rail){
+            else if(Sw->div.type == RAIL_LINK_C){
+              if(Sw->div.module == anchor_A && Sw->div.id == Rail){
                 // printf("++++++\n");
                 A.type = RAIL_LINK_S;
                 typeA  = 'D';
                 A.p = Units[ModuleA]->Sw[k];
                 break;
               }
-              // printf("\n");
+              printf("\n");
             }
           }
         }
@@ -700,15 +682,77 @@ int connect_Algor(struct ConnectList * List){
 }
 
 
+// int _connect_(struct ConnectList * List){
+//   uint8_t Atype = RAIL_LINK_E;
+//   void * Ap;
+//   uint8_t Btype = RAIL_LINK_E;
+//   void * Bp;
+//   int iA = -1, iB = -1;
+
+//   for(uint8_t i = 0; i < List->length; i++){
+//     if(!List->R_L[i]->p)
+//       continue;
+
+//     if(Atype != RAIL_LINK_E && Btype != RAIL_LINK_E)
+//       break;
+
+//     if(List->R_L[i]->type == 'R'){
+//       Block * B = List->R_L[i]->p;
+//       if(B->blocked){
+//         printf("Found block %i:%i %i\n",B->module,B->id,B->blocked);
+//         if(Atype == RAIL_LINK_E){
+//           Atype = RAIL_LINK_R;
+//           Ap = B;
+//           iA = i;
+//         }
+//         else{
+//           Btype = RAIL_LINK_R;
+//           Bp = B;
+//           iB = i;
+//         }
+//       }
+//     }
+//     else if(List->R_L[i]->type == 'S'){
+//       Switch * Sw = List->R_L[i]->p;
+//       if(Sw->Detection->blocked){
+//         printf("Found Switch %i:%i\n",Sw->module,Sw->id);
+//         if(Atype == RAIL_LINK_E){
+//           Atype = RAIL_LINK_S;
+//           Ap = Sw;
+//           iA = i;
+//         }
+//         else{
+//           Btype = RAIL_LINK_S;
+//           Bp = Sw;
+//           iB = i;
+//         }
+//       }
+//     }
+//   }
+
+//   printf("Connect %x => %x", (unsigned int)Ap, (unsigned int)Bp);
+
+//   // Connect
+//   find_and_connect(Ap->module, Ap->next.type == RAIL_LINK_C ? Ap->next.id : Ap->prev.id, Bp->module, Bp->next.type == RAIL_LINK_C ? Bp->next.id : Bp->prev.id);
+
+//   // Purge from list
+// }
+
 void * rail_link_pointer(struct rail_link link){
-  if(link.type == RAIL_LINK_R){
-    return Units[link.module]->B[link.id];
+  if(!Units[link.module])
+    return 0;
+  Unit * U = Units[link.module];
+  //if(link.module == 0 || Units[link.module] == 0){
+  //	  return 0;
+  //}
+  if(link.type == RAIL_LINK_R && U->B[link.id]){
+    return U->B[link.id];
   }
-  else if(link.type == RAIL_LINK_S || link.type == RAIL_LINK_s){
-    return Units[link.module]->Sw[link.id];
+  else if((link.type == RAIL_LINK_S || link.type == RAIL_LINK_s) && U->Sw[link.id]){
+    return U->Sw[link.id];
   }
-  else if(link.type == RAIL_LINK_M || link.type == RAIL_LINK_m){
-    return Units[link.module]->MSSw[link.id];
+  else if((link.type >= RAIL_LINK_MA && link.type <= RAIL_LINK_mb) && U->MSSw[link.id]){
+    return U->MSSw[link.id];
   }
   return 0;
 }
@@ -730,15 +774,13 @@ void SIM_JoinModules(){
   int prev_j = max_j;
   while(SYS->modules_linked == 0){
     cur_j = connect_Algor(&List);
-    if(i > 30){
+    printf("?\n");
+    if(i > 1){
       printf(" (%02i/%02i)\n",cur_j,max_j);
       i = 0;
       x++;
     }
-    if(prev_j == cur_j){
-      printf(".");
-    }else{
-      printf("+");
+    if(prev_j != cur_j){
 
       char data[20];
       data[0] = 0x82;
@@ -756,7 +798,7 @@ void SIM_JoinModules(){
     usleep(JOIN_SIM_INTERVAL);
     prev_j = cur_j;
 
-    if(i == 15){
+    if(i == 1){
     usleep(5000);
     if(x == 1){
       Units[20]->B[5]->blocked = 1;
@@ -858,7 +900,7 @@ void SIM_Connect_Rail_links(){
       continue;
     }
 
-    printf("LINKING UNIT %i\n", m);
+    loggerf(INFO, "LINKING UNIT %i", m);
 
     Unit * tU = Units[m];
 
@@ -868,8 +910,6 @@ void SIM_Connect_Rail_links(){
       }
 
       Block * tB = tU->B[i];
-
-      printf("LINKING block %i\n", i);
 
       tB->next.p = rail_link_pointer(tB->next);
       tB->prev.p = rail_link_pointer(tB->prev);
@@ -881,8 +921,6 @@ void SIM_Connect_Rail_links(){
       }
 
       Switch * tSw = tU->Sw[i];
-
-      printf("LINKING switch %i\n", i);
 
       tSw->app.p = rail_link_pointer(tSw->app);
       tSw->str.p = rail_link_pointer(tSw->str);
@@ -896,8 +934,6 @@ void SIM_Connect_Rail_links(){
 
       MSSwitch * tMSSw = tU->MSSw[i];
 
-      printf("LINKING msswitch %i\n", i);
-
       for(int s = 0; s < tMSSw->state_len; s++){
         tMSSw->sideA[s].p = rail_link_pointer(tMSSw->sideA[s]);
         tMSSw->sideB[s].p = rail_link_pointer(tMSSw->sideB[s]);
@@ -909,4 +945,13 @@ void SIM_Connect_Rail_links(){
 void SIM_Client_Connect_cb(){
   // SimA_start();
   // SimB_start();
+  
+  Algor_start();
+  while(SYS->LC.state != Module_Run){}
+  struct paths return_value = pathfinding(U_B(20,8), U_B(20,14));
+  if(return_value.forward || return_value.reverse)
+    printf("CHEERS");
+  // pathfinding_print(instr);
+  free_pathinstructions(return_value.forward);
+  free_pathinstructions(return_value.reverse);
 }

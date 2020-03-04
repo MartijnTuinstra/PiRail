@@ -291,7 +291,7 @@ var Canvas = {
 	    	(s == 0)?cnvs.strokeStyle = "#aaf":cnvs.strokeStyle = "#ddf";
 	    }
 	    else if(b == 6){ // RESERVED_SWICTH
-	    	(s == 0)?cnvs.strokeStyle = "#aaa":cnvs.strokeStyle = "#fcc";
+	    	(s == 0)?cnvs.strokeStyle = "#aaf":cnvs.strokeStyle = "#fcc";
 	    }
 	    else{ //Unknown
 	    	(s == 0)?cnvs.strokeStyle = "#ddd":cnvs.strokeStyle = "#ddd";
@@ -586,8 +586,12 @@ var Canvas = {
 	Longclick: false,
 
 	evt_mousedown: function(evt){
+		Canvas.touchStart.x = (Canvas.touchMove.x = evt.pageX);
+		Canvas.touchStart.y = (Canvas.touchMove.y = evt.pageY);
+		Canvas.touchMoved = false;
 		Canvas.Longclick = false;
-		Canvas.LongclickTimer = setTimeout(function(){Canvas.longClick(evt)},400);
+		Canvas.LongclickTimer = setTimeout(function(){Canvas.longClick(evt)},600);
+		Canvas.canvas_jquery.on("mousemove",Canvas.evt_drag);
 	},
 	evt_mouseup: function(evt){
 		clearTimeout(Canvas.LongclickTimer);
@@ -595,8 +599,34 @@ var Canvas = {
 			Canvas.click(evt.offsetX,evt.offsetY);
 		else
 			Canvas.touchClicked = false;
+		
+		Canvas.canvas_jquery.off("mousemove");
 	},
 
+
+	evt_drag: function(evt){
+		if(Canvas.touchMoved == true){
+			if(Canvas.dimensions.width < Canvas.dimensions.content.width){
+				Canvas.dimensions.ofX += (evt.pageX - Canvas.touchMove.x)/Canvas.dimensions.scale;
+			}
+			if(Canvas.dimensions.height < Canvas.dimensions.content.height){
+				Canvas.dimensions.ofY += (evt.pageY - Canvas.touchMove.y)/Canvas.dimensions.scale;
+			}
+
+			Canvas.moved()
+
+			Canvas.touchMove.x = evt.pageX;
+			Canvas.touchMove.y = evt.pageY;
+
+			return false;
+		}else{
+			if(Math.sqrt(Math.pow(Canvas.touchStart.x - evt.pageX,2)+Math.pow(Canvas.touchStart.y - evt.pageY,2)) >= 10){
+				Canvas.touchMoved = true;
+				clearTimeout(Canvas.LongclickTimer);
+				console.log("Mouse drag Moved");
+			}
+		}
+	},
 
 	touchStart: {x:0,y:0},
 	touchMove: {x:0,y:0},
@@ -606,8 +636,8 @@ var Canvas = {
 		Canvas.touchStart.x = (Canvas.touchMove.x = evt.touches[0].pageX);
 		Canvas.touchStart.y = (Canvas.touchMove.y = evt.touches[0].pageY);
 		Canvas.touchMoved = false;
-
-		Canvas.LongclickTimer = setTimeout(function(){longClick(evt)},600);
+		Canvas.Longclick = false;
+		Canvas.LongclickTimer = setTimeout(function(){Canvas.longClick(evt)},600);
 	},
 	evt_drag_move: function(evt){
 		if(Canvas.touchMoved == true){

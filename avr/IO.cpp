@@ -132,6 +132,8 @@ void IO::init(){
 
 	#ifdef IO_SPI
 
+  	uart.transmit("IO_SPI\n",7);
+
 	memset(writeData, 0, MAX_PORTS);
 	memset(readMask, 0xFF, MAX_PORTS);
 
@@ -160,9 +162,7 @@ void IO::init(){
 
 	writeOutput();
 
-	#endif
-
-	#ifndef IO_SPI
+	#else // not defined IO_SPI
 
 	uart.transmit("IO INIT\n", 8);
 

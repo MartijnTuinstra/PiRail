@@ -172,6 +172,8 @@ class RNet {
     bool checkReceived();
     void executeMessage();
 
+    void reset_bus();
+
     bool checkTxReady();
     
     bool available();

@@ -16,31 +16,7 @@ struct _RNet_buffer RNet_rx_buffer;
 struct _RNet_buffer RNet_tx_buffer;
 uint8_t tmp_rx_msg[RNET_MAX_BUFFER];
 
-// #define RNET_DEBUG
-
-// void RNet::add_to_rx_buf(uint8_t data){
-//   rx.buf[rx.write_index++] = data;
-//   if(rx.write_index >= RNET_MAX_BUFFER){
-//     rx.write_index = 0;
-//   }
-// }
-
-// void RNet::add_to_tx_buf(uint8_t data){
-//   tx.buf[tx.write_index++] = data;
-//   if(tx.write_index >= RNET_MAX_BUFFER){
-//     tx.write_index = 0;
-//   }
-// }
-
-// void RNet::calculateTxChecksum(){
-//   uint8_t checksum = RNET_CHECKSUM_SEED;
-//   for(uint8_t i = tx.read_index; i != tx.write_index; i = (i+1)%RNET_MAX_BUFFER){
-//     checksum ^= tx.buf[i];
-//     printHex(tx.buf[i]);
-//   }
-//   printHex(checksum);
-//   add_to_tx_buf(checksum);
-// }
+//#define RNET_DEBUG
 
 bool RNet::available(){
   if (rx.read_index != rx.write_index){;
@@ -49,9 +25,17 @@ bool RNet::available(){
     uart.transmit(rx.read_index, HEX, 2);
     uart.transmit("->", 2);
     uart.transmit(rx.write_index, HEX, 2);
+    uart.transmit('\t');
+    uart.transmit(size, HEX, 2);
     uart.transmit('\n');
 
-    if (rx.write_index >= (rx.read_index + size) % RNET_MAX_BUFFER){
+    if(size == 0){
+      uart.transmit("NOPC\n", 5);
+      rx.read_index++;
+      return false;
+    }
+
+    if ((uint8_t)(rx.write_index - rx.read_index) % RNET_MAX_BUFFER >= size){
       //Copy message and check checksum
       uint8_t checksum = RNET_CHECKSUM_SEED;
       uint8_t i = 0;
@@ -71,7 +55,7 @@ bool RNet::available(){
 
       // If wrong checksum discard message
       // checksum XOR checksum == 0
-      if(checksum){
+      if(checksum && size != 1){
         uart.transmit("WCS\n", 4);
         return false;
       }
@@ -100,12 +84,20 @@ void RNet::read(){
   else if(tmp_rx_msg[0] == RNet_OPC_ResetALL){
     uart.transmit("RAll\n", 5);
   }
+  else if(tmp_rx_msg[0] == RNet_OPC_DEV_ID){
+    uart.transmit("DEVID\n", 6);
+    reset_bus();
+
+    while(tx.read_index < 1){
+      asm("nop");
+    }
+  }
 
   //Check dev ID in header
   if(tmp_rx_msg[1] != node_id){
     return;
   }
-
+  
   if(tmp_rx_msg[0] == RNet_OPC_SetOutput){
     if(tmp_rx_msg[2] & 0x80){ // Only one address
       io.set(tmp_rx_msg[2] & 0x7F, (enum IO_event)(tmp_rx_msg[3] & 0xF));
@@ -225,23 +217,6 @@ uint8_t RNet::getMsgSize(struct _RNet_buffer * msg){
   return 0;
 }
 
-// uint8_t * currentMsg(struct _RNet_buffer * msg){
-//   msg->buf[0] = 'H';
-//   msg->buf[1] = 'e';
-//   msg->buf[2] = 'l';
-//   msg->buf[3] = 'l';
-//   msg->buf[4] = 'o';
-//   msg->buf[5] = ' ';
-//   msg->buf[6] = 'W';
-//   msg->buf[7] = 'o';
-//   msg->buf[8] = 'r';
-//   msg->buf[9] = 'l';
-//   msg->buf[10] = 'd';
-//   msg->buf[11] = '!';
-
-//   return msg->buf;
-// }
-
 #ifdef RNET_MASTER
 void RNet::init()
 #else
@@ -288,6 +263,29 @@ void RNet::init (uint8_t dev, uint8_t node)
   sei(); //Enable interupts
 }
 
+
+void RNet::reset_bus(){
+#ifdef RNET_MASTER
+  tx.buf[0] = 0xFF;
+  tx.buf[1] = RNet_OPC_DEV_ID;
+
+  tx.write_index = 2;
+  tx.read_index = 0;
+  _delay_ms(500);
+  try_transmit(); // includes request all
+
+  tx.buf[0] = 0;
+  tx.buf[1] = 0;
+  tx.write_index = 0;
+  tx.read_index = 0;
+#else // Slave
+  net.tx.buf[0] = RNet_OPC_DEV_ID;
+  net.tx.write_index = 1;
+  net.tx.read_index = 0;
+  net.txdata = 1;
+#endif
+}
+
 uint8_t * msg;
 uint8_t cAddr = 0;
 uint8_t * cMsg = 0; // current message pointer
@@ -318,7 +316,16 @@ void RNet::try_transmit(){
     if(size == RNet_msg_len_NotWhole){
       return;
     }
-    if(readlen >= size){
+    else if(size == 0){
+      return;
+    }
+    if(readlen > 1 && tx.buf[tx.read_index] == 0xFF && tx.buf[(tx.read_index + 1)%RNET_MAX_BUFFER] == 0x01){
+      net.transmit(&tx);
+      _delay_ms(1000);
+      net.request_all();
+      tx.read_index += 2;
+    }
+    else if(readlen > size){
       transmit(&tx);
     }
   }
@@ -339,16 +346,17 @@ void RNet::request_all(){
     if(state != TIMEOUT){
       // Device detected
       // #ifdef RNET_DEBUG
-      // uart.transmit('*');
+      uart.transmit('*');
       // #endif
       devices_list[i / 8] |= 1<<(i % 8);
     }
-    // uart.transmit(i, HEX);
-    // uart.transmit('\n');
+    uart.transmit(i, HEX);
+    uart.transmit('|');
     state = IDLE;
     _delay_ms(10);
   }
 
+  uart.transmit(0xFF);
   uart.transmit(0x01);
   for(uint8_t i = 0; i < 32; i++){
     uart.transmit(devices_list[i]);
@@ -404,6 +412,11 @@ status RNet::transmit(struct _RNet_buffer * buf){
 
   cAddr = buf->buf[buf->read_index];
   cLen = getMsgSize(buf);         //Get size of message
+  
+  if(!(devices_list[cAddr / 8] & (1 << (cAddr % 8))) && cAddr != 0xFF){
+    buf->read_index = (buf->read_index + cLen + 1) % RNET_MAX_BUFFER;
+    return FAILED;
+  }
 
   if(cLen == RNet_msg_len_NotWhole){
     uart.transmit("Message too short ", 17);

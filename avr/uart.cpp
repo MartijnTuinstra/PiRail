@@ -7,7 +7,7 @@
 
 static void uart_38400(void)
 {
-#define BAUD 250000
+#define BAUD 500000
 #include <util/setbaud.h>
 UBRR0H = UBRRH_VALUE;
 UBRR0L = UBRRL_VALUE;

@@ -53,6 +53,9 @@ typedef struct s_IO_Node {
   IO_Port ** io;
 } IO_Node;
 
+extern const char * IO_type_str[6];
+extern const char * IO_event_str[13];
+
 #define U_IO(a, b, c) Units[a]->Node[b].io[c]
 
 void Add_IO_Node(Unit * U, int Node_nr, int IO);
@@ -60,8 +63,6 @@ void Add_IO_Node(Unit * U, int Node_nr, int IO);
 void Init_IO(Unit * U, Node_adr adr, enum IO_type type);
 
 void update_IO();
-
-void str_IO_type(enum IO_type type, char * str);
-void str_IO_event(enum IO_event event, char * str);
+void IO_set_input(uint8_t module, uint8_t id, uint8_t port, uint8_t state);
 
 #endif

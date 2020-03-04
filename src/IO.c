@@ -54,10 +54,7 @@ void update_IO(){
     for(int n = 0; n < Units[u]->IO_Nodes; n++){
       for(int io = 0; io < Units[u]->Node[n].io_ports; io++){
         if(U_IO(u, n, io)->type == IO_Output && U_IO(u, n, io)->w_state != U_IO(u, n, io)->r_state){
-          char output[200];
-          sprintf(output, "Update io %02i:%02i:%02i", u, n, io);
-          str_IO_event(U_IO(u, n, io)->w_state, output);
-          loggerf(WARNING, "%s", output);
+          loggerf(WARNING, "Update io %02i:%02i:%02i %s", u, n, io, IO_event_str[U_IO(u, n, io)->w_state]);
           U_IO(u, n, io)->r_state = U_IO(u, n, io)->w_state;
         }
       }
@@ -65,67 +62,40 @@ void update_IO(){
   }
 }
 
+void IO_set_input(uint8_t module, uint8_t id, uint8_t port, uint8_t state){
+  if(!Units[module] || !Units[module]->Node || !U_IO(module,id,port))
+    return;
 
+  if(state){ // High
+    U_IO(module, id, port)->w_state = IO_event_High;
+    U_IO(module, id, port)->r_state = IO_event_High;
+  }
+  else{ // Low
+    U_IO(module, id, port)->w_state = IO_event_Low;
+    U_IO(module, id, port)->r_state = IO_event_Low;
+  }
+
+  if(U_IO(module, id, port)->type == IO_Input_Block){
+    ((Block *)U_IO(module, id, port)->object)->changed |= IO_Changed;
+    putAlgorQueue((Block *)U_IO(module, id, port)->object, 1);
+  }
+  else{
+    loggerf(CRITICAL, "Unknown io type %i", U_IO(module, id, port)->type);
+  }
+
+}
+
+const char * IO_type_str[6] = {
+  "IO_Undefined", "IO_Output", "IO_Input_Block", "IO_Input_Switch", "IO_Input_MSSwitch", "IO_Input"
+};
+const char * IO_event_str[13] = {
+  "IO_event_High", "IO_event_Low", "IO_event_Pulse", "IO_event_Blink1", "IO_event_Blink2",
+  "IO_event_Servo1", "IO_event_Servo2", "IO_event_Servo3", "IO_event_Servo4",
+  "IO_event_PWM1", "IO_event_PWM2", "IO_event_PWM3", "IO_event_PWM4"
+};
 
 void str_IO_type(enum IO_type type, char * str){
-  if(type == IO_Undefined){
-    sprintf(str, "%s IO_Undefined", str);
-  }
-  else if(type == IO_Output){
-    sprintf(str, "%s IO_Output", str);
-  }
-  else if(type == IO_Input_Block){
-    sprintf(str, "%s IO_Input_Block", str);
-  }
-  else if(type == IO_Input_Switch){
-    sprintf(str, "%s IO_Input_Switch", str);
-  }
-  else if(type == IO_Input_MSSwitch){
-    sprintf(str, "%s IO_Input_MSSwitch", str);
-  }
-  else if(type == IO_Input){
-    sprintf(str, "%s IO_Input", str);
-  }
+
 }
 void str_IO_event(enum IO_event event, char * str){
-  if(event == IO_event_High){
-    sprintf(str, "%s IO_event_High", str);
-  }
-  else if(event == IO_event_Low){
-    sprintf(str, "%s IO_event_Low", str);
-  }
-  else if(event == IO_event_Pulse){
-    sprintf(str, "%s IO_event_Pulse", str);
-  }
-  else if(event == IO_event_Blink1){
-    sprintf(str, "%s IO_event_Blink1", str);
-  }
-  else if(event == IO_event_Blink2){
-    sprintf(str, "%s IO_event_Blink2", str);
-  }
-
-  else if(event == IO_event_Servo1){
-    sprintf(str, "%s IO_event_Servo1", str);
-  }
-  else if(event == IO_event_Servo2){
-    sprintf(str, "%s IO_event_Servo2", str);
-  }
-  else if(event == IO_event_Servo3){
-    sprintf(str, "%s IO_event_Servo3", str);
-  }
-  else if(event == IO_event_Servo4){
-    sprintf(str, "%s IO_event_Servo4", str);
-  }
-  else if(event == IO_event_PWM1){
-    sprintf(str, "%s IO_event_PWM1", str);
-  }
-  else if(event == IO_event_PWM2){
-    sprintf(str, "%s IO_event_PWM2", str);
-  }
-  else if(event == IO_event_PWM3){
-    sprintf(str, "%s IO_event_PWM3", str);
-  }
-  else if(event == IO_event_PWM4){
-    sprintf(str, "%s IO_event_PWM4", str);
-  }
 }

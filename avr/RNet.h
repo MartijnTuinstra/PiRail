@@ -131,7 +131,7 @@
 
 #else
 
-#define RNET_TX_TICK 80
+#define RNET_TX_TICK 2000
 
 #endif
 
@@ -194,6 +194,7 @@ class RNet {
     #else
     void init(uint8_t dev, uint8_t node);
     #endif
+    void reset_bus();
     uint8_t getMsgSize(struct _RNet_buffer * msg);
     uint8_t getMsgSize(uint8_t * buf);
 

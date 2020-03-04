@@ -12,6 +12,7 @@
 #include "com.h"
 
 #include "system.h"
+#include "mem.h"
 
 #include "rail.h"
 #include "switch.h"
@@ -23,6 +24,8 @@
 
 #include "submodule.h"
 #include "websocket_msg.h"
+
+#include "../avr/RNet_msg.h"
 
 pthread_mutex_t mutex_UART;
 
@@ -39,6 +42,12 @@ void * UART(){
 
   _SYS->UART_State = _SYS_Module_Init;
   WS_stc_SubmoduleState();
+
+  struct fifobuffer uartbuffer;
+
+  memset(uartbuffer.buffer, 0, UART_BUFFER_SIZE);
+  uartbuffer.read = 0;
+  uartbuffer.write = 0;
 
   usleep(200000);
   _SYS->UART_State = _SYS_Module_Run;
@@ -67,15 +76,11 @@ void * UART(){
   tcflush(uart0_filestream, TCIFLUSH);
   tcsetattr(uart0_filestream, TCSANOW, &options);
 
-  char data[50];
-  memset(data,0,50);
-
   _SYS_change(STATE_COM_FLAG,0);
 
   while(_SYS->_STATE & STATE_RUN){
-    if(COM_Recv(data)){
-      COM_Parse(data);
-      memset(data,0,50);
+    if(COM_Recv(&uartbuffer)){
+      COM_Parse(&uartbuffer);
     }
     usleep(1000);
   }
@@ -103,133 +108,187 @@ void COM_Send(struct COM_t DATA){
   tcdrain(uart0_filestream);
 }
 
-int COM_Recv(char * OUT_Data){
+int COM_Recv(struct fifobuffer * buf){
   //Check if the filestream is open
   if(uart0_filestream == -1){
+    loggerf(CRITICAL , "UART no filestream");
+    _SYS->UART_State = _SYS_Module_Fail;
+    WS_stc_SubmoduleState();
     return 0;
   }
-  int index = 0;
 
-  //Create buffer and clear it
-  unsigned char data_buffer[256] = {0};
-  memset(data_buffer,0,256);
   while(1){
-    // Read up to 255 characters from the port if they are there
-      unsigned char rx_buffer[255];
+    //Filestream, buffer to store in, number of bytes to read (max)
+    uint8_t size = 8;
+    if(buf->write + size > UART_BUFFER_SIZE)
+      size = UART_BUFFER_SIZE - buf->write;
 
-      //Filestream, buffer to store in, number of bytes to read (max)
-    int rx_length = read(uart0_filestream, (void*)rx_buffer, 255);
+    int rx_length = read(uart0_filestream, (void*)buf->buffer, size);
     if (rx_length < 0)
     {
       //An error occured (will occur if there are no bytes)
+      loggerf(ERROR, "UART received error.");
     }
     else if (rx_length == 0)
     {
       //No data waiting
     }
-    else if (rx_length == 8)
+    else // some data waiting
     {
-      rx_buffer[rx_length] = '\0';
-      //printf("%i bytes read : %s\n", rx_length, rx_buffer);
-      for(int i = 0;i<8;i++){
-        data_buffer[index++] = rx_buffer[i];
-      }
+      loggerf(INFO, "%i-%i(%i) bytes read", rx_length, size, buf->write);
+      buf->write = (buf->write + rx_length) % UART_BUFFER_SIZE;
+
+      if(rx_length < size)
+        break;
     }
-    else
-    {
-      //Bytes received
-      rx_buffer[rx_length] = '\0';
-      //printf("%i bytes read : %s\n", rx_length, rx_buffer);
-      for(int i = 0;i<rx_length;i++){
-        data_buffer[index++] = rx_buffer[i];
-      }
-      break;
-    }
-    return index;
+    return 1;
   }
 
-  for(int i = 0;i<index;i++){
-    OUT_Data[i] = data_buffer[i];
-  }
-  return index;
+  return 1;
 }
 
-uint8_t COM_Packet_Length(char * Data){
-  uint8_t Opcode = Data[0];
-  if(Opcode == COMopc_EmergencyEn ||
-      Opcode == COMopc_EmergencyDis ||
-      Opcode == COMopc_PowerON ||
-      Opcode == COMopc_PowerOFF   ){
+uint8_t COM_Packet_Length(struct fifobuffer * buf){
+  // uint8_t Opcode = buf->buffer[buf->read];
+  // if(Opcode == COMopc_EmergencyEn ||
+  //     Opcode == COMopc_EmergencyDis ||
+  //     Opcode == COMopc_PowerON ||
+  //     Opcode == COMopc_PowerOFF   ){
+  //   return 2;
+  // }else if(Opcode == COMopc_ACK || // Set Acknowledge
+  //     Opcode == COMopc_ReportID      ||
+  //     Opcode == COMopc_ReqOut_Bl    ||
+  //     Opcode == COMopc_ReqIn     ||
+  //     Opcode == COMopc_ReqEEPROM    ){
+  //   return 3;
+  // }else if(Opcode == COMopc_ChangeDevID  ){ 
+  //   return 4;
+  // }else if(Opcode == COMopc_SetIN_OUT || // Change input and output
+  //     Opcode == COMopc_TogSinAdr || // Toggle Single Address
+  //     Opcode == COMopc_PulSinAdr || // Pulse Single Address
+  //     Opcode == COMopc_TogBlSinAdr || // Blink Single Address
+  //     Opcode == COMopc_PostSinAdr    // Post Single Input Address
+  //     ){ 
+  //   return 5;
+  // }else{
+  //   return buf->buffer[(buf->read + 1) + UART_BUFFER_SIZE];
+  // }
+  uint8_t r = (buf->read + 1) % UART_BUFFER_SIZE;
+  if( (uint8_t)(buf->write - buf->read) % UART_BUFFER_SIZE < 2){
+    return UART_Msg_NotComplete;
+  }
+
+  if(buf->buffer[r] == RNet_OPC_DEV_ID ||
+     buf->buffer[r] == RNet_OPC_SetEmergency ||
+     buf->buffer[r] == RNet_OPC_RelEmergency ||
+     buf->buffer[r] == RNet_OPC_PowerON ||
+     buf->buffer[r] == RNet_OPC_PowerOFF ||
+     buf->buffer[r] == RNet_OPC_ResetALL){
     return 2;
-  }else if(Opcode == COMopc_ACK || // Set Acknowledge
-      Opcode == COMopc_ReportID      ||
-      Opcode == COMopc_ReqOut_Bl    ||
-      Opcode == COMopc_ReqIn     ||
-      Opcode == COMopc_ReqEEPROM    ){
-    return 3;
-  }else if(Opcode == COMopc_ChangeDevID  ){ 
-    return 4;
-  }else if(Opcode == COMopc_SetIN_OUT || // Change input and output
-      Opcode == COMopc_TogSinAdr || // Toggle Single Address
-      Opcode == COMopc_PulSinAdr || // Pulse Single Address
-      Opcode == COMopc_TogBlSinAdr || // Blink Single Address
-      Opcode == COMopc_PostSinAdr    // Post Single Input Address
-      ){ 
-    return 5;
-  }else{
-    return Data[1];
   }
+  else if (buf->buffer[r] == RNet_OPC_ACK){
+   return 3;
+  }
+  else if(buf->buffer[r] == RNet_OPC_ChangeID ||
+          buf->buffer[r] == RNet_OPC_SetCheck){
+    return 5;
+  }
+  else if (buf->buffer[r] == RNet_OPC_SetOutput ||
+           buf->buffer[r] == RNet_OPC_ChangeNode){
+    return 6;
+  }
+  else if(buf->buffer[r] == RNet_OPC_SetBlink){
+    return 9;
+  }
+  else if(buf->buffer[r] == RNet_OPC_ReadAll){
+    if( (uint8_t)(buf->write - buf->read) % UART_BUFFER_SIZE < 3){
+      return UART_Msg_NotComplete; // Not enough bytes
+    }
+    return 5+buf->buffer[(r+1)%UART_BUFFER_SIZE];
+  }
+  else if(buf->buffer[r] == RNet_OPC_SetAllOutput){
+    if( (uint8_t)(buf->write - buf->read) % UART_BUFFER_SIZE < 4){
+      return UART_Msg_NotComplete; // Not enough bytes
+    }
+    return (buf->buffer[(r+2)%UART_BUFFER_SIZE] + 1) / 2 + 5;
+  }
+  else if(buf->buffer[r] == RNet_OPC_ReadInput){
+    if( (uint8_t)(buf->write - buf->read) % UART_BUFFER_SIZE < 4){
+      return UART_Msg_NotComplete; // Not enough bytes
+    }
+    return buf->buffer[(r+2)%UART_BUFFER_SIZE] + 5;
+  }
+
+  loggerf(CRITICAL, "Lost frame spacing");
+  return 1;
 }
 
-void COM_Parse(char * Data){
-  uint8_t length = COM_Packet_Length(Data);
+void COM_Parse(struct fifobuffer * buf){
+  uint8_t length = COM_Packet_Length(buf);
+
+  uint8_t * data = _calloc(length, char);
 
   //Check Checksum
-  uint8_t Check = 0xFF;
-  for(uint8_t i = 0;i<(length-1);i++){
-    Check ^= Data[i];
+  uint8_t Check = UART_CHECKSUM_SEED;
+  uint8_t j = buf->read;
+
+  for(uint8_t i = 0;i<length;i++){
+    data[i] = buf->buffer[j];
+
+    if(i != 0 && i == length-1) // Don't copy address in checksum
+      Check ^= data[i];
+
+    j = (buf->read = (buf->read + 1) % UART_BUFFER_SIZE);
   }
 
-  if(Check != Data[length]){
+  if(Check != data[length]){
     printf("COM - Checksum doesn't match\n");
     return;
   }
 
-
-  switch (Data[0]){
-    case 0x00: //Report ID
-      //Add device to device list
-      for(uint8_t i = 0;i<unit_len;i++){
-        loggerf(ERROR, "FIX DEVICELIST");
-        // if(DeviceList[i] != 0){
-        //   DeviceList[i] = Data[1];
-        // }
-      }
-      break;
-    case 0x01: //Set Emergency STOP
-    case 0x02: //Release Emergency STOP
-    case 0x03: //Set Power ON
-    case 0x04: //Set Power OFF
-      break;
-    case 0x7F: //Acknowledge
-      COM_ACK = 1;
-      break;
-
-    case 0x16: //Post Output
-    case 0x17: //Post Blink Mask
-      COM_ACK = 1;//Response uses same flag
-      break;
-
-
-    case 0x05: //Post Single Input
-    case 0x06: //Post Multiple Input
-    case 0x07: //Post All input
-      break;
-
-    case 0x55: //Post EEPROM Values
-      COM_ACK = 1;//Response uses same flag
-      break;
+  if(data[1] == 0x00){ //Report ID
+    //Add device to device list
+    for(uint8_t i = 0;i<unit_len;i++){
+      loggerf(ERROR, "FIX DEVICELIST");
+      // if(DeviceList[i] != 0){
+      //   DeviceList[i] = Data[1];
+      // }
+    }
   }
+  else if(data[1] == 0x01){ //Set Emergency STOP
+  }
+  else if(data[1] == 0x02){ //Release Emergency STOP
+  }
+  else if(data[1] == 0x03){ //Set Power ON
+  }
+  else if(data[1] == 0x04){ //Set Power OFF
+  }
+  else if(data[1] == 0x7F){ //Acknowledge
+    COM_ACK = 1;
+
+  }
+  else if(data[1] == RNet_OPC_ReadInput){
+    uint8_t module = data[0];
+    uint8_t id = data[2];
+    uint8_t ports = data[3];
+    for(uint8_t i = 0; i < ports*8; i++){
+      IO_set_input(module, id, i, data[i/8] & (1 << (i%8)));
+    }
+  }
+  else if(data[1] == 0x17){ //Post Blink Mask
+    COM_ACK = 1;//Response uses same flag
+  }
+  else if(data[1] == 0x05){ //Post Single Input
+  }
+  else if(data[1] == 0x06){ //Post Multiple Input
+  }
+  else if(data[1] == 0x07){ //Post All input
+
+  }
+  else if(data[1] == 0x55){ //Post EEPROM Values
+    COM_ACK = 1;//Response uses same flag
+  }
+
+  _free(data);
 }
 
 void COM_change_A_signal(int M){
@@ -238,9 +297,9 @@ void COM_change_A_signal(int M){
 
 void COM_DevReset(){
   struct COM_t Tx;
-  Tx.data[0] = COMopc_RESET;
+  Tx.data[0] = 0xFF;  //Broadcast
+  Tx.data[1] = RNet_OPC_DEV_ID;
   Tx.length  = 2;
-  Tx.data[1] = 0xFF ^ COMopc_RESET;
   COM_Send(Tx);
 }
 

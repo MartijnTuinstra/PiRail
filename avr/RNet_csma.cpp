@@ -39,6 +39,9 @@ void RNet::add_to_tx_buf(uint8_t data){
   }
 }
 
+void RNet::reset_bus(){
+}
+
 void RNet::calculateTxChecksum(){
   uint8_t checksum = RNET_CHECKSUM_SEED;
   for(uint8_t i = tx.read_index; i != tx.write_index; i = (i+1)%RNET_MAX_BUFFER){

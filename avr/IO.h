@@ -76,17 +76,17 @@ enum IO_event {
 #define _portModeRegister(P) ( (volatile uint8_t *)( pgm_read_word( ddrlist + (P))) )
 #define _portInputRegister(P) ( (volatile uint8_t *)( pgm_read_word( pinlins + (P))) )
 
-extern const uint16_t PROGMEM _PORT[];
+// extern const uint16_t PROGMEM _PORT[];
 
-extern const uint16_t PROGMEM _DDR[];
+// extern const uint16_t PROGMEM _DDR[];
 
-extern const uint16_t PROGMEM _PIN[];
+// extern const uint16_t PROGMEM _PIN[];
 
-extern uint8_t pin_to_Port[];
+// extern uint8_t pin_to_Port[];
 
-extern uint8_t pin_to_BIT[];
+// extern uint8_t pin_to_BIT[];
 
-
+#ifndef IO_SPI
 
 const uint16_t PROGMEM portlist[] = {
 	#if defined(__AVR_ATmega64A__) || defined(__AVR_ATmega2560__)
@@ -213,9 +213,10 @@ const uint16_t PROGMEM pinlist[] = {
 	};
 #endif
 
-#ifdef IO_SPI
+#else // IO_SPI
 	#undef MAX_PORTS
 	#define MAX_PORTS 6
+	#define MAX_PINS 0
 #endif
 
 class IO {

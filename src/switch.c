@@ -306,12 +306,16 @@ int Switch_Set_Path(void * p, struct rail_link link, int flags){
 
   //Check if switch is occupied
   if (link.type == RAIL_LINK_S || link.type == RAIL_LINK_s) {
-    if(((Switch *)link.p)->Detection && ((Switch *)link.p)->Detection->state == RESERVED_SWITCH)
+    if(((Switch *)link.p)->Detection && ((Switch *)link.p)->Detection->state == RESERVED_SWITCH){
+      loggerf(ERROR, "Switch allready Reserved");
       return 0;
+    }
   }
   else if (link.type >= RAIL_LINK_MA && link.type <= RAIL_LINK_mb) {
-    if(((MSSwitch *)link.p)->Detection && ((Switch *)link.p)->Detection->state == RESERVED_SWITCH)
+    if(((MSSwitch *)link.p)->Detection && ((Switch *)link.p)->Detection->state == RESERVED_SWITCH){
+      loggerf(ERROR, "Switch allready Reserved");
       return 0;
+    }
   }
 
 
@@ -329,13 +333,13 @@ int Switch_Set_Path(void * p, struct rail_link link, int flags){
     // Check if switch is in correct state
     // and continue to next switch
     Switch * N = link.p;
-    loggerf(TRACE, "set s (state: %i, str.p: %x, div.p: %x)", (N->state & 0x7F), (unsigned int)N->str.p, (unsigned int)N->div.p);
+    loggerf(TRACE, "set s %i (state: %i, str.p: %x, div.p: %x)", N->id, (N->state & 0x7F), (unsigned int)N->str.p, (unsigned int)N->div.p);
     if((N->state & 0x7F) == 0){
       if(N->str.p != p)
         throw_switch(N, 1, 1);
 
-      if(N->str.p != p)
-        return 0; // Failed to set switch
+      // if(N->str.p != p)
+      //   return 0; // Failed to set switch
 
       return Switch_Set_Path(N, N->app, flags);
     }
@@ -343,8 +347,8 @@ int Switch_Set_Path(void * p, struct rail_link link, int flags){
       if(N->div.p != p)
         throw_switch(N, 0, 1);
 
-      if(N->div.p != p)
-        return 0; // Failed to set switch
+      // if(N->div.p != p)
+      //   return 0; // Failed to set switch
 
       return Switch_Set_Path(N, N->app, flags);
     }
@@ -364,7 +368,18 @@ int Switch_Set_Path(void * p, struct rail_link link, int flags){
     }
   }
 
-  else if (link.type == RAIL_LINK_R || link.type == 'D'){
+  else if (link.type == RAIL_LINK_R){
+    Block * B = link.p;
+    loggerf(TRACE, "check B %i", B->id);
+    if(B->type != NOSTOP)
+      return 1; // Train can stop on the block, so a possible path
+
+    if(B->next.p == p)
+      return Switch_Set_Path(B, B->prev, flags);
+    else if(B->prev.p == p)
+      return Switch_Set_Path(B, B->next, flags);
+  }
+  else if(link.type == 'D'){
     return 1;
   }
   return 0;
@@ -383,12 +398,11 @@ int Switch_Reserve_Path(void * p, struct rail_link link, int flags){
     Switch * Sw = link.p;
     Block * DB = Sw->Detection;
 
-    Block_reserve(DB);
     DB->state = RESERVED_SWITCH;
     DB->reserved = 1;
     DB->statechanged = 1;
     Units[DB->module]->block_state_changed = 1;
-    loggerf(INFO, "Set switch %02i:%02i to RESERVED", Sw->module, Sw->id);
+    loggerf(TRACE, "Set switch %02i:%02i to RESERVED", Sw->module, Sw->id);
 
     if((Sw->state & 0x7F) == 0 && Sw->str.type != RAIL_LINK_R && Sw->str.type != 'D'){
       return Switch_Reserve_Path(Sw, Sw->str, flags);
@@ -403,12 +417,11 @@ int Switch_Reserve_Path(void * p, struct rail_link link, int flags){
     Switch * Sw = link.p;
     Block * DB = Sw->Detection;
 
-    Block_reserve(DB);
     DB->state = RESERVED_SWITCH;
     DB->reserved = 1;
     DB->statechanged = 1;
     Units[DB->module]->block_state_changed = 1;
-    loggerf(INFO, "Set switch %02i:%02i to RESERVED", Sw->module, Sw->id);
+    loggerf(TRACE, "Set switch %02i:%02i to RESERVED", Sw->module, Sw->id);
 
     return Switch_Reserve_Path(Sw, Sw->app, flags);
   }
@@ -427,7 +440,18 @@ int Switch_Reserve_Path(void * p, struct rail_link link, int flags){
     }
   }
 
-  else if (link.type == RAIL_LINK_R || link.type == 'D'){
+  else if (link.type == RAIL_LINK_R){
+    Block * B = link.p;
+    loggerf(TRACE, "check B %i", B->id);
+    if(B->type != NOSTOP)
+      return 1; // Train can stop on the block, so a possible path
+
+    if(B->next.p == p)
+      return Switch_Set_Path(B, B->prev, flags);
+    else if(B->prev.p == p)
+      return Switch_Set_Path(B, B->next, flags);
+  }
+  else if(link.type == 'D'){
     return 1;
   }
   return 0;
@@ -448,23 +472,24 @@ int Switch_Check_Path(void * p, struct rail_link link, int flags){
   }
   else if(link.type == RAIL_LINK_S){
     Switch * Sw = link.p;
-    if((Sw->state & 0x7F) == 0 && Sw->str.type != RAIL_LINK_R && Sw->str.type != 'D'){
+    loggerf(TRACE, "check S %i (state: %i)", Sw->id, (Sw->state & 0x7F));
+    if((Sw->state & 0x7F) == 0){
       return Switch_Check_Path(Sw, Sw->str, flags);
     }
-    else if((Sw->state & 0x7F) == 1 && Sw->div.type != RAIL_LINK_R && Sw->div.type != 'D'){
+    else if((Sw->state & 0x7F) == 1){
       return Switch_Check_Path(Sw, Sw->div, flags);
     }
   }
   else if(link.type == RAIL_LINK_s){
     Switch * N = link.p;
-    loggerf(INFO, "check s (state: %i, str.p: %x, div.p: %x)", (N->state & 0x7F), (unsigned int)N->str.p, (unsigned int)N->div.p);
+    loggerf(TRACE, "check s %i (state: %i, str.p: %x, div.p: %x)", N->id, (N->state & 0x7F), (unsigned int)N->str.p, (unsigned int)N->div.p);
     if((N->state & 0x7F) == 0 && N->str.p == p){
       return Switch_Check_Path(N, N->app, flags);
     }
     else if((N->state & 0x7F) == 1 && N->div.p == p){
       return Switch_Check_Path(N, N->app, flags);
     }
-    loggerf(INFO, "wrong State");
+    loggerf(ERROR, "wrong State %x", N->state);
   }
   else if(link.type == RAIL_LINK_MA || link.type == RAIL_LINK_MB){
     loggerf(WARNING, "IMPLEMENT");
@@ -481,8 +506,22 @@ int Switch_Check_Path(void * p, struct rail_link link, int flags){
     }
   }
 
-  else if (link.type == RAIL_LINK_R || link.type == 'D'){
+  else if (link.type == RAIL_LINK_R){
+
+    Block * B = link.p;
+
+    loggerf(TRACE, "check B %i", B->id);
+    if(B->type != NOSTOP)
+      return 1; // Train can stop on the block, so a possible path
+
+    if(B->next.p == p)
+      return Switch_Check_Path(B, B->prev, flags);
+    else if(B->prev.p == p)
+      return Switch_Check_Path(B, B->next, flags);
+  }
+  else if(link.type == 'D'){
     return 1;
   }
+  loggerf(ERROR, "Done checking");
   return 0;
 }

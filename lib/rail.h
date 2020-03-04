@@ -84,7 +84,7 @@ struct rail_link {
 enum Rail_types {
   MAIN,
   STATION,
-  SPECIAL,
+  NOSTOP,
   TURNTABLE
 };
 

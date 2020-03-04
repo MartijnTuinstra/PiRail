@@ -44,7 +44,7 @@ void print_Block(struct s_block_conf block){
   const char * rail_types_string[4] = {
     "MAIN",
     "STATION",
-    "SWITCHBLOCK",
+    "NOSTOP",
     "TURNTABLE"
   };
 

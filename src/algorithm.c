@@ -247,8 +247,8 @@ void Algor_process(Block * B, int flags){
   }
   
   // Print all found blocks
-  if(flags & _DEBUG)
-    Algor_print_block_debug(B);
+  // if(flags & _DEBUG)
+  //   Algor_print_block_debug(B);
 
   //Apply block stating
   Algor_rail_state(B->Alg, flags);
@@ -344,7 +344,7 @@ void Algor_search_Blocks(Block * B, int debug){
 
   if(B->type == TURNTABLE){
     Algor_turntable_search_Blocks(B, debug);
-    Algor_print_block_debug(B);
+    // Algor_print_block_debug(B);
     return;
   }
 
@@ -1068,7 +1068,7 @@ void Algor_set_block_state(Block * B, enum Rail_states state){
   B->state = state;
   B->statechanged = 1;
   Units[B->module]->block_state_changed |= 1;
-  loggerf(TRACE, "%02i:%02i -> %s", B->module, B->id, rail_states_string[state]);
+  loggerf(INFO, "%02i:%02i -> %s", B->module, B->id, rail_states_string[state]);
 }
 
 void Algor_set_blocks_state(Block ** B, uint8_t length, enum Rail_states state){
@@ -1236,20 +1236,33 @@ void Algor_train_following(Algor_Blocks * ABs, int debug){
         loggerf(ERROR, "Blocked and next is switch lane %x", (unsigned int)B);
         Block * tB = BN[i+1];
 
-        if(!dircmp(B, tB)){
-          loggerf(WARNING, "REVERSE BLOCK %02i:%02i after switchlane", tB->module, tB->id);
+        if(!dircmp(B, BN[i])){
+          loggerf(WARNING, "REVERSE NEXT SWITCH BLOCK %02i:%02i", BN[i]->module, BN[i]->id);
+          Block_Reverse(&BN[i]->Alg);
+        }
+
+        if(tB->state != RESERVED_SWITCH){
+          if(!dircmp(B, tB)){
+            loggerf(WARNING, "REVERSE BLOCK %02i:%02i after switchlane", tB->module, tB->id);
+            Block_Reverse(&tB->Alg);
+            Block_reserve(tB);
+            //void Block_Reverse(B);
+            Block_Reverse_To_Next_Switch(tB);
+          }
+          else if(tB->state != RESERVED){
+            loggerf(WARNING, "RESERVE BLOCK %02i:%02i until switchlane", tB->module, tB->id);
+            //reserve untill next switchlane
+            Block_reserve(tB);
+            Reserve_To_Next_Switch(tB);
+          }
+        }
+        else if(!dircmp(B, tB)){
+          loggerf(WARNING, "REVERSE SWITCH BLOCK %02i:%02i", tB->module, tB->id);
           Block_Reverse(&tB->Alg);
-          Block_reserve(tB);
-          //void Block_Reverse(B);
-          Block_Reverse_To_Next_Switch(tB);
+          continue;
         }
-        else if(tB->state != RESERVED){
-          loggerf(WARNING, "RESERVE BLOCK %02i:%02i until switchlane", tB->module, tB->id);
-          //reserve untill next switchlane
-          Block_reserve(tB);
-          Reserve_To_Next_Switch(tB);
-        }
-	break;
+
+	      break;
       }
     }
   }

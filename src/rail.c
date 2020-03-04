@@ -209,11 +209,6 @@ Block * _Next(Block * B, int flags, int level){
 
   level--;
 
-  if(B->type == SPECIAL){
-    loggerf(ERROR, "IMPLEMENT SPECIAL BLOCK");
-    return 0;
-  }
-
   struct rail_link next;
 
   uint8_t pdir = (dir >> 1);
@@ -477,9 +472,11 @@ void Block_Reverse(Algor_Blocks * AB){
   //_ALGOR_BLOCK_APPLY(_ABl, _A, _B, _C) if(_ABl->len == 0){_A}else{_B;for(uint8_t i = 0; i < _ABl->len; i++){_C}}
   int tmp_state;
   AB->B->dir ^= 0b100;
-  tmp_state = AB->B->state;
-  AB->B->state = AB->B->reverse_state;
-  AB->B->reverse_state = tmp_state;
+  if(AB->B->state != RESERVED_SWITCH){
+    tmp_state = AB->B->state;
+    AB->B->state = AB->B->reverse_state;
+    AB->B->reverse_state = tmp_state;
+  }
 
   uint8_t len = 0;
   if(AB->next > AB->prev)

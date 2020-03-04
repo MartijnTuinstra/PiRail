@@ -1,0 +1,2 @@
+14:44:54 - [32m  INFO   -            modules.c: 173 - Reading Module 0 (2733 b)[0m
+14:44:54 - [32m  INFO   -            modules.c:  57 - Clearing module 0[0m

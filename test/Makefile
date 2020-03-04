@@ -1,6 +1,6 @@
 
 files=system logger mem modules config rail signals switch IO algorithm encryption \
-      websocket websocket_msg websocket_control Z21 Z21_msg train submodule com sim
+      websocket websocket_msg websocket_control Z21 Z21_msg train submodule com sim pathfinding
 BIN=../bin
 object=$(addprefix $(BIN)/,$(addsuffix .o, $(files)))
 

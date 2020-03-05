@@ -174,6 +174,7 @@ void * Algor_Run(){
     usleep(1000);
   }
 
+  SYS_set_state(&SYS->LC.state, Module_Stop);
   loggerf(INFO, "Algor_run done");
   return 0;
 }

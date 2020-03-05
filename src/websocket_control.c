@@ -195,7 +195,7 @@ uint8_t websocket_client_first_connect(struct web_client_t * client, char * buf,
   // ws_send(client->fd, data, 3, 0xFF);
 
   //Send submodule status
-  WS_stc_SubmoduleState();
+  WS_stc_SubmoduleState(0);
   
   //Send track layout and data
   if(SYS->modules_loaded){

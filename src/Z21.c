@@ -32,8 +32,7 @@ void Z21_boot(){
 void * Z21(){
   pthread_join(SYS->Z21.th, NULL);
   z21_connected = 1;
-  SYS->Z21.state = Module_Init;
-  WS_stc_SubmoduleState();
+  SYS_set_state(&SYS->Z21.state, Module_Init);
 
   loggerf(INFO, "Connecting to Z21");
   int ret = 0;
@@ -50,12 +49,12 @@ void * Z21(){
   if(ret == 1){
     loggerf(INFO, "Connected Succesfully to Z21");
     SYS->Z21.state = Module_Run;
+    SYS_set_state(&SYS->Z21.state, Module_Run);
   }
   else{
     z21_connected = 0;
-    SYS->Z21.state = Module_Fail;
+    SYS_set_state(&SYS->Z21.state, Module_Fail);
   }
-  WS_stc_SubmoduleState();
   pthread_create(&SYS->Z21.th, NULL, Z21_run, NULL);
   return 0;
 }

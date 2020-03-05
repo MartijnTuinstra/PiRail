@@ -158,7 +158,7 @@ void WS_stc_Z21_IP(struct web_client_t * client){
     ws_send_all((char *)data, 7, 0xff);
 }
 
-void WS_stc_SubmoduleState(){
+void WS_stc_SubmoduleState(struct web_client_t * client){
   char data[5];
   data[0] = WSopc_SubModuleState;
 
@@ -169,7 +169,10 @@ void WS_stc_SubmoduleState(){
   data[3] = (SYS->TC.state & 0xF) << 4;
   data[4] = ((SYS->SimA.state & 0xF) << 4) | (SYS->SimB.state & 0xF);
 
-  ws_send_all(data, 5, 0xFF);
+  if(client)
+    ws_send(client, (char *)data, 5, 0xff);
+  else
+    ws_send_all((char *)data, 5, 0xff);
 }
 
 //Admin Messages

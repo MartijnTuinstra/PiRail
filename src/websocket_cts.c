@@ -19,6 +19,7 @@
 #include "train.h"
 #include "logger.h"
 #include "config.h"
+#include "algorithm.h"
 
 #include "modules.h"
 #include "Z21.h"
@@ -36,11 +37,11 @@ websocket_cts_func websocket_cts[256] = {
   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 
   // 0x10 WSopc_EmergencyStop
-  0,
+  (void (*)(void *, struct web_client_t *))&WS_cts_SetEmergencyStop,
   // 0x11 WSopc_ShortCircuitStop
   0,
   // 0x12 WSopc_ClearEmergency
-  0,
+  (void (*)(void *, struct web_client_t *))&WS_cts_ClearEmergency,
   // 0x13 WSopc_NewMessage
   0,
   // 0x14 WSopc_UpdateMessage
@@ -57,9 +58,9 @@ websocket_cts_func websocket_cts[256] = {
   0,0,0,0,0,0,0,
 
   // 0x20 WSopc_SetSwitch
-  0,
+  (void (*)(void *, struct web_client_t *))&WS_cts_SetSwitch,
   // 0x21 WSopc_SetMultiSwitch
-  0,
+  (void (*)(void *, struct web_client_t *))&WS_cts_SetMultiSwitch,
   // 0x22 WSopc_SetSwitchReserved
   0,
   // 0x23 WSopc_ChangeSwitchReserved
@@ -77,12 +78,12 @@ websocket_cts_func websocket_cts[256] = {
 
   // 0x30 WSopc_TrackLayoutOnlyRawData
   0,
-  // 0x31 WSopc_TrackLayoutRawData
-  0, // (void (*)(void *, struct web_client_t *))&WS_stc_TrackLayoutRawData,
+  // 0x31
+  (void (*)(void *, struct web_client_t *))&WS_cts_TrackLayoutRawData,
   // 0x32 Reserved
   0,
-  // 0x33 WSopc_TrackLayoutUpdateRaw
-  0,
+  // 0x33
+  (void (*)(void *, struct web_client_t *))&WS_cts_TrackLayoutUpdate,
   // 0x34 - 0x35 Reserved
   0,0,
   // 0x36 WSopc_StationLibrary
@@ -100,7 +101,7 @@ websocket_cts_func websocket_cts[256] = {
   0,
   // 0x44
   (void (*)(void *, struct web_client_t *))&WS_cts_TrainControl,
-  // 0x45 stc only
+  // 0x45 WSopc_TrainUpdate
   0,
   // 0x46
   (void (*)(void *, struct web_client_t *))&WS_cts_TrainRoute,
@@ -118,13 +119,13 @@ websocket_cts_func websocket_cts[256] = {
   // 0x53
   (void (*)(void *, struct web_client_t *))&WS_cts_AddCartoLib,
   // 0x54 WSopc_EditCarlib
-  0,
+  (void (*)(void *, struct web_client_t *))&WS_cts_Edit_Car,
   // 0x55 WSopc_CarsLibrary
   0,
   // 0x56 WSopc_AddNewTraintolib
   (void (*)(void *, struct web_client_t *))&WS_cts_AddTraintoLib,
   // 0x57 WSopc_EditTrainlib
-  0,
+  (void (*)(void *, struct web_client_t *))&WS_cts_Edit_Train,
   // 0x58 WSopc_TrainsLibrary
   0,
   // 0x59 Reserved
@@ -143,7 +144,7 @@ websocket_cts_func websocket_cts[256] = {
   // 0x91 WSopc_DisableSubModule
   (void (*)(void *, struct web_client_t *))&WS_cts_Disable_SubmoduleState,
   // 0x92 WSopc_SubModuleState
-  0,
+  (void (*)(void *, struct web_client_t *))&WS_cts_SubmoduleState,
   // 0x93 - 0x9E Reserved
   0,0,0,0,0,0,0,0,0,0,0,0,
   // 0x9F WSopc_RestartApplication
@@ -159,20 +160,72 @@ websocket_cts_func websocket_cts[256] = {
   // 0xC2 - 0xCD Reserved
   0,0,0,0,0,0,0,0,0,0,0,0,
   // 0xCE WSopc_Admin_Logout
-  0,
+  (void (*)(void *, struct web_client_t *))&WS_cts_Admin_Logout,
   // 0xCF WSopc_Admin_Login
-  0,
+  (void (*)(void *, struct web_client_t *))&WS_cts_Admin_Login,
 
   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // Dx
   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // Ex
   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // Fx
 };
 
+void WS_cts_SetSwitch(struct s_opc_SetSwitch * data, struct web_client_t * client){
+  if(data->mssw){
+    loggerf(INFO, "SetMSSw %2x %2x", data->module, data->id);
+    if(Units[data->module] && U_MSSw(data->module, data->id)){
+      loggerf(INFO, "throw msswitch %i:%i to state: \t%i->%i",
+              data->module, data->id, U_MSSw(data->module, data->id)->state, data->state);
+      lock_Algor_process();
+      throw_msswitch(U_MSSw(data->module, data->id), data->state, 1);
+      unlock_Algor_process();
+    }
+  }
+  else{
+    loggerf(INFO, "SetSw %2x %2x", data->module, data->id);
+    if(Units[data->module] && U_Sw(data->module, data->id)){ //Check if switch exists
+      loggerf(INFO, "throw switch %i:%i to state: \t%i->%i",
+              data->module, data->id, U_Sw(data->module, data->id)->state, !U_Sw(data->module, data->id)->state);
+      lock_Algor_process();
+      throw_switch(U_Sw(data->module, data->id), data->state, 1);
+      unlock_Algor_process();
+    }
+  }
+}
+
+void WS_cts_SetMultiSwitch(struct s_opc_SetMultiSwitch * data, struct web_client_t * client){
+  loggerf(INFO, "Throw multiple switches\n");
+  lock_Algor_process();
+  throw_multiple_switches(data->nr, (char *)data->switches);
+  unlock_Algor_process();
+}
+
+void WS_cts_SetEmergencyStop(void * data, struct web_client_t * client){
+  WS_stc_EmergencyStop();
+  Z21_TRACKPOWER_OFF;
+}
+
+void WS_cts_ClearEmergency(void * data, struct web_client_t * client){
+  WS_stc_ClearEmergency();
+  Z21_TRACKPOWER_ON;
+}
+
+void WS_cts_ChangeBroadcast(struct s_opc_ChangeBroadcast * data, struct web_client_t * client){
+  if(data->flags & 0x10){ //Admin flag
+    loggerf(WARNING, "Changing admin flag: NOT ALLOWED");
+    return; //Not allowed to set admin flag
+  }else if(data->flags != 0){
+    client->type = data->flags;
+    loggerf(DEBUG, "Changing flags");
+  }
+  loggerf(DEBUG,"Websocket:\t%02x - New flag for client %d\n",client->type, client->id);
+  ws_send(client,(char [2]){WSopc_ChangeBroadcast,client->type},2,255);
+}
+
 //System Messages
 void WS_cts_Enable_SubmoduleState(struct s_opc_enabledisableSubmoduleState * state, struct web_client_t * client){
   loggerf(INFO, "WSopc_EnableSubModule");
   if(state->flags & 0x80){ //Websocket
-    SYS->WebSocket.state = Module_Run;
+    SYS_set_state(&SYS->WebSocket.state, Module_Run);
   }
   else if(state->flags & 0x40){ //Z21
     Z21_start();
@@ -189,12 +242,11 @@ void WS_cts_Enable_SubmoduleState(struct s_opc_enabledisableSubmoduleState * sta
   else if(state->flags & 0x02){ //SimB
     SimB_start();
   }
-  WS_stc_SubmoduleState();
 }
 void WS_cts_Disable_SubmoduleState(struct s_opc_enabledisableSubmoduleState * state, struct web_client_t * client){
   loggerf(INFO, "WSopc_DisableSubModule");
   if(state->flags & 0x80){  //Websocket
-    SYS->WebSocket.state = Module_Init;
+    SYS_set_state(&SYS->WebSocket.state, Module_Init);
   }
   else if(state->flags & 0x40){ // Z21
     Z21_stop();
@@ -206,12 +258,15 @@ void WS_cts_Disable_SubmoduleState(struct s_opc_enabledisableSubmoduleState * st
     Algor_stop();
   }
   else if(state->flags & 0x04){
-    SYS->SimA.state = Module_STOP;
+    SYS_set_state(&SYS->SimA.state, Module_STOP);
   }
   else if(state->flags & 0x02){
-    SYS->SimB.state = Module_STOP;
+    SYS_set_state(&SYS->SimB.state, Module_STOP);
   }
-  WS_stc_SubmoduleState();
+}
+
+void WS_cts_SubmoduleState(void * d, struct web_client_t * client){
+  WS_stc_SubmoduleState(client);
 }
 
 //Admin Messages
@@ -413,42 +468,66 @@ void WS_cts_AddCartoLib(struct s_opc_AddNewCartolib * data, struct web_client_t 
   _free(sicon);
 }
 
-void WS_cts_Edit_Car(Cars * C, struct s_opc_AddNewCartolib * data, struct web_client_t * client){
+void WS_cts_Edit_Car(struct s_opc_EditCarlib * data, struct web_client_t * client){
   loggerf(DEBUG, "WS_cts_Edit_Car");
   struct s_WS_Data * rdata = _calloc(1, sizeof(struct s_WS_Data));
 
   rdata->opcode = WSopc_AddNewCartolib;
-  rdata->data.opc_AddNewCartolib_res.nr = data->nr;
+  rdata->data.opc_AddNewCartolib_res.nr = data->data.nr;
 
-  C->name = _realloc(C->name, data->name_len + 1, 1);
-  memcpy(C->name, &data->strings, data->name_len);
-  C->name[data->name_len] = 0;
+  uint16_t id = data->id_l + (data->id_h << 8);
 
-  char * filename = _calloc(data->name_len +1,1);
-  memcpy(filename, C->name, data->name_len);
+  if(data->remove){
+    if(cars[id]){
+      Clear_Car(&cars[id]);
+
+      rdata->data.opc_AddNewCartolib_res.response = 1;
+    }
+    else
+      rdata->data.opc_AddNewCartolib_res.response = 0;
+
+    ws_send(client, (char *)rdata, WSopc_AddNewCartolib_res_len, 0xff);
+    return;
+  }
+
+  // Check if car exists
+  if(!cars[id]){
+    rdata->data.opc_AddNewCartolib_res.response = 0;
+    ws_send(client, (char *)rdata, WSopc_AddNewCartolib_res_len, 0xff);
+    return;
+  }
+
+  Cars * C = cars[id];
+
+  C->name = _realloc(C->name, data->data.name_len + 1, 1);
+  memcpy(C->name, &data->data.strings, data->data.name_len);
+  C->name[data->data.name_len] = 0;
+
+  char * filename = _calloc(data->data.name_len +1,1);
+  memcpy(filename, C->name, data->data.name_len);
   for (char* current_pos = NULL; (current_pos = strchr(filename, ' ')) != NULL; *current_pos = '_');
   for (char* current_pos = NULL; (current_pos = strchr(filename, '.')) != NULL; *current_pos = '-');
     loggerf(WARNING, "Filename: %s", filename);
 
-  C->length = data->length;
-  C->type = data->type;
+  C->length = data->data.length;
+  C->type = data->data.type;
 
   char * sicon = _calloc(40, 1); //Source file
 
-  uint16_t icon_time = (data->timing / 60) * 100 + (data->timing % 60);
+  uint16_t icon_time = (data->data.timing / 60) * 100 + (data->data.timing % 60);
 
   loggerf(ERROR, "%04i", icon_time);
 
   char * dicon = 0;
 
   if(icon_time < 3000){
-    C->icon_path = _realloc(C->icon_path, data->name_len + 8 + 3 + 20, 1); //Destination file
-    if((data->filetype & 0b1) == 0){
-      sprintf(C->icon_path, "%iC_%s.%s", data->nr, filename, "png");
+    C->icon_path = _realloc(C->icon_path, data->data.name_len + 8 + 3 + 20, 1); //Destination file
+    if((data->data.filetype & 0b1) == 0){
+      sprintf(C->icon_path, "%iC_%s.%s", data->data.nr, filename, "png");
       sprintf(sicon, "%s.%04i.%s", "web/tmp_icon", icon_time, "png");
     }
     else{
-      sprintf(C->icon_path, "%iC_%s.%s", data->nr, filename, "jpg");
+      sprintf(C->icon_path, "%iC_%s.%s", data->data.nr, filename, "jpg");
       sprintf(sicon, "%s.%04i.%s", "web/tmp_icon", icon_time, "jpg");
     }
     dicon = _calloc(strlen(C->icon_path)+20, 1);
@@ -464,7 +543,7 @@ void WS_cts_Edit_Car(Cars * C, struct s_opc_AddNewCartolib * data, struct web_cl
     char filetype[5];
     sprintf(filetype, "%s", &C->icon_path[strlen(C->icon_path)-3]);
 
-    sprintf(C->icon_path, "%iC_%s.%s", data->nr, filename, filetype);
+    sprintf(C->icon_path, "%iC_%s.%s", data->data.nr, filename, filetype);
     dicon = _calloc(strlen(C->icon_path)+20, 1);
     sprintf(dicon, "%s%s", "web/trains_img/", C->icon_path);
 
@@ -479,6 +558,9 @@ void WS_cts_Edit_Car(Cars * C, struct s_opc_AddNewCartolib * data, struct web_cl
 
   _free(dicon);
   _free(sicon);
+
+  write_rolling_Configs();
+  WS_stc_CarsLib(0);
 }
 
 void WS_cts_AddEnginetoLib(struct s_opc_AddNewEnginetolib * data, struct web_client_t * client){
@@ -725,22 +807,36 @@ void WS_cts_AddTraintoLib(struct s_opc_AddNewTraintolib * data, struct web_clien
   WS_stc_TrainsLib(0);
 }
 
-void WS_cts_Edit_Train(Trains * T, struct s_opc_AddNewTraintolib * data, struct web_client_t * client){
+void WS_cts_Edit_Train(struct s_opc_EditTrainlib * data, struct web_client_t * client){
   loggerf(ERROR, "WS_cts_Edit_Train ");
   struct s_WS_Data * rdata = _calloc(1, sizeof(struct s_WS_Data));
 
   rdata->opcode = WSopc_AddNewTraintolib;
 
+  uint16_t id = data->id_l + (data->id_h << 8);
+  if(data->remove){
+    if(trains[id]){
+      Clear_Train(&trains[id]);
+      rdata->data.opc_AddNewTraintolib_res.response = 1;
+    }
+    else
+      rdata->data.opc_AddNewTraintolib_res.response = 0;
+    ws_send(client, (char *)rdata, WSopc_AddNewTraintolib_res_len, 0xff);
+    return;
+  }
+
+  Trains * T = trains[id];
+
   //Copy name
-  T->name = _realloc(T->name, data->name_len + 1, 1);
-  memcpy(T->name, &data->strings, data->name_len);
-  T->name[data->name_len] = 0;
+  T->name = _realloc(T->name, data->data.name_len + 1, 1);
+  memcpy(T->name, &data->data.strings, data->data.name_len);
+  T->name[data->data.name_len] = 0;
 
   // Copy traincomp
-  T->composition = _realloc(T->composition, data->nr_stock, sizeof(struct train_comp));
-  T->nr_stock = data->nr_stock;
+  T->composition = _realloc(T->composition, data->data.nr_stock, sizeof(struct train_comp));
+  T->nr_stock = data->data.nr_stock;
 
-  struct train_comp_ws * cdata = (void *)&data->strings + data->name_len;
+  struct train_comp_ws * cdata = (void *)&data->data.strings + data->data.name_len;
   for(int c = 0; c<T->nr_stock; c++){
     T->composition[c].type = cdata[c].type;
     T->composition[c].id = cdata[c].id;
@@ -755,5 +851,45 @@ void WS_cts_Edit_Train(Trains * T, struct s_opc_AddNewTraintolib * data, struct 
   // Send success response
   rdata->data.opc_AddNewTraintolib_res.response = 1;
   ws_send(client, (char *)rdata, WSopc_AddNewTraintolib_res_len, 0xff);
+
+  write_rolling_Configs();
+  WS_stc_TrainsLib(0);
 }
 
+void WS_cts_TrackLayoutRawData(struct s_opc_TrackLayoutRawData * data, struct web_client_t * client){
+  WS_stc_TrackLayoutRawData(data->module, client);
+}
+
+void WS_cts_TrackLayoutUpdate(struct s_opc_TrackLayoutUpdate * data, struct web_client_t * client){
+  loggerf(CRITICAL, "IMPLEMENT WS_cts_TrackLayoutUpdate");
+
+
+  // Respond with failure
+  struct s_WS_Data * rdata = _calloc(1, sizeof(struct s_WS_Data));
+
+  rdata->opcode = WSopc_TrackLayoutUpdateRaw;
+  rdata->data.opc_AddNewTraintolib_res.response = 0;
+  ws_send(client, (char *)rdata, WSopc_AddNewTraintolib_res_len, 0xff);
+}
+
+void WS_cts_Admin_Login(struct s_opc_AdminLogin * data, struct web_client_t * client){
+  if(strcmp((char *)data->password,WS_password) == 0){
+    loggerf(INFO, "SUCCESSFULL LOGIN");
+    //0xc3,0xbf,0x35,0x66,0x34,0x64,0x63,0x63,0x33,0x62,0x35,0x61,0x61,0x37,0x36,0x35,0x64,0x36,0x31,0x64,0x38,0x33,0x32,0x37,0x64,0x65,0x62,0x38,0x38,0x32,0x63,0x66,0x39,0x39
+    client->type |= 0x10;
+
+    loggerf(INFO, "Change client flags to %x", client->type);
+
+    ws_send(client,(char [2]){WSopc_ChangeBroadcast,client->type},2,255);
+  }else{
+    loggerf(INFO, "FAILED LOGIN!! %d", strcmp((char *)data->password,WS_password));
+    loggerf(INFO, "%s", data->password);
+    loggerf(INFO, "%s", WS_password);
+  }
+}
+
+void WS_cts_Admin_Logout(void * data, struct web_client_t * client){
+  client->type &= ~0x10;
+
+  ws_send(client,(char [2]){WSopc_ChangeBroadcast,client->type},2,255);
+}

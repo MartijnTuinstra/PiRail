@@ -31,6 +31,7 @@ int websocket_parse(uint8_t data[1024], struct web_client_t * client){
     return 0;
   }
 
+  loggerf(WARNING, "Not Using function array");
   if((data[0] & 0xC0) == 0x80){ // System settings
     loggerf(TRACE, "System Settings");
     if(data[0] == WSopc_ClearTrack){
@@ -65,7 +66,6 @@ int websocket_parse(uint8_t data[1024], struct web_client_t * client){
     }
     else if(data[0] == WSopc_SubModuleState){
       loggerf(TRACE, "WSopc_SubModuleState");
-      WS_stc_SubmoduleState();
     }
     else if(data[0] == WSopc_RestartApplication){
       loggerf(TRACE, "WSopc_RestartApplication");
@@ -74,21 +74,6 @@ int websocket_parse(uint8_t data[1024], struct web_client_t * client){
 
   }else if((data[0] & 0xC0) == 0xC0){ //Admin settings
     loggerf(TRACE, "Admin Settings  %02X", data[0]);
-    if(d->opcode == WSopc_Admin_Login){ //Admin login
-      if(strcmp((char *)&data[1],WS_password) == 0){
-        loggerf(INFO, "SUCCESSFULL LOGIN");
-        //0xc3,0xbf,0x35,0x66,0x34,0x64,0x63,0x63,0x33,0x62,0x35,0x61,0x61,0x37,0x36,0x35,0x64,0x36,0x31,0x64,0x38,0x33,0x32,0x37,0x64,0x65,0x62,0x38,0x38,0x32,0x63,0x66,0x39,0x39
-        client->type |= 0x10;
-
-	      loggerf(INFO, "Change client flags to %x", client->type);
-
-        ws_send(client,(char [2]){WSopc_ChangeBroadcast,client->type},2,255);
-      }else{
-        loggerf(INFO, "FAILED LOGIN!! %d", strcmp((char *)&data[1],WS_password));
-        loggerf(INFO, "%s", &data[1]);
-        loggerf(INFO, "%s", WS_password);
-      }
-    }
     if((client->type & 0x10) == 0){
       //Client is not an admin
       loggerf(INFO, "Not an Admin client");
@@ -105,11 +90,6 @@ int websocket_parse(uint8_t data[1024], struct web_client_t * client){
         loggerf(ERROR, "Reload setup not implemented");
       }
     }
-    else if(data[0] == WSopc_Admin_Logout){
-      client->type &= ~0x10;
-
-      ws_send(client,(char [2]){WSopc_ChangeBroadcast,client->type},2,255);
-    }
     else if(data[0] == WSopc_EmergencyStopAdmin){
 
     }
@@ -122,64 +102,13 @@ int websocket_parse(uint8_t data[1024], struct web_client_t * client){
     if(data[0] == WSopc_TrainFunction){ //Train function control
 
     }
-    else if(d->opcode == WSopc_EditCarlib){
-      uint16_t id = d->data.opc_EditCarlib.id_l + (d->data.opc_EditCarlib.id_h << 8);
-      if(d->data.opc_EditCarlib.remove && cars[id]){
-        Clear_Car(&cars[id]);
-      }
-      else{
-        WS_cts_Edit_Car(cars[id], &(d->data.opc_EditCarlib.data), client);
-      }
-      write_rolling_Configs();
-      WS_stc_CarsLib(0);
-    }
-    else if(d->opcode == WSopc_EditTrainlib){
-      uint16_t id = d->data.opc_EditTrainlib.id_l + (d->data.opc_EditTrainlib.id_h << 8);
-      if(d->data.opc_EditTrainlib.remove){
-        Clear_Train(&trains[id]);
-      }
-      else{
-        WS_cts_Edit_Train(trains[id], &(d->data.opc_EditTrainlib.data), client);
-      }
-      write_rolling_Configs();
-      WS_stc_TrainsLib(0);
-    }
-
     else{
       loggerf(WARNING, "Opcode %x not found", data[0]);
     }
   }
   else if(data[0] & 0x20){ //Track stuff
     loggerf(INFO, "Track Settings");
-    if(d->opcode == WSopc_SetSwitch){ //Toggle switch
-      if(d->data.opc_SetSwitch.mssw){
-        loggerf(INFO, "SetMSSw %2x %2x", d->data.opc_SetSwitch.module, d->data.opc_SetSwitch.id);
-        if(Units[d->data.opc_SetSwitch.module] && U_MSSw(d->data.opc_SetSwitch.module, d->data.opc_SetSwitch.id)){
-          loggerf(INFO, "throw msswitch %i:%i to state: \t%i->%i",
-                  d->data.opc_SetSwitch.module, d->data.opc_SetSwitch.id, U_MSSw(d->data.opc_SetSwitch.module, d->data.opc_SetSwitch.id)->state, d->data.opc_SetSwitch.state);
-          lock_Algor_process();
-          throw_msswitch(U_MSSw(d->data.opc_SetSwitch.module, d->data.opc_SetSwitch.id), d->data.opc_SetSwitch.state, 1);
-          unlock_Algor_process();
-        }
-      }
-      else{
-        loggerf(INFO, "SetSw %2x %2x", d->data.opc_SetSwitch.module, d->data.opc_SetSwitch.id);
-        if(Units[data[1]] && U_Sw(d->data.opc_SetSwitch.module, d->data.opc_SetSwitch.id)){ //Check if switch exists
-          loggerf(INFO, "throw switch %i:%i to state: \t%i->%i",
-                  d->data.opc_SetSwitch.module, d->data.opc_SetSwitch.id, U_Sw(d->data.opc_SetSwitch.module, d->data.opc_SetSwitch.id)->state, !U_Sw(d->data.opc_SetSwitch.module, d->data.opc_SetSwitch.id)->state);
-          lock_Algor_process();
-          throw_switch(U_Sw(d->data.opc_SetSwitch.module, d->data.opc_SetSwitch.id), d->data.opc_SetSwitch.state, 1);
-          unlock_Algor_process();
-        }
-      }
-    }
-    else if(data[0] == WSopc_SetMultiSwitch){ // Set mulitple switches at once
-      loggerf(INFO, "Throw multiple switches\n");
-      lock_Algor_process();
-      throw_multiple_switches(data[1], (char *)&data[2]);
-      unlock_Algor_process();
-    }
-    else if(data[0] == WSopc_SetSwitchReserved){ //Set switch reserved
+    if(data[0] == WSopc_SetSwitchReserved){ //Set switch reserved
 
     }
     else if(data[0] == WSopc_SetSwitchRoute){ //Set a route for switches
@@ -190,29 +119,8 @@ int websocket_parse(uint8_t data[1024], struct web_client_t * client){
 
   else if(data[0] & 0x10){ // General Operation
     loggerf(TRACE, "General Settings");
-    if(data[0] == WSopc_EmergencyStop){ //Enable Emergency Stop!!
-      WS_stc_EmergencyStop();
-      Z21_TRACKPOWER_OFF;
-    }
-    else if(data[0] == WSopc_ClearEmergency){ //Disable Emergency Stop!!
-      WS_stc_ClearEmergency();
-      Z21_TRACKPOWER_ON;
-    }
-    else if(data[0] == WSopc_ClearMessage){
+   if(data[0] == WSopc_ClearMessage){
 
-    }
-    else if(data[0] == WSopc_ChangeBroadcast){
-      // clients[client_data->thread_id]->client_type; //current flags
-      // data[1]; //new flags
-      if(data[1] & 0x10){ //Admin flag
-        loggerf(WARNING, "Changing admin flag: NOT ALLOWED");
-        return 0; //Not allowed to set admin flag
-      }else if(data[1] != 0){
-        client->type = data[1];
-        loggerf(DEBUG, "Changing flags");
-      }
-      loggerf(DEBUG,"Websocket:\t%02x - New flag for client %d\n",client->type, client->id);
-      ws_send(client,(char [2]){WSopc_ChangeBroadcast,client->type},2,255);
     }
   }
   return 0;

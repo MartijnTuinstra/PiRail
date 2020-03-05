@@ -74,12 +74,15 @@ void floggerf(enum logging_levels level, char * file, int line, char * text, ...
   va_list arglist;
   va_start( arglist, text );
 
-  time_t current_time;
+  // time_t current_time;
+  struct timespec clock;
   struct tm * time_info;
   char c_time[9];  // space for "HH:MM:SS\0"
 
-  time(&current_time);
-  time_info = localtime(&current_time);
+  // time(&current_time);
+  time_info = localtime(&clock.tv_sec);
+
+  clock_gettime(CLOCK_MONOTONIC_RAW, &clock);
 
   strftime(c_time, sizeof(c_time), "%H:%M:%S", time_info);
 
@@ -88,7 +91,7 @@ void floggerf(enum logging_levels level, char * file, int line, char * text, ...
 
   vsprintf(arg, text, arglist);
 
-  sprintf(msg, "%s - %s%s - %20s:%4i - %s%s\n",c_time,logging_levels_colour[level], logging_levels_str[level],file,line, arg, logging_levels_colour[7]);
+  sprintf(msg, "%s.%d - %s%s - %20s:%4i - %s%s\n",c_time,clock.tv_nsec,logging_levels_colour[level], logging_levels_str[level],file,line, arg, logging_levels_colour[7]);
 
   FILE * fp = fopen(logger_file,"a");
 

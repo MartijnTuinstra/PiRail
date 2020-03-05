@@ -94,5 +94,5 @@ void init_main(){
 
 void SYS_set_state(volatile enum e_SYS_Module_State * system, enum e_SYS_Module_State state){
   *system = state;
-  WS_stc_SubmoduleState();
+  WS_stc_SubmoduleState(0);
 }

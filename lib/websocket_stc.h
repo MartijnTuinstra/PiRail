@@ -21,7 +21,7 @@ void WS_stc_Track_Layout(struct web_client_t * client);
 void WS_stc_Z21_info(struct web_client_t * client);
 void WS_stc_Z21_IP(struct web_client_t * client);
 
-void WS_stc_SubmoduleState();
+void WS_stc_SubmoduleState(struct web_client_t * client);
 
 //Admin Messages
 

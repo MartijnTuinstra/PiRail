@@ -35,12 +35,11 @@ void * UART(){
   loggerf(INFO, "Starting UART thread");
   //OPEN THE UART
 
-  SYS->UART.state = Module_Init;
-  WS_stc_SubmoduleState();
+
+  SYS_set_state(&SYS->UART.state, Module_Init);
 
   usleep(200000);
-  SYS->UART.state = Module_Run;
-  WS_stc_SubmoduleState();
+  SYS_set_state(&SYS->UART.state, Module_Run);
 
   usleep(3000000);
 
@@ -48,9 +47,7 @@ void * UART(){
   if (uart0_filestream == -1)
   {
     //ERROR - CAN'T OPEN SERIAL PORT
-
-    SYS->UART.state = Module_Fail;
-    WS_stc_SubmoduleState();
+    SYS_set_state(&SYS->UART.state, Module_Fail);
     logger("Unable to open UART",CRITICAL);
     return 0;
   }

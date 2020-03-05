@@ -9,7 +9,7 @@
 #include "logger.h"
 #include "mem.h"
 
-#include "websocket_msg.h"
+#include "websocket_stc.h"
 
 sem_t AlgorQueueNoEmpty;
 

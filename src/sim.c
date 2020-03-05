@@ -10,7 +10,7 @@
 
 #include "submodule.h"
 #include "algorithm.h"
-#include "websocket_msg.h"
+#include "websocket_stc.h"
 #include "pathfinding.h"
 
 pthread_mutex_t mutex_lockA;
@@ -645,7 +645,7 @@ int connect_Algor(struct ConnectList * List){
           } // End Switch type
 
           if(connected){
-            WS_Partial_Layout(ModuleA,ModuleB);
+            WS_stc_Partial_Layout(ModuleA,ModuleB);
             connected = FALSE;
           }
         }
@@ -890,7 +890,7 @@ void SIM_JoinModules(){
     }
   }
 
-  // WS_Track_Layout();
+  // WS_stc_Track_Layout();
 }
 
 void SIM_Connect_Rail_links(){
@@ -945,13 +945,15 @@ void SIM_Connect_Rail_links(){
 void SIM_Client_Connect_cb(){
   // SimA_start();
   // SimB_start();
-  
-  Algor_start();
-  while(SYS->LC.state != Module_Run){}
-  struct paths return_value = pathfinding(U_B(20,8), U_B(20,14));
-  if(return_value.forward || return_value.reverse)
-    printf("CHEERS");
-  // pathfinding_print(instr);
-  free_pathinstructions(return_value.forward);
-  free_pathinstructions(return_value.reverse);
+  if(SYS->LC.state == Module_STOP){
+    Algor_start();
+    while(SYS->LC.state != Module_Run){}
+    struct paths return_value = pathfinding(U_B(20,8), U_B(20,14));
+    if(return_value.forward || return_value.reverse)
+      printf("CHEERS");
+    // pathfinding_print(instr);
+    free_pathinstructions(return_value.forward);
+    free_pathinstructions(return_value.reverse);
+  }
+  loggerf(INFO, "Done SIM_Client_Connect_cb");
 }

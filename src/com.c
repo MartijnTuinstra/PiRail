@@ -20,7 +20,7 @@
 #include "modules.h"
 
 #include "submodule.h"
-#include "websocket_msg.h"
+#include "websocket_stc.h"
 
 pthread_mutex_t mutex_UART;
 

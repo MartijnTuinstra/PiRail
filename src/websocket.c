@@ -10,15 +10,26 @@
 #include "websocket_control.h"
 #include "algorithm.h"
 
+#include "websocket_cts.h"
+#include "websocket_stc.h"
+
 pthread_mutex_t m_websocket_send;
 
-int websocket_decode(uint8_t data[1024], struct web_client_t * client){
+
+// websocket_cts[WSopc_LinkTrain] = WS_cts_LinkTrain;
+
+int websocket_parse(uint8_t data[1024], struct web_client_t * client){
   // Flag Admin Settings    0x80
   // Train stuff flag       0x40
   // Rail stuff flag        0x20
   // General Operation flag 0x10
 
   struct s_WS_Data * d = (struct s_WS_Data *)data;
+
+  if(websocket_cts[d->opcode]){
+    websocket_cts[d->opcode]((void *)&d->data, client);
+    return 0;
+  }
 
   if((data[0] & 0xC0) == 0x80){ // System settings
     loggerf(TRACE, "System Settings");
@@ -51,11 +62,6 @@ int websocket_decode(uint8_t data[1024], struct web_client_t * client){
       Z21_info.IP[2] = data[3];
       Z21_info.IP[3] = data[4];
       WS_stc_Z21_IP(0);
-    }
-    else if(data[0] == WSopc_DisableSubModule ||
-            data[0] == WSopc_EnableSubModule){
-      WS_cts_Enable_Disable_SubmoduleState(data[0], data[1]);
-      
     }
     else if(data[0] == WSopc_SubModuleState){
       loggerf(TRACE, "WSopc_SubModuleState");
@@ -113,27 +119,8 @@ int websocket_decode(uint8_t data[1024], struct web_client_t * client){
   }
   else if(data[0] & 0x40){ //Train stuff
     loggerf(TRACE, "Train Settings");
-    if(d->opcode == WSopc_LinkTrain){ //Link train
-      WS_cts_LinkTrain((void *)&d->data, client);
-    }
-    else if(data[0] == WSopc_TrainSpeed){ //Train speed control
-      WS_cts_SetTrainSpeed((void *)&d->data, client);
-    }
-    else if(data[0] == WSopc_TrainFunction){ //Train function control
+    if(data[0] == WSopc_TrainFunction){ //Train function control
 
-    }
-    else if(data[0] == WSopc_TrainControl){ //Train operation change
-      WS_cts_TrainControl(&d->data.opc_TrainControl, client);
-    }
-    else if(data[0] == WSopc_TrainAddRoute){ //Add route to train
-      WS_cts_TrainRoute(&d->data.opc_TrainRoute, client);
-    }
-    else if(data[0] == WSopc_TrainSubscribe){
-      WS_cts_TrainSubscribe((void *)&d->data, client);
-    }
-
-    else if(data[0] == WSopc_AddNewCartolib){
-      WS_cts_AddCartoLib((void *)&d->data, client);
     }
     else if(d->opcode == WSopc_EditCarlib){
       uint16_t id = d->data.opc_EditCarlib.id_l + (d->data.opc_EditCarlib.id_h << 8);
@@ -144,18 +131,7 @@ int websocket_decode(uint8_t data[1024], struct web_client_t * client){
         WS_cts_Edit_Car(cars[id], &(d->data.opc_EditCarlib.data), client);
       }
       write_rolling_Configs();
-      WS_CarsLib(0);
-    }
-
-    else if(data[0] == WSopc_AddNewEnginetolib){
-      WS_cts_AddEnginetoLib((void *)&d->data, client);
-    }
-    else if(data[0] == WSopc_EditEnginelib){ //Edit / Remove Engine
-      WS_cts_Edit_Engine((void *)&(d->data), client);
-    }
-
-    else if(data[0] == WSopc_AddNewTraintolib){
-      WS_cts_AddTraintoLib((void *)&d->data, client);
+      WS_stc_CarsLib(0);
     }
     else if(d->opcode == WSopc_EditTrainlib){
       uint16_t id = d->data.opc_EditTrainlib.id_l + (d->data.opc_EditTrainlib.id_h << 8);
@@ -166,7 +142,7 @@ int websocket_decode(uint8_t data[1024], struct web_client_t * client){
         WS_cts_Edit_Train(trains[id], &(d->data.opc_EditTrainlib.data), client);
       }
       write_rolling_Configs();
-      WS_TrainsLib(0);
+      WS_stc_TrainsLib(0);
     }
 
     else{
@@ -209,21 +185,17 @@ int websocket_decode(uint8_t data[1024], struct web_client_t * client){
     else if(data[0] == WSopc_SetSwitchRoute){ //Set a route for switches
 
     }
-
-    else if(data[0] == WSopc_TrackLayoutRawData){
-      WS_stc_TrackLayoutRawData(data[1], client);
-    }
   }
 
 
   else if(data[0] & 0x10){ // General Operation
     loggerf(TRACE, "General Settings");
     if(data[0] == WSopc_EmergencyStop){ //Enable Emergency Stop!!
-      WS_EmergencyStop();
+      WS_stc_EmergencyStop();
       Z21_TRACKPOWER_OFF;
     }
     else if(data[0] == WSopc_ClearEmergency){ //Disable Emergency Stop!!
-      WS_ClearEmergency();
+      WS_stc_ClearEmergency();
       Z21_TRACKPOWER_ON;
     }
     else if(data[0] == WSopc_ClearMessage){

@@ -12,7 +12,7 @@
 #include<sys/socket.h>
 
 #include "config.h"
-#include "websocket_msg.h"
+#include "websocket_stc.h"
 // #include "submodule.h"
 
 int z21_fd = -1;
@@ -203,18 +203,18 @@ void Z21_recv(char * data, int length){
                                 // LAN_X_UNKNOWN_COMMAND        0x82
         if(data[5] == 0){
           loggerf(ERROR, "LAN_X_BC_TRACK_POWER_OFF");
-          WS_EmergencyStop();
+          WS_stc_EmergencyStop();
         }
         else if(data[5] == 0x01){
           loggerf(ERROR, "LAN_X_BC_TRACK_POWER_ON");
-          WS_ClearEmergency();
+          WS_stc_ClearEmergency();
         }
         else if(data[5] == 0x02){
           loggerf(ERROR, "LAN_X_BC_PROGRAMMING_MODE");
         }
         else if(data[5] == 0x08){
           loggerf(ERROR, "LAN_X_BC_TRACK_SHORT_CIRCUIT");
-          WS_ShortCircuit();
+          WS_stc_ShortCircuit();
         }
         else if(data[5] == 0x82){
           loggerf(TRACE, "LAN_X_UNKNOWN_COMMAND");

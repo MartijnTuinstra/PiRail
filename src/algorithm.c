@@ -17,7 +17,7 @@
 
 #include "modules.h"
 // #include "com.h"
-#include "websocket_msg.h"
+#include "websocket_stc.h"
 
 #include "sim.h"
 
@@ -101,7 +101,7 @@ void * Algor_Run(){
   usleep(1000000);
   SYS_set_state(&SYS->LC.state, Module_LC_Connecting);
   SIM_Connect_Rail_links();
-  WS_Track_Layout(0);
+  WS_stc_Track_Layout(0);
   usleep(1000000);
   // scan_All();
   // Scan All Blocks
@@ -127,8 +127,8 @@ void * Algor_Run(){
   SYS_set_state(&SYS->LC.state, Module_Run);
   
   //Notify clients
-  WS_trackUpdate(0);
-  WS_SwitchesUpdate(0);
+  WS_stc_trackUpdate(0);
+  WS_stc_SwitchesUpdate(0);
 
   // throw_switch(U_Sw(20, 5), 1, 0);
   // throw_switch(U_Sw(20, 6), 1, 1);
@@ -164,8 +164,8 @@ void * Algor_Run(){
 
     mutex_lock(&algor_mutex, "Algor Mutex");
     //Notify clients
-    WS_trackUpdate(0);
-    WS_SwitchesUpdate(0);
+    WS_stc_trackUpdate(0);
+    WS_stc_SwitchesUpdate(0);
 
     update_IO();
 
@@ -1290,7 +1290,7 @@ void Algor_train_following(Algor_Blocks * ABs, int debug){
     }
 
     //Create a message for WebSocket
-    WS_NewTrain(B->train, B->module, B->id);
+    WS_stc_NewTrain(B->train, B->module, B->id);
 
     loggerf(INFO, "NEW_TRAIN %x", (unsigned int)B->train);
   }
@@ -1300,7 +1300,7 @@ void Algor_train_following(Algor_Blocks * ABs, int debug){
     //A train has split
     Block * tN = BN[0];
     Block * tP = BP[0];
-    WS_TrainSplit(BN[0]->train, tP->module,tP->id,tN->module,tN->id);
+    WS_stc_TrainSplit(BN[0]->train, tP->module,tP->id,tN->module,tN->id);
 
     loggerf(INFO, "SPLIT_TRAIN");
   }

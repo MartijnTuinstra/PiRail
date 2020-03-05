@@ -52,7 +52,9 @@
 
   int websocket_client_check(struct web_client_t * C);
 
-  void * websocket_client_connect(void * p);
+  uint8_t websocket_client_first_connect(struct web_client_t * client, char * buf, int * length);
+
+  void * websocket_client(void * p);
 
   void *clear_clients();
 
@@ -62,6 +64,7 @@
 
   void * websocket_server();
 
-  #include "websocket_msg.h"
+  #include "websocket_stc.h"
+  #include "websocket_cts.h"
 
 #endif

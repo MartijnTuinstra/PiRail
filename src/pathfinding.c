@@ -2,7 +2,7 @@
 #include "switch.h"
 #include "mem.h"
 #include "logger.h"
-#include "websocket_msg.h"
+#include "websocket_stc.h"
 #include "modules.h"
 
 struct paths pathfinding(Block * start, Block * end){

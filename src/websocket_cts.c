@@ -1,0 +1,759 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <unistd.h>
+#include <string.h>
+
+#include <pthread.h>
+
+//Websocket opcodes
+#include "websocket_control.h"
+#include "websocket_cts.h"
+#include "websocket.h"
+
+#include "system.h"
+#include "mem.h"
+
+#include "rail.h"
+#include "switch.h"
+#include "train.h"
+#include "logger.h"
+#include "config.h"
+
+#include "modules.h"
+#include "Z21.h"
+
+#include "submodule.h"
+
+
+#define ACTIVATE 0
+#define RELEASE  1
+
+pthread_mutex_t mutex_lockB;
+
+
+websocket_cts_func websocket_cts[256] = {
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+
+  // 0x10 WSopc_EmergencyStop
+  0,
+  // 0x11 WSopc_ShortCircuitStop
+  0,
+  // 0x12 WSopc_ClearEmergency
+  0,
+  // 0x13 WSopc_NewMessage
+  0,
+  // 0x14 WSopc_UpdateMessage
+  0,
+  // 0x15 WSopc_ClearMessage
+  0,
+  // 0x16 WSopc_ChangeBroadcast
+  0,
+  // 0x17 WSopc_Service_State
+  0,
+  // 0x18 WSopc_Canvas_Data
+  0,
+  // 0x19 - 0x1F Reserved
+  0,0,0,0,0,0,0,
+
+  // 0x20 WSopc_SetSwitch
+  0,
+  // 0x21 WSopc_SetMultiSwitch
+  0,
+  // 0x22 WSopc_SetSwitchReserved
+  0,
+  // 0x23 WSopc_ChangeSwitchReserved
+  0,
+  // 0x24 Reserved
+  0,
+  // 0x25 WSopc_SetSwitchRoute
+  0,
+  // 0x26 WSopc_BroadTrack
+  0,
+  // 0x27 WSopc_BroadSwitch
+  0,
+  // 0x28 - 0x2F Reserved
+  0,0,0,0,0,0,0,0,
+
+  // 0x30 WSopc_TrackLayoutOnlyRawData
+  0,
+  // 0x31 WSopc_TrackLayoutRawData
+  0, // (void (*)(void *, struct web_client_t *))&WS_stc_TrackLayoutRawData,
+  // 0x32 Reserved
+  0,
+  // 0x33 WSopc_TrackLayoutUpdateRaw
+  0,
+  // 0x34 - 0x35 Reserved
+  0,0,
+  // 0x36 WSopc_StationLibrary
+  0,
+  // 0x37 - 0x3F Reserved
+  0,0,0,0,0,0,0,0,0,
+
+  // 0x40 Reserved
+  0,
+  // 0x41
+  (void (*)(void *, struct web_client_t *))&WS_cts_LinkTrain,
+  // 0x42
+  (void (*)(void *, struct web_client_t *))&WS_cts_SetTrainSpeed,
+  // 0x43 WSopc_TrainFunction
+  0,
+  // 0x44
+  (void (*)(void *, struct web_client_t *))&WS_cts_TrainControl,
+  // 0x45 stc only
+  0,
+  // 0x46
+  (void (*)(void *, struct web_client_t *))&WS_cts_TrainRoute,
+  // 0x47-0x4E Reserved
+  0,0,0,0,0,0,0,0,
+  // 0x4F
+  (void (*)(void *, struct web_client_t *))&WS_cts_TrainSubscribe,
+
+  // 0x50
+  (void (*)(void *, struct web_client_t *))&WS_cts_AddEnginetoLib,
+  // 0x51
+  (void (*)(void *, struct web_client_t *))&WS_cts_Edit_Engine,
+  // 0x52 WSopc_EnginesLibrary
+  0,
+  // 0x53
+  (void (*)(void *, struct web_client_t *))&WS_cts_AddCartoLib,
+  // 0x54 WSopc_EditCarlib
+  0,
+  // 0x55 WSopc_CarsLibrary
+  0,
+  // 0x56 WSopc_AddNewTraintolib
+  (void (*)(void *, struct web_client_t *))&WS_cts_AddTraintoLib,
+  // 0x57 WSopc_EditTrainlib
+  0,
+  // 0x58 WSopc_TrainsLibrary
+  0,
+  // 0x59 Reserved
+  0,
+  // 0x5A WSopc_TrainCategories
+  0,
+  // 0x5B - 0x5F Reserved
+  0,0,0,0,0,
+
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 6x
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 7x
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 8x
+
+  // 0x90 WSopc_EnableSubModule
+  (void (*)(void *, struct web_client_t *))&WS_cts_Enable_SubmoduleState,
+  // 0x91 WSopc_DisableSubModule
+  (void (*)(void *, struct web_client_t *))&WS_cts_Disable_SubmoduleState,
+  // 0x92 WSopc_SubModuleState
+  0,
+  // 0x93 - 0x9E Reserved
+  0,0,0,0,0,0,0,0,0,0,0,0,
+  // 0x9F WSopc_RestartApplication
+  0, // 9x
+
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // Ax
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // Bx
+
+  // 0xC0 WSopc_EmergencyStopAdmin
+  0,
+  // 0xC1 WSopc_EmergencyStopAdminR
+  0,
+  // 0xC2 - 0xCD Reserved
+  0,0,0,0,0,0,0,0,0,0,0,0,
+  // 0xCE WSopc_Admin_Logout
+  0,
+  // 0xCF WSopc_Admin_Login
+  0,
+
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // Dx
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // Ex
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // Fx
+};
+
+//System Messages
+void WS_cts_Enable_SubmoduleState(struct s_opc_enabledisableSubmoduleState * state, struct web_client_t * client){
+  loggerf(INFO, "WSopc_EnableSubModule");
+  if(state->flags & 0x80){ //Websocket
+    SYS->WebSocket.state = Module_Run;
+  }
+  else if(state->flags & 0x40){ //Z21
+    Z21_start();
+  }
+  else if(state->flags & 0x20){ //UART
+    UART_start();
+  }
+  else if(state->flags & 0x10){ //LayoutControl
+    Algor_start();
+  }
+  else if(state->flags & 0x04){ //SimA
+    SimA_start();
+  }
+  else if(state->flags & 0x02){ //SimB
+    SimB_start();
+  }
+  WS_stc_SubmoduleState();
+}
+void WS_cts_Disable_SubmoduleState(struct s_opc_enabledisableSubmoduleState * state, struct web_client_t * client){
+  loggerf(INFO, "WSopc_DisableSubModule");
+  if(state->flags & 0x80){  //Websocket
+    SYS->WebSocket.state = Module_Init;
+  }
+  else if(state->flags & 0x40){ // Z21
+    Z21_stop();
+  }
+  else if(state->flags & 0x20){ //UART
+    UART_stop();
+  }
+  else if(state->flags & 0x10){
+    Algor_stop();
+  }
+  else if(state->flags & 0x04){
+    SYS->SimA.state = Module_STOP;
+  }
+  else if(state->flags & 0x02){
+    SYS->SimB.state = Module_STOP;
+  }
+  WS_stc_SubmoduleState();
+}
+
+//Admin Messages
+
+//Train Messages
+void WS_cts_LinkTrain(struct s_opc_LinkTrain * msg, struct web_client_t * client){
+  // uint8_t * data = (uint8_t *)msg;
+  // uint8_t fID = data[0]; //follow ID
+  // uint8_t tID = data[1]; //TrainID
+  // uint16_t mID = ((data[2] & 0x1F) << 8)+data[3];
+  char return_value;
+  if(msg->type == 0)
+    loggerf(INFO, "Linking train %i with T-%s\n",msg->follow_id, trains[msg->real_id]->name);
+  else
+    loggerf(INFO, "Linking train %i with E-%s\n",msg->follow_id, engines[msg->real_id]->name);
+
+  if((return_value = link_train(msg->follow_id, msg->real_id, msg->type)) == 1){
+    WS_stc_LinkTrain(msg);
+
+    WS_clear_message((msg->message_id_H << 8) + msg->message_id_L, 1);
+
+    Z21_get_train(trains[msg->real_id]);
+  }
+  else{
+    loggerf(WARNING, "Failed link_train()\n");
+    WS_clear_message((msg->message_id_H << 8) + msg->message_id_L, 0); //Failed
+  }
+}
+
+void WS_cts_TrainControl(struct s_opc_TrainControl * m, struct web_client_t * client){
+
+  if(!train_link[m->follow_id]){
+    loggerf(WARNING, "Trying to set speed of undefined RailTrain");
+    return;
+  }
+
+  loggerf(INFO, "WS_cts_TrainControl %i -> %i", m->follow_id, m->control);
+
+  RailTrain * T = train_link[m->follow_id];
+
+  T->control = m->control;
+}
+
+void WS_cts_SetTrainSpeed(struct s_opc_SetTrainSpeed * m, struct web_client_t * client){
+  // uint16_t id = m.follow_id;
+  // uint16_t speed = m.speed;
+
+  if(!train_link[m->follow_id]){
+    loggerf(WARNING, "Trying to set speed of undefined RailTrain");
+    return;
+  }
+
+  uint16_t speed = (m->speed_high << 8) + m->speed_low;
+
+  loggerf(INFO, "WS_cts_SetTrainSpeed %i -> %i", m->follow_id, speed);
+
+  RailTrain * T = train_link[m->follow_id];
+
+  T->speed = speed;
+  T->target_speed = speed;
+  T->dir   = m->dir;
+
+  if(T->type == TRAIN_ENGINE_TYPE){
+    ((Engines *)T->p)->dir = m->dir;
+    engine_set_speed(T->p, speed);
+    // Z21_Set_Loco_Drive_Train(T->p);
+  }
+  else{
+    ((Trains *)T->p)->cur_speed = speed;
+    ((Trains *)T->p)->dir = m->dir;
+    train_calc_speed(T->p);
+    // Z21_Set_Loco_Drive_Engine(T->p);
+  }
+
+  loggerf(INFO, "IMPLEMENT Z21");
+  // if(data[2] & 0x20 && id < trains_len){ //Train
+  //   trains[id]->cur_speed = speed;
+  //   trains[id]->dir = (data[2] & 0x10) >> 4;
+
+  //   train_calc_speed(trains[id]);
+
+  // }
+  // else if(id < engines_len){ //Engine
+  //   engines[id]->dir = (data[2] & 0x10) >> 4;
+
+  //   engine_set_speed(engines[id], speed);
+
+  // }
+}
+
+void WS_cts_TrainSubscribe(struct s_opc_SubscribeTrain * m, struct web_client_t * client){
+  client->trains[0] = m->followA;
+  client->trains[1] = m->followB;
+
+  if(client->trains[0] < 0xFF && train_link[client->trains[0]]){
+    WS_stc_UpdateTrain(train_link[client->trains[0]]);
+  }
+  if(client->trains[1] < 0xFF && train_link[client->trains[1]]){
+    WS_stc_UpdateTrain(train_link[client->trains[1]]);
+  }
+
+  loggerf(INFO, "WS_cts_TrainSubscribe client %i = %i, %i", client->id, client->trains[0], client->trains[1]);
+}
+
+/*
+void Web_Train_Split(int i,char tID,char B[]){
+  loggerf(DEBUG, "Web_Train_Split(%i,%i,{%i,%i});",i,tID,B[0],B[1]);
+  char data[8];
+  data[0] = 1;
+  if(i == ACTIVATE){
+    data[1] = 5;
+    data[2] = tID;
+    data[3] = B[0];
+    data[4] = B[1];
+    ws_send_all(data,5,1);
+  }else if(i == RELEASE){
+    data[1] = 6;
+    data[2] = tID;
+    ws_send_all(data,3,1);
+  }else{
+    return;
+  }
+}
+*/
+
+void WS_cts_TrainRoute(struct s_opc_TrainRoute * data, struct web_client_t * client){
+  RailTrain * T = train_link[data->train_id];
+
+  Station * St = Units[data->module_id]->St[data->station_id];
+
+  train_set_route(T, St->blocks[0]);
+}
+
+// void WS_TrainData(char data[14]){
+//   loggerf(TRACE,"WS_TrainData");
+//   char s_data[20];
+//   s_data[0] = WSopc_Z21TrainData;
+
+//   for(int i = 0;i<7;i++){
+//     s_data[i+2] = data[i];
+//   }
+
+//   loggerf(ERROR, "FIX ID");
+//   return;
+//   // s_data[1] = DCC_train[((s_data[2] << 8) + s_data[3])]->ID;
+
+//   ws_send_all(s_data,9,WS_Flag_Trains);
+// }
+
+void WS_cts_AddCartoLib(struct s_opc_AddNewCartolib * data, struct web_client_t * client){
+  loggerf(DEBUG, "WS_cts_AddCartoLib");
+  struct s_WS_Data * rdata = _calloc(1, sizeof(struct s_WS_Data));
+
+  rdata->opcode = WSopc_AddNewCartolib;
+  rdata->data.opc_AddNewCartolib_res.nr = data->nr;
+
+  char * name = _calloc(data->name_len + 1, 1);
+  char * filename = _calloc(data->name_len + 1, 1);
+  char * icon = _calloc(data->name_len + 8 + 3 + 20, 1); //Destination file
+  char * sicon = _calloc(40, 1); //Source file
+
+  memcpy(name, &data->strings, data->name_len);
+  memcpy(filename, &data->strings, data->name_len);
+  for (char* current_pos = NULL; (current_pos = strchr(filename, ' ')) != NULL; *current_pos = '_');
+  for (char* current_pos = NULL; (current_pos = strchr(filename, '.')) != NULL; *current_pos = '-');
+    loggerf(WARNING, "Filename: %s", filename);
+
+  uint16_t icon_time = (data->timing / 60) * 100 + (data->timing % 60);
+
+  loggerf(ERROR, "%04i", icon_time);
+
+  if((data->filetype & 0b1) == 0){
+    sprintf(icon, "%i_%s.%s", data->nr, filename, "png");
+    sprintf(sicon, "%s.%04i.%s", "web/tmp_icon", icon_time, "png");
+  }
+  else{
+    sprintf(icon, "%i_%s.%s", data->nr, filename, "jpg");
+    sprintf(sicon, "%s.%04i.%s", "web/tmp_icon", icon_time, "jpg");
+  }
+
+
+  Create_Car(name, data->nr, icon, data->type, data->length, data->max_speed);
+
+  char * dicon = _calloc(strlen(icon)+10, 1);
+
+  sprintf(dicon, "%s%s", "web/trains_img/", icon);
+
+  move_file(sicon, dicon);
+
+  write_rolling_Configs();
+
+  // Delete temp file
+  remove(sicon);
+
+  rdata->data.opc_AddNewCartolib_res.response = 1;
+  ws_send(client, (char *)rdata, WSopc_AddNewCartolib_res_len, 0xff);
+
+  _free(dicon);
+  _free(sicon);
+}
+
+void WS_cts_Edit_Car(Cars * C, struct s_opc_AddNewCartolib * data, struct web_client_t * client){
+  loggerf(DEBUG, "WS_cts_Edit_Car");
+  struct s_WS_Data * rdata = _calloc(1, sizeof(struct s_WS_Data));
+
+  rdata->opcode = WSopc_AddNewCartolib;
+  rdata->data.opc_AddNewCartolib_res.nr = data->nr;
+
+  C->name = _realloc(C->name, data->name_len + 1, 1);
+  memcpy(C->name, &data->strings, data->name_len);
+  C->name[data->name_len] = 0;
+
+  char * filename = _calloc(data->name_len +1,1);
+  memcpy(filename, C->name, data->name_len);
+  for (char* current_pos = NULL; (current_pos = strchr(filename, ' ')) != NULL; *current_pos = '_');
+  for (char* current_pos = NULL; (current_pos = strchr(filename, '.')) != NULL; *current_pos = '-');
+    loggerf(WARNING, "Filename: %s", filename);
+
+  C->length = data->length;
+  C->type = data->type;
+
+  char * sicon = _calloc(40, 1); //Source file
+
+  uint16_t icon_time = (data->timing / 60) * 100 + (data->timing % 60);
+
+  loggerf(ERROR, "%04i", icon_time);
+
+  char * dicon = 0;
+
+  if(icon_time < 3000){
+    C->icon_path = _realloc(C->icon_path, data->name_len + 8 + 3 + 20, 1); //Destination file
+    if((data->filetype & 0b1) == 0){
+      sprintf(C->icon_path, "%iC_%s.%s", data->nr, filename, "png");
+      sprintf(sicon, "%s.%04i.%s", "web/tmp_icon", icon_time, "png");
+    }
+    else{
+      sprintf(C->icon_path, "%iC_%s.%s", data->nr, filename, "jpg");
+      sprintf(sicon, "%s.%04i.%s", "web/tmp_icon", icon_time, "jpg");
+    }
+    dicon = _calloc(strlen(C->icon_path)+20, 1);
+    sprintf(dicon, "%s%s", "web/trains_img/", C->icon_path);
+    move_file(sicon, dicon);
+
+    // Delete temp file
+    remove(sicon);
+  }
+  else{
+    sprintf(sicon, "web/trains_img/%s", C->icon_path);
+
+    char filetype[5];
+    sprintf(filetype, "%s", &C->icon_path[strlen(C->icon_path)-3]);
+
+    sprintf(C->icon_path, "%iC_%s.%s", data->nr, filename, filetype);
+    dicon = _calloc(strlen(C->icon_path)+20, 1);
+    sprintf(dicon, "%s%s", "web/trains_img/", C->icon_path);
+
+    move_file(sicon, dicon);
+
+    if(strcmp(sicon, dicon) != 0)
+      remove(sicon);
+  }
+
+  rdata->data.opc_AddNewCartolib_res.response = 1;
+  ws_send(client, (char *)rdata, WSopc_AddNewCartolib_res_len, 0xff);
+
+  _free(dicon);
+  _free(sicon);
+}
+
+void WS_cts_AddEnginetoLib(struct s_opc_AddNewEnginetolib * data, struct web_client_t * client){
+  loggerf(DEBUG, "WS_cts_AddEnginetoLib");
+  struct s_WS_Data * rdata = _calloc(1, sizeof(struct s_WS_Data));
+
+  rdata->opcode = WSopc_AddNewEnginetolib;
+
+  if (DCC_train[data->DCC_ID]){
+    loggerf(ERROR, "DCC %i allready in use", data->DCC_ID);
+    rdata->data.opc_AddNewEnginetolib_res.response = 255;
+    ws_send(client, (char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
+    return;
+  }
+
+  char * name = _calloc(data->name_len + 1, 1);
+  char * steps = _calloc(data->steps, 3);
+  char * img = _calloc(data->name_len + 8 + 3 + 20, 1);  //Destination file
+  char * icon = _calloc(data->name_len + 8 + 3 + 20, 1); //Destination file
+  char * simg = _calloc(40, 1); //Source file
+  char * sicon = _calloc(40, 1); //Source file
+  char * filetype = _calloc(4, 1);
+
+  memcpy(name, &data->strings, data->name_len);
+  memcpy(steps, &data->strings + data->name_len, data->steps * 3);
+
+  char * filename = _calloc(data->name_len +1,1);
+  memcpy(filename, &data->strings, data->name_len);
+  for (char* current_pos = NULL; (current_pos = strchr(filename, ' ')) != NULL; *current_pos = '_');
+  for (char* current_pos = NULL; (current_pos = strchr(filename, '.')) != NULL; *current_pos = '-');
+    loggerf(WARNING, "Filename: %s", filename);
+
+  uint16_t image_time = data->timing[0] + ((data->timing[1] & 0xf0) << 4);
+  image_time = (image_time / 60) * 100 + (image_time % 60);
+  uint16_t icon_time = (data->timing[1] & 0x0f) + (data->timing[2] << 4);
+  icon_time = (icon_time / 60) * 100 + (icon_time % 60);
+
+  loggerf(ERROR, "%04i - %04i", image_time, icon_time);
+
+  if((data->flags & 0b10) == 0){
+    sprintf(img, "%i_%s_im.%s", data->DCC_ID, filename, "png");
+    sprintf(simg, "%s.%04i.%s", "web/tmp_img", image_time, "png");
+  }
+  else{
+    sprintf(img, "%i_%s_im.%s", data->DCC_ID, filename, "jpg");
+    sprintf(simg, "%s.%04i.%s", "web/tmp_img", image_time, "jpg");
+  }
+
+  if((data->flags & 0b1) == 0){
+    sprintf(icon, "%i_%s_ic.%s", data->DCC_ID, filename, "png");
+    sprintf(sicon, "%s.%04i.%s", "web/tmp_icon", icon_time, "png");
+  }
+  else{
+    sprintf(icon, "%i_%s_ic.%s", data->DCC_ID, filename, "jpg");
+    sprintf(sicon, "%s.%04i.%s", "web/tmp_icon", icon_time, "jpg");
+  }
+
+  Create_Engine(name, data->DCC_ID, img, icon, data->type, data->length, data->steps, (struct engine_speed_steps *)steps);
+
+  char * dimg = _calloc(strlen(img)+20, 1);
+  char * dicon = _calloc(strlen(icon)+20, 1);
+  sprintf(dimg, "%s%s", "web/trains_img/", img);
+  sprintf(dicon, "%s%s", "web/trains_img/", icon);
+
+  move_file(simg,  dimg);
+  move_file(sicon, dicon);
+
+  write_rolling_Configs();
+
+  // Delete temp file
+  remove(sicon);
+  remove(simg);
+
+  rdata->data.opc_AddNewEnginetolib_res.response = 1;
+  ws_send(client, (char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
+
+  _free(dimg);
+  _free(dicon);
+  _free(simg);
+  _free(sicon);
+  _free(filetype);
+
+  //Update clients Train Library
+  WS_stc_EnginesLib(0);
+}
+
+void WS_cts_Edit_Engine(struct s_opc_EditEnginelib * msg, struct web_client_t * client){
+  loggerf(DEBUG, "WS_cts_Edit_Engine");
+
+  struct s_WS_Data * rdata = _calloc(1, sizeof(struct s_WS_Data));
+
+  uint16_t id = msg->id_l + (msg->id_h << 8);
+  Engines * E = engines[id];
+
+  if(msg->remove){
+    // Remove Engine
+    // Remove images
+    remove(E->img_path);
+    remove(E->icon_path);
+    DCC_train[E->DCC_ID] = NULL;
+
+    Clear_Engine(&E);
+
+    for(int i = id; i < (engines_len - 1); i++){
+      engines[i] = engines[i+1];
+    }
+
+    engines_len--;
+
+    // Send succes response
+    rdata->data.opc_AddNewEnginetolib_res.response = 1;
+    ws_send(client, (char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
+  }
+  else{
+    // Edit engine
+    struct s_opc_AddNewEnginetolib * data = &msg->data;
+
+    rdata->opcode = WSopc_AddNewEnginetolib;
+
+    if (DCC_train[data->DCC_ID] && data->DCC_ID != E->DCC_ID){
+      loggerf(ERROR, "DCC %i (%i) allready in use", data->DCC_ID, E->DCC_ID);
+      rdata->data.opc_AddNewEnginetolib_res.response = 255;
+      ws_send(client, (char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
+      return;
+    }
+
+    DCC_train[E->DCC_ID] = NULL;
+    E->DCC_ID = data->DCC_ID;
+    DCC_train[E->DCC_ID] = E;
+
+    // Copy name
+    E->name = _realloc(E->name, data->name_len + 1, 1);
+    memcpy(E->name, &data->strings, data->name_len);
+    E->name[data->name_len] = 0;
+
+    char * filename = _calloc(data->name_len +1,1);
+    memcpy(filename, E->name, data->name_len);
+    for (char* current_pos = NULL; (current_pos = strchr(filename, ' ')) != NULL; *current_pos = '_');
+    for (char* current_pos = NULL; (current_pos = strchr(filename, '.')) != NULL; *current_pos = '-');
+      loggerf(WARNING, "Filename: %s", filename);
+
+    // Copy speedsteps
+    E->steps_len = data->steps;
+    E->steps = _realloc(E->steps, data->steps, 3);
+    memcpy(E->steps, &data->strings + data->name_len, data->steps * 3);
+
+    E->length = data->length;
+    E->type = data->type;
+
+
+    // Copy image/icon
+    char * simg = _calloc(40, 1); //Source file
+    char * sicon = _calloc(40, 1); //Source file
+    char * filetype = _calloc(4, 1);
+
+    uint16_t image_time = data->timing[0] + ((data->timing[1] & 0xf0) << 4);
+    image_time = (image_time / 60) * 100 + (image_time % 60);
+    uint16_t icon_time = (data->timing[1] & 0x0f) + (data->timing[2] << 4);
+    icon_time = (icon_time / 60) * 100 + (icon_time % 60);
+
+    loggerf(ERROR, "%04i - %04i", image_time, icon_time);
+
+    char * dimg = 0;
+    char * dicon = 0;
+
+    remove(E->img_path); //Remove original
+
+    E->img_path = _realloc(E->img_path, data->name_len + 8 + 3 + 20, 1);  //Destination file
+    if((data->flags & 0b10) == 0){
+      sprintf(E->img_path, "%i_%s_im.%s", data->DCC_ID, filename, "png");
+      sprintf(simg, "%s.%04i.%s", "web/tmp_img", image_time, "png");
+    }
+    else{
+      sprintf(E->img_path, "%i_%s_im.%s", data->DCC_ID, filename, "jpg");
+      sprintf(simg, "%s.%04i.%s", "web/tmp_img", image_time, "jpg");
+    }
+
+    dimg = _calloc(strlen(E->img_path)+20, 1);
+    sprintf(dimg, "%s%s", "web/trains_img/", E->img_path);
+    loggerf(INFO, "remove and move file %s -> %s", simg, dimg);
+    move_file(simg, dimg);
+
+    // Delete temp file
+    remove(simg);
+
+    remove(E->icon_path); //Remove original
+
+    E->icon_path = _realloc(E->icon_path, data->name_len + 8 + 3 + 20, 1); //Destination file
+    if((data->flags & 0b1) == 0){
+      sprintf(E->icon_path, "%i_%s_ic.%s", data->DCC_ID, filename, "png");
+      sprintf(sicon, "%s.%04i.%s", "web/tmp_icon", icon_time, "png");
+    }
+    else{
+      sprintf(E->icon_path, "%i_%s_ic.%s", data->DCC_ID, filename, "jpg");
+      sprintf(sicon, "%s.%04i.%s", "web/tmp_icon", icon_time, "jpg");
+    }
+    dicon = _calloc(strlen(E->icon_path)+20, 1);
+    sprintf(dicon, "%s%s", "web/trains_img/", E->icon_path);
+    loggerf(INFO, "remove and move file %s -> %s", simg, dimg);
+    move_file(sicon, dicon);
+
+    // Delete temp file
+    remove(sicon);
+
+    // Send succes response
+    rdata->data.opc_AddNewEnginetolib_res.response = 1;
+    ws_send(client, (char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
+
+    _free(dimg);
+    _free(dicon);
+    _free(simg);
+    _free(sicon);
+    _free(filetype);
+  }
+
+  write_rolling_Configs();
+  WS_stc_EnginesLib(0);
+}
+
+void WS_cts_AddTraintoLib(struct s_opc_AddNewTraintolib * data, struct web_client_t * client){
+  loggerf(DEBUG, "WS_cts_AddTraintoLib");
+  struct s_WS_Data * rdata = _calloc(1, sizeof(struct s_WS_Data));
+
+  rdata->opcode = WSopc_AddNewTraintolib;
+
+  char * name = _calloc(data->name_len + 1, 1);
+  char * comps = _calloc(data->nr_stock, 3);
+
+  //Copy name
+  memcpy(name, &data->strings, data->name_len);
+
+  // Copy configuration
+  memcpy(comps, &data->strings + data->name_len, data->nr_stock*3);
+
+  Create_Train(name, data->nr_stock, (struct train_comp_ws *)comps, data->catagory, data->save);
+
+  write_rolling_Configs();
+
+  // Send succes response
+  rdata->data.opc_AddNewTraintolib_res.response = 1;
+  ws_send(client, (char *)rdata, WSopc_AddNewTraintolib_res_len, 0xff);
+
+  //Update clients Train Library
+  WS_stc_TrainsLib(0);
+}
+
+void WS_cts_Edit_Train(Trains * T, struct s_opc_AddNewTraintolib * data, struct web_client_t * client){
+  loggerf(ERROR, "WS_cts_Edit_Train ");
+  struct s_WS_Data * rdata = _calloc(1, sizeof(struct s_WS_Data));
+
+  rdata->opcode = WSopc_AddNewTraintolib;
+
+  //Copy name
+  T->name = _realloc(T->name, data->name_len + 1, 1);
+  memcpy(T->name, &data->strings, data->name_len);
+  T->name[data->name_len] = 0;
+
+  // Copy traincomp
+  T->composition = _realloc(T->composition, data->nr_stock, sizeof(struct train_comp));
+  T->nr_stock = data->nr_stock;
+
+  struct train_comp_ws * cdata = (void *)&data->strings + data->name_len;
+  for(int c = 0; c<T->nr_stock; c++){
+    T->composition[c].type = cdata[c].type;
+    T->composition[c].id = cdata[c].id;
+    if(cdata[c].type == 0){
+      T->composition[c].p = (void *)engines[T->composition[c].id];
+    }
+    else{
+      T->composition[c].p = (void *)cars[T->composition[c].id];
+    }
+  }
+
+  // Send success response
+  rdata->data.opc_AddNewTraintolib_res.response = 1;
+  ws_send(client, (char *)rdata, WSopc_AddNewTraintolib_res_len, 0xff);
+}
+

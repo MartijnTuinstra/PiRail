@@ -13,7 +13,9 @@ GCC_FLAGS = -D _DEFAULT_SOURCE
 GCC = gcc -std=c99 -g3 $(GCC_INCLUDE) $(GCC_ERROR_FLAGS) $(GCC_LIBS) $(GCC_FLAGS)
 
 BAAN_FILES = baan system logger mem modules config rail signals switch IO algorithm encryption \
-             websocket websocket_msg websocket_control Z21 Z21_msg train submodule com sim pathfinding
+             Z21 Z21_msg train submodule com sim pathfinding
+
+BAAN_FILES += websocket websocket_cts websocket_stc websocket_control
 
 CONFIG_READER_FILES = config_reader config logger mem
 
@@ -44,12 +46,12 @@ _avr:
 
 baan: $(addprefix $(BIN)/,$(addsuffix .o, $(BAAN_FILES)))
 	@echo $@
-	@$(GCC) -o $@ $^
+	$(GCC) -o $@ $^
 	@$(GCC) -shared -o $@.so $^
 
 config_reader: $(addprefix $(BIN)/,$(addsuffix .o, $(CONFIG_READER_FILES)))
 	@echo $@
-	@$(GCC) -o $@ $^
+	$(GCC) -o $@ $^
 
 clean:
 	@echo "CLEAN"

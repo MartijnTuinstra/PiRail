@@ -1,36 +1,38 @@
+#include <stdlib.h>
 #include <stdint.h>
 #include <stdio.h>
 #include "logger.h"
 #include "config.h"
 #include "mem.h"
+#include "rail.h"
 
-void print_link(char * debug, struct s_link_conf link){
+void print_link(char ** debug, struct s_link_conf link){
   if(link.type == RAIL_LINK_C){
-    sprintf(debug, "%sC %2i:%2i  \t", debug, link.module, link.id);
+    *debug += sprintf(*debug, "C %2i:%2i  \t", link.module, link.id);
   }
   else if(link.type == RAIL_LINK_E){
-    sprintf(debug, "%sE        \t", debug);
+    *debug += sprintf(*debug, "E        \t");
   }
   else{
-    sprintf(debug, "%s%2i:%2i:", debug, link.module, link.id);
+    *debug += sprintf(*debug, "%2i:%2i:", link.module, link.id);
     if(link.type == RAIL_LINK_R)
-      sprintf(debug, "%s%c  \t", debug, 'R');
+      *debug += sprintf(*debug, "%c  \t", 'R');
     else if(link.type == RAIL_LINK_S)
-      sprintf(debug, "%s%c  \t", debug, 'S');
+      *debug += sprintf(*debug, "%c  \t", 'S');
     else if(link.type == RAIL_LINK_s)
-      sprintf(debug, "%s%c  \t", debug, 's');
+      *debug += sprintf(*debug, "%c  \t", 's');
     else if(link.type == RAIL_LINK_MA)
-      sprintf(debug, "%s%s  \t", debug, "MB");
+      *debug += sprintf(*debug, "%s  \t", "MB");
     else if(link.type == RAIL_LINK_MB)
-      sprintf(debug, "%s%s  \t", debug, "MB");
+      *debug += sprintf(*debug, "%s  \t", "MB");
     else if(link.type == RAIL_LINK_ma)
-      sprintf(debug, "%s%s  \t", debug, "ma");
+      *debug += sprintf(*debug, "%s  \t", "ma");
     else if(link.type == RAIL_LINK_mb)
-      sprintf(debug, "%s%s  \t", debug, "mb");
+      *debug += sprintf(*debug, "%s  \t", "mb");
     else if(link.type == RAIL_LINK_TT)
-      sprintf(debug, "%s%c%c \t", debug, 'T', 'T');
+      *debug += sprintf(*debug, "%c%c \t", 'T', 'T');
     else
-      sprintf(debug, "%s%i  \t", debug, link.type);
+      *debug += sprintf(*debug, "%i  \t", link.type);
   }
 }
 
@@ -48,15 +50,15 @@ void print_Block(struct s_block_conf block){
     "TURNTABLE"
   };
 
-  char debug[200];
+  char debug[300];
+  char * debugptr = debug;
 
-  sprintf(debug, "%i\t%11s\t",
+  debugptr += sprintf(debugptr, "%i\t%11s\t",
                 block.id,
                 rail_types_string[block.type]);
-  print_link(debug, block.next);
-  print_link(debug, block.prev);
-  sprintf(debug, "%s%i\t%i\t%i\t%i\t%i\t%i:%i\t%i:%i",
-                debug,
+  print_link(&debugptr, block.next);
+  print_link(&debugptr, block.prev);
+  debugptr += sprintf(debugptr, "%i\t%i\t%i\t%i\t%i\t%i:%i\t%i:%i",
                 block.speed,
                 (block.fl & 0x6) >> 1,
                 block.length,
@@ -69,30 +71,31 @@ void print_Block(struct s_block_conf block){
 }
 
 void print_Switch(struct switch_conf Switch){
-  char debug[200];
+  char debug[300];
+  char * debugptr = debug;
 
-  sprintf(debug, "%i\t%i\t",
+  debugptr += sprintf(debugptr, "%i\t%i\t",
                 Switch.id,
                 Switch.det_block);
-  print_link(debug, Switch.App);
-  print_link(debug, Switch.Str);
-  print_link(debug, Switch.Div);
-  sprintf(debug, "%s%x\t%i %i",
-                debug,
+  print_link(&debugptr, Switch.App);
+  print_link(&debugptr, Switch.Str);
+  print_link(&debugptr, Switch.Div);
+  debugptr += sprintf(debugptr, "%x\t%i %i",
                 Switch.IO,
                 Switch.speed_Str, Switch.speed_Div);
 
   for(int j = 0; j < (Switch.IO & 0x0f); j++){
-    sprintf(debug, "%s\t%i:%i", debug, Switch.IO_Ports[j].Node, Switch.IO_Ports[j].Adr);
+    debugptr += sprintf(debugptr, "\t%i:%i", Switch.IO_Ports[j].Node, Switch.IO_Ports[j].Adr);
   }
 
   printf( "%s\n", debug);
 }
 
 void print_MSSwitch(struct ms_switch_conf Switch){
-  char debug[400];
+  char debug[1000];
+  char * debugptr = debug;
 
-  sprintf(debug, "%i\t%i\t%i\t%2i -> [%2i:%2i",
+  debugptr += sprintf(debugptr, "%i\t%i\t%i\t%2i -> [%2i:%2i",
                 Switch.id,
                 Switch.det_block,
                 Switch.nr_states,
@@ -100,15 +103,15 @@ void print_MSSwitch(struct ms_switch_conf Switch){
                 Switch.IO_Ports[0].Node, Switch.IO_Ports[0].Adr);
 
   for(int i = 1; i < Switch.IO; i++){
-    sprintf(debug, "%s, %2i:%2i", debug, Switch.IO_Ports[i].Node, Switch.IO_Ports[i].Adr);
+    debugptr += sprintf(debugptr, ", %2i:%2i", Switch.IO_Ports[i].Node, Switch.IO_Ports[i].Adr);
   }
-  sprintf(debug, "%s]\n", debug);
+  debugptr += sprintf(debugptr, "]\n");
 
   for(int i = 0; i < Switch.nr_states; i++){
-    sprintf(debug, "%s\t\t\t%2i >\t", debug, i);
-    print_link(debug, Switch.states[i].sideA);
-    print_link(debug, Switch.states[i].sideB);
-    sprintf(debug, "%s%i\t%x\n", debug, Switch.states[i].speed, Switch.states[i].output_sequence);
+    debugptr += sprintf(debugptr, "\t\t\t%2i >\t", i);
+    print_link(&debugptr, Switch.states[i].sideA);
+    print_link(&debugptr, Switch.states[i].sideB);
+    debugptr += sprintf(debugptr, "%i\t%x\n", Switch.states[i].speed, Switch.states[i].output_sequence);
   }
 
   printf( "%s", debug);
@@ -116,12 +119,13 @@ void print_MSSwitch(struct ms_switch_conf Switch){
 
 void print_Signals(struct signal_conf signal){
   char debug[400];
+  char * debugptr = debug;
 
-  sprintf(debug, "%i\t%i\t%i", signal.id, signal.blockId, signal.output_len);
+  debugptr += sprintf(debugptr, "%i\t%i\t%i", signal.id, signal.blockId, signal.output_len);
   for(int i = 0;i < signal.output_len; i++){
-    sprintf(debug, "%s\n\t\t\t%02i:%02i - ", debug, signal.output[i].Node, signal.output[i].Adr);
+    debugptr += sprintf(debugptr, "\n\t\t\t%02i:%02i - ", signal.output[i].Node, signal.output[i].Adr);
     for(int j = 0; j < 8; j++){
-      sprintf(debug, "%s%i ", debug, signal.stating[i].event[j]);
+      debugptr += sprintf(debugptr, "%i ", signal.stating[i].event[j]);
     }
   }
 
@@ -129,14 +133,15 @@ void print_Signals(struct signal_conf signal){
 }
 
 void print_Stations(struct station_conf stations){
-  char debug[200];
+  char debug[250];
+  char * debugptr = debug;
 
-  sprintf(debug, "%i\t%9s\t",
+  debugptr += sprintf(debugptr, "%i\t%9s\t",
                 stations.type,
                 stations.name);
 
   for(int j = 0; j < stations.nr_blocks; j++){
-    sprintf(debug, "%s%i ", debug, stations.blocks[j]);
+    debugptr += sprintf(debugptr, "%i ", stations.blocks[j]);
   }
 
   printf( "%s\n", debug);
@@ -177,14 +182,15 @@ void print_Engines(struct engines_conf engine){
 }
 
 void print_Trains(struct trains_conf train){
-  char debug[200];
+  char debug[220];
+  char * debugptr = debug;
 
-  sprintf(debug, "%-20s\t%i\t\t",
+  debugptr += sprintf(debugptr, "%-20s\t%i\t\t",
                 train.name,
                 train.nr_stock);
 
   for(int i = 0; i < train.nr_stock; i++){
-    sprintf(debug, "%s%i:%i\t", debug, train.composition[i].type, train.composition[i].id);
+    debugptr += sprintf(debugptr, "%i:%i\t", train.composition[i].type, train.composition[i].id);
   }
 
   printf( "%s\n", debug);
@@ -492,23 +498,21 @@ void modify_Node(struct module_config * config, char cmd){
   }
 }
 
-void modify_Block(struct module_config * config, char cmd){
+void modify_Block(struct module_config * config, char ** cmds, uint8_t cmd_len){
   int id;
-  char _cmd[20];
-  int tmp, tmp1, tmp2;
-  char tmpc;
-  if(cmd == 'e'){
-    printf("Block ID: ");
-    fgets(_cmd, 20, stdin);
-    fgets(_cmd, 20, stdin);
-    if(sscanf(_cmd, "%i", &id) < 1)
+  char mode = cmds[0][0];
+  if(mode == 'e'){
+    if(cmd_len > 2){
+      id = atoi(cmds[2]);
+      printf("Editing block %i\n", id);
+    }
+    else{
+      printf("No ID supplied\n");
       return;
-    printf("Editing block %i\n", id);
-    // print_Block(config->Blocks[id]);
+    }
   }
-  else if(cmd == 'a'){
+  else if(mode == 'a'){
     printf("Block ID: (%i)\n", config->header.Blocks);
-    fgets(_cmd, 20, stdin); // Clear stdin
 
     if(config->header.Blocks == 0){
       printf("Calloc");
@@ -522,12 +526,15 @@ void modify_Block(struct module_config * config, char cmd){
     config->Blocks[config->header.Blocks].id = config->header.Blocks;
     id = config->header.Blocks++;
   }
-  else if(cmd == 'r'){
-    printf("Remove Block ID: ");
-    fgets(_cmd, 20, stdin);
-    fgets(_cmd, 20, stdin);
-    if(sscanf(_cmd, "%i", &id) < 1)
+  else if(mode == 'r'){
+    if(cmd_len > 2){
+      id = atoi(cmds[2]);
+      printf("Removing block %i\n", id);
+    }
+    else{
+      printf("No ID supplied\n");
       return;
+    }
 
     if(id == (config->header.Blocks - 1) && id >= 0){
       memset(&config->Blocks[config->header.Blocks - 1], 0, sizeof(struct s_block_conf));
@@ -539,7 +546,10 @@ void modify_Block(struct module_config * config, char cmd){
   }
 
 
-  if(cmd == 'e' || cmd == 'a'){
+  if((mode == 'e' && cmd_len <= 3) || (mode == 'a' && cmd_len <= 2)){
+    char _cmd[20];
+    int tmp, tmp1, tmp2;
+    char tmpc;
     printf("Block Type      (%i)         | ", config->Blocks[id].type);
     fgets(_cmd, 20, stdin);
     if(sscanf(_cmd, "%i", &tmp) > 0)
@@ -571,11 +581,8 @@ void modify_Block(struct module_config * config, char cmd){
     if(sscanf(_cmd, "%i", &tmp) > 0)
       config->Blocks[id].length = tmp;
 
-    printf("Block Oneway    (");
-    if(config->Blocks[id].fl & 1)
-      printf("Y)         | ");
-    else
-      printf("N)         | ");
+    printf("Block Oneway    (%c)         | ",(config->Blocks[id].fl & 1)?'Y':'N');
+
     fgets(_cmd, 20, stdin);
     if(sscanf(_cmd, "%c", &tmpc) > 0){
       if(tmpc == 'Y' || tmpc == 'y')
@@ -619,20 +626,81 @@ void modify_Block(struct module_config * config, char cmd){
     }
     printf("New:      \t");
     print_Block(config->Blocks[id]);
-    // struct s_block_conf tmp;
-    // int dir, oneway, Out_en;
-    // scanf("%i\t%i\t%2i:%2i:%c\t\t%2i:%2i:%c\t\t%i\t%i\t%i\t%i\t%i\t%i:%i\t%i:%i",
-    //   &tmp.id, &tmp.type,
-    //   &tmp.next.module, &tmp.next.id, &tmp.next.type,
-    //   &tmp.prev.module, &tmp.prev.id, &tmp.prev.type,
-    //   &tmp.speed,
-    //   &dir,
-    //   &tmp.length,
-    //   &oneway,
-    //   &Out_en,
-    //   &tmp.IO_In.Node, &tmp.IO_In.Adr,
-    //   &tmp.IO_Out.Node, &tmp.IO_Out.Adr);
+  }
+  else if(mode == 'e'){
+    printf("Argment mode\n");
+    cmds = &cmds[3];
+    cmd_len -= 3;
 
+    for(uint8_t i = 0; i < cmd_len;){
+      printf("%s\t", cmds[i]);
+      if(strcmp(cmds[i], "-h") == 0){
+        // Help
+        printf("Arguments for Block: \n");
+        printf("\t-t\tType\n");
+        printf("\t-N\tNextLink\n");
+        printf("\t-P\tPrevLink\n");
+        printf("\t-s\tSpeed\n");
+        printf("\t-l\tLength\n");
+        printf("\t--OW\tOneWay\n");
+        printf("\t-d\tDirection\n");
+        // printf("\t--IOIn\tIO Input Address\n");
+        // printf("\t--IOOut\tIO Output Address\n");
+        return;
+      }
+      else if(strcmp(cmds[i], "-t") == 0){
+        config->Blocks[id].type = atoi(cmds[i+1]);
+        i++;
+      }
+      else if(strcmp(cmds[i], "-N") == 0 || strcmp(cmds[i], "-P") == 0){
+        struct s_link_conf * link;
+        char _type[10];
+        uint8_t _m, _id;
+
+        if(cmds[i][1] == 'N')
+          link = &config->Blocks[id].next;
+        else
+          link = &config->Blocks[id].prev;
+
+        if(sscanf(cmds[i+1], "%hhu:%hhu:%s", &_m, &_id, _type) > 0){
+          link->module = _m;
+          link->id = _id;
+
+          if(_type[0] == 'E')
+            link->type = RAIL_LINK_E;
+          else if(_type[0] == 'C')
+            link->type = RAIL_LINK_C;
+          else
+            link->type = atoi(_type);
+        }
+        i++;
+      }
+      else if(strcmp(cmds[i], "-s") == 0){
+        config->Blocks[id].speed = atoi(cmds[i+1]);
+        i++;
+      }
+      else if(strcmp(cmds[i], "-l") == 0){
+        config->Blocks[id].length = atoi(cmds[i+1]);
+        i++;
+      }
+      else if(strcmp(cmds[i], "--OW") == 0){
+        if(cmds[i+1][0] == 'Y' || cmds[i+1][0] == 'y')
+          config->Blocks[id].fl |= 0x1;
+        else
+          config->Blocks[id].fl &= ~0x1;
+        i++;
+      }
+      else if(strcmp(cmds[i], "-d") == 0){
+        config->Blocks[id].fl &= ~0b1110;
+        config->Blocks[id].fl |= (atoi(cmds[i+1]) & 0x3) << 1;
+        i++;
+      }
+      i++;
+    }
+    printf("\n");
+  }
+  else{
+    printf("Mode not supported");
   }
 }
 
@@ -643,7 +711,6 @@ void modify_Switch(struct module_config * config, char cmd){
   if(cmd == 'e'){
     printf("Switch ID: ");
     fgets(_cmd, 20, stdin);
-    fgets(_cmd, 20, stdin);
     if(sscanf(_cmd, "%i", &id) < 1)
       return;
     printf("Editing Switch %i\n", id);
@@ -651,7 +718,6 @@ void modify_Switch(struct module_config * config, char cmd){
   }
   else if(cmd == 'a'){
     printf("Switch ID: (%i)\n", config->header.Switches);
-    fgets(_cmd, 20, stdin); // Clear stdin
 
     if(config->header.Switches == 0){
       printf("Calloc");
@@ -667,7 +733,6 @@ void modify_Switch(struct module_config * config, char cmd){
   }
   else if(cmd == 'r'){
     printf("Remove Switch ID: ");
-    fgets(_cmd, 20, stdin);
     fgets(_cmd, 20, stdin);
     if(sscanf(_cmd, "%i", &id) < 1)
       return;
@@ -756,7 +821,6 @@ void modify_MSSwitch(struct module_config * config, char cmd){
   if(cmd == 'e'){
     printf("MSSwitch ID: ");
     fgets(_cmd, 20, stdin);
-    fgets(_cmd, 20, stdin);
     if(sscanf(_cmd, "%i", &id) < 1 || id >= config->header.MSSwitches || id < 0){
       printf("Invalid\n");
       return;
@@ -766,7 +830,6 @@ void modify_MSSwitch(struct module_config * config, char cmd){
   }
   else if(cmd == 'a'){
     printf("MSSwitch ID: (%i)\n", config->header.MSSwitches);
-    fgets(_cmd, 20, stdin); // Clear stdin
 
     if(config->header.MSSwitches == 0){
       printf("Calloc");
@@ -787,7 +850,6 @@ void modify_MSSwitch(struct module_config * config, char cmd){
   }
   else if(cmd == 'r'){
     printf("Remove Switch ID: ");
-    fgets(_cmd, 20, stdin);
     fgets(_cmd, 20, stdin);
     if(sscanf(_cmd, "%i", &id) < 1)
       return;
@@ -909,7 +971,6 @@ void modify_Signal(struct module_config * config, char cmd){
   if(cmd == 'e'){
     printf("Signal ID: ");
     fgets(_cmd, 20, stdin);
-    fgets(_cmd, 20, stdin);
     if(sscanf(_cmd, "%i", &id) < 1)
       return;
     printf("Editing Signal %i\n", id);
@@ -917,7 +978,6 @@ void modify_Signal(struct module_config * config, char cmd){
   }
   else if(cmd == 'a'){
     printf("Signal ID: (%i)\n", config->header.Signals);
-    fgets(_cmd, 20, stdin); // Clear stdin
 
     if(config->header.Signals == 0){
       printf("Calloc");
@@ -938,7 +998,6 @@ void modify_Signal(struct module_config * config, char cmd){
   }
   else if(cmd == 'r'){
     printf("Remove Signal ID: ");
-    fgets(_cmd, 20, stdin);
     fgets(_cmd, 20, stdin);
     if(sscanf(_cmd, "%i", &id) < 1)
       return;
@@ -1028,7 +1087,6 @@ void modify_Station(struct module_config * config, char cmd){
   if(cmd == 'e'){
     printf("Station ID: ");
     fgets(_cmd, 20, stdin);
-    fgets(_cmd, 20, stdin);
     if(sscanf(_cmd, "%i", &id) < 1)
       return;
     printf("Editing Station %i\n", id);
@@ -1036,7 +1094,6 @@ void modify_Station(struct module_config * config, char cmd){
   }
   else if(cmd == 'a'){
     printf("Station ID: (%i)\n", config->header.Stations);
-    fgets(_cmd, 20, stdin); // Clear stdin
 
     if(config->header.Stations == 0){
       printf("Calloc");
@@ -1057,7 +1114,6 @@ void modify_Station(struct module_config * config, char cmd){
   }
   else if(cmd == 'r'){
     printf("Remove Station ID: ");
-    fgets(_cmd, 20, stdin);
     fgets(_cmd, 20, stdin);
     if(sscanf(_cmd, "%i", &id) < 1)
       return;
@@ -1122,10 +1178,18 @@ void modify_Station(struct module_config * config, char cmd){
   }
 }
 
-void export_Layout(struct module_config * config){
+void export_Layout(struct module_config * config, char * location){
   FILE * fp;
   /* open the file for writing*/
-  fp = fopen ("Layout_export.txt","w");
+  if(location)
+    fp = fopen (location,"w");
+  else
+    fp = fopen ("Layout_export.txt","w");
+
+  if(!fp){
+    printf("Failed to export layout\n");
+    return;
+  }
 
   /* write 10 lines of text into the file stream*/
   fprintf(fp, "%s", config->Layout);
@@ -1134,21 +1198,31 @@ void export_Layout(struct module_config * config){
   fclose (fp);
 }
 
-void import_Layout(struct module_config * config){
+void import_Layout(struct module_config * config, char * location){
   FILE * fp;
-  char src[80];
 
-  fgets(src, 2, stdin);
-  printf("Location: ");
-  fgets(src, 80, stdin);
-  sscanf(src, "%s", src);
-  /* open the file for reading*/
-  fp = fopen (src,"r");
+  if(!location){
+    char src[80];
 
-  if(!fp){
-    loggerf(ERROR, "File not found '%s'", src);
-    return;
+    fgets(src, 2, stdin);
+    printf("Location: ");
+    fgets(src, 80, stdin);
+    sscanf(src, "%s", src);
+    /* open the file for reading*/
+    fp = fopen (src,"r");
+    if(!fp){
+      loggerf(ERROR, "File not found '%s'", src);
+      return;
+    }
   }
+  else{
+    fp = fopen (location,"r");
+    if(!fp){
+      loggerf(ERROR, "File not found '%s'", location);
+      return;
+    }
+  }
+
 
   fseek(fp, 0, SEEK_END);
   long fsize = ftell(fp);
@@ -1621,14 +1695,15 @@ void modify_Catagory(struct train_config * config, char type, char cmd){
 }
 
 int edit_module(){
-  char filename[40] = "configs/units/";
+  const char filepath[20] = "configs/units/";
+  char filename[40];
   int file;
 
   printf("Open module: ");
 
   scanf("%i", &file);
 
-  sprintf(filename, "%s%i.bin", filename, file);
+  sprintf(filename, "%s%i.bin", filepath, file);
 
   FILE * fp = fopen(filename,"rb");
 
@@ -1680,60 +1755,88 @@ int edit_module(){
   print_module_config(&config);
 
   char cmd[300];
+  char ** cmds = _calloc(20, char *);
+  uint8_t cmds_len = 0;
 
   while (1){
-    printf("Command: ");
-    scanf("%s", cmd);
-    if(strcmp(cmd, "q") == 0){
+    memset(cmds, 0, 20);
+    cmds_len = 0;
+    printf("> ");
+    fgets(cmd,300,stdin);
+
+    // Split command into arguments
+    cmds[0] = strtok(cmd, " ");
+
+    while( cmds[cmds_len] != NULL ) {
+      cmds[++cmds_len] = strtok(NULL, " ");
+    }
+
+    // Remove \n character from last command/argument
+    cmds[cmds_len-1][strlen(cmds[cmds_len-1])-1] = 0;
+
+    // If no command
+    if(!cmds[0])
+      continue;
+
+    if(cmd[0] == 'q'){
       break;
     }
-    else if(strcmp(cmd, "e") == 0 || strcmp(cmd, "a") == 0 || strcmp(cmd, "r") == 0){
-      char cmd1 = cmd[0];
-      if(cmd1 == 'e')
-        printf("Edit");
-      else if(cmd1 == 'a')
-        printf("Add");
-      else if(cmd1 == 'r')
-        printf("Remove");
-      printf(" (B/Sw/MSSw/Sig/St)? ");
-      scanf("%s", cmd);
-      if(strcmp(cmd, "B") == 0){
-        modify_Block(&config, cmd1);
+    else if(cmd[0] == 'h'){
+      printf("Help:\n");
+      printf("\ta [Item]            \tAdd an Item with ID\n");
+      printf("\te [Item] [ID] {args}\tEdit an Item with ID\n");
+      printf("\td [Item] [ID] {args}\tRemove an Item with ID\n");
+      printf("\tp                   \tPrint configuration\n");
+      printf("\tim [path]           \tImport web layout from path\n");
+      printf("\tex {path}           \tExport web layout to path, defaults to Layout_export.txt\n");
+      printf("\tpl                  \tPrint current web layout\n");
+      printf("\ts                   \tSave configuration\n");
+    }
+    else if(strcmp(cmds[0], "e") == 0 || strcmp(cmds[0], "a") == 0 || strcmp(cmds[0], "r") == 0){
+      if(cmds_len < 2){
+        printf("Command too short\n");
+        continue;
       }
-      else if(strcmp(cmd, "Sw") == 0){
-        modify_Switch(&config, cmd1);
+
+      if(strcmp(cmds[1], "B") == 0){
+        modify_Block(&config, cmds, cmds_len);
       }
-      else if(strcmp(cmd, "MSSw") == 0){
-        modify_MSSwitch(&config, cmd1);
+      else if(strcmp(cmds[1], "Sw") == 0){
+        modify_Switch(&config, cmds[0][0]);
       }
-      else if(strcmp(cmd, "Sig") == 0){
-        modify_Signal(&config, cmd1);
+      else if(strcmp(cmds[1], "MSSw") == 0){
+        modify_MSSwitch(&config, cmds[0][0]);
       }
-      else if(strcmp(cmd, "St") == 0){
-        modify_Station(&config, cmd1);
+      else if(strcmp(cmds[1], "Sig") == 0){
+        modify_Signal(&config, cmds[0][0]);
       }
-      else if(strcmp(cmd, "N") == 0){
-        modify_Node(&config, cmd1);
+      else if(strcmp(cmds[1], "St") == 0){
+        modify_Station(&config, cmds[0][0]);
+      }
+      else if(strcmp(cmds[1], "N") == 0){
+        modify_Node(&config, cmds[0][0]);
       }
     }
-    else if(strcmp(cmd, "ex") == 0 || strcmp(cmd, "Ex") == 0){
-      export_Layout(&config);
+    else if(strcmp(cmds[0], "ex") == 0 || strcmp(cmds[0], "Ex") == 0){
+      export_Layout(&config, cmds[1]);
     }
-    else if(strcmp(cmd, "im") == 0 || strcmp(cmd, "Im") == 0){
-      import_Layout(&config);
+    else if(strcmp(cmds[0], "im") == 0 || strcmp(cmds[0], "Im") == 0){
+      import_Layout(&config, cmds[1]);
     }
-    else if(strcmp(cmd,  "pL") == 0 || strcmp(cmd, "pl") == 0){
+    else if(strcmp(cmds[0],  "pL") == 0 || strcmp(cmds[0], "pl") == 0){
       print_Layout(&config);
     }
-    else if(strcmp(cmd, "s") == 0){
+    else if(strcmp(cmds[0], "s") == 0){
       write_module_from_conf(&config, filename);
     }
-    else if(strcmp(cmd, "p") == 0){
+    else if(strcmp(cmds[0], "p") == 0){
       print_module_config(&config);
     }
-    else
-      printf("Not a command\n");
+  //   else
+  //     printf("Not a command\n");
   }
+
+  _free(cmds);
 
   //free switches
   for(int i = 0; i < config.header.Switches; i++){
@@ -1849,7 +1952,7 @@ int edit_rolling_stock(){
 
 int main(){
   init_logger("log_config.txt");
-  set_level(MEMORY);
+  set_level(TRACE);
 
   printf("Edit module or rolling stock? ");
 

@@ -36,10 +36,22 @@ void print_link(char ** debug, struct s_link_conf link){
   }
 }
 
-void print_Node(struct s_node_conf node){
-  printf("%i\t%i\n",
-                node.Node,
-                node.size);
+void print_Node(struct node_conf node){
+  char debug[300];
+  char * debugptr = debug;
+  const char hexset[16] = "0123456789ABCDEF";
+
+  debugptr += sprintf(debugptr, "%i\t%i\t", node.Node, node.size);
+
+  for(int j = 0; j < node.size; j++){
+    debugptr[0] = hexset[(node.data[j/2] >> (4 * (j%2))) & 0xF];
+    debugptr++;
+  }
+
+  debugptr[0] = '\n';
+  debugptr[1] = 0;
+
+  printf("%s", debug);
 }
 
 void print_Block(struct s_block_conf block){
@@ -215,50 +227,128 @@ void print_Catagories(struct train_config * config){
   }
 }
 
-void print_module_config(struct module_config * config){
-  printf( "Modules:     %i\n", config->header.module);
-  printf( "Connections: %i\n", config->header.connections);
-  printf( "IO_Nodes:    %i\n", config->header.IO_Nodes);
-  printf( "Blocks:      %i\n", config->header.Blocks);
-  printf( "Switches:    %i\n", config->header.Switches);
-  printf( "MSSwitches:  %i\n", config->header.MSSwitches);
-  printf( "Signals:     %i\n", config->header.Signals);
-  printf( "Stations:    %i\n", config->header.Stations);
+void print_module_config(struct module_config * config, char ** cmds, uint8_t cmd_len){
+  if(!cmds)
+    return;
   
-  printf( "IO Nodes\n");
-  printf( "id\tSize\n");
-  for(int i = 0; i < config->header.IO_Nodes; i++){
-    print_Node(config->Nodes[i]);
+  cmds = &cmds[1];
+  cmd_len -= 1;
+
+  uint16_t mask = 0;
+
+  for(uint8_t i = 0; i < cmd_len;){
+    if(strcmp(cmds[i], "-h") == 0){
+      // Help
+      printf("Arguments for Print config: \n");
+      printf("\t-H\tHeaders\n");
+      printf("\t-n\tNodes\n");
+      printf("\t-b\tBlocks\n");
+      printf("\t-p\tSwitches/Points\n");
+      printf("\t-m\tMSSwitches\n");
+      printf("\t-s\tSignals\n");
+      printf("\t-t\tStations\n");
+      printf("\t-A\tAll\n");
+      return;
+    }
+    else if(strcmp(cmds[i], "-H") == 0){
+      mask |= 1;
+    }
+    else if(strcmp(cmds[i], "-n") == 0){
+      mask |= 2;
+    }
+    else if(strcmp(cmds[i], "-b") == 0){
+      mask |= 8;
+    }
+    else if(strcmp(cmds[i], "-p") == 0){
+      mask |= 16;
+    }
+    else if(strcmp(cmds[i], "-m") == 0){
+      mask |= 32;
+    }
+    else if(strcmp(cmds[i], "-s") == 0){
+      mask |= 64;
+    }
+    else if(strcmp(cmds[i], "-t") == 0){
+      mask |= 128;
+    }
+    else if(strcmp(cmds[i], "-A") == 0){
+      mask |= 255;
+    }
+    i++;
   }
 
-  printf( "Block\n");
-  printf( "id\ttype\t\tNext    \tPrev    \tMax_sp\tdir\tlen\tOneWay\tOut en\tIO_in\tIO_out\n");
-  for(int i = 0; i < config->header.Blocks; i++){
-    print_Block(config->Blocks[i]);
+  if(mask == 0){
+    // Help
+    printf("Arguments for Print config: \n");
+    printf("\t-h\tHeaders\n");
+    printf("\t-n\tNodes\n");
+    printf("\t-b\tBlocks\n");
+    printf("\t-p\tSwitches/Points\n");
+    printf("\t-m\tMSSwitches\n");
+    printf("\t-s\tSignals\n");
+    printf("\t-t\tStations\n");
+    printf("\t-A\tAll");
+    return;
+  }
+
+  printf("\n");
+  if(mask & 1){
+    printf( "Modules:     %i\n", config->header.module);
+    printf( "Connections: %i\n", config->header.connections);
+    printf( "IO_Nodes:    %i\n", config->header.IO_Nodes);
+    printf( "Blocks:      %i\n", config->header.Blocks);
+    printf( "Switches:    %i\n", config->header.Switches);
+    printf( "MSSwitches:  %i\n", config->header.MSSwitches);
+    printf( "Signals:     %i\n", config->header.Signals);
+    printf( "Stations:    %i\n", config->header.Stations);
   }
   
-  printf( "Switch\n");
-  printf( "id\tblock\tApp       \tStr       \tDiv       \tIO\tSpeed\n");
-  for(int i = 0; i < config->header.Switches; i++){
-    print_Switch(config->Switches[i]);
+  if(mask & 2){
+    printf( "IO Nodes\n");
+    printf( "id\tSize\n");
+    for(int i = 0; i < config->header.IO_Nodes; i++){
+      print_Node(config->Nodes[i]);
+    }
   }
 
-  printf( "MSSwitch\n");
-  printf( "id\tblock\tstates\tIO\tSideA     \tSideB     \tSpeed\tSequence\t...\n");
-  for(int i = 0; i < config->header.MSSwitches; i++){
-    print_MSSwitch(config->MSSwitches[i]);
+  if(mask & 8){
+    printf( "Block\n");
+    printf( "id\ttype\t\tNext    \tPrev    \tMax_sp\tdir\tlen\tOneWay\tOut en\tIO_in\tIO_out\n");
+    for(int i = 0; i < config->header.Blocks; i++){
+      print_Block(config->Blocks[i]);
+    }
+  }
+  
+  if(mask & 16){
+    printf( "Switch\n");
+    printf( "id\tblock\tApp       \tStr       \tDiv       \tIO\tSpeed\n");
+    for(int i = 0; i < config->header.Switches; i++){
+      print_Switch(config->Switches[i]);
+    }
   }
 
-  printf( "Signals\n");
-  printf( "id\tBlockID\tOutput Length\t\tOutput states\n");
-  for(int i = 0; i < config->header.Signals; i++){
-    print_Signals(config->Signals[i]);
+  if(mask & 32){
+    printf( "MSSwitch\n");
+    printf( "id\tblock\tstates\tIO\tSideA     \tSideB     \tSpeed\tSequence\t...\n");
+    for(int i = 0; i < config->header.MSSwitches; i++){
+      print_MSSwitch(config->MSSwitches[i]);
+    }
   }
 
-  printf( "Station\n");
-  printf( "type\tName\t\tblocks\n");
-  for(int i = 0; i < config->header.Stations; i++){
-    print_Stations(config->Stations[i]);
+  if(mask & 64){
+    printf( "Signals\n");
+    printf( "id\tBlockID\tOutput Length\t\tOutput states\n");
+    for(int i = 0; i < config->header.Signals; i++){
+      print_Signals(config->Signals[i]);
+    }
+  }
+
+  if(mask & 128){
+    printf( "Station\n");
+    printf( "type\tName\t\tblocks\n");
+    for(int i = 0; i < config->header.Stations; i++){
+      print_Stations(config->Stations[i]);
+    }
   }
 }
 
@@ -319,7 +409,7 @@ int read_module_config(struct module_config * config, FILE * fp){
     return -1;
   }
 
-  config->Nodes = _calloc(config->header.IO_Nodes, struct s_node_conf);
+  config->Nodes = _calloc(config->header.IO_Nodes, struct node_conf);
   
   for(int i = 0; i < config->header.IO_Nodes; i++){
     config->Nodes[i]  = read_s_node_conf(buf_ptr);
@@ -427,22 +517,24 @@ int read_train_config(struct train_config * config, FILE * fp){
   return 1;
 }
 
-void modify_Node(struct module_config * config, char cmd){
+void modify_Node(struct module_config * config, char ** cmds, uint8_t cmd_len){
+  if(!cmds)
+    return;
+
   int id;
-  char _cmd[20];
-  int tmp;
-  if(cmd == 'e'){
-    printf("Node ID: ");
-    fgets(_cmd, 20, stdin);
-    fgets(_cmd, 20, stdin);
-    if(sscanf(_cmd, "%i", &id) < 1)
+  char mode = cmds[0][0];
+  if(cmds[0][0] == 'e'){
+    if(cmd_len > 2){
+      id = atoi(cmds[2]);
+      printf("Editing Node %i\n", id);
+    }
+    else{
+      printf("No ID supplied\n");
       return;
-    printf("Editing Node %i\n", id);
-    // print_Block(config->Blocks[id]);
+    }
   }
-  else if(cmd == 'a'){
+  else if(cmds[0][0] == 'a'){
     printf("Node ID: (%i)\n", config->header.IO_Nodes);
-    fgets(_cmd, 20, stdin); // Clear stdin
 
     if(config->header.IO_Nodes == 0){
       printf("Calloc");
@@ -456,24 +548,29 @@ void modify_Node(struct module_config * config, char cmd){
     config->Nodes[config->header.IO_Nodes].Node = config->header.IO_Nodes;
     id = config->header.IO_Nodes++;
   }
-  else if(cmd == 'r'){
-    printf("Remove Node ID: ");
-    fgets(_cmd, 20, stdin);
-    fgets(_cmd, 20, stdin);
-    if(sscanf(_cmd, "%i", &id) < 1)
+  else if(cmds[0][0] == 'r'){
+    if(cmd_len > 2){
+      id = atoi(cmds[2]);
+      printf("Removing Node %i\n", id);
+    }
+    else{
+      printf("No ID supplied\n");
       return;
+    }
 
     if(id == (config->header.IO_Nodes - 1) && id >= 0){
       memset(&config->Nodes[config->header.IO_Nodes - 1], 0, sizeof(struct s_node_conf));
       config->Nodes = _realloc(config->Nodes, --config->header.IO_Nodes, struct s_node_conf);
     }
     else{
-      printf("Only last block can be removed\n");
+      printf("Only last Node can be removed\n");
     }
   }
 
 
-  if(cmd == 'e' || cmd == 'a'){
+  if((mode == 'e' && cmd_len <= 3) || (mode == 'a' && cmd_len <= 2)){
+    int tmp;
+    char _cmd[20];
     printf("Node Size      (%i)         | ", config->Nodes[id].size);
     fgets(_cmd, 20, stdin);
     if(sscanf(_cmd, "%i", &tmp) > 0)
@@ -481,24 +578,43 @@ void modify_Node(struct module_config * config, char cmd){
 
     printf("New:      \t");
     print_Node(config->Nodes[id]);
-    // struct s_block_conf tmp;
-    // int dir, oneway, Out_en;
-    // scanf("%i\t%i\t%2i:%2i:%c\t\t%2i:%2i:%c\t\t%i\t%i\t%i\t%i\t%i\t%i:%i\t%i:%i",
-    //   &tmp.id, &tmp.type,
-    //   &tmp.next.module, &tmp.next.id, &tmp.next.type,
-    //   &tmp.prev.module, &tmp.prev.id, &tmp.prev.type,
-    //   &tmp.speed,
-    //   &dir,
-    //   &tmp.length,
-    //   &oneway,
-    //   &Out_en,
-    //   &tmp.IO_In.Node, &tmp.IO_In.Adr,
-    //   &tmp.IO_Out.Node, &tmp.IO_Out.Adr);
+  }
+  else if(mode == 'e'){
+    printf("Argment mode\n");
+    cmds = &cmds[3];
+    cmd_len -= 3;
 
+    for(uint8_t i = 0; i < cmd_len;){
+      printf("%s\t", cmds[i]);
+      if(strcmp(cmds[i], "-h") == 0){
+        // Help
+        printf("Arguments for Node: \n");
+        printf("\t-p              Number of IO\n");
+        printf("\t-t [io] [type]  Set io type\n");
+        return;
+      }
+      else if(strcmp(cmds[i], "-p") == 0){
+        printf("set size");
+        config->Nodes[id].size = atoi(cmds[i+1]);
+        i++;
+      }
+      else if(strcmp(cmds[i], "-t") == 0){
+        uint8_t port = atoi(cmds[i+1]);
+        printf("%i => %s\n", port, cmds[i+2]);
+        config->Nodes[id].data[port/2] &= ~(0xF << (4 * ((port + 1)% 2)));
+        config->Nodes[id].data[port/2] |= (atoi(cmds[i+2]) & 0xF) << (4 * (port % 2));
+        i+= 2;
+      }
+      i++;
+    }
+    printf("\n");
   }
 }
 
 void modify_Block(struct module_config * config, char ** cmds, uint8_t cmd_len){
+  if(!cmds)
+    return;
+  
   int id;
   char mode = cmds[0][0];
   if(mode == 'e'){
@@ -1752,7 +1868,7 @@ int edit_module(){
     }
     fclose(fp);
   }
-  print_module_config(&config);
+  print_module_config(&config, 0, 0);
 
   char cmd[300];
   char ** cmds = _calloc(20, char *);
@@ -1814,7 +1930,7 @@ int edit_module(){
         modify_Station(&config, cmds[0][0]);
       }
       else if(strcmp(cmds[1], "N") == 0){
-        modify_Node(&config, cmds[0][0]);
+        modify_Node(&config, cmds, cmds_len);
       }
     }
     else if(strcmp(cmds[0], "ex") == 0 || strcmp(cmds[0], "Ex") == 0){
@@ -1830,10 +1946,17 @@ int edit_module(){
       write_module_from_conf(&config, filename);
     }
     else if(strcmp(cmds[0], "p") == 0){
-      print_module_config(&config);
+      print_module_config(&config, cmds, cmds_len);
     }
   //   else
   //     printf("Not a command\n");
+  }
+
+  int exit = 1;
+
+
+  if(cmds_len > 1 && strcmp(cmds[1], "-r") == 0){
+    exit = -1;
   }
 
   _free(cmds);
@@ -1868,10 +1991,7 @@ int edit_module(){
   _free(config.Signals);
   _free(config.Stations);
 
-  exit_logger();
-
-  printf("Done\n");
-  return 1;
+  return exit;
 }
 
 struct train_config * global_config;
@@ -1955,14 +2075,18 @@ int main(){
   set_level(TRACE);
 
   printf("Edit module or rolling stock? ");
-
   char cmd[40] = "";
+  int val;
+
+  restart:
+
+  memset(cmd,0,40);
 
   fgets(cmd, 20, stdin);
   sscanf(cmd, "%s", cmd);
 
   if(strcmp(cmd, "module") == 0 || strcmp(cmd, "Module") == 0){
-    edit_module();
+    val = edit_module();
   }
   else if(strcmp(cmd, "Train") == 0 || strcmp(cmd, "Car") == 0 || strcmp(cmd, "Engine") == 0 || strcmp(cmd, "rolling stock") == 0){
     edit_rolling_stock();
@@ -1971,7 +2095,16 @@ int main(){
     printf("Unknown command");
   }
 
+  if(val == -1){
+    printf("Restart!!\n");
+    goto restart;
+  }
+
   printf("Done");
 
   
+  loggerf(INFO, "STOPPED");
+  exit_logger(); //Close logger
+
+  print_allocs();
 }

@@ -49,6 +49,12 @@ struct __attribute__((__packed__)) s_node_conf {
   uint8_t size;
 };
 
+struct node_conf {
+  uint8_t Node;
+  uint8_t size;
+  uint8_t * data;
+};
+
 struct __attribute__((__packed__)) s_block_conf {
   uint8_t id;
   uint8_t type;
@@ -162,7 +168,7 @@ struct __attribute__((__packed__)) s_signal_conf {
 struct module_config {
   struct s_unit_conf header;
 
-  struct s_node_conf * Nodes;
+  struct node_conf * Nodes;
 
   struct s_block_conf * Blocks;
   struct switch_conf * Switches;

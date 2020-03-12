@@ -18,7 +18,7 @@ void write_train_from_conf(struct train_config * config, char * filename);
 
 int check_Spacing(uint8_t ** p);
 
-struct s_node_conf read_s_node_conf(uint8_t ** p);
+struct node_conf read_s_node_conf(uint8_t ** p);
 struct s_unit_conf read_s_unit_conf(uint8_t ** p);
 
 struct s_block_conf read_s_block_conf(uint8_t ** p);

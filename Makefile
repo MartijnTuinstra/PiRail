@@ -6,7 +6,7 @@ LIB=lib
 
 GCC_DEPFLAGS = -MT $@ -MMD -MP -MF $(DEPDIR)/$*.d
 GCC_INCLUDE = -I $(LIB)
-GCC_ERROR_FLAGS = -Werror=unused-variable -Wno-packed-bitfield-compat -Wno-unused-parameter
+GCC_ERROR_FLAGS = -Werror=unused-variable -Wno-packed-bitfield-compat -Wno-unused-parameter -Wall
 GCC_LIBS = -lpthread -lssl -lcrypto -lm
 GCC_FLAGS = -D _DEFAULT_SOURCE
 

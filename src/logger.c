@@ -91,7 +91,7 @@ void floggerf(enum logging_levels level, char * file, int line, char * text, ...
 
   vsprintf(arg, text, arglist);
 
-  sprintf(msg, "%s.%d - %s%s - %20s:%4i - %s%s\n",c_time,clock.tv_nsec,logging_levels_colour[level], logging_levels_str[level],file,line, arg, logging_levels_colour[7]);
+  sprintf(msg, "%s.%ld - %s%s - %20s:%4i - %s%s\n",c_time,clock.tv_nsec,logging_levels_colour[level], logging_levels_str[level],file,line, arg, logging_levels_colour[7]);
 
   FILE * fp = fopen(logger_file,"a");
 

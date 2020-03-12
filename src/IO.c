@@ -63,88 +63,69 @@ void update_IO(){
       buf[1] = COMopc_SetAllOut;
 
       for(int io = 0; io < Units[u]->Node[n].io_ports; io++){
-        if(U_IO(u, n, io)->type == IO_Output && U_IO(u, n, io)->w_state != U_IO(u, n, io)->r_state){
-          char output[200];
-          sprintf(output, "Update io %02i:%02i:%02i", u, n, io);
-          str_IO_event(U_IO(u, n, io)->w_state, output);
-          loggerf(DEBUG, "%s", output);
+        if(U_IO(u, n, io)->type == IO_Output && U_IO(u, n, io)->w_state.value != U_IO(u, n, io)->r_state.value){;
+          loggerf(DEBUG, "Update io %02i:%02i:%02i %s", u, n, io,
+                  IO_event_string[U_IO(u, n, io)->type][U_IO(u, n, io)->w_state.value]);
 
-	  if(io % 2 == 0){
-            buf[io/2 + 2] = U_IO(u, n, io)->w_state;
-          }
-	  else{ // i% 2 == 1
-            buf[io/2 + 2] |= U_IO(u, n, io)->w_state << 4;
-          }
-	  if(U_IO(u, n, io)->w_state == IO_event_Pulse) // Reset When pulsing output
-            U_IO(u, n, io)->w_state = IO_event_Low;
-          U_IO(u, n, io)->r_state = U_IO(u, n, io)->w_state;
+          buf[io/4 + 2] = U_IO(u, n, io)->w_state.value << ((io % 4) * 2);
+
+          if(U_IO(u, n, io)->w_state.output == IO_event_Pulse) // Reset When pulsing output
+            U_IO(u, n, io)->w_state.output = IO_event_Low;
+            U_IO(u, n, io)->r_state.value = U_IO(u, n, io)->w_state.value;
         }
       }
     }
   }
 }
 
+const char * IO_enum_type_string[9] = {
+  "IO_Undefined",
+  "IO_Output",
+  "IO_Output_Blink",
+  "IO_Output_Servo",
+  "IO_Output_PWM",
+  "IO_Input_Block",
+  "IO_Input_Switch",
+  "IO_Input_MSSwitch",
+  "IO_Input"
+};
 
-
-void str_IO_type(enum e_IO_type type, char * str){
-  if(type == IO_Undefined){
-    sprintf(str, "%s IO_Undefined", str);
-  }
-  else if(type == IO_Output){
-    sprintf(str, "%s IO_Output", str);
-  }
-  else if(type == IO_Input_Block){
-    sprintf(str, "%s IO_Input_Block", str);
-  }
-  else if(type == IO_Input_Switch){
-    sprintf(str, "%s IO_Input_Switch", str);
-  }
-  else if(type == IO_Input_MSSwitch){
-    sprintf(str, "%s IO_Input_MSSwitch", str);
-  }
-  else if(type == IO_Input){
-    sprintf(str, "%s IO_Input", str);
-  }
-}
-void str_IO_event(enum e_IO_event event, char * str){
-  if(event == IO_event_High){
-    sprintf(str, "%s IO_event_High", str);
-  }
-  else if(event == IO_event_Low){
-    sprintf(str, "%s IO_event_Low", str);
-  }
-  else if(event == IO_event_Pulse){
-    sprintf(str, "%s IO_event_Pulse", str);
-  }
-  else if(event == IO_event_Blink1){
-    sprintf(str, "%s IO_event_Blink1", str);
-  }
-  else if(event == IO_event_Blink2){
-    sprintf(str, "%s IO_event_Blink2", str);
-  }
-
-  else if(event == IO_event_Servo1){
-    sprintf(str, "%s IO_event_Servo1", str);
-  }
-  else if(event == IO_event_Servo2){
-    sprintf(str, "%s IO_event_Servo2", str);
-  }
-  else if(event == IO_event_Servo3){
-    sprintf(str, "%s IO_event_Servo3", str);
-  }
-  else if(event == IO_event_Servo4){
-    sprintf(str, "%s IO_event_Servo4", str);
-  }
-  else if(event == IO_event_PWM1){
-    sprintf(str, "%s IO_event_PWM1", str);
-  }
-  else if(event == IO_event_PWM2){
-    sprintf(str, "%s IO_event_PWM2", str);
-  }
-  else if(event == IO_event_PWM3){
-    sprintf(str, "%s IO_event_PWM3", str);
-  }
-  else if(event == IO_event_PWM4){
-    sprintf(str, "%s IO_event_PWM4", str);
-  }
-}
+const char * IO_undefined_string[4] = {
+  "IO_event_undefined",
+  "IO_event_undefined",
+  "IO_event_undefined",
+  "IO_event_undefined",
+};
+const char * IO_output_string[4] = {
+  "IO_event_High",
+  "IO_event_Low",
+  "IO_event_Pulse",
+  "IO_event_Toggle"
+};
+const char * IO_blink_string[2] = {
+  "IO_event_Blink1",
+  "IO_event_Blink2"
+};
+const char * IO_servo_string[4] = {
+  "IO_event_Servo1",
+  "IO_event_Servo2",
+  "IO_event_Servo3",
+  "IO_event_Servo4"
+};
+const char * IO_pwm_string[4] = {
+  "IO_event_PWM1",
+  "IO_event_PWM2",
+  "IO_event_PWM3",
+  "IO_event_PWM4"
+};
+const char ** IO_event_string[9] = {
+  IO_undefined_string,
+  IO_output_string,
+  IO_blink_string,
+  IO_servo_string,
+  IO_pwm_string,
+  &IO_enum_type_string[5],
+  &IO_enum_type_string[6],
+  &IO_enum_type_string[7],
+  &IO_enum_type_string[8]
+};

@@ -37,7 +37,7 @@ void Create_Signal(uint8_t module, uint8_t blockId, uint16_t signalId, _Bool sid
     }
     Z->output[i] = U_IO(module, output[i].Node, output[i].Adr);
     for(int j = 0; j <= UNKNOWN; j++){
-      Z->output_stating[i].state[j] = stating[i].event[j];
+      Z->output_stating[i].state[j].value = stating[i].event[j];
     }
     struct s_node_adr out;
     out.Node = output[i].Node;

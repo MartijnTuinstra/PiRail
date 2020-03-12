@@ -174,7 +174,7 @@ void * Algor_Run(){
     usleep(1000);
   }
 
-  SYS_set_state(&SYS->LC.state, Module_Stop);
+  SYS_set_state(&SYS->LC.state, Module_STOP);
   loggerf(INFO, "Algor_run done");
   return 0;
 }
@@ -901,66 +901,68 @@ void Algor_turntable_search_Blocks(Block * B, int debug){
 void Algor_print_block_debug(Block * B){
   int debug = INFO;
 
-  char output[200] = "";
+  char output[300] = "";
+  char * ptr = output;
 
   Algor_Blocks * ABs = &B->Alg;
 
   for(int i = 9; i >= 0; i--){
     if(ABs->prev > i){
       if(ABs->P[i]){
-        sprintf(output, "%s%02i:%02i", output, ABs->P[i]->module, ABs->P[i]->id);
+        ptr += sprintf(ptr, "%02i:%02i", ABs->P[i]->module, ABs->P[i]->id);
         if(ABs->P[i]->blocked)
-          sprintf(output, "%sB ", output);
+          ptr += sprintf(ptr, "B ");
         else if(ABs->P[i]->state == RESERVED_SWITCH)
-          sprintf(output, "%sS ", output);
+          ptr += sprintf(ptr, "S ");
         else if(ABs->P[i]->state == RESERVED)
-          sprintf(output, "%sR ", output);
+          ptr += sprintf(ptr, "R ");
         else
-          sprintf(output, "%s  ", output);
+          ptr += sprintf(ptr, "  ");
       }
       else
-        sprintf(output, "%s------ ", output);
+        ptr += sprintf(ptr, "------ ");
     }
     else{
-      sprintf(output, "%s       ", output);
+      ptr += sprintf(ptr, "       ");
     }
   }
 
-  sprintf(output, "%s A%3i %2x%02i:%02i;",output,B->length,B->type,B->module,B->id);
+  ptr += sprintf(ptr, " A%3i %2x%02i:%02i;",B->length,B->type,B->module,B->id);
   if(B->train){
-    sprintf(output, "%sT", output);
+    ptr += sprintf(ptr, "T");
   }
   else{
-    sprintf(output, "%s ", output);
+    ptr += sprintf(ptr, " ");
   }
-  sprintf(output, "%sD%-2iS%x/%x", output, B->dir,B->state,B->reverse_state);
+  ptr += sprintf(ptr, "D%-2iS%x/%x", B->dir,B->state,B->reverse_state);
   if(B->blocked)
-    sprintf(output, "%sb", output);
+    ptr += sprintf(ptr, "b");
   else
-    sprintf(output, "%s ", output);
+    ptr += sprintf(ptr, " ");
   if(ABs->B->blocked)
-    sprintf(output, "%sB", output);
+    ptr += sprintf(ptr, "B");
   else
-    sprintf(output, "%s ", output);
+    ptr += sprintf(ptr, " ");
 
-  sprintf(output, "%s  ", output);
+  ptr += sprintf(ptr, "  ");
 
 
   for(uint8_t i = 0; i < ABs->next; i++){
     if(ABs->N[i]){
-      sprintf(output, "%s%02i:%02i", output, ABs->N[i]->module, ABs->N[i]->id);
+      ptr += sprintf(ptr, "%02i:%02i", ABs->N[i]->module, ABs->N[i]->id);
       if(ABs->N[i]->blocked)
-        sprintf(output, "%sB ", output);
+        ptr += sprintf(ptr, "B ");
       else if(ABs->N[i]->state == RESERVED_SWITCH)
-          sprintf(output, "%sS ", output);
+          ptr += sprintf(ptr, "S ");
       else if(ABs->N[i]->state == RESERVED)
-          sprintf(output, "%sR ", output);
+          ptr += sprintf(ptr, "R ");
       else
-        sprintf(output, "%s  ", output);
+        ptr += sprintf(ptr, "  ");
     }
     else
-      sprintf(output, "%s------ ", output);
+      ptr += sprintf(ptr, "------ ");
   }
+  ptr[0] = 0;
 
   loggerf(debug, "%s", output);
 }
@@ -1034,7 +1036,7 @@ void Algor_Switch_Checker(Algor_Blocks * ABs, int debug){
         }
       }
       else if(((link->type == RAIL_LINK_S  || link->type == RAIL_LINK_s ) &&   ((Switch *)link->p)->Detection &&   ((Switch *)link->p)->Detection->state != RESERVED_SWITCH) || 
-               (link->type >= RAIL_LINK_MA && link->type <= RAIL_LINK_mb) && ((MSSwitch *)link->p)->Detection && ((MSSwitch *)link->p)->Detection->state != RESERVED_SWITCH){
+              ((link->type >= RAIL_LINK_MA && link->type <= RAIL_LINK_mb) && ((MSSwitch *)link->p)->Detection && ((MSSwitch *)link->p)->Detection->state != RESERVED_SWITCH)){
         loggerf(WARNING, "reserve_switch_path");
         Switch_Reserve_Path(tB, *link, NEXT | SWITCH_CARE);
       }
@@ -1155,7 +1157,7 @@ void Algor_rail_state(Algor_Blocks AllBlocks, int debug){
     else if(B->state != UNKNOWN)
       Algor_set_block_state(B, PROCEED);
   }
-  else if(!B->blocked && (next > 1 && !BN[0]->blocked && !BN[1]->blocked) || (next == 1 && !BN[0]->blocked)){
+  else if(!B->blocked && ((next > 1 && !BN[0]->blocked && !BN[1]->blocked) || (next == 1 && !BN[0]->blocked))){
     if(B->reserved)
       Algor_set_block_state(B, RESERVED);
     else if(B->state != UNKNOWN)
@@ -1379,7 +1381,7 @@ void Algor_train_control(Algor_Blocks * ABs, int debug){
       train_change_speed(T, CAUTION_SPEED, GRADUAL_FAST_SPEED);
     }
   }
-  else if(T->control != TRAIN_MANUAL && T->target_speed > N[0]->max_speed || T->speed > N[0]->max_speed){
+  else if(T->control != TRAIN_MANUAL && (T->target_speed > N[0]->max_speed || T->speed > N[0]->max_speed)){
     loggerf(DEBUG, "Next block speed limit");
     train_change_speed(T, N[0]->max_speed, GRADUAL_SLOW_SPEED);
   }

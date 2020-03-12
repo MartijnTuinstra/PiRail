@@ -120,6 +120,7 @@ void * Clear_Unit(Unit * U){
 
   _free(U);
   U = 0;
+  return 0;
 }
 
 void read_module_Config(uint16_t M){
@@ -176,7 +177,8 @@ void read_module_Config(uint16_t M){
   loggerf(DEBUG, "  Module nodes");
 
   for(int i = 0; i < config->header.IO_Nodes; i++){
-    struct s_node_conf node = read_s_node_conf(buf_ptr);
+    struct node_conf node = read_s_node_conf(buf_ptr);
+    loggerf(CRITICAL, "TODO IMPLEMENT node data");
     Add_IO_Node(Units[M], node.Node, node.size);
   }
 

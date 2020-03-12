@@ -226,6 +226,8 @@ int load_rolling_Configs(){
   read_rolling_Configs();
 
   SYS->trains_loaded = 1;
+
+  return 1;
 }
 
 int read_rolling_Configs(){

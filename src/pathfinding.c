@@ -55,7 +55,7 @@ struct paths pathfinding(Block * start, Block * end){
   }
 
   t = clock() - t;
-  printf ("It took me %d clicks (%f seconds).\n",t,((float)t)/CLOCKS_PER_SEC);
+  printf ("It took me %ld clicks (%f seconds).\n",t,((float)t)/CLOCKS_PER_SEC);
 
   if(result.found){
     loggerf(ERROR, "FOUND");

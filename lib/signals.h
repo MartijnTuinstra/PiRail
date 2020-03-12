@@ -14,7 +14,7 @@
 #include "rail.h"
 
 struct s_signal_stating {
-  enum e_IO_event state[8];
+  union u_IO_event state[8];
 };
 
 typedef struct s_Signal{

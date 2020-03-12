@@ -814,10 +814,10 @@ void WS_stc_TrackLayoutRawData(int unit, struct web_client_t * client){
 }
 
 void WS_stc_StationLib(struct web_client_t * client){
-  uint8_t * data = _calloc(stations_len, Station);
+  char * data = _calloc(stations_len, Station);
   data[0] = WSopc_StationLibrary;
-  uint8_t * length = &data[1];
-  uint8_t * d = &data[2];
+  char * length = &data[1];
+  char * d = &data[2];
 
   for(uint8_t i = 0; i < stations_len; i++){
     if(!stations[i])

@@ -55,7 +55,7 @@ void * UART(){
 
   usleep(3000000);
 
-  // uart0_filestream = open(Serial_Port, O_RDWR | O_NOCTTY);
+  uart0_filestream = open(Serial_Port, O_RDWR | O_NOCTTY);
   if (uart0_filestream == -1)
   {
     //ERROR - CAN'T OPEN SERIAL PORT
@@ -65,6 +65,8 @@ void * UART(){
     logger("Unable to open UART",CRITICAL);
     return 0;
   }
+
+  loggerf(INFO, "UART %s opened", Serial_Port);
 
   //CONFIGURE THE UART
   struct termios options;
@@ -78,7 +80,9 @@ void * UART(){
 
   _SYS_change(STATE_COM_FLAG,0);
 
-  while(_SYS->_STATE & STATE_RUN){
+  loggerf(INFO, "UARTSTATE %x & %x", _SYS->UART_State, STATE_RUN);
+
+  while(_SYS->UART_State & _SYS_Module_Run){
     if(COM_Recv(&uartbuffer)){
       COM_Parse(&uartbuffer);
     }
@@ -97,6 +101,15 @@ void COM_Send(struct COM_t DATA){
   }
 
   tcflush(uart0_filestream, TCIFLUSH);
+
+
+  char debug[200];
+  char *ptr = debug;
+
+  for(uint8_t i = 0;i<DATA.length;i++){
+    ptr += sprintf(ptr, "%02x ", DATA.data[i]);
+  }
+  loggerf(INFO, "COM RX - %s", debug);
 
   int count = write(uart0_filestream, &DATA.data[0], DATA.length);    //Filestream, bytes to write, number of bytes to write
   if (count < 0)
@@ -123,7 +136,7 @@ int COM_Recv(struct fifobuffer * buf){
     if(buf->write + size > UART_BUFFER_SIZE)
       size = UART_BUFFER_SIZE - buf->write;
 
-    int rx_length = read(uart0_filestream, (void*)buf->buffer, size);
+    int rx_length = read(uart0_filestream, (void*)&buf->buffer[buf->write], size);
     if (rx_length < 0)
     {
       //An error occured (will occur if there are no bytes)
@@ -135,8 +148,8 @@ int COM_Recv(struct fifobuffer * buf){
     }
     else // some data waiting
     {
-      loggerf(INFO, "%i-%i(%i) bytes read", rx_length, size, buf->write);
       buf->write = (buf->write + rx_length) % UART_BUFFER_SIZE;
+      loggerf(INFO, "%i-%i(%i/%i) bytes read", rx_length, size, buf->read, buf->write);
 
       if(rx_length < size)
         break;
@@ -148,30 +161,6 @@ int COM_Recv(struct fifobuffer * buf){
 }
 
 uint8_t COM_Packet_Length(struct fifobuffer * buf){
-  // uint8_t Opcode = buf->buffer[buf->read];
-  // if(Opcode == COMopc_EmergencyEn ||
-  //     Opcode == COMopc_EmergencyDis ||
-  //     Opcode == COMopc_PowerON ||
-  //     Opcode == COMopc_PowerOFF   ){
-  //   return 2;
-  // }else if(Opcode == COMopc_ACK || // Set Acknowledge
-  //     Opcode == COMopc_ReportID      ||
-  //     Opcode == COMopc_ReqOut_Bl    ||
-  //     Opcode == COMopc_ReqIn     ||
-  //     Opcode == COMopc_ReqEEPROM    ){
-  //   return 3;
-  // }else if(Opcode == COMopc_ChangeDevID  ){ 
-  //   return 4;
-  // }else if(Opcode == COMopc_SetIN_OUT || // Change input and output
-  //     Opcode == COMopc_TogSinAdr || // Toggle Single Address
-  //     Opcode == COMopc_PulSinAdr || // Pulse Single Address
-  //     Opcode == COMopc_TogBlSinAdr || // Blink Single Address
-  //     Opcode == COMopc_PostSinAdr    // Post Single Input Address
-  //     ){ 
-  //   return 5;
-  // }else{
-  //   return buf->buffer[(buf->read + 1) + UART_BUFFER_SIZE];
-  // }
   uint8_t r = (buf->read + 1) % UART_BUFFER_SIZE;
   if( (uint8_t)(buf->write - buf->read) % UART_BUFFER_SIZE < 2){
     return UART_Msg_NotComplete;
@@ -225,35 +214,65 @@ uint8_t COM_Packet_Length(struct fifobuffer * buf){
 void COM_Parse(struct fifobuffer * buf){
   uint8_t length = COM_Packet_Length(buf);
 
+  if(length == UART_Msg_NotComplete)
+    return;
+
+  if(length > (uint8_t)(buf->write - buf->read) % UART_BUFFER_SIZE)
+    return;
+
   uint8_t * data = _calloc(length, char);
 
   //Check Checksum
   uint8_t Check = UART_CHECKSUM_SEED;
-  uint8_t j = buf->read;
+
+  char debug[200];
+  char *ptr = debug;
 
   for(uint8_t i = 0;i<length;i++){
-    data[i] = buf->buffer[j];
+    data[i] = buf->buffer[buf->read];
+    ptr += sprintf(ptr, "%02x ", data[i]);
 
-    if(i != 0 && i == length-1) // Don't copy address in checksum
+    if(i != 0) // Don't copy address in checksum
       Check ^= data[i];
 
-    j = (buf->read = (buf->read + 1) % UART_BUFFER_SIZE);
+    buf->read = (buf->read + 1) % UART_BUFFER_SIZE;
   }
 
-  if(Check != data[length]){
-    printf("COM - Checksum doesn't match\n");
-    return;
-  }
+  loggerf(INFO, "COM RECV - %s", debug);
 
-  if(data[1] == 0x00){ //Report ID
+
+  if(data[1] == RNet_OPC_DEV_ID){ //Report ID
     //Add device to device list
-    for(uint8_t i = 0;i<unit_len;i++){
-      loggerf(ERROR, "FIX DEVICELIST");
-      // if(DeviceList[i] != 0){
+    
+    for(uint16_t i = 0;i<255;i++){
+      if(data[i/8+2] & (1 << (i%8))){
       //   DeviceList[i] = Data[1];
-      // }
+        loggerf(INFO, "Module %d", i);
+      }
     }
   }
+  else if(data[1] == RNet_OPC_ReadInput){
+    loggerf(INFO, "READIN - %s", &debug[6]);
+
+    if(Check != UART_CHECKSUM_SEED){
+      loggerf(WARNING, "Failed Checksum");
+      return;
+    }
+
+    //uint8_t node = data[3];
+    uint8_t l = data[4];
+    for(uint8_t i = 0; i < l; i++){
+      if(data[i/8+4] & (1 << (i%8)))
+        loggerf(INFO, "%d IO %i HIGH", data[0], i);
+      else
+        loggerf(INFO, "%d IO %i LOW", data[0], i);
+    }
+  }
+  else if(data[1] == RNet_OPC_ChangeNode){
+    loggerf(WARNING, "Slaves should not send this");
+    loggerf(INFO, "CHNGNO - %s", &debug[6]);
+  }
+/*
   else if(data[1] == 0x01){ //Set Emergency STOP
   }
   else if(data[1] == 0x02){ //Release Emergency STOP
@@ -267,12 +286,12 @@ void COM_Parse(struct fifobuffer * buf){
 
   }
   else if(data[1] == RNet_OPC_ReadInput){
-    uint8_t module = data[0];
-    uint8_t id = data[2];
-    uint8_t ports = data[3];
-    for(uint8_t i = 0; i < ports*8; i++){
-      IO_set_input(module, id, i, data[i/8] & (1 << (i%8)));
-    }
+    //uint8_t module = data[0];
+    //uint8_t id = data[2];
+    //uint8_t ports = data[3];
+    //for(uint8_t i = 0; i < ports*8; i++){
+    //  IO_set_input(module, id, i, data[i/8] & (1 << (i%8)));
+    //}
   }
   else if(data[1] == 0x17){ //Post Blink Mask
     COM_ACK = 1;//Response uses same flag
@@ -288,7 +307,7 @@ void COM_Parse(struct fifobuffer * buf){
     COM_ACK = 1;//Response uses same flag
   }
 
-  _free(data);
+  _free(data);*/
 }
 
 void COM_change_A_signal(int M){

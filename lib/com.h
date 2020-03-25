@@ -1,8 +1,8 @@
 #ifndef _INCLUDE_COM_H
   #define _INCLUDE_COM_H
 
-  #define Serial_Port "/dev/ttyAMB0"
-  #define Serial_Baud B115200
+  #define Serial_Port "/dev/ttyUSB0"
+  #define Serial_Baud B500000
 
   #define UART_BUFFER_SIZE 200
   #define UART_Msg_NotComplete 0xFF

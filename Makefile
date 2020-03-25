@@ -17,7 +17,7 @@ BAAN_FILES = baan system logger mem modules config rail signals switch IO algori
 
 BAAN_FILES += websocket websocket_cts websocket_stc websocket_control
 
-COMTEST_FILES = logger mem comtest com
+COMTEST_FILES = comtest system logger mem modules config rail signals switch IO algorithm encryption Z21 Z21_msg train submodule com sim pathfinding websocket websocket_cts websocket_stc websocket_control
 
 CONFIG_READER_FILES = config_reader config logger mem
 
@@ -55,7 +55,7 @@ config_reader: $(addprefix $(BIN)/,$(addsuffix .o, $(CONFIG_READER_FILES)))
 	@echo $@
 	$(GCC) -o $@ $^
 
-comtest: $(addprefix $(BIN)/,$(addsuffix .o, $(CONFIG_READER_FILES)))
+comtest: $(addprefix $(BIN)/,$(addsuffix .o, $(COMTEST_FILES)))
 	@echo $@
 	$(GCC) -o $@ $^ 
 

@@ -4,6 +4,10 @@
 #define Serial_Port "/dev/ttyUSB0"
 #define Serial_Baud B500000
 
+#define UART_BUFFER_SIZE 200
+#define UART_Msg_NotComplete 0xFF
+#define UART_CHECKSUM_SEED 0b10101010
+
 #include "signals.h"
 
 struct train;
@@ -18,7 +22,17 @@ struct COM_t{
   char data[32];
 };
 
+struct fifobuffer {
+  char buffer[UART_BUFFER_SIZE];
+  uint8_t read;
+  uint8_t write;
+};
+
 void * UART();
+
+int COM_Recv(struct fifobuffer * buf);
+uint8_t COM_Packet_Length(struct fifobuffer * buf);
+void COM_Parse(struct fifobuffer * buf);
 
 #define COMopc_ReportID     0x00
 #define COMopc_EmergencyEn  0x01

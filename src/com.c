@@ -19,6 +19,8 @@
 #include "train.h"
 #include "logger.h"
 
+#include "mem.h"
+
 #include "modules.h"
 
 #include "submodule.h"
@@ -39,8 +41,7 @@ void * UART(){
   loggerf(INFO, "Starting UART thread");
   //OPEN THE UART
 
-  _SYS->UART_State = _SYS_Module_Init;
-  WS_stc_SubmoduleState();
+  SYS_set_state(&SYS->UART.state, Module_Init);
 
   struct fifobuffer uartbuffer;
 
@@ -48,19 +49,12 @@ void * UART(){
   uartbuffer.read = 0;
   uartbuffer.write = 0;
 
-  usleep(200000);
-  _SYS->UART_State = _SYS_Module_Run;
-  WS_stc_SubmoduleState();
-
-  usleep(3000000);
-
   uart0_filestream = open(Serial_Port, O_RDWR | O_NOCTTY);
   if (uart0_filestream == -1)
   {
     //ERROR - CAN'T OPEN SERIAL PORT
 
-    _SYS->UART_State = _SYS_Module_Fail;
-    WS_stc_SubmoduleState();
+    SYS_set_state(&SYS->UART.state, Module_Fail);
     logger("Unable to open UART",CRITICAL);
     return 0;
   }
@@ -77,11 +71,9 @@ void * UART(){
   tcflush(uart0_filestream, TCIFLUSH);
   tcsetattr(uart0_filestream, TCSANOW, &options);
 
-  _SYS_change(STATE_COM_FLAG,0);
+  SYS_set_state(&SYS->UART.state, Module_Run);
 
-  loggerf(INFO, "UARTSTATE %x & %x", _SYS->UART_State, STATE_RUN);
-
-  while(_SYS->UART_State & _SYS_Module_Run){
+  while(SYS->UART.state & Module_Run){
     if(COM_Recv(&uartbuffer)){
       COM_Parse(&uartbuffer);
     }
@@ -90,6 +82,9 @@ void * UART(){
 
   //----- CLOSE THE UART -----
   close(uart0_filestream);
+
+  SYS_set_state(&SYS->UART.state, Module_STOP);
+
   return 0;
 }
 
@@ -124,8 +119,7 @@ int COM_Recv(struct fifobuffer * buf){
   //Check if the filestream is open
   if(uart0_filestream == -1){
     loggerf(CRITICAL , "UART no filestream");
-    _SYS->UART_State = _SYS_Module_Fail;
-    WS_stc_SubmoduleState();
+    SYS_set_state(&SYS->UART.state, Module_Fail);
     return 0;
   }
 

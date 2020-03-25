@@ -6,6 +6,7 @@
 #include "mem.h"
 #include "IO.h"
 #include "com.h"
+#include "algorithm.h"
 
 void Add_IO_Node(Unit * U, int Node_nr, int IO){
   IO_Node Z;
@@ -64,11 +65,11 @@ void update_IO(){
       buf[1] = COMopc_SetAllOut;
 
       for(int io = 0; io < Units[u]->Node[n].io_ports; io++){
-        if(U_IO(u, n, io)->type == IO_Output && U_IO(u, n, io)->w_state != U_IO(u, n, io)->r_state){
-          loggerf(WARNING, "Update io %02i:%02i:%02i %s", u, n, io, IO_event_str[U_IO(u, n, io)->w_state]);
-          U_IO(u, n, io)->r_state = U_IO(u, n, io)->w_state;
+        if(U_IO(u, n, io)->type == IO_Output && U_IO(u, n, io)->w_state.value != U_IO(u, n, io)->r_state.value){
+          loggerf(WARNING, "Update io %02i:%02i:%02i %s", u, n, io, IO_event_string[U_IO(u, n, io)->w_state.value]);
+          U_IO(u, n, io)->r_state.value = U_IO(u, n, io)->w_state.value;
 
-          // buf[io/4 + 2] = U_IO(u, n, io)->w_state.value << ((io % 4) * 2);
+          buf[io/4 + 2] = U_IO(u, n, io)->w_state.value << ((io % 4) * 2);
 
           if(U_IO(u, n, io)->w_state.output == IO_event_Pulse) // Reset When pulsing output
             U_IO(u, n, io)->w_state.output = IO_event_Low;
@@ -84,16 +85,16 @@ void IO_set_input(uint8_t module, uint8_t id, uint8_t port, uint8_t state){
     return;
 
   if(state){ // High
-    U_IO(module, id, port)->w_state = IO_event_High;
-    U_IO(module, id, port)->r_state = IO_event_High;
+    U_IO(module, id, port)->w_state.value = IO_event_High;
+    U_IO(module, id, port)->r_state.value = IO_event_High;
   }
   else{ // Low
-    U_IO(module, id, port)->w_state = IO_event_Low;
-    U_IO(module, id, port)->r_state = IO_event_Low;
+    U_IO(module, id, port)->w_state.value = IO_event_Low;
+    U_IO(module, id, port)->r_state.value = IO_event_Low;
   }
 
   if(U_IO(module, id, port)->type == IO_Input_Block){
-    ((Block *)U_IO(module, id, port)->object)->changed |= IO_Changed;
+    ((Block *)U_IO(module, id, port)->object)->IOchanged = 1;
     putAlgorQueue((Block *)U_IO(module, id, port)->object, 1);
   }
   else{
@@ -126,7 +127,9 @@ const char * IO_output_string[4] = {
   "IO_event_Pulse",
   "IO_event_Toggle"
 };
-const char * IO_blink_string[2] = {
+const char * IO_blink_string[4] = {
+  "IO_event_B_High",
+  "IO_event_B_Low",
   "IO_event_Blink1",
   "IO_event_Blink2"
 };
@@ -153,4 +156,3 @@ const char ** IO_event_string[9] = {
   &IO_enum_type_string[7],
   &IO_enum_type_string[8]
 };
-

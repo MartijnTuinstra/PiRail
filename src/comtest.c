@@ -3,10 +3,10 @@
 #include "mem.h"
 #include "system.h"
 
-struct systemState * _SYS;
+struct s_systemState * SYS;
 
 int main(){
-   _SYS = _calloc(1, struct systemState);
+  init_main();
   init_allocs();
 
   init_logger("uartlog.txt");
@@ -14,6 +14,6 @@ int main(){
 
   UART();
 
-  _free(_SYS);
+  _free(SYS);
   return 1;
 }

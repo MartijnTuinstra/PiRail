@@ -12,7 +12,6 @@
 #include "com.h"
 
 #include "system.h"
-#include "mem.h"
 
 #include "rail.h"
 #include "switch.h"
@@ -20,10 +19,10 @@
 #include "train.h"
 #include "logger.h"
 
-#include "module.h"
+#include "modules.h"
 
 #include "submodule.h"
-#include "websocket_msg.h"
+#include "websocket_stc.h"
 
 #include "../avr/RNet_msg.h"
 
@@ -272,7 +271,7 @@ void COM_Parse(struct fifobuffer * buf){
     loggerf(WARNING, "Slaves should not send this");
     loggerf(INFO, "CHNGNO - %s", &debug[6]);
   }
-/*
+  /*
   else if(data[1] == 0x01){ //Set Emergency STOP
   }
   else if(data[1] == 0x02){ //Release Emergency STOP

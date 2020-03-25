@@ -2,38 +2,28 @@
 #include "mem.h"
 
 #include "logger.h"
-#include "rail.h"
-#include "switch.h"
+// #include "rail.h"
+// #include "switch.h"
 #include "train.h"
-#include "module.h"
+#include "modules.h"
 
-#include "algorithm.h"
 
-#include "com.h"
+// #include "com.h"
 
 #include "websocket_control.h"
 
-#include "train_sim.h"
-#include "Z21.h"
+#include "pathfinding.h"
+// #include "train_sim.h"
+// #include "Z21.h"
 
-struct systemState * _SYS;
+struct s_systemState * SYS;
 
 int main(){
-  _SYS = _calloc(1, struct systemState);
-  _SYS->_STATE = STATE_RUN;
-  _SYS->_Clients = 0;
-
-  _SYS->Z21_State  = _SYS_Module_Stop;
-  _SYS->UART_State = _SYS_Module_Stop;
-  _SYS->TC_State   = _SYS_Module_Stop;
-  _SYS->LC_State   = _SYS_Module_Stop;
-  _SYS->Websocket_State = _SYS_Module_Stop;
-
-  init_allocs();
-
+  init_main();
   init_logger("log.txt");
   set_level(INFO);
 
+  // Stop program when receiving SIGINT
   if (signal(SIGINT, sigint_func) == SIG_ERR){
     logger("Cannot catch SIGINT", CRITICAL);
     return 0;
@@ -44,22 +34,23 @@ int main(){
   signal(SIGPIPE, SIG_IGN);
   srand(time(NULL));
   
-  init_trains();
-  Z21_boot();
-  
-  ReadAllModuleConfigs();
+  load_module_Configs();
+  load_rolling_Configs();
 
+  // Z21_boot();
   websocket_server();
 
-  UART_stop();
-  clear_Modules();
+  // UART_stop();
+  loggerf(WARNING, "Shutdown sequence started");
 
-  free_trains();
-
-  _free(_SYS);
+  // Stop all
+  SYS->stop = 1;
+  unload_module_Configs();
+  unload_rolling_Configs();
 
   loggerf(INFO, "STOPPED");
   exit_logger(); //Close logger
+  _free(SYS);
 
   print_allocs();
 }

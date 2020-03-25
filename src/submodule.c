@@ -1,5 +1,3 @@
-#define _BSD_SOURCE 
-
 #include <unistd.h>
 
 #include "logger.h"
@@ -8,92 +6,103 @@
 
 #include "algorithm.h"
 #include "com.h"
-#include "train_sim.h"
+#include "sim.h"
 #include "Z21.h"
+// #include "pathfinding.h"
 
-
-pthread_t Algor_thread;
 
 void Algor_start(){
-  pthread_join(Algor_thread, NULL);
+  pthread_join(SYS->LC.th, NULL);
 
-  if(_SYS->UART_State == _SYS_Module_Stop)
+  if(SYS->UART.state == Module_STOP)
     UART_start();
+  else if(SYS->UART.state == Module_Fail){
+    SYS->LC.state = Module_Fail;
+    return;
+  }
 
-  _SYS->LC_State = _SYS_Module_Init;
-  pthread_create(&Algor_thread, NULL, Algor_Run, NULL);
+  SYS_set_state(&SYS->LC.state, Module_Init);
+  pthread_create(&SYS->LC.th, NULL, Algor_Run, NULL);
 }
 
 void Algor_stop(){
-  _SYS->TC_State = _SYS_Module_Stop;
-  _SYS->LC_State = _SYS_Module_Stop;
+  SYS->TC.state = Module_STOP;
+  SYS->LC.state = Module_STOP;
   sem_post(&AlgorQueueNoEmpty);
 }
 
-pthread_t UART_thread;
-
 void UART_start(){
-  pthread_join(UART_thread, NULL);
-  pthread_create(&UART_thread, NULL, UART, NULL);
+  pthread_join(SYS->UART.th, NULL);
+  pthread_create(&SYS->UART.th, NULL, UART, NULL);
 
-  //Wait until UART is out of Stop state
-  while(_SYS->UART_State == _SYS_Module_Stop){
+  // Wait until UART is out of STOP state
+  while(SYS->UART.state == Module_STOP){
     usleep(1000);
   }
+
   loggerf(DEBUG, "Done starting UART");
 }
 
 void UART_stop(){
   Algor_stop();
-  _SYS->UART_State = _SYS_Module_Stop;
+  SYS_set_state(&SYS->UART.state, Module_STOP);
 }
 
 pthread_t pt_train_simA;
 
 void SimA_start(){
-  pthread_join(pt_train_simA, NULL);
+  pthread_join(SYS->SimA.th, NULL);
 
-  if(_SYS->LC_State == _SYS_Module_Stop){
+  SYS_set_state(&SYS->SimA.state, Module_Init_Parent);
+
+  if(SYS->LC.state == Module_STOP){
     Algor_start();
   }
-
-  while(_SYS->LC_State != _SYS_Module_Run){
-    usleep(10000);
+  else if(SYS->LC.state == Module_Fail){
+    SYS->SimA.state = Module_Fail;
+    return;
   }
 
-  _SYS->SimA_State = _SYS_Module_Init;
-  pthread_create(&pt_train_simA, NULL, TRAIN_SIMA, NULL);
+  SYS_set_state(&SYS->SimA.state, Module_Init);
+  pthread_create(&SYS->SimA.th, NULL, TRAIN_SIMA, NULL);
 }
-
-pthread_t pt_train_simB;
 
 void SimB_start(){
-  pthread_join(pt_train_simB, NULL);
+  pthread_join(SYS->SimB.th, NULL);
 
-  if(_SYS->LC_State == _SYS_Module_Stop){
+  SYS_set_state(&SYS->SimB.state, Module_Init_Parent);
+
+  if(SYS->LC.state == Module_STOP){
     Algor_start();
   }
-
-  while(_SYS->LC_State != _SYS_Module_Run){
-    usleep(10000);
+  else if(SYS->LC.state == Module_Fail){
+    SYS->SimB.state = Module_Fail;
+    return;
   }
 
-  _SYS->SimB_State = _SYS_Module_Init;
-  pthread_create(&pt_train_simB, NULL, TRAIN_SIMB, NULL);
+  usleep(100000);
+
+  // Block * start = Units[22]->B[1];
+  // Block * end   = Units[26]->B[5];
+
+  // struct pathfindingstep path = pathfinding(start, end);
+  // if(path.found){
+  //   printf("f");
+  // }
+
+  SYS_set_state(&SYS->SimB.state, Module_Init);
+  pthread_create(&SYS->SimB.th, NULL, TRAIN_SIMB, NULL);
 }
 
-pthread_t z21_thread;
-pthread_t z21_start_thread;
-
 void Z21_start(){
-  if(_SYS->Z21_State != _SYS_Module_Stop){
+  if(SYS->Z21.state != Module_STOP){
     loggerf(ERROR, "Z21 Allready running");
     return;
   }
-  pthread_create(&z21_start_thread, NULL, Z21, NULL);
+  pthread_create(&SYS->Z21.start_th, NULL, Z21, NULL);
 }
 
 void Z21_stop(){
-  _SYS->Z21_State = _SYS_Module_Stop;
-  _SYS->TC_State = _SYS_Module_Stop;
+  SYS->Z21.state = Module_STOP;
+  SYS->TC.state = Module_STOP;
 }

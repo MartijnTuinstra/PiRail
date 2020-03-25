@@ -28,22 +28,128 @@ var Modals = {
       }
     },
     "train.link":{
-      open_cb: function(data, ref_obj){
-        $('.imgbox', ref_obj).append(data.fid);
+      open_cb: function(data, ref){
+        $('.modal-body', ref).append('<input name="fid" type="number" class="modal-form" style="display: none;" value="'+data.fid+'"/>');
+        $('.modal-body', ref).append('<input name="msg_id" type="number" class="modal-form" style="display: none;" value="'+data.msg_id+'"/>');
+        $('.modal-body', ref).append("<div style='width:100%; overflow:hidden; max-height: 600px'><div style='width:125%;position: relative; overflow: overlay;'><div class='cont' style='width:80%;'><ul class='list-unstyled btn-toggle-group train-list'><li class='empty'><i>No trains available</i></li></ul></div></div></div>");
+        $('.modal-body ul.train-list', ref).after("<ul class='list-unstyled btn-toggle-group engine-list'><li class='empty'><i>No engines available</i></li></ul>");
+
+        $('.modal-body > div').css("max-height", "calc("+(window.innerHeight*0.8-71)+"px - 3em)");
+        $('.modal-body > div > div').css("max-height", "calc("+(window.innerHeight*0.8-71)+"px - 3em)");
+        for(var i = 0; i<Train.trains.length; i++){
+          var t = Train.trains[i];
+
+          var text = '<li ontrack="'+t.ontrack+'" class="list-unstyled">'+
+              '<div class="mr-3 ml-3 mt-3 bg-outline-dark" style="width:calc(100% - 2rem);height:36px; padding: 3px; overflow: hidden"><div style="width:100%; height:150%; overflow-x: overlay;white-space: nowrap">';
+
+          for(var j = 0; j < t.link.length; j++){
+            if(t.link[j][0] == 0 && Train.engines[t.link[j][1]] != undefined){
+              text += '<img src="./trains_img/'+Train.engines[t.link[j][1]].icon+'" style="height:30px"/>';
+            }else if(Train.cars[t.link[j][1]] != undefined){
+              text += '<img src="./trains_img/'+Train.cars[t.link[j][1]].icon+'" style="height:30px"/>';
+            }
+          }
+
+          text += '</div></div><div class="m-2" style="width:calc(100% - 2rem)">'+
+                '<button type="number" name="id" class="modal-form btn btn-toggle btn-xs btn-outline-primary m-1 mr-3"\
+                  value="'+i+'" style="display: inline-block;">Select</button>'+
+                '<div class="mt-0 mb-0" style="display: inline-block"><b>'+t.name+'</b></div>'+
+                '<div class="" style="display: inline-block; float:right; max-width: 210px;font-size:small; width:100%;">\
+                  <i>DCC: '+t.dcc.join(", ")+'</i>\
+                  <i style="float:right">Length: '+t.length+' mm</i>\
+                </div>'+
+              '</div></li>';
+          $('.modal-body .cont ul.train-list li:last-child', ref).before(text);
+        }
+
+        for(var i = 0; i<Train.engines.length; i++){
+          var t = Train.engines[i];
+
+          var text = '<li ontrack="'+t.ontrack+'" class="message media">'+
+              '<div class="message-mbox align-self-center mr-3 bg-primary" style="width:120px;height:60px"></div>'+
+              '<div class="message-body media-body">'+
+                '<div class="mt-0 mb-0 message-header"><b>'+t.name+'</b></div>'+
+                '<div class="message-content" style="max-width: 210px;font-size:small; width:100%;">\
+                  <i>DCC: '+t.dcc+'</i>\
+                  <i style="float:right">Length: '+t.length+' mm</i>\
+                </div>'+
+                '<button type="number" name="id" class="modal-form btn btn-toggle btn-xs btn-outline-primary m-1"\
+                  value="'+i+'" style="display: block;">Select</button>'+
+              '</div></li>';
+          $('.modal-body .cont ul.engine-list li:last-child', ref).before(text);
+        }
+
+
+        $('button', $('.btn-toggle-group', ref)[0]).on("click", function(evt){
+          $('ul.train-list', ref).hide();
+          $('ul.engine-list', ref).hide();
+
+          if(evt.currentTarget.innerText == "Engines"){
+            $('ul.engine-list', ref).show();
+          }
+          else if(evt.currentTarget.innerText == "Trains"){
+            $('ul.train-list', ref).show();
+          }
+        });
+
+        function show_empty_list(){
+          if($('#modal ul.train-list li:not(.hide-train)').first().hasClass("empty")){
+            $('#modal ul.train-list li.empty').show();
+          }
+          else{
+            $('#modal ul.train-list li.empty').hide();
+          }
+
+          if($('#modal ul.engine-list li:not(.hide-train)').first().hasClass("empty")){
+            $('#modal ul.engine-list li.empty').show();
+          }
+          else{
+            $('#modal ul.engine-list li.empty').hide();
+          }
+        }
+
+        $('button', $('.btn-toggle-group', ref)[1]).on("click", function(evt){
+          if(evt.currentTarget.innerText == "All"){
+            $('li:not(.empty)', ref).show()
+            $('li:not(.empty)', ref).removeClass("hide-train");
+          }
+          else if(evt.currentTarget.innerText == "Not on layout"){
+            $('li[ontrack=1]:not(.empty)', ref).hide();
+            $('li[ontrack=1]:not(.empty)', ref).addClass("hide-train");
+          }
+
+          show_empty_list();
+        });
+
+        $('#modal ul.train-list').hide();
+        $('li[ontrack=1]:not(.empty)', ref).hide();
+        $('li[ontrack=1]:not(.empty)', ref).addClass("hide-train");
+        show_empty_list();
       },
       title: "Link Train",
-      content: '<div> \
-          <div class="selected">\
-            <div class="container">\
-              <div data="10">\
-                <div class="imgbox"></div>\
-              </div>\
+      content: '<div class="row mb-3">\
+        <div class="col-6">\
+          <div class="row btn-toggle-group">\
+            <div class="col-6" style="text-align: right;">\
+              <button name="type" value="E" class="modal-form btn btn-toggle btn-xs btn-primary">Engines</button>\
             </div>\
-            <div class="selector"></div>\
+            <div class="col-6" style="text-align:left;">\
+              <button name="type" value="T" class="modal-form btn btn-toggle btn-xs btn-outline-primary">Trains</button>\
+            </div>\
+          </div>\
+        </div>\
+        <div class="col-6">\
+          <div class="row btn-toggle-group">\
+            <div class="col-6" style="text-align: right;">\
+              <button class="btn btn-toggle btn-xs btn-outline-primary">All</button>\
+            </div>\
+            <div class="col-6" style="text-align:left;">\
+              <button class="btn btn-toggle btn-xs btn-primary">Not on layout</button>\
+            </div>\
           </div>\
         </div>',
       buttons: {
-        success: {visible: true, content: "Link", cb: function(data){/*websocket.cts_link_train(fid, rid, type, mid)*/}, wait: false},
+        success: {visible: true, content: "Link", cb: function(data){Train_Control.link_request(data)}, wait: true},
         warning: {visible: false, content: ""},
         danger: {visible: true, content: "Cancel", cb: undefined, wait: false},
       }
@@ -665,16 +771,16 @@ var Modals = {
             $('li:not(.empty)', ref).removeClass("hide-train");
           }
           else if(evt.currentTarget.innerText == "On layout"){
-            $('li[ontrack=0]:not(.empty)', ref).hide();
-            $('li[ontrack=0]:not(.empty)', ref).addClass("hide-train");
+            $('li[ontrack=0]:not(.empty), li[ontrack=2]:not(.empty)', ref).hide();
+            $('li[ontrack=0]:not(.empty), li[ontrack=2]:not(.empty)', ref).addClass("hide-train");
           }
 
           show_empty_list();
         });
 
         $('#modal ul.train-list').hide();
-        $('li[ontrack=0]:not(.empty)', ref).hide();
-        $('li[ontrack=0]:not(.empty)', ref).addClass("hide-train");
+        $('li[ontrack=0]:not(.empty), li[ontrack=2]:not(.empty)', ref).hide();
+        $('li[ontrack=0]:not(.empty), li[ontrack=2]:not(.empty)', ref).addClass("hide-train");
         show_empty_list();
       },
       title: "Select a train",
@@ -710,11 +816,29 @@ var Modals = {
            {link: ".train-box.box2 button.set-route", args: {box: 2}}],
       open_cb: function(data, ref){
         // $('.modal-body', ref).append("<div style='width:100%; overflow:hidden; max-height: 600px'><div style='width:125%;position: relative; overflow: overlay;'><div class='cont' style='width:80%;'><ul class='list-unstyled'></ul></div></div></div>");
-        $('.modal-body', ref).append(data.box);
+        $('.modal-body', ref).append("<div style='display: hidden' class='tid'>"+Train_Control.train[data.box].t.railtrainid+"</div>");
         // $('.modal-body > div').css("max-height", "calc("+(window.innerHeight*0.8-71)+"px - 3em)");
         // $('.modal-body > div > div').css("max-height", "calc("+(window.innerHeight*0.8-71)+"px - 3em)");
         // for(var i = 0; i<Train.cars.length; i++){
         //  var t = Train.cars[i];
+
+        var text = "";
+        $.each(stations, function(id){
+          text += '<li class="message media" station="'+id+'">'+this.module+':'+this.id+'&nbsp;&nbsp;&nbsp;'+this.name+'</li>';
+        });
+
+        $('.modal-body', ref).append(text);
+
+        $('.modal-body li.media', ref).on("click", function(){
+          var st = stations[$(this).attr("station")];
+
+          var tid = $('.tid', $(this).closest('.modal-body')).text();
+
+          var data = {train_id: tid, station_id: st.id, station_module: st.module}
+
+          websocket.cts_TrainAddRoute(data);
+
+        });
 
         //  var text = '<li class="message media">'+
         //      '<div class="message-mbox align-self-center mr-3 bg-primary" style="width:120px;height:60px"></div>'+
@@ -735,7 +859,7 @@ var Modals = {
       title: "Set route for train",
       content: '',
       buttons: {
-        success: {visible: true, content: "Select", cb: undefined, wait: false},
+        success: {visible: false, content: "", cb: undefined, wait: false},
         warning: {visible: false, content: "", cb: undefined, wait: false},
         danger: {visible: true, content: "Cancel", cb: undefined, wait: false},
       }
@@ -1535,7 +1659,7 @@ var Modals = {
                             <a class="dropdown-item" value="2" href="#">Pulse</a>\
                             <a class="dropdown-item" value="3" href="#">Blinking 1</a>\
                             <a class="dropdown-item" value="4" href="#">Blinking 2</a>\
-                            <a class="dropdown-item" value="5" href="#">Servo 1</a>\
+                            <a class="dropdown-item" value="5" href="#" selected>Servo 1</a>\
                             <a class="dropdown-item" value="6" href="#">Servo 2</a>\
                             <a class="dropdown-item" value="7" href="#">Servo 3</a>\
                             <a class="dropdown-item" value="8" href="#">Servo 4</a>\

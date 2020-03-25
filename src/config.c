@@ -1,4 +1,6 @@
 #include <stdint.h>
+#include <stdlib.h>
+#include <stdio.h>
 #include "config.h"
 #include "logger.h"
 #include "mem.h"
@@ -14,7 +16,11 @@ int calc_write_module_size(struct module_config * config){
   size += sizeof(struct s_unit_conf) + 1;
 
   //Nodes
-  size += (sizeof(struct s_node_conf) + 1) * config->header.IO_Nodes;
+  size += (sizeof(struct s_node_conf) + 2) * config->header.IO_Nodes;
+  for(int i = 0; i < config->header.IO_Nodes; i++){
+    size += (config->Nodes[i].size + 1) / 2;
+  }
+
 
   //Blocks
   size += (sizeof(struct s_block_conf) + 1) * config->header.Blocks;
@@ -49,7 +55,7 @@ int calc_write_module_size(struct module_config * config){
 
   //Layout
 
-  size += 2 + config->Layout_length;
+  size += 3 + config->Layout_length+3;
 
   return size;
 }
@@ -142,6 +148,8 @@ void write_module_from_conf(struct module_config * config, char * filename){
     memcpy(p, &config->Nodes[i], sizeof(struct s_node_conf));
 
     p += sizeof(struct s_node_conf) + 1;
+    memcpy(p, &config->Nodes[i].data, (config->Nodes[i].size+1)/2);
+    p += (config->Nodes[i].size+1)/2 + 1;
   }
 
   //Copy blocks
@@ -179,8 +187,8 @@ void write_module_from_conf(struct module_config * config, char * filename){
     p += 1;
 
     for(int j = 0; j < config->MSSwitches[i].IO; j++){
-      memcpy(p, &config->MSSwitches[i].IO_Ports[j], 2);
-      p += 2;
+      memcpy(p, &config->MSSwitches[i].IO_Ports[j], sizeof(struct s_IO_port_conf));
+      p += sizeof(struct s_IO_port_conf);
     }
 
     p += 1;
@@ -214,10 +222,10 @@ void write_module_from_conf(struct module_config * config, char * filename){
 
   //Copy Layout
   memcpy(p, &config->Layout_length, sizeof(uint16_t));
-  p += sizeof(uint16_t);
+  p += sizeof(uint16_t) + 1;
 
   memcpy(p, config->Layout, config->Layout_length);
-  p += sizeof(uint16_t);
+  p += config->Layout_length + 1;
 
   //Print output
   // print_hex(data, size);
@@ -327,11 +335,18 @@ int check_Spacing(uint8_t ** p){
   return 1;
 }
 
-struct s_node_conf read_s_node_conf(uint8_t ** p){
-  struct s_node_conf n;
+struct node_conf read_s_node_conf(uint8_t ** p){
+  struct node_conf n;
   memcpy(&n, *p, sizeof(struct s_node_conf));
 
   *p += sizeof(struct s_node_conf);
+  
+  check_Spacing(p);
+
+  n.data = _calloc((n.size+1)/2, uint8_t);
+  memcpy(n.data, *p, (n.size+1)/2);
+
+  *p += (n.size+1)/2;
   
   check_Spacing(p);
 
@@ -385,8 +400,6 @@ struct switch_conf read_s_switch_conf(uint8_t ** p){
 struct ms_switch_conf read_s_ms_switch_conf(uint8_t ** p){
   struct ms_switch_conf s;
 
-  print_hex((char *)*p, 16);
-
   memcpy(&s, *p, sizeof(struct s_ms_switch_conf));
 
   *p += sizeof(struct s_ms_switch_conf);
@@ -407,7 +420,7 @@ struct ms_switch_conf read_s_ms_switch_conf(uint8_t ** p){
   s.IO_Ports = _calloc(s.IO, struct s_IO_port_conf);
 
   for(int i = 0; i < s.IO; i++){
-    memcpy(&s.IO_Ports[i], *p, 2);
+    memcpy(&s.IO_Ports[i], *p, sizeof(struct s_IO_port_conf));
     *p += sizeof(struct s_IO_port_conf);
   }
 

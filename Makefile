@@ -1,122 +1,67 @@
-BIN=./bin
-SRC=./src
-LIB=./lib
-INCLUDE = -I $(LIB) -I $(SRC)
-ARGS=-std=c99 -lpthread -lssl -lcrypto -lwiringPi -lm -g3 $(INCLUDE) -Wall -W -Werror=unused-variable -Wno-packed-bitfield-compat -Wno-unused-parameter
+BIN=bin
+SRC=src
+LIB=lib
+#ARGS=-std=c99 -lpthread -lssl -lcrypto -lwiringPi -lm -g3 $(INCLUDE) -Werror=unused-variable -Wno-packed-bitfield-compat -Wno-unused-parameter -D _DEFAULT_SOURCE
+# GCC_ARGS=-std=c99 -lpthread -lssl -lcrypto -lm -g3 -Werror=unused-variable -Wno-packed-bitfield-compat -Wno-unused-parameter -D _DEFAULT_SOURCE
 
-GCC = gcc $(ARGS)
-GCC_SIMPLE = gcc -g -Wall -W -Werror=unused-variable $(INCLUDE) -std=c99
+GCC_DEPFLAGS = -MT $@ -MMD -MP -MF $(DEPDIR)/$*.d
+GCC_INCLUDE = -I $(LIB)
+GCC_ERROR_FLAGS = -Werror=unused-variable -Wno-packed-bitfield-compat -Wno-unused-parameter -Wall
+GCC_LIBS = -lpthread -lssl -lcrypto -lm
+GCC_FLAGS = -D _DEFAULT_SOURCE
 
-ifndef VERBOSE
-.SILENT:
-endif
+GCC = gcc -std=c99 -g3 $(GCC_INCLUDE) $(GCC_ERROR_FLAGS) $(GCC_LIBS) $(GCC_FLAGS)
 
-.PHONY: all avr
+BAAN_FILES = baan system logger mem modules config rail signals switch IO algorithm encryption \
+             Z21 Z21_msg train submodule com sim pathfinding
 
-avr:
-	$(MAKE) -C avr all -O
+BAAN_FILES += websocket websocket_cts websocket_stc websocket_control
 
-all: config_reader baan comtest avr
+COMTEST_FILES = logger mem comtest com
+
+CONFIG_READER_FILES = config_reader config logger mem
+
+.DEFAULT_GOAL := all
+
+-include $(BIN)/*.d
 
 $(BIN)/%.o: $(SRC)/%.c
-	@echo "(  GCC  ) $@"
-	@$(GCC) -c -o $@ $^
+	@echo ' '-$@
+	@$(GCC) -c $(SRC)/$*.c -MP -MMD -MT '$@ $(BIN)/$*.d' -o $(BIN)/$*.o
+	@$(GCC) -shared -o $(SRC)/$*.c -o $(BIN)/$*.so
 
-$(BIN)/comtest.o: comtest.c
-	@echo "(  GCC  ) $@"
-	@$(GCC) -c -o $@ $^
+.PHONY: all test run debug
 
-comtest: $(BIN)/comtest.o $(BIN)/logger.o $(BIN)/rail.o $(BIN)/train.o $(BIN)/system.o $(BIN)/websocket_control.o $(BIN)/websocket_msg.o $(BIN)/module.o \
-		$(BIN)/train_sim.o $(BIN)/com.o $(BIN)/algorithm.o $(BIN)/signals.o $(BIN)/switch.o $(BIN)/Z21.o $(BIN)/Z21_msg.o $(BIN)/websocket.o $(BIN)/encryption.o $(BIN)/IO.o \
-		$(BIN)/config.o $(BIN)/mem.o $(BIN)/submodule.o
-	@echo comtest
-	$(GCC) -o comtest $(BIN)/comtest.o $(BIN)/logger.o $(BIN)/rail.o $(BIN)/train.o $(BIN)/system.o $(BIN)/websocket_control.o $(BIN)/websocket_msg.o $(BIN)/module.o \
-	$(BIN)/train_sim.o $(BIN)/com.o $(BIN)/algorithm.o $(BIN)/signals.o $(BIN)/switch.o $(BIN)/Z21.o $(BIN)/Z21_msg.o $(BIN)/websocket.o $(BIN)/encryption.o $(BIN)/IO.o \
-	$(BIN)/config.o $(BIN)/mem.o $(BIN)/submodule.o
+all: config_reader baan comtest
 
-config_reader: $(BIN)/config_reader.o $(BIN)/config.o $(BIN)/logger.o $(BIN)/mem.o
-	@echo config_reader
-	@$(GCC_SIMPLE) -o $@ $(BIN)/config_reader.o $(BIN)/config.o $(BIN)/logger.o $(BIN)/mem.o
+run: all
+	./baan
 
-$(SRC)/config_reader.c: $(LIB)/config.h $(LIB)/logger.h
+debug: all
+	gdb ./baan
 
-$(LIB)/config.h: $(LIB)/rail.h $(LIB)/IO.h $(LIB)/config_data.h
-$(SRC)/config.c: $(LIB)/config.h $(LIB)/logger.h
+test: all
+	@+$(MAKE) -sC test
 
-baan: $(BIN)/baan.o $(BIN)/logger.o $(BIN)/rail.o $(BIN)/train.o $(BIN)/system.o $(BIN)/websocket_control.o $(BIN)/websocket_msg.o $(BIN)/module.o \
-		$(BIN)/train_sim.o $(BIN)/com.o $(BIN)/algorithm.o $(BIN)/signals.o $(BIN)/switch.o $(BIN)/Z21.o $(BIN)/Z21_msg.o $(BIN)/websocket.o $(BIN)/encryption.o $(BIN)/IO.o \
-		$(BIN)/config.o $(BIN)/mem.o $(BIN)/submodule.o
-	@echo baan
-	$(GCC) -o baan $(BIN)/baan.o $(BIN)/logger.o $(BIN)/rail.o $(BIN)/train.o $(BIN)/system.o $(BIN)/websocket_control.o $(BIN)/websocket_msg.o $(BIN)/module.o \
-	$(BIN)/train_sim.o $(BIN)/com.o $(BIN)/algorithm.o $(BIN)/signals.o $(BIN)/switch.o $(BIN)/Z21.o $(BIN)/Z21_msg.o $(BIN)/websocket.o $(BIN)/encryption.o $(BIN)/IO.o \
-	$(BIN)/config.o $(BIN)/mem.o $(BIN)/submodule.o
+_avr:
+	@+$(MAKE) -f avr/Makefile all
 
-baan.c: $(LIB)/logger.h $(LIB)/train.h $(LIB)/rail.h $(LIB)/switch.h $(LIB)/com.h $(LIB)/websocket_control.h $(LIB)/system.h $(LIB)/mem.h
-$(BIN)/baan.o: baan.c
-	@echo baan.o
-	$(GCC) baan.c -c -o $(BIN)/baan.o
+baan: $(addprefix $(BIN)/,$(addsuffix .o, $(BAAN_FILES)))
+	@echo $@
+	$(GCC) -o $@ $^
+	@$(GCC) -shared -o $@.so $^
 
-$(SRC)/mem.c: $(LIB)/mem.h $(LIB)/logger.h
+config_reader: $(addprefix $(BIN)/,$(addsuffix .o, $(CONFIG_READER_FILES)))
+	@echo $@
+	$(GCC) -o $@ $^
 
-$(LIB)/algorithm.h: $(LIB)/rail.h
-$(SRC)/algorithm.c: $(LIB)/algorithm.h $(LIB)/system.h \
-		$(LIB)/logger.h $(LIB)/train.h $(LIB)/switch.h $(LIB)/signals.h \
-		$(LIB)/module.h $(LIB)/com.h $(LIB)/websocket_msg.h $(LIB)/submodule.h
-
-$(LIB)/com.h: $(LIB)/signals.h
-$(SRC)/com.c: $(LIB)/com.h $(LIB)/system.h $(LIB)/rail.h \
-		$(LIB)/switch.h $(LIB)/signals.h $(LIB)/train.h $(LIB)/logger.h \
-		$(LIB)/module.h $(LIB)/submodule.h
-
-$(SRC)/encryption.c: $(LIB)/encryption.h
-
-$(SRC)/logger.c: $(LIB)/logger.h $(LIB)/mem.h
-
-$(LIB)/module.h: $(LIB)/rail.h $(LIB)/switch.h $(LIB)/signals.h
-$(SRC)/module.c: $(LIB)/module.h $(LIB)/system.h \
-		$(LIB)/logger.h $(LIB)/train.h $(LIB)/algorithm.h \
-		$(LIB)/websocket_msg.h $(LIB)/websocket_control.h
-
-$(LIB)/rail.h: $(LIB)/config_data.h
-$(SRC)/rail.c: $(LIB)/rail.h $(LIB)/system.h $(LIB)/module.h $(LIB)/switch.h $(LIB)/logger.h $(LIB)/algorithm.h
-
-$(LIB)/route.h: $(LIB)/rail.h #$(LIB)/switch.h
-
-$(LIB)/signals.h: $(LIB)/rail.h
-$(SRC)/signals.c: $(LIB)/signals.h $(LIB)/system.h $(LIB)/mem.h $(LIB)/config_data.h $(LIB)/module.h $(LIB)/logger.h
-
-$(LIB)/switch.h: $(LIB)/rail.h $(LIB)/train.h
-$(SRC)/switch.c: $(LIB)/switch.h $(LIB)/logger.h
-
-$(SRC)/submodule.c: $(LIB)/algorithm.h $(LIB)/com.h $(LIB)/train_sim.h $(LIB)/Z21.h $(LIB)/logger.h
-
-$(SRC)/system.c: $(LIB)/system.h $(LIB)/websocket_control.h $(LIB)/logger.h $(LIB)/algorithm.h
-
-$(LIB)/train.h: $(LIB)/rail.h $(LIB)/route.h
-$(SRC)/train.c: $(LIB)/train.h $(LIB)/system.h $(LIB)/logger.h $(LIB)/switch.h
-
-$(SRC)/train_sim.c: $(LIB)/train_sim.h $(LIB)/rail.h $(LIB)/train.h $(LIB)/system.h $(LIB)/module.h $(LIB)/submodule.h
-
-$(SRC)/websocket.c: $(LIB)/websocket.h
-
-$(LIB)/websocket_control.h: $(LIB)/websocket.h $(LIB)/websocket_msg.h $(LIB)/module.h
-$(SRC)/websocket_control.c: $(LIB)/websocket_control.h
-
-$(LIB)/websocket_msg.h: $(LIB)/websocket.h $(LIB)/train.h
-$(SRC)/websocket_msg.c: $(LIB)/websocket_msg.h $(LIB)/system.h $(LIB)/rail.h $(LIB)/switch.h \
-	                    $(LIB)/train.h $(LIB)/logger.h $(LIB)/module.h $(LIB)/Z21.h
-
-$(SRC)/Z21.c: $(LIB)/Z21.h $(LIB)/logger.h $(LIB)/submodule.h $(LIB)/Z21_msg.h
-
-$(SRC)/Z21_msg.c: $(LIB)/Z21.h $(LIB)/Z21_msg.h $(LIB)/train.h
-
-$(LIB)/IO.h: $(LIB)/module.h
-$(SRC)/IO.c: $(LIB)/IO.h
-
-.PHONY: clean
+comtest: $(addprefix $(BIN)/,$(addsuffix .o, $(CONFIG_READER_FILES)))
+	@echo $@
+	$(GCC) -o $@ $^ 
 
 clean:
-	$(MAKE) -C avr clean
 	@echo "CLEAN"
 	@rm -f baan
-	@rm bin/*
+	@rm -f baan.so
+	@rm -f config_reader
+	@rm -rf bin/*

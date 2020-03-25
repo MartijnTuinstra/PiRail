@@ -1,8 +1,6 @@
 #ifndef INCLUDE_CONFIG_H
 #define INCLUDE_CONFIG_H
 
-#include "rail.h"
-#include "IO.h"
 #include "config_data.h"
 
 uint8_t read_byte_conf(uint8_t ** p);
@@ -20,7 +18,7 @@ void write_train_from_conf(struct train_config * config, char * filename);
 
 int check_Spacing(uint8_t ** p);
 
-struct s_node_conf read_s_node_conf(uint8_t ** p);
+struct node_conf read_s_node_conf(uint8_t ** p);
 struct s_unit_conf read_s_unit_conf(uint8_t ** p);
 
 struct s_block_conf read_s_block_conf(uint8_t ** p);

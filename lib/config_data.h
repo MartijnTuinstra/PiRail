@@ -34,16 +34,25 @@ enum link_types {
   RAIL_LINK_R,
   RAIL_LINK_S,
   RAIL_LINK_s,
-  RAIL_LINK_M,
-  RAIL_LINK_m,
-  RAIL_LINK_C = 0xfe,
-  RAIL_LINK_E = 0xff
+  RAIL_LINK_MA,
+  RAIL_LINK_MB,
+  RAIL_LINK_ma,
+  RAIL_LINK_mb,
+  RAIL_LINK_TT = 0x10, // Turntable
+  RAIL_LINK_C  = 0xfe,
+  RAIL_LINK_E  = 0xff
 };
 #endif
 
 struct __attribute__((__packed__)) s_node_conf {
   uint8_t Node;
   uint8_t size;
+};
+
+struct node_conf {
+  uint8_t Node;
+  uint8_t size;
+  uint8_t * data;
 };
 
 struct __attribute__((__packed__)) s_block_conf {
@@ -159,7 +168,7 @@ struct __attribute__((__packed__)) s_signal_conf {
 struct module_config {
   struct s_unit_conf header;
 
-  struct s_node_conf * Nodes;
+  struct node_conf * Nodes;
 
   struct s_block_conf * Blocks;
   struct switch_conf * Switches;

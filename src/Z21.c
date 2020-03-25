@@ -11,8 +11,9 @@
 #include<arpa/inet.h>
 #include<sys/socket.h>
 
-#include "websocket_msg.h"
-#include "submodule.h"
+#include "config.h"
+#include "websocket_stc.h"
+// #include "submodule.h"
 
 int z21_fd = -1;
 _Bool z21_connected = 0;
@@ -29,10 +30,9 @@ void Z21_boot(){
 }
 
 void * Z21(){
-  pthread_join(z21_thread, NULL);
+  pthread_join(SYS->Z21.th, NULL);
   z21_connected = 1;
-  _SYS->Z21_State = _SYS_Module_Init;
-  WS_stc_SubmoduleState();
+  SYS_set_state(&SYS->Z21.state, Module_Init);
 
   loggerf(INFO, "Connecting to Z21");
   int ret = 0;
@@ -48,14 +48,14 @@ void * Z21(){
   
   if(ret == 1){
     loggerf(INFO, "Connected Succesfully to Z21");
-    _SYS->Z21_State = _SYS_Module_Run;
+    SYS->Z21.state = Module_Run;
+    SYS_set_state(&SYS->Z21.state, Module_Run);
   }
   else{
     z21_connected = 0;
-    _SYS->Z21_State = _SYS_Module_Fail;
+    SYS_set_state(&SYS->Z21.state, Module_Fail);
   }
-  WS_stc_SubmoduleState();
-  pthread_create(&z21_thread, NULL, Z21_run, NULL);
+  pthread_create(&SYS->Z21.th, NULL, Z21_run, NULL);
   return 0;
 }
 
@@ -134,7 +134,7 @@ int Z21_client(char * ip, uint16_t port){
 }
 
 void * Z21_run(){
-  pthread_join(z21_start_thread, NULL);
+  pthread_join(SYS->Z21.start_th, NULL);
 
   if(!z21_connected){
     return 0;
@@ -145,7 +145,7 @@ void * Z21_run(){
 
   Z21_SET_BROADCAST_FLAGS(Z21_BROADCAST_FLAGS);
 
-  while(_SYS->Z21_State == _SYS_Module_Run){
+  while(SYS->Z21.state == Module_Run && !SYS->stop){
     int length = read(z21_fd, z21_buf, z21_buf_size);
     Z21_recv(z21_buf, length);
   }
@@ -202,18 +202,18 @@ void Z21_recv(char * data, int length){
                                 // LAN_X_UNKNOWN_COMMAND        0x82
         if(data[5] == 0){
           loggerf(ERROR, "LAN_X_BC_TRACK_POWER_OFF");
-          WS_EmergencyStop();
+          WS_stc_EmergencyStop();
         }
         else if(data[5] == 0x01){
           loggerf(ERROR, "LAN_X_BC_TRACK_POWER_ON");
-          WS_ClearEmergency();
+          WS_stc_ClearEmergency();
         }
         else if(data[5] == 0x02){
           loggerf(ERROR, "LAN_X_BC_PROGRAMMING_MODE");
         }
         else if(data[5] == 0x08){
           loggerf(ERROR, "LAN_X_BC_TRACK_SHORT_CIRCUIT");
-          WS_ShortCircuit();
+          WS_stc_ShortCircuit();
         }
         else if(data[5] == 0x82){
           loggerf(TRACE, "LAN_X_UNKNOWN_COMMAND");
@@ -274,7 +274,7 @@ void Z21_recv(char * data, int length){
 
 void Z21_send(uint16_t length, uint16_t header, ...){
   // Check if not connected
-  if(_SYS->Z21_State == _SYS_Module_Stop || _SYS->Z21_State == _SYS_Module_Fail)
+  if(SYS->Z21.state == Module_STOP || SYS->Z21.state == Module_Fail)
     return;
   
   pthread_mutex_lock(&z21_send_mutex);
@@ -303,7 +303,7 @@ void Z21_send(uint16_t length, uint16_t header, ...){
 }
 
 void Z21_send_data(uint8_t * data, uint8_t length){
-  if(_SYS->Z21_State == _SYS_Module_Stop || _SYS->Z21_State == _SYS_Module_Fail)
+  if(SYS->Z21.state == Module_STOP || SYS->Z21.state == Module_Fail)
     return;
 
   pthread_mutex_lock(&z21_send_mutex);

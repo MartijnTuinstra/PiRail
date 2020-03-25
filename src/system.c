@@ -3,37 +3,23 @@
 
 #include <signal.h>
 #include <errno.h>
+#include <semaphore.h>
 
 #include "system.h"
-#include "websocket_control.h"
 #include "logger.h"
-#include "algorithm.h"
-
 #include "mem.h"
 
-void _SYS_change(int STATE,char send){
-  loggerf(INFO, "_SYS_change %x\n",_SYS->_STATE);
+#include "websocket_stc.h"
 
-  if(_SYS->_STATE & STATE && send & 0x02){
-    _SYS->_STATE &= 0xFFFF ^ STATE;
-  }else if(!(_SYS->_STATE & STATE)){
-    _SYS->_STATE |= STATE;
-  }
-  loggerf(INFO, "_SYS_change %x", _SYS->_STATE);
-
-  if(send & 0x01){
-    char data[5];
-    data[0] = WSopc_Service_State;
-    data[1] = _SYS->_STATE >> 8;
-    data[2] = _SYS->_STATE & 0xFF;
-    ws_send_all(data,3,WS_Flag_Admin || WS_Flag_Track);
-  }
-}
+sem_t AlgorQueueNoEmpty;
 
 void sigint_func(int sig){
   if(sig == SIGINT){
     loggerf(WARNING, "-- SIGINT -- STOPPING");
-    _SYS_change(STATE_RUN | STATE_Client_Accept, 3);
+    SYS->WebSocket.accept_clients = 0;
+
+    // Request Stop
+    SYS->stop = 1;
 
     sem_post(&AlgorQueueNoEmpty);
   }
@@ -82,4 +68,31 @@ void move_file(char * src, char * dest){
 
   fclose(source);
   fclose(target);
+}
+
+void system_init(struct s_systemState * S){
+  S->stop = 0;
+  S->Clients = 0;
+
+  S->Z21.state  = Module_STOP;
+  S->UART.state = Module_STOP;
+  S->TC.state   = Module_STOP;
+  S->LC.state   = Module_STOP;
+  S->WebSocket.state = Module_STOP;
+
+  S->SimA.state = Module_STOP;
+  S->SimB.state = Module_STOP;
+}
+
+void init_main(){
+  SYS = _calloc(1, struct s_systemState);
+  system_init(SYS);
+
+  init_allocs();
+}
+
+
+void SYS_set_state(volatile enum e_SYS_Module_State * system, enum e_SYS_Module_State state){
+  *system = state;
+  WS_stc_SubmoduleState(0);
 }

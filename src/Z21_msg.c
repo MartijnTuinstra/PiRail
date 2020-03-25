@@ -1,6 +1,7 @@
 #include "logger.h"
 #include "mem.h"
 #include "train.h"
+#include "websocket_stc.h"
 #include "Z21.h"
 
 void Z21_Set_Loco_Drive_Engine(Engines * E){
@@ -71,16 +72,16 @@ void Z21_LAN_X_LOCO_INFO(uint8_t length, char * data){
 	E->speed = speed;
 	E->dir = dir;
 
-	engine_calc_real_speed(E);
+	engine_read_speed(E);
 
 	if(E->train){
 		loggerf(INFO, "Engine part of train");
 
 		train_set_speed(E->train, E->cur_speed);
 
-		WS_UpdateTrain(E->train, TRAIN_TRAIN_TYPE);
+		// WS_stc_UpdateTrain(E->train, TRAIN_TRAIN_TYPE);
 	}
-	else{
-		WS_UpdateTrain(E, TRAIN_ENGINE_TYPE);
-	}
+	// else{
+		// WS_stc_UpdateTrain(E, TRAIN_ENGINE_TYPE);
+	// }
 }

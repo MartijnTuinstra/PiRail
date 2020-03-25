@@ -7,6 +7,8 @@
   #define MAX_WEB_CLIENTS 20
   #define WS_BUF_SIZE 1024
 
+  #include "websocket.h"
+
   struct web_client_t{
     int fd;
     int type; /*Flags for client type
@@ -26,17 +28,11 @@
                       1 = in use
                       2 = stopping / ready to join thread*/
 
-    struct web_client_trains {
-      uint16_t id:12;
-      uint16_t type:4;
-    } trains[2];
+    uint8_t trains[2];
   };
-
-  #include "websocket.h"
 
   extern char * WS_password;
 
-  #include "websocket_control.h"
   #include "system.h"
   #include "logger.h"
 
@@ -56,7 +52,9 @@
 
   int websocket_client_check(struct web_client_t * C);
 
-  void * websocket_client_connect(void * p);
+  uint8_t websocket_client_first_connect(struct web_client_t * client, char * buf, int * length);
+
+  void * websocket_client(void * p);
 
   void *clear_clients();
 
@@ -66,6 +64,7 @@
 
   void * websocket_server();
 
-  #include "websocket_msg.h"
+  #include "websocket_stc.h"
+  #include "websocket_cts.h"
 
 #endif

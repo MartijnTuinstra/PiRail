@@ -2,14 +2,11 @@
 #include "logger.h"
 #include "system.h"
 #include "mem.h"
-#include "module.h"
-#include "websocket_msg.h"
-#include "websocket.h"
-#include "com.h"
+
 #include "IO.h"
 #include "algorithm.h"
 
-void Create_Switch(struct switch_connect connect, uint8_t block_id, uint8_t output_len, Node_adr * output_pins, uint8_t * output_states){
+void Create_Switch(struct s_switch_connect connect, uint8_t block_id, uint8_t output_len, Node_adr * output_pins, uint8_t * output_states){
   loggerf(TRACE, "Create Sw %i:%i", connect.module, connect.id);
   Switch * Z = _calloc(1, Switch);
 
@@ -31,7 +28,7 @@ void Create_Switch(struct switch_connect connect, uint8_t block_id, uint8_t outp
   Z->IO_len = output_len;
   Z->IO_states = output_states;
 
-  if(Units[Z->module]->B[block_id]){
+  if(Units[Z->module]->block_len > block_id && Units[Z->module]->B[block_id]){
     Z->Detection = Units[Z->module]->B[block_id];
     if(Units[Z->module]->B[block_id]->switch_len == 0){
       Units[Z->module]->B[block_id]->Sw = _calloc(1, void *);
@@ -53,22 +50,41 @@ void Create_Switch(struct switch_connect connect, uint8_t block_id, uint8_t outp
   Units[connect.module]->Sw[connect.id] = Z;
 }
 
-void Switch_Add_Feedback(Switch * S, char len, Node_adr * pins, char * state){
-  //Enable feedback pins
-  S->feedback_en = 1;
+void create_msswitch_from_conf(uint8_t module, struct ms_switch_conf conf){
 
-  for(int i = 0; i < len; i++){
-    Init_IO(Units[S->module], pins[i], IO_Input);
+  // uint8_t id;
+  // uint8_t det_block;
 
-    S->feedback[i] = Units[S->module]->Node[pins[i].Node].io[pins[i].io];
+  // uint8_t nr_states;
+  // uint8_t IO;
+
+  // struct s_ms_switch_state_conf * states;
+  // struct s_IO_port_conf * IO_Ports;  
+
+  struct s_msswitch_connect connect;
+  connect.module = module;
+  connect.id = conf.id;
+  connect.states = conf.nr_states;
+
+  connect.sideA = _calloc(conf.nr_states, struct rail_link);
+  connect.sideB = _calloc(conf.nr_states, struct rail_link);
+
+  for(uint8_t i = 0; i < conf.nr_states; i++){
+    connect.sideA[i].module = conf.states[i].sideA.module;
+    connect.sideA[i].id = conf.states[i].sideA.id;
+    connect.sideA[i].type = conf.states[i].sideA.type;
+
+    connect.sideB[i].module = conf.states[i].sideB.module;
+    connect.sideB[i].id = conf.states[i].sideB.id;
+    connect.sideB[i].type = conf.states[i].sideB.type;
   }
-  _free(pins);
 
-  S->feedback_len = len;
-  S->feedback_states = state;
+  _free(conf.states);
+
+  Create_MSSwitch(connect, conf.det_block, conf.IO, conf.IO_Ports, 0);
 }
 
-void Create_MSSwitch(struct msswitch_connect connect, uint8_t block_id, uint8_t output_len, Node_adr * output_pins, uint16_t * output_states){
+void Create_MSSwitch(struct s_msswitch_connect connect, uint8_t block_id, uint8_t output_len, struct s_IO_port_conf * output_pins, uint16_t * output_states){
   loggerf(DEBUG, "Create MSSw %i:%i", connect.module, connect.id);
   MSSwitch * Z = _calloc(1, MSSwitch);
 
@@ -78,23 +94,26 @@ void Create_MSSwitch(struct msswitch_connect connect, uint8_t block_id, uint8_t 
   Z->sideA = connect.sideA;
   Z->sideB = connect.sideB;
 
+  Z->state_len = connect.states;
+
   Z->IO = _calloc(output_len, IO_Port *);
 
   for(int i = 0; i < output_len; i++){
-    Init_IO(Units[connect.module], output_pins[i], IO_Output);
+    Init_IO_from_conf(Units[connect.module], output_pins[i], IO_Output);
 
-    Z->IO[i] = Units[connect.module]->Node[output_pins[i].Node].io[output_pins[i].io];
+    Z->IO[i] = Units[connect.module]->Node[output_pins[i].Node].io[output_pins[i].Adr];
   }
-  _free(output_pins);
+  if(output_pins)
+    _free(output_pins);
 
   Z->IO_len = output_len;
   Z->IO_states = output_states;
 
   if(U_B(Z->module, block_id)){
-    Z->Detection = Units[Z->module]->B[block_id];
+    Z->Detection = U_B(Z->module, block_id);
     if(U_B(Z->module, block_id)->msswitch_len == 0){
-      U_B(Z->module, block_id)->MSSw = _calloc(2, void *);
-      U_B(Z->module, block_id)->msswitch_len = 2;
+      U_B(Z->module, block_id)->MSSw = _calloc(1, void *);
+      U_B(Z->module, block_id)->msswitch_len = 1;
     }
     int id = find_free_index(U_B(Z->module, block_id)->MSSw, U_B(Z->module, block_id)->msswitch_len);
     U_B(Z->module, block_id)->MSSw[id] = Z;
@@ -109,56 +128,35 @@ void Create_MSSwitch(struct msswitch_connect connect, uint8_t block_id, uint8_t 
   U_MSSw(connect.module, connect.id) = Z;
 }
 
-int check_linked_switches(Switch * S){
-  for(int i = 0;i<S->links_len;i++){
-    if(!S->links[i].p)
-      continue;
+void * Clear_Switch(Switch * Sw){
+  _free(Sw->feedback);
+  _free(Sw->IO);
+  _free(Sw->IO_states);
+  _free(Sw->links);
+  _free(Sw->preferences);
 
-    if(S->links[i].type == RAIL_LINK_S || S->links[i].type == RAIL_LINK_s){
-      if(((Switch *)S->links[i].p)->Detection &&
-         ( ((Switch *)S->links[i].p)->Detection->state == RESERVED ||
-           ((Switch *)S->links[i].p)->Detection->state == RESERVED_SWITCH ||
-           ((Switch *)S->links[i].p)->Detection->blocked )){
-        return 0;
-      }
-    }else if(S->links[i].type == RAIL_LINK_M || S->links[i].type == RAIL_LINK_m){
-      if(((MSSwitch *)S->links[i].p)->Detection &&
-         ( ((MSSwitch *)S->links[i].p)->Detection->state == RESERVED ||
-           ((MSSwitch *)S->links[i].p)->Detection->state == RESERVED_SWITCH ||
-           ((MSSwitch *)S->links[i].p)->Detection->blocked )){
-        return 0;
-      }
-    }
-  }
-  return 1;
+  _free(Sw);
+  return NULL;
 }
 
-int check_linked_msswitches(MSSwitch * S){
-  for(int i = 0;i<S->links_len;i++){
-    if(!S->links[i].p)
-      continue;
+void * Clear_MSSwitch(MSSwitch * MSSw){
+  _free(MSSw->sideA);
+  _free(MSSw->sideB);
+  _free(MSSw->IO);
+  _free(MSSw->IO_states);
+  // _free(MSSw->links);
+  // _free(MSSw->preferences);
 
-    if(S->links[i].type == RAIL_LINK_S || S->links[i].type == RAIL_LINK_s){
-      if(((Switch *)S->links[i].p)->Detection &&
-         ( ((Switch *)S->links[i].p)->Detection->state == RESERVED ||
-           ((Switch *)S->links[i].p)->Detection->state == RESERVED_SWITCH ||
-           ((Switch *)S->links[i].p)->Detection->blocked )){
-        return 0;
-      }
-    }else if(S->links[i].type == RAIL_LINK_M || S->links[i].type == RAIL_LINK_m){
-      if(((MSSwitch *)S->links[i].p)->Detection &&
-         ( ((MSSwitch *)S->links[i].p)->Detection->state == RESERVED ||
-           ((MSSwitch *)S->links[i].p)->Detection->state == RESERVED_SWITCH ||
-           ((MSSwitch *)S->links[i].p)->Detection->blocked )){
-        return 0;
-      }
-    }
-  }
-  return 1;
+  _free(MSSw);
+  return NULL;
 }
+
 
 void throw_switch(Switch * S, uint8_t state, uint8_t lock){
   loggerf(TRACE, "throw_switch");
+
+  if(S->Detection && (S->Detection->state == BLOCKED || S->Detection->state == RESERVED_SWITCH))
+    return; // Switch is blocked
 
   Algor_Set_Changed(&S->Detection->Alg);
   putList_AlgorQueue(S->Detection->Alg, 0);
@@ -167,9 +165,12 @@ void throw_switch(Switch * S, uint8_t state, uint8_t lock){
 
   Units[S->module]->switch_state_changed |= 1;
 
-  Algor_search_Blocks(&S->Detection->Alg, 0);
+  Algor_search_Blocks(S->Detection, 0);
 
   Algor_Set_Changed(&S->Detection->Alg);
+
+  S->Detection->algorchanged = 0; // Block is allready search should not be researched
+  
   putList_AlgorQueue(S->Detection->Alg, 0);
 
   putAlgorQueue(S->Detection, lock);
@@ -178,6 +179,9 @@ void throw_switch(Switch * S, uint8_t state, uint8_t lock){
 void throw_msswitch(MSSwitch * S, uint8_t state, uint8_t lock){
   loggerf(TRACE, "throw_msswitch");
 
+  if(S->Detection && (S->Detection->state == BLOCKED || S->Detection->state == RESERVED_SWITCH))
+    return; // Switch is blocked
+
   Algor_Set_Changed(&S->Detection->Alg);
   putList_AlgorQueue(S->Detection->Alg, 0);
 
@@ -185,234 +189,15 @@ void throw_msswitch(MSSwitch * S, uint8_t state, uint8_t lock){
 
   Units[S->module]->msswitch_state_changed |= 1;
 
-  Algor_search_Blocks(&S->Detection->Alg, 0);
+  Algor_search_Blocks(S->Detection, 0);
 
   Algor_Set_Changed(&S->Detection->Alg);
+
+  S->Detection->algorchanged = 0; // Block is allready search should not be researched
+
   putList_AlgorQueue(S->Detection->Alg, 0);
 
   putAlgorQueue(S->Detection, lock);
-}
-
-int set_switch(Switch * S, uint8_t state){
-
-  //Check if linked switches are blocked or reserved
-  if(!check_linked_switches(S)){
-    loggerf(INFO, "Linked Switches Blocked");
-    return 0;
-  }
-
-  //Check if switch is blocked or reserved
-  if(S->Detection && (S->Detection->state == RESERVED || S->Detection->state == RESERVED_SWITCH || S->Detection->blocked)){
-    if(S->Detection->state == RESERVED || S->Detection->state == RESERVED_SWITCH){
-      loggerf(INFO, "Switch reserved");
-    }
-    else{
-      loggerf(INFO, "Switch blocked");
-    }
-    return 0;
-  }
-
-  int lock = 1;
-
-  if(S->links_len > 0)
-    lock = 0;
-
-  throw_switch(S, state, lock);
-
-  for(int i = 0; i<S->links_len; i++){
-    if(!S->links[i].p)
-      continue;
-
-    if(S->links[i].type == RAIL_LINK_S || S->links[i].type == RAIL_LINK_s){
-      throw_switch(S->links[i].p, S->links[i].states[S->state & 0x7f], lock);
-    }
-    else if(S->links[i].type == RAIL_LINK_M || S->links[i].type == RAIL_LINK_m){
-      throw_msswitch(S->links[i].p, S->links[i].states[S->state & 0x7f], lock);
-    }
-  }
-
-  // If algor queue is not allready unlocked
-  if(lock == 0){
-    algor_queue_enable(1);
-  }
-
-  loggerf(INFO, "Throw Switch %i:%i\n", S->module, S->id);
-  COM_update_switch(S->module);
-  return 1;
-}
-
-int set_switch_path(void * p, struct rail_link link, int flags){
-  loggerf(TRACE, "set_switch_path (%x, %x, %i)", (unsigned int)p, (unsigned int)&link, flags);
-  if((flags & 0x80) == 0){
-    //No SWITCH_CARE
-    return 1;
-  }
-
-  //Check if switch is occupied
-  if (link.type == RAIL_LINK_S || link.type == RAIL_LINK_s) {
-    if(((Switch *)link.p)->Detection && ((Switch *)link.p)->Detection->state == RESERVED_SWITCH)
-      return 0;
-  }
-  else if (link.type == RAIL_LINK_M || link.type == RAIL_LINK_m) {
-    if(((MSSwitch *)link.p)->Detection && ((Switch *)link.p)->Detection->state == RESERVED_SWITCH)
-      return 0;
-  }
-
-
-  if(link.type == RAIL_LINK_S){
-    // Go to next switch
-    Switch * Sw = link.p;
-    if((Sw->state & 0x7F) == 0 && Sw->str.type != RAIL_LINK_R && Sw->str.type != 'D'){
-      return set_switch_path(Sw, Sw->str, flags);
-    }
-    else if((Sw->state & 0x7F) == 1 && Sw->div.type != RAIL_LINK_R && Sw->div.type != 'D'){
-      return set_switch_path(Sw, Sw->div, flags);
-    }
-  }
-  else if(link.type == RAIL_LINK_s){
-    // Check if switch is in correct state
-    // and continue to next switch
-    Switch * N = link.p;
-    loggerf(TRACE, "set s (state: %i, str.p: %x, div.p: %x)", (N->state & 0x7F), (unsigned int)N->str.p, (unsigned int)N->div.p);
-    if((N->state & 0x7F) == 0){
-      if(N->str.p != p)
-        set_switch(N, 1);
-
-      return set_switch_path(N, N->app, flags);
-    }
-    else if((N->state & 0x7F) == 1){
-      if(N->div.p != p)
-        set_switch(N, 0);
-
-      return set_switch_path(N, N->app, flags);
-    }
-  }
-  else if(link.type == RAIL_LINK_M){
-    loggerf(ERROR, "IMPLEMENT");
-    MSSwitch * N = link.p;
-    if(N->sideB[N->state].p == p){
-      return 1;
-    }
-  }
-  else if(link.type == RAIL_LINK_m){
-    loggerf(ERROR, "IMPLEMENT");
-    MSSwitch * N = link.p;
-    if(N->sideA[N->state].p == p){
-      return 1;
-    }
-  }
-
-  else if (link.type == RAIL_LINK_R || link.type == 'D'){
-    return 1;
-  }
-  return 0;
-}
-
-int reserve_switch_path(void * p, struct rail_link link, int flags){
-  loggerf(TRACE, "reserve_switch_path (%x, %x, %i)", (unsigned int)p, (unsigned int)&link, flags);
-  if((flags & 0x80) == 0){
-    //No SWITCH_CARE
-    return 1;
-  }
-
-
-  if(link.type == RAIL_LINK_S){
-    // Go to next switch
-    Switch * Sw = link.p;
-
-    Block_reserve(Sw->Detection);
-    Sw->Detection->state = RESERVED_SWITCH;
-    Sw->Detection->reserved = 1;
-    Sw->Detection->changed |= State_Changed;
-    loggerf(INFO, "Set switch %02i:%02i to RESERVED", Sw->module, Sw->id);
-
-    if((Sw->state & 0x7F) == 0 && Sw->str.type != RAIL_LINK_R && Sw->str.type != 'D'){
-      return reserve_switch_path(Sw, Sw->str, flags);
-    }
-    else if((Sw->state & 0x7F) == 1 && Sw->div.type != RAIL_LINK_R && Sw->div.type != 'D'){
-      return reserve_switch_path(Sw, Sw->div, flags);
-    }
-  }
-  else if(link.type == RAIL_LINK_s){
-    // Check if switch is in correct state
-    // and continue to next switch
-    Switch * Sw = link.p;
-
-    Block_reserve(Sw->Detection);
-    Sw->Detection->state = RESERVED_SWITCH;
-    Sw->Detection->reserved = 1;
-    Sw->Detection->changed |= State_Changed;
-    loggerf(INFO, "Set switch %02i:%02i to RESERVED", Sw->module, Sw->id);
-
-    return reserve_switch_path(Sw, Sw->app, flags);
-  }
-  else if(link.type == RAIL_LINK_M){
-    loggerf(ERROR, "IMPLEMENT");
-    MSSwitch * N = link.p;
-    if(N->sideB[N->state].p == p){
-      return 1;
-    }
-  }
-  else if(link.type == RAIL_LINK_m){
-    loggerf(ERROR, "IMPLEMENT");
-    MSSwitch * N = link.p;
-    if(N->sideA[N->state].p == p){
-      return 1;
-    }
-  }
-
-  else if (link.type == RAIL_LINK_R || link.type == 'D'){
-    return 1;
-  }
-  return 0;
-}
-
-
-int set_msswitch(MSSwitch * S, uint8_t state){
-
-  //Check if linked switches are blocked or reserved
-  if(!check_linked_msswitches(S)){
-    loggerf(INFO, "Linked Switches Blocked");
-    return 0;
-  }
-
-  //Check if switch is blocked or reserved
-  if(S->Detection && (S->Detection->state == RESERVED || S->Detection->state == RESERVED_SWITCH || S->Detection->blocked)){
-    if(S->Detection->state == RESERVED || S->Detection->state == RESERVED_SWITCH){
-      loggerf(INFO, "Switch reserved");
-    }
-    else{
-      loggerf(INFO, "Switch blocked");
-    }
-    return 0;
-  }
-
-  int lock = 1;
-
-  if(S->links_len > 0)
-    lock = 0;
-
-  throw_msswitch(S, state, lock);
-
-  for(int i = 0; i<S->links_len; i++){
-    if(!S->links[i].p)
-      continue;
-
-    if(S->links[i].type == RAIL_LINK_S || S->links[i].type == RAIL_LINK_s){
-      throw_switch(S->links[i].p, S->links[i].states[S->state & 0x7f], lock);
-    }
-    else if(S->links[i].type == RAIL_LINK_M || S->links[i].type == RAIL_LINK_m){
-      throw_msswitch(S->links[i].p, S->links[i].states[S->state & 0x7f], lock);
-    }
-  }
-
-  if(lock == 0){
-    algor_queue_enable(1);
-  }
-
-  loggerf(INFO, "Throw MSSwitch %i:%i\n");
-  COM_update_switch(S->module);
-  return 1;
 }
 
 int throw_multiple_switches(uint8_t len, char * msg){
@@ -471,94 +256,269 @@ int throw_multiple_switches(uint8_t len, char * msg){
 
   algor_queue_enable(1);
 
-  COM_change_switch(0);
+  // COM_change_switch(0);
   return 1;
 }
 
-int check_Switch(struct rail_link link, _Bool pref){
-  struct rail_link next;
-
-  if(link.type == 'R'){
+int Next_check_Switch(void * p, struct rail_link link, int flags){
+  loggerf(TRACE, "Next_check_Switch (%x, %x, %x)", (unsigned int)p, (unsigned int)&link, flags);
+  if((flags & 0x80) == 0){
+    //No SWITCH_CARE
     return 1;
   }
-  else if(link.type == 'e'){
-    return 0;
+  else if(link.type == RAIL_LINK_S){
+    return 1;
   }
-  else if(link.type == 'S'){
-    if(((Switch *)link.p)->state == 0)
-      next = ((Switch *)link.p)->str;
-    else
-      next = ((Switch *)link.p)->div;
-  }
-  else if(link.type == 's'){
-    next = ((Switch *)link.p)->app;
-  }
-  else if(link.type == 'M'){
-    next = ((MSSwitch *)link.p)->sideB[((MSSwitch *)link.p)->state];
-  }
-  else if(link.type == 'm'){
-    next = ((MSSwitch *)link.p)->sideA[((MSSwitch *)link.p)->state];
-  }
-
-  if(next.type == 'S' || next.type == 'R' || next.type == 'e'){
-    return check_Switch(next, pref);
-  }
-  else if(next.type == 's'){
-    Switch * S = next.p;
-
-    if(S->state == 0){
-      //If next switch is straight
-      if(S->str.p != link.p){
-        return 0;
-      }
-      else{
-        return check_Switch(next, pref);
-      }
+  else if(link.type == RAIL_LINK_s){
+    Switch * N = link.p;
+    loggerf(TRACE, "check s (state: %i, str.p: %x, div.p: %x)", (N->state & 0x7F), (unsigned int)N->str.p, (unsigned int)N->div.p);
+    if(((N->state & 0x7F) == 0 && N->str.p == p) || ((N->state & 0x7F) == 1 && N->div.p == p)){
+      return 1;
     }
-    else{
-      //If next switch is diverging
-      if(S->div.p != link.p){
-        return 0;
-      }
-      else{
-        return check_Switch(next, pref);
-      }
+    // else
+    //   printf("str: %i  %x==%x\tdiv: %i  %x==%x\t",N->state, N->str.p, p, N->state, N->div.p, p);
+  }
+  else if(link.type == RAIL_LINK_MA || link.type == RAIL_LINK_MB){
+    MSSwitch * N = link.p;
+    if(N->sideB[N->state].p == p){
+      return 1;
     }
   }
-  else if(next.type == 'M'){
-    MSSwitch * S = next.p;
-
-    if(S->sideB[S->state].p != link.p){
-      return 0;
-    }
-    else{
-      return check_Switch(next, pref);
+  else if(link.type == RAIL_LINK_ma || link.type == RAIL_LINK_mb){
+    MSSwitch * N = link.p;
+    if(N->sideA[N->state].p == p){
+      return 1;
     }
   }
-  else if(next.type == 'm'){
-    MSSwitch * S = next.p;
-
-    if(S->sideA[S->state].p != link.p){
-      return 0;
-    }
-    else{
-      return check_Switch(next, pref);
-    }
-  }
-
   return 0;
 }
-int check_Switch_State(struct rail_link adr){
-  loggerf(ERROR, "Implement check_Switch_State");
-  return -1;
+
+
+int Switch_Set_Path(void * p, struct rail_link link, int flags){
+  loggerf(TRACE, "Switch_Set_Path (%x, %x, %i)", (unsigned int)p, (unsigned int)&link, flags);
+  if((flags & 0x80) == 0){
+    //No SWITCH_CARE
+    return 1;
+  }
+
+  //Check if switch is occupied
+  if (link.type == RAIL_LINK_S || link.type == RAIL_LINK_s) {
+    if(((Switch *)link.p)->Detection && ((Switch *)link.p)->Detection->state == RESERVED_SWITCH){
+      loggerf(ERROR, "Switch allready Reserved");
+      return 0;
+    }
+  }
+  else if (link.type >= RAIL_LINK_MA && link.type <= RAIL_LINK_mb) {
+    if(((MSSwitch *)link.p)->Detection && ((Switch *)link.p)->Detection->state == RESERVED_SWITCH){
+      loggerf(ERROR, "Switch allready Reserved");
+      return 0;
+    }
+  }
+
+
+  if(link.type == RAIL_LINK_S){
+    // Go to next switch
+    Switch * Sw = link.p;
+    if((Sw->state & 0x7F) == 0 && Sw->str.type != RAIL_LINK_R && Sw->str.type != 'D'){
+      return Switch_Set_Path(Sw, Sw->str, flags);
+    }
+    else if((Sw->state & 0x7F) == 1 && Sw->div.type != RAIL_LINK_R && Sw->div.type != 'D'){
+      return Switch_Set_Path(Sw, Sw->div, flags);
+    }
+  }
+  else if(link.type == RAIL_LINK_s){
+    // Check if switch is in correct state
+    // and continue to next switch
+    Switch * N = link.p;
+    loggerf(TRACE, "set s %i (state: %i, str.p: %x, div.p: %x)", N->id, (N->state & 0x7F), (unsigned int)N->str.p, (unsigned int)N->div.p);
+    if((N->state & 0x7F) == 0){
+      if(N->str.p != p)
+        throw_switch(N, 1, 1);
+
+      // if(N->str.p != p)
+      //   return 0; // Failed to set switch
+
+      return Switch_Set_Path(N, N->app, flags);
+    }
+    else if((N->state & 0x7F) == 1){
+      if(N->div.p != p)
+        throw_switch(N, 0, 1);
+
+      // if(N->div.p != p)
+      //   return 0; // Failed to set switch
+
+      return Switch_Set_Path(N, N->app, flags);
+    }
+  }
+  else if(link.type == RAIL_LINK_MA || link.type == RAIL_LINK_MB){
+    loggerf(ERROR, "IMPLEMENT");
+    MSSwitch * N = link.p;
+    if(N->sideB[N->state].p == p){
+      return 1;
+    }
+  }
+  else if(link.type == RAIL_LINK_ma || link.type == RAIL_LINK_mb){
+    loggerf(ERROR, "IMPLEMENT");
+    MSSwitch * N = link.p;
+    if(N->sideA[N->state].p == p){
+      return 1;
+    }
+  }
+
+  else if (link.type == RAIL_LINK_R){
+    Block * B = link.p;
+    loggerf(TRACE, "check B %i", B->id);
+    if(B->type != NOSTOP)
+      return 1; // Train can stop on the block, so a possible path
+
+    if(B->next.p == p)
+      return Switch_Set_Path(B, B->prev, flags);
+    else if(B->prev.p == p)
+      return Switch_Set_Path(B, B->next, flags);
+  }
+  else if(link.type == 'D'){
+    return 1;
+  }
+  return 0;
 }
 
-int free_Switch(Block * B, int dir){
-  loggerf(ERROR, "Implement free_Switch");
-  return -1;
+int Switch_Reserve_Path(void * p, struct rail_link link, int flags){
+  loggerf(TRACE, "reserve_switch_path (%x, %x, %i)", (unsigned int)p, (unsigned int)&link, flags);
+  if((flags & 0x80) == 0){
+    //No SWITCH_CARE
+    return 1;
+  }
+
+
+  if(link.type == RAIL_LINK_S){
+    // Go to next switch
+    Switch * Sw = link.p;
+    Block * DB = Sw->Detection;
+
+    DB->state = RESERVED_SWITCH;
+    DB->reserved = 1;
+    DB->statechanged = 1;
+    Units[DB->module]->block_state_changed = 1;
+    loggerf(TRACE, "Set switch %02i:%02i to RESERVED", Sw->module, Sw->id);
+
+    if((Sw->state & 0x7F) == 0 && Sw->str.type != RAIL_LINK_R && Sw->str.type != 'D'){
+      return Switch_Reserve_Path(Sw, Sw->str, flags);
+    }
+    else if((Sw->state & 0x7F) == 1 && Sw->div.type != RAIL_LINK_R && Sw->div.type != 'D'){
+      return Switch_Reserve_Path(Sw, Sw->div, flags);
+    }
+  }
+  else if(link.type == RAIL_LINK_s){
+    // Check if switch is in correct state
+    // and continue to next switch
+    Switch * Sw = link.p;
+    Block * DB = Sw->Detection;
+
+    DB->state = RESERVED_SWITCH;
+    DB->reserved = 1;
+    DB->statechanged = 1;
+    Units[DB->module]->block_state_changed = 1;
+    loggerf(TRACE, "Set switch %02i:%02i to RESERVED", Sw->module, Sw->id);
+
+    return Switch_Reserve_Path(Sw, Sw->app, flags);
+  }
+  else if(link.type == RAIL_LINK_MA || link.type == RAIL_LINK_MB){
+    loggerf(ERROR, "IMPLEMENT");
+    MSSwitch * N = link.p;
+    if(N->sideB[N->state].p == p){
+      return 1;
+    }
+  }
+  else if(link.type == RAIL_LINK_ma || link.type == RAIL_LINK_mb){
+    loggerf(ERROR, "IMPLEMENT");
+    MSSwitch * N = link.p;
+    if(N->sideA[N->state].p == p){
+      return 1;
+    }
+  }
+
+  else if (link.type == RAIL_LINK_R){
+    Block * B = link.p;
+    loggerf(TRACE, "check B %i", B->id);
+    if(B->type != NOSTOP)
+      return 1; // Train can stop on the block, so a possible path
+
+    if(B->next.p == p)
+      return Switch_Set_Path(B, B->prev, flags);
+    else if(B->prev.p == p)
+      return Switch_Set_Path(B, B->next, flags);
+  }
+  else if(link.type == 'D'){
+    return 1;
+  }
+  return 0;
 }
 
-int free_Route_Switch(Block * B, int dir, Trains * T){
-  loggerf(ERROR, "Implement free_Route_Switch");
-  return -1;
+int Switch_Check_Path(void * p, struct rail_link link, int flags){
+  // Check if switches are set to a good path
+
+  loggerf(TRACE, "Switch_Check_Path (%x, %x, %i)", (unsigned int)p, (unsigned int)&link, flags);
+  if(!link.p){
+    loggerf(ERROR, "Empty LINK {%i:%i - %i}", link.module, link.id, link.type);
+    return 1;
+  }
+
+  if((flags & 0x80) == 0){
+    //No SWITCH_CARE
+    return 1;
+  }
+  else if(link.type == RAIL_LINK_S){
+    Switch * Sw = link.p;
+    loggerf(TRACE, "check S %i (state: %i)", Sw->id, (Sw->state & 0x7F));
+    if((Sw->state & 0x7F) == 0){
+      return Switch_Check_Path(Sw, Sw->str, flags);
+    }
+    else if((Sw->state & 0x7F) == 1){
+      return Switch_Check_Path(Sw, Sw->div, flags);
+    }
+  }
+  else if(link.type == RAIL_LINK_s){
+    Switch * N = link.p;
+    loggerf(TRACE, "check s %i (state: %i, str.p: %x, div.p: %x)", N->id, (N->state & 0x7F), (unsigned int)N->str.p, (unsigned int)N->div.p);
+    if((N->state & 0x7F) == 0 && N->str.p == p){
+      return Switch_Check_Path(N, N->app, flags);
+    }
+    else if((N->state & 0x7F) == 1 && N->div.p == p){
+      return Switch_Check_Path(N, N->app, flags);
+    }
+    loggerf(ERROR, "wrong State %x", N->state);
+  }
+  else if(link.type == RAIL_LINK_MA || link.type == RAIL_LINK_MB){
+    loggerf(WARNING, "IMPLEMENT");
+    MSSwitch * N = link.p;
+    if(N->sideB[N->state].p == p){
+      return 1;
+    }
+  }
+  else if(link.type == RAIL_LINK_ma || link.type == RAIL_LINK_mb){
+    loggerf(WARNING, "IMPLEMENT");
+    MSSwitch * N = link.p;
+    if(N->sideA[N->state].p == p){
+      return 1;
+    }
+  }
+
+  else if (link.type == RAIL_LINK_R){
+
+    Block * B = link.p;
+
+    loggerf(TRACE, "check B %i", B->id);
+    if(B->type != NOSTOP)
+      return 1; // Train can stop on the block, so a possible path
+
+    if(B->next.p == p)
+      return Switch_Check_Path(B, B->prev, flags);
+    else if(B->prev.p == p)
+      return Switch_Check_Path(B, B->next, flags);
+  }
+  else if(link.type == 'D'){
+    return 1;
+  }
+  loggerf(ERROR, "Done checking");
+  return 0;
 }

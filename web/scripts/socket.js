@@ -141,11 +141,19 @@ var websocket = {
       msg = msg.slice(1);
     }
 
-    if(this.opc[opcode] == undefined){
-      console.warn("Unknown opcode "+opcode);
+    if(opcode == undefined || this.opc[opcode] == undefined){
+      console.warn("Unknown opcode "+opcode, msg);
+      return;
     }
 
-    console.log("0x"+opcode.toString(16)+" stc_"+this.opc[opcode]);
+    text = "0x"+opcode.toString(16);
+    text += " stc_"+this.opc[opcode];
+    console.log(text);
+
+    if(this.opc[opcode] == undefined || (this.opc[opcode] && {}.toString.call(this.opc[opcode]) === '[object Function]')){
+      console.warn("Failure to load opcode "+opcode);
+      return;
+    }
 
     this["stc_"+this.opc[opcode]](msg);
 
@@ -208,6 +216,9 @@ websocket.add_opcodes([
           module.connect();
         }
 
+        Canvas.fit();
+        Canvas.fitOptimize();
+
         Canvas.rescale(1);
       }
     },
@@ -225,6 +236,9 @@ websocket.add_opcodes([
 
           module.connect();
         }
+
+        Canvas.fit();
+        Canvas.fitOptimize();
 
         Canvas.rescale(1);
       }
@@ -287,7 +301,7 @@ websocket.add_opcodes([
       opcode: 0x92,
       name: "SubModuleState",
       recv: function(data){
-        Submodules.update([data[0], data[1]])
+        Submodules.update([data[0], data[1], data[2], data[3]])
       }
     },
     {
@@ -336,16 +350,23 @@ websocket.add_opcodes([
       opcode: 0x41,
       name: "LinkTrain",
       send: function(data){
-        return [data.fid, data.rid, ((type == "E")?0x80:0) + ((mid & 0x1F) >> 8)];
+        return [data.fid, data.real_id, ((data.type == "E")?1:0) + ((data.msg_id >> 8) & 0x7F), data.msg_id & 0xFF];
       },
+      recv: function(data){
+        var follow_id = data[0];
+        var train_id = data[1];
+        var type = (data[2] & 0x1);
+
+        var msg_id = ((data[2] & 0xFE) << 7) + data[3];
+
+        Train_Control.link({fid: follow_id, tid: train_id, type:type, msg_id: msg_id});
+      }
     },
     {
       opcode: 0x42,
       name: "TrainSpeed",
       send: function(data){
-        return [data.train.id & 0xFF,
-                (data.train.id & 0x300) >> 2 | (data.type == "T")?0x20:0 | 
-                  (data.train.dir & 1) << 4 | (data.train.speed & 0xF00) >> 8,
+        return [data.train.railtrainid, (data.train.dir & 1) << 4 | (data.train.speed & 0xF00) >> 8,
                 data.train.speed & 0xFF];
       },
     },
@@ -357,68 +378,67 @@ websocket.add_opcodes([
     },
     {
       opcode: 0x44,
-      name: "TrainOperation",
-      send: function(data){ console.warn("TrainOperation", data); },
-      recv: function(data){ console.warn("TrainOperation", data); }
+      name: "TrainControl",
+      send: function(data){
+        if(data.train.railtrainid != undefined && data.train.control != undefined){
+          return [data.train.railtrainid, data.train.control];
+        }
+      },
+      recv: function(data){ console.warn("TrainControl", data); }
     },
     {
       opcode: 0x45,
-      name: "TrainData",
-      send: function(data){ console.warn("Z21TrainData", data); },
+      name: "TrainUpdate",
+      send: function(data){ console.warn("TrainUpdate", data); },
       recv: function(data){
 
-        var id = data[0] + ((data[1] & 0xC0) << 2);
-        var type = (data[1] & 0x20) >> 5;
+        var id = data[0];
 
-        var dir = (data[1] & 0x10) >> 4;
-        var control = (data[1] & 0x0C) >> 2;
+        var box = 0;
 
-        var speed = ((data[1] & 0x01) << 8) + data[2];        
-
-        var ratio = 0;
-
-        if(type == 0){
-          Train.engines[id].speed = speed;
-          ratio = Train.engines[id].speed / Train.engines[id].max_speed;
-        }
-        else{
-          Train.trains[id].speed = speed;
-          ratio = Train.trains[id].speed / Train.trains[id].max_speed;
-        }
-
-        type = type?"T":"E"
-
-        var box = -1;
-
-        if(Train_Control.train[1] != undefined && Train_Control.train[1].id == id && Train_Control.train[1].type == type){
+        if(Train_Control.train[1] != undefined && Train_Control.train[1].t.railtrainid == id){
           box = 1;
         }
-        else if(Train_Control.train[2] != undefined && Train_Control.train[2].id == id && Train_Control.train[2].type == type){
+        else if(Train_Control.train[2] != undefined && Train_Control.train[2].t.railtrainid == id){
           box = 2;
         }
 
         if(box == 0){
           console.warn("No box");
+          return;
         }
 
-        if(box >= 0){
-          var slider_box = $('.train-box.box'+box+' .train-speed-slider');
-          var pageY = slider_box.offset().top + slider_box.height();
-          var ylim = slider_box.height() - $('.slider-handle', slider_box).height(); 
+        Train_Control.train[box].t.control = (data[1] & 0x70) >> 4;
+        Train_Control.train[box].t.dir = (data[1] & 0x80) >> 7;
+        Train_Control.train[box].t.speed = ((data[1] & 0x0F) << 8) + data[2];
+        var ratio = Train_Control.train[box].t.speed / Train_Control.train[box].t.max_speed;
 
-          var pos = ylim * ratio;
+        var slider_box = $('.train-box.box'+box+' .train-speed-slider');
+        var pageY = slider_box.offset().top + slider_box.height();
+        var ylim = slider_box.height() - $('.slider-handle', slider_box).height(); 
 
-          $('.train-box.box'+box+' .train-speed > span').text(speed);
-          Train_Control.set_handle(box, pos);
-        }
+        var pos = ylim * ratio;
 
-        console.log(type, id, speed, dir, control);
+        $('.train-box.box'+box+' .train-speed > span').text(Train_Control.train[box].t.speed);
+        Train_Control.set_handle(box, pos);
+
+        Train_Control.apply_dir(box);
+
+        Train_Control.apply_control(box);
       }
     },
     {
       opcode: 0x46,
       name: "TrainAddRoute",
-      send: function(data){ console.warn("TrainAddRoute", data); },
+      send: function(data){ 
+        var msg = [];
+
+        msg[0] = data.train_id;
+        msg[1] = data.station_id;
+        msg[2] = data.station_module;
+
+        return msg;
+      },
       recv: function(data){ console.warn("TrainAddRoute", data); }
     },
     {
@@ -428,21 +448,15 @@ websocket.add_opcodes([
         var msg = [];
         if(data[1] == undefined){
           msg[0] = 0xFF;
-          msg[1] = 0xC0;
         }
         else{
-          msg[0] = data[1].id & 0xFF;
-          msg[1] = (data[1].id & 0x300) >> 2;
-          msg[1] |= (data[1].type=="T")?0x20:0;
+          msg[0] = data[1].t.railtrainid & 0xFF;
         }
         if(data[2] == undefined){
-          msg[1] |= 0x03;
-          msg[2] = 0xFF;
+          msg[1] = 0xFF;
         }
         else{
-          msg[2] = data[2].id & 0xFF;
-          msg[1] |= data[2].id & 0x300;
-          msg[1] |= (data[2].type=="T")?0x04:0;
+          msg[1] = data[2].t.railtrainid & 0xFF;
         }
 
         return msg;
@@ -953,7 +967,7 @@ websocket.add_opcodes([
           if(data[i+1] & 0x80){ //MSSwitch
             var len   = data[i+3];
 
-            modules[M].switches[data[i+1]&0x7F] = data[i+2] & 0x7F;
+            modules[M].msswitches[data[i+1]&0x7F] = data[i+2] & 0x7F;
 
             i += 4;
           }else{ //Switch
@@ -1159,7 +1173,30 @@ websocket.add_opcodes([
       opcode: 0x36,
       name: "StationLibrary",
       send: function(data){},
-      recv: function(data){}
+      recv: function(data){
+        nr = data[0];
+
+        stations = {};
+
+        $.each(modules, function(){
+          this.stations = {};
+        });
+        
+        var i = 1;
+        for(var j = 0; j < nr; j++){
+          st = {module: data[i++],
+                id: data[i++],
+                type: data[i++],
+                name_len: data[i++],
+                name: ""};
+          st.name = String.fromCharCode.apply(null, data.slice(i, i+st.name_len));
+
+          i += st.name_len;
+
+          stations[j] = st;
+          modules[st.module].stations[st.id] = st;
+        }
+      }
     },
 
   // Client / General
@@ -1353,5 +1390,7 @@ websocket.add_opcodes([
 ]);
 
 $(document).ready(function(){
-  websocket.connect("ws://192.168.2.92:9000/", 0xFF);
+  setTimeout(function(){
+    websocket.connect("ws://192.168.2.92:9000/", 0xFF);
+  }, 500);
 });

@@ -16,11 +16,23 @@ endif
 avr:
 	$(MAKE) -C avr all -O
 
-all: config_reader baan avr
+all: config_reader baan comtest avr
 
 $(BIN)/%.o: $(SRC)/%.c
-	@echo $@
+	@echo "(  GCC  ) $@"
 	@$(GCC) -c -o $@ $^
+
+$(BIN)/comtest.o: comtest.c
+	@echo "(  GCC  ) $@"
+	@$(GCC) -c -o $@ $^
+
+comtest: $(BIN)/comtest.o $(BIN)/logger.o $(BIN)/rail.o $(BIN)/train.o $(BIN)/system.o $(BIN)/websocket_control.o $(BIN)/websocket_msg.o $(BIN)/module.o \
+		$(BIN)/train_sim.o $(BIN)/com.o $(BIN)/algorithm.o $(BIN)/signals.o $(BIN)/switch.o $(BIN)/Z21.o $(BIN)/Z21_msg.o $(BIN)/websocket.o $(BIN)/encryption.o $(BIN)/IO.o \
+		$(BIN)/config.o $(BIN)/mem.o $(BIN)/submodule.o
+	@echo comtest
+	$(GCC) -o comtest $(BIN)/comtest.o $(BIN)/logger.o $(BIN)/rail.o $(BIN)/train.o $(BIN)/system.o $(BIN)/websocket_control.o $(BIN)/websocket_msg.o $(BIN)/module.o \
+	$(BIN)/train_sim.o $(BIN)/com.o $(BIN)/algorithm.o $(BIN)/signals.o $(BIN)/switch.o $(BIN)/Z21.o $(BIN)/Z21_msg.o $(BIN)/websocket.o $(BIN)/encryption.o $(BIN)/IO.o \
+	$(BIN)/config.o $(BIN)/mem.o $(BIN)/submodule.o
 
 config_reader: $(BIN)/config_reader.o $(BIN)/config.o $(BIN)/logger.o $(BIN)/mem.o
 	@echo config_reader

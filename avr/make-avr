@@ -13,15 +13,15 @@ $(bdir)/$(output)/bin:
 	mkdir -p $@
 
 $(bdir)/$(output)/bin/%.o: %.cpp
-	@echo $@
+	@echo "(AVR GCC) $@"
 	@$(avr-gcc) -c $*.cpp -MP -MMD -MT '$@ $(bdir)/$(output)/bin/$*.d' -o $(bdir)/$(output)/bin/$*.o -Wa,-ahlmns=$(bdir)/$(output)/bin/$*.lst
 
 $(bdir)/$(output)/$(output).elf: $(addsuffix .o,$(addprefix $(bdir)/$(output)/bin/,$(files)))
-	@echo $@
+	@echo "(AVR ELF) $@"
 	@$(avr-gcc) $^ -o $@
 
 $(bdir)/$(output).flash.hex: $(bdir)/$(output)/$(output).elf
-	@echo split $^
+	@echo "(AVRHEX) $@"
 	@avr-objcopy -j .text -j .data -O ihex $^ $(bdir)/$(output).flash.hex
 	@avr-objcopy -j .eeprom --set-section-flags=.eeprom="alloc,load" --change-section-lma .eeprom=0 -O ihex $^ $(bdir)/$(output)/$(output).eeprom
 	@avr-objcopy -j .fuse -O ihex $^ $(bdir)/$(output)/$(output).fuses --change-section-lma .fuse=0

@@ -99,6 +99,7 @@ int main(){
   // }
 
   #ifdef RNET_MASTER
+
   _delay_ms(1000);
   net.init();
   #else
@@ -128,6 +129,11 @@ int main(){
 
   #else // Slave
 
+  //RNET_TX_SET_HIGH
+  //RNET_TX_SET_LOW
+  //RNET_DUPLEX_SET_RX
+  //RNET_READ_RX
+
   net.reset_bus();
 
   uint8_t i = 0;
@@ -151,11 +157,11 @@ int main(){
       net.tx.buf[(net.tx.write_index+3)%RNET_MAX_BUFFER] = 0x34;
       net.tx.buf[(net.tx.write_index+4)%RNET_MAX_BUFFER] = 0xBC;
       net.tx.write_index = (net.tx.write_index+5)%RNET_MAX_BUFFER;
-      net.txdata = 1;
+      net.txdata++;
       j = 0;
     }
 
-    continue;
+    //continue;
 
     io.copyInput();
     io.readInput();
@@ -171,6 +177,9 @@ int main(){
 
     if(diff){
       uart.transmit("IO change: ", 11);
+      uart.transmit(RNet_OPC_ReadInput, HEX,2);
+      uart.transmit(net.node_id, HEX, 2);
+      uart.transmit(MAX_PORTS, HEX, 2);
       net.tx.buf[net.tx.write_index] = RNet_OPC_ReadInput;
       net.tx.buf[(net.tx.write_index+1)%RNET_MAX_BUFFER] = net.node_id;
       net.tx.buf[(net.tx.write_index+2)%RNET_MAX_BUFFER] = MAX_PORTS;
@@ -185,10 +194,12 @@ int main(){
         checksum ^= io.readData[i];
       }
 
+      uart.transmit(checksum, HEX, 2);
       net.tx.buf[(net.tx.write_index+(x++))%RNET_MAX_BUFFER] = checksum;
       net.tx.write_index = (net.tx.write_index+x)%RNET_MAX_BUFFER;
-      net.txdata = 1;
+      net.txdata++;
       uart.transmit('\n');
+      uart.transmit('\r');
     }
 
   }

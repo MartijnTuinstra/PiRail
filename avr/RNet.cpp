@@ -16,7 +16,7 @@ struct _RNet_buffer RNet_rx_buffer;
 struct _RNet_buffer RNet_tx_buffer;
 uint8_t tmp_rx_msg[RNET_MAX_BUFFER];
 
-//#define RNET_DEBUG
+// #define RNET_DEBUG
 
 bool RNet::available(){
   if (rx.read_index != rx.write_index){;
@@ -138,7 +138,7 @@ void RNet::read(){
 
       tx.buf[tx.write_index++] = RNet_OPC_ACK;
       tx.buf[tx.write_index++] = RNet_OPC_ACK ^ RNET_CHECKSUM_SEED;
-      txdata = 1;
+      txdata++;
     }
   }
   else if(tmp_rx_msg[0] == RNet_OPC_ChangeNode){
@@ -147,7 +147,7 @@ void RNet::read(){
 
       tx.buf[tx.write_index++] = RNet_OPC_ACK;
       tx.buf[tx.write_index++] = RNet_OPC_ACK ^ RNET_CHECKSUM_SEED;
-      txdata = 1;
+      txdata++;
     }
   }
   else if(tmp_rx_msg[0] == RNet_OPC_ReadEEPROM){
@@ -159,7 +159,7 @@ void RNet::read(){
       tx.buf[tx.write_index++] = eeprom_read_byte((&EE_Mem.ModuleID) + i);
     }
     tx.buf[tx.write_index++] = checksum;
-    txdata = 1;
+    txdata++;
   }
 }
 #endif
@@ -173,46 +173,49 @@ uint8_t RNet::getMsgSize(struct _RNet_buffer * msg){
 #else
   uint8_t r = msg->read_index;
 #endif
-  if(msg->buf[r] == RNet_OPC_DEV_ID ||
-     msg->buf[r] == RNet_OPC_SetEmergency ||
-     msg->buf[r] == RNet_OPC_RelEmergency ||
-     msg->buf[r] == RNet_OPC_PowerON ||
-     msg->buf[r] == RNet_OPC_PowerOFF ||
-     msg->buf[r] == RNet_OPC_ResetALL){
+  return getMsgSize(msg, r);
+}
+
+inline uint8_t RNet::getMsgSize(struct _RNet_buffer * msg, uint8_t offset){
+  if(msg->buf[offset] == RNet_OPC_DEV_ID ||
+     msg->buf[offset] == RNet_OPC_SetEmergency ||
+     msg->buf[offset] == RNet_OPC_RelEmergency ||
+     msg->buf[offset] == RNet_OPC_PowerON ||
+     msg->buf[offset] == RNet_OPC_PowerOFF ||
+     msg->buf[offset] == RNet_OPC_ResetALL){
     return 1;
   }
-  else if (msg->buf[r] == RNet_OPC_ACK){
+  else if (msg->buf[offset] == RNet_OPC_ACK){
    return 2;
   }
-  else if(msg->buf[r] == RNet_OPC_ChangeID ||
-          msg->buf[r] == RNet_OPC_SetCheck){
+  else if(msg->buf[offset] == RNet_OPC_ChangeID ||
+          msg->buf[offset] == RNet_OPC_SetCheck){
     return 4;
   }
-  else if (msg->buf[r] == RNet_OPC_SetOutput ||
-           msg->buf[r] == RNet_OPC_ChangeNode){
+  else if (msg->buf[offset] == RNet_OPC_SetOutput ||
+           msg->buf[offset] == RNet_OPC_ChangeNode){
     return 5;
   }
-  else if(msg->buf[r] == RNet_OPC_SetBlink){
+  else if(msg->buf[offset] == RNet_OPC_SetBlink){
     return 8;
   }
-  else if(msg->buf[r] == RNet_OPC_ReadAll){
-    if( (uint8_t)(msg->write_index - msg->read_index) % RNET_MAX_BUFFER < 3){
+  else if(msg->buf[offset] == RNet_OPC_ReadAll){
+    if( (uint8_t)(msg->write_index - offset) % RNET_MAX_BUFFER < 3){
       return RNet_msg_len_NotWhole; // Not enough bytes
     }
-    return 4+msg->buf[(r+1)%RNET_MAX_BUFFER];
+    return 4+msg->buf[(offset+1)%RNET_MAX_BUFFER];
   }
-  else if(msg->buf[r] == RNet_OPC_SetAllOutput){
-    if( (uint8_t)(msg->write_index - msg->read_index) % RNET_MAX_BUFFER < 4){
+  else if(msg->buf[offset] == RNet_OPC_SetAllOutput){
+    if( (uint8_t)(msg->write_index - offset) % RNET_MAX_BUFFER < 4){
       return RNet_msg_len_NotWhole; // Not enough bytes
     }
-    return (msg->buf[(r+2)%RNET_MAX_BUFFER] + 1) / 2 + 4;
+    return (msg->buf[(offset+2)%RNET_MAX_BUFFER] + 1) / 2 + 4;
   }
-  else if(msg->buf[r] == RNet_OPC_ReadInput){
-    if( (uint8_t)(msg->write_index - msg->read_index) % RNET_MAX_BUFFER < 4){
+  else if(msg->buf[offset] == RNet_OPC_ReadInput){
+    if( (uint8_t)(msg->write_index - offset) % RNET_MAX_BUFFER < 4){
       return RNet_msg_len_NotWhole; // Not enough bytes
     }
-    uart.transmit("ORI\n", 4);
-    return msg->buf[(r+2)%RNET_MAX_BUFFER] + 4;
+    return msg->buf[(offset+2)%RNET_MAX_BUFFER] + 4;
   }
   return 0;
 }
@@ -227,14 +230,18 @@ void RNet::init (uint8_t dev, uint8_t node)
   for(uint8_t i = 0; i < 32; i++)
     devices_list[i] = 0;
 
-  // uart.transmit("RNet Master Init\n",17);
+  #ifdef RNET_DEBUG
+  uart.transmit("RNet Master Init\n",17);
+  #endif
 #else
   dev_id = dev;
   node_id = node;
   txdata = 0;
+  #ifdef RNET_DEBUG
   uart.transmit("RNet Slave Init\t",16);
   uart.transmit(dev, HEX, 2);
   uart.transmit('\n');
+  #endif
 #endif
 
   RNET_TX_SET_HIGH; // Write pull up and will become high output HIGH
@@ -244,7 +251,7 @@ void RNet::init (uint8_t dev, uint8_t node)
   //_set_low(PORT(RNET_RX_PORT), RNET_TX_pin); //Disable pull-resistor
   // _set_high(PORT(RNET_RX_PORT), RNET_RX_pin); //Enable pull-resistor for debug
 
-  _set_out(PORT(RNET_DUPLEX_PORT), RNET_DUPLEX_pin); //Set as output
+  _set_out(DDR(RNET_DUPLEX_PORT), RNET_DUPLEX_pin); //Set as output
   RNET_DUPLEX_SET_RX;
 
   state = IDLE;
@@ -283,6 +290,9 @@ void RNet::reset_bus(){
   net.tx.write_index = 1;
   net.tx.read_index = 0;
   net.txdata = 1;
+
+  net.rx.write_index = 0;
+  net.rx.read_index = 0;
 #endif
 }
 
@@ -292,6 +302,7 @@ uint8_t * cMsg = 0; // current message pointer
 uint8_t cBy = 0; //currentByte
 uint8_t cBi = 0; //currentBit
 uint8_t cLen = 0; //current messageLength
+uint8_t cStart = 0;
 
 
 // bool RNet::checkTxReady(){
@@ -345,13 +356,15 @@ void RNet::request_all(){
 
     if(state != TIMEOUT){
       // Device detected
-      // #ifdef RNET_DEBUG
+      #ifdef RNET_DEBUG
       uart.transmit('*');
-      // #endif
+      #endif
       devices_list[i / 8] |= 1<<(i % 8);
     }
+    #ifdef RNET_DEBUG
     uart.transmit(i, HEX);
     uart.transmit('|');
+    #endif
     state = IDLE;
     _delay_ms(10);
   }
@@ -540,17 +553,6 @@ ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
   // PORTB ^= 0b00100000;
   if(net.state == RX){
     if(cBi == 0){ // Start-bit (Acknowledge)
-      if(!RNET_READ_RX){
-        // Start
-        #ifdef RNET_DEBUG
-          uart.transmit('+');
-        #endif
-      }
-      else{
-        #ifdef RNET_DEBUG
-          uart.transmit('-');
-        #endif
-      }
       cBi++;
       cMsg = &net.rx.buf[net.rx.write_index];
       return;
@@ -574,12 +576,9 @@ ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
       return;
     }
     else if(cBi == 9){ // Stop-bit
-      net.rx.write_index++;
-      if(net.rx.write_index >= RNET_MAX_BUFFER){
-        net.rx.write_index = 0;
-      }
+      net.rx.write_index = (net.rx.write_index + 1) % RNET_MAX_BUFFER;
       cBi++;
-
+      cBy++;
       // uart.transmit(cMsg[0]);
 
       if(RNET_READ_RX){
@@ -594,15 +593,21 @@ ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
         #endif
 
         _TIM_COMPA = RNET_TIMEOUT;
-      }
-      else{
-        // Stop
-        #ifdef RNET_DEBUG
-          uart.transmit('s');
-        #endif
-        // End of transmission
-        RNET_TIMER_DISABLE;
-        net.state = IDLE;
+        cBi++; // Goto to timeout if no signal is captured
+
+        if(cLen == RNet_msg_len_NotWhole){
+          cLen = net.getMsgSize(&net.rx, cStart);
+          if(cLen == 0)
+            cLen = RNet_msg_len_NotWhole;
+        }
+        else if(cLen <= cBy){
+          cBy = 0;
+          cLen = RNet_msg_len_NotWhole;
+
+          net.rx.buf[net.rx.write_index] = cAddr;
+          net.rx.write_index = (net.rx.write_index + 1) % RNET_MAX_BUFFER;
+          cStart = net.rx.write_index;
+        }
       }
 
       #ifdef RNET_DEBUG
@@ -610,6 +615,14 @@ ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
       uart.transmit(cMsg[0], HEX, 2);
       #endif
 
+    }
+    else if(cBi == 10){
+      // End of Message
+      #ifdef RNET_DEBUG
+      uart.transmit('*');
+      #endif
+      RNET_TIMER_DISABLE;
+      net.state = IDLE;
     }
     else{
       // Timeout
@@ -770,7 +783,7 @@ ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
   if(net.state == RX){
     if(cBi == 0){
       #ifdef RNET_DEBUG
-      uart.transmit('S');
+      //uart.transmit('S');
       #endif
       cMsg = net.getBufP(&net.rx, 1);
     }
@@ -779,12 +792,12 @@ ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
       if(RNET_READ_RX){
         cMsg[0] |= 0x80;
         #ifdef RNET_DEBUG
-        uart.transmit('1');
+        //uart.transmit('1');
         #endif
       }
       #ifdef RNET_DEBUG
       else{
-        uart.transmit('0');
+        //uart.transmit('0');
       }
       #endif
     }
@@ -795,7 +808,7 @@ ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
 
       if(RNET_READ_RX){
         #ifdef RNET_DEBUG
-        uart.transmit('C');
+        //uart.transmit('C');
         #endif
 
         // Enable input interrupt to capture start next RX transmission
@@ -808,8 +821,9 @@ ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
       }
       else{
         #ifdef RNET_DEBUG
-        uart.transmit('S');
-        uart.transmit('\n');
+        //uart.transmit('S');
+        //uart.transmit('\n');
+	      uart.transmit(cMsg[0], HEX, 2);
         #endif
 
         // Enable input interrupt to capture start next master transmission
@@ -830,7 +844,7 @@ ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
   else if(net.state == TX){
     if(cBi == 0){ // Start-bit
       #ifdef RNET_DEBUG
-        uart.transmit('S');
+      //uart.transmit('S');
       #endif
       RNET_TX_SET_LOW;
       cBi++;
@@ -839,13 +853,13 @@ ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
     else if(cBi < 9){ // Data
       if(net.tx.buf[net.tx.read_index] & _BV(cBi - 1)){
         #ifdef RNET_DEBUG
-          uart.transmit('1');
+        //uart.transmit('1');
         #endif
         RNET_TX_SET_HIGH;
       }
       else{
         #ifdef RNET_DEBUG
-          uart.transmit('0');
+        //uart.transmit('0');
         #endif
         RNET_TX_SET_LOW;
       }
@@ -853,22 +867,24 @@ ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
       return;
     }
     else if(cBi == 9){ //Stop bit
-      net.tx.read_index = (net.tx.read_index + 1) % RNET_MAX_BUFFER;
       if(++cBy < cLen){
         //Data available
         RNET_TX_SET_HIGH;
         cBi = 0;
         #ifdef RNET_DEBUG
-          uart.transmit('C');
+        //uart.transmit('C');
         #endif
       }
       else{
         RNET_TX_SET_LOW;
         #ifdef RNET_DEBUG
-          uart.transmit("s\n", 2);
+        //uart.transmit("s\n", 2);
         #endif
         cBi++;
       }
+      uart.transmit(net.tx.buf[net.tx.read_index], HEX, 2);
+      net.tx.read_index = (net.tx.read_index + 1) % RNET_MAX_BUFFER;
+      return;
     }
     else{
       RNET_DUPLEX_SET_RX;
@@ -884,10 +900,6 @@ ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
       RNET_ENABLE_ISR_CAPT;
 
       RNET_TIMER_DISABLE;
-
-      if(net.tx.read_index == net.tx.write_index){
-        net.txdata = 0;
-      }
     }
   }
   else if(net.state == ADDR){
@@ -898,13 +910,13 @@ ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
     else if(cBi < 9){ // Addr
       if(RNET_READ_RX){
         #ifdef RNET_DEBUG
-          uart.transmit('1');
+        //uart.transmit('1');
         #endif
         cAddr = (cAddr >> 1) | 0x80;
       }
       else{
         #ifdef RNET_DEBUG
-          uart.transmit('0');
+        //uart.transmit('0');
         #endif
         cAddr = (cAddr >> 1);
       }
@@ -952,7 +964,7 @@ ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
           cBi = 0; // Slave writing
           cBy = 0;
 
-          // uart.transmit('+');
+          uart.transmit('+');
 
           cMsg = net.getBufP(&net.tx, 0);
           cLen = net.getMsgSize(&net.tx);
@@ -962,11 +974,11 @@ ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
           net.state = TX;
 
           #ifdef RNET_DEBUG
-          uart.transmit('L');
-          uart.transmit(cLen, HEX);
+          //uart.transmit('L');
+          //uart.transmit(cLen, HEX);
           #endif
 
-          net.txdata = 0;
+          net.txdata--;
         }
         else{
           net.state = IDLE;
@@ -996,24 +1008,17 @@ ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
     return;
   }
   else if(net.state == OTHER){
-    if(cBi == 0){
-      #ifdef RNET_DEBUG
-      uart.transmit('S');
-      #endif
-    }
-    else if(cBi < 9){
-      #ifdef RNET_DEBUG
-        uart.transmit('d');
-      #endif
+    if(cBi == 0){}else if(cBi < 9){
+      cBy >>= 1;
+      if(RNET_READ_RX){
+        cBy |= 0x80;
+      }
     }
     else if(cBi == 9){
-
+      uart.transmit(cBy, HEX, 2);
+      cBy = 0;
       if(RNET_READ_RX){
-        #ifdef RNET_DEBUG
-        uart.transmit('C');
-        #endif
-
-        // Enable input interrupt to capture start next RX transmission
+        // Enable input interrupt to capture start next slave transmission
         RNET_CLEAR_ISR_CAPT;
         RNET_ENABLE_ISR_CAPT;
         cBi++;
@@ -1022,11 +1027,6 @@ ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
         return;
       }
       else{
-        #ifdef RNET_DEBUG
-        uart.transmit('S');
-        uart.transmit('\n');
-        #endif
-
         // Enable input interrupt to capture start next master transmission
         RNET_CLEAR_ISR_CAPT;
         RNET_ENABLE_ISR_CAPT;
@@ -1065,18 +1065,23 @@ ISR(RNET_RX_ICP_ISR_vect){
 
   #ifdef RNET_MASTER
   if(net.state == ADDR){
-    net.rx.buf[net.rx.write_index++] = cAddr;
+    net.rx.buf[net.rx.write_index] = cAddr;
+    net.rx.write_index = (net.rx.write_index + 1) % RNET_MAX_BUFFER;
+    cStart = net.rx.write_index;
     #ifdef RNET_DEBUG
     uart.transmit('$');
     #endif
     net.state = RX;
+    cLen = RNet_msg_len_NotWhole;
+    cBy = 0;
   }
   #else
   if(net.state == IDLE){
     net.state = ADDR;
     #ifdef RNET_DEBUG
-    uart.transmit('\n');
+    uart.transmit('|');
     #endif
+    cBy = 0;
   }
   #endif
 
@@ -1085,5 +1090,4 @@ ISR(RNET_RX_ICP_ISR_vect){
   #endif
 
   cBi = 0;
-  cBy = 0;
 }

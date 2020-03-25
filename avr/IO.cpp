@@ -160,6 +160,7 @@ void IO::init(){
 	LATCH_IN_DISABLE;
 	IN_LOAD;
 
+	uart.transmit("SPI WriteOUT\n\r", 14);
 	writeOutput();
 
 	#else // not defined IO_SPI
@@ -424,27 +425,22 @@ uint16_t IO::calculateTimer(uint16_t mseconds){
 #ifdef IO_SPI
 
 void IO::writeOutput(){
-	cli();
 	LATCH_OUT_ENABLE; 
 
 	for(int i = 0; i < MAX_PORTS; i++){
 		/* Start transmission */
 		SPCR |= (1<<MSTR);
 		SPDR = writeData[i];
-		// printHex(writeData[i]);
 		/* Wait for transmission complete */
 		while(!(SPSR & (1<<SPIF)));
 	}
 
-	// uart.transmit('\n');
 	LATCH_OUT_DISABLE;
-	sei();
 }
 
 void IO::readInput(){
-	cli();
 	IN_LOAD;
-	_delay_ms(10);
+	_delay_us(10);
 	LATCH_IN_ENABLE;
 
 	for(int i = 0; i < MAX_PORTS; i++){
@@ -460,7 +456,6 @@ void IO::readInput(){
 
 	// uart.transmit('\n');
 	LATCH_IN_DISABLE;
-	sei();
 }
 
 #else

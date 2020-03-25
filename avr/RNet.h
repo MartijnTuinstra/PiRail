@@ -196,7 +196,7 @@ class RNet {
     #endif
     void reset_bus();
     uint8_t getMsgSize(struct _RNet_buffer * msg);
-    uint8_t getMsgSize(uint8_t * buf);
+    inline uint8_t getMsgSize(struct _RNet_buffer * msg, uint8_t offset);
 
     bool available();
     void read();

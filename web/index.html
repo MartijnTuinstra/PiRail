@@ -146,7 +146,7 @@ header('Pragma: no-cache');
 			}
 		}
 
-		.info-box .media:hover {
+		.info-box .media:not(.connection_state):hover {
 			background: #ecf0f5;
 			cursor: pointer;
 		}
@@ -560,13 +560,74 @@ header('Pragma: no-cache');
 								<button type="button" class="btn btn-sm btn-xs mini-btn btn-success" onClick='windows.switch("main");'>Close</button>
 							</div>
 						</div>
-						<div class="col-sm-8 col-lg-10"></div>
+						<div class="col-sm-4 col-lg-6" class="module_editing">
+							<div style="font-weight:bold">
+								Current Module
+								<span id="current_module" style="margin-left:1em;"></span>
+							</div>
+							<div class="btn btn-sm btn-xs mini-btn btn-success">Save</div>
+							<div class="btn btn-sm btn-xs mini-btn btn-warning">Discard</div>
+						</div>
+						<div class="col-sm-4 col-lg-4"></div>
 					</div>
 					<div class="row">
 						<div calss="col" style="height: 265px; overflow-y:hidden;">
 							<div style="overflow-x:scroll; overflow-y:hidden; height: 320px;padding:20px;width:100%">
 								<div class="moduleContainer" style="height:265px; width:2800px; white-space: nowrap; overflow: hidden;"></div>
 							</div>
+						</div>
+					</div>
+					<div class="row" id="moduleNodes">
+						<div class="col-1">
+							<div class="dropdown">
+							  <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+							    Select Node
+							  </button>
+							  <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+							    <a class="dropdown-item" href="#">Action</a>
+							    <a class="dropdown-item" href="#">Another action</a>
+							    <a class="dropdown-item" href="#">Something else here</a>
+							  </div>
+							</div>
+						</div>
+						<div class="col-11" style="height: 520px; overflow-y:hidden;">
+							<div id="board328" style="display:inline"></div>
+							<div id="board64" style="display:inline"></div>
+							<div id="board2560" style="display:inline"></div>
+
+<script>
+function loadSvg(selector, url) {
+  var target = document.querySelector(selector);
+
+  // If SVG is supported
+  if (typeof SVGRect != "undefined") {
+    // Request the SVG file
+    var ajax = new XMLHttpRequest();
+    ajax.open("GET", url + ".svg", true);
+    ajax.send();
+
+    // Append the SVG to the target
+    ajax.onload = function(e) {
+      target.innerHTML = ajax.responseText;
+    }
+  } else {
+    // Fallback to png
+    target.innerHTML = "<img src='" + url + ".png' />";
+  }
+}
+
+
+loadSvg('#board328', './img/node328_Board');
+loadSvg('#board64', './img/node64_Board');
+loadSvg('#board2560', './img/node2560_Board');
+
+// function loadBalloons(){
+	
+// }
+// $( document ).ready(function() {
+//     setTimeout(function(){ loadBalloons(); }, 3000);
+// });
+</script>
 						</div>
 					</div>
 				</div>

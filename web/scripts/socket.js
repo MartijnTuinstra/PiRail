@@ -1038,7 +1038,18 @@ websocket.add_opcodes([
         var i = 13;
 
         for(var j = 0; j < nodes; j++){
-          conf.nodes.push({id: data[i++], size: data[i++]});
+          obj = {id: data[i++], size: data[i++], data: []};
+
+          i++;
+
+          obj.data
+
+          for(var k = 0; k < parseInt((obj.size+1)/2); k++){
+            obj.data.push(data[i] & 0xF);
+            obj.data.push(data[i++] >> 4);
+          }
+
+          conf.nodes.push(obj);
 
           i++;
         }

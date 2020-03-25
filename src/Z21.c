@@ -277,7 +277,30 @@ void Z21_send(uint16_t length, uint16_t header, ...){
   if(SYS->Z21.state == Module_STOP || SYS->Z21.state == Module_Fail)
     return;
   
-  pthread_mutex_lock(&z21_send_mutex);
+  z21_send_buffer[0] = length & 0x00ff;
+  z21_send_buffer[1] = (length & 0xff00) >> 8;
+  z21_send_buffer[2] = header & 0x00ff;
+  z21_send_buffer[3] = (header & 0xff00) >> 8;
+
+  if(length != 4){
+    va_list arglist;
+    va_start(arglist, header);
+
+    for(int i = 4; i<length; i++){
+      z21_send_buffer[i] = (uint8_t)va_arg(arglist, int);
+    }
+
+    va_end(arglist);
+  }
+  
+  Z21_send_data(z21_send_buffer, length);
+}
+
+void Z21_send_c(uint16_t length, uint16_t header, ...){
+  // Check if not connected
+  if(SYS->Z21.state == Module_STOP || SYS->Z21.state == Module_Fail)
+    return;
+  
 
   z21_send_buffer[0] = length & 0x00ff;
   z21_send_buffer[1] = (length & 0xff00) >> 8;
@@ -297,9 +320,7 @@ void Z21_send(uint16_t length, uint16_t header, ...){
     va_end(arglist);
   }
   
-  write(z21_fd, z21_send_buffer, length);
-  
-  pthread_mutex_unlock(&z21_send_mutex);
+  Z21_send_data(z21_send_buffer, length);
 }
 
 void Z21_send_data(uint8_t * data, uint8_t length){

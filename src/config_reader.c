@@ -596,12 +596,14 @@ void modify_Node(struct module_config * config, char ** cmds, uint8_t cmd_len){
       else if(strcmp(cmds[i], "-p") == 0){
         printf("set size");
         config->Nodes[id].size = atoi(cmds[i+1]);
+        config->Nodes[id].data = _realloc(config->Nodes[id].data, (config->Nodes[id].size+1)/2, char);
+
         i++;
       }
       else if(strcmp(cmds[i], "-t") == 0){
         uint8_t port = atoi(cmds[i+1]);
         printf("%i => %s\n", port, cmds[i+2]);
-        config->Nodes[id].data[port/2] &= ~(0xF << (4 * ((port + 1)% 2)));
+        config->Nodes[id].data[port/2] &= ~(0xF << (4 * (port % 2)));
         config->Nodes[id].data[port/2] |= (atoi(cmds[i+2]) & 0xF) << (4 * (port % 2));
         i+= 2;
       }
@@ -1871,11 +1873,11 @@ int edit_module(){
   print_module_config(&config, 0, 0);
 
   char cmd[300];
-  char ** cmds = _calloc(20, char *);
+  char ** cmds = _calloc(100, char *);
   uint8_t cmds_len = 0;
 
   while (1){
-    memset(cmds, 0, 20);
+    memset(cmds, 0, 100);
     cmds_len = 0;
     printf("> ");
     fgets(cmd,300,stdin);

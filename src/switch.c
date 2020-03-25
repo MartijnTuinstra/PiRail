@@ -20,7 +20,7 @@ void Create_Switch(struct s_switch_connect connect, uint8_t block_id, uint8_t ou
   Z->IO = _calloc(output_len, IO_Port *);
 
   for(int i = 0; i < output_len; i++){
-    Init_IO(Units[connect.module], output_pins[i], IO_Output);
+    Init_IO(Units[connect.module], output_pins[i], Z);
 
     Z->IO[i] = Units[connect.module]->Node[output_pins[i].Node].io[output_pins[i].io];
   }
@@ -99,7 +99,7 @@ void Create_MSSwitch(struct s_msswitch_connect connect, uint8_t block_id, uint8_
   Z->IO = _calloc(output_len, IO_Port *);
 
   for(int i = 0; i < output_len; i++){
-    Init_IO_from_conf(Units[connect.module], output_pins[i], IO_Output);
+    Init_IO_from_conf(Units[connect.module], output_pins[i], Z);
 
     Z->IO[i] = Units[connect.module]->Node[output_pins[i].Node].io[output_pins[i].Adr];
   }

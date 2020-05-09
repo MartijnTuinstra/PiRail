@@ -26,13 +26,15 @@ enum e_IO_type {
 };
 
 enum e_IO_output_event {
-  IO_event_High,
   IO_event_Low,
+  IO_event_High,
   IO_event_Pulse,
   IO_event_Toggle
 };
 
 enum e_IO_blink_event {
+  IO_event_B_Low,
+  IO_event_B_High,
   IO_event_Blink1,
   IO_event_Blink2
 };
@@ -91,6 +93,7 @@ void Init_IO_from_conf(Unit * U, struct s_IO_port_conf adr, enum e_IO_type type)
 void Init_IO(Unit * U, Node_adr adr, enum e_IO_type type);
 
 void update_IO();
+void update_IO_Module(uint8_t module);
 
 void IO_set_input(uint8_t module, uint8_t id, uint8_t port, uint8_t state);
 

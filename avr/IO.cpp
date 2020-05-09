@@ -42,7 +42,7 @@ IO io;
 // }
 
 
-void IO::high(uint8_t pin){
+inline void IO::high(uint8_t pin){
 	#ifdef IO_SPI
 	writeData[pin/8] |= 1 << (pin % 8);
 	#else
@@ -50,7 +50,7 @@ void IO::high(uint8_t pin){
 	#endif
 }
 
-void IO::low(uint8_t pin){
+inline void IO::low(uint8_t pin){
 	#ifdef IO_SPI
 	writeData[pin/8] &= ~(1 << (pin % 8));
 	#else
@@ -58,16 +58,16 @@ void IO::low(uint8_t pin){
 	#endif
 }
 
-void IO::toggle(uint8_t pin){
+inline void IO::toggle(uint8_t pin){
 	#ifdef IO_SPI
-	writeData[pin/8] ^= 1 << (pin % 8);
+	writeData[pin/8] ^= (1 << (pin % 8));
 	#else
 	*_portOutputRegister(list[pin]/8) ^= 1 << (list[pin] % 8);
 	#endif
 }
 
 
-void IO::out(uint8_t pin){
+inline void IO::out(uint8_t pin){
 	#ifdef IO_SPI
 	return (void)pin;
 	#else
@@ -76,7 +76,7 @@ void IO::out(uint8_t pin){
 	#endif
 }
 
-void IO::in(uint8_t pin){
+inline void IO::in(uint8_t pin){
 	#ifdef IO_SPI
 	return (void)pin;
 	#else
@@ -85,7 +85,7 @@ void IO::in(uint8_t pin){
 	#endif
 }
 
-uint8_t IO::read(uint8_t pin){
+inline uint8_t IO::read(uint8_t pin){
 	#ifdef IO_SPI
 	return readData[pin/8] & (1 << (pin % 8));
 	#else
@@ -160,7 +160,10 @@ void IO::init(){
 	LATCH_IN_DISABLE;
 	IN_LOAD;
 
-	uart.transmit("SPI WriteOUT\n\r", 14);
+	for(uint8_t i = 0; i < MAX_PORTS*8; i++){
+		typelist[i] = IO_Output;
+	}
+
 	writeOutput();
 
 	#else // not defined IO_SPI
@@ -169,33 +172,37 @@ void IO::init(){
 
 	// Init io ports
 	for(uint8_t i = 0; i < MAX_PINS; i++){
-		uint8_t type = eeprom_read_byte((const uint8_t *)&EE_Mem.IO[i].type);
-		enum IO_event def = (enum IO_event)eeprom_read_byte((const uint8_t *)&EE_Mem.IO[i].def);
+		enum e_IO_type type = (enum e_IO_type)eeprom_read_byte((const uint8_t *)&EE_Mem.IO[i].type);
+		union u_IO_event def;
+		def.value = eeprom_read_byte((const uint8_t *)&EE_Mem.IO[i]._default);
 
 		uart.transmit(list[i] / 8, HEX, 2);
 		uart.transmit('\t');
 		uart.transmit(1 << (list[i] % 8), HEX, 2);
 		uart.transmit('\t');
-		uart.transmit(type, HEX, 2);
+		uart.transmit((uint8_t)type, HEX, 2);
 		uart.transmit('\t');
-		uart.transmit(def, HEX, 2);
+		uart.transmit(def.value, HEX, 2);
 		uart.transmit('\n');
 
-		if(type == IO_Output){
+		typelist[i] = type;
+
+		if(type == IO_Undefined)
+			in(i);
+		else if(type <= IO_Output_PWM){
 			out(i);
 			set(i, def);
 		}
 		else{
 			in(i);
-			set(i, IO_event_High);
+			def.output = IO_event_High;
+			set(i, def);
 		}
 	}
 
 	for(uint8_t i = 0; i < MAX_PORTS; i++){
 		uart.transmit(readMask[i], HEX, 2);
 	}
-
-	uart.transmit("DONE\n", 5);
 
 	#endif
 
@@ -206,7 +213,8 @@ void IO::init(){
 	blink2_counter = blink2_period;
 
 	pulse_counter = 0xFFFF;
-	pulse_length = calculateTimer((uint16_t)eeprom_read_byte(&EE_Mem.settings.pulse));
+	uint8_t value = eeprom_read_byte(&EE_Mem.settings.pulse);
+	pulse_length = calculateTimer((uint16_t)(value*10));
 
 	servo1Pulse = eeprom_read_byte(&EE_Mem.settings.servo1);
 	servo2Pulse = eeprom_read_byte(&EE_Mem.settings.servo2);
@@ -232,6 +240,10 @@ void IO::blink1(){
 		*_portOutputRegister(i) ^= blink1Mask[i];
 		#endif
 	}
+
+	#ifdef IO_SPI
+	writeOutput();
+	#endif
 }
 
 void IO::blink2(){
@@ -242,13 +254,17 @@ void IO::blink2(){
 		*_portOutputRegister(i) ^= blink2Mask[i];
 		#endif
 	}
+
+	#ifdef IO_SPI
+	writeOutput();
+	#endif
 }
 
 
 void IO::pulse_high(){
 	for(int i = 0; i < MAX_PORTS; i++){
 		#ifdef IO_SPI
-		writeData[i] = writeData[i] | pulseMask[i];
+		writeData[i] |= pulseMask[i];
 		#else
 		*_portOutputRegister(i) |= pulseMask[i];
 		#endif
@@ -278,12 +294,16 @@ void IO::pulse_low(){
 	// uart.transmit("Pl\n",3);
 	for(int i = 0; i < MAX_PORTS; i++){
 		#ifdef IO_SPI
-		writeData[i] = writeData[i] & ~pulseMask[i];
+		writeData[i] &= ~pulseMask[i];
 		#else
 		*_portOutputRegister(i) &= ~pulseMask[i];
 		#endif
 		pulseMask[i] = 0;
 	}
+
+	#ifdef IO_SPI
+	writeOutput();
+	#endif
 }
 
 void IO::servo_low(){
@@ -306,120 +326,24 @@ void IO::servo_high(uint8_t * mask){
 	}
 }
 
-void IO::set_mask(uint8_t pin, enum IO_event type){
+void IO::set_mask(uint8_t pin, uint8_t * mask){
 	#ifdef IO_SPI
-	switch(type){
-		case IO_event_Blink1:
-			blink1Mask[pin/8] |= (1 << (pin % 8));
-			break;
-		case IO_event_Blink2:
-			blink2Mask[pin/8] |= (1 << (pin % 8));
-			break;
-		case IO_event_Pulse:
-			pulseMask[pin/8] |= (1 << (pin % 8));
-			break;
-		case IO_event_Servo1:
-			servo1Mask[pin/8] |= (1 << (pin%8));
-			break;
-		case IO_event_Servo2:
-			servo2Mask[pin/8] |= (1 << (pin%8));
-			break;
-		case IO_event_Servo3:
-			servo3Mask[pin/8] |= (1 << (pin%8));
-			break;
-		case IO_event_Servo4:
-			servo4Mask[pin/8] |= (1 << (pin%8));
-			break;
-		default:
-			break;
-	}
+	mask[pin/8] |= (1 << (pin % 8));
 	#else
-	switch(type){
-		case IO_event_Blink1:
-			blink1Mask[list[pin]/8] |= (1 << (list[pin] % 8));
-			break;
-		case IO_event_Blink2:
-			blink2Mask[list[pin]/8] |= (1 << (list[pin] % 8));
-			break;
-		case IO_event_Pulse:
-			pulseMask[list[pin]/8] |= (1 << (list[pin] % 8));
-			break;
-		case IO_event_Servo1:
-			servo1Mask[list[pin]/8] |= (1 << (list[pin]%8));
-			break;
-		case IO_event_Servo2:
-			servo2Mask[list[pin]/8] |= (1 << (list[pin]%8));
-			break;
-		case IO_event_Servo3:
-			servo3Mask[list[pin]/8] |= (1 << (list[pin]%8));
-			break;
-		case IO_event_Servo4:
-			servo4Mask[list[pin]/8] |= (1 << (list[pin]%8));
-			break;
-		default:
-			break;
-	}
+	mask[list[pin]/8] |= (1 << (list[pin] % 8));
 	#endif
 }
 
-void IO::unset_mask(uint8_t pin, enum IO_event type){
+void IO::unset_mask(uint8_t pin, uint8_t * mask){
 	#ifdef IO_SPI
-	switch(type){
-		case IO_event_Blink1:
-			blink1Mask[pin/8] &= ~(1 << (pin % 8));
-			break;
-		case IO_event_Blink2:
-			blink2Mask[pin/8] &= ~(1 << (pin % 8));
-			break;
-		case IO_event_Pulse:
-			pulseMask[pin/8] &= ~(1 << (pin % 8));
-			break;
-		case IO_event_Servo1:
-			servo1Mask[pin/8] &= ~(1 << (pin%8));
-			break;
-		case IO_event_Servo2:
-			servo2Mask[pin/8] &= ~(1 << (pin%8));
-			break;
-		case IO_event_Servo3:
-			servo3Mask[pin/8] &= ~(1 << (pin%8));
-			break;
-		case IO_event_Servo4:
-			servo4Mask[pin/8] &= ~(1 << (pin%8));
-			break;
-		default:
-			break;
-	}
+	mask[pin/8] &= ~(1 << (pin % 8));
 	#else
-	switch(type){
-		case IO_event_Blink1:
-			blink1Mask[list[pin]/8] &= ~(1 << (list[pin] % 8));
-			break;
-		case IO_event_Blink2:
-			blink2Mask[list[pin]/8] &= ~(1 << (list[pin] % 8));
-			break;
-		case IO_event_Pulse:
-			pulseMask[list[pin]/8] &= ~(1 << (list[pin] % 8));
-			break;
-		case IO_event_Servo1:
-			servo1Mask[list[pin]/8] &= ~(1 << (list[pin]%8));
-			break;
-		case IO_event_Servo2:
-			servo2Mask[list[pin]/8] &= ~(1 << (list[pin]%8));
-			break;
-		case IO_event_Servo3:
-			servo3Mask[list[pin]/8] &= ~(1 << (list[pin]%8));
-			break;
-		case IO_event_Servo4:
-			servo4Mask[list[pin]/8] &= ~(1 << (list[pin]%8));
-			break;
-		default:
-			break;
-	}
+	mask[list[pin]/8] &= ~(1 << (list[pin] % 8));
 	#endif
 }
 
 uint16_t IO::calculateTimer(uint16_t mseconds){
-	return ((mseconds * (F_CPU/1000)) / 1024);
+	return (uint16_t)((mseconds * (F_CPU/1000)) / 1024);
 }
 
 #ifdef IO_SPI
@@ -475,39 +399,53 @@ void IO::copyInput(){
 }
 
 
-void IO::set(uint8_t pin, enum IO_event func){
-	if(func != IO_event_Blink1){
-		unset_mask(pin, IO_event_Blink1);
-	}
-	if(func != IO_event_Blink2){
-		unset_mask(pin, IO_event_Blink2);
-	}
-	switch(func){
-		case IO_event_High:
-			high(pin);
-			break;
-		case IO_event_Low:
-			low(pin);
-			break;
-		case IO_event_Toggle:
-			toggle(pin);
-			break;
-		case IO_event_Blink1:
-			set_mask(pin, func);
-			break;
-		case IO_event_Blink2:
-			set_mask(pin, func);
-			break;
-		case IO_event_Pulse:
-			set_mask(pin, func);
-			break;
+void IO::set(uint8_t pin, union u_IO_event func){
+	enum e_IO_type type = typelist[pin];
 
-		default:
-			break;
+	uart.transmit("SetIO ", 6);
+	uart.transmit(pin, HEX, 2);
+	uart.transmit((uint8_t)type, HEX, 2);
+	uart.transmit(func.value, HEX, 2);
+	uart.transmit('\n');
+
+	if(type == IO_Output){
+		if(func.output == IO_event_High)
+			high(pin);
+		else if(func.output == IO_event_Low)
+			low(pin);
+		else if(func.output == IO_event_Toggle)
+			toggle(pin);
+		else if(func.output == IO_event_Pulse){
+			set_mask(pin, pulseMask);
+		}
+	}
+	else if(type == IO_Output_Blink){
+		if(func.blink != IO_event_Blink1)
+			unset_mask(pin, blink1Mask);
+		if(func.blink != IO_event_Blink2)
+			unset_mask(pin, blink2Mask);
+
+		if(func.blink == IO_event_B_High)
+			high(pin);
+		else if(func.blink == IO_event_B_Low)
+			low(pin);
+		else if(func.blink == IO_event_Blink1)
+			set_mask(pin, blink1Mask);
+		else if(func.blink == IO_event_Blink2)
+			set_mask(pin, blink2Mask);
+
+	}
+	else if(type == IO_Output_Servo){
+		
+	}
+	else if(type == IO_Output_PWM){
+		
 	}
 }
 
 ISR(IO_TIMER_OVERFLOW_INT){
+
+	// If compare match failed
 	if(io.compareInt){
 		if(io.compareInt & IO_event_Blink1){
 			io.blink1();
@@ -579,89 +517,38 @@ ISR(IO_TIMER_OVERFLOW_INT){
 }
 
 ISR(IO_TIMER_COMPA_INT){
-	// uart.transmit("T1CA", 4);
-	// uint8_t x = IO_TIMER_COMPA_REG;
-	// printHex(x);
-	// uart.transmit('\n');
-	// printHex(io.compareInt);
-	// uart.transmit("\nBA: ", 5);
-	// printHex(io.blink1_counter >> 8);
-	// printHex(io.blink1_counter & 0xFF);
-	// uart.transmit("\nBB: ", 5);
-	// printHex(io.blink2_counter >> 8);
-	// printHex(io.blink2_counter & 0xFF);
-	// uart.transmit("\nP: ", 4);
-	// printHex(io.pulse_counter >> 8);
-	// printHex(io.pulse_counter & 0xFF);
-	// uart.transmit('\n');
-
 	if(io.compareInt & IO_INT_BlinkA && io.blink1_counter <= IO_TIMER_COMPA_REG){
 		io.blink1();
 		io.blink1_counter = IO_TIMER_COMPA_REG + io.blink1_period;
 
-		// Disable compa if no other counter is needing compa
-		// Otherwise set OCRA0 to the counter
 		io.compareInt &= ~(IO_INT_BlinkA);
-		if(io.compareInt == 0){
-			cli();
-			IO_Disable_COMPA_INT;
-			IO_TIMER_COMPA_REG = 0xFF;
-			sei();
-			#ifdef IO_SPI
-			// uart.transmit("blnkA\n",6);
-			io.writeOutput();
-			#endif
-			return;
-		}
 	}
 	if(io.compareInt & IO_INT_BlinkB && io.blink2_counter <= IO_TIMER_COMPA_REG){
 		io.blink2();
 		io.blink2_counter = IO_TIMER_COMPA_REG + io.blink2_period;
 
-		// Disable compa if no other counter is needing compa
-		// Otherwise set OCRA0 to the counter
 		io.compareInt &= ~(IO_INT_BlinkB);
-		if(io.compareInt == 0){
-			cli();
-			IO_Disable_COMPA_INT;
-			IO_TIMER_COMPA_REG = 0xFF;
-			sei();
-			#ifdef IO_SPI
-			// uart.transmit("blnkB\n",6);
-			io.writeOutput();
-			#endif
-			return;
-		}
 	}
 
 	if(io.compareInt & IO_INT_Pulse && io.pulse_counter <= IO_TIMER_COMPA_REG){
 		io.pulse_low();
 		io.pulse_counter = 0xFFFF; // Disable Pulse
 
-		// Disable compa if no other counter is needing compa
-		// Otherwise set OCRA0 to the counter
 		io.compareInt &= ~(IO_INT_Pulse);
-		if(io.compareInt == 0){
-			cli();
-			IO_Disable_COMPA_INT;
-			IO_TIMER_COMPA_REG = 0xFF;
-			sei();
-			#ifdef IO_SPI
-			// uart.transmit("pulse\n",6);
-			io.writeOutput();
-			#endif
-			return;
-		}
 	}
 
 	// #ifdef IO_SPI
+	if(io.compareInt == 0){
+		IO_Disable_COMPA_INT;
+		IO_TIMER_COMPA_REG = 0xFF;
+		return;
+	}
 	// uart.transmit("compA\n",6);
 	// io.writeOutput();
 	// #endif
 
 	//Calculate next compare interupt
 	IO_TIMER_COMPA_REG = 0xFF;
-	cli();
 	if(io.compareInt & IO_INT_BlinkA && io.blink1_counter < IO_TIMER_COMPA_REG){
 		IO_TIMER_COMPA_REG = io.blink1_counter;
 	}
@@ -675,5 +562,4 @@ ISR(IO_TIMER_COMPA_INT){
 	if(io.compareInt == 0){
 		IO_Disable_COMPA_INT;
 	}
-	sei();
 }

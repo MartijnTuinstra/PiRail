@@ -29,29 +29,60 @@ void set_toggle(uint8_t pin);
 
 uint8_t read(uint8_t pin);
 
-enum IO_type {
-	IO_InputToggle,
-	IO_InputRising,
-	IO_InputFalling,
-	IO_Output
+// enum IO_type {
+// 	IO_InputToggle,
+// 	IO_InputRising,
+// 	IO_InputFalling,
+// 	IO_Output
+// };
+
+enum e_IO_type {
+  IO_Undefined,
+  IO_Output,
+  IO_Output_Blink,
+  IO_Output_Servo,
+  IO_Output_PWM,
+  IO_Input,
+  IO_Input_Block,
+  IO_Input_Switch,
+  IO_Input_MSSwitch,
 };
 
-enum IO_event {
-  IO_event_High,
+enum e_IO_output_event {
   IO_event_Low,
-  IO_event_Toggle,
+  IO_event_High,
   IO_event_Pulse,
-  IO_event_Blink1,
-  IO_event_Blink2,
+  IO_event_Toggle
+};
 
+enum e_IO_blink_event {
+  IO_event_B_Low,
+  IO_event_B_High,
+  IO_event_Blink1,
+  IO_event_Blink2
+};
+
+enum e_IO_servo_event {
   IO_event_Servo1,
   IO_event_Servo2,
   IO_event_Servo3,
-  IO_event_Servo4,
+  IO_event_Servo4
+};
+
+enum e_IO_PWM_event {
   IO_event_PWM1,
   IO_event_PWM2,
   IO_event_PWM3,
   IO_event_PWM4
+};
+
+union u_IO_event {
+  enum e_IO_output_event output;
+  enum e_IO_blink_event blink;
+  enum e_IO_servo_event servo;
+  enum e_IO_PWM_event pwm;
+
+  uint8_t value;
 };
 
 #define PA 0
@@ -221,14 +252,14 @@ const uint16_t PROGMEM pinlist[] = {
 
 class IO {
 	public:
-		void set(uint8_t pin, enum IO_event func);
+		void set(uint8_t pin, union u_IO_event func);
 
-		void high(uint8_t pin);
-		void low(uint8_t pin);
-		void toggle(uint8_t pin);
-		void out(uint8_t pin);
-		void in(uint8_t pin);
-		uint8_t read(uint8_t pin);
+		inline void high(uint8_t pin);
+		inline void low(uint8_t pin);
+		inline void toggle(uint8_t pin);
+		inline void out(uint8_t pin);
+		inline void in(uint8_t pin);
+		inline uint8_t read(uint8_t pin);
 
 		void init();
 
@@ -241,8 +272,8 @@ class IO {
 		void servo_low();
 		void servo_high(uint8_t * mask);
 
-		void set_mask(uint8_t pin, enum IO_event type);
-		void unset_mask(uint8_t pin, enum IO_event type);
+		void set_mask(uint8_t pin, uint8_t * mask);
+		void unset_mask(uint8_t pin, uint8_t * mask);
 
 		void readInput();
 		void copyInput();
@@ -257,7 +288,7 @@ class IO {
 		uint16_t blink2_period;
 		volatile uint16_t blink2_counter;
 		volatile uint16_t pulse_counter;
-		uint8_t pulse_length;
+		uint16_t pulse_length;
 
 		uint8_t servo1Pulse;
 		volatile uint16_t servo1counter;
@@ -288,6 +319,9 @@ class IO {
 
 		#ifdef IO_SPI
 		uint8_t writeData[MAX_PORTS];
+		enum e_IO_type typelist[MAX_PORTS*8];
+		#else
+		enum e_IO_type typelist[MAX_PINS];
 		#endif
 };
 

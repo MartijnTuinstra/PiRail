@@ -58,25 +58,43 @@ void update_IO(){
     if(!Units[u] || Units[u]->io_out_changed == 0)
       continue;
 
-    for(int n = 0; n < Units[u]->IO_Nodes; n++){
-      char buf[100];
-      memset(buf, 0, 100);
-      buf[0] = n;
-      buf[1] = COMopc_SetAllOut;
+    update_IO_Module(u);
+  }
+}
 
-      for(int io = 0; io < Units[u]->Node[n].io_ports; io++){
-        if(U_IO(u, n, io)->type == IO_Output && U_IO(u, n, io)->w_state.value != U_IO(u, n, io)->r_state.value){
-          loggerf(WARNING, "Update io %02i:%02i:%02i %s", u, n, io, IO_event_string[U_IO(u, n, io)->w_state.value]);
-          U_IO(u, n, io)->r_state.value = U_IO(u, n, io)->w_state.value;
+inline void update_IO_Module(uint8_t module){
+  struct COM_t tx;
+  uint8_t check = 0;
+  for(int n = 0; n < Units[module]->IO_Nodes; n++){
+    tx.data[0] = module;
+    tx.data[1] = COMopc_SetAllOut;
+    tx.data[2] = Units[module]->Node[n].io_ports;
+    check = UART_CHECKSUM_SEED ^ tx.data[1] ^ tx.data[2];
 
-          buf[io/4 + 2] = U_IO(u, n, io)->w_state.value << ((io % 4) * 2);
+    memset(&tx.data[3], 0, UART_COM_t_Length);
 
-          if(U_IO(u, n, io)->w_state.output == IO_event_Pulse) // Reset When pulsing output
-            U_IO(u, n, io)->w_state.output = IO_event_Low;
-            U_IO(u, n, io)->r_state.value = U_IO(u, n, io)->w_state.value;
-        }
+    for(int io = 0; io < Units[module]->Node[n].io_ports; io++){
+      if(U_IO(module, n, io)->type == IO_Undefined)
+        continue;
+
+      loggerf(WARNING, "Update io %02i:%02i:%02i %s (%i)", module, n, io, IO_event_string[U_IO(module, n, io)->type][U_IO(module, n, io)->w_state.value], U_IO(module, n, io)->w_state.value);
+      if(U_IO(module, n, io)->type <= IO_Output_PWM && U_IO(module, n, io)->w_state.value != U_IO(module, n, io)->r_state.value){
+        U_IO(module, n, io)->r_state.value = U_IO(module, n, io)->w_state.value;
+      }
+
+      tx.data[io/4 + 3] |= U_IO(module, n, io)->w_state.value << ((io % 4) * 2);
+
+      if(io%4 == 3)
+        check ^= tx.data[io/4 + 2];
+
+      if(U_IO(module, n, io)->type == IO_Output && U_IO(module, n, io)->w_state.output == IO_event_Pulse){ // Reset When pulsing output
+        U_IO(module, n, io)->w_state.output = IO_event_Low;
+        U_IO(module, n, io)->r_state.value = U_IO(module, n, io)->w_state.value;
       }
     }
+    tx.data[Units[module]->Node[n].io_ports/4 + 3] = check;
+    tx.length = Units[module]->Node[n].io_ports/4 + 4;
+    COM_Send(&tx);
   }
 }
 
@@ -122,14 +140,14 @@ const char * IO_undefined_string[4] = {
   "IO_event_undefined",
 };
 const char * IO_output_string[4] = {
-  "IO_event_High",
   "IO_event_Low",
+  "IO_event_High",
   "IO_event_Pulse",
   "IO_event_Toggle"
 };
 const char * IO_blink_string[4] = {
-  "IO_event_B_High",
   "IO_event_B_Low",
+  "IO_event_B_High",
   "IO_event_Blink1",
   "IO_event_Blink2"
 };

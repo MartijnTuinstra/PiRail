@@ -10,7 +10,7 @@ avr-gcc-args=-g -Wall -Os -Werror -Wextra -mmcu=$(DEVICE)
 avr-gcc=avr-gcc $(avr-gcc-args) $(args)
 
 $(bdir)/$(output)/bin:
-	mkdir -p $@
+	@mkdir -p $@
 
 $(bdir)/$(output)/bin/%.o: %.cpp
 	@echo "(AVR GCC) $@"
@@ -21,7 +21,7 @@ $(bdir)/$(output)/$(output).elf: $(addsuffix .o,$(addprefix $(bdir)/$(output)/bi
 	@$(avr-gcc) $^ -o $@
 
 $(bdir)/$(output).flash.hex: $(bdir)/$(output)/$(output).elf
-	@echo "(AVRHEX) $@"
+	@echo "(AVR HEX) $@"
 	@avr-objcopy -j .text -j .data -O ihex $^ $(bdir)/$(output).flash.hex
 	@avr-objcopy -j .eeprom --set-section-flags=.eeprom="alloc,load" --change-section-lma .eeprom=0 -O ihex $^ $(bdir)/$(output)/$(output).eeprom
 	@avr-objcopy -j .fuse -O ihex $^ $(bdir)/$(output)/$(output).fuses --change-section-lma .fuse=0

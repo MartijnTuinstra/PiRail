@@ -15,3 +15,5 @@ web/tmp_*
 test/libbaan.so
 test/test.o
 test/testresults/*
+comtest
+uartlog.txt

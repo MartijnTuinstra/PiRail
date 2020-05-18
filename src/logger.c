@@ -54,6 +54,7 @@ void exit_logger(){
 }
 
 enum logging_levels logger_set_lvl;
+enum logging_levels logger_set_print_lvl;
 
 pthread_mutex_t logger_mutex;
 
@@ -61,12 +62,16 @@ void set_level(enum logging_levels level){
   logger_set_lvl = level;
 }
 
+void set_logger_print_level(enum logging_levels level){
+  logger_set_print_lvl = level;
+}
+
 enum logging_levels read_level(){
   return logger_set_lvl;
 }
 
 void floggerf(enum logging_levels level, char * file, int line, char * text, ...){
-  if(level > logger_set_lvl)
+  if(level > logger_set_lvl && level > logger_set_print_lvl)
     return;
 
   pthread_mutex_lock(&logger_mutex);
@@ -82,7 +87,7 @@ void floggerf(enum logging_levels level, char * file, int line, char * text, ...
   // time(&current_time);
   time_info = localtime(&clock.tv_sec);
 
-  clock_gettime(CLOCK_MONOTONIC_RAW, &clock);
+  clock_gettime(CLOCK_REALTIME_COARSE, &clock);
 
   strftime(c_time, sizeof(c_time), "%H:%M:%S", time_info);
 
@@ -93,17 +98,19 @@ void floggerf(enum logging_levels level, char * file, int line, char * text, ...
 
   sprintf(msg, "%s.%ld - %s%s - %20s:%4i - %s%s\n",c_time,clock.tv_nsec,logging_levels_colour[level], logging_levels_str[level],file,line, arg, logging_levels_colour[7]);
 
-  FILE * fp = fopen(logger_file,"a");
 
-  if(stdoutPrint)
+  if(stdoutPrint && level <= logger_set_print_lvl)
     printf("%s", msg);
 
-  if(fp){
-    fprintf(fp, "%s", msg);
-    fclose(fp);
+  if(level <= logger_set_lvl){
+    FILE * fp = fopen(logger_file,"a");
+    if(fp){
+      fprintf(fp, "%s", msg);
+      fclose(fp);
+    }
+    else
+      printf("%s%s - Failed to open logger %s\n", logging_levels_colour[0], logging_levels_str[0], logging_levels_colour[7]);
   }
-  else
-    printf("%s%s - Failed to open logger %s\n", logging_levels_colour[0], logging_levels_str[0], logging_levels_colour[7]);
 
   va_end( arglist );
 

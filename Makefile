@@ -26,13 +26,13 @@ CONFIG_READER_FILES = config_reader config logger mem
 -include $(BIN)/*.d
 
 $(BIN)/%.o: $(SRC)/%.c
-	@echo ' '-$@
+	@echo '(  GCC  ) -$@'
 	@$(GCC) -c $(SRC)/$*.c -MP -MMD -MT '$@ $(BIN)/$*.d' -o $(BIN)/$*.o
 	@$(GCC) -shared -o $(SRC)/$*.c -o $(BIN)/$*.so
 
-.PHONY: all test run debug
+.PHONY: all test run debug avr
 
-all: config_reader baan comtest
+all: config_reader baan comtest avr
 
 run: all
 	./baan
@@ -43,25 +43,27 @@ debug: all
 test: all
 	@+$(MAKE) -sC test
 
-_avr:
-	@+$(MAKE) -f avr/Makefile all
+avr:
+	@+$(MAKE) -C avr all --no-print-directory
 
 baan: $(addprefix $(BIN)/,$(addsuffix .o, $(BAAN_FILES)))
-	@echo $@
-	$(GCC) -o $@ $^
+	@echo '( GCCLD ) $@'
+	@$(GCC) -o $@ $^
 	@$(GCC) -shared -o $@.so $^
 
 config_reader: $(addprefix $(BIN)/,$(addsuffix .o, $(CONFIG_READER_FILES)))
-	@echo $@
-	$(GCC) -o $@ $^
+	@echo '( GCCLD ) $@'
+	@$(GCC) -o $@ $^
 
 comtest: $(addprefix $(BIN)/,$(addsuffix .o, $(COMTEST_FILES)))
-	@echo $@
-	$(GCC) -o $@ $^ 
+	@echo '( GCCLD ) $@'
+	@$(GCC) -o $@ $^ 
 
 clean:
 	@echo "CLEAN"
 	@rm -f baan
 	@rm -f baan.so
 	@rm -f config_reader
+	@rm -f comtest
 	@rm -rf bin/*
+	@+$(MAKE) -C avr clean --no-print-directory

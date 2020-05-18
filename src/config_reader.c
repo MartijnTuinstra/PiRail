@@ -596,16 +596,22 @@ void modify_Node(struct module_config * config, char ** cmds, uint8_t cmd_len){
       else if(strcmp(cmds[i], "-p") == 0){
         printf("set size");
         config->Nodes[id].size = atoi(cmds[i+1]);
-        i++;
+        config->Nodes[id].data = _realloc(config->Nodes[id].data, (config->Nodes[id].size + 2) / 2, char);
+        i+=2;
       }
       else if(strcmp(cmds[i], "-t") == 0){
         uint8_t port = atoi(cmds[i+1]);
-        printf("%i => %s\n", port, cmds[i+2]);
-        config->Nodes[id].data[port/2] &= ~(0xF << (4 * ((port + 1)% 2)));
+        if(port > config->Nodes[id].size){
+          printf("Invalid io port\n");
+          i += 3;
+          continue;
+        }
+        printf("%d %i => %s\t%x %x\n", id, port, cmds[i+2], (0xF << (4 * ((port + 1)% 2))), (atoi(cmds[i+2]) & 0xF) << (4 * (port % 2)));
+        config->Nodes[id].data[port/2] &= (0xF << (4 * ((port + 1)% 2)));
         config->Nodes[id].data[port/2] |= (atoi(cmds[i+2]) & 0xF) << (4 * (port % 2));
-        i+= 2;
+        printf("%x\n", config->Nodes[id].data[port/2]);
+        i += 3;
       }
-      i++;
     }
     printf("\n");
   }
@@ -1872,6 +1878,7 @@ int edit_module(){
 
   char cmd[300];
   char ** cmds = _calloc(20, char *);
+  uint8_t max_cmds = 20;
   uint8_t cmds_len = 0;
 
   while (1){
@@ -1885,6 +1892,12 @@ int edit_module(){
 
     while( cmds[cmds_len] != NULL ) {
       cmds[++cmds_len] = strtok(NULL, " ");
+
+      if(cmds_len + 1 > max_cmds){
+        max_cmds += 20;
+        loggerf(INFO, "Expand cmds to %d", max_cmds);
+        cmds = _realloc(cmds, max_cmds, char *);
+      }
     }
 
     // Remove \n character from last command/argument

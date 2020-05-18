@@ -148,7 +148,7 @@ void write_module_from_conf(struct module_config * config, char * filename){
     memcpy(p, &config->Nodes[i], sizeof(struct s_node_conf));
 
     p += sizeof(struct s_node_conf) + 1;
-    memcpy(p, &config->Nodes[i].data, (config->Nodes[i].size+1)/2);
+    memcpy(p, config->Nodes[i].data, (config->Nodes[i].size+1)/2);
     p += (config->Nodes[i].size+1)/2 + 1;
   }
 

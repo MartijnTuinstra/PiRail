@@ -544,9 +544,10 @@ void modify_Node(struct module_config * config, char ** cmds, uint8_t cmd_len){
       printf("Realloc");
       config->Nodes = _realloc(config->Nodes, config->header.IO_Nodes+1, struct s_node_conf);
     }
-    memset(&config->Nodes[config->header.IO_Nodes], 0, sizeof(struct s_node_conf));
-    config->Nodes[config->header.IO_Nodes].Node = config->header.IO_Nodes;
     id = config->header.IO_Nodes++;
+
+    memset(&config->Nodes[id], 0, sizeof(struct s_node_conf));
+    config->Nodes[id].Node = id;
   }
   else if(cmds[0][0] == 'r'){
     if(cmd_len > 2){
@@ -573,8 +574,14 @@ void modify_Node(struct module_config * config, char ** cmds, uint8_t cmd_len){
     char _cmd[20];
     printf("Node Size      (%i)         | ", config->Nodes[id].size);
     fgets(_cmd, 20, stdin);
-    if(sscanf(_cmd, "%i", &tmp) > 0)
+    if(sscanf(_cmd, "%i", &tmp) > 0){
+      if(config->Nodes[id].size)
+        config->Nodes[id].data = _realloc(config->Nodes[id].data, tmp, char);
+      else
+        config->Nodes[id].data = _calloc(tmp, char);
+
       config->Nodes[id].size = tmp;
+    }
 
     printf("New:      \t");
     print_Node(config->Nodes[id]);

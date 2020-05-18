@@ -1858,6 +1858,7 @@ int edit_module(){
 
     config.header.module = file;
     config.header.connections = connections;
+    config.header.IO_Nodes = 0;
     config.header.Blocks = 0;
     config.header.Switches = 0;
     config.header.MSSwitches = 0;

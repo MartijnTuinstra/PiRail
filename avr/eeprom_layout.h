@@ -13,7 +13,7 @@ struct _EE_Settings {
 
 struct _EE_IO_Port {
 	uint8_t type;
-	uint8_t def;
+	uint8_t _default;
 };
 
 struct _EE_Mem {

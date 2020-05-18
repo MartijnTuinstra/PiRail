@@ -239,7 +239,7 @@ var Submodules = {
 	init: function(){
 		this.modules.push(new submodule(28, 4, 7, "Websocket", ["Stopped", "", "Admin only", "Running", "Failure"]));
 		this.modules.push(new submodule(24, 4, 6, "Z21", ["Stopped", "Waiting to start", "Initializing", "Running", "Failure"]));
-		this.modules.push(new submodule(20, 4, 5, "UART", ["Stopped", "Waiting to start", "Initializing", "Running", "Failure"]));
+		this.modules.push(new submodule(20, 4, 5, "UART", ["Stopped", "Waiting to start", "Initializing", "Running", "Failure", "", "", "Simulated"]));
 		this.modules.push(new submodule(16, 4, 4, "LayoutControl", ["Stopped", "Waiting to start", "Initializing", "Running", "Failure", "Finding rails", "Connecting rails"]));
 		this.modules.push(new submodule(12, 4, 3, "TrainControl", ["Stopped", "Waiting to start", "Initializing", "Running", "Failure"]));
 		this.modules.push(new submodule( 4, 4, 2, "SimA", ["Stopped", "Waiting to start", "Initializing", "Running", "Failure"]));

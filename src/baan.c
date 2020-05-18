@@ -18,10 +18,13 @@
 
 struct s_systemState * SYS;
 
+char * UART_Serial_Port;
+
 int main(){
   init_main();
   init_logger("log.txt");
   set_level(INFO);
+  set_logger_print_level(INFO);
 
   // Stop program when receiving SIGINT
   if (signal(SIGINT, sigint_func) == SIG_ERR){

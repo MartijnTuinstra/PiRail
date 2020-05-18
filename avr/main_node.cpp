@@ -83,7 +83,7 @@ int main(){
   for(uint8_t i = 0; i < MAX_PORTS; i++)
     uart.transmit(io.readMask[i], HEX, 2);
   uart.transmit('\n');
-  #endif // RNET_MASTER
+  #endif // not RNET_MASTER
 
   //Scope for ID
   // {
@@ -108,11 +108,11 @@ int main(){
 
   #ifdef RNET_MASTER
 
-  net.reset_bus();
+  // net.reset_bus();
 
   _delay_ms(1000);
 
-  net.request_registered();
+  // net.request_registered();
 
   // Loop
   while(1){
@@ -124,7 +124,7 @@ int main(){
       uart.start_tx();
     }
 
-    _delay_ms(10);
+    _delay_us(10);
   }
 
   #else // Slave
@@ -136,72 +136,63 @@ int main(){
 
   net.reset_bus();
 
-  uint8_t i = 0;
-  uint16_t j = 0;
+  uint8_t checkcounter = 0;
+
   while(1){
     while(net.state == IDLE && net.available()){
       net.read();
     }
 
-    _delay_ms(10);
-    j++;
-    if(j == 1000){
+    _delay_us(100);
 
-      uart.transmit('?');
+    checkcounter++;
 
-      while(net.state != IDLE){}
-
-      net.tx.buf[net.tx.write_index] = RNet_OPC_ChangeNode;
-      net.tx.buf[(net.tx.write_index+1)%RNET_MAX_BUFFER] = i++;
-      net.tx.buf[(net.tx.write_index+2)%RNET_MAX_BUFFER] = 0xED;
-      net.tx.buf[(net.tx.write_index+3)%RNET_MAX_BUFFER] = 0x34;
-      net.tx.buf[(net.tx.write_index+4)%RNET_MAX_BUFFER] = 0xBC;
-      net.tx.write_index = (net.tx.write_index+5)%RNET_MAX_BUFFER;
-      net.txdata++;
-      j = 0;
-    }
+    if(checkcounter > 10){
+      checkcounter = 0;
 
     //continue;
 
-    io.copyInput();
-    io.readInput();
+      io.copyInput();
+      io.readInput();
 
-    uint8_t diff = 0;
+      uint8_t diff = 0;
 
-    for(int i = 0; i < MAX_PORTS; i++){
-      if(io.oldreadData[i] ^ io.readData[i]){
-        io.oldreadData[i] = io.readData[i];
-        diff = 1;
-      }
-    }
-
-    if(diff){
-      uart.transmit("IO change: ", 11);
-      uart.transmit(RNet_OPC_ReadInput, HEX,2);
-      uart.transmit(net.node_id, HEX, 2);
-      uart.transmit(MAX_PORTS, HEX, 2);
-      net.tx.buf[net.tx.write_index] = RNet_OPC_ReadInput;
-      net.tx.buf[(net.tx.write_index+1)%RNET_MAX_BUFFER] = net.node_id;
-      net.tx.buf[(net.tx.write_index+2)%RNET_MAX_BUFFER] = MAX_PORTS;
-
-      uint8_t checksum = RNET_CHECKSUM_SEED ^ RNet_OPC_ReadInput ^ MAX_PORTS ^ net.node_id;
-
-      uint8_t x = 3;
-
-      for(uint8_t i = 0; i < MAX_PORTS; i++){
-        uart.transmit(io.readData[i], HEX, 2);
-        net.tx.buf[(net.tx.write_index+(x++))%RNET_MAX_BUFFER] = io.readData[i];
-        checksum ^= io.readData[i];
+      for(int i = 0; i < MAX_PORTS; i++){
+        if(io.oldreadData[i] ^ io.readData[i]){
+          io.oldreadData[i] = io.readData[i];
+          diff = 1;
+        }
       }
 
-      uart.transmit(checksum, HEX, 2);
-      net.tx.buf[(net.tx.write_index+(x++))%RNET_MAX_BUFFER] = checksum;
-      net.tx.write_index = (net.tx.write_index+x)%RNET_MAX_BUFFER;
-      net.txdata++;
-      uart.transmit('\n');
-      uart.transmit('\r');
-    }
+      if(diff){
+        uart.transmit("IO change: ", 11);
+        uart.transmit(RNet_OPC_ReadInput, HEX,2);
+        uart.transmit(net.node_id, HEX, 2);
+        uart.transmit(MAX_PORTS, HEX, 2);
+        net.tx.buf[net.tx.write_index] = RNet_OPC_ReadInput;
+        net.tx.buf[(net.tx.write_index+1)%RNET_MAX_BUFFER] = net.node_id;
+        net.tx.buf[(net.tx.write_index+2)%RNET_MAX_BUFFER] = MAX_PORTS;
 
+        uint8_t checksum = RNET_CHECKSUM_SEED ^ RNet_OPC_ReadInput ^ MAX_PORTS ^ net.node_id;
+
+        uint8_t x = 3;
+
+        for(uint8_t i = 0; i < MAX_PORTS; i++){
+          uart.transmit(io.readData[i], HEX, 2);
+          net.tx.buf[(net.tx.write_index+x)%RNET_MAX_BUFFER] = io.readData[i];
+          x++;
+          checksum ^= io.readData[i];
+        }
+
+        uart.transmit(checksum, HEX, 2);
+        net.tx.buf[(net.tx.write_index+x)%RNET_MAX_BUFFER] = checksum;
+        x++;
+        net.tx.write_index = (net.tx.write_index+x)%RNET_MAX_BUFFER;
+        net.txdata++;
+        uart.transmit('\n');
+        uart.transmit('\r');
+      }
+    }
   }
 
   #endif

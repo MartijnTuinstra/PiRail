@@ -131,17 +131,17 @@
 
 #else
 
-#define RNET_TX_TICK 2000
+#define RNET_TX_TICK 200
 
 #endif
 
 #define RNET_TICK RNET_TX_TICK
-#define RNET_OFFSET RNET_TX_TICK / 4
+#define RNET_OFFSET 50
 
 #ifdef RNET_MASTER
-#define RNET_TIMEOUT RNET_TX_TICK * 4
+#define RNET_TIMEOUT 800
 #else
-#define RNET_TIMEOUT RNET_TX_TICK * 1.5
+#define RNET_TIMEOUT 300
 #endif
 
 struct _RNet_buffer {

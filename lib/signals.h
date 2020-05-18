@@ -18,14 +18,14 @@ struct s_signal_stating {
 };
 
 typedef struct s_Signal{
-  uint16_t id;
-  uint8_t module;
-  Block * B;
-  enum Rail_states state;
+  uint16_t id;            // Signal ID
+  uint8_t module;         // Module number
+  Block * B;              // Parent block
+  enum Rail_states state; // State of the signal
 
-  uint8_t output_len;
+  uint8_t output_len;     // Number of IO outputs
 
-  IO_Port ** output;
+  IO_Port ** output;      // List of IO_port pointers
   struct s_signal_stating * output_stating;
 
 } Signal;

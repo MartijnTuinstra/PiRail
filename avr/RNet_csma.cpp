@@ -108,21 +108,24 @@ void RNet::executeMessage(){
   }
 
   if(tmp_rx_msg[0] == RNet_OPC_SetOutput){
+    union u_IO_event event;
     if(tmp_rx_msg[2] & 0x80){ // Only one address
-      io.set(tmp_rx_msg[2] & 0x7F, (enum IO_event)(tmp_rx_msg[3] & 0xF));
+      event.value = tmp_rx_msg[3] & 0xF;
+      io.set(tmp_rx_msg[2] & 0x7F, event);
     }
     else{ // More than one
       uint8_t length = tmp_rx_msg[2] & 0x7F;
-
       uint8_t j = 0;
       for(uint8_t i = 0; i < length; i+= 2, j+=3){
-        io.set(tmp_rx_msg[2+j] & 0x7F, (enum IO_event)(tmp_rx_msg[2+j+1] >> 4));
+        event.value = tmp_rx_msg[2+j+1] >> 4;
+        io.set(tmp_rx_msg[2+j] & 0x7F, event);
 
         if(tmp_rx_msg[2+j+2] & 0x80){
           break;
         }
 
-        io.set(tmp_rx_msg[2+j+2] & 0x7F, (enum IO_event)(tmp_rx_msg[2+j+1] & 0xF));
+        event.value = tmp_rx_msg[2+j+1] & 0xF;
+        io.set(tmp_rx_msg[2+j+2] & 0x7F, event);
       }
 
     }

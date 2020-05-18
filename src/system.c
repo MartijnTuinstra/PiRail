@@ -91,8 +91,19 @@ void init_main(){
   init_allocs();
 }
 
+const char * e_SYS_Module_State_string[8] = {
+  "Module_STOP",
+  "Module_Init_Parent",
+  "Module_Init",
+  "Module_Run",
+  "Module_Fail",
+  "Module_LC_Searching",
+  "Module_LC_Connecting",
+  "Module_SIM_State"
+};
 
 void SYS_set_state(volatile enum e_SYS_Module_State * system, enum e_SYS_Module_State state){
   *system = state;
+  loggerf(INFO, "Setting module to state %s", e_SYS_Module_State_string[state]);
   WS_stc_SubmoduleState(0);
 }

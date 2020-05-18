@@ -1,12 +1,14 @@
 #ifndef _INCLUDE_COM_H
 #define _INCLUDE_COM_H
 
-#define Serial_Port "/dev/ttyUSB0"
+#define Serial_Port "/dev/ttyUSB1"
 #define Serial_Baud B500000
 
-#define UART_BUFFER_SIZE 200
+#define UART_BUFFER_SIZE 256
 #define UART_Msg_NotComplete 0xFF
 #define UART_CHECKSUM_SEED 0b10101010
+
+#define UART_COM_t_Length 64
 
 #include "signals.h"
 
@@ -19,7 +21,7 @@ struct Swi;
 
 struct COM_t{
   char length;
-  char data[32];
+  char data[UART_COM_t_Length];
 };
 
 struct fifobuffer {
@@ -28,11 +30,25 @@ struct fifobuffer {
   uint8_t write;
 };
 
+// extern int uart0_filestream;
+
+extern char COM_ACK;
+extern char COM_NACK;
+
+extern char * UART_Serial_Port;
+
 void * UART();
 
 int COM_Recv(struct fifobuffer * buf);
 uint8_t COM_Packet_Length(struct fifobuffer * buf);
 void COM_Parse(struct fifobuffer * buf);
+void COM_Send(struct COM_t * DATA);
+
+void COM_Reset();
+
+void COM_change_Output(int M);
+void COM_set_single_Output(int M, int io, union u_IO_event type);
+void COM_set_single_Output_output(int M, int io, enum e_IO_output_event event);
 
 #define COMopc_ReportID     0x00
 #define COMopc_EmergencyEn  0x01

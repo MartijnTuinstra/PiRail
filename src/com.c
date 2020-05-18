@@ -8,6 +8,7 @@
 #include <termios.h>
 #include <pthread.h>
 #include <string.h>
+#include <sys/ioctl.h>
 
 #include "com.h"
 
@@ -36,6 +37,7 @@ pthread_mutex_t mutex_UART;
 int uart0_filestream = -1;
 
 char COM_ACK = 0;
+char COM_NACK = 0;
 
 void * UART(){
   loggerf(INFO, "Starting UART thread");
@@ -49,13 +51,19 @@ void * UART(){
   uartbuffer.read = 0;
   uartbuffer.write = 0;
 
-  uart0_filestream = open(Serial_Port, O_RDWR | O_NOCTTY);
+  if(!UART_Serial_Port){
+    SYS_set_state(&SYS->UART.state, Module_SIM_State);
+    logger("No UART Device", CRITICAL);
+    return 0;
+  }
+
+  uart0_filestream = open(UART_Serial_Port, O_RDWR | O_NOCTTY);
   if (uart0_filestream == -1)
   {
     //ERROR - CAN'T OPEN SERIAL PORT
 
     SYS_set_state(&SYS->UART.state, Module_Fail);
-    logger("Unable to open UART",CRITICAL);
+    loggerf(CRITICAL, "Unable to open UART %s", UART_Serial_Port);
     return 0;
   }
 
@@ -68,8 +76,12 @@ void * UART(){
   options.c_iflag = IGNPAR;
   options.c_oflag = 0;
   options.c_lflag = 0;
+  options.c_cc[VMIN] = 0;  // Minimum number of characters for noncanonical read
+  options.c_cc[VTIME] = 3; // deciseconds
   tcflush(uart0_filestream, TCIFLUSH);
   tcsetattr(uart0_filestream, TCSANOW, &options);
+
+  COM_Reset();
 
   SYS_set_state(&SYS->UART.state, Module_Run);
 
@@ -88,7 +100,14 @@ void * UART(){
   return 0;
 }
 
-void COM_Send(struct COM_t DATA){
+void COM_Reset(){
+  uint8_t DTS_FLAG = TIOCM_DTR;
+  ioctl(uart0_filestream,TIOCMBIS,&DTS_FLAG);
+  usleep(100000); 
+  ioctl(uart0_filestream,TIOCMBIC,&DTS_FLAG);
+}
+
+void COM_Send(struct COM_t * DATA){
   if (uart0_filestream == -1){
     loggerf(ERROR, "No UART");
     return;
@@ -100,12 +119,12 @@ void COM_Send(struct COM_t DATA){
   char debug[200];
   char *ptr = debug;
 
-  for(uint8_t i = 0;i<DATA.length;i++){
-    ptr += sprintf(ptr, "%02x ", DATA.data[i]);
+  for(uint8_t i = 0;i<DATA->length;i++){
+    ptr += sprintf(ptr, "%02x ", DATA->data[i]);
   }
-  loggerf(INFO, "COM RX - %s", debug);
+  loggerf(INFO, "COM TX - %s", debug);
 
-  int count = write(uart0_filestream, &DATA.data[0], DATA.length);    //Filestream, bytes to write, number of bytes to write
+  int count = write(uart0_filestream, &DATA->data[0], DATA->length);    //Filestream, bytes to write, number of bytes to write
   if (count < 0)
   {
     printf("UART TX error\n");
@@ -125,7 +144,7 @@ int COM_Recv(struct fifobuffer * buf){
 
   while(1){
     //Filestream, buffer to store in, number of bytes to read (max)
-    uint8_t size = 8;
+    uint8_t size = 32;
     if(buf->write + size > UART_BUFFER_SIZE)
       size = UART_BUFFER_SIZE - buf->write;
 
@@ -141,8 +160,16 @@ int COM_Recv(struct fifobuffer * buf){
     }
     else // some data waiting
     {
+      char debug[200];
+      char *ptr = debug;
+
+      for(uint8_t i = 0;i<rx_length;i++){
+        ptr += sprintf(ptr, "%02x", buf->buffer[i+buf->write]);
+      }
+
       buf->write = (buf->write + rx_length) % UART_BUFFER_SIZE;
-      loggerf(INFO, "%i-%i(%i/%i) bytes read", rx_length, size, buf->read, buf->write);
+
+      loggerf(INFO, "%i/%i-(%i/%i) bytes read, %d available, %s", rx_length, size, buf->read, buf->write, (uint8_t)(((int16_t)buf->write - (int16_t)buf->read) % UART_BUFFER_SIZE), debug);
 
       if(rx_length < size)
         break;
@@ -159,24 +186,27 @@ uint8_t COM_Packet_Length(struct fifobuffer * buf){
     return UART_Msg_NotComplete;
   }
 
-  if(buf->buffer[r] == RNet_OPC_DEV_ID ||
-     buf->buffer[r] == RNet_OPC_SetEmergency ||
-     buf->buffer[r] == RNet_OPC_RelEmergency ||
-     buf->buffer[r] == RNet_OPC_PowerON ||
-     buf->buffer[r] == RNet_OPC_PowerOFF ||
-     buf->buffer[r] == RNet_OPC_ResetALL){
+  if(buf->buffer[r] == RNet_OPC_DEV_ID){
+    return 34;
+  }
+  else if(buf->buffer[r] == RNet_OPC_SetEmergency ||
+          buf->buffer[r] == RNet_OPC_RelEmergency ||
+          buf->buffer[r] == RNet_OPC_PowerON ||
+          buf->buffer[r] == RNet_OPC_PowerOFF ||
+          buf->buffer[r] == RNet_OPC_ResetALL || 
+          buf->buffer[r] == RNet_OPC_ReqReadInput ||
+          buf->buffer[r] == RNet_OPC_ACK ||
+          buf->buffer[r] == RNet_OPC_NACK){
     return 2;
   }
-  else if (buf->buffer[r] == RNet_OPC_ACK){
-   return 3;
+  else if(buf->buffer[r] == RNet_OPC_ChangeID   ||
+          buf->buffer[r] == RNet_OPC_ChangeNode ||
+          buf->buffer[r] == RNet_OPC_SetCheck   ||
+          buf->buffer[r] == RNet_OPC_SetPulse){
+    return 4;
   }
-  else if(buf->buffer[r] == RNet_OPC_ChangeID ||
-          buf->buffer[r] == RNet_OPC_SetCheck){
+  else if (buf->buffer[r] == RNet_OPC_SetOutput){
     return 5;
-  }
-  else if (buf->buffer[r] == RNet_OPC_SetOutput ||
-           buf->buffer[r] == RNet_OPC_ChangeNode){
-    return 6;
   }
   else if(buf->buffer[r] == RNet_OPC_SetBlink){
     return 9;
@@ -193,10 +223,12 @@ uint8_t COM_Packet_Length(struct fifobuffer * buf){
     }
     return (buf->buffer[(r+2)%UART_BUFFER_SIZE] + 1) / 2 + 5;
   }
-  else if(buf->buffer[r] == RNet_OPC_ReadInput){
+  else if(buf->buffer[r] == RNet_OPC_ReadInput ||
+          buf->buffer[r] == RNet_OPC_ReadEEPROM){
     if( (uint8_t)(buf->write - buf->read) % UART_BUFFER_SIZE < 4){
       return UART_Msg_NotComplete; // Not enough bytes
     }
+    loggerf(INFO, "OPC RIN, READEEPROM %x -> len %d", buf->buffer[(r+2) % UART_BUFFER_SIZE], buf->buffer[(r+2) % UART_BUFFER_SIZE] + 5);
     return buf->buffer[(r+2)%UART_BUFFER_SIZE] + 5;
   }
 
@@ -231,39 +263,68 @@ void COM_Parse(struct fifobuffer * buf){
     buf->read = (buf->read + 1) % UART_BUFFER_SIZE;
   }
 
-  loggerf(INFO, "COM RECV - %s", debug);
+  loggerf(INFO, "COM RECV - (%d) %s", length, debug);
 
 
-  if(data[1] == RNet_OPC_DEV_ID){ //Report ID
+  if(data[1] == RNet_OPC_ACK){
+    loggerf(INFO, "ACK");
+    COM_ACK = 1;
+  }
+  else if(data[1] == RNet_OPC_NACK){
+    loggerf(WARNING, "NACK");
+    COM_NACK = 1;
+  }
+  else if(data[1] == RNet_OPC_DEV_ID){ //Report ID
     //Add device to device list
     
     for(uint16_t i = 0;i<255;i++){
+      Units[i]->on_layout = 0;
       if(data[i/8+2] & (1 << (i%8))){
-      //   DeviceList[i] = Data[1];
-        loggerf(INFO, "Module %d", i);
+        loggerf(INFO, "UART Found Module %d", i);
+        Units[i]->on_layout = 1;
       }
     }
+
+    SYS->UART.modules_found = 1;
   }
   else if(data[1] == RNet_OPC_ReadInput){
     loggerf(INFO, "READIN - %s", &debug[6]);
 
-    if(Check != UART_CHECKSUM_SEED){
-      loggerf(WARNING, "Failed Checksum");
+    if(Check != 0){
+      loggerf(WARNING, "Failed Checksum %x", Check);
       return;
     }
 
     //uint8_t node = data[3];
-    uint8_t l = data[4];
-    for(uint8_t i = 0; i < l; i++){
-      if(data[i/8+4] & (1 << (i%8)))
-        loggerf(INFO, "%d IO %i HIGH", data[0], i);
-      else
-        loggerf(INFO, "%d IO %i LOW", data[0], i);
-    }
+    // uint8_t l = data[3];
+    // for(uint8_t i = 0; i < l*8; i++){
+    //   if(data[i/8+4] & (1 << (i%8)))
+    //     loggerf(INFO, "%d IO %i HIGH", data[0], i);
+    //   else
+    //     loggerf(INFO, "%d IO %i LOW", data[0], i);
+    // }
+
+    // if(data[0] == 2){
+    //   if(data[5] & 0x1 && data[5] & 0x8){
+    //     COM_set_single_Output_output(3, 34, IO_event_High);
+    //     COM_set_single_Output_output(3, 35, IO_event_Low);
+    //     COM_set_single_Output_output(3, 36, IO_event_Low);
+    //   }
+    //   else if(!(data[5] & 0x8)){
+    //     COM_set_single_Output_output(3, 34, IO_event_Low);
+    //     COM_set_single_Output_output(3, 35, IO_event_High);
+    //     COM_set_single_Output_output(3, 36, IO_event_Low);
+    //   }
+    //   else{
+    //     COM_set_single_Output_output(3, 34, IO_event_Low);
+    //     COM_set_single_Output_output(3, 35, IO_event_Low);
+    //     COM_set_single_Output_output(3, 36, IO_event_High);
+    //   }
+    // }
   }
-  else if(data[1] == RNet_OPC_ChangeNode){
-    loggerf(WARNING, "Slaves should not send this");
-    loggerf(INFO, "CHNGNO - %s", &debug[6]);
+  else if(data[1] == RNet_OPC_ReadEEPROM){
+    loggerf(INFO, "EEPROMDUMP");
+    loggerf(INFO, "%s", debug);
   }
   /*
   else if(data[1] == 0x01){ //Set Emergency STOP
@@ -312,91 +373,24 @@ void COM_DevReset(){
   Tx.data[0] = 0xFF;  //Broadcast
   Tx.data[1] = RNet_OPC_DEV_ID;
   Tx.length  = 2;
-  COM_Send(Tx);
+  COM_Send(&Tx);
 }
 
-void COM_set_Output(int M){
-  loggerf(ERROR, "FIX COM_set_Output (%i)", M);
+void COM_set_single_Output_output(int M, int io, enum e_IO_output_event event){
+  union u_IO_event type;
+  type.output = event;
+  COM_set_single_Output(M, io, type);
+}
 
-  // uint8_t * OutRegs   = (uint8_t *)malloc(((Units[M]->Out_length-1)/8)+1);
-  // uint8_t * BlinkMask = (uint8_t *)malloc(((Units[M]->Out_length-1)/8)+1);
-  // uint8_t * PulseMask = (uint8_t *)malloc(((Units[M]->Out_length-1)/8)+1);
-  // char Out = 0,Blink = 0,Pulse = 0;
-  // uint8_t byte,offset;
-
-  // for(int i = 0;i<Units[M]->S_L;i++){
-  //   for(int j = 0;j<Units[M]->Signals[i]->length;j++){
-  //     byte   = Units[M]->Signals[i]->adr[Units[M]->Signals[i]->state&0x3F] / 8;
-  //     offset = Units[M]->Signals[i]->adr[Units[M]->Signals[i]->state&0x3F] % 8;
-  //     if(Units[M]->Signals[i]->states[Units[M]->Signals[i]->state&0x3F] == (1 << j)){
-  //       OutRegs[byte] |= (1 << offset);
-  //       Out++;
-  //     }
-  //     if(Units[M]->Signals[i]->flash[Units[M]->Signals[i]->state&0x3F] == (1 << j)){
-  //       BlinkMask[byte] |= (1 << offset);
-  //       Blink++;
-  //     }
-  //     Units[M]->Signals[i]->state &= 0x3F;
-  //   }
-  // }
-
-  // for(int i = 0;i<Units[M]->S_L;i++){
-  //   //for(int j = 0;j<Units[M]->Sw[i]->length;j++){
-  //   if(Units[M]->Sw[i]->len & 0xC0 == 0){ //Pulse Address
-  //     Units[M]->Sw[i]->state &= 0x3F;
-  //     byte   = Units[M]->Sw[i]->Out[Units[M]->Sw[i]->state & 0x3F] / 8;
-  //     offset = Units[M]->Sw[i]->Out[Units[M]->Sw[i]->state & 0x3F] % 8;
-  //     PulseMask[byte] |= (1 << offset);
-  //     Pulse++;
-  //   }else if(Units[M]->Sw[i]->len & 0xC0 == 0x40){// Hold a single Address--------------------------------------------------------------------------- Roadmap: Toggle outputs, pulse multiple
-  //     Units[M]->Sw[i]->state &= 0x3F;
-  //     byte   = Units[M]->Sw[i]->Out[Units[M]->Sw[i]->state & 0x3F] / 8;
-  //     offset = Units[M]->Sw[i]->Out[Units[M]->Sw[i]->state & 0x3F] % 8;
-  //     OutRegs[byte] |= (1 << offset);
-  //     Out++;
-  //   }
-  // }
-
-  // if(Out > 0){
-  //   printf("Set All Out Addresses:\n");
-  //   struct COM_t TxPacket;
-  //   TxPacket.data[0] = COMopc_SetAllOut;
-  //   TxPacket.data[1] = (Units[M]->Out_length/8)+4;
-  //   TxPacket.length = TxPacket.data[1];
-  //   TxPacket.data[2] = M;
-  //   for(int i = 0;i<(Units[M]->Out_length/8)+1;i++){
-  //     TxPacket.data[3+i] = OutRegs[i];
-  //   }
-  //   for(int i = 0;i<(Units[M]->Out_length/8)+4;i++){
-  //     printf("%02X ",TxPacket.data[i]);
-  //   }
-  //   printf("\n");
-  //   memcpy(Units[M]->OutRegs,OutRegs,((Units[M]->Out_length-1)/8)+1);
-  // }
-  // if(Blink > 0){
-  //   printf("Set Blink Mask:\n");
-  //   struct COM_t TxPacket;
-  //   TxPacket.data[0] = COMopc_SetBlOut;
-  //   TxPacket.data[1] = (Units[M]->Out_length/8)+4;
-  //   TxPacket.length = TxPacket.data[1];
-  //   TxPacket.data[2] = M;
-  //   for(int i = 0;i<(Units[M]->Out_length/8)+1;i++){
-  //     TxPacket.data[3+i] = BlinkMask[i];
-  //   }
-  //   for(int i = 0;i<(Units[M]->Out_length/8)+4;i++){
-  //     printf("%02X ",TxPacket.data[i]);
-  //   }
-  //   printf("\n");
-  //   memcpy(Units[M]->BlinkMask,BlinkMask,((Units[M]->Out_length-1)/8)+1);
-  // }
-  // if(Pulse > 0){
-  //   printf("Set Pulse Mask: \n");
-
-  // }
-
-  // free(OutRegs);
-  // free(BlinkMask);
-  // free(PulseMask);
+void COM_set_single_Output(int M, int io, union u_IO_event type){
+  struct COM_t TX;
+  TX.data[0] = M;
+  TX.data[1] = RNet_OPC_SetOutput;
+  TX.data[2] = io + 48;
+  TX.data[3] = type.value;
+  TX.data[4] = UART_CHECKSUM_SEED ^ RNet_OPC_SetOutput ^ (io + 48) ^ type.value;
+  TX.length = 5;
+  COM_Send(&TX);
 }
 
 void COM_change_Output(int M){

@@ -54,7 +54,7 @@ while(c != "n" and c != "N"):
   if sys.platform.startswith("win"):
     cmd = ['"C:\\Program Files (x86)\\Arduino\\hardware\\tools\\avr\\bin\\avrdude.exe"', '-C', '"C:\\Program Files (x86)\\Arduino\\hardware\\tools\\avr\\etc\\avrdude.conf"', '-p', dev, '-P', pdev.device, '-c', 'arduino',  '-b',  '57600', '-v', '-U', 'flash:w:build/'+dev+'/'+f+'/'+f+'.flash']
     print(cmd)
-    subprocess.call([cmd])
+    subprocess.call(cmd)
   else:
     os.system("avrdude -p "+dev+" -P /dev/"+pdev+" -c arduino -b 57600 -v -U flash:w:build/"+dev+"/"+f) 
   c = input("Again (y/n)? ")

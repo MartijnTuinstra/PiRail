@@ -5,6 +5,7 @@
 #include <string.h>
 
 enum logging_levels {
+  NONE,
   CRITICAL,
   ERROR,
   WARNING,
@@ -24,7 +25,8 @@ void init_logger(char * file_location);
 void init_logger_file_only(char * file_location);
 void exit_logger();
 
-void set_level(enum logging_levels);
+void set_level(enum logging_levels level);
+void set_logger_print_level(enum logging_levels level);
 enum logging_levels read_level();
 
 void floggerf(enum logging_levels level, char * file, int line, char * text, ...);

@@ -8,6 +8,7 @@
 #define RNet_OPC_PowerOFF      0x04
 #define RNet_OPC_PowerON       0x05
 #define RNet_OPC_ResetALL      0x06
+#define RNet_OPC_NACK          0x7E
 #define RNet_OPC_ACK           0x7F
 
 //IO

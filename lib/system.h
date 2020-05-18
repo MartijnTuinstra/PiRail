@@ -22,7 +22,8 @@ enum e_SYS_Module_State {
   Module_Run,
   Module_Fail,
   Module_LC_Searching,
-  Module_LC_Connecting
+  Module_LC_Connecting,
+  Module_SIM_State
 };
 
 struct s_SYS_requiredSystem {
@@ -51,6 +52,7 @@ struct s_systemState{
 
   struct {
     volatile enum e_SYS_Module_State state;
+    uint8_t modules_found:1;
     uint8_t modules_coupled:1;
     pthread_t th;
   } UART;

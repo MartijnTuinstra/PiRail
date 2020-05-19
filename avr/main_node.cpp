@@ -55,21 +55,21 @@ int main(){
   #ifndef RNET_MASTER
 
   #ifndef IO_SPI
-  eeprom_write_byte(&EE_Mem.IO[0].type, IO_InputToggle);
-  eeprom_write_byte(&EE_Mem.IO[0].def, IO_event_High);
+  eeprom_write_byte(&EE_Mem.IO[0].type, IO_Input_Block);
+  eeprom_write_byte(&EE_Mem.IO[0]._default, IO_event_High);
 
   eeprom_write_byte(&EE_Mem.IO[1].type, IO_Output);
-  eeprom_write_byte(&EE_Mem.IO[1].def, IO_event_High);
+  eeprom_write_byte(&EE_Mem.IO[1]._default, IO_event_High);
 
-  eeprom_write_byte(&EE_Mem.IO[2].type, IO_InputToggle);
-  eeprom_write_byte(&EE_Mem.IO[2].def, IO_event_High);
+  eeprom_write_byte(&EE_Mem.IO[2].type, IO_Input_Block);
+  eeprom_write_byte(&EE_Mem.IO[2]._default, IO_event_High);
 
   for (uint8_t i = 3; i < 12; i++){
-    eeprom_write_byte(&EE_Mem.IO[i].type, IO_InputToggle);
-    eeprom_write_byte(&EE_Mem.IO[i].def, IO_event_High);
+    eeprom_write_byte(&EE_Mem.IO[i].type, IO_Input_Block);
+    eeprom_write_byte(&EE_Mem.IO[i]._default, IO_event_High);
   }
   eeprom_write_byte(&EE_Mem.IO[12].type, IO_Output);
-  eeprom_write_byte(&EE_Mem.IO[12].def, IO_event_High);
+  eeprom_write_byte(&EE_Mem.IO[12]._default, IO_event_High);
   #endif // IO_SPI
 
   eeprom_write_word(&EE_Mem.settings.blink1, 1000);

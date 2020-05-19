@@ -57,14 +57,14 @@ void Create_Block(uint8_t module, struct s_block_conf block){
   in.Node = block.IO_In.Node;
   in.io = block.IO_In.Adr;
 
-  Init_IO(Units[p->module], in, IO_Input);
+  Init_IO(Units[p->module], in, p);
 
   if(block.fl & 0x8){
     struct s_node_adr out;
     out.Node = block.IO_Out.Node;
     out.io = block.IO_Out.Adr;
 
-    Init_IO(Units[p->module], out, IO_Output);
+    Init_IO(Units[p->module], out, p);
   }
 
   // If block array is to small

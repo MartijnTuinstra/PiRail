@@ -1794,7 +1794,54 @@ var Modals = {
         warning: {visible: true, content: "Discard", cb: undefined, wait: false},
         danger: {visible: true, content: "Delete", cb: undefined, wait: false}
       }
-    }
+    },
+    "module.io":{
+      link: "",
+      open_cb: function(data, ref){
+        // var st = modules[data.module].config.stations[data.id];
+
+        // console.log(st);
+
+        $("input[name=ID]", ref).val(data.pin);
+        // $("button[name=type][value="+st.type+"]", ref).removeClass("btn-outline-primary").addClass("btn-primary");
+
+        // $("input[name=name]", ref).val(st.name);
+
+        // $("input[name=blocklist]", ref).val(st.blocks.join(","));
+      },
+      title: "Edit IO",
+      content: '<div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
+                  <div class="col-4 control-label"><span style="line-height: 38px;vertical-align:middle">ID</span></div>\
+                  <div class="col-8"><input name="ID" type="text" class="modal-form form-control input-sm"></div>\
+                </div>\
+                <div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
+                  <div class="col-4 control-label"><span style="line-height: 38px;vertical-align:middle">Type</span></div>\
+                  <div class="col-8 btn-toggle-group" style="padding-top: 0.4em; text-align: center;">\
+                    <button type="number" name="type" class="modal-form btn-toggle btn-cleartoggle btn btn-xs btn-outline-primary" value="0">Disabled</button><hr/>\
+                    <button type="number" name="type" class="modal-form btn-toggle btn-cleartoggle btn btn-xs btn-outline-primary" value="1">Output</button>\
+                    <button type="number" name="type" class="modal-form btn-toggle btn-cleartoggle btn btn-xs btn-outline-primary" value="2">Blink</button>\
+                    <button type="number" name="type" class="modal-form btn-toggle btn-cleartoggle btn btn-xs btn-outline-primary" value="3">Servo</button>\
+                    <button type="number" name="type" class="modal-form btn-toggle btn-cleartoggle btn btn-xs btn-outline-primary" value="4">PWM</button><hr/>\
+                    <button type="number" name="type" class="modal-form btn-toggle btn-cleartoggle btn btn-xs btn-outline-primary" value="5">Input</button>\
+                    <button type="number" name="type" class="modal-form btn-toggle btn-cleartoggle btn btn-xs btn-outline-primary" value="6">Input_Block</button>\
+                    <button type="number" name="type" class="modal-form btn-toggle btn-cleartoggle btn btn-xs btn-outline-primary" value="7">Input_Switch</button>\
+                    <button type="number" name="type" class="modal-form btn-toggle btn-cleartoggle btn btn-xs btn-outline-primary" value="8">Input_MSSwitch</button>\
+                  </div>\
+                </div>\
+                <div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
+                  <div class="col-4 control-label"><span style="line-height: 38px;vertical-align:middle">Name</span></div>\
+                  <div class="col-8"><input name="name" type="text" class="modal-form form-control input-sm"></div>\
+                </div>\
+                <div class="row mb-2" style="border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">\
+                  <div class="col-4 control-label"><span style="line-height: 38px;vertical-align:middle">Block List</span></div>\
+                  <div class="col-8"><input name="blocklist" type="text" class="modal-form form-control input-sm"></div>\
+                </div>',
+      buttons: {
+        success: {visible: true, content: "Update", cb: undefined, wait: false},
+        warning: {visible: true, content: "Discard", cb: undefined, wait: false},
+        danger: {visible: true, content: "Delete", cb: undefined, wait: false}
+      }
+    },
   },
 
   init: function(){

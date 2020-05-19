@@ -1890,7 +1890,7 @@ int edit_module(){
   uint8_t cmds_len = 0;
 
   while (1){
-    memset(cmds, 0, 20);
+    memset(cmds, 0, 100);
     cmds_len = 0;
     printf("> ");
     fgets(cmd,300,stdin);

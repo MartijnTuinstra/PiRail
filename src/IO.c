@@ -1,51 +1,55 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "com.h"
+#include "IO.h"
+
 #include "logger.h"
 #include "system.h"
 #include "mem.h"
-#include "IO.h"
 #include "com.h"
 #include "algorithm.h"
 
-void Add_IO_Node(Unit * U, int Node_nr, int IO){
+void Add_IO_Node(Unit * U, struct node_conf node){
   IO_Node Z;
 
-  Z.id = Node_nr;
-  Z.io_ports = IO;
+  Z.id = node.Node;
+  Z.io_ports = node.size;
   
-  Z.io = _calloc(IO, IO_Port*);
+  Z.io = _calloc(node.size, IO_Port*);
 
-  for(int i = 0; i<IO; i++){
+  for(int i = 0; i<node.size; i++){
     Z.io[i] = _calloc(1, IO_Port);
+    Z.io[i]->type = (node.data[i/2] >> (4 * (i % 2))) & 0xF;
+    loggerf(INFO, "IO Port %i:%i -- %s", Z.id, i, IO_enum_type_string[Z.io[i]->type]);
   }
 
-  if(U->IO_Nodes <= Node_nr){
+  if(U->IO_Nodes <= node.Node){
     U->Node = _realloc(U->Node, U->IO_Nodes + 1, IO_Node);
   }
 
-  loggerf(DEBUG, "Node %02i:%02i created (0-%3i)", U->module, Node_nr, IO);
+  loggerf(DEBUG, "Node %02i:%02i created (0-%3i)", U->module, node.Node, node.size);
 
-  U->Node[Node_nr] = Z;
+  U->Node[Z.id] = Z;
   return;
 }
 
-void Init_IO_from_conf(Unit * U, struct s_IO_port_conf adr, enum e_IO_type type){
+void Init_IO_from_conf(Unit * U, struct s_IO_port_conf adr, void * pntr){
   Node_adr new_adr = {adr.Node, adr.Adr};
-  Init_IO(U, new_adr, type);
+  Init_IO(U, new_adr, pntr);
 }
 
-void Init_IO(Unit * U, Node_adr adr, enum e_IO_type type){
+void Init_IO(Unit * U, Node_adr adr, void * pntr){
   if((adr.Node < U->IO_Nodes) && 
      (adr.io < U->Node[adr.Node].io_ports) &&
      U->Node[adr.Node].io[adr.io]){
 
     IO_Port * A = U->Node[adr.Node].io[adr.io];
 
-    if(A->type != IO_Undefined)
-      loggerf(WARNING, "IO %i:%i:%i already in use", U->module, adr.Node, adr.io);
+    // if(A->type != IO_Undefined)
+    //   loggerf(WARNING, "IO %i:%i:%i already in use", U->module, adr.Node, adr.io);
+    if(A->type == IO_Undefined)
+      loggerf(WARNING, "IO %i:%i:%i is not configured correctly", U->module, adr.Node, adr.io);
 
-    A->type = type;
+    A->object = pntr;
     A->id = adr.io;
   }
   else{

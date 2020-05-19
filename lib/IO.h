@@ -87,10 +87,10 @@ extern const char * IO_enum_type_string[9];
 extern const char ** IO_event_string[9];
 
 
-void Add_IO_Node(Unit * U, int Node_nr, int IO);
+void Add_IO_Node(Unit * U, struct node_conf node);
 
-void Init_IO_from_conf(Unit * U, struct s_IO_port_conf adr, enum e_IO_type type);
-void Init_IO(Unit * U, Node_adr adr, enum e_IO_type type);
+void Init_IO_from_conf(Unit * U, struct s_IO_port_conf adr, void * pntr);
+void Init_IO(Unit * U, Node_adr adr, void * pntr);
 
 void update_IO();
 void update_IO_Module(uint8_t module);

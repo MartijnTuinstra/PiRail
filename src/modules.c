@@ -179,7 +179,7 @@ void read_module_Config(uint16_t M){
   for(int i = 0; i < config->header.IO_Nodes; i++){
     struct node_conf node = read_s_node_conf(buf_ptr);
     loggerf(CRITICAL, "TODO IMPLEMENT node data");
-    Add_IO_Node(Units[M], node.Node, node.size);
+    Add_IO_Node(Units[M], node);
   }
 
   loggerf(DEBUG, "  Module Block");

@@ -43,7 +43,7 @@ void Create_Signal(uint8_t module, uint8_t blockId, uint16_t signalId, _Bool sid
     out.Node = output[i].Node;
     out.io = output[i].Adr;
 
-    Init_IO(Units[module], out, IO_Output);
+    Init_IO(Units[module], out, Z);
   }
 
   if(Units[module]->Sig[Z->id]){

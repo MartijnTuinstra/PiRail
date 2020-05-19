@@ -37,7 +37,7 @@ uint16_t MessageCounter = 0;
 
 //System Messages
 void WS_stc_Partial_Layout(uint8_t M_A,uint8_t M_B){
-
+  loggerf(INFO, "WS_stc_Partial_Layout %i, %i", M_A, M_B);
   char data[20];
   int q = 1;
   int x = 1;

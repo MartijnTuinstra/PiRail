@@ -16,7 +16,8 @@
 #include "train.h"
 #include "websocket.h"
 #include "websocket_control.h"
-#include "websocket_msg.h"
+#include "websocket_cts.h"
+#include "websocket_stc.h"
 #include "Z21.h"
 #include "Z21_msg.h"
 
@@ -353,6 +354,24 @@ START_TEST (TrainFollowingTest)
 }
 END_TEST
 
+START_TEST (IO_StatingString){
+	char buf[2000];
+	buf[0] = 0;
+
+	union u_IO_event event;
+	for(uint8_t i = 0; i < 9; i++){
+		for(uint8_t j = 0; j < 4; j++){
+			event.value = j;
+			if(i == 2 && j > 1)
+				continue;
+			else if(i >= 5 && j > 0)
+				continue;
+			str_IO_event(i, event, buf);
+		}
+	}
+	printf("%s", buf);
+}
+END_TEST
 
 int main(void)
 {
@@ -367,6 +386,7 @@ int main(void)
 	tcase_add_test(tc1_1, BlockAlgorithmTest);
 	tcase_add_test(tc1_1, BlockStatingTest);
 	tcase_add_test(tc1_1, TrainFollowingTest);
+	tcase_add_test(tc1_1, IO_StatingString);
 
 	srunner_run_all(sr, CK_VERBOSE);
 	nf = srunner_ntests_failed(sr);

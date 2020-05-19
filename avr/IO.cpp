@@ -275,7 +275,7 @@ void IO::pulse_high(){
 	#endif
 
 	//Set pulse period into timer
-	cli();
+	// cli();
 	io.pulse_counter = IO_TIMER_REG + io.pulse_length;
 
 	if(io.pulse_counter < 0x100){
@@ -288,7 +288,7 @@ void IO::pulse_high(){
 		io.compareInt |= IO_INT_Pulse;
 		IO_Enable_COMPA_INT;
 	}
-	sei();
+	// sei();
 }
 void IO::pulse_low(){
 	// uart.transmit("Pl\n",3);
@@ -443,7 +443,7 @@ void IO::set(uint8_t pin, union u_IO_event func){
 	}
 }
 
-ISR(IO_TIMER_OVERFLOW_INT){
+ISR(IO_TIMER_OVERFLOW_INT, ISR_NOBLOCK){
 
 	// If compare match failed
 	if(io.compareInt){
@@ -476,10 +476,8 @@ ISR(IO_TIMER_OVERFLOW_INT){
 		// printHex(io.blink1_counter);
 		// uart.transmit('\n');
 		io.compareInt |= IO_INT_BlinkA;
-		cli();
 		IO_TIMER_COMPA_REG = io.blink1_counter & 0xFF;
 		IO_Enable_COMPA_INT;
-		sei();
 	}
 	if(io.blink2_counter < 0x100){
 		//Enable Comparator and set to counter & 0xFF
@@ -487,7 +485,6 @@ ISR(IO_TIMER_OVERFLOW_INT){
 		// uart.transmit("B2 SETCOMPA ", 12);
 		// printHex(io.blink2_counter);
 		// uart.transmit('\n');
-		cli();
 		if(io.compareInt == 0){
 			IO_TIMER_COMPA_REG = io.blink2_counter & 0xFF;
 		}
@@ -496,14 +493,12 @@ ISR(IO_TIMER_OVERFLOW_INT){
 		}
 		io.compareInt |= IO_INT_BlinkB;
 		IO_Enable_COMPA_INT;
-		sei();
 	}
 	if(io.pulse_counter < 0x100){
 		//Check if Interrupt is allready set
 		// uart.transmit("P  SETCOMPA ", 12);
 		// printHex(io.pulse_counter);
 		// uart.transmit('\n');
-		cli();
 		if(io.compareInt == 0){
 			IO_TIMER_COMPA_REG = io.pulse_counter & 0xFF;
 		}
@@ -512,11 +507,10 @@ ISR(IO_TIMER_OVERFLOW_INT){
 		}
 		io.compareInt |= IO_INT_Pulse;
 		IO_Enable_COMPA_INT;
-		sei();
 	}
 }
 
-ISR(IO_TIMER_COMPA_INT){
+ISR(IO_TIMER_COMPA_INT, ISR_NOBLOCK){
 	if(io.compareInt & IO_INT_BlinkA && io.blink1_counter <= IO_TIMER_COMPA_REG){
 		io.blink1();
 		io.blink1_counter = IO_TIMER_COMPA_REG + io.blink1_period;

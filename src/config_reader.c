@@ -1890,7 +1890,7 @@ int edit_module(){
   uint8_t cmds_len = 0;
 
   while (1){
-    memset(cmds, 0, 100);
+    memset(cmds, 0, 20 * sizeof(char *));
     cmds_len = 0;
     printf("> ");
     fgets(cmd,300,stdin);
@@ -2093,7 +2093,8 @@ int edit_rolling_stock(){
 
 int main(){
   init_logger("log_config.txt");
-  set_level(TRACE);
+  set_level(MEMORY);
+  set_logger_print_level(MEMORY);
 
   printf("Edit module or rolling stock? ");
   char cmd[40] = "";

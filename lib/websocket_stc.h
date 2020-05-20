@@ -15,7 +15,7 @@ struct WS_Message {
 };
 
 //System Messages
-void WS_stc_Partial_Layout(uint8_t M_A,uint8_t M_B);
+void WS_stc_Partial_Layout(uint8_t M_A);
 void WS_stc_Track_Layout(struct web_client_t * client);
 
 void WS_stc_Z21_info(struct web_client_t * client);

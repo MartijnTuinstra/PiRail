@@ -36,50 +36,22 @@ uint16_t MessageCounter = 0;
 
 
 //System Messages
-void WS_stc_Partial_Layout(uint8_t M_A,uint8_t M_B){
-  loggerf(INFO, "WS_stc_Partial_Layout %i, %i", M_A, M_B);
+void WS_stc_Partial_Layout(uint8_t M){
+  loggerf(DEBUG, "WS_stc_Partial_Layout %i", M);
   char data[20];
   int q = 1;
-  int x = 1;
   memset(data,0,20);
   data[0] = WSopc_Track_Layout_Update;
 
-  loggerf(INFO, "WS_stc_Partial_Layout\n");
-  printf("Checking Module A, %i\n",M_A);
-  data[q++] = M_A;
-  for(int i = 0;i<Units[M_A]->connections_len;i++){
-    if(Units[M_A]->connection[i]){
-      printf(" - Connect found, module %i\n",Units[M_A]->connection[i]->module);
-      data[q++] = Units[M_A]->connection[i]->module;
-    }
-    else{
-      printf("Reset\n");
-      q = 1;
-      break;
-    }
+  data[q++] = M;
+  for(int i = 0;i<Units[M]->connections_len;i++){
+    if(Units[M]->connection[i])
+      data[q++] = Units[M]->connection[i]->module;
+    else
+      data[q++] = 0;
   }
 
-  x = q;
-
-  printf("Checking Module B, %i\n",M_B);
-
-  data[q++] = M_B;
-  for(int i = 0;i<Units[M_B]->connections_len;i++){
-    if(Units[M_B]->connection[i]){
-      printf(" - Connect found, module %i\n",Units[M_B]->connection[i]->module);
-      data[q++] = Units[M_B]->connection[i]->module;
-    }
-    else{
-      printf("Reset\n");
-      q = x;
-      break;
-    }
-  }
-
-  if(q > 1){
-    printf("Send %i\n",q);
-    ws_send_all(data,q,WS_Flag_Admin);
-  }
+  ws_send_all(data,q,WS_Flag_Admin);
 }
 
 void WS_stc_Track_Layout(struct web_client_t * client){
@@ -89,28 +61,23 @@ void WS_stc_Track_Layout(struct web_client_t * client){
   memset(data,0,100);
   data[0] = WSopc_Track_Layout_Config;
 
-  loggerf(INFO, "WS_stc_Track_Layout\n");
+  loggerf(DEBUG, "WS_stc_Track_Layout");
 
   for(int i = 0;i<unit_len;i++){
-    if(!Units[i])
+    if(!Units[i] || !Units[i]->on_layout)
       continue;
 
     data[q++] = i;
-    printf("Module %i\n", i);
 
     for(int j = 0;j<Units[i]->connections_len;j++){
       if(Units[i]->connection[j]){
-        printf(" - Connect found, module %i\n",Units[i]->connection[j]->module);
         data[q++] = Units[i]->connection[j]->module;
       }
       else{
-        printf(" - No Connect found\n");
         data[q++] = 0;
       }
     }
   }
-  
-  printf("Send %i\n",q);
 
   if(q > 1){
     if(client){
@@ -503,7 +470,7 @@ void WS_stc_trackUpdate(struct web_client_t * client){
   int q = 1;
 
   for(int i = 0;i<unit_len;i++){
-    if(!Units[i] || Units[i]->block_state_changed == 0)
+    if(!Units[i] || !Units[i]->on_layout || Units[i]->block_state_changed == 0)
       continue;
 
     Units[i]->block_state_changed = 0;
@@ -550,7 +517,7 @@ void WS_stc_SwitchesUpdate(struct web_client_t * client){
     int q = 1;
 
     for(int i = 0;i<unit_len;i++){
-      if(!Units[i])// || !Units[i]->switch_state_changed)
+      if(!Units[i] || !Units[i]->on_layout)// || !Units[i]->switch_state_changed)
         continue;
       // Units[i]->switch_state_changed = 0;
 
@@ -630,20 +597,21 @@ void WS_stc_NewClient_track_Switch_Update(struct web_client_t * client){
   int q = 1;
 
   for(int i = 0;i<unit_len;i++){
-    if(Units[i]){
-      for(int j = 0;j<=Units[i]->block_len;j++){
-        Block * B = Units[i]->B[j];
-        if(B){
-          content = 1;
+    if(!Units[i] || !Units[i]->on_layout)
+      continue;
 
-          buf[(q-1)*4+1] = B->module;
-          buf[(q-1)*4+2] = B->id;
-          buf[(q-1)*4+3] = (B->dir << 7) + B->state;
-          buf[(q-1)*4+4] = 0;//B->train;
-          q++;
+    for(int j = 0; j < Units[i]->block_len; j++){
+      Block * B = Units[i]->B[j];
+      if(B){
+        content = 1;
 
-          B->statechanged = 0;
-        }
+        buf[(q-1)*4+1] = B->module;
+        buf[(q-1)*4+2] = B->id;
+        buf[(q-1)*4+3] = (B->dir << 7) + B->state;
+        buf[(q-1)*4+4] = 0;//B->train;
+        q++;
+
+        B->statechanged = 0;
       }
     }
   }
@@ -671,17 +639,17 @@ void WS_stc_NewClient_track_Switch_Update(struct web_client_t * client){
     q = 1; // Counter for switches
 
     for(int i = 0;i<unit_len;i++){
-      if(Units[i]){
-        for(int j = 0;j<=Units[i]->switch_len;j++){
-          Switch * S = Units[i]->Sw[j];
-          if(S){
-            content = 1;
-            buf[(q-1)*3+1] = S->module;
-            buf[(q-1)*3+2] = S->id & 0x7F;
-            buf[(q-1)*3+3] = S->state & 0x7F;
-           // printf(",%i,%i,%i",S->Module,S->id,S->state);
-            q++;
-          }
+      if(!Units[i] || !Units[i]->on_layout)
+        continue;
+      for(int j = 0;j<=Units[i]->switch_len;j++){
+        Switch * S = Units[i]->Sw[j];
+        if(S){
+          content = 1;
+          buf[(q-1)*3+1] = S->module;
+          buf[(q-1)*3+2] = S->id & 0x7F;
+          buf[(q-1)*3+3] = S->state & 0x7F;
+          // printf(",%i,%i,%i",S->Module,S->id,S->state);
+          q++;
         }
       }
     }

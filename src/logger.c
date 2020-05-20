@@ -32,13 +32,11 @@ const char * logging_levels_colour[8] = {
 };
 
 _Bool stdoutPrint = 1;
-struct tm * time_info;
 
 void init_logger(char * file_location){
   // Clear log / create log
   FILE * fp = fopen(file_location,"w");
   
-  time_info = _calloc(1, struct tm);
   fclose(fp);
 
   logger_file = _calloc(strlen(file_location) + 1, char);
@@ -49,12 +47,10 @@ void init_logger(char * file_location){
 
 void init_logger_file_only(char * file_location){
   init_logger(file_location);
-  time_info = _calloc(1, struct tm);
   stdoutPrint = 0;
 }
 
 void exit_logger(){
-  _free(time_info);
   _free(logger_file);
 }
 
@@ -85,6 +81,7 @@ void floggerf(enum logging_levels level, char * file, int line, char * text, ...
   va_start( arglist, text );
 
   // time_t current_time;
+  struct tm * time_info;
   struct timespec clock;
   char c_time[9];  // space for "HH:MM:SS\0"
 

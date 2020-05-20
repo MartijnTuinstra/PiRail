@@ -14,7 +14,7 @@ $(bdir)/$(output)/bin:
 
 $(bdir)/$(output)/bin/%.o: %.cpp
 	@echo "(AVR GCC) $@"
-	@$(avr-gcc) -c $*.cpp -MP -MMD -MT '$@ $(bdir)/$(output)/bin/$*.d' -o $(bdir)/$(output)/bin/$*.o -Wa,-ahlmns=$(bdir)/$(output)/bin/$*.lst
+	@$(avr-gcc) -c -Os $*.cpp -MP -MMD -MT '$@ $(bdir)/$(output)/bin/$*.d' -o $(bdir)/$(output)/bin/$*.o -Wa,-ahlmns=$(bdir)/$(output)/bin/$*.lst
 
 $(bdir)/$(output)/$(output).elf: $(addsuffix .o,$(addprefix $(bdir)/$(output)/bin/,$(files)))
 	@echo "(AVR ELF) $@"

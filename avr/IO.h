@@ -311,6 +311,8 @@ class IO {
 
 		uint8_t pulseMask[MAX_PORTS];
 
+		uint8_t invertedMask[MAX_PORTS];
+
 		uint8_t servo1Mask[MAX_PORTS];
 		uint8_t servo2Mask[MAX_PORTS];
 		uint8_t servo3Mask[MAX_PORTS];

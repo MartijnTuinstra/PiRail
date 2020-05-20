@@ -124,11 +124,14 @@ void IO::init(){
 	memset(servo3Mask, 0, MAX_PORTS);
 	memset(servo4Mask, 0, MAX_PORTS);
 
+	memset(invertedMask, 0x00, MAX_PORTS);
+
 	#ifndef IO_SPI
 	memset(readMask, 0, MAX_PORTS);
 	#endif
 	memset(readData, 0xFF, MAX_PORTS);
 	memset(oldreadData, 0xFF, MAX_PORTS);
+	memset(invertedMask, 0xFF, MAX_PORTS);
 
 	#ifdef IO_SPI
 
@@ -172,9 +175,10 @@ void IO::init(){
 
 	// Init io ports
 	for(uint8_t i = 0; i < MAX_PINS; i++){
-		enum e_IO_type type = (enum e_IO_type)eeprom_read_byte((const uint8_t *)&EE_Mem.IO[i].type);
-		union u_IO_event def;
-		def.value = eeprom_read_byte((const uint8_t *)&EE_Mem.IO[i]._default);
+		uint16_t portconfig = eeprom_read_word(&EE_Mem.IO[i]);
+		union u_IO_event defaultState;
+		defaultState.value = (portconfig & 0x0F00) >> 8;
+		enum e_IO_type type = (enum e_IO_type)(portconfig >> 12);
 
 		uart.transmit(list[i] / 8, HEX, 2);
 		uart.transmit('\t');
@@ -182,21 +186,23 @@ void IO::init(){
 		uart.transmit('\t');
 		uart.transmit((uint8_t)type, HEX, 2);
 		uart.transmit('\t');
-		uart.transmit(def.value, HEX, 2);
+		uart.transmit(defaultState.value, HEX, 2);
 		uart.transmit('\n');
 
-		typelist[i] = type;
+		typelist[i] = (enum e_IO_type)type;
 
 		if(type == IO_Undefined)
 			in(i);
 		else if(type <= IO_Output_PWM){
 			out(i);
-			set(i, def);
+			set(i, defaultState);
 		}
-		else{
+		else{ // IO_Input_*
+			if(portconfig & 0x0080)
+				set_mask(i, invertedMask);
+
 			in(i);
-			def.output = IO_event_High;
-			set(i, def);
+			set(i, defaultState);
 		}
 	}
 
@@ -374,7 +380,7 @@ void IO::readInput(){
 		/* Wait for transmission complete */
 		while(!(SPSR & (1<<SPIF)));
 
-		readData[i] = SPDR; 
+		readData[i] = SPDR ^ invertedMask[i]; 
 		// printHex(readData[i]);
 	}
 
@@ -386,7 +392,7 @@ void IO::readInput(){
 
 void IO::readInput(){
 	for(uint8_t i = 0; i < MAX_PORTS; i++){
-		readData[i] = (*(volatile uint16_t *)pinlist[i]) & readMask[i];
+		readData[i] = ((*(volatile uint16_t *)pinlist[i]) & readMask[i]) ^ invertedMask[i];
 	}
 }
 
@@ -440,6 +446,12 @@ void IO::set(uint8_t pin, union u_IO_event func){
 	}
 	else if(type == IO_Output_PWM){
 		
+	}
+	else{ // IO_Input_*
+		if(func.output == IO_event_High)
+			high(pin);
+		else
+			low(pin);
 	}
 }
 

@@ -11,16 +11,12 @@ struct _EE_Settings {
 
 };
 
-struct _EE_IO_Port {
-	uint8_t type;
-	uint8_t _default;
-};
-
 struct _EE_Mem {
 	uint8_t ModuleID;
 	uint8_t NodeID;
 	struct _EE_Settings settings;
-	struct _EE_IO_Port IO[MAX_PINS];
+	uint16_t IO[MAX_PINS]; // MSB - 4 bit | 4 bit   | 1 bit    | 7 bit    - LSB
+	                       //       type  | default | inverted | reserved
 };
 
 extern struct _EE_Mem EEMEM EE_Mem;

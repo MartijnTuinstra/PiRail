@@ -234,18 +234,49 @@ void RNet::read(){
   }
   else if(tmp_rx_msg[0] == RNet_OPC_ReadEEPROM){
     uart.transmit("RDEE\n", 5);
-    uint8_t checksum = RNET_CHECKSUM_SEED ^ RNet_OPC_ReadEEPROM ^ sizeof(struct _EE_Mem);
-    uint8_t x = 0;
-    tx.buf[(tx.write_index+(x++)) % RNET_MAX_BUFFER] = RNet_OPC_ReadEEPROM;
-    tx.buf[(tx.write_index+(x++)) % RNET_MAX_BUFFER] = sizeof(struct _EE_Mem);
-    for(uint8_t i = 0; i < sizeof(struct _EE_Mem); i++){
-      checksum = checksum ^ tx.buf[(tx.write_index+x) % RNET_MAX_BUFFER];
-      tx.buf[(tx.write_index+(x++)) % RNET_MAX_BUFFER] = eeprom_read_byte((&EE_Mem.ModuleID) + i);
+    if(sizeof(struct _EE_Mem) > 100){
+      uint8_t parts = sizeof(struct _EE_Mem) / 100;
+
+      for (uint8_t i = 0; i < parts; i++){
+        uint8_t checksum = RNET_CHECKSUM_SEED ^ (i + 1) ^ parts ^ RNet_OPC_ReadEEPROM ^ sizeof(struct _EE_Mem);
+        uint8_t x = 0;
+        tx.buf[(tx.write_index+(x++)) % RNET_MAX_BUFFER] = RNet_OPC_ReadEEPROM;
+        tx.buf[(tx.write_index+(x++)) % RNET_MAX_BUFFER] = sizeof(struct _EE_Mem);
+        tx.buf[(tx.write_index+(x++)) % RNET_MAX_BUFFER] = i + 1; // Part
+        tx.buf[(tx.write_index+(x++)) % RNET_MAX_BUFFER] = parts; //  out of parts
+        for(uint8_t j = 0; j < 100; j++){
+          if((uint16_t)(i * 100 + j) > sizeof(struct _EE_Mem)){
+            break;
+          }
+
+          checksum = checksum ^ tx.buf[(tx.write_index+x) % RNET_MAX_BUFFER];
+          tx.buf[(tx.write_index+(x++)) % RNET_MAX_BUFFER] = eeprom_read_byte((&EE_Mem.ModuleID) + (i*100) + j);
+        }
+        tx.buf[(tx.write_index+(x++)) % RNET_MAX_BUFFER] = checksum;
+        
+        tx.write_index = (tx.write_index + x) % RNET_MAX_BUFFER;
+        txdata++;
+
+        // Wait untill packet is fully transmitted
+        while(tx.write_index != tx.read_index){}
+      }
     }
-    tx.buf[(tx.write_index+(x++)) % RNET_MAX_BUFFER] = checksum;
-    
-    tx.write_index = (tx.write_index + x) % RNET_MAX_BUFFER;
-    txdata++;
+    else{
+      uint8_t checksum = RNET_CHECKSUM_SEED ^ RNet_OPC_ReadEEPROM ^ sizeof(struct _EE_Mem);
+      uint8_t x = 0;
+      tx.buf[(tx.write_index+(x++)) % RNET_MAX_BUFFER] = RNet_OPC_ReadEEPROM;
+      tx.buf[(tx.write_index+(x++)) % RNET_MAX_BUFFER] = sizeof(struct _EE_Mem);
+      tx.buf[(tx.write_index+(x++)) % RNET_MAX_BUFFER] = 1; // Part
+      tx.buf[(tx.write_index+(x++)) % RNET_MAX_BUFFER] = 1; //  out of parts
+      for(uint8_t i = 0; i < sizeof(struct _EE_Mem); i++){
+        checksum = checksum ^ tx.buf[(tx.write_index+x) % RNET_MAX_BUFFER];
+        tx.buf[(tx.write_index+(x++)) % RNET_MAX_BUFFER] = eeprom_read_byte((&EE_Mem.ModuleID) + i);
+      }
+      tx.buf[(tx.write_index+(x++)) % RNET_MAX_BUFFER] = checksum;
+      
+      tx.write_index = (tx.write_index + x) % RNET_MAX_BUFFER;
+      txdata++;
+    }
   }
 }
 #endif

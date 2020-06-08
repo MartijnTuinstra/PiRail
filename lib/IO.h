@@ -95,6 +95,6 @@ void Init_IO(Unit * U, Node_adr adr, void * pntr);
 void update_IO();
 void update_IO_Module(uint8_t module);
 
-void IO_set_input(uint8_t module, uint8_t id, uint8_t port, uint8_t state);
+void IO_set_input(IO_Port * port, uint8_t state);
 
 #endif

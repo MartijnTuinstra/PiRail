@@ -81,7 +81,7 @@ inline void update_IO_Module(uint8_t module){
       if(U_IO(module, n, io)->type == IO_Undefined)
         continue;
 
-      loggerf(WARNING, "Update io %02i:%02i:%02i %s (%i)", module, n, io, IO_event_string[U_IO(module, n, io)->type][U_IO(module, n, io)->w_state.value], U_IO(module, n, io)->w_state.value);
+      // loggerf(WARNING, "Update io %02i:%02i:%02i %s (%i)", module, n, io, IO_event_string[U_IO(module, n, io)->type][U_IO(module, n, io)->w_state.value], U_IO(module, n, io)->w_state.value);
       if(U_IO(module, n, io)->type <= IO_Output_PWM && U_IO(module, n, io)->w_state.value != U_IO(module, n, io)->r_state.value){
         U_IO(module, n, io)->r_state.value = U_IO(module, n, io)->w_state.value;
       }
@@ -102,25 +102,25 @@ inline void update_IO_Module(uint8_t module){
   }
 }
 
-void IO_set_input(uint8_t module, uint8_t id, uint8_t port, uint8_t state){
-  if(!Units[module] || !Units[module]->Node || !U_IO(module,id,port))
+void IO_set_input(IO_Port * port, uint8_t state){
+  if(!port)
     return;
 
   if(state){ // High
-    U_IO(module, id, port)->w_state.value = IO_event_High;
-    U_IO(module, id, port)->r_state.value = IO_event_High;
+    port->w_state.value = IO_event_High;
+    port->r_state.value = IO_event_High;
   }
   else{ // Low
-    U_IO(module, id, port)->w_state.value = IO_event_Low;
-    U_IO(module, id, port)->r_state.value = IO_event_Low;
+    port->w_state.value = IO_event_Low;
+    port->r_state.value = IO_event_Low;
   }
 
-  if(U_IO(module, id, port)->type == IO_Input_Block){
-    ((Block *)U_IO(module, id, port)->object)->IOchanged = 1;
-    putAlgorQueue((Block *)U_IO(module, id, port)->object, 1);
+  if(port->type == IO_Input_Block){
+    ((Block *)port->object)->IOchanged = 1;
+    putAlgorQueue((Block *)port->object, 1);
   }
   else{
-    loggerf(CRITICAL, "Unknown io type %i", U_IO(module, id, port)->type);
+    loggerf(CRITICAL, "Unknown io type %i", port->type);
   }
 
 }

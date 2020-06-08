@@ -39,7 +39,7 @@ void print_link(char ** debug, struct s_link_conf link){
 void print_Node(struct node_conf node){
   char debug[300];
   char * debugptr = debug;
-  const char hexset[16] = "0123456789ABCDEF";
+  const char hexset[17] = "0123456789ABCDEF";
 
   debugptr += sprintf(debugptr, "%i\t%i\t", node.Node, node.size);
 
@@ -386,7 +386,7 @@ void print_train_config(struct train_config * config){
 int read_module_config(struct module_config * config, FILE * fp){
 
 
-  char * header = _calloc(2, char);
+  char * header = (char *)_calloc(2, char);
 
   fread(header, 1, 1, fp);
 
@@ -394,7 +394,7 @@ int read_module_config(struct module_config * config, FILE * fp){
   long fsize = ftell(fp);
   fseek(fp, 0, SEEK_SET);
 
-  char * buffer = _calloc(fsize + 10, char);
+  char * buffer = (char *)_calloc(fsize + 10, char);
   char * buffer_start = &buffer[0];
   fread(buffer, fsize, 1, fp);
 
@@ -409,38 +409,38 @@ int read_module_config(struct module_config * config, FILE * fp){
     return -1;
   }
 
-  config->Nodes = _calloc(config->header.IO_Nodes, struct node_conf);
+  config->Nodes = (struct node_conf *)_calloc(config->header.IO_Nodes, struct node_conf);
   
   for(int i = 0; i < config->header.IO_Nodes; i++){
     config->Nodes[i]  = read_s_node_conf(buf_ptr);
   }
 
-  config->Blocks = _calloc(config->header.Blocks, struct s_block_conf);
+  config->Blocks = (struct s_block_conf *)_calloc(config->header.Blocks, struct s_block_conf);
 
   
   for(int i = 0; i < config->header.Blocks; i++){
     config->Blocks[i]  = read_s_block_conf(buf_ptr);
   }
 
-  config->Switches = _calloc(config->header.Switches, struct switch_conf);
+  config->Switches = (struct switch_conf *)_calloc(config->header.Switches, struct switch_conf);
 
   for(int i = 0; i < config->header.Switches; i++){
     config->Switches[i]  = read_s_switch_conf(buf_ptr);
   }
 
-  config->MSSwitches = _calloc(config->header.MSSwitches, struct ms_switch_conf);
+  config->MSSwitches = (struct ms_switch_conf *)_calloc(config->header.MSSwitches, struct ms_switch_conf);
 
   for(int i = 0; i < config->header.MSSwitches; i++){
     config->MSSwitches[i]  = read_s_ms_switch_conf(buf_ptr);
   }
 
-  config->Signals = _calloc(config->header.Signals, struct signal_conf);
+  config->Signals = (struct signal_conf *)_calloc(config->header.Signals, struct signal_conf);
 
   for(int i = 0; i < config->header.Signals; i++){
     config->Signals[i]  = read_s_signal_conf(buf_ptr);
   }
 
-  config->Stations = _calloc(config->header.Stations, struct station_conf);
+  config->Stations = (struct station_conf *)_calloc(config->header.Stations, struct station_conf);
 
   for(int i = 0; i < config->header.Stations; i++){
     config->Stations[i]  = read_s_station_conf(buf_ptr);
@@ -450,7 +450,7 @@ int read_module_config(struct module_config * config, FILE * fp){
   memcpy(&config->Layout_length, *buf_ptr, sizeof(uint16_t));
   *buf_ptr += sizeof(uint16_t) + 1;
 
-  config->Layout = _calloc(config->Layout_length + 1, uint8_t);
+  config->Layout = (char *)_calloc(config->Layout_length + 1, char);
   memcpy(config->Layout, *buf_ptr, config->Layout_length);
 
   _free(header);
@@ -460,7 +460,7 @@ int read_module_config(struct module_config * config, FILE * fp){
 }
 
 int read_train_config(struct train_config * config, FILE * fp){
-  char * header = _calloc(2, char);
+  char * header = (char *)_calloc(2, char);
 
   fread(header, 1, 1, fp);
 
@@ -468,7 +468,7 @@ int read_train_config(struct train_config * config, FILE * fp){
   long fsize = ftell(fp);
   fseek(fp, 0, SEEK_SET);
 
-  char * buffer = _calloc(fsize, char);
+  char * buffer = (char *)_calloc(fsize, char);
   char * buffer_start = &buffer[0];
   fread(buffer, fsize, 1, fp);
 
@@ -485,11 +485,11 @@ int read_train_config(struct train_config * config, FILE * fp){
     // loggerf(WARNING, "Please re-save to update", config->header.module);
   }
 
-  config->P_Cat = _calloc(config->header.P_Catagories, struct cat_conf);
-  config->C_Cat = _calloc(config->header.C_Catagories, struct cat_conf);
-  config->Engines = _calloc(config->header.Engines, struct engines_conf);
-  config->Cars = _calloc(config->header.Cars, struct cars_conf);
-  config->Trains = _calloc(config->header.Trains, struct trains_conf);
+  config->P_Cat = (struct cat_conf *)_calloc(config->header.P_Catagories, struct cat_conf);
+  config->C_Cat = (struct cat_conf *)_calloc(config->header.C_Catagories, struct cat_conf);
+  config->Engines = (struct engines_conf *)_calloc(config->header.Engines, struct engines_conf);
+  config->Cars = (struct cars_conf *)_calloc(config->header.Cars, struct cars_conf);
+  config->Trains = (struct trains_conf *)_calloc(config->header.Trains, struct trains_conf);
   
   for(int i = 0; i < config->header.P_Catagories; i++){
     config->P_Cat[i]  = read_cat_conf(buf_ptr);
@@ -538,11 +538,11 @@ void modify_Node(struct module_config * config, char ** cmds, uint8_t cmd_len){
 
     if(config->header.IO_Nodes == 0){
       printf("Calloc");
-      config->Nodes = _calloc(1, struct s_node_conf);
+      config->Nodes = (struct node_conf *)_calloc(1, struct s_node_conf);
     }
     else{
       printf("Realloc");
-      config->Nodes = _realloc(config->Nodes, config->header.IO_Nodes+1, struct s_node_conf);
+      config->Nodes = (struct node_conf *)_realloc(config->Nodes, config->header.IO_Nodes+1, struct s_node_conf);
     }
     id = config->header.IO_Nodes++;
 
@@ -561,7 +561,7 @@ void modify_Node(struct module_config * config, char ** cmds, uint8_t cmd_len){
 
     if(id == (config->header.IO_Nodes - 1) && id >= 0){
       memset(&config->Nodes[config->header.IO_Nodes - 1], 0, sizeof(struct s_node_conf));
-      config->Nodes = _realloc(config->Nodes, --config->header.IO_Nodes, struct s_node_conf);
+      config->Nodes = (struct node_conf *)_realloc(config->Nodes, --config->header.IO_Nodes, struct s_node_conf);
     }
     else{
       printf("Only last Node can be removed\n");
@@ -576,9 +576,9 @@ void modify_Node(struct module_config * config, char ** cmds, uint8_t cmd_len){
     fgets(_cmd, 20, stdin);
     if(sscanf(_cmd, "%i", &tmp) > 0){
       if(config->Nodes[id].size)
-        config->Nodes[id].data = _realloc(config->Nodes[id].data, tmp, char);
+        config->Nodes[id].data = (uint8_t *)_realloc(config->Nodes[id].data, tmp, uint8_t);
       else
-        config->Nodes[id].data = _calloc(tmp, char);
+        config->Nodes[id].data = (uint8_t *)_calloc(tmp, uint8_t);
 
       config->Nodes[id].size = tmp;
     }
@@ -603,7 +603,7 @@ void modify_Node(struct module_config * config, char ** cmds, uint8_t cmd_len){
       else if(strcmp(cmds[i], "-p") == 0){
         printf("set size");
         config->Nodes[id].size = atoi(cmds[i+1]);
-        config->Nodes[id].data = _realloc(config->Nodes[id].data, (config->Nodes[id].size + 2) / 2, char);
+        config->Nodes[id].data = (uint8_t *)_realloc(config->Nodes[id].data, (config->Nodes[id].size + 2) / 2, uint8_t);
         i+=2;
       }
       else if(strcmp(cmds[i], "-t") == 0){
@@ -645,11 +645,11 @@ void modify_Block(struct module_config * config, char ** cmds, uint8_t cmd_len){
 
     if(config->header.Blocks == 0){
       printf("Calloc");
-      config->Blocks = _calloc(1, struct s_block_conf);
+      config->Blocks = (struct s_block_conf *)_calloc(1, struct s_block_conf);
     }
     else{
       printf("Realloc");
-      config->Blocks = _realloc(config->Blocks, config->header.Blocks+1, struct s_block_conf);
+      config->Blocks = (struct s_block_conf *)_realloc(config->Blocks, config->header.Blocks+1, struct s_block_conf);
     }
     memset(&config->Blocks[config->header.Blocks], 0, sizeof(struct s_block_conf));
     config->Blocks[config->header.Blocks].id = config->header.Blocks;
@@ -667,7 +667,7 @@ void modify_Block(struct module_config * config, char ** cmds, uint8_t cmd_len){
 
     if(id == (config->header.Blocks - 1) && id >= 0){
       memset(&config->Blocks[config->header.Blocks - 1], 0, sizeof(struct s_block_conf));
-      config->Blocks = _realloc(config->Blocks, --config->header.Blocks, struct s_block_conf);
+      config->Blocks = (struct s_block_conf *)_realloc(config->Blocks, --config->header.Blocks, struct s_block_conf);
     }
     else{
       printf("Only last block can be removed\n");
@@ -850,11 +850,11 @@ void modify_Switch(struct module_config * config, char cmd){
 
     if(config->header.Switches == 0){
       printf("Calloc");
-      config->Switches = _calloc(1, struct switch_conf);
+      config->Switches = (struct switch_conf *)_calloc(1, struct switch_conf);
     }
     else{
       printf("Realloc");
-      config->Switches = _realloc(config->Switches, config->header.Switches+1, struct switch_conf);
+      config->Switches = (struct switch_conf *)_realloc(config->Switches, config->header.Switches+1, struct switch_conf);
     }
     memset(&config->Switches[config->header.Switches], 0, sizeof(struct switch_conf));
     config->Switches[config->header.Switches].id = config->header.Switches;
@@ -868,7 +868,7 @@ void modify_Switch(struct module_config * config, char cmd){
 
     if(id == (config->header.Switches - 1) && id >= 0){
       memset(&config->Switches[config->header.Switches - 1], 0, sizeof(struct switch_conf));
-      config->Switches = _realloc(config->Switches, --config->header.Switches, struct switch_conf);
+      config->Switches = (struct switch_conf *)_realloc(config->Switches, --config->header.Switches, struct switch_conf);
     }
     else{
       printf("Only last block can be removed\n");
@@ -962,20 +962,20 @@ void modify_MSSwitch(struct module_config * config, char cmd){
 
     if(config->header.MSSwitches == 0){
       printf("Calloc");
-      config->MSSwitches = _calloc(1, struct ms_switch_conf);
+      config->MSSwitches = (struct ms_switch_conf *)_calloc(1, struct ms_switch_conf);
     }
     else{
       printf("Realloc");
-      config->MSSwitches = _realloc(config->MSSwitches, config->header.MSSwitches+1, struct ms_switch_conf);
+      config->MSSwitches = (struct ms_switch_conf *)_realloc(config->MSSwitches, config->header.MSSwitches+1, struct ms_switch_conf);
     }
     memset(&config->MSSwitches[config->header.MSSwitches], 0, sizeof(struct ms_switch_conf));
     id = config->header.MSSwitches++;
 
     //Set child pointers
     config->MSSwitches[id].nr_states = 1;
-    config->MSSwitches[id].states = _calloc(1, struct s_ms_switch_state_conf);
+    config->MSSwitches[id].states = (struct s_ms_switch_state_conf *)_calloc(1, struct s_ms_switch_state_conf);
     config->MSSwitches[id].IO = 1;
-    config->MSSwitches[id].IO_Ports = _calloc(1, struct s_IO_port_conf);
+    config->MSSwitches[id].IO_Ports = (struct s_IO_port_conf *)_calloc(1, struct s_IO_port_conf);
   }
   else if(cmd == 'r'){
     printf("Remove Switch ID: ");
@@ -985,7 +985,7 @@ void modify_MSSwitch(struct module_config * config, char cmd){
 
     if(id == (config->header.MSSwitches - 1) && id >= 0){
       memset(&config->MSSwitches[config->header.MSSwitches - 1], 0, sizeof(struct ms_switch_conf));
-      config->MSSwitches = _realloc(config->MSSwitches, --config->header.MSSwitches, struct ms_switch_conf);
+      config->MSSwitches = (struct ms_switch_conf *)_realloc(config->MSSwitches, --config->header.MSSwitches, struct ms_switch_conf);
     }
     else{
       printf("Only last block can be removed\n");
@@ -1003,7 +1003,7 @@ void modify_MSSwitch(struct module_config * config, char cmd){
     fgets(_cmd, 20, stdin);
     if(sscanf(_cmd, "%i", &tmp) > 0){
       config->MSSwitches[id].nr_states = tmp;
-      config->MSSwitches[id].states = _realloc(config->MSSwitches[id].states, tmp, struct s_ms_switch_state_conf);
+      config->MSSwitches[id].states = (struct s_ms_switch_state_conf *)_realloc(config->MSSwitches[id].states, tmp, struct s_ms_switch_state_conf);
     }
 
     printf("MSSwitch nr IO Ports  (%2i)    | ", config->MSSwitches[id].IO);
@@ -1011,7 +1011,7 @@ void modify_MSSwitch(struct module_config * config, char cmd){
     if(sscanf(_cmd, "%i", &tmp) > 0){
       if(tmp <= 16){
         config->MSSwitches[id].IO = tmp;
-        config->MSSwitches[id].IO_Ports = _realloc(config->MSSwitches[id].IO_Ports, tmp, struct s_IO_port_conf);
+        config->MSSwitches[id].IO_Ports = (struct s_IO_port_conf *)_realloc(config->MSSwitches[id].IO_Ports, tmp, struct s_IO_port_conf);
       }
       else{
         printf("Invalid length\n");
@@ -1110,11 +1110,11 @@ void modify_Signal(struct module_config * config, char cmd){
 
     if(config->header.Signals == 0){
       printf("Calloc");
-      config->Signals = _calloc(1, struct signal_conf);
+      config->Signals = (struct signal_conf *)_calloc(1, struct signal_conf);
     }
     else{
       printf("Realloc");
-      config->Signals = _realloc(config->Signals, config->header.Signals+1, struct signal_conf);
+      config->Signals = (struct signal_conf *)_realloc(config->Signals, config->header.Signals+1, struct signal_conf);
     }
     memset(&config->Signals[config->header.Signals], 0, sizeof(struct signal_conf));
     id = config->header.Signals++;
@@ -1122,8 +1122,8 @@ void modify_Signal(struct module_config * config, char cmd){
     //Set child pointers
     config->Signals[id].id = id;
     config->Signals[id].output_len = 1;
-    config->Signals[id].output = _calloc(1, struct s_IO_port_conf);
-    config->Signals[id].stating = _calloc(1, struct s_IO_signal_event_conf);
+    config->Signals[id].output = (struct s_IO_port_conf *)_calloc(1, struct s_IO_port_conf);
+    config->Signals[id].stating = (struct s_IO_signal_event_conf *)_calloc(1, struct s_IO_signal_event_conf);
   }
   else if(cmd == 'r'){
     printf("Remove Signal ID: ");
@@ -1136,7 +1136,7 @@ void modify_Signal(struct module_config * config, char cmd){
       _free(config->Signals[id].stating);
 
       memset(&config->Signals[config->header.Signals - 1], 0, sizeof(struct signal_conf));
-      config->Signals = _realloc(config->Signals, --config->header.Signals, struct signal_conf);
+      config->Signals = (struct signal_conf *)_realloc(config->Signals, --config->header.Signals, struct signal_conf);
     }
     else{
       printf("Only last block can be removed\n");
@@ -1169,8 +1169,8 @@ void modify_Signal(struct module_config * config, char cmd){
     printf("Signals Outputs (%i) | ", config->Signals[id].output_len);
     fgets(_cmd, 20, stdin);
     if(sscanf(_cmd, "%i", &tmp) > 0){
-      config->Signals[id].output = _realloc(config->Signals[id].output, tmp, struct s_IO_port_conf);
-      config->Signals[id].stating = _realloc(config->Signals[id].stating, tmp, struct s_IO_signal_event_conf);
+      config->Signals[id].output = (struct s_IO_port_conf *)_realloc(config->Signals[id].output, tmp, struct s_IO_port_conf);
+      config->Signals[id].stating = (struct s_IO_signal_event_conf *)_realloc(config->Signals[id].stating, tmp, struct s_IO_signal_event_conf);
       config->Signals[id].output_len = tmp;
     }
 
@@ -1226,20 +1226,20 @@ void modify_Station(struct module_config * config, char cmd){
 
     if(config->header.Stations == 0){
       printf("Calloc");
-      config->Stations = _calloc(1, struct station_conf);
+      config->Stations = (struct station_conf *)_calloc(1, struct station_conf);
     }
     else{
       printf("Realloc");
-      config->Stations = _realloc(config->Stations, config->header.Stations+1, struct station_conf);
+      config->Stations = (struct station_conf *)_realloc(config->Stations, config->header.Stations+1, struct station_conf);
     }
     memset(&config->Stations[config->header.Stations], 0, sizeof(struct station_conf));
     id = config->header.Stations++;
 
     //Set child pointers
     config->Stations[id].name_len = 1;
-    config->Stations[id].name = _calloc(1, char);
+    config->Stations[id].name = (char *)_calloc(1, char);
     config->Stations[id].nr_blocks = 1;
-    config->Stations[id].blocks = _calloc(1, uint8_t);
+    config->Stations[id].blocks = (uint8_t *)_calloc(1, uint8_t);
   }
   else if(cmd == 'r'){
     printf("Remove Station ID: ");
@@ -1249,7 +1249,7 @@ void modify_Station(struct module_config * config, char cmd){
 
     if(id == (config->header.Stations - 1) && id >= 0){
       memset(&config->Stations[config->header.Stations - 1], 0, sizeof(struct station_conf));
-      config->Stations = _realloc(config->Stations, --config->header.Stations, struct station_conf);
+      config->Stations = (struct station_conf *)_realloc(config->Stations, --config->header.Stations, struct station_conf);
     }
     else{
       printf("Only last block can be removed\n");
@@ -1267,7 +1267,7 @@ void modify_Station(struct module_config * config, char cmd){
     fgets(_cmd, 20, stdin);
     if(sscanf(_cmd, "%s", _cmd) > 0){
       tmp = strlen(_cmd);
-      config->Stations[id].name = _realloc(config->Stations[id].name, tmp, char);
+      config->Stations[id].name = (char *)_realloc(config->Stations[id].name, tmp, char);
       memcpy(config->Stations[id].name, _cmd, tmp);
       config->Stations[id].name[tmp] = 0;
       config->Stations[id].name_len = tmp;
@@ -1277,7 +1277,7 @@ void modify_Station(struct module_config * config, char cmd){
     fgets(_cmd, 20, stdin);
     if(sscanf(_cmd, "%i", &tmp) > 0){
       config->Stations[id].nr_blocks = tmp;
-      config->Stations[id].blocks = _realloc(config->Stations[id].blocks, tmp, uint8_t);
+      config->Stations[id].blocks = (uint8_t *)_realloc(config->Stations[id].blocks, tmp, uint8_t);
     }
 
     for(int i = 0; i < config->Stations[id].nr_blocks; i++){
@@ -1357,7 +1357,7 @@ void import_Layout(struct module_config * config, char * location){
   long fsize = ftell(fp);
   fseek(fp, 0, SEEK_SET);
 
-  config->Layout = _realloc(config->Layout, fsize, uint8_t);
+  config->Layout = (char *)_realloc(config->Layout, fsize, char);
 
   fread(config->Layout, fsize, 1, fp);
   // config->Layout[fsize] = 0;
@@ -1386,20 +1386,20 @@ void modify_Car(struct train_config * config, char cmd){
 
     if(config->header.Cars == 0){
       printf("Calloc");
-      config->Cars = _calloc(1, struct cars_conf);
+      config->Cars = (struct cars_conf *)_calloc(1, struct cars_conf);
     }
     else{
       printf("Realloc");
-      config->Cars = _realloc(config->Cars, config->header.Cars+1, struct cars_conf);
+      config->Cars = (struct cars_conf *)_realloc(config->Cars, config->header.Cars+1, struct cars_conf);
     }
     memset(&config->Cars[config->header.Cars], 0, sizeof(struct cars_conf));
     id = config->header.Cars++;
 
     //Set child pointers
     config->Cars[id].name_len = 1;
-    config->Cars[id].name = _calloc(1, char);
+    config->Cars[id].name = (char *)_calloc(1, char);
     config->Cars[id].icon_path_len = 1;
-    config->Cars[id].icon_path = _calloc(1, char);
+    config->Cars[id].icon_path = (char *)_calloc(1, char);
   }
   else if(cmd == 'r'){
     printf("Remove Station ID: ");
@@ -1413,7 +1413,7 @@ void modify_Car(struct train_config * config, char cmd){
       _free(config->Cars[config->header.Cars - 1].icon_path);
 
       memset(&config->Cars[config->header.Cars - 1], 0, sizeof(struct cars_conf));
-      config->Cars = _realloc(config->Cars, --config->header.Cars, struct cars_conf);
+      config->Cars = (struct cars_conf *)_realloc(config->Cars, --config->header.Cars, struct cars_conf);
     }
     else{
       printf("Only last block can be removed\n");
@@ -1449,7 +1449,7 @@ void modify_Car(struct train_config * config, char cmd){
     fgets(_cmd, 80, stdin);
     if(sscanf(_cmd, "%s", _cmd) > 0){
       tmp = strlen(_cmd);
-      config->Cars[id].name = _realloc(config->Cars[id].name, tmp, char);
+      config->Cars[id].name = (char *)_realloc(config->Cars[id].name, tmp, char);
       memcpy(config->Cars[id].name, _cmd, tmp);
       config->Cars[id].name[tmp] = 0;
       config->Cars[id].name_len = tmp;
@@ -1459,7 +1459,7 @@ void modify_Car(struct train_config * config, char cmd){
     fgets(_cmd, 80, stdin);
     if(sscanf(_cmd, "%s", _cmd) > 0){
       tmp = strlen(_cmd);
-      config->Cars[id].icon_path = _realloc(config->Cars[id].icon_path, tmp, char);
+      config->Cars[id].icon_path = (char *)_realloc(config->Cars[id].icon_path, tmp, char);
       memcpy(config->Cars[id].icon_path, _cmd, tmp);
       config->Cars[id].icon_path[tmp] = 0;
       config->Cars[id].icon_path_len = tmp;
@@ -1490,49 +1490,54 @@ void modify_Car(struct train_config * config, char cmd){
   }
 }
 
-void modify_Engine(struct train_config * config, char cmd){
+void modify_Engine(struct train_config * config, char ** cmds, uint8_t cmd_len){
   int id;
-  char _cmd[80];
   int tmp, tmp1;//, tmp2;
-  if(cmd == 'e'){
-    printf("Engine ID: ");
-    fgets(_cmd, 80, stdin);
-    fgets(_cmd, 80, stdin);
-    if(sscanf(_cmd, "%i", &id) < 1)
+  char mode = cmds[0][0];
+  if(mode == 'e'){
+    if(cmd_len > 2){
+      id = atoi(cmds[2]);
+      printf("Editing block %i\n", id);
+    }
+    else{
+      printf("No ID supplied\n");
       return;
-    printf("Editing Engine %i\n", id);
+    }
   }
-  else if(cmd == 'a'){
+  else if(mode == 'a'){
     printf("Engine ID: (%i)\n", config->header.Engines);
-    fgets(_cmd, 80, stdin); // Clear stdin
 
     if(config->header.Engines == 0){
       printf("Calloc");
-      config->Engines = _calloc(1, struct engines_conf);
+      config->Engines = (struct engines_conf *)_calloc(1, struct engines_conf);
     }
     else{
       printf("Realloc");
-      config->Engines = _realloc(config->Engines, config->header.Engines+1, struct engines_conf);
+      config->Engines = (struct engines_conf *)_realloc(config->Engines, config->header.Engines+1, struct engines_conf);
     }
     memset(&config->Engines[config->header.Engines], 0, sizeof(struct engines_conf));
+    // config->Engines[config->header.Engines].id = config->header.Engines;
     id = config->header.Engines++;
 
     //Set child pointers
     config->Engines[id].name_len = 1;
-    config->Engines[id].name = _calloc(1, char);
+    config->Engines[id].name = (char *)_calloc(1, char);
     config->Engines[id].img_path_len = 1;
-    config->Engines[id].img_path = _calloc(1, char);
+    config->Engines[id].img_path = (char *)_calloc(1, char);
     config->Engines[id].icon_path_len = 1;
-    config->Engines[id].icon_path = _calloc(1, char);
+    config->Engines[id].icon_path = (char *)_calloc(1, char);
     config->Engines[id].config_steps = 1;
-    config->Engines[id].speed_steps = _calloc(1, struct engine_speed_steps);
+    config->Engines[id].speed_steps = (struct engine_speed_steps *)_calloc(1, struct engine_speed_steps);
   }
-  else if(cmd == 'r'){
-    printf("Remove Car ID: ");
-    fgets(_cmd, 80, stdin);
-    fgets(_cmd, 80, stdin);
-    if(sscanf(_cmd, "%i", &id) < 1)
+  else if(mode == 'r'){
+    if(cmd_len > 2){
+      id = atoi(cmds[2]);
+      printf("Removing block %i\n", id);
+    }
+    else{
+      printf("No ID supplied\n");
       return;
+    }
 
     if(id == (config->header.Engines - 1) && id >= 0){
       _free(config->Engines[config->header.Engines - 1].name);
@@ -1541,7 +1546,7 @@ void modify_Engine(struct train_config * config, char cmd){
       _free(config->Engines[config->header.Engines - 1].speed_steps);
 
       memset(&config->Engines[config->header.Engines - 1], 0, sizeof(struct engines_conf));
-      config->Engines = _realloc(config->Engines, --config->header.Engines, struct engines_conf);
+      config->Engines = (struct engines_conf *)_realloc(config->Engines, --config->header.Engines, struct engines_conf);
     }
     else{
       printf("Only last engine can be removed\n");
@@ -1549,8 +1554,9 @@ void modify_Engine(struct train_config * config, char cmd){
   }
 
 
-  if(cmd == 'e' || cmd == 'a'){
+  if((mode == 'e' && cmd_len <= 3) || (mode == 'a' && cmd_len <= 2)){
     printf("DCC Address (%i)         | ", config->Engines[id].DCC_ID);
+    char _cmd[80];
     fgets(_cmd, 80, stdin);
     if(sscanf(_cmd, "%i", &tmp) > 0)
       config->Engines[id].DCC_ID = tmp;
@@ -1594,7 +1600,7 @@ void modify_Engine(struct train_config * config, char cmd){
     fgets(_cmd, 80, stdin);
     if(sscanf(_cmd, "%s", _cmd) > 0){
       tmp = strlen(_cmd);
-      config->Engines[id].name = _realloc(config->Engines[id].name, tmp, char);
+      config->Engines[id].name = (char *)_realloc(config->Engines[id].name, tmp, char);
       memcpy(config->Engines[id].name, _cmd, tmp);
       config->Engines[id].name[tmp] = 0;
       config->Engines[id].name_len = tmp;
@@ -1604,7 +1610,7 @@ void modify_Engine(struct train_config * config, char cmd){
     fgets(_cmd, 80, stdin);
     if(sscanf(_cmd, "%s", _cmd) > 0){
       tmp = strlen(_cmd);
-      config->Engines[id].img_path = _realloc(config->Engines[id].img_path, tmp, char);
+      config->Engines[id].img_path = (char *)_realloc(config->Engines[id].img_path, tmp, char);
       memcpy(config->Engines[id].img_path, _cmd, tmp);
       config->Engines[id].img_path[tmp] = 0;
       config->Engines[id].img_path_len = tmp;
@@ -1614,11 +1620,45 @@ void modify_Engine(struct train_config * config, char cmd){
     fgets(_cmd, 80, stdin);
     if(sscanf(_cmd, "%s", _cmd) > 0){
       tmp = strlen(_cmd);
-      config->Engines[id].icon_path = _realloc(config->Engines[id].icon_path, tmp, char);
+      config->Engines[id].icon_path = (char *)_realloc(config->Engines[id].icon_path, tmp, char);
       memcpy(config->Engines[id].icon_path, _cmd, tmp);
       config->Engines[id].icon_path[tmp] = 0;
       config->Engines[id].icon_path_len = tmp;
     }
+  }
+  else if(mode == 'e'){
+    printf("Argment mode\n");
+    cmds = &cmds[3];
+    cmd_len -= 3;
+
+    for(uint8_t i = 0; i < cmd_len;){
+      printf("%s\t", cmds[i]);
+      if(strcmp(cmds[i], "-h") == 0){
+        // Help
+        printf("Arguments for Engine: \n");
+        printf("\t-f\tFunction [Fn] [F_type] [F_Hold]\n");
+        // printf("\t-N\tNextLink\n");
+        // printf("\t-P\tPrevLink\n");
+        // printf("\t-s\tSpeed\n");
+        // printf("\t-l\tLength\n");
+        // printf("\t--OW\tOneWay\n");
+        // printf("\t-d\tDirection\n");
+        // printf("\t--IOIn\tIO Input Address\n");
+        // printf("\t--IOOut\tIO Output Address\n");
+        return;
+      }
+      else if(strcmp(cmds[i], "-f") == 0){
+        uint8_t Fn = atoi(cmds[i+1]);
+        uint8_t Ftype = atoi(cmds[i+2]);
+        uint8_t FHold = atoi(cmds[i+3]);
+        loggerf(INFO, "Set F%i to type %i", Fn, Ftype);
+        config->Engines[id].functions[Fn] = (FHold << 6) | (Ftype & 0x3F);
+        i += 3;
+      }
+      i++;
+    }
+    printf("\n");
+  }
 
   //   printf("New:      \t");
   //   print_Stations(config->Stations[id]);
@@ -1635,8 +1675,6 @@ void modify_Engine(struct train_config * config, char cmd){
   //   //   &Out_en,
   //   //   &tmp.IO_In.Node, &tmp.IO_In.Adr,
   //   //   &tmp.IO_Out.Node, &tmp.IO_Out.Adr);
-
-  }
 }
 
 void modify_Train(struct train_config * config, char cmd){
@@ -1657,20 +1695,20 @@ void modify_Train(struct train_config * config, char cmd){
 
     if(config->header.Trains == 0){
       printf("Calloc");
-      config->Trains = _calloc(1, struct trains_conf);
+      config->Trains = (struct trains_conf *)_calloc(1, struct trains_conf);
     }
     else{
       printf("Realloc");
-      config->Trains = _realloc(config->Trains, config->header.Trains+1, struct trains_conf);
+      config->Trains = (struct trains_conf *)_realloc(config->Trains, config->header.Trains+1, struct trains_conf);
     }
     memset(&config->Trains[config->header.Trains], 0, sizeof(struct trains_conf));
     id = config->header.Trains++;
 
     //Set child pointers
     config->Trains[id].name_len = 1;
-    config->Trains[id].name = _calloc(1, char);
+    config->Trains[id].name = (char *)_calloc(1, char);
     config->Trains[id].nr_stock = 1;
-    config->Trains[id].composition = _calloc(1, sizeof(struct train_comp_ws));
+    config->Trains[id].composition = (struct train_comp_ws *)_calloc(1, struct train_comp_ws);
   }
   else if(cmd == 'r'){
     printf("Remove Train ID: ");
@@ -1683,7 +1721,7 @@ void modify_Train(struct train_config * config, char cmd){
       _free(config->Trains[config->header.Trains - 1].name);
 
       memset(&config->Engines[config->header.Trains - 1], 0, sizeof(struct trains_conf));
-      config->Trains = _realloc(config->Trains, --config->header.Trains, struct trains_conf);
+      config->Trains = (struct trains_conf *)_realloc(config->Trains, --config->header.Trains, struct trains_conf);
     }
     else{
       printf("Only last engine can be removed\n");
@@ -1696,14 +1734,14 @@ void modify_Train(struct train_config * config, char cmd){
     fgets(_cmd, 20, stdin);
     if(sscanf(_cmd, "%i", &tmp) > 0){
       config->Trains[id].nr_stock = tmp;
-      config->Trains[id].composition = _realloc(config->Trains[id].composition, tmp, struct train_comp_ws);
+      config->Trains[id].composition = (struct train_comp_ws *)_realloc(config->Trains[id].composition, tmp, struct train_comp_ws);
     }
 
     printf("Name      (%s) | ", config->Trains[id].name);
     fgets(_cmd, 20, stdin);
     if(sscanf(_cmd, "%s", _cmd) > 0){
       tmp = strlen(_cmd);
-      config->Trains[id].name = _realloc(config->Trains[id].name, tmp, char);
+      config->Trains[id].name = (char *)_realloc(config->Trains[id].name, tmp, char);
       memcpy(config->Trains[id].name, _cmd, tmp);
       config->Trains[id].name[tmp] = 0;
       config->Trains[id].name_len = tmp;
@@ -1778,11 +1816,11 @@ void modify_Catagory(struct train_config * config, char type, char cmd){
 
     if(*_header == 0){
       printf("Calloc");
-      *_cat = _calloc(1, struct cat_conf);
+      *_cat = (struct cat_conf *)_calloc(1, struct cat_conf);
     }
     else{
       printf("Realloc");
-      *_cat = _realloc(*_cat, (*_header)+1, struct cat_conf);
+      *_cat = (struct cat_conf *)_realloc(*_cat, (*_header)+1, struct cat_conf);
     }
     memset(&(*_cat)[*_header], 0, sizeof(struct cat_conf));
     id = *_header;
@@ -1790,7 +1828,7 @@ void modify_Catagory(struct train_config * config, char type, char cmd){
 
     //Set child pointers
     (*_cat)[id].name_len = 1;
-    (*_cat)[id].name = _calloc(1, char);
+    (*_cat)[id].name = (char *)_calloc(1, char);
   }
   else if(cmd == 'r'){
     printf("Remove Train ID: ");
@@ -1803,7 +1841,7 @@ void modify_Catagory(struct train_config * config, char type, char cmd){
       _free((*_cat)[*_header - 1].name);
 
       memset(&(*_cat)[*_header - 1], 0, sizeof(struct cat_conf));
-      *_cat = _realloc(*_cat, --(*_header), struct cat_conf);
+      *_cat = (struct cat_conf *)_realloc(*_cat, --(*_header), struct cat_conf);
     }
     else{
       printf("Only last engine can be removed\n");
@@ -1816,7 +1854,7 @@ void modify_Catagory(struct train_config * config, char type, char cmd){
     fgets(_cmd, 20, stdin);
     if(sscanf(_cmd, "%s", _cmd) > 0){
       tmp = strlen(_cmd);
-      (*_cat)[id].name = _realloc((*_cat)[id].name, tmp, char);
+      (*_cat)[id].name = (char *)_realloc((*_cat)[id].name, tmp, char);
       memcpy((*_cat)[id].name, _cmd, tmp);
       (*_cat)[id].name_len = tmp;
     }
@@ -1885,7 +1923,7 @@ int edit_module(){
   print_module_config(&config, 0, 0);
 
   char cmd[300];
-  char ** cmds = _calloc(20, char *);
+  char ** cmds = (char **)_calloc(20, char *);
   uint8_t max_cmds = 20;
   uint8_t cmds_len = 0;
 
@@ -1904,7 +1942,7 @@ int edit_module(){
       if(cmds_len + 1 > max_cmds){
         max_cmds += 20;
         loggerf(INFO, "Expand cmds to %d", max_cmds);
-        cmds = _realloc(cmds, max_cmds, char *);
+        cmds = (char * *)_realloc(cmds, max_cmds, char *);
       }
     }
 
@@ -2037,44 +2075,65 @@ int edit_rolling_stock(){
   global_config = &config;
 
   char cmd[300];
+  char ** cmds = (char **)_calloc(20, char *);
+  uint8_t max_cmds = 20;
+  uint8_t cmds_len = 0;
 
   while (1){
-    printf("Command: ");
-    scanf("%s", cmd);
-    if(strcmp(cmd, "q") == 0){
+    memset(cmds, 0, 20 * sizeof(char *));
+    cmds_len = 0;
+    printf("> ");
+    fgets(cmd,300,stdin);
+
+    // Split command into arguments
+    cmds[0] = strtok(cmd, " ");
+
+    while( cmds[cmds_len] != NULL ) {
+      cmds[++cmds_len] = strtok(NULL, " ");
+
+      if(cmds_len + 1 > max_cmds){
+        max_cmds += 20;
+        loggerf(INFO, "Expand cmds to %d", max_cmds);
+        cmds = (char * *)_realloc(cmds, max_cmds, char *);
+      }
+    }
+
+    // Remove \n character from last command/argument
+    cmds[cmds_len-1][strlen(cmds[cmds_len-1])-1] = 0;
+
+    // If no command
+    if(!cmds[0])
+      continue;
+
+    if(strcmp(cmds[0], "q") == 0){
       break;
     }
-    else if(strcmp(cmd, "e") == 0 || strcmp(cmd, "a") == 0 || strcmp(cmd, "r") == 0){
-      char cmd1 = cmd[0];
-      if(cmd1 == 'e')
-        printf("Edit");
-      else if(cmd1 == 'a')
-        printf("Add");
-      else if(cmd1 == 'r')
-        printf("Remove");
+    else if(strcmp(cmds[0], "e") == 0 || strcmp(cmds[0], "a") == 0 || strcmp(cmds[0], "r") == 0){
+      if(cmds_len < 2){
+        printf("Command too short\nPlease use [e/a/r] [C/E/T/P/C]");
+        continue;
+      }
 
-      printf(" (C(ar)/E(ngine)/T(rain)/(P/C)_Cat)? ");
-      scanf("%s", cmd);
-      if(strcmp(cmd, "C") == 0){
-        modify_Car(&config, cmd1);
+      if(strcmp(cmds[1], "C") == 0){
+        modify_Car(&config, cmds[0][0]);
       }
-      else if(strcmp(cmd, "E") == 0){
-        modify_Engine(&config, cmd1);
+      else if(strcmp(cmds[1], "E") == 0){
+        modify_Engine(&config, cmds, cmds_len);
       }
-      else if(strcmp(cmd, "T") == 0){
-        modify_Train(&config, cmd1);
+      else if(strcmp(cmds[1], "T") == 0){
+        modify_Train(&config, cmds[0][0]);
       }
-      else if(strcmp(cmd, "P_Cat") == 0){
-        modify_Catagory(&config, 'P', cmd1);
+      else if(strcmp(cmds[1], "P_Cat") == 0){
+        modify_Catagory(&config, 'P', cmds[0][0]);
       }
-      else if(strcmp(cmd, "C_Cat") == 0){
-        modify_Catagory(&config, 'C', cmd1);
+      else if(strcmp(cmds[1], "C_Cat") == 0){
+        modify_Catagory(&config, 'C', cmds[0][0]);
       }
     }
-    else if(strcmp(cmd, "s") == 0){
+    else if(strcmp(cmds[0], "s") == 0){
       write_train_from_conf(&config, TRAIN_CONF_PATH);
     }
-    else if(strcmp(cmd, "p") == 0){
+    else if(strcmp(cmds[0], "p") == 0){
       print_train_config(&config);
     }
     else

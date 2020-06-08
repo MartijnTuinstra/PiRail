@@ -8,7 +8,7 @@
 
 void Create_Switch(struct s_switch_connect connect, uint8_t block_id, uint8_t output_len, Node_adr * output_pins, uint8_t * output_states){
   loggerf(TRACE, "Create Sw %i:%i", connect.module, connect.id);
-  Switch * Z = _calloc(1, Switch);
+  Switch * Z = (Switch *)_calloc(1, Switch);
 
   Z->module = connect.module;
   Z->id = connect.id;
@@ -17,7 +17,7 @@ void Create_Switch(struct s_switch_connect connect, uint8_t block_id, uint8_t ou
   Z->str = connect.str;
   Z->app = connect.app;
 
-  Z->IO = _calloc(output_len, IO_Port *);
+  Z->IO = (IO_Port **)_calloc(output_len, IO_Port *);
 
   for(int i = 0; i < output_len; i++){
     Init_IO(Units[connect.module], output_pins[i], Z);
@@ -31,7 +31,7 @@ void Create_Switch(struct s_switch_connect connect, uint8_t block_id, uint8_t ou
   if(Units[Z->module]->block_len > block_id && Units[Z->module]->B[block_id]){
     Z->Detection = Units[Z->module]->B[block_id];
     if(Units[Z->module]->B[block_id]->switch_len == 0){
-      Units[Z->module]->B[block_id]->Sw = _calloc(1, void *);
+      Units[Z->module]->B[block_id]->Sw = (Switch **)_calloc(1, Switch *);
       Units[Z->module]->B[block_id]->switch_len = 1;
     }
     
@@ -66,17 +66,17 @@ void create_msswitch_from_conf(uint8_t module, struct ms_switch_conf conf){
   connect.id = conf.id;
   connect.states = conf.nr_states;
 
-  connect.sideA = _calloc(conf.nr_states, struct rail_link);
-  connect.sideB = _calloc(conf.nr_states, struct rail_link);
+  connect.sideA = (struct rail_link *)_calloc(conf.nr_states, struct rail_link);
+  connect.sideB = (struct rail_link *)_calloc(conf.nr_states, struct rail_link);
 
   for(uint8_t i = 0; i < conf.nr_states; i++){
     connect.sideA[i].module = conf.states[i].sideA.module;
     connect.sideA[i].id = conf.states[i].sideA.id;
-    connect.sideA[i].type = conf.states[i].sideA.type;
+    connect.sideA[i].type = (enum link_types)conf.states[i].sideA.type;
 
     connect.sideB[i].module = conf.states[i].sideB.module;
     connect.sideB[i].id = conf.states[i].sideB.id;
-    connect.sideB[i].type = conf.states[i].sideB.type;
+    connect.sideB[i].type = (enum link_types)conf.states[i].sideB.type;
   }
 
   _free(conf.states);
@@ -86,7 +86,7 @@ void create_msswitch_from_conf(uint8_t module, struct ms_switch_conf conf){
 
 void Create_MSSwitch(struct s_msswitch_connect connect, uint8_t block_id, uint8_t output_len, struct s_IO_port_conf * output_pins, uint16_t * output_states){
   loggerf(DEBUG, "Create MSSw %i:%i", connect.module, connect.id);
-  MSSwitch * Z = _calloc(1, MSSwitch);
+  MSSwitch * Z = (MSSwitch *)_calloc(1, MSSwitch);
 
   Z->module = connect.module;
   Z->id = connect.id;
@@ -96,7 +96,7 @@ void Create_MSSwitch(struct s_msswitch_connect connect, uint8_t block_id, uint8_
 
   Z->state_len = connect.states;
 
-  Z->IO = _calloc(output_len, IO_Port *);
+  Z->IO = (IO_Port **)_calloc(output_len, IO_Port *);
 
   for(int i = 0; i < output_len; i++){
     Init_IO_from_conf(Units[connect.module], output_pins[i], Z);
@@ -112,7 +112,7 @@ void Create_MSSwitch(struct s_msswitch_connect connect, uint8_t block_id, uint8_
   if(U_B(Z->module, block_id)){
     Z->Detection = U_B(Z->module, block_id);
     if(U_B(Z->module, block_id)->msswitch_len == 0){
-      U_B(Z->module, block_id)->MSSw = _calloc(1, void *);
+      U_B(Z->module, block_id)->MSSw = (MSSwitch **)_calloc(1, MSSwitch *);
       U_B(Z->module, block_id)->msswitch_len = 1;
     }
     int id = find_free_index(U_B(Z->module, block_id)->MSSw, U_B(Z->module, block_id)->msswitch_len);
@@ -128,7 +128,7 @@ void Create_MSSwitch(struct s_msswitch_connect connect, uint8_t block_id, uint8_
   U_MSSw(connect.module, connect.id) = Z;
 }
 
-void * Clear_Switch(Switch * Sw){
+Switch * Clear_Switch(Switch * Sw){
   _free(Sw->feedback);
   _free(Sw->IO);
   _free(Sw->IO_states);
@@ -139,7 +139,7 @@ void * Clear_Switch(Switch * Sw){
   return NULL;
 }
 
-void * Clear_MSSwitch(MSSwitch * MSSw){
+MSSwitch * Clear_MSSwitch(MSSwitch * MSSw){
   _free(MSSw->sideA);
   _free(MSSw->sideB);
   _free(MSSw->IO);
@@ -204,13 +204,13 @@ int throw_multiple_switches(uint8_t len, char * msg){
   struct switchdata {
     uint8_t module;
     uint8_t id:7;
-    _Bool type;
+    bool type;
     char state;
   };
 
   // Check if all switches are non-blocked
   for(int i = 0; i < len; i++){
-    char * data = (void *)&msg[i*3];
+    char * data = (char *)&msg[i*3];
 
     struct switchdata p;
     p.module = data[0];
@@ -238,7 +238,7 @@ int throw_multiple_switches(uint8_t len, char * msg){
 
   //Throw all switches
   for(int i = 0; i < len; i++){
-    char * data = (void *)&msg[i*3];
+    char * data = (char *)&msg[i*3];
 
     struct switchdata p;
     p.module = data[0];
@@ -270,7 +270,7 @@ int Next_check_Switch(void * p, struct rail_link link, int flags){
     return 1;
   }
   else if(link.type == RAIL_LINK_s){
-    Switch * N = link.p;
+    Switch * N = (Switch *)link.p;
     loggerf(TRACE, "check s (state: %i, str.p: %x, div.p: %x)", (N->state & 0x7F), (unsigned int)N->str.p, (unsigned int)N->div.p);
     if(((N->state & 0x7F) == 0 && N->str.p == p) || ((N->state & 0x7F) == 1 && N->div.p == p)){
       return 1;
@@ -279,13 +279,13 @@ int Next_check_Switch(void * p, struct rail_link link, int flags){
     //   printf("str: %i  %x==%x\tdiv: %i  %x==%x\t",N->state, N->str.p, p, N->state, N->div.p, p);
   }
   else if(link.type == RAIL_LINK_MA || link.type == RAIL_LINK_MB){
-    MSSwitch * N = link.p;
+    MSSwitch * N = (MSSwitch *)link.p;
     if(N->sideB[N->state].p == p){
       return 1;
     }
   }
   else if(link.type == RAIL_LINK_ma || link.type == RAIL_LINK_mb){
-    MSSwitch * N = link.p;
+    MSSwitch * N = (MSSwitch *)link.p;
     if(N->sideA[N->state].p == p){
       return 1;
     }
@@ -318,7 +318,7 @@ int Switch_Set_Path(void * p, struct rail_link link, int flags){
 
   if(link.type == RAIL_LINK_S){
     // Go to next switch
-    Switch * Sw = link.p;
+    Switch * Sw = (Switch *)link.p;
     if((Sw->state & 0x7F) == 0 && Sw->str.type != RAIL_LINK_R && Sw->str.type != 'D'){
       return Switch_Set_Path(Sw, Sw->str, flags);
     }
@@ -329,7 +329,7 @@ int Switch_Set_Path(void * p, struct rail_link link, int flags){
   else if(link.type == RAIL_LINK_s){
     // Check if switch is in correct state
     // and continue to next switch
-    Switch * N = link.p;
+    Switch * N = (Switch *)link.p;
     loggerf(TRACE, "set s %i (state: %i, str.p: %x, div.p: %x)", N->id, (N->state & 0x7F), (unsigned int)N->str.p, (unsigned int)N->div.p);
     if((N->state & 0x7F) == 0){
       if(N->str.p != p)
@@ -352,21 +352,21 @@ int Switch_Set_Path(void * p, struct rail_link link, int flags){
   }
   else if(link.type == RAIL_LINK_MA || link.type == RAIL_LINK_MB){
     loggerf(ERROR, "IMPLEMENT");
-    MSSwitch * N = link.p;
+    MSSwitch * N = (MSSwitch *)link.p;
     if(N->sideB[N->state].p == p){
       return 1;
     }
   }
   else if(link.type == RAIL_LINK_ma || link.type == RAIL_LINK_mb){
     loggerf(ERROR, "IMPLEMENT");
-    MSSwitch * N = link.p;
+    MSSwitch * N = (MSSwitch *)link.p;
     if(N->sideA[N->state].p == p){
       return 1;
     }
   }
 
   else if (link.type == RAIL_LINK_R){
-    Block * B = link.p;
+    Block * B = (Block *)link.p;
     loggerf(TRACE, "check B %i", B->id);
     if(B->type != NOSTOP)
       return 1; // Train can stop on the block, so a possible path
@@ -392,7 +392,7 @@ int Switch_Reserve_Path(void * p, struct rail_link link, int flags){
 
   if(link.type == RAIL_LINK_S){
     // Go to next switch
-    Switch * Sw = link.p;
+    Switch * Sw = (Switch *)link.p;
     Block * DB = Sw->Detection;
 
     DB->state = RESERVED_SWITCH;
@@ -411,7 +411,7 @@ int Switch_Reserve_Path(void * p, struct rail_link link, int flags){
   else if(link.type == RAIL_LINK_s){
     // Check if switch is in correct state
     // and continue to next switch
-    Switch * Sw = link.p;
+    Switch * Sw = (Switch *)link.p;
     Block * DB = Sw->Detection;
 
     DB->state = RESERVED_SWITCH;
@@ -424,21 +424,21 @@ int Switch_Reserve_Path(void * p, struct rail_link link, int flags){
   }
   else if(link.type == RAIL_LINK_MA || link.type == RAIL_LINK_MB){
     loggerf(ERROR, "IMPLEMENT");
-    MSSwitch * N = link.p;
+    MSSwitch * N = (MSSwitch *)link.p;
     if(N->sideB[N->state].p == p){
       return 1;
     }
   }
   else if(link.type == RAIL_LINK_ma || link.type == RAIL_LINK_mb){
     loggerf(ERROR, "IMPLEMENT");
-    MSSwitch * N = link.p;
+    MSSwitch * N = (MSSwitch *)link.p;
     if(N->sideA[N->state].p == p){
       return 1;
     }
   }
 
   else if (link.type == RAIL_LINK_R){
-    Block * B = link.p;
+    Block * B = (Block *)link.p;
     loggerf(TRACE, "check B %i", B->id);
     if(B->type != NOSTOP)
       return 1; // Train can stop on the block, so a possible path
@@ -468,7 +468,7 @@ int Switch_Check_Path(void * p, struct rail_link link, int flags){
     return 1;
   }
   else if(link.type == RAIL_LINK_S){
-    Switch * Sw = link.p;
+    Switch * Sw = (Switch *)link.p;
     loggerf(TRACE, "check S %i (state: %i)", Sw->id, (Sw->state & 0x7F));
     if((Sw->state & 0x7F) == 0){
       return Switch_Check_Path(Sw, Sw->str, flags);
@@ -478,7 +478,7 @@ int Switch_Check_Path(void * p, struct rail_link link, int flags){
     }
   }
   else if(link.type == RAIL_LINK_s){
-    Switch * N = link.p;
+    Switch * N = (Switch *)link.p;
     loggerf(TRACE, "check s %i (state: %i, str.p: %x, div.p: %x)", N->id, (N->state & 0x7F), (unsigned int)N->str.p, (unsigned int)N->div.p);
     if((N->state & 0x7F) == 0 && N->str.p == p){
       return Switch_Check_Path(N, N->app, flags);
@@ -490,14 +490,14 @@ int Switch_Check_Path(void * p, struct rail_link link, int flags){
   }
   else if(link.type == RAIL_LINK_MA || link.type == RAIL_LINK_MB){
     loggerf(WARNING, "IMPLEMENT");
-    MSSwitch * N = link.p;
+    MSSwitch * N = (MSSwitch *)link.p;
     if(N->sideB[N->state].p == p){
       return 1;
     }
   }
   else if(link.type == RAIL_LINK_ma || link.type == RAIL_LINK_mb){
     loggerf(WARNING, "IMPLEMENT");
-    MSSwitch * N = link.p;
+    MSSwitch * N = (MSSwitch *)link.p;
     if(N->sideA[N->state].p == p){
       return 1;
     }
@@ -505,7 +505,7 @@ int Switch_Check_Path(void * p, struct rail_link link, int flags){
 
   else if (link.type == RAIL_LINK_R){
 
-    Block * B = link.p;
+    Block * B = (Block *)link.p;
 
     loggerf(TRACE, "check B %i", B->id);
     if(B->type != NOSTOP)

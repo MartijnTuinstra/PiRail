@@ -56,7 +56,7 @@
 
   void * websocket_client(void * p);
 
-  void *clear_clients();
+  void * clear_clients(void * args);
 
   void read_password();
 

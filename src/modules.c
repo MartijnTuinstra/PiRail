@@ -19,7 +19,7 @@ int unit_len;
 Unit ** Units;
 
 void Create_Unit(uint16_t M, uint8_t Nodes, char points){
-  Unit * Z = _calloc(1, Unit);
+  Unit * Z = (Unit *)_calloc(1, Unit);
 
   if(M < unit_len){
     Units[M] = Z;
@@ -32,28 +32,28 @@ void Create_Unit(uint16_t M, uint8_t Nodes, char points){
   Z->module = M;
 
   Z->connections_len = points;
-  Z->connection = _calloc(points, Unit *);
+  Z->connection = (Unit **)_calloc(points, Unit *);
 
   Z->IO_Nodes = Nodes;
-  Z->Node = _calloc(Z->IO_Nodes, IO_Node);
+  Z->Node = (IO_Node *)_calloc(Z->IO_Nodes, IO_Node);
 
   Z->block_len = 8;
-  Z->B = _calloc(Z->block_len, Block);
+  Z->B = (Block **)_calloc(Z->block_len, Block*);
 
   Z->switch_len = 8;
-  Z->Sw = _calloc(Z->switch_len, Switch);
+  Z->Sw = (Switch **)_calloc(Z->switch_len, Switch*);
 
   Z->msswitch_len = 8;
-  Z->MSSw = _calloc(Z->switch_len, MSSwitch);
+  Z->MSSw = (MSSwitch **)_calloc(Z->switch_len, MSSwitch*);
 
   Z->signal_len = 8;
-  Z->Sig = _calloc(Z->signal_len, Signal);
+  Z->Sig = (Signal **)_calloc(Z->signal_len, Signal*);
 
   Z->station_len = 8;
-  Z->St = _calloc(Z->station_len, Station);
+  Z->St = (Station **)_calloc(Z->station_len, Station*);
 }
 
-void * Clear_Unit(Unit * U){
+Unit * Clear_Unit(Unit * U){
   loggerf(INFO, "Clearing module %i", U->module);
 
   //Clear unit connections array
@@ -137,16 +137,16 @@ void read_module_Config(uint16_t M){
     return;
   }
 
-  struct module_config * config = _calloc(1, struct module_config);
+  struct module_config * config = (struct module_config *)_calloc(1, struct module_config);
 
-  char * header = _calloc(2, char);
+  char * header = (char *)_calloc(2, char);
 
   fread(header, 1, 1, fp);
   fseek(fp, 0, SEEK_END);
   long fsize = ftell(fp);
   fseek(fp, 0, SEEK_SET);
 
-  char * buffer = _calloc(fsize, char);
+  char * buffer = (char *)_calloc(fsize, char);
   char * buf_start = &buffer[0];
   fread(buffer, fsize, 1, fp);
 
@@ -170,7 +170,7 @@ void read_module_Config(uint16_t M){
 
   //Raw copy
   Units[M]->raw_length = fsize-2;
-  Units[M]->raw = _calloc(fsize+5, char);
+  Units[M]->raw = (char *)_calloc(fsize+5, char);
   loggerf(INFO, "Reading Module %i (%d b)", M, fsize);
   memcpy(Units[M]->raw, raw, fsize-2);
 
@@ -198,17 +198,17 @@ void read_module_Config(uint16_t M){
 
     connect.module = M;
     connect.id = s.id;
-    connect.app.module = s.App.module; connect.app.id = s.App.id; connect.app.type = s.App.type;
-    connect.str.module = s.Str.module; connect.str.id = s.Str.id; connect.str.type = s.Str.type;
-    connect.div.module = s.Div.module; connect.div.id = s.Div.id; connect.div.type = s.Div.type;
+    connect.app.module = s.App.module; connect.app.id = s.App.id; connect.app.type = (enum link_types)s.App.type;
+    connect.str.module = s.Str.module; connect.str.id = s.Str.id; connect.str.type = (enum link_types)s.Str.type;
+    connect.div.module = s.Div.module; connect.div.id = s.Div.id; connect.div.type = (enum link_types)s.Div.type;
 
-    Node_adr * Adrs = _calloc(s.IO & 0x0f, Node_adr);
+    Node_adr * Adrs = (Node_adr *)_calloc(s.IO & 0x0f, Node_adr);
 
     for(int i = 0; i < (s.IO & 0x0f); i++){
       Adrs[i].Node = s.IO_Ports[i].Node;
       Adrs[i].io = s.IO_Ports[i].Adr;
     }
-    uint8_t * States = _calloc(2, _Bool *);
+    uint8_t * States = (uint8_t *)_calloc(2, uint8_t);
     States[0] = 1 + (0 << 1); //State 0 - Address 0 hight, address 1 low
     States[1] = 0 + (1 << 1); //State 1 - Address 1 hight, address 0 low
 
@@ -251,7 +251,7 @@ void read_module_Config(uint16_t M){
   Units[M]->Layout_length = config->Layout_length;
   *buf_ptr += sizeof(uint16_t) + 1;
 
-  config->Layout = _calloc(config->Layout_length + 1, uint8_t);
+  config->Layout = (char *)_calloc(config->Layout_length + 1, char);
   memcpy(config->Layout, *buf_ptr, config->Layout_length);
   Units[M]->Layout = config->Layout;
 
@@ -277,7 +277,7 @@ void load_module_Configs(){
   uint8_t moduleID_list[255];
   memset(moduleID_list, 0, 255);
 
-  Units = _calloc(30, Unit *);
+  Units = (Unit **)_calloc(30, Unit *);
   unit_len = 30;
 
   if (d)

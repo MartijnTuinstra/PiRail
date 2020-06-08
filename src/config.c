@@ -127,13 +127,13 @@ void print_hex(char * data, int size){
   // }
 }
 
-void write_module_from_conf(struct module_config * config, char * filename){
+void write_module_from_conf(struct module_config * config, const char * filename){
   loggerf(DEBUG, "write_module_from_conf");
   int size = calc_write_module_size(config);
 
   loggerf(INFO, "Writing %i bytes", size);
 
-  char * data = _calloc(size, 1);
+  char * data = (char *)_calloc(size, char);
 
   data[0] = MODULE_CONF_VERSION;
 
@@ -239,13 +239,13 @@ void write_module_from_conf(struct module_config * config, char * filename){
   free(data);
 }
 
-void write_train_from_conf(struct train_config * config, char * filename){
+void write_train_from_conf(struct train_config * config, const char * filename){
   loggerf(DEBUG, "write_train_from_conf");
   int size = calc_write_train_size(config);
 
   loggerf(INFO, "Writing %i bytes", size);
 
-  char * data = _calloc(size, 1);
+  char * data = (char *)_calloc(size, char);
 
   data[0] = TRAIN_CONF_VERSION;
 
@@ -343,7 +343,7 @@ struct node_conf read_s_node_conf(uint8_t ** p){
   
   check_Spacing(p);
 
-  n.data = _calloc((n.size+1)/2, uint8_t);
+  n.data = (uint8_t *)_calloc((n.size+1)/2, uint8_t);
   memcpy(n.data, *p, (n.size+1)/2);
 
   *p += (n.size+1)/2;
@@ -385,7 +385,7 @@ struct switch_conf read_s_switch_conf(uint8_t ** p){
   if(!check_Spacing(p))
     return s;
 
-  s.IO_Ports = _calloc(s.IO & 0x0f, struct s_IO_port_conf);
+  s.IO_Ports = (struct s_IO_port_conf *)_calloc(s.IO & 0x0f, struct s_IO_port_conf);
 
   for(int i = 0; i < (s.IO & 0x0f); i++){
     memcpy(&s.IO_Ports[i], *p, 2);
@@ -407,7 +407,7 @@ struct ms_switch_conf read_s_ms_switch_conf(uint8_t ** p){
   if(!check_Spacing(p))
     return s;
 
-  s.states = _calloc(s.nr_states, struct s_ms_switch_state_conf);
+  s.states = (struct s_ms_switch_state_conf *)_calloc(s.nr_states, struct s_ms_switch_state_conf);
 
   for(int i = 0; i < s.nr_states; i++){
     memcpy(&s.states[i], *p, sizeof(struct s_ms_switch_state_conf));
@@ -417,7 +417,7 @@ struct ms_switch_conf read_s_ms_switch_conf(uint8_t ** p){
   if(!check_Spacing(p))
     return s;
 
-  s.IO_Ports = _calloc(s.IO, struct s_IO_port_conf);
+  s.IO_Ports = (struct s_IO_port_conf *)_calloc(s.IO, struct s_IO_port_conf);
 
   for(int i = 0; i < s.IO; i++){
     memcpy(&s.IO_Ports[i], *p, sizeof(struct s_IO_port_conf));
@@ -436,8 +436,8 @@ struct station_conf read_s_station_conf(uint8_t ** p){
 
   *p += sizeof(struct s_station_conf);
 
-  s.name = _calloc(s.name_len, char);
-  s.blocks = _calloc(s.nr_blocks, uint8_t);
+  s.name = (char *)_calloc(s.name_len, char);
+  s.blocks = (uint8_t *)_calloc(s.nr_blocks, uint8_t);
 
   if(!check_Spacing(p))
     return s;
@@ -463,8 +463,8 @@ struct signal_conf read_s_signal_conf(uint8_t ** p){
 
   *p += sizeof(struct s_signal_conf);
 
-  s.output = _calloc(s.output_len, struct s_IO_port_conf);
-  s.stating = _calloc(s.output_len, struct s_IO_signal_event_conf);
+  s.output = (struct s_IO_port_conf *)_calloc(s.output_len, struct s_IO_port_conf);
+  s.stating = (struct s_IO_signal_event_conf *)_calloc(s.output_len, struct s_IO_signal_event_conf);
 
   if(!check_Spacing(p))
     return s;
@@ -506,13 +506,13 @@ struct cars_conf read_cars_conf(uint8_t ** p){
   if(!check_Spacing(p))
     return c;
 
-  c.name = _calloc(c.name_len+1, char);
+  c.name = (char *)_calloc(c.name_len+1, char);
   memcpy(c.name, *p, sizeof(char) * c.name_len);
   *p += c.name_len;
   if(!check_Spacing(p))
     return c;
 
-  c.icon_path = _calloc(c.icon_path_len+1, char);
+  c.icon_path = (char *)_calloc(c.icon_path_len+1, char);
   memcpy(c.icon_path, *p, sizeof(char) * c.icon_path_len);
   *p += c.icon_path_len;
 
@@ -531,25 +531,25 @@ struct engines_conf read_engines_conf(uint8_t ** p){
   if(!check_Spacing(p))
     return e;
 
-  e.name = _calloc(e.name_len+1, char);
+  e.name = (char *)_calloc(e.name_len+1, char);
   memcpy(e.name, *p, sizeof(char) * e.name_len);
   *p += e.name_len;
   if(!check_Spacing(p))
     return e;
 
-  e.img_path = _calloc(e.img_path_len+1, char);
+  e.img_path = (char *)_calloc(e.img_path_len+1, char);
   memcpy(e.img_path, *p, sizeof(char) * e.img_path_len);
   *p += e.img_path_len;
   if(!check_Spacing(p))
     return e;
 
-  e.icon_path = _calloc(e.icon_path_len+1, char);
+  e.icon_path = (char *)_calloc(e.icon_path_len+1, char);
   memcpy(e.icon_path, *p, sizeof(char) * e.icon_path_len);
   *p += e.icon_path_len;
   if(!check_Spacing(p))
     return e;
 
-  e.speed_steps = _calloc(e.config_steps, sizeof(struct engine_speed_steps));
+  e.speed_steps = (struct engine_speed_steps *)_calloc(e.config_steps, struct engine_speed_steps);
   memcpy(e.speed_steps, *p, sizeof(struct engine_speed_steps) * e.config_steps);
   *p += e.config_steps * sizeof(struct engine_speed_steps);
 
@@ -568,13 +568,13 @@ struct trains_conf read_trains_conf(uint8_t ** p){
   if(!check_Spacing(p))
     return t;
 
-  t.name = _calloc(t.name_len+1, char);
+  t.name = (char *)_calloc(t.name_len+1, char);
   memcpy(t.name, *p, sizeof(char) * t.name_len);
   *p += t.name_len;
   if(!check_Spacing(p))
     return t;
 
-  t.composition = _calloc(t.nr_stock+1, sizeof(struct train_comp_ws));
+  t.composition = (struct train_comp_ws *)_calloc(t.nr_stock+1, struct train_comp_ws);
   memcpy(t.composition, *p, sizeof(struct train_comp_ws) * t.nr_stock);
   *p += sizeof(struct train_comp_ws) * t.nr_stock;
 
@@ -593,7 +593,7 @@ struct cat_conf read_cat_conf(uint8_t ** p){
   if(!check_Spacing(p))
     return c;
 
-  c.name = _calloc(c.name_len+1, char);
+  c.name = (char *)_calloc(c.name_len+1, char);
   memcpy(c.name, *p, sizeof(char) * c.name_len);
   *p += c.name_len;
 

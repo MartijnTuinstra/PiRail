@@ -7,8 +7,8 @@
 #include "modules.h"
 #include "logger.h"
 
-void Create_Signal(uint8_t module, uint8_t blockId, uint16_t signalId, _Bool side, char output_len, struct s_IO_port_conf * output, struct s_IO_signal_event_conf * stating){
-  Signal * Z = _calloc(1, Signal);
+void Create_Signal(uint8_t module, uint8_t blockId, uint16_t signalId, bool side, char output_len, struct s_IO_port_conf * output, struct s_IO_signal_event_conf * stating){
+  Signal * Z = (Signal *)_calloc(1, Signal);
 
   Block * B = U_B(module, blockId);
   
@@ -23,8 +23,8 @@ void Create_Signal(uint8_t module, uint8_t blockId, uint16_t signalId, _Bool sid
   Z->state = UNKNOWN;
   Z->output_len = output_len;
   
-  Z->output = _calloc(output_len, IO_Port *);
-  Z->output_stating = _calloc(output_len, struct s_signal_stating);
+  Z->output = (IO_Port **)_calloc(output_len, IO_Port *);
+  Z->output_stating = (struct s_signal_stating *)_calloc(output_len, struct s_signal_stating);
 
   for(int i = 0; i<output_len; i++){
     if(Units[module]->Node[output[i].Node].io_ports <= output[i].Adr){
@@ -63,7 +63,7 @@ void Create_Signal(uint8_t module, uint8_t blockId, uint16_t signalId, _Bool sid
   set_signal(Z, UNKNOWN);
 }
 
-void * Clear_Signal(Signal * Sig){
+Signal * Clear_Signal(Signal * Sig){
 
   _free(Sig->output);
   _free(Sig->output_stating);

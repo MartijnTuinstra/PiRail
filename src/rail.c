@@ -12,7 +12,7 @@
 Station ** stations;
 int stations_len;
 
-char * rail_states_string[8] = {
+const char * rail_states_string[8] = {
   "BLOCKED",
   "DANGER",
   "RESTRICTED",
@@ -25,20 +25,20 @@ char * rail_states_string[8] = {
 
 
 void Create_Block(uint8_t module, struct s_block_conf block){
-  Block * p = _calloc(1, Block);
+  Block * p = (Block *)_calloc(1, Block);
 
   p->module = module;
   p->id = block.id;
-  p->type = block.type;
+  p->type = (enum Rail_types)block.type;
 
   //Unit * U = Units[p->module]; Never used
 
   p->next.module = block.next.module;
   p->next.id = block.next.id;
-  p->next.type = block.next.type;
+  p->next.type = (enum link_types)block.next.type;
   p->prev.module = block.prev.module;
   p->prev.id = block.prev.id;
-  p->prev.type = block.prev.type;
+  p->prev.type = (enum link_types)block.prev.type;
 
   p->max_speed = block.speed;
   p->dir = (block.fl & 0x6) >> 1;
@@ -70,7 +70,7 @@ void Create_Block(uint8_t module, struct s_block_conf block){
   // If block array is to small
   if(Units[p->module]->block_len <= p->id){
     loggerf(TRACE, "Expand block len %i", Units[p->module]->block_len+8);
-    Units[p->module]->B = _realloc(Units[p->module]->B, (Units[p->module]->block_len + 8), Block *);
+    Units[p->module]->B = (Block * *)_realloc(Units[p->module]->B, (Units[p->module]->block_len + 8), Block *);
 
     int i = Units[p->module]->block_len;
     for(; i < Units[p->module]->block_len+8; i++){
@@ -87,7 +87,7 @@ void Create_Block(uint8_t module, struct s_block_conf block){
   Units[p->module]->B[p->id] = p;
 }
 
-void * Clear_Block(Block * B){
+Block * Clear_Block(Block * B){
   _free(B->Sw);
   _free(B->MSSw);
 
@@ -97,18 +97,18 @@ void * Clear_Block(Block * B){
 }
 
 void Create_Station(int module, int id, char * name, char name_len, enum Station_types type, int len, uint8_t * blocks){
-  Station * Z = _calloc(1, Station);
+  Station * Z = (Station *)_calloc(1, Station);
   Z->module = module;
   Z->id = id;
   Z->type = type;
 
-  Z->name = _calloc(name_len+1, char);
+  Z->name = (char *)_calloc(name_len+1, char);
   strncpy(Z->name, name, name_len);
 
   // If block array is to small
   if(Units[Z->module]->station_len <= Z->id){
     loggerf(INFO, "Expand station len %i", Units[Z->module]->station_len+8);
-    Units[Z->module]->St = _realloc(Units[Z->module]->St, (Units[Z->module]->station_len + 8), Station *);
+    Units[Z->module]->St = (Station * *)_realloc(Units[Z->module]->St, (Units[Z->module]->station_len + 8), Station *);
 
     int i = Units[Z->module]->station_len;
     for(; i < Units[Z->module]->station_len+8; i++){
@@ -120,7 +120,7 @@ void Create_Station(int module, int id, char * name, char name_len, enum Station
   Units[Z->module]->St[Z->id] = Z;
 
   Z->blocks_len = len;
-  Z->blocks = _calloc(Z->blocks_len, void *);
+  Z->blocks = (Block **)_calloc(Z->blocks_len, Block *);
 
   for(int i = 0; i < len; i++){
     Z->blocks[i] = U_B(module, blocks[i]);
@@ -128,7 +128,7 @@ void Create_Station(int module, int id, char * name, char name_len, enum Station
   }
 
   if(!stations){
-    stations = _calloc(1, void *);
+    stations = (Station **)_calloc(1, Station *);
     stations_len = 1;
   }
 
@@ -137,7 +137,7 @@ void Create_Station(int module, int id, char * name, char name_len, enum Station
   stations[Z->uid] = Z;
 }
 
-void * Clear_Station(Station * St){
+Station * Clear_Station(Station * St){
   if(St->switch_link){
     for(int k = 0; k <= St->switches_len; k++){
       if(St->switch_link[k])
@@ -337,7 +337,7 @@ Block * Next_Switch_Block(Switch * S, enum link_types type, int flags, int level
   }
   else if(next.type == RAIL_LINK_S || next.type == RAIL_LINK_s){
     if(Next_check_Switch(S, next, flags)){
-      Switch * N = next.p;
+      Switch * N = (Switch *)next.p;
       // if(N->Detection && S->Detection != N->Detection){
       //   level--;
       //   if(level == 0){
@@ -351,7 +351,7 @@ Block * Next_Switch_Block(Switch * S, enum link_types type, int flags, int level
   }
   else if(next.type >= RAIL_LINK_MA && next.type == RAIL_LINK_mb){
     // printf("RET MSSw\n");
-    MSSwitch * N = next.p;
+    MSSwitch * N = (MSSwitch *)next.p;
     if(N->Detection && S->Detection != N->Detection && level == 1){
       return N->Detection;
     }
@@ -475,7 +475,7 @@ void Block_Reverse(Algor_Blocks * AB){
   if(AB->B->state != RESERVED_SWITCH){
     tmp_state = AB->B->state;
     AB->B->state = AB->B->reverse_state;
-    AB->B->reverse_state = tmp_state;
+    AB->B->reverse_state = (enum Rail_states)tmp_state;
   }
 
   uint8_t len = 0;

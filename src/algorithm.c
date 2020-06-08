@@ -16,7 +16,7 @@
 #include "signals.h"
 
 #include "modules.h"
-// #include "com.h"
+#include "com.h"
 #include "websocket_stc.h"
 
 #include "sim.h"
@@ -83,10 +83,10 @@ void processAlgorQueue(){
   }
 }
 
-void * Algor_Run(){
+void * Algor_Run(void * args){
   loggerf(INFO, "Algor_run started");
 
-  while(SYS->UART.state != Module_Run){
+  while(SYS->UART.state != Module_Run && SYS->UART.state != Module_SIM_State){
     if(SYS->UART.state == Module_Fail || SYS->UART.state == Module_STOP){
       loggerf(ERROR, "Cannot run Algor when UART FAIL or STOP %x", SYS->UART.state);
       return 0;
@@ -97,12 +97,25 @@ void * Algor_Run(){
   
   usleep(1000000);
   SYS_set_state(&SYS->LC.state, Module_LC_Searching);
+  if(SYS->UART.state == Module_SIM_State){
   SIM_JoinModules();
   usleep(1000000);
+  }
+  else{
+    COM_Reset();
+    while(!SYS->UART.modules_found){
+      usleep(1000);
+    }
+  }
   SYS_set_state(&SYS->LC.state, Module_LC_Connecting);
+  if(SYS->UART.state == Module_SIM_State){
   SIM_Connect_Rail_links();
-  WS_stc_Track_Layout(0);
   usleep(1000000);
+  }
+  else{
+    Algor_Connect_Rails();
+  }
+  WS_stc_Track_Layout(0);
   // scan_All();
   // Scan All Blocks
   for(int i = 0;i<unit_len;i++){
@@ -964,7 +977,7 @@ void Algor_print_block_debug(Block * B){
   }
   ptr[0] = 0;
 
-  loggerf(debug, "%s", output);
+  loggerf((enum logging_levels)debug, "%s", output);
 }
 
 void Algor_Switch_Checker(Algor_Blocks * ABs, int debug){
@@ -1071,7 +1084,7 @@ void Algor_set_block_state(Block * B, enum Rail_states state){
   B->state = state;
   B->statechanged = 1;
   Units[B->module]->block_state_changed |= 1;
-  loggerf(INFO, "%02i:%02i -> %s", B->module, B->id, rail_states_string[state]);
+  // loggerf(INFO, "%02i:%02i -> %s", B->module, B->id, rail_states_string[state]);
 }
 
 void Algor_set_blocks_state(Block ** B, uint8_t length, enum Rail_states state){
@@ -1428,4 +1441,58 @@ void Algor_signal_state(Algor_Blocks AB, int debug){
     if(tB->PrevSignal)
       check_Signal(tB->PrevSignal);
   }
+}
+
+void Algor_Connect_Rails(){
+  struct ConnectList List;
+  List.length = 0;
+  List.list_index = 8;
+  List.R_L = (struct rail_link **)_calloc(8, struct rail_link *);
+
+  int i = 0;
+  int x = 0;
+  int max_j = init_connect_Algor(&List);
+  int cur_j = max_j;
+  int prev_j = max_j;
+
+  while(SYS->LC.state == Module_Run && SYS->stop == 0 && SYS->modules_linked == 0){
+    sem_wait(&AlgorQueueNoEmpty);
+    
+    cur_j = connect_Algor(&List);
+    printf("?\n");
+    if(i > 1){
+      printf(" (%02i/%02i)\n",cur_j,max_j);
+      i = 0;
+      x++;
+    }
+    if(prev_j != cur_j){
+
+      char data[20];
+      data[0] = 0x82;
+      data[1] = cur_j;
+      data[2] = max_j;
+      int k = 3;
+      for(int j = 0;j<unit_len;j++){
+        if(Units[j]){
+          data[k++] = j;
+        }
+      }
+      ws_send_all(data,k,0x10);
+    }
+    i++;
+    prev_j = cur_j;
+
+    //IF ALL JOINED
+    //BREAK
+
+    mutex_lock(&algor_mutex, "Algor Mutex");
+    //Notify clients
+    WS_stc_trackUpdate(0);
+
+    mutex_unlock(&algor_mutex, "Algor Mutex");
+
+    usleep(1000);
+  }
+
+  SYS->modules_linked = 1;
 }

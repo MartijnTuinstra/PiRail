@@ -22,19 +22,19 @@ struct paths pathfinding(Block * start, Block * end){
 
 
 
-  c.sw_data = _calloc(1, struct pathfindingswitchdata);
-  c.sw_data->sw   = _calloc(unit_len, void *);
-  c.sw_data->mssw = _calloc(unit_len, void *);
+  c.sw_data = (struct pathfindingswitchdata *)_calloc(1, struct pathfindingswitchdata);
+  c.sw_data->sw   = (pathinstruction ***)_calloc(unit_len, void *);
+  c.sw_data->mssw = (pathinstruction ***)_calloc(unit_len, void *);
 
   for(uint8_t i = 0; i < unit_len; i++){
     if(!Units[i])
       continue;
 
     if(Units[i]->switch_len)
-      c.sw_data->sw[i] = _calloc(Units[i]->switch_len, void *);
+      c.sw_data->sw[i] = (pathinstruction **)_calloc(Units[i]->switch_len, void *);
 
     if(Units[i]->msswitch_len)
-      c.sw_data->mssw[i] = _calloc(Units[i]->msswitch_len, void *);
+      c.sw_data->mssw[i] = (pathinstruction **)_calloc(Units[i]->msswitch_len, void *);
   }
 
   clock_t t;
@@ -123,7 +123,7 @@ struct pathfindingstep _pathfinding_step(struct pathfindingconfig c){
   if(c.current == c.end){
     s.found = 1;
     if(!c.final_instruction[0]){
-      struct pathinstruction * instr = _calloc(1, struct pathinstruction);
+      struct pathinstruction * instr = (struct pathinstruction *)_calloc(1, struct pathinstruction);
 
       instr->type = RAIL_LINK_R;
       instr->prevcounter = 1;
@@ -144,10 +144,10 @@ struct pathfindingstep _pathfinding_step(struct pathfindingconfig c){
   }
 
   if(c.link->type == RAIL_LINK_R){
-    if(!dircmp(c.current, c.link->p)){
+    if(!dircmp(c.current, (Block *)c.link->p)){
       c.dir ^= PREV;
     }
-    c.current = c.link->p;
+    c.current = (Block *)c.link->p;
     // if(((Block *)c.current)->oneWay)
     //   printf("%02i:%02i %i %i\n", ((Block *)c.current)->module, ((Block *)c.current)->id, ((Block *)c.current)->dir, c.dir);
 
@@ -175,7 +175,7 @@ struct pathfindingstep _pathfinding_step(struct pathfindingconfig c){
       return s;
     }
 
-    struct pathinstruction * instr = _calloc(1, struct pathinstruction);
+    struct pathinstruction * instr = (struct pathinstruction *)_calloc(1, struct pathinstruction);
     c.sw_data->sw[S->module][S->id] = instr;
     instr->p = 0;
 
@@ -189,9 +189,9 @@ struct pathfindingstep _pathfinding_step(struct pathfindingconfig c){
     instr->type = RAIL_LINK_S;
     instr->p = S;
     instr->prevcounter = 0;
-    instr->optionalstates = _calloc(2, uint8_t);
-    instr->next_instruction = _calloc(2, struct pathinstruction *);
-    instr->lengthstates = _calloc(2, uint16_t);
+    instr->optionalstates = (uint8_t *)_calloc(2, uint8_t);
+    instr->next_instruction = (struct pathinstruction **)_calloc(2, struct pathinstruction *);
+    instr->lengthstates = (uint16_t *)_calloc(2, uint16_t);
     instr->states = 0;
 
     if(str.found || div.found){
@@ -300,7 +300,7 @@ void free_pathinstructions(struct pathinstruction * instr){
     return;
 
   if(instr->type == RAIL_LINK_R){
-    instr = _free(instr);
+    instr = (struct pathinstruction*)_free(instr);
     return;
   }
 
@@ -310,8 +310,8 @@ void free_pathinstructions(struct pathinstruction * instr){
     }
   }
 
-  instr->next_instruction = _free(instr->next_instruction);
-  instr->optionalstates = _free(instr->optionalstates);
-  instr->lengthstates = _free(instr->lengthstates);
-  instr = _free(instr);
+  instr->next_instruction = (struct pathinstruction **)_free(instr->next_instruction);
+  instr->optionalstates = (uint8_t *)_free(instr->optionalstates);
+  instr->lengthstates = (uint16_t *)_free(instr->lengthstates);
+  instr = (pathinstruction *)_free(instr);
 }

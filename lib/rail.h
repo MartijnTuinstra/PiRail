@@ -99,7 +99,7 @@ enum Rail_states {
   UNKNOWN           // 7
 };
 
-extern char * rail_states_string[8];
+extern const char * rail_states_string[8];
 
 typedef struct s_Block {
   uint8_t  module;
@@ -189,10 +189,10 @@ extern int stations_len;
 // void init_rail();
 
 void Create_Block(uint8_t module, struct s_block_conf block);
-void * Clear_Block(Block * B);
+Block * Clear_Block(Block * B);
 
 void Create_Station(int module, int id, char * name, char name_len, enum Station_types type, int len, uint8_t * blocks);
-void * Clear_Station(Station * St);
+Station * Clear_Station(Station * St);
 
 int dircmp(Block *A, Block *B);
 

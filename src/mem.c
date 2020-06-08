@@ -12,11 +12,11 @@ struct allocations * allocations;
 pthread_mutex_t mem_lock;
 
 void init_allocs(){
-  allocations = _calloc(2048, struct allocations);
+  allocations = (struct allocations *)_calloc(2048, struct allocations);
   allocs = 2048;
 }
 
-void * my_calloc(int elements, int size, char * file, int line){
+void * my_calloc(int elements, int size, const char * file, const int line){
   void * p = calloc(elements, size);
   floggerf(MEMORY, file, line, "calloc \tsize: %i \tpointer: %08x", elements * size, p);
 
@@ -24,7 +24,7 @@ void * my_calloc(int elements, int size, char * file, int line){
   for(unsigned int i = 0; i < allocs; i++){
     if(!allocations[i].pointer){
       allocations[i].pointer = p;
-      allocations[i].location = calloc(30, sizeof(char));
+      allocations[i].location = (char *)calloc(30, sizeof(char));
       sprintf(allocations[i].location, "%s:%i", file, line);
       break;
     }
@@ -34,7 +34,7 @@ void * my_calloc(int elements, int size, char * file, int line){
   return p;
 }
 
-void * my_realloc(void * p, int type_size, int elements, char * file, int line){
+void * my_realloc(void * p, int type_size, int elements, const char * file, const int line){
   void * old_p = p;
   p = realloc(p, type_size * elements);
   floggerf(MEMORY, file, line, "realloc \told_pointer: %08x \tnew_size: %i*%i \tnew_pointer: %08x", old_p, type_size, elements, p);
@@ -51,7 +51,7 @@ void * my_realloc(void * p, int type_size, int elements, char * file, int line){
   return p;
 }
 
-void * my_free(void * p, char * file, int line){
+void * my_free(void * p, const char * file, const int line){
   if(!p)
     return 0;
   floggerf(MEMORY, file, line, "free \tpointer: %08x", p);

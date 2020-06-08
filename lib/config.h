@@ -12,9 +12,9 @@ int calc_train_write_size(struct train_config * config);
 
 void print_hex(char * data, int size);
 
-void write_module_from_conf(struct module_config * config, char * filename);
+void write_module_from_conf(struct module_config * config, const char * filename);
 
-void write_train_from_conf(struct train_config * config, char * filename);
+void write_train_from_conf(struct train_config * config, const char * filename);
 
 int check_Spacing(uint8_t ** p);
 

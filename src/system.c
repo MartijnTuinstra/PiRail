@@ -11,7 +11,7 @@
 
 #include "websocket_stc.h"
 
-sem_t AlgorQueueNoEmpty;
+extern sem_t AlgorQueueNoEmpty;
 
 void sigint_func(int sig){
   if(sig == SIGINT){
@@ -36,7 +36,7 @@ int _find_free_index(void *** list, int * length){
     }
   }
 
-  *list = _realloc(*list, (*length)+1, void *);
+  *list = (void **)_realloc(*list, (*length)+1, void *);
   for(int i = *length; i < (*length)+1; i++){
     (*list)[i] = 0;
   }
@@ -85,7 +85,7 @@ void system_init(struct s_systemState * S){
 }
 
 void init_main(){
-  SYS = _calloc(1, struct s_systemState);
+  SYS = (struct s_systemState *)_calloc(1, struct s_systemState);
   system_init(SYS);
 
   init_allocs();

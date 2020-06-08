@@ -17,7 +17,7 @@ struct web_client_t * websocket_clients;
 char * WS_password;
 
 int websocket_client_check(struct web_client_t * client){
-  char * buf = _calloc(2048, char);
+  char * buf = (char *)_calloc(2048, char);
 
   read(client->fd, buf, 2040);
 
@@ -28,8 +28,8 @@ int websocket_client_check(struct web_client_t * client){
   char Protocol[20] = "Protocol: ";
 
   char *key_s, *key_e, *protocol_s, *protocol_e;
-  char * key = _calloc(100, char);
-  char * _protocol = _calloc(10, char);
+  char * key = (char *)_calloc(100, char);
+  char * _protocol = (char *)_calloc(10, char);
   int protocol;
 
   loggerf(INFO, "Web Client (%d) check", client->fd);
@@ -65,7 +65,7 @@ int websocket_client_check(struct web_client_t * client){
     //Create response Security key by hashing it with SHA1 + base64 encryption
     char hash[SHA_DIGEST_LENGTH];
     SHA1((unsigned char *)key, strlen(key), (unsigned char *)hash);
-    char * response_key = _calloc(40, char);
+    char * response_key = (char *)_calloc(40, char);
     base64_encode((unsigned char *)hash, sizeof(hash), response_key, 40);
 
     //Server response to the client
@@ -222,7 +222,9 @@ uint8_t websocket_client_first_connect(struct web_client_t * client, char * buf,
 
 
   // Send broadcast flags
-  ws_send(client, (char [2]){WSopc_ChangeBroadcast,client->type}, 2, 0xFF);
+  data[0] = WSopc_ChangeBroadcast;
+  data[1] = client->type;
+  ws_send(client, data, 2, 0xFF);
 
   if(SYS->trains_loaded){
     loggerf(INFO, "Update clients libs %i", client->id);
@@ -261,7 +263,7 @@ uint8_t websocket_client_first_connect(struct web_client_t * client, char * buf,
   }
   WS_stc_Z21_IP(client);
 
-  SIM_Client_Connect_cb();
+  //SIM_Client_Connect_cb();
 
   return 1;
 }
@@ -269,7 +271,7 @@ uint8_t websocket_client_first_connect(struct web_client_t * client, char * buf,
 void * websocket_client(void * p){
   // Thread of a websocket client
 
-  struct web_client_t * client = p;
+  struct web_client_t * client = (struct web_client_t *)p;
 
   // Check if it is a valid HTML5-websocket
   if(!websocket_client_check(client)){
@@ -288,7 +290,7 @@ void * websocket_client(void * p){
   client->trains[0] = 0xFF;
   client->trains[1] = 0xFF;
 
-  char * buf = _calloc(WS_BUF_SIZE, char);
+  char * buf = (char *)_calloc(WS_BUF_SIZE, char);
   int length = 0;
 
   SYS->Clients++;
@@ -368,7 +370,7 @@ void * websocket_client(void * p){
   loggerf(ERROR, "FIX websocket_client");
 }
 
-void * websocket_clear_clients(){
+void * websocket_clear_clients(void * args){
   while (SYS->stop == 0){
     for(int i = 0; i < MAX_WEB_CLIENTS; i++){
       if(websocket_clients[i].state == 2){
@@ -395,7 +397,7 @@ void read_password(){
     fseek (f, 0, SEEK_END);
     WS_pass_length = ftell (f);
     fseek (f, 0, SEEK_SET);
-    WS_password = _calloc(WS_pass_length + 2, char);
+    WS_password = (char *)_calloc(WS_pass_length + 2, char);
     if (WS_password && WS_pass_length == 32)
     {
       fread (WS_password, 1, WS_pass_length, f);
@@ -437,7 +439,7 @@ void * websocket_server(){
   loggerf(INFO, "Starting websocket server at port %i", WEBSOCKET_PORT);
 
   //Memory alloc for clients list and thread data
-  websocket_clients = _calloc(MAX_WEB_CLIENTS, struct web_client_t);
+  websocket_clients = (struct web_client_t *)_calloc(MAX_WEB_CLIENTS, struct web_client_t);
 
   for(uint8_t i = 0; i < MAX_WEB_CLIENTS; i++){
     websocket_clients[i].trains[0] = 0xFF;

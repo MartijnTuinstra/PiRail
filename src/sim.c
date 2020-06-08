@@ -13,7 +13,7 @@
 #include "websocket_stc.h"
 #include "pathfinding.h"
 
-pthread_mutex_t mutex_lockA;
+extern pthread_mutex_t mutex_lockA;
 
 #define delayA 5000000
 #define delayB 5000000
@@ -97,7 +97,7 @@ void train_sim_tick(struct train_sim * t){
   t->posRear  -= (t->T->speed / 3.6) * 100 / 160 * TRAINSIM_INTERVAL_SEC;
 }
 
-void *TRAIN_SIMA(){
+void *TRAIN_SIMA(void * args){
   while(SYS->LC.state != Module_Run){
     usleep(10000);
     if(SYS->LC.state == Module_Fail || SYS->LC.state == Module_STOP){
@@ -106,12 +106,12 @@ void *TRAIN_SIMA(){
     }
   }
 
-  usleep(10000000);
+  usleep(100000);
 
   Block *B = Units[25]->B[3];
 
   struct train_sim train;
-  train.B = _calloc(10, void *);
+  train.B = (Block **)_calloc(10, Block *);
   train.sim = 'A';
   train.posFront = 0;
   train.posRear = B->length;
@@ -183,7 +183,7 @@ void *TRAIN_SIMA(){
   return 0;
 }
 
-void *TRAIN_SIMB(){
+void *TRAIN_SIMB(void * args){
   while(SYS->LC.state != Module_Run){
     usleep(10000);
     if(SYS->LC.state == Module_Fail || SYS->LC.state == Module_STOP){
@@ -197,7 +197,7 @@ void *TRAIN_SIMB(){
   Block *B = Units[25]->B[3];
 
   struct train_sim train;
-  train.B = _calloc(10, void *);
+  train.B = (Block **)_calloc(10, Block *);
   train.sim = 'B';
   train.posFront = 0;
   train.posRear = B->length;
@@ -273,65 +273,65 @@ int init_connect_Algor(struct ConnectList * List){
   // printf("init_connect_Algor\n");
   int return_value = 0;
   for(int i = 0;i < unit_len;i++){
-  if(!Units[i])
-    continue;
-
-  for(int j = 0;j < Units[i]->block_len; j++){
-    if(!Units[i]->B[j])
+    if(!Units[i])
       continue;
 
-    if(Units[i]->B[j]->next.type == RAIL_LINK_C || Units[i]->B[j]->prev.type == RAIL_LINK_C){
-      printf("found block %i:%i\n",i,j);
-      if(List->list_index <= List->length + 1){
-        struct rail_link ** temp = _calloc(List->list_index+8, struct rail_link *);
-        for(int q = 0;q < List->list_index;q++){
-          temp[q] = List->R_L[q];
+    for(int j = 0;j < Units[i]->block_len; j++){
+      if(!Units[i]->B[j])
+        continue;
+
+      if(Units[i]->B[j]->next.type == RAIL_LINK_C || Units[i]->B[j]->prev.type == RAIL_LINK_C){
+        printf("found block %i:%i\n",i,j);
+        if(List->list_index <= List->length + 1){
+          struct rail_link ** temp = (struct rail_link **)_calloc(List->list_index+8, struct rail_link *);
+          for(int q = 0;q < List->list_index;q++){
+            temp[q] = List->R_L[q];
+          }
+          _free(List->R_L);
+          List->R_L = temp;
+          List->list_index += 8;
         }
-        _free(List->R_L);
-        List->R_L = temp;
-        List->list_index += 8;
+        // printf("write index: %i\n",List->length);
+        List->R_L[List->length] = (struct rail_link *)_calloc(1, struct rail_link);
+        List->R_L[List->length]->type = (enum link_types)'R';
+        List->R_L[List->length++]->p  = Units[i]->B[j];
       }
-      // printf("write index: %i\n",List->length);
-      List->R_L[List->length] = _calloc(1, struct rail_link);
-      List->R_L[List->length]->type = 'R';
-      List->R_L[List->length++]->p  = Units[i]->B[j];
     }
-  }
 
-  for(int j = 0;j < Units[i]->switch_len; j++){
-    if(!Units[i]->Sw[j])
-      continue;
+    for(int j = 0;j < Units[i]->switch_len; j++){
+      if(!Units[i]->Sw[j])
+        continue;
 
-    if(Units[i]->Sw[j]->app.type == RAIL_LINK_C || Units[i]->Sw[j]->div.type == RAIL_LINK_C || Units[i]->Sw[j]->str.type == RAIL_LINK_C){
-      printf("module %i, switch %i\n",i,j);
-      if(List->list_index <= List->length + 1){
-        struct rail_link ** temp = _calloc(List->list_index+8, struct rail_link *);
-        for(int q = 0;q < List->list_index;q++){
-          temp[q] = List->R_L[q];
+      if(Units[i]->Sw[j]->app.type == RAIL_LINK_C || Units[i]->Sw[j]->div.type == RAIL_LINK_C || Units[i]->Sw[j]->str.type == RAIL_LINK_C){
+        printf("module %i, switch %i\n",i,j);
+        if(List->list_index <= List->length + 1){
+          struct rail_link ** temp = (struct rail_link **)_calloc(List->list_index+8, struct rail_link *);
+          for(int q = 0;q < List->list_index;q++){
+            temp[q] = List->R_L[q];
+          }
+          _free(List->R_L);
+          List->R_L = temp;
+          List->list_index += 8;
         }
-        _free(List->R_L);
-        List->R_L = temp;
-        List->list_index += 8;
+        List->R_L[List->length] = (struct rail_link *)_calloc(1, struct rail_link);
+        List->R_L[List->length]->type = (enum link_types)'S';
+        List->R_L[List->length++]->p  = Units[i]->Sw[j];
       }
-      List->R_L[List->length] = _calloc(1, struct rail_link);
-      List->R_L[List->length]->type = 'S';
-      List->R_L[List->length++]->p  = Units[i]->Sw[j];
     }
-  }
 
-  return_value += Units[i]->connections_len;
+    return_value += Units[i]->connections_len;
   }
   return return_value;
 }
 
-_Bool find_and_connect(uint8_t ModuleA, char anchor_A, uint8_t ModuleB, char anchor_B){
+bool find_and_connect(uint8_t ModuleA, char anchor_A, uint8_t ModuleB, char anchor_B){
   //Node shouldn't be connected to the same Module
   if(ModuleA == ModuleB){return FALSE;}
 
   char typeA = 0;
   char typeB = 0;
 
-  _Bool connected = FALSE;
+  bool connected = FALSE;
 
   printf("find_and_connect: %i:%i\t\t%i:%i\n",ModuleA,anchor_A,ModuleB,anchor_B);
 
@@ -600,7 +600,7 @@ int connect_Algor(struct ConnectList * List){
           R = List->R_L[i];
         else
         {
-          _Bool connected = FALSE;
+          bool connected = FALSE;
           char anchor_A = 0;
           char anchor_B = 0;
 
@@ -645,7 +645,8 @@ int connect_Algor(struct ConnectList * List){
           } // End Switch type
 
           if(connected){
-            WS_stc_Partial_Layout(ModuleA,ModuleB);
+            WS_stc_Partial_Layout(ModuleA);
+            WS_stc_Partial_Layout(ModuleB);
             connected = FALSE;
           }
         }
@@ -759,12 +760,20 @@ void * rail_link_pointer(struct rail_link link){
 
 
 void SIM_JoinModules(){
+  Units[10]->on_layout = 1;
+  Units[20]->on_layout = 1;
+  Units[21]->on_layout = 1;
+  Units[22]->on_layout = 1;
+  Units[23]->on_layout = 1;
+  Units[25]->on_layout = 1;
+
+  WS_stc_Track_Layout(0);
   printf("Ready to join modules\n");
 
   struct ConnectList List;
   List.length = 0;
   List.list_index = 8;
-  List.R_L = _calloc(8, struct rail_link *);
+  List.R_L = (struct rail_link **)_calloc(8, struct rail_link *);
 
 
   int i = 0;
@@ -773,6 +782,7 @@ void SIM_JoinModules(){
   int cur_j = max_j;
   int prev_j = max_j;
   while(SYS->modules_linked == 0){
+    WS_stc_trackUpdate(0);
     cur_j = connect_Algor(&List);
     printf("?\n");
     if(i > 1){
@@ -799,49 +809,133 @@ void SIM_JoinModules(){
     prev_j = cur_j;
 
     if(i == 1){
-    usleep(5000);
+    usleep(50000);
     if(x == 1){
+      Units[20]->block_state_changed = 1;
+      Units[20]->B[5]->IOchanged = 1;
+      Units[25]->block_state_changed = 1;
+      Units[25]->B[0]->IOchanged = 1;
+
       Units[20]->B[5]->blocked = 1;
       Units[25]->B[0]->blocked = 1;
+      Units[20]->B[5]->state = BLOCKED;
+      Units[25]->B[0]->state = BLOCKED;
       printf("\n1\n");
     }else if(x == 2){
+      Units[20]->block_state_changed = 1;
+      Units[20]->B[5]->IOchanged = 1;
+      Units[25]->block_state_changed = 1;
+      Units[25]->B[0]->IOchanged = 1;
+      
+      Units[25]->block_state_changed = 1;
+      Units[25]->B[3]->IOchanged = 1;
+      Units[22]->block_state_changed = 1;
+      Units[22]->B[0]->IOchanged = 1;
+
       Units[25]->B[3]->blocked = 1;
       Units[22]->B[0]->blocked = 1;
+      Units[25]->B[3]->state = BLOCKED;
+      Units[22]->B[0]->state = BLOCKED;
 
       Units[20]->B[5]->blocked = 0;
       Units[25]->B[0]->blocked = 0;
+      Units[20]->B[5]->state = PROCEED;
+      Units[25]->B[0]->state = PROCEED;
       printf("\n2\n");
     }else if(x == 3){
+      Units[25]->block_state_changed = 1;
+      Units[25]->B[3]->IOchanged = 1;
+      Units[22]->block_state_changed = 1;
+      Units[22]->B[0]->IOchanged = 1;
+
+      Units[22]->block_state_changed = 1;
+      Units[22]->B[1]->IOchanged = 1;
+      Units[10]->block_state_changed = 1;
+      Units[10]->B[0]->IOchanged = 1;
+
       Units[22]->B[1]->blocked = 1;
       Units[10]->B[0]->blocked = 1;
+      Units[22]->B[1]->state = BLOCKED;
+      Units[10]->B[0]->state = BLOCKED;
 
-      Units[25]->B[3]->blocked = 1;
-      Units[22]->B[0]->blocked = 1;
+      Units[25]->B[3]->blocked = 0;
+      Units[22]->B[0]->blocked = 0;
+      Units[25]->B[3]->state = PROCEED;
+      Units[22]->B[0]->state = PROCEED;
       printf("\n3\n");
     }else if(x == 4){
+      Units[22]->block_state_changed = 1;
+      Units[22]->B[1]->IOchanged = 1;
+      Units[10]->block_state_changed = 1;
+      Units[10]->B[0]->IOchanged = 1;
+
+      Units[10]->block_state_changed = 1;
+      Units[10]->B[3]->IOchanged = 1;
+      Units[21]->block_state_changed = 1;
+      Units[21]->B[0]->IOchanged = 1;
+
       Units[10]->B[3]->blocked = 1;
       Units[21]->B[0]->blocked = 1;
+      Units[10]->B[3]->state = BLOCKED;
+      Units[21]->B[0]->state = BLOCKED;
 
       Units[22]->B[1]->blocked = 0;
       Units[10]->B[0]->blocked = 0;
+      Units[22]->B[1]->state = PROCEED;
+      Units[10]->B[0]->state = PROCEED;
       printf("\n4\n");
     }else if(x == 5){
+      Units[10]->block_state_changed = 1;
+      Units[10]->B[3]->IOchanged = 1;
+      Units[21]->block_state_changed = 1;
+      Units[21]->B[0]->IOchanged = 1;
+      
+      Units[21]->block_state_changed = 1;
+      Units[21]->B[3]->IOchanged = 1;
+      Units[23]->block_state_changed = 1;
+      Units[23]->B[0]->IOchanged = 1;
+
       Units[21]->B[3]->blocked = 1;
       Units[23]->B[0]->blocked = 1;
+      Units[21]->B[3]->state = BLOCKED;
+      Units[23]->B[0]->state = BLOCKED;
 
       Units[10]->B[3]->blocked = 0;
       Units[21]->B[0]->blocked = 0;
+      Units[10]->B[3]->state = PROCEED;
+      Units[21]->B[0]->state = PROCEED;
       printf("\n5\n");
     }else if(x == 6){
+      Units[21]->block_state_changed = 1;
+      Units[21]->B[3]->IOchanged = 1;
+      Units[23]->block_state_changed = 1;
+      Units[23]->B[0]->IOchanged = 1;
+
+      Units[23]->block_state_changed = 1;
+      Units[23]->B[1]->IOchanged = 1;
+      Units[20]->block_state_changed = 1;
+      Units[20]->B[0]->IOchanged = 1;
+
       Units[23]->B[1]->blocked = 1;
       Units[20]->B[0]->blocked = 1;
+      Units[23]->B[1]->state = BLOCKED;
+      Units[20]->B[0]->state = BLOCKED;
 
       Units[21]->B[3]->blocked = 0;
       Units[23]->B[0]->blocked = 0;
+      Units[21]->B[3]->state = PROCEED;
+      Units[23]->B[0]->state = PROCEED;
       printf("\n6\n");
     }else if(x == 7){
+      Units[23]->block_state_changed = 1;
+      Units[23]->B[1]->IOchanged = 1;
+      Units[20]->block_state_changed = 1;
+      Units[20]->B[0]->IOchanged = 1;
+
       Units[23]->B[1]->blocked = 0;
       Units[20]->B[0]->blocked = 0;
+      Units[23]->B[1]->state = PROCEED;
+      Units[20]->B[0]->state = PROCEED;
       printf("\n7\n");
     }else if(x == 6){
       printf("\nend\n");

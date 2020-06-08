@@ -32,7 +32,7 @@ void putList_AlgorQueue(struct algor_blocks AllBlocks, int enable);
 Block * getAlgorQueue();
 void processAlgorQueue();
 
-void * Algor_Run();
+void * Algor_Run(void * args);
 
 #define lock_Algor_process() mutex_lock(&algor_mutex, "Algor_mutex")
 #define unlock_Algor_process() mutex_unlock(&algor_mutex, "Algor_mutex")
@@ -65,6 +65,8 @@ void Algor_rail_state(struct algor_blocks AllBlocks, int debug);
 // void Algor_apply_rail_state(Algor_Block blocks, enum Rail_states state);
 void Algor_signal_state(Algor_Blocks AB, int debug);
 void Algor_train_control(Algor_Blocks * ABs, int debug);
+
+void Algor_Connect_Rails();
 
 // void procces_accessoire();
 

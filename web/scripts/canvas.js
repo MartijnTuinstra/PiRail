@@ -141,8 +141,6 @@ var Canvas = {
 					b = point[i].y + 100;
 				}
 			}
-
-			console.log([l, r, t, b]);
 		}
 
 		this.dimensions.content.width = (r - l)*this.dimensions.scale;
@@ -314,8 +312,8 @@ var Canvas = {
 		this.c.setTransform(this.dimensions.scale, 0, 0, this.dimensions.scale, this.dimensions.ofX-this.dimensions.content.ofX, this.dimensions.ofY-this.dimensions.content.ofY);
 
 
-		for (var w = this.dimensions.content.ofX; w < (this.dimensions.content.ofX + this.dimensions.content.width/this.dimensions.scale) + 50; w += 100) {
-		    for (var h = this.dimensions.content.ofY; h < (this.dimensions.content.ofY + this.dimensions.content.height/this.dimensions.scale) + 50; h += 100) {
+		for (var w = this.dimensions.content.ofX; w < (this.dimensions.content.ofX + this.dimensions.content.width/this.dimensions.scale); w += 100) {
+		    for (var h = this.dimensions.content.ofY; h < (this.dimensions.content.ofY + this.dimensions.content.height/this.dimensions.scale); h += 100) {
 		        var x = Math.round((w) / 100) * 100;
 		        var y = Math.round((h) / 100) * 100;
 
@@ -350,7 +348,7 @@ var Canvas = {
 
 				this.c.fill();
 				this.c.stroke();
-				this.c.fillText(i, this.fitlist[i].originX, this.fitlist[i].originY+20);
+				this.c.fillText(i, this.fitlist[i].originX, this.fitlist[i].originY+10);
 				this.c.beginPath();
 
 				this.c.arc(this.fitlist[i].originX+this.fitlist[i].w, this.fitlist[i].originY+this.fitlist[i].h, 1, 0, 2*Math.PI, false);
@@ -702,7 +700,6 @@ var Canvas = {
 		var m = [];
 
 		function fit_func(module, prev, depth, origin, blocks, blockid, module_list){
-			console.log(["test", module, prev]);
 			for(var i = 0; i < module.connection_link.length; i++){
 				if(module.connection_link[i] == undefined)
 					continue;
@@ -726,42 +723,34 @@ var Canvas = {
 				pos = rotated_point(m.width, m.height, m.r, m.OffsetX, m.OffsetY);
 
 				if(m.OffsetX < blocks[blockid].originX){
-					console.log(m.id + " -> oX " + (blocks[blockid].originX - m.OffsetX));
 					blocks[blockid].dx += blocks[blockid].originX - m.OffsetX;
 					blocks[blockid].w += blocks[blockid].originX - m.OffsetX;
 					blocks[blockid].originX = m.OffsetX;
 				}
 				else if(m.OffsetX > blocks[blockid].originX + blocks[blockid].w){
-					console.log(m.id + " -> wX " + (m.OffsetX - blocks[blockid].originX));
 					blocks[blockid].w = m.OffsetX - blocks[blockid].originX;
 				}
 				if(m.OffsetY < blocks[blockid].originY){
-					console.log(m.id + " -> oY " + (blocks[blockid].originY - m.OffsetY));
 					blocks[blockid].dy += blocks[blockid].originY - m.OffsetY;
 					blocks[blockid].h += blocks[blockid].originY - m.OffsetY;
 					blocks[blockid].originY = m.OffsetY;
 				}
 				else if(m.OffsetY > blocks[blockid].originY + blocks[blockid].h){
-					console.log(m.id + " -> hY " + (m.OffsetX - blocks[blockid].originX));
 					blocks[blockid].h = m.OffsetY - blocks[blockid].originY;
 				}
 
 				if(pos.y > blocks[blockid].originY + blocks[blockid].h){
-					console.log(m.id + " -> h " + (pos.y - blocks[blockid].originY));
 					blocks[blockid].h = pos.y - blocks[blockid].originY;
 				}
 				else if(pos.y < blocks[blockid].originY){
-					console.log(m.id + " -> oh " + (blocks[blockid].originY - pos.y));
 					blocks[blockid].dy += blocks[blockid].originY - pos.y;
 					blocks[blockid].h += blocks[blockid].originY - pos.y;
 					blocks[blockid].originY = pos.y;
 				}
 				if(pos.x > blocks[blockid].originX + blocks[blockid].w){
-					console.log(m.id + " -> w " + (pos.x - blocks[blockid].originX));
 					blocks[blockid].w = pos.x - blocks[blockid].originX;
 				}
 				else if(pos.x < blocks[blockid].originX){
-					console.log(m.id + " -> ow " + (blocks[blockid].originX - pos.x));
 					blocks[blockid].dx += blocks[blockid].originX - pos.x;
 					blocks[blockid].w += blocks[blockid].originX - pos.x;
 					blocks[blockid].originX = pos.x;
@@ -775,6 +764,11 @@ var Canvas = {
 		var module_keys = Object.keys(modules);
 		for(var i = 0; i < module_keys.length; i++){
 			var this_module = modules[module_keys[i]];
+
+			if(!this_module.visible){
+				continue;
+			}
+
 			if(!m.includes(parseInt(module_keys[i]))){
 				m.push(parseInt(module_keys[i]));
 				var block_id = blocks.length;

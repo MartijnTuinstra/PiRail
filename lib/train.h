@@ -43,8 +43,9 @@ typedef struct engine {
   uint8_t dir;
   uint8_t halt;
 
-  _Bool use;
+  bool use;
   Trains * train;
+  RailTrain * RT;
 
   char speed; // Z21 Speed
   char speed_step_type;
@@ -104,7 +105,7 @@ typedef struct trains {
   uint8_t halt:2;
   uint8_t save:1;
 
-  Block * Block;
+  Block * B;
 
   char timer;
   int timer_id;
@@ -118,8 +119,8 @@ typedef struct rail_train {
 
   uint8_t link_id;
 
-  uint16_t speed;
-  uint16_t max_speed;
+  uint16_t speed;        // Real speed
+  uint16_t max_speed;    // Real max speed
 
   uint16_t target_speed;
   uint16_t target_distance;
@@ -187,13 +188,13 @@ void write_rolling_Configs();
 int load_rolling_Configs();
 void unload_rolling_Configs();
 
-#define create_engine_from_conf(e) Create_Engine(e.name, e.DCC_ID, e.img_path, e.icon_path, e.type, e.length, e.config_steps, e.speed_steps)
+#define create_engine_from_conf(e) Create_Engine(e.name, e.DCC_ID, e.img_path, e.icon_path, e.type, e.length, e.config_steps, e.speed_steps, e.functions)
 #define create_car_from_conf(c) Create_Car(c.name, c.nr, c.icon_path, c.type, c.length, c.max_speed)
 #define create_train_from_conf(t) Create_Train(t.name, t.nr_stock, t.composition, t.catagory, 1)
 
 void Create_Train(char * name, int nr_stock, struct train_comp_ws * comps, uint8_t catagory, uint8_t save);
 void Clear_Train(Trains ** E);
-void Create_Engine(char * name,int DCC,char * img, char * icon, char type, int length, int steps_len, struct engine_speed_steps * steps);
+void Create_Engine(char * name,int DCC,char * img, char * icon, char type, int length, int steps_len, struct engine_speed_steps * steps, uint8_t functions[28]);
 void Clear_Engine(Engines ** E);
 void Create_Car(char * name,int nr, char * icon, char type, uint16_t length, uint16_t speed);
 void Clear_Car(Cars ** E);

@@ -15,6 +15,7 @@
 #include "logger.h"
 #include "config.h"
 
+#include "Z21_msg.h"
 #include "websocket.h"
 
 // #include "pathfinding.h"
@@ -50,17 +51,17 @@ Engines * DCC_train[9999];
 
 
 void Create_Train(char * name, int nr_stock, struct train_comp_ws * comps, uint8_t catagory, uint8_t save){
-  Trains * Z = _calloc(1, Trains);
+  Trains * Z = (Trains *)_calloc(1, Trains);
 
   Z->nr_stock = nr_stock;
-  Z->composition = _calloc(nr_stock, struct train_comp);
+  Z->composition = (struct train_comp *)_calloc(nr_stock, struct train_comp);
 
   Z->max_speed = 0xFFFF;
   Z->length = 0;
   Z->type = catagory;
   Z->save = save;
 
-  Z->engines = _calloc(1, Engines *);
+  Z->engines = (Engines **)_calloc(1, Engines *);
   Z->nr_engines = 0;
 
   for(int i = 0;i<nr_stock;i++){
@@ -125,14 +126,14 @@ void Clear_Train(Trains ** T){
   *T = 0;
 }
 
-void Create_Engine(char * name,int DCC,char * img, char * icon, char type, int length, int steps_len, struct engine_speed_steps * steps){
+void Create_Engine(char * name,int DCC,char * img, char * icon, char type, int length, int steps_len, struct engine_speed_steps * steps, uint8_t functions[28]){
   //DCC cant be used twice
   for(int i = 0;i<engines_len;i++){
     if(engines[i] && engines[i]->DCC_ID == DCC){
       loggerf(WARNING,"create_engine: found duplicate: %s",engines[i]->name);
     }
   }
-  Engines * Z = _calloc(1, Engines);
+  Engines * Z = (Engines *)_calloc(1, Engines);
 
   Z->name = name;
   Z->img_path = img;
@@ -150,7 +151,9 @@ void Create_Engine(char * name,int DCC,char * img, char * icon, char type, int l
   Z->steps_len = steps_len;
   Z->steps = steps;
 
-  for(int i = 0; i < steps_len; i++){
+
+  // Copy each speed step
+  for(uint8_t i = 0; i < steps_len; i++){
     if(Z->max_speed < steps[i].speed){
       Z->max_speed = steps[i].speed;
     }
@@ -175,7 +178,7 @@ void Clear_Engine(Engines ** E){
 }
 
 void Create_Car(char * name,int nr, char * icon, char type, uint16_t length, uint16_t speed){
-  Cars * Z = _calloc(1, Cars);
+  Cars * Z = (Cars *)_calloc(1, Cars);
 
   Z->name = name;
   Z->icon_path = icon;
@@ -196,12 +199,12 @@ void Create_Car(char * name,int nr, char * icon, char type, uint16_t length, uin
 void Clear_Car(Cars ** C){
   _free((*C)->name);
   _free((*C)->icon_path);
-  _free((*C)->funcs);
-  *C = _free((*C));
+  _free((*C));
+  *C = 0;
 }
 
 RailTrain * new_railTrain(){
-  RailTrain * T = _calloc(1, RailTrain);
+  RailTrain * T = (RailTrain *)_calloc(1, RailTrain);
   uint16_t id = find_free_index(train_link, train_link_len);
   T->link_id = id;
   train_link[id] = T;
@@ -212,15 +215,15 @@ int load_rolling_Configs(){
   loggerf(INFO, "Initializing cars/engines/trains");
 
   // Allocation Basic Space
-  trains = _calloc(10, Trains *);
+  trains = (Trains **)_calloc(10, Trains *);
   trains_len = 10;
-  engines = _calloc(10, Engines *);
+  engines = (Engines **)_calloc(10, Engines *);
   engines_len = 10;
-  cars = _calloc(10, Cars *);
+  cars = (Cars **)_calloc(10, Cars *);
   cars_len = 10;
-  trains_comp = _calloc(10, struct train_composition *);
+  trains_comp = (struct train_composition **)_calloc(10, struct train_composition *);
   trains_comp_len = 10;
-  train_link = _calloc(10,RailTrain *);
+  train_link = (RailTrain **)_calloc(10,RailTrain *);
   train_link_len = 10;
 
   read_rolling_Configs();
@@ -233,7 +236,12 @@ int load_rolling_Configs(){
 int read_rolling_Configs(){
   FILE * fp = fopen("configs/stock.bin", "rb");
 
-  char * header = _calloc(2, char);
+  if(!fp){
+    loggerf(ERROR, "Failed to open config file");
+    return -1;
+  }
+
+  char * header = (char *)_calloc(2, char);
 
   fread(header, 1, 1, fp);
 
@@ -241,7 +249,7 @@ int read_rolling_Configs(){
   long fsize = ftell(fp);
   fseek(fp, 0, SEEK_SET);
 
-  char * buffer = _calloc(fsize, char);
+  char * buffer = (char *)_calloc(fsize, char);
   char * buffer_start = &buffer[0];
   fread(buffer, fsize, 1, fp);
 
@@ -259,9 +267,9 @@ int read_rolling_Configs(){
   }
 
 
-  train_P_cat = _calloc(h.P_Catagories, struct cat_conf);
+  train_P_cat = (struct cat_conf *)_calloc(h.P_Catagories, struct cat_conf);
   train_P_cat_len = h.P_Catagories;
-  train_C_cat = _calloc(h.C_Catagories, struct cat_conf);
+  train_C_cat = (struct cat_conf *)_calloc(h.C_Catagories, struct cat_conf);
   train_C_cat_len = h.C_Catagories;
 
   for(int i = 0; i < h.P_Catagories; i++){
@@ -362,7 +370,7 @@ void write_rolling_Configs(){
 
   loggerf(INFO, "Writing %i bytes", size);
 
-  char * data = _calloc(size, 1);
+  char * data = (char *)_calloc(size, 1);
 
   data[0] = TRAIN_CONF_VERSION;
 
@@ -508,16 +516,16 @@ void unload_rolling_Configs(){
 
   for(int i = 0;i<trains_comp_len;i++){
     if(trains_comp[i]){
-      trains_comp[i]->name = _free(trains_comp[i]->name);
-      trains_comp[i]->composition = _free(trains_comp[i]->composition);
-      trains_comp[i] = _free(trains_comp[i]);
+      trains_comp[i]->name = (char *)_free(trains_comp[i]->name);
+      trains_comp[i]->composition = (struct train_comp *)_free(trains_comp[i]->composition);
+      trains_comp[i] = (struct train_composition *)_free(trains_comp[i]);
     }
   }
 
-  trains = _free(trains);
-  engines = _free(engines);
-  cars = _free(cars);
-  trains_comp = _free(trains_comp);
+  trains = (Trains **)_free(trains);
+  engines = (Engines **)_free(engines);
+  cars = (Cars **)_free(cars);
+  trains_comp = (train_composition **)_free(trains_comp);
 
   for(int i = 0; i < train_link_len; i++){
     if(!train_link[i])
@@ -527,7 +535,7 @@ void unload_rolling_Configs(){
     train_link[i] = 0;
   }
 
-  train_link = _free(train_link);
+  train_link = (RailTrain **)_free(train_link);
 
   for(int i = 0; i < train_P_cat_len; i++){
     _free(train_P_cat[i].name);
@@ -573,6 +581,7 @@ int link_train(int fid, int tid, char type){
 
     //Lock engines
     engines[tid]->use = 1;
+    engines[tid]->RT = RT;
   }
   else{
     for(int  i = 0; i < trains[tid]->nr_engines; i++){
@@ -591,6 +600,7 @@ int link_train(int fid, int tid, char type){
     //Lock all engines    
     for(int i = 0; i < trains[tid]->nr_engines; i++){
       trains[tid]->engines[i]->use = 1;
+      trains[tid]->engines[i]->RT = RT;
     }
   }
 
@@ -600,9 +610,18 @@ int link_train(int fid, int tid, char type){
 void unlink_train(int id){
   //TODO implement RailTrain type
   //Unlock all engines
-  //for(int i = 0; i < train_link[fid]->nr_engines; i++){
-  //  train_link[fid]->engines[i]->use = 0;
-  //}
+  if(train_link[id]->type == TRAIN_ENGINE_TYPE){
+    Engines * E = (Engines *)train_link[id]->p;
+    E->use = 0;
+    E->RT = 0;
+  }
+  else{
+    Trains * T = (Trains *)train_link[id]->p;
+    for(int i = 0; i < T->nr_engines; i++){
+      T->engines[i]->use = 0;
+      T->engines[i]->RT = 0;
+    }
+  }
   //Reset link
   _free(train_link[id]);
   train_link[id] = NULL;
@@ -847,6 +866,14 @@ void * train_speed_timer_run(void * args){
 
     loggerf(INFO, "train_speed_timer_run %i %f", T->speed, acceleration);
 
+    if(T->type == TRAIN_ENGINE_TYPE){
+      engine_set_speed((Engines *)T->p, T->speed);
+      Z21_Set_Loco_Drive_Engine((Engines *)T->p);
+    }
+    else{
+      train_set_speed((Trains *)T->p, T->speed);
+      Z21_Set_Loco_Drive_Train((Trains *)T->p);
+    }
     WS_stc_UpdateTrain(T);
 
     if(T->changing_speed == RAILTRAIN_SPEED_T_DONE){

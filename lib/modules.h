@@ -69,7 +69,7 @@ extern Unit ** Units;
 #define Unit_Signal_changed 0x8
 
 void Create_Unit(uint16_t M, uint8_t Nodes, char points);
-void * Clear_Unit(Unit * U);
+Unit * Clear_Unit(Unit * U);
 
 void read_module_Config(uint16_t M);
 void write_module_Config(uint16_t M);

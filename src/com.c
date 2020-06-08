@@ -19,6 +19,8 @@
 #include "signals.h"
 #include "train.h"
 #include "logger.h"
+#include "IO.h"
+#include "Z21.h"
 
 #include "mem.h"
 
@@ -39,7 +41,7 @@ int uart0_filestream = -1;
 char COM_ACK = 0;
 char COM_NACK = 0;
 
-void * UART(){
+void * UART(void * args){
   loggerf(INFO, "Starting UART thread");
   //OPEN THE UART
 
@@ -108,7 +110,10 @@ void COM_Reset(){
 }
 
 void COM_Send(struct COM_t * DATA){
-  if (uart0_filestream == -1){
+  if (SYS->UART.state == Module_SIM_State){
+    return;
+  }
+  else if (SYS->UART.state != Module_Run){
     loggerf(ERROR, "No UART");
     return;
   }
@@ -245,7 +250,7 @@ void COM_Parse(struct fifobuffer * buf){
   if(length > (uint8_t)(buf->write - buf->read) % UART_BUFFER_SIZE)
     return;
 
-  uint8_t * data = _calloc(length, char);
+  uint8_t * data = (uint8_t *)_calloc(length, uint8_t);
 
   //Check Checksum
   uint8_t Check = UART_CHECKSUM_SEED;
@@ -278,12 +283,18 @@ void COM_Parse(struct fifobuffer * buf){
     //Add device to device list
     
     for(uint16_t i = 0;i<255;i++){
-      Units[i]->on_layout = 0;
+      if(Units[i])
+        Units[i]->on_layout = 0;
+
       if(data[i/8+2] & (1 << (i%8))){
         loggerf(INFO, "UART Found Module %d", i);
-        Units[i]->on_layout = 1;
+        if(Units[i])
+          Units[i]->on_layout = 1;
       }
     }
+
+    // Update all clients with the new set of modules
+    WS_stc_Track_Layout(0);
 
     SYS->UART.modules_found = 1;
   }
@@ -295,42 +306,40 @@ void COM_Parse(struct fifobuffer * buf){
       return;
     }
 
-    //uint8_t node = data[3];
-    // uint8_t l = data[3];
-    // for(uint8_t i = 0; i < l*8; i++){
-    //   if(data[i/8+4] & (1 << (i%8)))
-    //     loggerf(INFO, "%d IO %i HIGH", data[0], i);
-    //   else
-    //     loggerf(INFO, "%d IO %i LOW", data[0], i);
-    // }
+    uint8_t module = data[0];
+    uint8_t node = data[2];
 
-    // if(data[0] == 2){
-    //   if(data[5] & 0x1 && data[5] & 0x8){
-    //     COM_set_single_Output_output(3, 34, IO_event_High);
-    //     COM_set_single_Output_output(3, 35, IO_event_Low);
-    //     COM_set_single_Output_output(3, 36, IO_event_Low);
-    //   }
-    //   else if(!(data[5] & 0x8)){
-    //     COM_set_single_Output_output(3, 34, IO_event_Low);
-    //     COM_set_single_Output_output(3, 35, IO_event_High);
-    //     COM_set_single_Output_output(3, 36, IO_event_Low);
-    //   }
-    //   else{
-    //     COM_set_single_Output_output(3, 34, IO_event_Low);
-    //     COM_set_single_Output_output(3, 35, IO_event_Low);
-    //     COM_set_single_Output_output(3, 36, IO_event_High);
-    //   }
-    // }
+    if(!Units[module] || node >= Units[module]->IO_Nodes)
+      return;
+
+    IO_Node * IO = &Units[module]->Node[node];
+
+    //uint8_t node = data[3];
+    uint8_t l = data[3];
+    for(uint8_t i = 0; i < l*8; i++){
+      if(data[i/8+4] & (1 << (i%8))){
+        loggerf(INFO, "%d IO %i HIGH", data[0], i);
+        IO_set_input(IO->io[i], 1);
+      }
+      else{
+        loggerf(INFO, "%d IO %i LOW", data[0], i);
+        IO_set_input(IO->io[i], 0);
+      }
+    }
   }
   else if(data[1] == RNet_OPC_ReadEEPROM){
     loggerf(INFO, "EEPROMDUMP");
     loggerf(INFO, "%s", debug);
   }
-  /*
   else if(data[1] == 0x01){ //Set Emergency STOP
+    WS_stc_EmergencyStop();
+    Z21_TRACKPOWER_OFF;
   }
   else if(data[1] == 0x02){ //Release Emergency STOP
+    WS_stc_ClearEmergency();
+    Z21_TRACKPOWER_ON;
   }
+  /*
   else if(data[1] == 0x03){ //Set Power ON
   }
   else if(data[1] == 0x04){ //Set Power OFF

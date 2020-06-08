@@ -37,7 +37,7 @@ extern char COM_NACK;
 
 extern char * UART_Serial_Port;
 
-void * UART();
+void * UART(void * args);
 
 int COM_Recv(struct fifobuffer * buf);
 uint8_t COM_Packet_Length(struct fifobuffer * buf);

@@ -109,7 +109,7 @@ var websocket = {
       }
       msg = msg.concat(msg2);
 
-      console.log(msg);
+      console.log("cts_" + name, msg);
 
       if(!this.__send__(msg)){
         console.log("Failed to send");
@@ -123,7 +123,6 @@ var websocket = {
 
   __send__: function(data){
     if(this.connected){
-      console.log(new Int8Array(data));
       websocket.ws.send(new Int8Array(data));
       return 1;
     }
@@ -206,13 +205,25 @@ websocket.add_opcodes([
       name: "Track_Layout_Update", // Partial layout
       recv: function(data){
         for(var i = 0;i<data.length;i++){
-          var module = modules[data[i]]
+          var module = modules[data[i]];
+
+          module.visible = true;
+          var noanchor = true;
           for(var j = 1;j<= module.connections.length; j++){
             module.connection_link[j-1] = data[i+j];
+            if(data[i+j] != 0){
+              noanchor = false;
+            }
           }
+
+          if(noanchor){
+            continue;
+          }
+
           console.log("Module "+data[i]+" connect ", module.connection_link, {x: module.OffsetX, y:module.OffsetY, r:module.r});
           i += module.connections.length;
 
+          module.visible = true;
           module.connect();
         }
 
@@ -227,10 +238,21 @@ websocket.add_opcodes([
       name: "Track_Layout_Config", // Full layout
       recv: function(data){
         for(var i = 0;i<data.length;i++){
-          var module = modules[data[i]]
+          var module = modules[data[i]];
+
+          module.visible = true;
+          var noanchor = true;
           for(var j = 1;j<= module.connections.length; j++){
             module.connection_link[j-1] = data[i+j];
+            if(data[i+j] != 0){
+              noanchor = false;
+            }
           }
+
+          if(noanchor){
+            continue;
+          }
+
           console.log("Module "+data[i]+" connect ", module.connection_link, {x: module.OffsetX, y:module.OffsetY, r:module.r});
           i += module.connections.length;
 
@@ -350,14 +372,14 @@ websocket.add_opcodes([
       opcode: 0x41,
       name: "LinkTrain",
       send: function(data){
-        return [data.fid, data.real_id, ((data.type == "E")?1:0) + ((data.msg_id >> 8) & 0x7F), data.msg_id & 0xFF];
+        return [data.fid, data.real_id, ((data.type == "E")?0x80:0) + ((data.msg_id >> 8) & 0x7F), data.msg_id & 0xFF];
       },
       recv: function(data){
         var follow_id = data[0];
         var train_id = data[1];
-        var type = (data[2] & 0x1);
+        var type = (data[2] & 0x80);
 
-        var msg_id = ((data[2] & 0xFE) << 7) + data[3];
+        var msg_id = ((data[2] & 0x7F) << 8) + data[3];
 
         Train_Control.link({fid: follow_id, tid: train_id, type:type, msg_id: msg_id});
       }
@@ -425,6 +447,12 @@ websocket.add_opcodes([
         Train_Control.apply_dir(box);
 
         Train_Control.apply_control(box);
+
+        // Route
+        // data[3] and data[4]
+
+        // Functions
+        // data[5] - data[8]
       }
     },
     {
@@ -636,16 +664,23 @@ websocket.add_opcodes([
           speedsteps = data[i++];
           steps_len = data[i++];
 
-          var name = IntArrayToString(data.slice(i+3, i+3+data[i]));
-          var text_length = data[i++];
+          name_len = data[i++];
+          img_name_len = data[i++];
+          icon_name_len = data[i++];
 
-          var img = IntArrayToString(data.slice(i+2+text_length, i+2+text_length+data[i]));
-          text_length += data[i++];
+          // functions = data.slice(i, i + 29);
 
-          var icon = IntArrayToString(data.slice(i+1+text_length, i+1+text_length+data[i]));
-          text_length += data[i];
+          var name = IntArrayToString(data.slice(i, i+name_len));
+          
+          i += name_len;
 
-          i += text_length + 1;
+          var img = IntArrayToString(data.slice(i, i+img_name_len));
+          
+          i += img_name_len;
+
+          var icon = IntArrayToString(data.slice(i, i+icon_name_len));
+          
+          i += img_name_len;
 
           steps = [];
           for(var j = 0; j < steps_len; j++){
@@ -999,7 +1034,7 @@ websocket.add_opcodes([
         
         modules[newdata.id] = new canvas_module(newdata);
 
-        modules[newdata.id].init({visible: true, OffsetX: 0, OffsetY: newdata.id*300, r: 0});
+        modules[newdata.id].init({OffsetX: 0, OffsetY: newdata.id*300, r: 0});
 
         ModuleEditor.update()
 

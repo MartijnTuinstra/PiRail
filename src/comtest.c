@@ -18,11 +18,11 @@ int main(int argc, char *argv[]){
 
   if(argc > 1){
     printf("Got argument %s", argv[1]);
-    UART_Serial_Port = _calloc(strlen(argv[1])+5, char);
+    UART_Serial_Port = (char *)_calloc(strlen(argv[1])+5, char);
     strcpy(UART_Serial_Port, argv[1]);
   }
   else{
-    UART_Serial_Port = _calloc(30, char);
+    UART_Serial_Port = (char *)_calloc(30, char);
     strcpy(UART_Serial_Port, "/dev/ttyUSB1");
   }
 
@@ -33,13 +33,13 @@ int main(int argc, char *argv[]){
   set_level(DEBUG);
   set_logger_print_level(NONE);
 
-  Units = _calloc(30, Unit *);
+  Units = (Unit **)_calloc(30, Unit *);
   unit_len = 30;
 
   pthread_create(&thread, NULL, UART, NULL);
 
   char cmd[300];
-  char ** cmds = _calloc(20, char *);
+  char ** cmds = (char **)_calloc(20, char *);
   uint8_t max_cmds = 20;
   uint8_t cmds_len = 0;
 
@@ -58,7 +58,7 @@ int main(int argc, char *argv[]){
       if(cmds_len + 1 > max_cmds){
         max_cmds += 20;
         loggerf(INFO, "Expand cmds to %d", max_cmds);
-        cmds = _realloc(cmds, max_cmds, char *);
+        cmds = (char * *)_realloc(cmds, max_cmds, char *);
       }
     }
 
@@ -179,8 +179,8 @@ int main(int argc, char *argv[]){
         continue;
 
       int M = atoi(cmds[1]);
-      int new = atoi(cmds[2]);
-      loggerf(INFO, "Reprogram node id %d -> %d", M, new);
+      int newNode = atoi(cmds[2]);
+      loggerf(INFO, "Reprogram node id %d -> %d", M, newNode);
 
       struct COM_t data;
       data.data[0] = M;

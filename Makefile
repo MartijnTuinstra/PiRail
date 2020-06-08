@@ -10,7 +10,7 @@ GCC_ERROR_FLAGS = -Werror=unused-variable -Wno-packed-bitfield-compat -Wno-unuse
 GCC_LIBS = -lpthread -lssl -lcrypto -lm
 GCC_FLAGS = -D _DEFAULT_SOURCE
 
-GCC = gcc -std=c99 -g3 $(GCC_INCLUDE) $(GCC_ERROR_FLAGS) $(GCC_LIBS) $(GCC_FLAGS)
+GCC = g++ -std=c++14 -g3 $(GCC_INCLUDE) $(GCC_ERROR_FLAGS) $(GCC_LIBS) $(GCC_FLAGS)
 
 BAAN_FILES = baan system logger mem modules config rail signals switch IO algorithm encryption \
              Z21 Z21_msg train submodule com sim pathfinding
@@ -29,6 +29,11 @@ $(BIN)/%.o: $(SRC)/%.c
 	@echo '(  GCC  ) -$@'
 	@$(GCC) -c $(SRC)/$*.c -MP -MMD -MT '$@ $(BIN)/$*.d' -o $(BIN)/$*.o
 	@$(GCC) -shared -o $(SRC)/$*.c -o $(BIN)/$*.so
+
+$(BIN)/%.o: $(SRC)/%.cpp
+	@echo '(  G++  ) -$@'
+	@$(GCC) -c $(SRC)/$*.cpp -MP -MMD -MT '$@ $(BIN)/$*.d' -o $(BIN)/$*.o
+	@$(GCC) -shared -o $(SRC)/$*.cpp -o $(BIN)/$*.so
 
 .PHONY: all test run debug avr
 

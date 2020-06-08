@@ -26,9 +26,9 @@
   void die(char *s);
 
   void Z21_boot();
-  void * Z21();
+  void * Z21(void * args);
   int Z21_client(char * ip, uint16_t port);
-  void * Z21_run();
+  void * Z21_run(void * args);
 
   extern char Z21_prio_list[05][30];
   extern char Z21_send_list[10][30];
@@ -54,10 +54,7 @@
   void Z21_send_c(uint16_t length, uint16_t header, ...);
   void Z21_send_data(uint8_t * data, uint8_t length);
 
-  void Z21_get_train(Trains * T);
-  void Z21_get_engine(int dcc);
-
-  void Z21_SET_LOCO_DRIVE(int DCC_Adr,char steps,_Bool dir,char drive);
+  void Z21_SET_LOCO_DRIVE(int DCC_Adr,char steps,bool dir,char drive);
 
   void Z21_SET_LOCO_FUNCTION(int DCC_Adr,char function_nr,char switch_type);
 

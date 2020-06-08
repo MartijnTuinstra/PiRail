@@ -24,28 +24,28 @@
 
 char * logger_file = 0;
 
-const char * logging_levels_str[7] = {
-  "CRITICAL", "  ERROR ", " WARNING", "  INFO  ", "  DEBUG ", "  TRACE ", " MEMORY "
+const char * logging_levels_str[8] = {
+  "CRITICAL", "  ERROR ", " WARNING", "  INFO  ", "  DEBUG ", "  TRACE ", " MEMORY ", "        "
 };
 const char * logging_levels_colour[8] = {
   "\x1b[31m", "\x1b[31m", "\x1b[33m", "\x1b[32m", "", "", "", "\x1b[0m"
 };
 
-_Bool stdoutPrint = 1;
+bool stdoutPrint = 1;
 
-void init_logger(char * file_location){
+void init_logger(const char * file_location){
   // Clear log / create log
   FILE * fp = fopen(file_location,"w");
   
   fclose(fp);
 
-  logger_file = _calloc(strlen(file_location) + 1, char);
+  logger_file = (char *)_calloc(strlen(file_location) + 1, char);
   strcpy(logger_file,file_location);
 
   stdoutPrint = 1;
 }
 
-void init_logger_file_only(char * file_location){
+void init_logger_file_only(const char * file_location){
   init_logger(file_location);
   stdoutPrint = 0;
 }
@@ -54,8 +54,8 @@ void exit_logger(){
   _free(logger_file);
 }
 
-enum logging_levels logger_set_lvl;
-enum logging_levels logger_set_print_lvl;
+enum logging_levels logger_set_lvl = INFO;
+enum logging_levels logger_set_print_lvl = INFO;
 
 pthread_mutex_t logger_mutex;
 
@@ -71,7 +71,7 @@ enum logging_levels read_level(){
   return logger_set_lvl;
 }
 
-void floggerf(enum logging_levels level, char * file, int line, char * text, ...){
+void floggerf(enum logging_levels level, const char * file, int line, const char * text, ...){
   if(level > logger_set_lvl && level > logger_set_print_lvl)
     return;
 

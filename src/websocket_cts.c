@@ -23,6 +23,7 @@
 
 #include "modules.h"
 #include "Z21.h"
+#include "Z21_msg.h"
 
 #include "submodule.h"
 
@@ -30,7 +31,7 @@
 #define ACTIVATE 0
 #define RELEASE  1
 
-pthread_mutex_t mutex_lockB;
+extern pthread_mutex_t mutex_lockB;
 
 
 websocket_cts_func websocket_cts[256] = {
@@ -218,7 +219,8 @@ void WS_cts_ChangeBroadcast(struct s_opc_ChangeBroadcast * data, struct web_clie
     loggerf(DEBUG, "Changing flags");
   }
   loggerf(DEBUG,"Websocket:\t%02x - New flag for client %d\n",client->type, client->id);
-  ws_send(client,(char [2]){WSopc_ChangeBroadcast,client->type},2,255);
+  char msg[2] = {WSopc_ChangeBroadcast,(char)client->type};
+  ws_send(client, msg, 2, 255);
 }
 
 //System Messages
@@ -288,7 +290,7 @@ void WS_cts_LinkTrain(struct s_opc_LinkTrain * msg, struct web_client_t * client
 
     WS_clear_message((msg->message_id_H << 8) + msg->message_id_L, 1);
 
-    Z21_get_train(trains[msg->real_id]);
+    Z21_get_train(train_link[msg->follow_id]);
   }
   else{
     loggerf(WARNING, "Failed link_train()\n");
@@ -325,23 +327,27 @@ void WS_cts_SetTrainSpeed(struct s_opc_SetTrainSpeed * m, struct web_client_t * 
 
   RailTrain * T = train_link[m->follow_id];
 
+  T->changing_speed = RAILTRAIN_SPEED_T_DONE;
+
   T->speed = speed;
   T->target_speed = speed;
   T->dir   = m->dir;
 
   if(T->type == TRAIN_ENGINE_TYPE){
-    ((Engines *)T->p)->dir = m->dir;
-    engine_set_speed(T->p, speed);
-    // Z21_Set_Loco_Drive_Train(T->p);
+    Engines * E = (Engines *)T->p;
+    E->dir = m->dir;
+    engine_set_speed(E, speed);
+    Z21_Set_Loco_Drive_Engine(E);
   }
   else{
-    ((Trains *)T->p)->cur_speed = speed;
-    ((Trains *)T->p)->dir = m->dir;
-    train_calc_speed(T->p);
-    // Z21_Set_Loco_Drive_Engine(T->p);
+    Trains * tmpT = (Trains *)T->p;
+    tmpT->cur_speed = speed;
+    tmpT->dir = m->dir;
+    train_calc_speed(tmpT);
+    Z21_Set_Loco_Drive_Train(tmpT);
   }
 
-  loggerf(INFO, "IMPLEMENT Z21");
+  // loggerf(INFO, "IMPLEMENT Z21");
   // if(data[2] & 0x20 && id < trains_len){ //Train
   //   trains[id]->cur_speed = speed;
   //   trains[id]->dir = (data[2] & 0x10) >> 4;
@@ -418,15 +424,15 @@ void WS_cts_TrainRoute(struct s_opc_TrainRoute * data, struct web_client_t * cli
 
 void WS_cts_AddCartoLib(struct s_opc_AddNewCartolib * data, struct web_client_t * client){
   loggerf(DEBUG, "WS_cts_AddCartoLib");
-  struct s_WS_Data * rdata = _calloc(1, sizeof(struct s_WS_Data));
+  struct s_WS_Data * rdata = (struct s_WS_Data *)_calloc(1, struct s_WS_Data);
 
   rdata->opcode = WSopc_AddNewCartolib;
   rdata->data.opc_AddNewCartolib_res.nr = data->nr;
 
-  char * name = _calloc(data->name_len + 1, 1);
-  char * filename = _calloc(data->name_len + 1, 1);
-  char * icon = _calloc(data->name_len + 8 + 3 + 20, 1); //Destination file
-  char * sicon = _calloc(40, 1); //Source file
+  char * name = (char *)_calloc(data->name_len + 1, char);
+  char * filename = (char *)_calloc(data->name_len + 1, char);
+  char * icon = (char *)_calloc(data->name_len + 8 + 3 + 20, char); //Destination file
+  char * sicon = (char *)_calloc(40, char); //Source file
 
   memcpy(name, &data->strings, data->name_len);
   memcpy(filename, &data->strings, data->name_len);
@@ -450,7 +456,7 @@ void WS_cts_AddCartoLib(struct s_opc_AddNewCartolib * data, struct web_client_t 
 
   Create_Car(name, data->nr, icon, data->type, data->length, data->max_speed);
 
-  char * dicon = _calloc(strlen(icon)+10, 1);
+  char * dicon = (char *)_calloc(strlen(icon)+10, char);
 
   sprintf(dicon, "%s%s", "web/trains_img/", icon);
 
@@ -470,7 +476,7 @@ void WS_cts_AddCartoLib(struct s_opc_AddNewCartolib * data, struct web_client_t 
 
 void WS_cts_Edit_Car(struct s_opc_EditCarlib * data, struct web_client_t * client){
   loggerf(DEBUG, "WS_cts_Edit_Car");
-  struct s_WS_Data * rdata = _calloc(1, sizeof(struct s_WS_Data));
+  struct s_WS_Data * rdata = (struct s_WS_Data *)_calloc(1, struct s_WS_Data);
 
   rdata->opcode = WSopc_AddNewCartolib;
   rdata->data.opc_AddNewCartolib_res.nr = data->data.nr;
@@ -499,11 +505,11 @@ void WS_cts_Edit_Car(struct s_opc_EditCarlib * data, struct web_client_t * clien
 
   Cars * C = cars[id];
 
-  C->name = _realloc(C->name, data->data.name_len + 1, 1);
+  C->name = (char *)_realloc(C->name, data->data.name_len + 1, char);
   memcpy(C->name, &data->data.strings, data->data.name_len);
   C->name[data->data.name_len] = 0;
 
-  char * filename = _calloc(data->data.name_len +1,1);
+  char * filename = (char *)_calloc(data->data.name_len +1, char);
   memcpy(filename, C->name, data->data.name_len);
   for (char* current_pos = NULL; (current_pos = strchr(filename, ' ')) != NULL; *current_pos = '_');
   for (char* current_pos = NULL; (current_pos = strchr(filename, '.')) != NULL; *current_pos = '-');
@@ -512,7 +518,7 @@ void WS_cts_Edit_Car(struct s_opc_EditCarlib * data, struct web_client_t * clien
   C->length = data->data.length;
   C->type = data->data.type;
 
-  char * sicon = _calloc(40, 1); //Source file
+  char * sicon = (char *)_calloc(40, char); //Source file
 
   uint16_t icon_time = (data->data.timing / 60) * 100 + (data->data.timing % 60);
 
@@ -521,7 +527,7 @@ void WS_cts_Edit_Car(struct s_opc_EditCarlib * data, struct web_client_t * clien
   char * dicon = 0;
 
   if(icon_time < 3000){
-    C->icon_path = _realloc(C->icon_path, data->data.name_len + 8 + 3 + 20, 1); //Destination file
+    C->icon_path = (char *)_realloc(C->icon_path, data->data.name_len + 8 + 3 + 20, char); //Destination file
     if((data->data.filetype & 0b1) == 0){
       sprintf(C->icon_path, "%iC_%s.%s", data->data.nr, filename, "png");
       sprintf(sicon, "%s.%04i.%s", "web/tmp_icon", icon_time, "png");
@@ -530,7 +536,7 @@ void WS_cts_Edit_Car(struct s_opc_EditCarlib * data, struct web_client_t * clien
       sprintf(C->icon_path, "%iC_%s.%s", data->data.nr, filename, "jpg");
       sprintf(sicon, "%s.%04i.%s", "web/tmp_icon", icon_time, "jpg");
     }
-    dicon = _calloc(strlen(C->icon_path)+20, 1);
+    dicon = (char *)_calloc(strlen(C->icon_path)+20, char);
     sprintf(dicon, "%s%s", "web/trains_img/", C->icon_path);
     move_file(sicon, dicon);
 
@@ -544,7 +550,7 @@ void WS_cts_Edit_Car(struct s_opc_EditCarlib * data, struct web_client_t * clien
     sprintf(filetype, "%s", &C->icon_path[strlen(C->icon_path)-3]);
 
     sprintf(C->icon_path, "%iC_%s.%s", data->data.nr, filename, filetype);
-    dicon = _calloc(strlen(C->icon_path)+20, 1);
+    dicon = (char *)_calloc(strlen(C->icon_path)+20, char);
     sprintf(dicon, "%s%s", "web/trains_img/", C->icon_path);
 
     move_file(sicon, dicon);
@@ -565,7 +571,7 @@ void WS_cts_Edit_Car(struct s_opc_EditCarlib * data, struct web_client_t * clien
 
 void WS_cts_AddEnginetoLib(struct s_opc_AddNewEnginetolib * data, struct web_client_t * client){
   loggerf(DEBUG, "WS_cts_AddEnginetoLib");
-  struct s_WS_Data * rdata = _calloc(1, sizeof(struct s_WS_Data));
+  struct s_WS_Data * rdata = (struct s_WS_Data *)_calloc(1, struct s_WS_Data);
 
   rdata->opcode = WSopc_AddNewEnginetolib;
 
@@ -576,18 +582,18 @@ void WS_cts_AddEnginetoLib(struct s_opc_AddNewEnginetolib * data, struct web_cli
     return;
   }
 
-  char * name = _calloc(data->name_len + 1, 1);
-  char * steps = _calloc(data->steps, 3);
-  char * img = _calloc(data->name_len + 8 + 3 + 20, 1);  //Destination file
-  char * icon = _calloc(data->name_len + 8 + 3 + 20, 1); //Destination file
-  char * simg = _calloc(40, 1); //Source file
-  char * sicon = _calloc(40, 1); //Source file
-  char * filetype = _calloc(4, 1);
+  char * name = (char *)_calloc(data->name_len + 1, char);
+  char * steps = (char *)_calloc(data->steps, char);
+  char * img = (char *)_calloc(data->name_len + 8 + 3 + 20, char);  //Destination file
+  char * icon = (char *)_calloc(data->name_len + 8 + 3 + 20, char); //Destination file
+  char * simg = (char *)_calloc(40, char); //Source file
+  char * sicon = (char *)_calloc(40, char); //Source file
+  char * filetype = (char *)_calloc(4, char);
 
   memcpy(name, &data->strings, data->name_len);
   memcpy(steps, &data->strings + data->name_len, data->steps * 3);
 
-  char * filename = _calloc(data->name_len +1,1);
+  char * filename = (char *)_calloc(data->name_len +1, char);
   memcpy(filename, &data->strings, data->name_len);
   for (char* current_pos = NULL; (current_pos = strchr(filename, ' ')) != NULL; *current_pos = '_');
   for (char* current_pos = NULL; (current_pos = strchr(filename, '.')) != NULL; *current_pos = '-');
@@ -620,8 +626,8 @@ void WS_cts_AddEnginetoLib(struct s_opc_AddNewEnginetolib * data, struct web_cli
 
   Create_Engine(name, data->DCC_ID, img, icon, data->type, data->length, data->steps, (struct engine_speed_steps *)steps);
 
-  char * dimg = _calloc(strlen(img)+20, 1);
-  char * dicon = _calloc(strlen(icon)+20, 1);
+  char * dimg = (char *)_calloc(strlen(img)+20, char);
+  char * dicon = (char *)_calloc(strlen(icon)+20, char);
   sprintf(dimg, "%s%s", "web/trains_img/", img);
   sprintf(dicon, "%s%s", "web/trains_img/", icon);
 
@@ -650,7 +656,7 @@ void WS_cts_AddEnginetoLib(struct s_opc_AddNewEnginetolib * data, struct web_cli
 void WS_cts_Edit_Engine(struct s_opc_EditEnginelib * msg, struct web_client_t * client){
   loggerf(DEBUG, "WS_cts_Edit_Engine");
 
-  struct s_WS_Data * rdata = _calloc(1, sizeof(struct s_WS_Data));
+  struct s_WS_Data * rdata = (struct s_WS_Data *)_calloc(1, struct s_WS_Data);
 
   uint16_t id = msg->id_l + (msg->id_h << 8);
   Engines * E = engines[id];
@@ -692,11 +698,11 @@ void WS_cts_Edit_Engine(struct s_opc_EditEnginelib * msg, struct web_client_t * 
     DCC_train[E->DCC_ID] = E;
 
     // Copy name
-    E->name = _realloc(E->name, data->name_len + 1, 1);
+    E->name = (char *)_realloc(E->name, data->name_len + 1, char);
     memcpy(E->name, &data->strings, data->name_len);
     E->name[data->name_len] = 0;
 
-    char * filename = _calloc(data->name_len +1,1);
+    char * filename = (char *)_calloc(data->name_len +1, char);
     memcpy(filename, E->name, data->name_len);
     for (char* current_pos = NULL; (current_pos = strchr(filename, ' ')) != NULL; *current_pos = '_');
     for (char* current_pos = NULL; (current_pos = strchr(filename, '.')) != NULL; *current_pos = '-');
@@ -704,7 +710,7 @@ void WS_cts_Edit_Engine(struct s_opc_EditEnginelib * msg, struct web_client_t * 
 
     // Copy speedsteps
     E->steps_len = data->steps;
-    E->steps = _realloc(E->steps, data->steps, 3);
+    E->steps = (struct engine_speed_steps *)_realloc(E->steps, data->steps, struct engine_speed_steps);
     memcpy(E->steps, &data->strings + data->name_len, data->steps * 3);
 
     E->length = data->length;
@@ -712,9 +718,9 @@ void WS_cts_Edit_Engine(struct s_opc_EditEnginelib * msg, struct web_client_t * 
 
 
     // Copy image/icon
-    char * simg = _calloc(40, 1); //Source file
-    char * sicon = _calloc(40, 1); //Source file
-    char * filetype = _calloc(4, 1);
+    char * simg = (char *)_calloc(40, char); //Source file
+    char * sicon = (char *)_calloc(40, char); //Source file
+    char * filetype = (char *)_calloc(4, char);
 
     uint16_t image_time = data->timing[0] + ((data->timing[1] & 0xf0) << 4);
     image_time = (image_time / 60) * 100 + (image_time % 60);
@@ -728,7 +734,7 @@ void WS_cts_Edit_Engine(struct s_opc_EditEnginelib * msg, struct web_client_t * 
 
     remove(E->img_path); //Remove original
 
-    E->img_path = _realloc(E->img_path, data->name_len + 8 + 3 + 20, 1);  //Destination file
+    E->img_path = (char *)_realloc(E->img_path, data->name_len + 8 + 3 + 20, char);  //Destination file
     if((data->flags & 0b10) == 0){
       sprintf(E->img_path, "%i_%s_im.%s", data->DCC_ID, filename, "png");
       sprintf(simg, "%s.%04i.%s", "web/tmp_img", image_time, "png");
@@ -738,7 +744,7 @@ void WS_cts_Edit_Engine(struct s_opc_EditEnginelib * msg, struct web_client_t * 
       sprintf(simg, "%s.%04i.%s", "web/tmp_img", image_time, "jpg");
     }
 
-    dimg = _calloc(strlen(E->img_path)+20, 1);
+    dimg = (char *)_calloc(strlen(E->img_path)+20, char);
     sprintf(dimg, "%s%s", "web/trains_img/", E->img_path);
     loggerf(INFO, "remove and move file %s -> %s", simg, dimg);
     move_file(simg, dimg);
@@ -748,7 +754,7 @@ void WS_cts_Edit_Engine(struct s_opc_EditEnginelib * msg, struct web_client_t * 
 
     remove(E->icon_path); //Remove original
 
-    E->icon_path = _realloc(E->icon_path, data->name_len + 8 + 3 + 20, 1); //Destination file
+    E->icon_path = (char *)_realloc(E->icon_path, data->name_len + 8 + 3 + 20, char); //Destination file
     if((data->flags & 0b1) == 0){
       sprintf(E->icon_path, "%i_%s_ic.%s", data->DCC_ID, filename, "png");
       sprintf(sicon, "%s.%04i.%s", "web/tmp_icon", icon_time, "png");
@@ -757,7 +763,7 @@ void WS_cts_Edit_Engine(struct s_opc_EditEnginelib * msg, struct web_client_t * 
       sprintf(E->icon_path, "%i_%s_ic.%s", data->DCC_ID, filename, "jpg");
       sprintf(sicon, "%s.%04i.%s", "web/tmp_icon", icon_time, "jpg");
     }
-    dicon = _calloc(strlen(E->icon_path)+20, 1);
+    dicon = (char *)_calloc(strlen(E->icon_path)+20, char);
     sprintf(dicon, "%s%s", "web/trains_img/", E->icon_path);
     loggerf(INFO, "remove and move file %s -> %s", simg, dimg);
     move_file(sicon, dicon);
@@ -782,12 +788,12 @@ void WS_cts_Edit_Engine(struct s_opc_EditEnginelib * msg, struct web_client_t * 
 
 void WS_cts_AddTraintoLib(struct s_opc_AddNewTraintolib * data, struct web_client_t * client){
   loggerf(DEBUG, "WS_cts_AddTraintoLib");
-  struct s_WS_Data * rdata = _calloc(1, sizeof(struct s_WS_Data));
+  struct s_WS_Data * rdata = (struct s_WS_Data *)_calloc(1, struct s_WS_Data);
 
   rdata->opcode = WSopc_AddNewTraintolib;
 
-  char * name = _calloc(data->name_len + 1, 1);
-  char * comps = _calloc(data->nr_stock, 3);
+  char * name = (char *)_calloc(data->name_len + 1, char);
+  char * comps = (char *)_calloc(data->nr_stock * 3, char);
 
   //Copy name
   memcpy(name, &data->strings, data->name_len);
@@ -809,7 +815,7 @@ void WS_cts_AddTraintoLib(struct s_opc_AddNewTraintolib * data, struct web_clien
 
 void WS_cts_Edit_Train(struct s_opc_EditTrainlib * data, struct web_client_t * client){
   loggerf(ERROR, "WS_cts_Edit_Train ");
-  struct s_WS_Data * rdata = _calloc(1, sizeof(struct s_WS_Data));
+  struct s_WS_Data * rdata = (struct s_WS_Data *)_calloc(1, struct s_WS_Data);
 
   rdata->opcode = WSopc_AddNewTraintolib;
 
@@ -828,15 +834,15 @@ void WS_cts_Edit_Train(struct s_opc_EditTrainlib * data, struct web_client_t * c
   Trains * T = trains[id];
 
   //Copy name
-  T->name = _realloc(T->name, data->data.name_len + 1, 1);
+  T->name = (char *)_realloc(T->name, data->data.name_len + 1, char);
   memcpy(T->name, &data->data.strings, data->data.name_len);
   T->name[data->data.name_len] = 0;
 
   // Copy traincomp
-  T->composition = _realloc(T->composition, data->data.nr_stock, sizeof(struct train_comp));
+  T->composition = (struct train_comp *)_realloc(T->composition, data->data.nr_stock, struct train_comp);
   T->nr_stock = data->data.nr_stock;
 
-  struct train_comp_ws * cdata = (void *)&data->data.strings + data->data.name_len;
+  struct train_comp_ws * cdata = (struct train_comp_ws *)((char *)&data->data.strings + data->data.name_len);
   for(int c = 0; c<T->nr_stock; c++){
     T->composition[c].type = cdata[c].type;
     T->composition[c].id = cdata[c].id;
@@ -865,7 +871,7 @@ void WS_cts_TrackLayoutUpdate(struct s_opc_TrackLayoutUpdate * data, struct web_
 
 
   // Respond with failure
-  struct s_WS_Data * rdata = _calloc(1, sizeof(struct s_WS_Data));
+  struct s_WS_Data * rdata = (struct s_WS_Data *)_calloc(1, struct s_WS_Data);
 
   rdata->opcode = WSopc_TrackLayoutUpdateRaw;
   rdata->data.opc_AddNewTraintolib_res.response = 0;
@@ -880,7 +886,8 @@ void WS_cts_Admin_Login(struct s_opc_AdminLogin * data, struct web_client_t * cl
 
     loggerf(INFO, "Change client flags to %x", client->type);
 
-    ws_send(client,(char [2]){WSopc_ChangeBroadcast,client->type},2,255);
+    char msg[2] = {WSopc_ChangeBroadcast, (char)client->type};
+    ws_send(client, msg, 2, 255);
   }else{
     loggerf(INFO, "FAILED LOGIN!! %d", strcmp((char *)data->password,WS_password));
     loggerf(INFO, "%s", data->password);
@@ -891,5 +898,6 @@ void WS_cts_Admin_Login(struct s_opc_AdminLogin * data, struct web_client_t * cl
 void WS_cts_Admin_Logout(void * data, struct web_client_t * client){
   client->type &= ~0x10;
 
-  ws_send(client,(char [2]){WSopc_ChangeBroadcast,client->type},2,255);
+  char msg[2] = {WSopc_ChangeBroadcast, (char)client->type};
+  ws_send(client, msg, 2, 255);
 }

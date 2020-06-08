@@ -14,16 +14,16 @@ void Add_IO_Node(Unit * U, struct node_conf node){
   Z.id = node.Node;
   Z.io_ports = node.size;
   
-  Z.io = _calloc(node.size, IO_Port*);
+  Z.io = (IO_Port **)_calloc(node.size, IO_Port*);
 
   for(int i = 0; i<node.size; i++){
-    Z.io[i] = _calloc(1, IO_Port);
-    Z.io[i]->type = (node.data[i/2] >> (4 * (i % 2))) & 0xF;
+    Z.io[i] = (IO_Port *)_calloc(1, IO_Port);
+    Z.io[i]->type = (enum e_IO_type)((node.data[i/2] >> (4 * (i % 2))) & 0xF);
     loggerf(INFO, "IO Port %i:%i -- %s", Z.id, i, IO_enum_type_string[Z.io[i]->type]);
   }
 
   if(U->IO_Nodes <= node.Node){
-    U->Node = _realloc(U->Node, U->IO_Nodes + 1, IO_Node);
+    U->Node = (IO_Node *)_realloc(U->Node, U->IO_Nodes + 1, IO_Node);
   }
 
   loggerf(DEBUG, "Node %02i:%02i created (0-%3i)", U->module, node.Node, node.size);

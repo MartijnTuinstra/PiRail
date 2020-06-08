@@ -183,7 +183,7 @@ void WS_stc_UpdateTrain(RailTrain * T){
 void WS_stc_EnginesLib(struct web_client_t * client){
   int buffer_size = 1024;
 
-  char * data = _calloc(buffer_size, 1);
+  char * data = (char *)_calloc(buffer_size, char);
 
   int len = 0;
 
@@ -192,7 +192,7 @@ void WS_stc_EnginesLib(struct web_client_t * client){
   for(int i = 0;i<engines_len;i++){
     if(buffer_size < (len + 100)){
       buffer_size += 1024;
-      data = _realloc(data, buffer_size, 1);
+      data = (char *)_realloc(data, buffer_size, char);
     }
     if(!engines[i]){
       continue;
@@ -244,7 +244,7 @@ void WS_stc_CarsLib(struct web_client_t * client){
   loggerf(INFO, "CarsLib for client %i", client);
   int buffer_size = 1024;
 
-  char * data = _calloc(buffer_size, 1);
+  char * data = (char *)_calloc(buffer_size, char);
 
   int len = 0;
 
@@ -253,7 +253,7 @@ void WS_stc_CarsLib(struct web_client_t * client){
   for(int i = 0;i<cars_len;i++){
     if(buffer_size < (len + 100)){
       buffer_size += 1024;
-      data = _realloc(data, buffer_size, 1);
+      data = (char *)_realloc(data, buffer_size, char);
     }
     if(cars[i]){
       data[len++] = cars[i]->nr & 0xFF;
@@ -287,7 +287,7 @@ void WS_stc_TrainsLib(struct web_client_t * client){
   loggerf(INFO, "TrainsLib for client %i", client);
   int buffer_size = 1024;
 
-  char * data = _calloc(buffer_size, 1);
+  char * data = (char *)_calloc(buffer_size, char);
 
   int len = 0;
 
@@ -299,7 +299,7 @@ void WS_stc_TrainsLib(struct web_client_t * client){
     }
     if(buffer_size < (len + 100)){
       buffer_size += 1024;
-      data = _realloc(data, buffer_size, 1);
+      data = (char *)_realloc(data, buffer_size, char);
     }
     
     data[len++] = trains[i]->max_speed & 0xFF;
@@ -337,7 +337,7 @@ void WS_stc_TrainCategories(struct web_client_t * client){
   loggerf(INFO, "TrainCategories for client %i", client);
   int buffer_size = 1024;
 
-  char * data = _calloc(buffer_size, 1);
+  char * data = (char *)_calloc(buffer_size, char);
 
   int len = 0;
 
@@ -346,7 +346,7 @@ void WS_stc_TrainCategories(struct web_client_t * client){
   for(int i = 0;i<train_P_cat_len;i++){
     if(buffer_size < (len + 100)){
       buffer_size += 1024;
-      data = _realloc(data, buffer_size, 1);
+      data = (char *)_realloc(data, buffer_size, char);
     }
     data[len++] = i;
 
@@ -360,7 +360,7 @@ void WS_stc_TrainCategories(struct web_client_t * client){
   for(int i = 0;i<train_C_cat_len;i++){
     if(buffer_size < (len + 100)){
       buffer_size += 1024;
-      data = _realloc(data, buffer_size, 1);
+      data = (char *)_realloc(data, buffer_size, char);
     }
     data[len++] = i | 0x80;
 
@@ -465,7 +465,7 @@ void WS_stc_trackUpdate(struct web_client_t * client){
   data[0] = WSopc_BroadTrack; //Opcode
 
   int data_len;
-  _Bool content = 0;
+  bool content = 0;
 
   int q = 1;
 
@@ -512,7 +512,7 @@ void WS_stc_SwitchesUpdate(struct web_client_t * client){
 
     buf[0] = WSopc_BroadSwitch;
     int buf_l  = 0;
-    _Bool content   = 0;
+    bool content   = 0;
 
     int q = 1;
 
@@ -592,7 +592,7 @@ void WS_stc_NewClient_track_Switch_Update(struct web_client_t * client){
   buf[0] = WSopc_BroadTrack; //Opcode
 
   int data_len;
-  _Bool content = 0;
+  bool content = 0;
 
   int q = 1;
 
@@ -688,7 +688,7 @@ void WS_stc_NewClient_track_Switch_Update(struct web_client_t * client){
 
   buf[0] = 6;
   buf_len = 1;
-    _Bool data = 0;
+    bool data = 0;
 
   if(stations_len>0){
     data = 1;
@@ -747,7 +747,7 @@ void WS_stc_reset_switches(struct web_client_t * client){
 void WS_stc_Track_LayoutDataOnly(int unit, struct web_client_t * client){
   loggerf(DEBUG, "WS_Track_LayoutDataOnly");
 
-  char * data = _calloc(Units[unit]->Layout_length + 20, 1);
+  char * data = (char *)_calloc(Units[unit]->Layout_length + 20, char);
 
   data[0] = WSopc_TrackLayoutOnlyRawData;
   data[1] = unit;
@@ -765,7 +765,7 @@ void WS_stc_Track_LayoutDataOnly(int unit, struct web_client_t * client){
 
 void WS_stc_TrackLayoutRawData(int unit, struct web_client_t * client){
   Unit * U = Units[unit];
-  char * data = _calloc(U->raw_length+2, 1);
+  char * data = (char *)_calloc(U->raw_length+2, char);
   data[0] = WSopc_TrackLayoutRawData;
   data[1] = unit;
 
@@ -782,7 +782,7 @@ void WS_stc_TrackLayoutRawData(int unit, struct web_client_t * client){
 }
 
 void WS_stc_StationLib(struct web_client_t * client){
-  char * data = _calloc(stations_len, Station);
+  char * data = (char *)_calloc(stations_len, Station);
   data[0] = WSopc_StationLibrary;
   char * length = &data[1];
   char * d = &data[2];
@@ -814,17 +814,20 @@ void WS_stc_StationLib(struct web_client_t * client){
 //General Messages
 void WS_stc_EmergencyStop(){
   loggerf(WARNING, "EMERGENCY STOP");
-  ws_send_all((char []){WSopc_EmergencyStop},1,0xFF); //Everyone
+  char msg[1] = {WSopc_EmergencyStop};
+  ws_send_all(msg, 1, 0xFF); //Everyone
 }
 
 void WS_stc_ShortCircuit(){
   loggerf(WARNING, "SHORT CIRCUIT");
-  ws_send_all((char []){WSopc_ShortCircuitStop},1,0xFF); //Everyone
+  char msg[1] = {WSopc_ShortCircuitStop};
+  ws_send_all(msg, 1, 0xFF); //Everyone
 }
 
 void WS_stc_ClearEmergency(){
   loggerf(INFO, "EMERGENCY Released");
-  ws_send_all((char []){WSopc_ClearEmergency},1,0xFF); //Everyone
+  char msg[1] = {WSopc_ClearEmergency};
+  ws_send_all(msg, 1, 0xFF); //Everyone
 }
 
 
@@ -868,5 +871,9 @@ void WS_clear_message(uint16_t ID, char ret_code){
 
   loggerf(INFO, "clear_message %x", ID);
 
-  ws_send_all((char [3]){WSopc_ClearMessage,((ID >> 8) & 0x1F) + (ret_code << 5),ID&0xFF},3,0xFF);
+  char msg[3] = {};
+  msg[0] = WSopc_ClearMessage;
+  msg[1] = (char)( ((ID >> 8) & 0x1F) + (ret_code << 5) );
+  msg[2] = (char)(ID & 0xFF);
+  ws_send_all(msg, 3, 0xFF);
 }

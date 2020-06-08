@@ -127,7 +127,7 @@ int websocket_parse(uint8_t data[1024], struct web_client_t * client){
 }
 
 int websocket_get_msg(int fd, char outbuf[], int * length_out){
-  char * buf = _calloc(1024, char);
+  char * buf = (char *)_calloc(1024, char);
   usleep(10000);
   int32_t recvlength = recv(fd,buf,1024,0);
 
@@ -219,7 +219,7 @@ void websocket_create_msg(char * input, int length_in, char * output, int * leng
 }
 
 void ws_send(struct web_client_t * client, char * data, int length, int flag){
-  char * outbuf = _calloc(length + 100, 1);
+  char * outbuf = (char *)_calloc(length + 100, char);
   int outlength = 0;
 
   if(!(SYS->WebSocket.state == Module_Run || SYS->WebSocket.state == Module_Init)){
@@ -252,7 +252,7 @@ void ws_send(struct web_client_t * client, char * data, int length, int flag){
 }
 
 void ws_send_all(char * data,int length,int flag){
-  char * outbuf = _calloc(length + 100, 1);
+  char * outbuf = (char *)_calloc(length + 100, char);
   int outlength = 0;
 
   if(!(SYS->WebSocket.state == Module_Run || SYS->WebSocket.state == Module_Init)){

@@ -33,8 +33,8 @@ typedef struct s_Signal{
 #define U_Sig(M, S) Units[M]->Sig[S]
 
 #define create_signal_from_conf(module, data) Create_Signal(module, data.blockId, data.id, data.side, data.output_len, data.output, data.stating)
-void Create_Signal(uint8_t module, uint8_t blockId, uint16_t signalId, _Bool side, char output_len, struct s_IO_port_conf * output, struct s_IO_signal_event_conf * stating);
-void * Clear_Signal(Signal * Sig);
+void Create_Signal(uint8_t module, uint8_t blockId, uint16_t signalId, bool side, char output_len, struct s_IO_port_conf * output, struct s_IO_signal_event_conf * stating);
+Signal * Clear_Signal(Signal * Sig);
 
 void check_Signal(Signal * Si);
 void set_signal(Signal *Si, enum Rail_states state);

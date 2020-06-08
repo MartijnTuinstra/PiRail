@@ -65,6 +65,9 @@ extern websocket_cts_func websocket_cts[256];
 #define WSopc_TrainControl       0x44
 #define WSopc_UpdateTrain        0x45
 #define WSopc_TrainAddRoute      0x46
+#define WSopc_DCCEngineUpdate    0x4A
+#define WSopc_DCCEngineSpeed     0x4B
+#define WSopc_DCCEngineFunction  0x4C
 #define WSopc_TrainSubscribe     0x4F
 
 #define WSopc_AddNewEnginetolib  0x50

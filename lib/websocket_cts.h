@@ -33,9 +33,14 @@ void WS_cts_Disable_SubmoduleState(struct s_opc_enabledisableSubmoduleState * st
 //Train Messages
 struct s_opc_LinkTrain;
 struct s_opc_SetTrainSpeed;
+struct s_opc_SetTrainFunction;
 struct s_opc_TrainControl;
 struct s_opc_SubscribeTrain;
 struct s_opc_TrainRoute;
+
+struct s_opc_DCCEngineSpeed;
+struct s_opc_DCCEngineFunction;
+
 struct s_opc_AddNewCartolib;
 struct s_opc_EditCarlib;
 struct s_opc_AddNewEnginetolib;
@@ -46,12 +51,16 @@ struct s_opc_EditTrainlib;
 
 void WS_cts_LinkTrain(struct s_opc_LinkTrain * msg, struct web_client_t * client);
 void WS_cts_SetTrainSpeed(struct s_opc_SetTrainSpeed * m, struct web_client_t * client);
+void WS_cts_SetTrainFunction(struct s_opc_SetTrainFunction * m, struct web_client_t * client);
 
 // void WS_TrainData(char data[14]);
 
 void WS_cts_TrainControl(struct s_opc_TrainControl * m, struct web_client_t * client);
 void WS_cts_TrainSubscribe(struct s_opc_SubscribeTrain * m, struct web_client_t * client);
 void WS_cts_TrainRoute(struct s_opc_TrainRoute * data, struct web_client_t * client);
+
+void WS_cts_DCCEngineSpeed(struct s_opc_DCCEngineSpeed * data, struct web_client_t * client);
+void WS_cts_DCCEngineFunction(struct s_opc_DCCEngineFunction * data, struct web_client_t * client);
 
 void WS_cts_AddCartoLib(struct s_opc_AddNewCartolib * data, struct web_client_t * client);
 void WS_cts_Edit_Car(struct s_opc_EditCarlib * data, struct web_client_t * client);

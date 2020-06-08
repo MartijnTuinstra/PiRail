@@ -21,6 +21,54 @@ var Train_Control = {
     this.train = [undefined, undefined, undefined];
     this.timer = 0;
 
+    var text = '';
+
+    for(var i = 0; i < 29; i++){
+      position = (Math.floor(i / 4) * -32) + "px " + (((i % 4) + 1) * -32) + "px";
+      text += '<div class="btn btn-sm btn-outline-primary train-function" func="' + i + '" style="background-position: '+position+'"></div>';
+    }
+    $('.train-box.box1 .train-function-box').html(text);
+    $('.train-box.box2 .train-function-box').html(text);
+
+    $('.train-box .train-function-box .train-function').on("mousedown touchstart", function(evt){
+      evt.preventDefault();
+
+      function_nr = $(evt.currentTarget).attr("func");
+
+      console.log("Function "+function_nr + " down");
+
+      var box = Train_Control.get_box(evt.currentTarget);
+
+      var U = Train_Control.train[box].t;
+
+      if(U.railtrainid != undefined){
+        websocket.cts_TrainFunction({"id": U.railtrainid, "function": function_nr, "type": 1});
+      }
+      else if(Train_Control.train[box].type == 'E'){
+        websocket.cts_DCCEngineFunction({"id": U.id, "function": function_nr, "type": 1});
+      }
+    });
+    $('.train-box .train-function-box .train-function').on("mouseup touchend", function(evt){
+      evt.preventDefault();
+
+      function_nr = $(evt.currentTarget).attr("func");
+
+      console.log("Function "+function_nr + " up");
+
+      var box = Train_Control.get_box(evt.currentTarget);
+
+      var U = Train_Control.train[box].t;
+
+      if(U.functions[function_nr].button == 0){
+        if(U.railtrainid != undefined){
+          websocket.cts_TrainFunction({"id": U.railtrainid, "function": function_nr, "type": 0});
+        }
+        else if(Train_Control.train[box].type == 'E'){
+          websocket.cts_DCCEngineFunction({"id": U.id, "function": function_nr, "type": 0});
+        }
+      }
+    });
+
     function handler(box, evt) {
       evt.preventDefault();
         if (evt.type === 'mouseup' || evt.type == "touchend") {
@@ -104,6 +152,74 @@ var Train_Control = {
       this.set_stop(box);
     }.bind(this));
   },
+
+  init_train_functions: function(box){
+    // $('.train-box.box'+box+' .train-function-box').empty();
+    var text = '';
+
+    // if(this.train[box] == undefined){
+    //   return;
+    // }
+
+    if(this.train[box].type == 'E'){ // Engine
+      var E = this.train[box].t;
+      for(var i = 0; i < 29; i++){
+        if(E.functions[i].type == 1){
+          position = (Math.floor(i / 4) * -32) + "px " + (((i % 4) + 1) * -32) + "px";
+        }
+        else if(E.functions[i].type == 2){  // Headlight
+          position = "0px 0px";
+        }
+        else if(E.functions[i].type == 3){  // Cablight
+          position = "-32px 0px";
+        }
+        else if(E.functions[i].type == 4){  // General Horn
+          position = "-96px 0px";
+        }
+        else if(E.functions[i].type == 5){  // Low Horn
+          position = "-128px 0px";
+        }
+        else if(E.functions[i].type == 6){  // High Horn
+          position = "-64px 0px";
+        }
+        else{
+          $('.train-box.box' + box + ' .train-function-box .train-function[func=' + i + ']').hide();
+          continue;
+        }
+        $('.train-box.box' + box + ' .train-function-box .train-function[func=' + i + ']').show();
+        $('.train-box.box' + box + ' .train-function-box .train-function[func=' + i + ']').css("background-position", position);
+      }
+    }
+    else{
+      // Type is Train
+      $('.train-box.box' + box + ' .train-function-box .train-function').hide();
+      $('.train-box.box' + box + ' .train-function-box .train-function[func=0]').show();
+      $('.train-box.box' + box + ' .train-function-box .train-function[func=1]').show();
+      $('.train-box.box' + box + ' .train-function-box .train-function[func=2]').show();
+      $('.train-box.box' + box + ' .train-function-box .train-function[func=3]').show();
+      $('.train-box.box' + box + ' .train-function-box .train-function[func=4]').show();
+      $('.train-box.box' + box + ' .train-function-box .train-function[func=0]').css("background-position", "0px 0px");
+      $('.train-box.box' + box + ' .train-function-box .train-function[func=1]').css("background-position", "-32px 0px");
+      $('.train-box.box' + box + ' .train-function-box .train-function[func=2]').css("background-position", "-96px 0px");
+      $('.train-box.box' + box + ' .train-function-box .train-function[func=3]').css("background-position", "-128px 0px");
+      $('.train-box.box' + box + ' .train-function-box .train-function[func=4]').css("background-position", "-64px 0px");
+    }
+  },
+
+  update_Functions: function(box){
+    if(this.train[box].type == 'E'){ // Engine
+      var E = this.train[box].t;
+      for(var i = 0; i < 29; i++){
+        if(E.functions[i].state){
+          $('.train-box.box' + box + ' .train-function-box .train-function[func=' + i + ']').addClass("active");
+        }
+        else{
+          $('.train-box.box' + box + ' .train-function-box .train-function[func=' + i + ']').removeClass("active");
+        }
+      }
+    }
+  },
+
   resize: function(){
     if(window.innerWidth < 576){
       $('.train-box.box2').hide();
@@ -111,6 +227,11 @@ var Train_Control = {
     else{
       $('.train-box.box2').show();
     }
+
+    var height = $('.train-box.box1 .train-img').height() + $('.train-box.box1 .train-info-box').height() + 20;
+
+    $('.train-box.box1 .train-function-box').css("height", "calc(100% - " + height + "px)");
+    $('.train-box.box2 .train-function-box').css("height", "calc(100% - " + height + "px)");
   },
 
   set_handle: function(box, pos){
@@ -131,7 +252,13 @@ var Train_Control = {
   },
 
   send_speed: function(box, resend){
-    websocket.cts_TrainSpeed({train: this.train[box].t});
+    if(this.train[box].t.railtrainid != undefined){
+      websocket.cts_TrainSpeed({train: this.train[box].t});
+    }
+    else if(this.train[box].type == 'E'){
+      websocket.cts_DCCEngineSpeed({engine: this.train[box].t});
+    }
+    
     if(resend != undefined && resend){
       this.timer = setTimeout(this.send_speed.bind(this, box, true), 100);
     }
@@ -203,6 +330,9 @@ var Train_Control = {
     }
 
     this.train[box] = {type: type, id: id, t: list[id]};
+
+    
+    this.init_train_functions(box);
 
     websocket.cts_TrainSubscribe(this.train);
 

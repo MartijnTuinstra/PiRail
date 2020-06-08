@@ -205,8 +205,12 @@ header('Pragma: no-cache');
 		.train-box .control {text-align: center;}
 		.train-box .control button {white-space: nowrap}
 
-		.train-box .train-function-box {text-align: center; column-count: 3; padding: 5px}
-		.train-box .train-function-box button {margin:0.3em}
+		.train-box .train-function-box {text-align: center; width: 100%; padding: 5px; overflow: auto; -ms-overflow-style: none; scrollbar-width: none;}
+		.train-box .train-function-box::-webkit-scrollbar { display: none; }
+
+		.train-box .train-function-box div {display: inline-block; margin:0.3em; background-image: url("./img/TrainFunctions.svg") !important; background-size: 256px 160px;
+		                                    width: 34px; height: 34px;}
+		.train-box .train-function-box div:hover {background-color: white;}
 
 		.train-box .train-speed {width: 100%; height:30px; text-align: center;}
 		.train-box .train-speed-slider {width: 100%; height: 100%;position: relative;touch-action: none;}
@@ -293,7 +297,7 @@ header('Pragma: no-cache');
 								<button class="select-train btn btn-xs btn-outline-primary">Select</button>
 							</span>
 							<div class="row">
-								<div class="col-8">
+								<div class="col-8" style="height: 100%;">
 									<div class="train-img-container bg-light">
 										<div class="train-img" style="background-image: url('./trains_img/NoTrain.jpg');"></div>
 									</div>
@@ -315,16 +319,7 @@ header('Pragma: no-cache');
 											</div>
 										</div>
 									</div>
-									<div class="train-function-box">
-										<div><button class="btn btn-sm btn-outline-primary">F1</button></div>
-										<div><button class="btn btn-sm btn-outline-primary">F2</button></div>
-										<div><button class="btn btn-sm btn-outline-primary">F3</button></div>
-										<div><button class="btn btn-sm btn-outline-primary">F4</button></div>
-										<div><button class="btn btn-sm btn-outline-primary">F5</button></div>
-										<div><button class="btn btn-sm btn-outline-primary">F6</button></div>
-										<div><button class="btn btn-sm btn-outline-primary">F7</button></div>
-										<div><button class="btn btn-sm btn-outline-primary">F8</button></div>
-									</div>
+									<div class="train-function-box"></div>
 								</div>
 								<div class="col-4">
 									<div style="height:100%; position: relative;">
@@ -349,7 +344,7 @@ header('Pragma: no-cache');
 												</div>
 											</div>
 											<div class="train-stop btn-group">
-												<button type="button" class="btn btn-sm btn-danger" style="">STOP</button>
+												<button type="button" class="btn btn-sm btn-danger">STOP</button>
 											</div>
 										</div>
 									</div>
@@ -362,7 +357,7 @@ header('Pragma: no-cache');
 								<button class="select-train btn btn-xs btn-outline-primary">Select</button>
 							</span>
 							<div class="row">
-								<div class="col-8">
+								<div class="col-8" style="height:100%">
 									<div class="train-img-container bg-light">
 										<div class="train-img" style="background-image: url('./trains_img/NoTrain.jpg');"></div>
 									</div>
@@ -384,16 +379,7 @@ header('Pragma: no-cache');
 											</div>
 										</div>
 									</div>
-									<div class="train-function-box">
-										<div><button class="btn btn-sm btn-outline-primary">F1</button></div>
-										<div><button class="btn btn-sm btn-outline-primary">F2</button></div>
-										<div><button class="btn btn-sm btn-outline-primary">F3</button></div>
-										<div><button class="btn btn-sm btn-outline-primary">F4</button></div>
-										<div><button class="btn btn-sm btn-outline-primary">F5</button></div>
-										<div><button class="btn btn-sm btn-outline-primary">F6</button></div>
-										<div><button class="btn btn-sm btn-outline-primary">F7</button></div>
-										<div><button class="btn btn-sm btn-outline-primary">F8</button></div>
-									</div>
+									<div class="train-function-box"></div>
 								</div>
 								<div class="col-4">
 									<div style="height:100%; position: relative;">
@@ -426,7 +412,7 @@ header('Pragma: no-cache');
 							</div>
 						</div>
 					</div>
-					<div class="settings-group" style="">
+					<div class="settings-group">
 						<div id="subsystems" class="info-box">
 							<span class="header">Sub Systems</span>
 							<ul class="list-unstyled">
@@ -488,7 +474,7 @@ header('Pragma: no-cache');
 	<div id="rollingstock" class="window" style="display:none;background-color:#ecf0f5;">
 		<div style="width: 125%; overflow-y: overlay; overflow-x:hidden; height: 100%">
 			<div class="scrollcontainer" style="width: 80%;">
-				<div style="">
+				<div>
 					<div class="row">
 						<div class="col-3 d-xs-none d-md-block"></div>
 						<div class="col-12 col-md-6">

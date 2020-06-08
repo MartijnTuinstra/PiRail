@@ -161,6 +161,14 @@ void Create_Engine(char * name,int DCC,char * img, char * icon, char type, int l
     }
   }
 
+  // Copy each function
+  for(uint8_t i = 0; i < 29; i++){
+    Z->function[i].button = functions[i] >> 6;
+    Z->function[i].type = functions[i] & 0x3F;
+
+    // loggerf(INFO, "Engine %i - Function %i - type %i - %i", DCC, i, Z->function[i].type, Z->function[i].button);
+  }
+
   int index = find_free_index(engines, engines_len);
 
   engines[index] = Z;
@@ -174,7 +182,6 @@ void Clear_Engine(Engines ** E){
   _free((*E)->img_path);
   _free((*E)->icon_path);
   _free((*E)->steps);
-  _free((*E)->funcs);
   _free((*E));
   *E = 0;
 }

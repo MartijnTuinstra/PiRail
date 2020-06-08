@@ -170,14 +170,59 @@ void WS_stc_UpdateTrain(RailTrain * T){
   msg->speed_high = (T->speed & 0x0F00) >> 8;
   msg->speed_low  = (T->speed & 0xFF);
 
+  if(T->type == TRAIN_ENGINE_TYPE){
+    for(uint8_t i = 0; i < 29; i++){
+      if(((Engines *)T->p)->function[i].state){
+        msg->functions[i / 8] |= (0x80 >> (i % 8));
+      }
+    }
+  }
+  else{
+    // Train type
+    msg->functions[0] = 0;
+    msg->functions[1] = 0;
+    msg->functions[2] = 0;
+    msg->functions[3] = 0;
+  }
+
   loggerf(DEBUG, "train Update_Train id: %i, d: %i, c: %i, sp: %x%02x", msg->follow_id, msg->dir, msg->control, msg->speed_high, msg->speed_low);
 
   for(int i = 0; i<MAX_WEB_CLIENTS; i++){
     if((websocket_clients[i].trains[0] == T->link_id) || 
        (websocket_clients[i].trains[1] == T->link_id)){
-      ws_send(&websocket_clients[i], (void *)&return_msg, sizeof(struct s_opc_UpdateTrain) + 1, WS_Flag_Trains);
+      ws_send(&websocket_clients[i], (char *)&return_msg, sizeof(struct s_opc_UpdateTrain) + 1, WS_Flag_Trains);
     }
   }
+}
+
+void WS_stc_DCCEngineUpdate(Engines * E){
+  loggerf(TRACE, "WS_cts_DCCEngineUpdate");
+
+  if(!E)
+    return;
+
+  struct s_WS_Data return_msg;
+  return_msg.opcode = WSopc_DCCEngineUpdate;
+  struct s_opc_DCCEngineUpdate * msg = &return_msg.data.opc_DCCEngineUpdate;
+
+  msg->follow_id = E->id;
+
+  msg->dir = E->dir;
+  msg->control = 0;
+  msg->speed_high = (E->cur_speed & 0x0F00) >> 8;
+  msg->speed_low  = (E->cur_speed & 0xFF);
+
+  memset(msg->functions, 0, 4);
+
+  for(uint8_t i = 0; i < 29; i++){
+    if(E->function[i].state){
+      msg->functions[i / 8] |= (0x80 >> (i % 8));
+    }
+  }
+
+  loggerf(DEBUG, "train Update_Train id: %i, d: %i, c: %i, sp: %x%02x", msg->follow_id, msg->dir, msg->control, msg->speed_high, msg->speed_low);
+
+  ws_send_all((char *)&return_msg, sizeof(struct s_opc_DCCEngineUpdate) + 1, WS_Flag_Trains);
 }
 
 void WS_stc_EnginesLib(struct web_client_t * client){
@@ -213,6 +258,10 @@ void WS_stc_EnginesLib(struct web_client_t * client){
     data[len++] = strlen(engines[i]->name);
     data[len++] = strlen(engines[i]->img_path);
     data[len++] = strlen(engines[i]->icon_path);
+
+    for(uint8_t j = 0; j < 29; j++){
+      data[len++] = (engines[i]->function[j].button << 6) | engines[i]->function[j].type;
+    }
 
     int l = strlen(engines[i]->name);
     memcpy(&data[len], engines[i]->name, l);

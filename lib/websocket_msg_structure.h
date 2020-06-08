@@ -52,6 +52,13 @@ packedstruct s_opc_SetTrainSpeed {
   uint8_t speed_low;
 };
 
+// 0x43
+packedstruct s_opc_SetTrainFunction {
+  uint8_t id;
+  uint8_t type:2;
+  uint8_t function:6;
+};
+
 // 0x44
 packedstruct s_opc_TrainControl {
   uint8_t follow_id;
@@ -67,6 +74,7 @@ packedstruct s_opc_UpdateTrain {
   uint8_t speed_low;
   uint8_t routeStation;
   uint8_t routeModule;
+  uint8_t functions[4];
 };
 
 // 0x46
@@ -76,7 +84,35 @@ packedstruct s_opc_TrainRoute {
   uint8_t module_id;
 };
 
-// 0x47
+// 0x4A
+packedstruct s_opc_DCCEngineUpdate {
+  uint8_t follow_id;
+  uint8_t speed_high:4;
+  uint8_t control:3;
+  uint8_t dir:1;
+  uint8_t speed_low;
+  uint8_t routeStation;
+  uint8_t routeModule;
+  uint8_t functions[4];
+};
+
+// 0x4B
+packedstruct s_opc_DCCEngineSpeed {
+  uint8_t id;
+  uint8_t empty1:3;
+  uint8_t dir:1;
+  uint8_t speed_high:4;
+  uint8_t speed_low;
+};
+
+// 0x4C
+packedstruct s_opc_DCCEngineFunction {
+  uint8_t id;
+  uint8_t type:2;
+  uint8_t function:6;
+};
+
+// 0x4F
 packedstruct s_opc_SubscribeTrain {
   uint8_t followA;
   uint8_t followB;
@@ -116,6 +152,7 @@ packedstruct s_opc_AddNewEnginetolib {
   uint8_t flags;
   uint8_t name_len;
   uint8_t steps;
+  uint8_t functions[29];
   uint8_t timing[3];
   char strings;
 };
@@ -180,11 +217,17 @@ struct s_WS_Data {
 
     struct s_opc_LinkTrain                   opc_LinkTrain;
     struct s_opc_SetTrainSpeed               opc_SetTrainSpeed;
+    struct s_opc_SetTrainFunction            opc_SetTrainFunction;
 
     struct s_opc_TrainControl                opc_TrainControl;
 
     struct s_opc_UpdateTrain                 opc_UpdateTrain;
     struct s_opc_TrainRoute                  opc_TrainRoute;
+
+    struct s_opc_DCCEngineUpdate             opc_DCCEngineUpdate;
+    struct s_opc_DCCEngineSpeed              opc_DCCEngineSpeed;
+    struct s_opc_DCCEngineFunction           opc_DCCEngineFunction;
+
     struct s_opc_SubscribeTrain              opc_SubscribeTrain;
 
     struct s_opc_AddNewCartolib              opc_AddNewCartolib;

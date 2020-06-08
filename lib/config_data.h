@@ -2,7 +2,7 @@
 #define INCLUDE_CONFIG_DATA_H
 
 #define MODULE_CONF_VERSION 3
-#define TRAIN_CONF_VERSION 2
+#define TRAIN_CONF_VERSION 3
 
 #define TRAIN_CONF_PATH "configs/stock.bin"
 
@@ -196,6 +196,7 @@ struct __attribute__((__packed__)) s_engine_conf {
   uint8_t name_len;
   uint8_t img_path_len;
   uint8_t icon_path_len;
+  uint8_t functions[29];
 };
 
 struct __attribute__((__packed__)) engine_speed_steps {
@@ -211,6 +212,7 @@ struct engines_conf {
   uint8_t name_len;
   uint8_t img_path_len;
   uint8_t icon_path_len;
+  uint8_t functions[29];
   char * name;
   char * img_path;
   char * icon_path;
@@ -232,6 +234,7 @@ struct __attribute__((__packed__)) s_car_conf {
   uint8_t type;   //in mm   
   uint8_t name_len;
   uint8_t icon_path_len;
+  uint8_t functions[29];
 };
 
 struct cars_conf {
@@ -241,6 +244,7 @@ struct cars_conf {
   uint8_t type;   //in mm   
   uint8_t name_len;
   uint8_t icon_path_len;
+  uint8_t functions[29];
   char * name;
   char * icon_path;
 };

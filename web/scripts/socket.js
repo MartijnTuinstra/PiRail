@@ -395,7 +395,17 @@ websocket.add_opcodes([
     {
       opcode: 0x43,
       name: "TrainFunction",
-      send: function(data){ console.warn("TrainFunction", data); },
+      send: function(data){ 
+        if(data.id == undefined){
+          return;
+        }
+
+        var msg = []
+        msg[0] = data.id;
+        msg[1] = (data.function << 2) | (data.type & 0x03);
+
+        return msg;
+       },
       recv: function(data){ console.warn("TrainFunction", data); }
     },
     {
@@ -453,6 +463,16 @@ websocket.add_opcodes([
 
         // Functions
         // data[5] - data[8]
+        for(var i = 0; i < 29; i++){
+          if((data[Math.floor(i / 8) + 5] & (0x80 >> (i % 8))) != 0){
+            Train_Control.train[box].t.functions[i].state = 1;
+          }
+          else{
+            Train_Control.train[box].t.functions[i].state = 0;
+          }
+        }
+
+        Train_Control.update_Functions(box);
       }
     },
     {
@@ -468,6 +488,87 @@ websocket.add_opcodes([
         return msg;
       },
       recv: function(data){ console.warn("TrainAddRoute", data); }
+    },
+    {
+      opcode: 0x4A,
+      name: "DCCEngineUpdate",
+      send: function(data){ console.warn("DCCEngineUpdate", data); },
+      recv: function(data){ 
+        var id = data[0];
+
+        var box = 0;
+
+        if(Train_Control.train[1] != undefined && Train_Control.train[1].type == 'E' && Train_Control.train[1].t.id == id){
+          box = 1;
+        }
+        else if(Train_Control.train[2] != undefined && Train_Control.train[2].type == 'E' && Train_Control.train[2].t.id == id){
+          box = 2;
+        }
+
+        if(box == 0){
+          console.warn("No box");
+          return;
+        }
+
+        Train_Control.train[box].t.control = (data[1] & 0x70) >> 4;
+        Train_Control.train[box].t.dir = (data[1] & 0x80) >> 7;
+        Train_Control.train[box].t.speed = ((data[1] & 0x0F) << 8) + data[2];
+        var ratio = Train_Control.train[box].t.speed / Train_Control.train[box].t.max_speed;
+
+        var slider_box = $('.train-box.box'+box+' .train-speed-slider');
+        var pageY = slider_box.offset().top + slider_box.height();
+        var ylim = slider_box.height() - $('.slider-handle', slider_box).height(); 
+
+        var pos = ylim * ratio;
+
+        $('.train-box.box'+box+' .train-speed > span').text(Train_Control.train[box].t.speed);
+        Train_Control.set_handle(box, pos);
+
+        Train_Control.apply_dir(box);
+
+        Train_Control.apply_control(box);
+
+        // Route
+        // data[3] and data[4]
+
+        // Functions
+        // data[5] - data[8]
+        for(var i = 0; i < 29; i++){
+          if((data[Math.floor(i / 8) + 5] & (0x80 >> (i % 8))) != 0){
+            Train_Control.train[box].t.functions[i].state = 1;
+          }
+          else{
+            Train_Control.train[box].t.functions[i].state = 0;
+          }
+        }
+
+        Train_Control.update_Functions(box);
+      }
+    },
+    {
+      opcode: 0x4B,
+      name: "DCCEngineSpeed",
+      send: function(data){
+        return [data.engine.id, (data.engine.dir & 1) << 4 | (data.engine.speed & 0xF00) >> 8,
+                data.engine.speed & 0xFF];
+      },
+      recv: function(data){ console.warn("DCCEngineSpeed", data); }
+    },
+    {
+      opcode: 0x4C,
+      name: "DCCEngineFunction",
+      send: function(data){
+        if(data.id == undefined){
+          return;
+        }
+
+        var msg = []
+        msg[0] = data.id;
+        msg[1] = (data.function << 2) | (data.type & 0x03);
+
+        return msg;
+      },
+      recv: function(data){ console.warn("DCCEngineFunction", data); }
     },
     {
       opcode: 0x4F,
@@ -669,6 +770,11 @@ websocket.add_opcodes([
           icon_name_len = data[i++];
 
           // functions = data.slice(i, i + 29);
+          functions = [];
+          for(var j = 0; j < 29; j++){
+            functions[j] = {"button": data[i+j] >> 6, "type": data[i+j] & 0x3F, "state": 0};
+          }
+          i += 29;
 
           var name = IntArrayToString(data.slice(i, i+name_len));
           
@@ -700,7 +806,18 @@ websocket.add_opcodes([
             speedsteps = 128;
           }
           
-          Train.engines.push({ontrack: 0, id: Train.engines.length, name: name, dcc: dcc_id, img: img, icon: icon, max_speed: max_spd, length: length, type: type, speedstep: speedsteps, steps: steps});
+          Train.engines.push({functions: functions, 
+                              ontrack: 0,
+                              id: Train.engines.length,
+                              name: name,
+                              dcc: dcc_id,
+                              img: img,
+                              icon: icon,
+                              max_speed: max_spd,
+                              length: length,
+                              type: type,
+                              speedstep: speedsteps,
+                              steps: steps});
         }
 
         Train_Configurator.update();
@@ -908,8 +1025,20 @@ websocket.add_opcodes([
               dcc.push(Train.engines[links[j+1]+ (links[j+2] << 8)].dcc);
             }
           }
+          
+          functions = [
+            {"button": 1, "type": 1, "state": 0},
+            {"button": 1, "type": 2, "state": 0},
+            {"button": 0, "type": 3, "state": 0},
+            {"button": 0, "type": 4, "state": 0},
+            {"button": 0, "type": 5, "state": 0},
+            {"button": 0, "type": 0, "state": 0}, {"button": 0, "type": 0, "state": 0}, {"button": 0, "type": 0, "state": 0}, {"button": 0, "type": 0, "state": 0}, {"button": 0, "type": 0, "state": 0}, {"button": 0, "type": 0, "state": 0},
+            {"button": 0, "type": 0, "state": 0}, {"button": 0, "type": 0, "state": 0}, {"button": 0, "type": 0, "state": 0}, {"button": 0, "type": 0, "state": 0}, {"button": 0, "type": 0, "state": 0}, {"button": 0, "type": 0, "state": 0},
+            {"button": 0, "type": 0, "state": 0}, {"button": 0, "type": 0, "state": 0}, {"button": 0, "type": 0, "state": 0}, {"button": 0, "type": 0, "state": 0}, {"button": 0, "type": 0, "state": 0}, {"button": 0, "type": 0, "state": 0},
+            {"button": 0, "type": 0, "state": 0}, {"button": 0, "type": 0, "state": 0}, {"button": 0, "type": 0, "state": 0}, {"button": 0, "type": 0, "state": 0}, {"button": 0, "type": 0, "state": 0}, {"button": 0, "type": 0, "state": 0}
+          ];
 
-          Train.trains.push({ontrack: 0, id: Train.trains.length, name: name, dcc: dcc, max_speed: max_spd, length: length, type: type, link: link_list, use: use});
+          Train.trains.push({ontrack: 0, id: Train.trains.length, name: name, dcc: dcc, max_speed: max_spd, length: length, type: type, link: link_list, use: use, functions: functions});
           i += data_len;
         }
 

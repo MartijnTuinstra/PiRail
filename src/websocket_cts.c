@@ -98,16 +98,24 @@ websocket_cts_func websocket_cts[256] = {
   (void (*)(void *, struct web_client_t *))&WS_cts_LinkTrain,
   // 0x42
   (void (*)(void *, struct web_client_t *))&WS_cts_SetTrainSpeed,
-  // 0x43 WSopc_TrainFunction
-  0,
+  // 0x43
+  (void (*)(void *, struct web_client_t *))&WS_cts_SetTrainFunction,
   // 0x44
   (void (*)(void *, struct web_client_t *))&WS_cts_TrainControl,
   // 0x45 WSopc_TrainUpdate
   0,
-  // 0x46
+  // 0x46 SetTrainRoute
   (void (*)(void *, struct web_client_t *))&WS_cts_TrainRoute,
-  // 0x47-0x4E Reserved
-  0,0,0,0,0,0,0,0,
+  // 0x47-0x49 Reserved
+  0,0,0,
+  // 0x4A IndependentEngineUpdate (stc only)
+  0,
+  // 0x4B IndependentEngineSpeed
+  (void (*)(void *, struct web_client_t *))&WS_cts_DCCEngineSpeed,
+  // 0x4C IndependentEngineFunction
+  (void (*)(void *, struct web_client_t *))&WS_cts_DCCEngineFunction,
+  // 0x4D-0x4E Reserved
+  0,0,
   // 0x4F
   (void (*)(void *, struct web_client_t *))&WS_cts_TrainSubscribe,
 
@@ -312,6 +320,31 @@ void WS_cts_TrainControl(struct s_opc_TrainControl * m, struct web_client_t * cl
   T->control = m->control;
 }
 
+void WS_cts_SetTrainFunction(struct s_opc_SetTrainFunction * m, struct web_client_t * client){
+  loggerf(INFO, "WS_cts_SetTrainFunction");
+
+  RailTrain * T = train_link[m->id];
+
+  if(!T){
+    loggerf(WARNING, "No Railtrain %i", m->id);
+    return;
+  }
+
+  if(T->type == TRAIN_ENGINE_TYPE){
+    Engines * E = (Engines *)T->p;
+
+    if(E->function[m->function].button == TRAIN_FUNCTION_TOGGLE){
+      m->type = 2;
+    }
+
+    Z21_setLocoFunction(E, m->function, m->type);
+  }
+  else{
+    // TRAIN_TRAIN_TYPE
+    loggerf(INFO, "TODO: implement set function for train");
+  }
+}
+
 void WS_cts_SetTrainSpeed(struct s_opc_SetTrainSpeed * m, struct web_client_t * client){
   // uint16_t id = m.follow_id;
   // uint16_t speed = m.speed;
@@ -404,6 +437,36 @@ void WS_cts_TrainRoute(struct s_opc_TrainRoute * data, struct web_client_t * cli
   Station * St = Units[data->module_id]->St[data->station_id];
 
   train_set_route(T, St->blocks[0]);
+}
+
+void WS_cts_DCCEngineSpeed(struct s_opc_DCCEngineSpeed * m, struct web_client_t * client){
+  Engines * E = engines[m->id];
+
+  if(!E)
+    return;
+
+  uint16_t speed = (m->speed_high << 8) + m->speed_low;
+
+  E->dir = m->dir;
+  engine_set_speed(E, speed);
+  Z21_Set_Loco_Drive_Engine(E);
+}
+
+void WS_cts_DCCEngineFunction(struct s_opc_DCCEngineFunction * m, struct web_client_t * client){
+  loggerf(INFO, "WS_cts_DCCEngineFunction");
+
+  Engines * E = engines[m->id];
+
+  if(!E){
+    loggerf(WARNING, "No Engine %i", m->id);
+    return;
+  }
+
+  if(E->function[m->function].button == TRAIN_FUNCTION_TOGGLE){
+    m->type = 2;
+  }
+
+  Z21_setLocoFunction(E, m->function, m->type);
 }
 
 // void WS_TrainData(char data[14]){
@@ -624,7 +687,7 @@ void WS_cts_AddEnginetoLib(struct s_opc_AddNewEnginetolib * data, struct web_cli
     sprintf(sicon, "%s.%04i.%s", "web/tmp_icon", icon_time, "jpg");
   }
 
-  Create_Engine(name, data->DCC_ID, img, icon, data->type, data->length, data->steps, (struct engine_speed_steps *)steps);
+  Create_Engine(name, data->DCC_ID, img, icon, data->type, data->length, data->steps, (struct engine_speed_steps *)steps, data->functions);
 
   char * dimg = (char *)_calloc(strlen(img)+20, char);
   char * dicon = (char *)_calloc(strlen(icon)+20, char);
@@ -696,6 +759,9 @@ void WS_cts_Edit_Engine(struct s_opc_EditEnginelib * msg, struct web_client_t * 
     DCC_train[E->DCC_ID] = NULL;
     E->DCC_ID = data->DCC_ID;
     DCC_train[E->DCC_ID] = E;
+
+    // Copy functions
+    memcpy(&E->function, data->functions, 29);
 
     // Copy name
     E->name = (char *)_realloc(E->name, data->name_len + 1, char);

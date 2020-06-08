@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="-0.5 -3.5 16 16">
+  <title>TrainFunction_High Horn</title>
+  <g>
+    <rect x="2.22" y="3.66" width="5.55" height="3.1" rx="1.55" ry="1.55" style="fill: none;stroke: #cccccb;stroke-miterlimit: 10;stroke-width: 0.5px"/>
+    <line x1="0.46" y1="3.66" x2="8.29" y2="3.66" style="fill: none;stroke: #cccccb;stroke-miterlimit: 10;stroke-width: 0.5px"/>
+    <circle cx="0.46" cy="3.66" r="0.21" style="fill: none;stroke: #cccccb;stroke-miterlimit: 10;stroke-width: 0.5px"/>
+    <path d="M6.74,3.52V4a6.31,6.31,0,0,1,5.71,3.45V.1A6.32,6.32,0,0,1,6.74,3.52Z" transform="translate(0 -0.1)" style="fill: #cccccb"/>
+    <g>
+      <path d="M.66,2.58V.42h.69v.73H2V.42h.69V2.58H2V1.74H1.35v.84Z" transform="translate(0 -0.1)" style="fill: #cccccb"/>
+      <path d="M3.11,2.58V.42h.71V2.58Z" transform="translate(0 -0.1)" style="fill: #cccccb"/>
+    </g>
+	<g class="functionEnabled" style="display: none;">
+    <path d="M13,2.58A2.76,2.76,0,0,1,13.34,4,2.75,2.75,0,0,1,13,5.35" transform="translate(0 -0.1)" style="fill: none;stroke: #cccccb;stroke-linecap: round;stroke-miterlimit: 10;stroke-width: 0.25px"/>
+    <path d="M13.36,6.17A4.19,4.19,0,0,0,13.92,4a4.19,4.19,0,0,0-.56-2.2" transform="translate(0 -0.1)" style="fill: none;stroke: #cccccb;stroke-linecap: round;stroke-miterlimit: 10;stroke-width: 0.25px"/>
+    <path d="M13.82,1.24A5.75,5.75,0,0,1,14.45,4a5.75,5.75,0,0,1-.63,2.72" transform="translate(0 -0.1)" style="fill: none;stroke: #cccccb;stroke-linecap: round;stroke-miterlimit: 10;stroke-width: 0.25px"/>
+	</g>
+  </g>
+</svg>

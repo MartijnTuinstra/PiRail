@@ -61,6 +61,21 @@ void Z21_LAN_X_LOCO_INFO(uint8_t length, char * data){
   // loggerf(INFO, " -  %02x %02x %02x %02x", data[9], data[10], data[11], data[12]);
 
   //Functions ....
+  E->function[0].state = (data[4] >> 4) & 0x1;
+  E->function[1].state = data[4] & 0x1;
+  E->function[2].state = (data[4] >> 1) & 0x1;
+  E->function[3].state = (data[4] >> 2) & 0x1;
+  E->function[4].state = (data[4] >> 3) & 0x1;
+
+  for(uint8_t i = 0; i < 3; i++){
+    if ((i + 4) > length) {
+      break;
+    }
+
+    for(uint8_t j = 0; j < 8; j++){
+      E->function[i * 8 + j + 5].state = (data[5 + i] >> j) & 0x1;
+    }
+  }
 
   bool samespeed = (speed == E->speed);
   bool samedir = (dir == E->dir);
@@ -126,11 +141,45 @@ void Z21_get_train(RailTrain * RT){
   
 }
 
-		train_set_speed(E->train, E->cur_speed);
+void Z21_get_loco_info(uint16_t DCC_id){
+  uint8_t data[10];
 
-		// WS_stc_UpdateTrain(E->train, TRAIN_TRAIN_TYPE);
-	}
-	// else{
-		// WS_stc_UpdateTrain(E, TRAIN_ENGINE_TYPE);
-	// }
+  data[0] = 0x09;
+  data[1] = 0x00;
+  data[2] = 0x40;
+  data[3] = 0x00;
+  data[4] = 0xE3;
+  data[5] = 0xF0;
+  data[6] = (DCC_id & 0x3F00) >> 8;
+  data[7] = (DCC_id & 0xFF);
+  data[8] = 0x13 ^ data[6] ^ data[7];
+
+  Z21_send_data(data, 9);
+}
+
+void Z21_setLocoFunction(Engines * E, uint8_t function, uint8_t type){
+  uint8_t data[11];
+
+  loggerf(INFO, "Set function %i of train %i", function, E->DCC_ID);
+
+  data[0] = 0x0A;
+  data[1] = 0x00;
+  data[2] = 0x40;
+  data[3] = 0x00;
+  data[4] = 0xE4;
+  data[5] = 0xF8;
+  data[6] = (E->DCC_ID & 0x3F00) >> 8;
+
+  if(E->DCC_ID >= 128)
+    data[6] |= 0x80;
+
+  data[7] = (E->DCC_ID & 0xFF);
+  data[8] = ((type & 0x3) << 6) | (function & 0x3F);
+  data[9] = 0x1C ^ data[6] ^ data[7] ^ data[8];
+
+  Z21_send_data(data, 10);
+}
+
+void Z21_KeepAliveFunc(void * args){
+  Z21_send(4, 0x10);
 }

@@ -16,10 +16,11 @@
 struct engine_speed_steps;
 typedef struct trains Trains;
 
+
 struct train_funcs {
-  char type:6;
-  char momentary:1;
-  char state:1;
+  uint8_t type;
+  uint8_t button:4;
+  uint8_t state:4;
 };
 
 struct __attribute__((__packed__)) train_comp {
@@ -56,8 +57,7 @@ typedef struct engine {
   uint8_t steps_len;
   struct engine_speed_steps * steps;
 
-  char funcs_len;
-  struct train_funcs ** funcs;
+  struct train_funcs function[29];
 
   uint16_t length;    //in mm   
   char * name;
@@ -73,8 +73,7 @@ typedef struct car {
   uint8_t halt;
   uint16_t max_speed;
 
-  char funcs_len;
-  struct train_funcs ** funcs;
+  struct train_funcs function[29];
 
   uint16_t length;   //in mm
   char * name;
@@ -184,6 +183,18 @@ struct TrainSpeedEventData {
 
 #define TRAIN_ENGINE_TYPE 0
 #define TRAIN_TRAIN_TYPE 1
+
+#define TRAIN_FUNCTION_MOMENTARY 0
+#define TRAIN_FUNCTION_TOGGLE 1
+#define TRAIN_FUNCTION_SHORT 2
+#define TRAIN_FUNCTION_LONG 3
+
+#define TRAIN_FUNCTION_UNDEFINED 0
+#define TRAIN_FUNCTION_HEADLIGHTS 2
+#define TRAIN_FUNCTION_CABLIGHTS 3
+#define TRAIN_FUNCTION_LOW_HORN 4
+#define TRAIN_FUNCTION_HIGH_HORN 5
+#define TRAIN_FUNCTION_UNUSED 0x3F
 
 extern Trains ** trains;
 extern int trains_len;

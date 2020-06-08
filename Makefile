@@ -15,9 +15,9 @@ GCC = g++ -std=c++14 -g3 $(GCC_INCLUDE) $(GCC_ERROR_FLAGS) $(GCC_LIBS) $(GCC_FLA
 BAAN_FILES = baan system logger mem modules config rail signals switch IO algorithm encryption \
              Z21 Z21_msg train submodule com sim pathfinding
 
-BAAN_FILES += websocket websocket_cts websocket_stc websocket_control
+BAAN_FILES += websocket websocket_cts websocket_stc websocket_control scheduler
 
-COMTEST_FILES = comtest system logger mem modules config rail signals switch IO algorithm encryption Z21 Z21_msg train submodule com sim pathfinding websocket websocket_cts websocket_stc websocket_control
+COMTEST_FILES = comtest system logger mem modules config rail signals switch IO algorithm encryption Z21 Z21_msg train submodule com sim pathfinding websocket websocket_cts websocket_stc websocket_control scheduler
 
 CONFIG_READER_FILES = config_reader config logger mem
 

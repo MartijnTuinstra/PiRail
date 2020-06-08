@@ -4,6 +4,7 @@
 #include "encryption.h"
 #include "modules.h"
 #include "config.h"
+#include "scheduler.h"
 
 #include "websocket_control.h"
 #include "websocket_stc.h"
@@ -370,22 +371,15 @@ void * websocket_client(void * p){
   loggerf(ERROR, "FIX websocket_client");
 }
 
-void * websocket_clear_clients(void * args){
-  while (SYS->stop == 0){
-    for(int i = 0; i < MAX_WEB_CLIENTS; i++){
-      if(websocket_clients[i].state == 2){
-        loggerf(INFO, "Stopping websocket client %i thread", i);
-        pthread_join(websocket_clients[i].thread, NULL);
-        websocket_clients[i].fd = 0;
-        websocket_clients[i].state = 0;
-      }
+void Websocket_ClearUnusedSockets(void * args){
+  for(int i = 0; i < MAX_WEB_CLIENTS; i++){
+    if(websocket_clients[i].state == 2){
+      loggerf(INFO, "Stopping websocket client %i thread", i);
+      pthread_join(websocket_clients[i].thread, NULL);
+      websocket_clients[i].fd = 0;
+      websocket_clients[i].state = 0;
     }
-
-    // reduce cpu load
-    usleep(1000000);
   }
-
-  return 0;
 }
 
 void read_password(){
@@ -488,7 +482,8 @@ void * websocket_server(){
   }
 
   //Start clear_clients
-  pthread_create(&websocket_clear_thread, NULL, websocket_clear_clients, NULL);
+  struct SchedulerEvent event = {{30, 0}, &Websocket_ClearUnusedSockets, NULL, "Websocket_ClearUnusedSockets", 0, {0, 0}};
+  scheduler->addEvent(event);
 
   WS_init_Message_List();
   
@@ -525,6 +520,8 @@ void * websocket_server(){
   }
 
   loggerf(INFO, "Stopping Websocket Server");
+
+  scheduler->removeEvent("Websocket_ClearUnusedSockets");
 
   close(server);
 

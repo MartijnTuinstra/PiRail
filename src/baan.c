@@ -8,7 +8,7 @@
 #include "modules.h"
 
 
-// #include "com.h"
+#include "scheduler.h"
 
 #include "websocket_control.h"
 
@@ -40,6 +40,8 @@ int main(){
   load_module_Configs();
   load_rolling_Configs();
 
+  scheduler->start();
+
   // Z21_boot();
   websocket_server();
 
@@ -48,6 +50,9 @@ int main(){
 
   // Stop all
   SYS->stop = 1;
+
+  scheduler->stop();
+
   unload_module_Configs();
   unload_rolling_Configs();
 
@@ -87,7 +92,7 @@ int main(){
 
 //   /* Search all blocks */
 //     init_modules();
-//     char * DeviceList = _calloc(10, char);
+//     char * DeviceList = (char *)_calloc(10, char);
 
 //     if(DeviceList[0] != 0){
 //       //There are allready some device listed. Clear.

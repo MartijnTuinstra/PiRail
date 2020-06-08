@@ -21,7 +21,7 @@
     (byte & 0x02 ? '1' : '0'), \
     (byte & 0x01 ? '1' : '0')
 
-  #define Z21_BROADCAST_FLAGS 0x00010001
+  #define Z21_BROADCAST_FLAGS 0x00010101
 
   void die(char *s);
 

@@ -6,6 +6,7 @@
 #include "rail.h"
 // #include "route.h"
 #include "config_data.h"
+#include "scheduler/event.h"
 
 #define TRAIN_COMPS_CONF "./configs/train_comp.conf"
 #define CARS_CONF "./configs/cars.conf"
@@ -111,6 +112,8 @@ typedef struct trains {
   int timer_id;
 } Trains;
 
+struct TrainSpeedEventData;
+
 typedef struct rail_train {
   void * p;
   char type;
@@ -131,7 +134,8 @@ typedef struct rail_train {
   uint8_t stop:1;            // 
   uint8_t dir:1;             // TRAIN_FORWARD / TRAIN_REVERSE
 
-  pthread_t speed_thread;
+  struct SchedulerEvent * speed_event;
+  struct TrainSpeedEventData * speed_event_data;
 
   uint8_t category;
 
@@ -142,6 +146,19 @@ struct train_speed_timer {
   RailTrain * T;
   uint16_t target_speed;
   uint16_t length;
+};
+
+struct TrainSpeedEventData {
+  RailTrain * T;
+
+  uint16_t startSpeed;
+  float acceleration;
+  float time;
+  uint16_t steps;
+  uint16_t stepCounter;
+  uint32_t stepTime;
+
+  struct timespec starttime;
 };
 
 #define RAILTRAIN_SPEED_T_INIT 0
@@ -207,12 +224,14 @@ void unlink_train(int fid);
 void engine_set_speed(Engines * E, uint16_t speed);
 void engine_read_speed(Engines * E);
 
+void train_speed_event_create(RailTrain * T, uint16_t targetSpeed, uint16_t distance);
+void train_speed_event_calc(struct TrainSpeedEventData * data);
+void train_speed_event_init(RailTrain * T);
+void train_speed_event_tick(struct TrainSpeedEventData * data);
+
 void train_set_speed(Trains * T, uint16_t speed);
 void train_calc_speed(Trains * T);
 void train_change_speed(RailTrain * T, uint16_t target_speed, uint8_t type);
-
-void train_speed_timer_create(RailTrain * T, uint16_t target, uint16_t length);
-void * train_speed_timer_run(void * args);
 
 void train_set_route(RailTrain * T, Block * dest);
 #endif

@@ -98,8 +98,8 @@ void * Algor_Run(void * args){
   usleep(1000000);
   SYS_set_state(&SYS->LC.state, Module_LC_Searching);
   if(SYS->UART.state == Module_SIM_State){
-  SIM_JoinModules();
-  usleep(1000000);
+    SIM_JoinModules();
+    usleep(1000000);
   }
   else{
     COM_Reset();
@@ -109,8 +109,8 @@ void * Algor_Run(void * args){
   }
   SYS_set_state(&SYS->LC.state, Module_LC_Connecting);
   if(SYS->UART.state == Module_SIM_State){
-  SIM_Connect_Rail_links();
-  usleep(1000000);
+    SIM_Connect_Rail_links();
+    usleep(1000000);
   }
   else{
     Algor_Connect_Rails();

@@ -13,6 +13,7 @@
 
 #include "config.h"
 #include "websocket_stc.h"
+#include "scheduler.h"
 // #include "submodule.h"
 
 int z21_fd = -1;
@@ -59,7 +60,6 @@ void * Z21(void * args){
     z21_connected = 0;
     SYS_set_state(&SYS->Z21.state, Module_Fail);
   }
-  pthread_create(&SYS->Z21.th, NULL, Z21_run, NULL);
   return 0;
 }
 
@@ -139,6 +139,11 @@ int Z21_client(char * ip, uint16_t port){
 
 void * Z21_run(void * args){
   pthread_join(SYS->Z21.start_th, NULL);
+  
+  struct SchedulerEvent * keepalive_event = scheduler->addEvent("Z21_KeepAlive", {20, 0});
+  keepalive_event->function = &Z21_KeepAliveFunc;
+  scheduler->enableEvent(keepalive_event);
+  scheduler->update();
 
   if(!z21_connected){
     return 0;
@@ -153,6 +158,8 @@ void * Z21_run(void * args){
     int length = read(z21_fd, z21_buf, z21_buf_size);
     Z21_recv(z21_buf, length);
   }
+
+  scheduler->removeEvent(keepalive_event);
 
   z21_connected = 0;
 
@@ -330,4 +337,3 @@ void Z21_send_data(uint8_t * data, uint8_t length){
   write(z21_fd, data, length);
   pthread_mutex_unlock(&z21_send_mutex);
 }
-

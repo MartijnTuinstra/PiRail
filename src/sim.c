@@ -3,8 +3,9 @@
 #include "system.h"
 
 #include "sim.h"
-#include "rail.h"
-#include "switch.h"
+#include "switchboard/rail.h"
+#include "switchboard/switch.h"
+#include "switchboard/msswitch.h"
 #include "train.h"
 #include "modules.h"
 
@@ -70,7 +71,7 @@ void train_sim_tick(struct train_sim * t){
     }
     t->blocks++;
     if(t->FrontSpecialCounter){
-      t->B[0] = _Next(t->Front, NEXT, ++t->FrontSpecialCounter);
+      t->B[0] = t->Front->_Next(NEXT, ++t->FrontSpecialCounter);
     }
     else if(t->B[1]->Alg.next){
       t->B[0] = t->B[1]->Alg.N[0];
@@ -293,8 +294,8 @@ int init_connect_Algor(struct ConnectList * List){
         }
         // printf("write index: %i\n",List->length);
         List->R_L[List->length] = (struct rail_link *)_calloc(1, struct rail_link);
-        List->R_L[List->length]->type = (enum link_types)'R';
-        List->R_L[List->length++]->p  = Units[i]->B[j];
+        List->R_L[List->length]->type  = (enum link_types)'R';
+        List->R_L[List->length++]->p.B = Units[i]->B[j];
       }
     }
 
@@ -314,8 +315,8 @@ int init_connect_Algor(struct ConnectList * List){
           List->list_index += 8;
         }
         List->R_L[List->length] = (struct rail_link *)_calloc(1, struct rail_link);
-        List->R_L[List->length]->type = (enum link_types)'S';
-        List->R_L[List->length++]->p  = Units[i]->Sw[j];
+        List->R_L[List->length]->type   = (enum link_types)'S';
+        List->R_L[List->length++]->p.Sw = Units[i]->Sw[j];
       }
     }
 
@@ -336,8 +337,8 @@ bool find_and_connect(uint8_t ModuleA, char anchor_A, uint8_t ModuleB, char anch
   printf("find_and_connect: %i:%i\t\t%i:%i\n",ModuleA,anchor_A,ModuleB,anchor_B);
 
   for(int Rail = 1;Rail<3;Rail++){
-    struct rail_link A;A.p = 0;
-    struct rail_link B;B.p = 0;
+    struct rail_link A;A.p.p = 0;
+    struct rail_link B;B.p.p = 0;
 
     //Find Anchor A
     // - Find a Block
@@ -349,7 +350,7 @@ bool find_and_connect(uint8_t ModuleA, char anchor_A, uint8_t ModuleB, char anch
             printf("++++++\n");
             A.type = RAIL_LINK_R;
             typeA  = 'P';
-            A.p = Bl;
+            A.p.B = Bl;
             printf("\n");
             break;
           }
@@ -357,14 +358,14 @@ bool find_and_connect(uint8_t ModuleA, char anchor_A, uint8_t ModuleB, char anch
             // printf("++++++\n");
             A.type = RAIL_LINK_R;
             typeA  = 'N';
-            A.p = Bl;
+            A.p.B = Bl;
             printf("\n");
             break;
           }
         }
       }
     // - Find a switch
-      if(!A.p){
+      if(!A.p.p){
         for(int k = 0;k<Units[ModuleA]->switch_len;k++){
           if(Units[ModuleA]->Sw[k]){
             Switch * Sw = Units[ModuleA]->Sw[k];
@@ -374,7 +375,7 @@ bool find_and_connect(uint8_t ModuleA, char anchor_A, uint8_t ModuleB, char anch
                 // printf("++++++\n");
                 A.type = RAIL_LINK_S;
                 typeA  = 'A';
-                A.p = Sw;
+                A.p.Sw = Sw;
                 break;
               }
               printf("\n");
@@ -384,7 +385,7 @@ bool find_and_connect(uint8_t ModuleA, char anchor_A, uint8_t ModuleB, char anch
                 // printf("++++++\n");
                 A.type = RAIL_LINK_S;
                 typeA  = 'S';
-                A.p = Sw;
+                A.p.Sw = Sw;
                 break;//dsafas
               }
               printf("\n");
@@ -394,7 +395,7 @@ bool find_and_connect(uint8_t ModuleA, char anchor_A, uint8_t ModuleB, char anch
                 // printf("++++++\n");
                 A.type = RAIL_LINK_S;
                 typeA  = 'D';
-                A.p = Units[ModuleA]->Sw[k];
+                A.p.Sw = Units[ModuleA]->Sw[k];
                 break;
               }
               printf("\n");
@@ -403,7 +404,7 @@ bool find_and_connect(uint8_t ModuleA, char anchor_A, uint8_t ModuleB, char anch
         }
       }
     // - Find a msswitch
-      if(!A.p){
+      if(!A.p.p){
         printf("Mayby a MSwitch, but not IMPLEMENTED!!\n");
         continue;
       }
@@ -418,7 +419,7 @@ bool find_and_connect(uint8_t ModuleA, char anchor_A, uint8_t ModuleB, char anch
             printf("++++++\n");
             B.type = RAIL_LINK_R;
             typeB  = 'N';
-            B.p = Units[ModuleB]->B[k];
+            B.p.B = Units[ModuleB]->B[k];
             break;
           }
           printf("\n");
@@ -429,7 +430,7 @@ bool find_and_connect(uint8_t ModuleA, char anchor_A, uint8_t ModuleB, char anch
             printf("++++++\n");
             B.type = RAIL_LINK_R;
             typeB  = 'P';
-            B.p = Units[ModuleB]->B[k];
+            B.p.B = Units[ModuleB]->B[k];
             break;
           }
           printf("\n");
@@ -437,7 +438,7 @@ bool find_and_connect(uint8_t ModuleA, char anchor_A, uint8_t ModuleB, char anch
         }
       }
     // - Find a Switch
-      if(!B.p){
+      if(!B.p.p){
         for(int k = 0;k<Units[ModuleB]->switch_len;k++){
           if(Units[ModuleB]->Sw[k]){
             if(Units[ModuleB]->Sw[k]->app.type == RAIL_LINK_C){
@@ -446,7 +447,7 @@ bool find_and_connect(uint8_t ModuleA, char anchor_A, uint8_t ModuleB, char anch
               printf("++++++\n");
               B.type = RAIL_LINK_S;
               typeB  = 'A';
-              B.p = Units[ModuleB]->Sw[k];
+              B.p.Sw = Units[ModuleB]->Sw[k];
               break;
               }
               printf("\n");
@@ -457,7 +458,7 @@ bool find_and_connect(uint8_t ModuleA, char anchor_A, uint8_t ModuleB, char anch
               printf("++++++\n");
               B.type = RAIL_LINK_S;
               typeB  = 'S';
-              B.p = Units[ModuleB]->Sw[k];
+              B.p.Sw = Units[ModuleB]->Sw[k];
               break;
               }
               printf("\n");
@@ -468,7 +469,7 @@ bool find_and_connect(uint8_t ModuleA, char anchor_A, uint8_t ModuleB, char anch
               printf("++++++\n");
               B.type = RAIL_LINK_S;
               typeB  = 'D';
-              B.p = Units[ModuleB]->Sw[k];
+              B.p.Sw = Units[ModuleB]->Sw[k];
               break;
               }
               printf("\n");
@@ -477,19 +478,19 @@ bool find_and_connect(uint8_t ModuleA, char anchor_A, uint8_t ModuleB, char anch
         }
       }
     // - Find a MSwitch
-      if(!B.p){
+      if(!B.p.p){
         printf("Mayby a MSwitch, but not IMPLEMENTED!!\n");
         continue;
       }
 
     if(A.type == RAIL_LINK_R && B.type == RAIL_LINK_R){
-      printf("Connecting R %i:%i <==> %i:%i R\n",((Block *)A.p)->module,((Block *)A.p)->id,((Block *)B.p)->module,((Block *)B.p)->id);
+      printf("Connecting R %i:%i <==> %i:%i R\n",A.p.B->module,A.p.B->id,B.p.B->module,B.p.B->id);
     }
     else if(A.type == RAIL_LINK_S && B.type == RAIL_LINK_R){
-      printf("Connecting S %i:%i <==> %i:%i R\n",((Switch *)A.p)->module,((Switch *)A.p)->id,((Block *)B.p)->module,((Block *)B.p)->id);
+      printf("Connecting S %i:%i <==> %i:%i R\n",A.p.Sw->module,A.p.Sw->id,B.p.B->module,B.p.B->id);
     }
     else if(A.type == RAIL_LINK_R && B.type == RAIL_LINK_S){
-      printf("Connecting R %i:%i <==> %i:%i S\n",((Block *)A.p)->module,((Block *)A.p)->id,((Switch *)B.p)->module,((Switch *)B.p)->id);
+      printf("Connecting R %i:%i <==> %i:%i S\n",A.p.B->module,A.p.B->id,B.p.Sw->module,B.p.Sw->id);
     }
 
     connected = TRUE;
@@ -497,76 +498,76 @@ bool find_and_connect(uint8_t ModuleA, char anchor_A, uint8_t ModuleB, char anch
     //Connect
     if(A.type == RAIL_LINK_R && B.type == RAIL_LINK_R){
       if(typeA == 'P'){
-        ((Block *)A.p)->prev.module = ((Block *)B.p)->module;
-        ((Block *)A.p)->prev.id    = ((Block *)B.p)->id;
-        ((Block *)A.p)->prev.type   = RAIL_LINK_R;
-        ((Block *)B.p)->next.module = ((Block *)A.p)->module;
-        ((Block *)B.p)->next.id    = ((Block *)A.p)->id;
-        ((Block *)B.p)->next.type   = RAIL_LINK_R;
+        A.p.B->prev.module = B.p.B->module;
+        A.p.B->prev.id    = B.p.B->id;
+        A.p.B->prev.type   = RAIL_LINK_R;
+        B.p.B->next.module = A.p.B->module;
+        B.p.B->next.id    = A.p.B->id;
+        B.p.B->next.type   = RAIL_LINK_R;
       }
       else{
-        ((Block *)A.p)->next.module = ((Block *)B.p)->module;
-        ((Block *)A.p)->next.id    = ((Block *)B.p)->id;
-        ((Block *)A.p)->next.type   = RAIL_LINK_R;
-        ((Block *)B.p)->prev.module = ((Block *)A.p)->module;
-        ((Block *)B.p)->prev.id    = ((Block *)A.p)->id;
-        ((Block *)B.p)->prev.type   = RAIL_LINK_R;
+        A.p.B->next.module = B.p.B->module;
+        A.p.B->next.id    = B.p.B->id;
+        A.p.B->next.type   = RAIL_LINK_R;
+        B.p.B->prev.module = A.p.B->module;
+        B.p.B->prev.id    = A.p.B->id;
+        B.p.B->prev.type   = RAIL_LINK_R;
       }
     }
     else if(A.type == RAIL_LINK_S && B.type == RAIL_LINK_R){
       if(typeB == 'N'){
-        ((Block *)B.p)->next.module = ((Switch *)A.p)->module;
-        ((Block *)B.p)->next.id    = ((Switch *)A.p)->id;
-        ((Block *)B.p)->next.type   = (typeA == 'A') ? RAIL_LINK_S : RAIL_LINK_s;
+        B.p.B->next.module = A.p.Sw->module;
+        B.p.B->next.id    = A.p.Sw->id;
+        B.p.B->next.type   = (typeA == 'A') ? RAIL_LINK_S : RAIL_LINK_s;
       }
       else{
-        ((Block *)B.p)->prev.module = ((Switch *)A.p)->module;
-        ((Block *)B.p)->prev.id    = ((Switch *)A.p)->id;
-        ((Block *)B.p)->prev.type   = (typeA == 'A') ? RAIL_LINK_S : RAIL_LINK_s;
+        B.p.B->prev.module = A.p.Sw->module;
+        B.p.B->prev.id    = A.p.Sw->id;
+        B.p.B->prev.type   = (typeA == 'A') ? RAIL_LINK_S : RAIL_LINK_s;
       }
 
       if(typeA == 'A'){
-        ((Switch *)A.p)->app.module = ((Block *)B.p)->module;
-        ((Switch *)A.p)->app.id    = ((Block *)B.p)->id;
-        ((Switch *)A.p)->app.type   = RAIL_LINK_R;
+        A.p.Sw->app.module = B.p.B->module;
+        A.p.Sw->app.id    = B.p.B->id;
+        A.p.Sw->app.type   = RAIL_LINK_R;
       }
       else if(typeA == 'S'){
-        ((Switch *)A.p)->str.module = ((Block *)B.p)->module;
-        ((Switch *)A.p)->str.id    = ((Block *)B.p)->id;
-        ((Switch *)A.p)->str.type   = RAIL_LINK_R;
+        A.p.Sw->str.module = B.p.B->module;
+        A.p.Sw->str.id    = B.p.B->id;
+        A.p.Sw->str.type   = RAIL_LINK_R;
       }
       else if(typeA == 'D'){
-        ((Switch *)A.p)->div.module = ((Block *)B.p)->module;
-        ((Switch *)A.p)->div.id    = ((Block *)B.p)->id;
-        ((Switch *)A.p)->div.type   = RAIL_LINK_R;
+        A.p.Sw->div.module = B.p.B->module;
+        A.p.Sw->div.id    = B.p.B->id;
+        A.p.Sw->div.type   = RAIL_LINK_R;
       }
     }
     else if(A.type == RAIL_LINK_R && B.type == RAIL_LINK_S){
       if(typeA == 'N'){
-        ((Block *)A.p)->next.module = ((Switch *)B.p)->module;
-        ((Block *)A.p)->next.id    = ((Switch *)B.p)->id;
-        ((Block *)A.p)->next.type   = (typeB == 'A') ? RAIL_LINK_S : RAIL_LINK_s;
+        A.p.B->next.module = B.p.Sw->module;
+        A.p.B->next.id    = B.p.Sw->id;
+        A.p.B->next.type   = (typeB == 'A') ? RAIL_LINK_S : RAIL_LINK_s;
       }
       else{
-        ((Block *)A.p)->prev.module = ((Switch *)B.p)->module;
-        ((Block *)A.p)->prev.id    = ((Switch *)B.p)->id;
-        ((Block *)A.p)->prev.type   = (typeB == 'A') ? RAIL_LINK_S : RAIL_LINK_s;
+        A.p.B->prev.module = B.p.Sw->module;
+        A.p.B->prev.id    = B.p.Sw->id;
+        A.p.B->prev.type   = (typeB == 'A') ? RAIL_LINK_S : RAIL_LINK_s;
       }
 
       if(typeB == 'A'){
-        ((Switch *)B.p)->app.module = ((Block *)A.p)->module;
-        ((Switch *)B.p)->app.id    = ((Block *)A.p)->id;
-        ((Switch *)B.p)->app.type   = RAIL_LINK_R;
+        B.p.Sw->app.module = A.p.B->module;
+        B.p.Sw->app.id    = A.p.B->id;
+        B.p.Sw->app.type   = RAIL_LINK_R;
       }
       else if(typeB == 'S'){
-        ((Switch *)B.p)->str.module = ((Block *)A.p)->module;
-        ((Switch *)B.p)->str.id    = ((Block *)A.p)->id;
-        ((Switch *)B.p)->str.type   = RAIL_LINK_R;
+        B.p.Sw->str.module = A.p.B->module;
+        B.p.Sw->str.id    = A.p.B->id;
+        B.p.Sw->str.type   = RAIL_LINK_R;
       }
       else if(typeB == 'D'){
-        ((Switch *)B.p)->div.module = ((Block *)A.p)->module;
-        ((Switch *)B.p)->div.id    = ((Block *)A.p)->id;
-        ((Switch *)B.p)->div.type   = RAIL_LINK_R;
+        B.p.Sw->div.module = A.p.B->module;
+        B.p.Sw->div.id    = A.p.B->id;
+        B.p.Sw->div.type   = RAIL_LINK_R;
       }
     }
   }
@@ -585,16 +586,16 @@ int connect_Algor(struct ConnectList * List){
   int value = 0;
 
   for(int i = 0;i<List->length;i++){
-    if(!List->R_L[i]->p)
+    if(!List->R_L[i]->p.p)
       continue;
 
     if(List->R_L[i]->type == 'R'){
-      if(((Block *)List->R_L[i]->p)->next.type != RAIL_LINK_C && ((Block *)List->R_L[i]->p)->prev.type != RAIL_LINK_C) {
+      if(List->R_L[i]->p.B->next.type != RAIL_LINK_C && List->R_L[i]->p.B->prev.type != RAIL_LINK_C) {
         value++;
         continue;
       }
-      if(((Block *)List->R_L[i]->p)->blocked){
-        printf("Found block %i:%i %i\t",((Block*)List->R_L[i]->p)->module,((Block*)List->R_L[i]->p)->id,((Block*)List->R_L[i]->p)->blocked);
+      if(List->R_L[i]->p.B->blocked){
+        printf("Found block %i:%i %i\t", List->R_L[i]->p.B->module, List->R_L[i]->p.B->id, List->R_L[i]->p.B->blocked);
         //Blocked block
         if(!R)
           R = List->R_L[i];
@@ -607,38 +608,38 @@ int connect_Algor(struct ConnectList * List){
           int ModuleA = 0;
           int ModuleB = 0;
           if(R->type == 'R'){
-            ModuleA = ((Block *)R->p)->module;
-            ModuleB = ((Block *)List->R_L[i]->p)->module;
+            ModuleA = R->p.B->module;
+            ModuleB = List->R_L[i]->p.B->module;
 
-            if(((Block *)R->p)->next.type == RAIL_LINK_C){
-              anchor_A = ((Block *)R->p)->next.module;
-              anchor_B = ((Block *)List->R_L[i]->p)->prev.module;
+            if(R->p.B->next.type == RAIL_LINK_C){
+              anchor_A = R->p.B->next.module;
+              anchor_B = List->R_L[i]->p.B->prev.module;
             }
-            else if(((Block *)R->p)->prev.type == RAIL_LINK_C){
-              anchor_A = ((Block *)R->p)->prev.module;
-              anchor_B = ((Block *)List->R_L[i]->p)->next.module;
+            else if(R->p.B->prev.type == RAIL_LINK_C){
+              anchor_A = R->p.B->prev.module;
+              anchor_B = List->R_L[i]->p.B->next.module;
             }
 
             connected = find_and_connect(ModuleA,anchor_A,ModuleB,anchor_B);
           }
           else if(R->type == 'S'){
-            ModuleA = ((Switch *)R->p)->module;
-            ModuleB = ((Block *)List->R_L[i]->p)->module;
-            if(((Block *)List->R_L[i]->p)->next.type == RAIL_LINK_C){
-              anchor_B = ((Block *)List->R_L[i]->p)->next.module;
+            ModuleA = R->p.Sw->module;
+            ModuleB = List->R_L[i]->p.B->module;
+            if(List->R_L[i]->p.B->next.type == RAIL_LINK_C){
+              anchor_B = List->R_L[i]->p.B->next.module;
             }
             else{
-              anchor_B = ((Block *)List->R_L[i]->p)->prev.module;
+              anchor_B = List->R_L[i]->p.B->prev.module;
             }
 
-            if(((Switch *)R->p)->app.type == RAIL_LINK_C){
-              anchor_A = ((Switch *)R->p)->app.module;
+            if(R->p.Sw->app.type == RAIL_LINK_C){
+              anchor_A = R->p.Sw->app.module;
             }
-            else if(((Switch *)R->p)->str.type == RAIL_LINK_C){
-              anchor_A = ((Switch *)R->p)->str.module;
+            else if(R->p.Sw->str.type == RAIL_LINK_C){
+              anchor_A = R->p.Sw->str.module;
             }
-            else if(((Switch *)R->p)->div.type == RAIL_LINK_C){
-              anchor_A = ((Switch *)R->p)->div.module;
+            else if(R->p.Sw->div.type == RAIL_LINK_C){
+              anchor_A = R->p.Sw->div.module;
             } //End Switch approach type
 
             connected = find_and_connect(ModuleA,anchor_A,ModuleB,anchor_B);
@@ -652,7 +653,7 @@ int connect_Algor(struct ConnectList * List){
         }
       }
     }
-    else if(List->R_L[i]->type == 'S' && ((Switch *)List->R_L[i]->p)->Detection->blocked){
+    else if(List->R_L[i]->type == 'S' && List->R_L[i]->p.Sw->Detection->blocked){
       //Blocked switch
       if(!R){
         R = List->R_L[i];
@@ -752,7 +753,7 @@ void * rail_link_pointer(struct rail_link link){
   else if((link.type == RAIL_LINK_S || link.type == RAIL_LINK_s) && U->Sw[link.id]){
     return U->Sw[link.id];
   }
-  else if((link.type >= RAIL_LINK_MA && link.type <= RAIL_LINK_mb) && U->MSSw[link.id]){
+  else if((link.type >= RAIL_LINK_MA && link.type <= RAIL_LINK_MB) && U->MSSw[link.id]){
     return U->MSSw[link.id];
   }
   return 0;
@@ -1005,8 +1006,8 @@ void SIM_Connect_Rail_links(){
 
       Block * tB = tU->B[i];
 
-      tB->next.p = rail_link_pointer(tB->next);
-      tB->prev.p = rail_link_pointer(tB->prev);
+      tB->next.p.p = rail_link_pointer(tB->next);
+      tB->prev.p.p = rail_link_pointer(tB->prev);
     }
 
     for(int i = 0; i<tU->switch_len; i++){
@@ -1016,9 +1017,9 @@ void SIM_Connect_Rail_links(){
 
       Switch * tSw = tU->Sw[i];
 
-      tSw->app.p = rail_link_pointer(tSw->app);
-      tSw->str.p = rail_link_pointer(tSw->str);
-      tSw->div.p = rail_link_pointer(tSw->div);
+      tSw->app.p.p = rail_link_pointer(tSw->app);
+      tSw->str.p.p = rail_link_pointer(tSw->str);
+      tSw->div.p.p = rail_link_pointer(tSw->div);
     }
 
     for(int i = 0; i<tU->msswitch_len; i++){
@@ -1028,9 +1029,9 @@ void SIM_Connect_Rail_links(){
 
       MSSwitch * tMSSw = tU->MSSw[i];
 
+      tMSSw->sideA.p.p = rail_link_pointer(tMSSw->sideA);
       for(int s = 0; s < tMSSw->state_len; s++){
-        tMSSw->sideA[s].p = rail_link_pointer(tMSSw->sideA[s]);
-        tMSSw->sideB[s].p = rail_link_pointer(tMSSw->sideB[s]);
+        tMSSw->sideB[s].p.p = rail_link_pointer(tMSSw->sideB[s]);
       }
     }
   }

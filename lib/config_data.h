@@ -1,6 +1,8 @@
 #ifndef INCLUDE_CONFIG_DATA_H
 #define INCLUDE_CONFIG_DATA_H
 
+#include <stdint.h>
+
 #define MODULE_CONF_VERSION 3
 #define TRAIN_CONF_VERSION 3
 
@@ -28,21 +30,7 @@ struct __attribute__((__packed__)) s_IO_port_conf {
   uint16_t Adr;
 };
 
-#ifndef RAIL_LINK_TYPES
-#define RAIL_LINK_TYPES 
-enum link_types {
-  RAIL_LINK_R,
-  RAIL_LINK_S,
-  RAIL_LINK_s,
-  RAIL_LINK_MA,
-  RAIL_LINK_MB,
-  RAIL_LINK_ma,
-  RAIL_LINK_mb,
-  RAIL_LINK_TT = 0x10, // Turntable
-  RAIL_LINK_C  = 0xfe,
-  RAIL_LINK_E  = 0xff
-};
-#endif
+#include "switchboard/links.h"
 
 struct __attribute__((__packed__)) s_node_conf {
   uint8_t Node;

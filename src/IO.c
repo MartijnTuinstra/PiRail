@@ -19,7 +19,7 @@ void Add_IO_Node(Unit * U, struct node_conf node){
   for(int i = 0; i<node.size; i++){
     Z.io[i] = (IO_Port *)_calloc(1, IO_Port);
     Z.io[i]->type = (enum e_IO_type)((node.data[i/2] >> (4 * (i % 2))) & 0xF);
-    loggerf(INFO, "IO Port %i:%i -- %s", Z.id, i, IO_enum_type_string[Z.io[i]->type]);
+    // loggerf(INFO, "IO Port %i:%i -- %s", Z.id, i, IO_enum_type_string[Z.io[i]->type]);
   }
 
   if(U->IO_Nodes <= node.Node){

@@ -10,118 +10,12 @@
 #include "mem.h"
 #include "config.h"
 
-#include "rail.h"
-#include "switch.h"
-#include "signals.h"
+#include "switchboard/rail.h"
+#include "switchboard/switch.h"
+#include "switchboard/signals.h"
 #include "IO.h"
 
-int unit_len;
-Unit ** Units;
-
-void Create_Unit(uint16_t M, uint8_t Nodes, char points){
-  Unit * Z = (Unit *)_calloc(1, Unit);
-
-  if(M < unit_len){
-    Units[M] = Z;
-  }
-  else{
-    loggerf(CRITICAL, "NEED TO EXPAND UNITS");
-    return;
-  }
-
-  Z->module = M;
-
-  Z->connections_len = points;
-  Z->connection = (Unit **)_calloc(points, Unit *);
-
-  Z->IO_Nodes = Nodes;
-  Z->Node = (IO_Node *)_calloc(Z->IO_Nodes, IO_Node);
-
-  Z->block_len = 8;
-  Z->B = (Block **)_calloc(Z->block_len, Block*);
-
-  Z->switch_len = 8;
-  Z->Sw = (Switch **)_calloc(Z->switch_len, Switch*);
-
-  Z->msswitch_len = 8;
-  Z->MSSw = (MSSwitch **)_calloc(Z->switch_len, MSSwitch*);
-
-  Z->signal_len = 8;
-  Z->Sig = (Signal **)_calloc(Z->signal_len, Signal*);
-
-  Z->station_len = 8;
-  Z->St = (Station **)_calloc(Z->station_len, Station*);
-}
-
-Unit * Clear_Unit(Unit * U){
-  loggerf(INFO, "Clearing module %i", U->module);
-
-  //Clear unit connections array
-  _free(U->connection);
-
-  //Clear IO
-  for(int j = 0; j < U->IO_Nodes; j++){
-    for(int k =0; k < U->Node[j].io_ports; k++){
-      _free(U->Node[j].io[k]);
-    }
-    _free(U->Node[j].io);
-  }
-  _free(U->Node);
-
-  //clear Segments
-  for(int j = 0; j < U->block_len; j++){
-    if(!U->B[j])
-      continue;
-
-    U->B[j] = Clear_Block(U->B[j]);;
-  }
-  _free(U->B);
-
-  //clear Switches
-  if(U->Sw){
-    for(int j = 0; j <= U->switch_len; j++){
-      if(!U->Sw[j])
-        continue;
-
-      U->Sw[j] = Clear_Switch(U->Sw[j]);
-    }
-    _free(U->Sw);
-  }
-  //clear Mods
-  for(int j = 0;j<=U->msswitch_len;j++){
-    if(U->MSSw[j]){
-      U->MSSw[j] = Clear_MSSwitch(U->MSSw[j]);
-    }
-  }
-  _free(U->MSSw);
-
-  //clear Signals
-  if(U->Sig){
-    for(int j = 0;j<=U->signal_len;j++){
-      if(!U->Sig[j])
-        continue;
-      U->Sig[j] = Clear_Signal(U->Sig[j]);
-    }
-  }
-
-  _free(U->Sig);
-  //clear Stations
-  if(U->St){
-    for(int j = 0;j<=U->station_len;j++){
-      if(!U->St[j])
-        continue;
-      U->St[j] = Clear_Station(U->St[j]);
-    }
-    _free(U->St);
-  }
-
-  _free(U->raw);
-  _free(U->Layout);
-
-  _free(U);
-  U = 0;
-  return 0;
-}
+#include "switchboard/station.h"
 
 void read_module_Config(uint16_t M){
   char filename[40] = "";
@@ -187,7 +81,7 @@ void read_module_Config(uint16_t M){
   
   for(int i = 0; i < config->header.Blocks; i++){
     struct s_block_conf block = read_s_block_conf(buf_ptr);
-    Create_Block(M, block);
+    new Block(M, block);
   }
 
   loggerf(DEBUG, "  Module Switch");
@@ -212,7 +106,7 @@ void read_module_Config(uint16_t M){
     States[0] = 1 + (0 << 1); //State 0 - Address 0 hight, address 1 low
     States[1] = 0 + (1 << 1); //State 1 - Address 1 hight, address 0 low
 
-    Create_Switch(connect, s.det_block, s.IO & 0x0f, Adrs, States);
+    new Switch(connect, s.det_block, s.IO & 0x0f, Adrs, States);
 
     _free(s.IO_Ports);
     _free(Adrs);
@@ -240,7 +134,7 @@ void read_module_Config(uint16_t M){
   for(int i = 0; i < config->header.Stations; i++){
     struct station_conf st = read_s_station_conf(buf_ptr);
 
-    Create_Station(M, i, st.name, st.name_len, (enum Station_types)st.type, st.nr_blocks, st.blocks);
+    new Station(M, i, st.name, st.name_len, (enum Station_types)st.type, st.nr_blocks, st.blocks);
 
     _free(st.name);
     _free(st.blocks);

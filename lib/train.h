@@ -3,7 +3,7 @@
 
 #include <signal.h>
 #include <pthread.h>
-#include "rail.h"
+#include "switchboard/rail.h"
 // #include "route.h"
 #include "config_data.h"
 #include "scheduler/event.h"
@@ -15,6 +15,7 @@
 
 struct engine_speed_steps;
 typedef struct trains Trains;
+typedef struct rail_train RailTrain;
 
 
 struct train_funcs {

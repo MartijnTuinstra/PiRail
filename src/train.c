@@ -10,7 +10,7 @@
 #include "mem.h"
 
 #include "train.h"
-#include "switch.h"
+#include "switchboard/switch.h"
 
 #include "logger.h"
 #include "config.h"

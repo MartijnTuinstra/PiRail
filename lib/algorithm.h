@@ -5,7 +5,7 @@
 
 #include <pthread.h>
 #include <semaphore.h>
-#include "rail.h"
+#include "switchboard/rail.h"
 
 #define AlgorQueueLength 100
 

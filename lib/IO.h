@@ -6,7 +6,7 @@
 #include "modules.h"
 #include "config_data.h"
 
-typedef struct s_unit Unit;
+// typedef struct s_unit Unit;
 
 typedef struct s_node_adr {
   uint8_t Node;

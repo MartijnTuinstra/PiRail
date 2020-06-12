@@ -14,8 +14,10 @@
 #include "system.h"
 #include "mem.h"
 
-#include "rail.h"
-#include "switch.h"
+#include "switchboard/rail.h"
+#include "switchboard/station.h"
+#include "switchboard/switch.h"
+#include "switchboard/msswitch.h"
 #include "train.h"
 #include "logger.h"
 #include "config.h"

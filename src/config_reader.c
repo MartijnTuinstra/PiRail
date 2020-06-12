@@ -4,7 +4,7 @@
 #include "logger.h"
 #include "config.h"
 #include "mem.h"
-#include "rail.h"
+#include "switchboard/rail.h"
 
 void print_link(char ** debug, struct s_link_conf link){
   if(link.type == RAIL_LINK_C){
@@ -22,13 +22,9 @@ void print_link(char ** debug, struct s_link_conf link){
     else if(link.type == RAIL_LINK_s)
       *debug += sprintf(*debug, "%c  \t", 's');
     else if(link.type == RAIL_LINK_MA)
-      *debug += sprintf(*debug, "%s  \t", "MB");
+      *debug += sprintf(*debug, "%s  \t", "MA");
     else if(link.type == RAIL_LINK_MB)
       *debug += sprintf(*debug, "%s  \t", "MB");
-    else if(link.type == RAIL_LINK_ma)
-      *debug += sprintf(*debug, "%s  \t", "ma");
-    else if(link.type == RAIL_LINK_mb)
-      *debug += sprintf(*debug, "%s  \t", "mb");
     else if(link.type == RAIL_LINK_TT)
       *debug += sprintf(*debug, "%c%c \t", 'T', 'T');
     else

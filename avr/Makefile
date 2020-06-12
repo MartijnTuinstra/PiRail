@@ -28,11 +28,13 @@ build/$(1)/$(2)/$(2).flash:
 	@echo "(  AVR  ) $(1)\t$(2)"
 	@+$(MAKE) -f make-avr all DEVICE=$(1) args="$$(args_$(2))" output=$(2) files="$$(File_$(2))" --no-print-directory
 
-all: build/$(1)/$(2)/$(2).flash
-
+buildall: build/$(1)/$(2)/$(2).flash
 endef
 
 $(foreach d,$(dev), $(foreach p,$(programs), $(eval $(call compile,$(d),$(p)))))
+
+all: buildall
+	@:
 
 clean:
 	rm -rf build

@@ -28,6 +28,7 @@ $(bdir)/$(output).flash.hex: $(bdir)/$(output)/$(output).elf
 #	@+$(MAKE) -f make-avr hex dev=$(DEVICE) dir=build/$(DEVICE) --no-print-directory
 
 all: $(bdir)/$(output)/bin $(bdir)/$(output).flash.hex
+	@:
 
 clean:
 	rm -rf build

@@ -1,5 +1,6 @@
 #include "pathfinding.h"
-#include "switch.h"
+#include "switchboard/switch.h"
+#include "switchboard/msswitch.h"
 #include "mem.h"
 #include "logger.h"
 #include "websocket_stc.h"
@@ -10,7 +11,7 @@ struct paths pathfinding(Block * start, Block * end){
   c.start = start;
   c.current = start;
   c.dir = NEXT;
-  c.link = Next_link(c.current, c.dir);
+  c.link = c.current->NextLink(c.dir);
   c.end = end;
 
   struct pathinstruction * final_instruction = 0;
@@ -48,7 +49,7 @@ struct paths pathfinding(Block * start, Block * end){
   c.final_instruction = &final_instruction;
 
     c.dir = PREV;
-    c.link = Next_link(c.current, c.dir);
+    c.link = c.current->NextLink(c.dir);
     c.length = 0;
     c.steps = 0;
     result_backward = _pathfinding_step(c);
@@ -144,24 +145,24 @@ struct pathfindingstep _pathfinding_step(struct pathfindingconfig c){
   }
 
   if(c.link->type == RAIL_LINK_R){
-    if(!dircmp(c.current, (Block *)c.link->p)){
+    if(!dircmp(c.current, c.link->p.B)){
       c.dir ^= PREV;
     }
-    c.current = (Block *)c.link->p;
-    // if(((Block *)c.current)->oneWay)
-    //   printf("%02i:%02i %i %i\n", ((Block *)c.current)->module, ((Block *)c.current)->id, ((Block *)c.current)->dir, c.dir);
+    c.current = c.link->p.B;
+    // if(c.current->oneWay)
+    //   printf("%02i:%02i %i %i\n", c.current->module, c.current->id, c.current->dir, c.dir);
 
-    if(c.dir == PREV && ((Block *)c.current)->oneWay){
+    if(c.dir == PREV && c.current->oneWay){
       return s; // Wrongway
     }
-    c.length += ((Block *)c.current)->length;
+    c.length += c.current->length;
 
-    c.link = Next_link(c.current, c.dir);
+    c.link = c.current->NextLink(c.dir);
     return _pathfinding_step(c);
   }
 
   else if(c.link->type == RAIL_LINK_S){
-    Switch * S = (Switch *)c.link->p;
+    Switch * S = c.link->p.Sw;
     if(c.sw_data->sw[S->module][S->id]){
       s.instructions = c.sw_data->sw[S->module][S->id];
 
@@ -224,15 +225,15 @@ struct pathfindingstep _pathfinding_step(struct pathfindingconfig c){
   }
   else if(c.link->type == RAIL_LINK_s){
     // loggerf(ERROR, "%i s", c.length);
-    c.link = &((Switch *)c.link->p)->app;
+    c.link = &c.link->p.Sw->app;
     return _pathfinding_step(c);
   }
   else if(c.link->type == RAIL_LINK_MA || c.link->type == RAIL_LINK_MB){
     loggerf(ERROR, "%i M", c.length);
   }
-  else if(c.link->type == RAIL_LINK_ma || c.link->type == RAIL_LINK_mb){
-    loggerf(ERROR, "%i m", c.length);
-  }
+  // else if(c.link->type == RAIL_LINK_ma || c.link->type == RAIL_LINK_mb){
+  //   loggerf(ERROR, "%i m", c.length);
+  // }
   else{
     // loggerf(ERROR, "%i ?", c.length);
   }

@@ -14,8 +14,10 @@
 #include "system.h"
 #include "mem.h"
 
-#include "rail.h"
-#include "switch.h"
+#include "switchboard/rail.h"
+#include "switchboard/station.h"
+#include "switchboard/switch.h"
+#include "switchboard/msswitch.h"
 #include "train.h"
 #include "logger.h"
 #include "config.h"
@@ -179,14 +181,14 @@ websocket_cts_func websocket_cts[256] = {
 };
 
 void WS_cts_SetSwitch(struct s_opc_SetSwitch * data, struct web_client_t * client){
+  lock_Algor_process();
   if(data->mssw){
     loggerf(INFO, "SetMSSw %2x %2x", data->module, data->id);
     if(Units[data->module] && U_MSSw(data->module, data->id)){
       loggerf(INFO, "throw msswitch %i:%i to state: \t%i->%i",
               data->module, data->id, U_MSSw(data->module, data->id)->state, data->state);
-      lock_Algor_process();
-      throw_msswitch(U_MSSw(data->module, data->id), data->state, 1);
-      unlock_Algor_process();
+
+      U_MSSw(data->module, data->id)->setState(data->state, 1);
     }
   }
   else{
@@ -194,11 +196,11 @@ void WS_cts_SetSwitch(struct s_opc_SetSwitch * data, struct web_client_t * clien
     if(Units[data->module] && U_Sw(data->module, data->id)){ //Check if switch exists
       loggerf(INFO, "throw switch %i:%i to state: \t%i->%i",
               data->module, data->id, U_Sw(data->module, data->id)->state, !U_Sw(data->module, data->id)->state);
-      lock_Algor_process();
-      throw_switch(U_Sw(data->module, data->id), data->state, 1);
-      unlock_Algor_process();
+
+      U_Sw(data->module, data->id)->setState(data->state, 1);
     }
   }
+  unlock_Algor_process();
 }
 
 void WS_cts_SetMultiSwitch(struct s_opc_SetMultiSwitch * data, struct web_client_t * client){

@@ -12,12 +12,16 @@ GCC_FLAGS = -D _DEFAULT_SOURCE
 
 GCC = g++ -std=c++14 -g3 $(GCC_INCLUDE) $(GCC_ERROR_FLAGS) $(GCC_LIBS) $(GCC_FLAGS)
 
-BAAN_FILES = baan system logger mem modules config rail signals switch IO algorithm encryption \
+BAAN_FILES = baan system logger mem modules config IO algorithm encryption \
              Z21 Z21_msg train submodule com sim pathfinding
+
+BAAN_FILES += switchboard/rail switchboard/switch switchboard/msswitch switchboard/unit switchboard/station switchboard/signals
 
 BAAN_FILES += websocket websocket_cts websocket_stc websocket_control scheduler
 
-COMTEST_FILES = comtest system logger mem modules config rail signals switch IO algorithm encryption Z21 Z21_msg train submodule com sim pathfinding websocket websocket_cts websocket_stc websocket_control scheduler
+COMTEST_FILES = comtest system logger mem modules config IO algorithm encryption Z21 Z21_msg train submodule com sim pathfinding websocket websocket_cts websocket_stc websocket_control scheduler
+
+COMTEST_FILES += switchboard/rail switchboard/switch switchboard/msswitch switchboard/unit switchboard/station switchboard/signals
 
 CONFIG_READER_FILES = config_reader config logger mem
 
@@ -35,7 +39,7 @@ $(BIN)/%.o: $(SRC)/%.cpp
 	@$(GCC) -c $(SRC)/$*.cpp -MP -MMD -MT '$@ $(BIN)/$*.d' -o $(BIN)/$*.o
 	@$(GCC) -shared -o $(SRC)/$*.cpp -o $(BIN)/$*.so
 
-.PHONY: all test run debug avr
+.PHONY: all test run debug avr clean cleanall cleanavr
 
 all: config_reader baan comtest avr
 
@@ -64,11 +68,18 @@ comtest: $(addprefix $(BIN)/,$(addsuffix .o, $(COMTEST_FILES)))
 	@echo '( GCCLD ) $@'
 	@$(GCC) -o $@ $^ 
 
+cleanavr:
+	@echo "CLEAN AVR"
+	@+$(MAKE) -C avr clean --no-print-directory
+
 clean:
 	@echo "CLEAN"
 	@rm -f baan
 	@rm -f baan.so
 	@rm -f config_reader
 	@rm -f comtest
-	@rm -rf bin/*
-	@+$(MAKE) -C avr clean --no-print-directory
+	@rm -rf bin/*.o
+	@rm -rf bin/*.d
+	@rm -rf bin/*.so
+
+cleanall: cleanavr clean

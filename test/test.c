@@ -21,6 +21,8 @@
 #include "Z21.h"
 #include "Z21_msg.h"
 
+#include "switchboard/unit.h"
+
 #include <stdint.h>
 #include <string.h>
 #include <pthread.h>
@@ -30,6 +32,8 @@
 
 struct s_systemState * SYS;
 
+char * UART_Serial_Port;
+
 START_TEST (loadTest)
 {
 	printf("loadTest\n");
@@ -38,10 +42,14 @@ START_TEST (loadTest)
 	init_logger_file_only("testresults/loadTest.txt");
 	set_level(INFO);
 
-	Units = _calloc(30, Unit *);
+	Units = (Unit **)_calloc(30, Unit *);
 	unit_len = 30;
 
+	mark_point();
+
 	read_module_Config(0);
+
+	mark_point();
 
 	// Check Valuse
 	fail_unless(U_B(0,0)->max_speed == 180);
@@ -83,21 +91,21 @@ START_TEST (BlockLinkTest)
 	init_logger_file_only("testresults/BlockLinkTest.txt");
 	set_level(INFO);
 
-	Units = _calloc(30, Unit *);
+	Units = (Unit **)_calloc(30, Unit *);
 	unit_len = 30;
 
 	read_module_Config(0);
 	SIM_Connect_Rail_links();
 
 	// Check block links
-	fail_unless(U_B(0,2)->prev.p == Units[0]->B[3]);
-	fail_unless(U_B(0,2)->next.p == Units[0]->B[1]);
+	fail_unless(U_B(0,2)->prev.p.B == Units[0]->B[3]);
+	fail_unless(U_B(0,2)->next.p.B == Units[0]->B[1]);
 
 	// Check Switchs
-	fail_unless(U_B(0,13)->prev.p == Units[0]->Sw[0]);
-	fail_unless(U_Sw(0,0)->app.p == Units[0]->B[13]);
-	fail_unless(U_Sw(0,0)->str.p == Units[0]->B[14]);
-	fail_unless(U_Sw(0,0)->div.p == 0);
+	fail_unless(U_B(0,13)->prev.p.Sw == Units[0]->Sw[0]);
+	fail_unless(U_Sw(0,0)->app.p.B == Units[0]->B[13]);
+	fail_unless(U_Sw(0,0)->str.p.B == Units[0]->B[14]);
+	fail_unless(U_Sw(0,0)->div.p.p == 0);
 
 	unload_module_Configs();
 
@@ -116,7 +124,7 @@ START_TEST (BlockAlgorithmTest)
 	init_logger("testresults/BlockAlgorithmTest.txt");
 	set_level(INFO);
 
-	Units = _calloc(30, Unit *);
+	Units = (Unit **)_calloc(30, Unit *);
 	unit_len = 30;
 
 	read_module_Config(0);
@@ -209,7 +217,7 @@ START_TEST (BlockStatingTest)
 	init_logger_file_only("testresults/BlockStatingTest.txt");
 	set_level(INFO);
 
-	Units = _calloc(30, Unit *);
+	Units = (Unit **)_calloc(30, Unit *);
 	unit_len = 30;
 
 	read_module_Config(0);
@@ -265,7 +273,7 @@ START_TEST (TrainFollowingTest)
 	init_logger_file_only("testresults/TrainFollowingTest.txt");
 	set_level(INFO);
 
-	Units = _calloc(30, Unit *);
+	Units = (Unit **)_calloc(30, Unit *);
 	unit_len = 30;
 
 	read_module_Config(0);
@@ -358,17 +366,18 @@ START_TEST (IO_StatingString){
 	char buf[2000];
 	buf[0] = 0;
 
-	union u_IO_event event;
-	for(uint8_t i = 0; i < 9; i++){
-		for(uint8_t j = 0; j < 4; j++){
-			event.value = j;
-			if(i == 2 && j > 1)
-				continue;
-			else if(i >= 5 && j > 0)
-				continue;
-			str_IO_event(i, event, buf);
-		}
-	}
+	// union u_IO_event event;
+	// for(uint8_t i = 0; i < 9; i++){
+	// 	for(uint8_t j = 0; j < 4; j++){
+	// 		event.value = j;
+	// 		if(i == 2 && j > 1)
+	// 			continue;
+	// 		else if(i >= 5 && j > 0)
+	// 			continue;
+	// 		str_IO_event(i, event, buf);
+	// 		// IO_event_string
+	// 	}
+	// }
 	printf("%s", buf);
 }
 END_TEST

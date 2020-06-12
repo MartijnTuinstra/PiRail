@@ -1,7 +1,9 @@
 #ifndef H_PATHFINDING
 #define H_PATHFINDING
 
-#include "rail.h"
+#include <stdint.h>
+
+#include "switchboard/rail.h"
 
 #define PATHFINDING_MAX_LENGHT 40
 

@@ -1,8 +1,12 @@
 
-files=system logger mem modules config rail signals switch IO algorithm encryption \
-      websocket websocket_cts websocket_stc websocket_control Z21 Z21_msg train submodule com sim pathfinding
+files=system logger mem modules config rail signals switch IO algorithm encryption scheduler \
+      websocket websocket_cts websocket_stc websocket_control Z21 Z21_msg train submodule com sim pathfinding \
+      switchboard/rail switchboard/switch switchboard/unit
 BIN=../bin
 object=$(addprefix $(BIN)/,$(addsuffix .o, $(files)))
+
+configs/units/0.bin: ../configs/units/0.bin
+	cp ../configs/units/0.bin configs/units/0.bin
 
 test: test.c
 	@echo Clear Test Results
@@ -11,8 +15,8 @@ test: test.c
 	@echo Copy Shared Object
 	@cp ../baan.so libbaan.so
 	@echo Compile
-	@gcc -I../lib -c test.c -o test.o -lpthread -lssl -lcrypto -lm -lcheck -lcheck_pic -lrt -lsubunit -g3
-	@gcc test.o $(object) -o test -lpthread -lssl -lcrypto -lm -lcheck -lcheck_pic -lrt -lsubunit -g3
+	@g++ -I../lib -c test.c -o test.o -lpthread -lssl -lcrypto -lm -lcheck -lcheck_pic -lrt -lsubunit -g3
+	@g++ test.o $(object) -o test -lpthread -lssl -lcrypto -lm -lcheck -lcheck_pic -lrt -lsubunit -g3
 	@echo Test
 	@./test
 	@rm test

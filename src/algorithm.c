@@ -10,10 +10,10 @@
 #include "algorithm.h"
 #include "logger.h"
 
-#include "switch.h"
+#include "switchboard/switch.h"
+#include "switchboard/msswitch.h"
 #include "train.h"
-#include "switch.h"
-#include "signals.h"
+#include "switchboard/signals.h"
 
 #include "modules.h"
 #include "com.h"
@@ -234,9 +234,9 @@ void Algor_process(Block * B, int flags){
   }
 
 
-  if(flags & _DEBUG){
-  //   Algor_print_block_debug(B->Alg);
-  }
+  // if(flags & _DEBUG){
+    Algor_print_block_debug(B);
+  // }
 
   //Follow the train arround the layout
   Algor_train_following(&B->Alg, flags);
@@ -372,8 +372,8 @@ void Algor_search_Blocks(Block * B, int debug){
   // int next_level = 1;
   // int prev_level = 1;
 
-  next = Next(B, 0 | SWITCH_CARE,1);
-  prev = Next(B, 1 | SWITCH_CARE,1);
+  next = B->_Next(0 | SWITCH_CARE,1);
+  prev = B->_Next(1 | SWITCH_CARE,1);
 
   //Select all surrounding blocks
   uint8_t i = 0;
@@ -386,7 +386,7 @@ void Algor_search_Blocks(Block * B, int debug){
         tmpB = next;
       }
       else{
-        tmpB = Next(B, 0 | SWITCH_CARE, level);
+        tmpB = B->_Next(NEXT | SWITCH_CARE, level);
       }
 
       if(!tmpB){
@@ -436,7 +436,7 @@ void Algor_search_Blocks(Block * B, int debug){
         tmpB = prev;
       }
       else{
-        tmpB = Next(B, 1 | SWITCH_CARE, level);
+        tmpB = B->_Next(PREV | SWITCH_CARE, level);
       }
 
       if(!tmpB){
@@ -494,24 +494,24 @@ int Switch_to_rail(Block ** B, void * Sw, enum link_types type, uint8_t counter)
   }
 
   if(next.type == RAIL_LINK_S){
-    Switch * NSw = (Switch *)next.p;
+    Switch * NSw = next.p.Sw;
     if(NSw->Detection && NSw->Detection != *B){
       counter++;
       *B = NSw->Detection;
     }
-    return Switch_to_rail(B, (Switch *)next.p, RAIL_LINK_S, counter);
+    return Switch_to_rail(B, next.p.Sw, RAIL_LINK_S, counter);
   }
   else if(next.type == RAIL_LINK_s){
-    Switch * NSw = (Switch *)next.p;
+    Switch * NSw = next.p.Sw;
     if(NSw->Detection && NSw->Detection != *B){
       counter++;
       *B = NSw->Detection;
       //printf("-%i:%i\n", (*B)->module, (*B)->id);
     }
-    if((NSw->state & 0x7f) == 0 && NSw->str.p == Sw){
+    if((NSw->state & 0x7f) == 0 && NSw->str.p.Sw == Sw){
       return Switch_to_rail(B, NSw, RAIL_LINK_s, counter);
     }
-    else if((NSw->state & 0x7f) == 1 && NSw->div.p == Sw){
+    else if((NSw->state & 0x7f) == 1 && NSw->div.p.Sw == Sw){
       return Switch_to_rail(B, NSw, RAIL_LINK_s, counter);
     }
     else{
@@ -520,7 +520,7 @@ int Switch_to_rail(Block ** B, void * Sw, enum link_types type, uint8_t counter)
     }
   }
   else if(next.type == RAIL_LINK_R){
-    Block * tmp_B = (Block *)next.p;
+    Block * tmp_B = next.p.B;
     if(tmp_B != *B){
       counter++;
       *B = tmp_B;
@@ -530,385 +530,385 @@ int Switch_to_rail(Block ** B, void * Sw, enum link_types type, uint8_t counter)
   return 0;
 }
 
-// void Algor_special_search_Blocks(Block * B, int flags){
-//   loggerf(TRACE, "Algor_special_search_Blocks %02i:%02i", B->module, B->id);
-//   struct next_prev_Block {
-//     Block * prev;
-//     uint8_t prev_l;
-//     Block * next;
-//     uint8_t next_l;
-//   };
+/* void Algor_special_search_Blocks(Block * B, int flags){
+  loggerf(TRACE, "Algor_special_search_Blocks %02i:%02i", B->module, B->id);
+  struct next_prev_Block {
+    Block * prev;
+    uint8_t prev_l;
+    Block * next;
+    uint8_t next_l;
+  };
 
-//   struct next_prev_Block pairs[10];
-//   memset(pairs, 0, 10*sizeof(struct next_prev_Block));
-//   uint8_t pair_counter = 0;
+  struct next_prev_Block pairs[10];
+  memset(pairs, 0, 10*sizeof(struct next_prev_Block));
+  uint8_t pair_counter = 0;
 
-//   for(int i = 0; i < B->switch_len; i++){
-//     Block * BlA = B;
-//     Block * BlB = B;
-//     int a = Switch_to_rail(&BlA, B->Sw[i], RAIL_LINK_S, 0);
-//     int b = Switch_to_rail(&BlB, B->Sw[i], RAIL_LINK_s, 0);
+  for(int i = 0; i < B->switch_len; i++){
+    Block * BlA = B;
+    Block * BlB = B;
+    int a = Switch_to_rail(&BlA, B->Sw[i], RAIL_LINK_S, 0);
+    int b = Switch_to_rail(&BlB, B->Sw[i], RAIL_LINK_s, 0);
 
-//     if(a == 0 || b == 0){
-//       continue;
-//     }
+    if(a == 0 || b == 0){
+      continue;
+    }
 
-//     // if(BlA && BlB){
-//     //   printf("%02i:%02i == %02i:%02i\n", BlA->module, BlA->id, BlB->module, BlB->id);
-//     // }
-//     // else if(BlA){
-//     //   printf("%02i:%02i == %02i:%02i\n", BlA->module, BlA->id, 0, 0);
-//     // }
-//     // else if(BlB){
-//     //   printf("%02i:%02i == %02i:%02i\n", 0, 0, BlB->module, BlB->id);
-//     // }
+    // if(BlA && BlB){
+    //   printf("%02i:%02i == %02i:%02i\n", BlA->module, BlA->id, BlB->module, BlB->id);
+    // }
+    // else if(BlA){
+    //   printf("%02i:%02i == %02i:%02i\n", BlA->module, BlA->id, 0, 0);
+    // }
+    // else if(BlB){
+    //   printf("%02i:%02i == %02i:%02i\n", 0, 0, BlB->module, BlB->id);
+    // }
 
-//     for(int j =0; j<10; j++){
-//       if((pairs[j].next == BlA && pairs[j].prev == BlB) ||
-//          (pairs[j].prev == BlA && pairs[j].next == BlB)){
-//          break;
-//       }
-//       if(j == 9){
-//         pairs[pair_counter].next = BlA;
-//         pairs[pair_counter].next_l = a;
-//         pairs[pair_counter].prev = BlB;
-//         pairs[pair_counter].prev_l = b;
-//         pair_counter++;
-//       }
-//     }
-//   }
+    for(int j =0; j<10; j++){
+      if((pairs[j].next == BlA && pairs[j].prev == BlB) ||
+         (pairs[j].prev == BlA && pairs[j].next == BlB)){
+         break;
+      }
+      if(j == 9){
+        pairs[pair_counter].next = BlA;
+        pairs[pair_counter].next_l = a;
+        pairs[pair_counter].prev = BlB;
+        pairs[pair_counter].prev_l = b;
+        pair_counter++;
+      }
+    }
+  }
 
 
-//   Block * Aside[15];
-//   Block * Bside[15];
-//   memset(Aside, 0, 15*sizeof(void *) );
-//   memset(Bside, 0, 15*sizeof(void *) );
+  Block * Aside[15];
+  Block * Bside[15];
+  memset(Aside, 0, 15*sizeof(void *) );
+  memset(Bside, 0, 15*sizeof(void *) );
 
-//   if(pair_counter == 1){
-//     uint8_t a_dir = SWITCH_CARE;
-//     uint8_t b_dir = SWITCH_CARE;
-//     // Get direction away from the block
-//     if(Next(pairs[0].next, NEXT | SWITCH_CARE, pairs[0].next_l) == B)
-//       a_dir |= PREV;
-//     else if(Next(pairs[0].next, PREV | SWITCH_CARE, pairs[0].next_l) == B)
-//       a_dir |= NEXT;
+  if(pair_counter == 1){
+    uint8_t a_dir = SWITCH_CARE;
+    uint8_t b_dir = SWITCH_CARE;
+    // Get direction away from the block
+    if(Next(pairs[0].next, NEXT | SWITCH_CARE, pairs[0].next_l) == B)
+      a_dir |= PREV;
+    else if(Next(pairs[0].next, PREV | SWITCH_CARE, pairs[0].next_l) == B)
+      a_dir |= NEXT;
 
-//     if(Next(pairs[0].prev, NEXT | SWITCH_CARE, pairs[0].prev_l) == B)
-//       b_dir |= PREV;
-//     else if(Next(pairs[0].prev, PREV | SWITCH_CARE, pairs[0].prev_l) == B)
-//       b_dir |= NEXT;
+    if(Next(pairs[0].prev, NEXT | SWITCH_CARE, pairs[0].prev_l) == B)
+      b_dir |= PREV;
+    else if(Next(pairs[0].prev, PREV | SWITCH_CARE, pairs[0].prev_l) == B)
+      b_dir |= NEXT;
 
-//     // Get all blocks to and away from selected blocks
-//     int16_t lengthA = 0;
-//     if(pairs[0].next_l > 1){
-//       // reverse
-//       for(int i = 1; i < pairs[0].next_l; i++){
-//         Aside[i-1] = Next(pairs[0].next, (a_dir ^ PREV), pairs[0].next_l - i);
-//         lengthA += Aside[i-1]->length;
-//       }
-//     }
-//     if(pairs[0].next){
-//       Aside[pairs[0].next_l - 1] = pairs[0].next;
-//       lengthA += Aside[pairs[0].next_l - 1]->length;
-//       for(int i = pairs[0].next_l + 1; i<15; i++){
-//         Aside[i-1] = Next(pairs[0].next, a_dir, i - pairs[0].next_l);
-//         if(!Aside[i-1])
-//           break;
-//         lengthA += Aside[i-1]->length;
-//         if(lengthA > 400){
-//           break;
-//         }
-//       }
-//     }
+    // Get all blocks to and away from selected blocks
+    int16_t lengthA = 0;
+    if(pairs[0].next_l > 1){
+      // reverse
+      for(int i = 1; i < pairs[0].next_l; i++){
+        Aside[i-1] = Next(pairs[0].next, (a_dir ^ PREV), pairs[0].next_l - i);
+        lengthA += Aside[i-1]->length;
+      }
+    }
+    if(pairs[0].next){
+      Aside[pairs[0].next_l - 1] = pairs[0].next;
+      lengthA += Aside[pairs[0].next_l - 1]->length;
+      for(int i = pairs[0].next_l + 1; i<15; i++){
+        Aside[i-1] = Next(pairs[0].next, a_dir, i - pairs[0].next_l);
+        if(!Aside[i-1])
+          break;
+        lengthA += Aside[i-1]->length;
+        if(lengthA > 400){
+          break;
+        }
+      }
+    }
 
-//     uint16_t lengthB = 0;
-//     if(pairs[0].prev_l > 1){
-//       // reverse
-//       for(int i = 1; i < pairs[0].prev_l; i++){
-//         Bside[i-1] = Next(pairs[0].prev, (b_dir ^ PREV), pairs[0].prev_l - i);
-//         lengthB += Bside[i-1]->length;
-//       }
-//     }
-//     if(pairs[0].prev){
-//       Bside[pairs[0].prev_l - 1] = pairs[0].prev;
-//       lengthB += Bside[pairs[0].prev_l - 1]->length;
-//       for(int i = pairs[0].prev_l + 1; i<15; i++){
-//         Bside[i-1] = Next(pairs[0].prev, b_dir, i - pairs[0].prev_l);
-//         if(!Bside[i-1])
-//           break;
-//         lengthB += Bside[i-1]->length;
-//         if(lengthB > 400){
-//           break;
-//         }
-//       }
-//     }
+    uint16_t lengthB = 0;
+    if(pairs[0].prev_l > 1){
+      // reverse
+      for(int i = 1; i < pairs[0].prev_l; i++){
+        Bside[i-1] = Next(pairs[0].prev, (b_dir ^ PREV), pairs[0].prev_l - i);
+        lengthB += Bside[i-1]->length;
+      }
+    }
+    if(pairs[0].prev){
+      Bside[pairs[0].prev_l - 1] = pairs[0].prev;
+      lengthB += Bside[pairs[0].prev_l - 1]->length;
+      for(int i = pairs[0].prev_l + 1; i<15; i++){
+        Bside[i-1] = Next(pairs[0].prev, b_dir, i - pairs[0].prev_l);
+        if(!Bside[i-1])
+          break;
+        lengthB += Bside[i-1]->length;
+        if(lengthB > 400){
+          break;
+        }
+      }
+    }
 
-//     // char debug_output[200];
-//     // sprintf(debug_output, "A%i    ", a_dir);
-//     // for(int ab = 0; ab < 15; ab++){
-//     //   if(Aside[ab])
-//     //     sprintf(debug_output, "%s%2i:%2i\t", debug_output, Aside[ab]->module, Aside[ab]->id);
-//     // }
-//     // loggerf(TRACE, "%s", debug_output);
+    // char debug_output[200];
+    // sprintf(debug_output, "A%i    ", a_dir);
+    // for(int ab = 0; ab < 15; ab++){
+    //   if(Aside[ab])
+    //     sprintf(debug_output, "%s%2i:%2i\t", debug_output, Aside[ab]->module, Aside[ab]->id);
+    // }
+    // loggerf(TRACE, "%s", debug_output);
 
-//     // sprintf(debug_output, "B%i    ", a_dir);
-//     // for(int ab = 0; ab < 15; ab++){
-//     //   if(Bside[ab])
-//     //     sprintf(debug_output, "%s%2i:%2i\t", debug_output, Bside[ab]->module, Bside[ab]->id);
-//     // }
-//     // loggerf(TRACE, "%s", debug_output);
+    // sprintf(debug_output, "B%i    ", a_dir);
+    // for(int ab = 0; ab < 15; ab++){
+    //   if(Bside[ab])
+    //     sprintf(debug_output, "%s%2i:%2i\t", debug_output, Bside[ab]->module, Bside[ab]->id);
+    // }
+    // loggerf(TRACE, "%s", debug_output);
 
-//     // Put all blocks into Algor blocks
-//     int8_t dir = -1;
+    // Put all blocks into Algor blocks
+    int8_t dir = -1;
 
-//     //Determine direction for A side and B side
-//     if(Aside[0] && Bside[0]){
-//       // If A and B have the same direction
-//       if((Aside[0]->dir == Bside[0]->dir || (Aside[0]->dir ^ 0b101) == Bside[0]->dir)){
-//         // As the block itself
-//         if(Aside[0]->dir == B->dir || Bside[0]->dir == B->dir){
-//           dir = (b_dir & 1) ^ 1;
-//         }
-//         // Or as reversed blocks
-//         else if((Aside[0]->dir ^ 0b1) == B->dir || (Bside[0]->dir ^ 0b1) == B->dir){
-//           dir = (b_dir & 1);
-//         }
-//         // if different but neighbours are normal blocks, reverse B
-//         else if(Aside[0]->dir == B->dir ^ 0b100 && Aside[0]->Alg.B->len == 0 && Bside[0]->Alg.B->len == 0){
-//           B->dir ^= 0b100;
-//           dir = (b_dir & 1) ^ 1;
-//         }
-//       }
+    //Determine direction for A side and B side
+    if(Aside[0] && Bside[0]){
+      // If A and B have the same direction
+      if((Aside[0]->dir == Bside[0]->dir || (Aside[0]->dir ^ 0b101) == Bside[0]->dir)){
+        // As the block itself
+        if(Aside[0]->dir == B->dir || Bside[0]->dir == B->dir){
+          dir = (b_dir & 1) ^ 1;
+        }
+        // Or as reversed blocks
+        else if((Aside[0]->dir ^ 0b1) == B->dir || (Bside[0]->dir ^ 0b1) == B->dir){
+          dir = (b_dir & 1);
+        }
+        // if different but neighbours are normal blocks, reverse B
+        else if(Aside[0]->dir == B->dir ^ 0b100 && Aside[0]->Alg.B->len == 0 && Bside[0]->Alg.B->len == 0){
+          B->dir ^= 0b100;
+          dir = (b_dir & 1) ^ 1;
+        }
+      }
 
-//       // If A has the same direction as block
-//       // If A is reversed to block
-//       else if(Aside[0]->dir == B->dir || (Aside[0]->dir ^ 0b101) == B->dir){
-//         dir = (a_dir & 1);
-//       }
+      // If A has the same direction as block
+      // If A is reversed to block
+      else if(Aside[0]->dir == B->dir || (Aside[0]->dir ^ 0b101) == B->dir){
+        dir = (a_dir & 1);
+      }
 
-//       // If B has the same direction as block
-//       // If B is reversed to block
-//       else if(Bside[0]->dir == B->dir || (Bside[0]->dir ^ 0b101) == B->dir){
-//         dir = (b_dir & 1) ^ 1;
-//       }
-//     }
-//     else if(Bside[0]){
-//       if(Bside[0]->dir == B->dir || (B->dir ^ 0b101) == Bside[0]->dir){
-//         dir = (b_dir & 1) ^ 1;
-//       }
-//       else{
-//         B->dir ^= 0b100;
-//         dir = (b_dir & 1) ^ 1;
-//       }
-//     }
-//     else if(Aside[0]){
-//       if(Aside[0]->dir == B->dir || (B->dir ^ 0b101) == Aside[0]->dir){
-//         dir = (a_dir & 1);
-//       }
-//       else{
-//         B->dir ^= 0b100;
-//         dir = (a_dir & 1);
-//       }
-//     }
+      // If B has the same direction as block
+      // If B is reversed to block
+      else if(Bside[0]->dir == B->dir || (Bside[0]->dir ^ 0b101) == B->dir){
+        dir = (b_dir & 1) ^ 1;
+      }
+    }
+    else if(Bside[0]){
+      if(Bside[0]->dir == B->dir || (B->dir ^ 0b101) == Bside[0]->dir){
+        dir = (b_dir & 1) ^ 1;
+      }
+      else{
+        B->dir ^= 0b100;
+        dir = (b_dir & 1) ^ 1;
+      }
+    }
+    else if(Aside[0]){
+      if(Aside[0]->dir == B->dir || (B->dir ^ 0b101) == Aside[0]->dir){
+        dir = (a_dir & 1);
+      }
+      else{
+        B->dir ^= 0b100;
+        dir = (a_dir & 1);
+      }
+    }
 
-//     // Debug stuf
-//     if(dir == -1){
-//       loggerf(ERROR, "No direction found");
-//       return;
-//     }
+    // Debug stuf
+    if(dir == -1){
+      loggerf(ERROR, "No direction found");
+      return;
+    }
 
-//     // Check for neighbouring SPECIAL blocks
-//     uint8_t a = 0, b = 0;
-//     if(Aside[0] && Aside[0]->type == SPECIAL){
-//       if(B->Alg.B && Aside[0]->Alg.B){
-//         loggerf(INFO, "Join Algor_Blocks");
-//         Algor_Join_ABlocks(B->Alg.B, Aside[0]->Alg.B);
-//         B->Alg.B = Aside[0]->Alg.B;
-//       }
-//       else if(Aside[0]->Alg.B){
-//         Aside[0]->Alg.B->p.SB[Aside[0]->Alg.B->len++] = B;
-//         B->Alg.B = Aside[0]->Alg.B;
-//       }
-//       else if(B->Alg.B){
-//         B->Alg.B->p.SB[B->Alg.B->len++] = Aside[0];
-//         Aside[0]->Alg.B = B->Alg.B;
-//       }
-//       a += B->Alg.B->len - 1;
+    // Check for neighbouring SPECIAL blocks
+    uint8_t a = 0, b = 0;
+    if(Aside[0] && Aside[0]->type == SPECIAL){
+      if(B->Alg.B && Aside[0]->Alg.B){
+        loggerf(INFO, "Join Algor_Blocks");
+        Algor_Join_ABlocks(B->Alg.B, Aside[0]->Alg.B);
+        B->Alg.B = Aside[0]->Alg.B;
+      }
+      else if(Aside[0]->Alg.B){
+        Aside[0]->Alg.B->p.SB[Aside[0]->Alg.B->len++] = B;
+        B->Alg.B = Aside[0]->Alg.B;
+      }
+      else if(B->Alg.B){
+        B->Alg.B->p.SB[B->Alg.B->len++] = Aside[0];
+        Aside[0]->Alg.B = B->Alg.B;
+      }
+      a += B->Alg.B->len - 1;
 
-//       if(!dircmp(Aside[0], B)){
-//         B->dir ^= 0b100;
-//         dir ^= 1; // Toggle PREV <-> NEXT
-//       }
-//     }
+      if(!dircmp(Aside[0], B)){
+        B->dir ^= 0b100;
+        dir ^= 1; // Toggle PREV <-> NEXT
+      }
+    }
     
-//     if(Bside[0] && Bside[0]->type == SPECIAL){
-//       if(B->Alg.B){
-//         loggerf(INFO, "Join Algor_Blocks");
-//         Algor_Join_ABlocks(B->Alg.B, Bside[0]->Alg.B);
-//         B->Alg.B = Bside[0]->Alg.B;
-//       }
-//       else if(Bside[0]->Alg.B){
-//         Bside[0]->Alg.B->p.SB[Bside[0]->Alg.B->len++] = B;
-//         B->Alg.B = Bside[0]->Alg.B;
-//       }
-//       else if(B->Alg.B){
-//         B->Alg.B->p.SB[B->Alg.B->len++] = Bside[0];
-//         Bside[0]->Alg.B = B->Alg.B;
-//       }
-//       b += B->Alg.B->len - 1;
+    if(Bside[0] && Bside[0]->type == SPECIAL){
+      if(B->Alg.B){
+        loggerf(INFO, "Join Algor_Blocks");
+        Algor_Join_ABlocks(B->Alg.B, Bside[0]->Alg.B);
+        B->Alg.B = Bside[0]->Alg.B;
+      }
+      else if(Bside[0]->Alg.B){
+        Bside[0]->Alg.B->p.SB[Bside[0]->Alg.B->len++] = B;
+        B->Alg.B = Bside[0]->Alg.B;
+      }
+      else if(B->Alg.B){
+        B->Alg.B->p.SB[B->Alg.B->len++] = Bside[0];
+        Bside[0]->Alg.B = B->Alg.B;
+      }
+      b += B->Alg.B->len - 1;
 
-//       if(!dircmp(Bside[0], B)){
-//         B->dir ^= 0b100;
-//         dir ^= 1; // Toggle PREV <-> NEXT
-//       }
-//     }
+      if(!dircmp(Bside[0], B)){
+        B->dir ^= 0b100;
+        dir ^= 1; // Toggle PREV <-> NEXT
+      }
+    }
 
-//     if(!B->Alg.B){
-//       B->Alg->B = B;
-//     }
+    if(!B->Alg.B){
+      B->Alg->B = B;
+    }
 
 
-//     Algor_Block ** Aside_P;
-//     Algor_Block ** Bside_P;
-//     uint8_t * Alength;
-//     uint8_t * Blength;
+    Algor_Block ** Aside_P;
+    Algor_Block ** Bside_P;
+    uint8_t * Alength;
+    uint8_t * Blength;
 
-//     if(dir == PREV){
-//       Bside_P = B->Alg.N;
-//       Aside_P = B->Alg.P;
-//       Alength = &B->Alg.prev;
-//       Blength = &B->Alg.next;
-//     }
-//     else if(dir == NEXT){
-//       Bside_P = B->Alg.P;
-//       Aside_P = B->Alg.N;
-//       Alength = &B->Alg.next;
-//       Blength = &B->Alg.prev;
-//     }
-//     else{
-//       loggerf(WARNING, "No DIR");
-//     }
+    if(dir == PREV){
+      Bside_P = B->Alg.N;
+      Aside_P = B->Alg.P;
+      Alength = &B->Alg.prev;
+      Blength = &B->Alg.next;
+    }
+    else if(dir == NEXT){
+      Bside_P = B->Alg.P;
+      Aside_P = B->Alg.N;
+      Alength = &B->Alg.next;
+      Blength = &B->Alg.prev;
+    }
+    else{
+      loggerf(WARNING, "No DIR");
+    }
 
-//     *Alength = 0;
-//     *Blength = 0;
+    *Alength = 0;
+    *Blength = 0;
 
-//     uint16_t BlockLength = 0;
+    uint16_t BlockLength = 0;
 
-//     do{
-//       if(!Bside[b] || !Bside_P)
-//         break;
-//       Bside_P[(*Blength)] = Bside[b]->Alg.B;
-//       BlockLength += Bside[b]->length;
-//       *Blength = *Blength + 1;
-//       b++;
-//     }
-//     while(BlockLength < Block_Minimum_Size*3 && *Blength < 10);
+    do{
+      if(!Bside[b] || !Bside_P)
+        break;
+      Bside_P[(*Blength)] = Bside[b]->Alg.B;
+      BlockLength += Bside[b]->length;
+      *Blength = *Blength + 1;
+      b++;
+    }
+    while(BlockLength < Block_Minimum_Size*3 && *Blength < 10);
 
-//     BlockLength = 0;
+    BlockLength = 0;
     
-//     do{
-//       if(!Aside[a] || !Aside_P)
-//         break;
-//       Aside_P[(*Alength)] = Aside[a]->Alg.B;
-//       BlockLength += Aside[a]->length;
-//       *Alength = *Alength + 1;
-//       a++;
-//     }
-//     while(BlockLength < Block_Minimum_Size*3 && *Alength < 10);
-//   }
-//   else{
-//     loggerf(ERROR, "Zero or 1+ pairs");
-//   }
-// }
+    do{
+      if(!Aside[a] || !Aside_P)
+        break;
+      Aside_P[(*Alength)] = Aside[a]->Alg.B;
+      BlockLength += Aside[a]->length;
+      *Alength = *Alength + 1;
+      a++;
+    }
+    while(BlockLength < Block_Minimum_Size*3 && *Alength < 10);
+  }
+  else{
+    loggerf(ERROR, "Zero or 1+ pairs");
+  }
+}*/
 
 void Algor_turntable_search_Blocks(Block * B, int debug){
   loggerf(WARNING, "Algor_turntable_search_Blocks - %02i:%02i", B->module, B->id);
-  Block * next = 0;
-  Block * prev = 0;
+  // Block * next = 0;
+  // Block * prev = 0;
 
-  Algor_Blocks * ABs = &B->Alg;
-  Block * tmpB = B;
+  // Algor_Blocks * ABs = &B->Alg;
+  // Block * tmpB = B;
 
-  Algor_clear_Blocks(ABs);
+  // Algor_clear_Blocks(ABs);
 
-  // loggerf(DEBUG, "Search blocks %02i:%02i", B->module, B->id);
+  // // loggerf(DEBUG, "Search blocks %02i:%02i", B->module, B->id);
 
-  // int next_level = 1;
-  // int prev_level = 1;
+  // // int next_level = 1;
+  // // int prev_level = 1;
 
-  if(B->msswitch_len == 0){
-    loggerf(ERROR, "Turntable has more than no msswitch");
-    return;
-  }
-  else if(B->msswitch_len > 1){
-    loggerf(ERROR, "Turntable has more than one msswitch");
-  }
+  // if(B->msswitch_len == 0){
+  //   loggerf(ERROR, "Turntable has more than no msswitch");
+  //   return;
+  // }
+  // else if(B->msswitch_len > 1){
+  //   loggerf(ERROR, "Turntable has more than one msswitch");
+  // }
 
-  next = Next_MSSwitch_Block(B->MSSw[0], RAIL_LINK_TT, NEXT | SWITCH_CARE, 1);
-  prev = Next_MSSwitch_Block(B->MSSw[0], RAIL_LINK_TT, PREV | SWITCH_CARE, 1);
+  // next = Next_MSSwitch_Block(B->MSSw[0], RAIL_LINK_TT, NEXT | SWITCH_CARE, 1);
+  // prev = Next_MSSwitch_Block(B->MSSw[0], RAIL_LINK_TT, PREV | SWITCH_CARE, 1);
 
-  if(next)
-    loggerf(WARNING, "%02i:%02i", next->module, next->id);
-  if(prev)
-    loggerf(WARNING, "%02i:%02i", prev->module, prev->id);
+  // if(next)
+  //   loggerf(WARNING, "%02i:%02i", next->module, next->id);
+  // if(prev)
+  //   loggerf(WARNING, "%02i:%02i", prev->module, prev->id);
 
-  //Select all surrounding blocks
-  uint8_t i = 0;
-  uint8_t level = 1;
-  uint16_t length = 0;
-  if(next){
-    do{
-      if(i == 0 && ABs->next == 0){
-        tmpB = next;
-      }
-      else{
-        tmpB = Next_MSSwitch_Block(B->MSSw[0], RAIL_LINK_TT, NEXT | SWITCH_CARE, level);
-      }
+  // //Select all surrounding blocks
+  // uint8_t i = 0;
+  // uint8_t level = 1;
+  // uint16_t length = 0;
+  // if(next){
+  //   do{
+  //     if(i == 0 && ABs->next == 0){
+  //       tmpB = next;
+  //     }
+  //     else{
+  //       tmpB = Next_MSSwitch_Block(B->MSSw[0], RAIL_LINK_TT, NEXT | SWITCH_CARE, level);
+  //     }
 
-      if(!tmpB){
-        break;
-      }
+  //     if(!tmpB){
+  //       break;
+  //     }
 
-      ABs->N[i] = tmpB;
+  //     ABs->N[i] = tmpB;
 
-      length += tmpB->length;
+  //     length += tmpB->length;
 
-      ABs->next += 1;
+  //     ABs->next += 1;
 
-      i++;
-      level++;
-    }
-    while(length < 3*Block_Minimum_Size && level < 10 && i < 10);
-  }
+  //     i++;
+  //     level++;
+  //   }
+  //   while(length < 3*Block_Minimum_Size && level < 10 && i < 10);
+  // }
 
-  i = 0;
-  level = 1;
-  length = 0;
+  // i = 0;
+  // level = 1;
+  // length = 0;
 
-  if(prev){
-    do{
-      if(i == 0 && ABs->prev == 0){
-        tmpB = prev;
-      }
-      else{
-        tmpB = Next_MSSwitch_Block(B->MSSw[0], RAIL_LINK_TT, PREV | SWITCH_CARE, level);
-      }
+  // if(prev){
+  //   do{
+  //     if(i == 0 && ABs->prev == 0){
+  //       tmpB = prev;
+  //     }
+  //     else{
+  //       tmpB = Next_MSSwitch_Block(B->MSSw[0], RAIL_LINK_TT, PREV | SWITCH_CARE, level);
+  //     }
 
-      if(!tmpB){
-        break;
-      }
+  //     if(!tmpB){
+  //       break;
+  //     }
 
-      ABs->P[i] = tmpB;
+  //     ABs->P[i] = tmpB;
 
-      length += tmpB->length;
+  //     length += tmpB->length;
 
-      ABs->prev += 1;
+  //     ABs->prev += 1;
 
-      i++;
-      level++;
-    }
-    while(length < 3*Block_Minimum_Size && level < 10 && i < 10);
-  }
+  //     i++;
+  //     level++;
+  //   }
+  //   while(length < 3*Block_Minimum_Size && level < 10 && i < 10);
+  // }
 }
 
 void Algor_print_block_debug(Block * B){
@@ -1009,7 +1009,7 @@ void Algor_Switch_Checker(Algor_Blocks * ABs, int debug){
     if(tB->blocked)
       continue;
 
-    struct rail_link * link = Next_link(tB, NEXT);
+    struct rail_link * link = tB->NextLink(NEXT);
     if (link->type != RAIL_LINK_R && link->type != RAIL_LINK_E && link->type != RAIL_LINK_C) {
       loggerf(INFO, "Switch_Checker scan block (%i,%i)", tB->module, tB->id);
       // if(B->train && B->train->route == 1){
@@ -1048,8 +1048,8 @@ void Algor_Switch_Checker(Algor_Blocks * ABs, int debug){
           loggerf(WARNING, "Failed switch set path");
         }
       }
-      else if(((link->type == RAIL_LINK_S  || link->type == RAIL_LINK_s ) &&   ((Switch *)link->p)->Detection &&   ((Switch *)link->p)->Detection->state != RESERVED_SWITCH) || 
-              ((link->type >= RAIL_LINK_MA && link->type <= RAIL_LINK_mb) && ((MSSwitch *)link->p)->Detection && ((MSSwitch *)link->p)->Detection->state != RESERVED_SWITCH)){
+      else if(((link->type == RAIL_LINK_S  || link->type == RAIL_LINK_s ) &&   (link->p.Sw)->Detection &&   (link->p.Sw)->Detection->state != RESERVED_SWITCH) || 
+              ((link->type == RAIL_LINK_MA || link->type == RAIL_LINK_MB) && (link->p.MSSw)->Detection && (link->p.MSSw)->Detection->state != RESERVED_SWITCH)){
         loggerf(WARNING, "reserve_switch_path");
         Switch_Reserve_Path(tB, *link, NEXT | SWITCH_CARE);
       }
@@ -1222,7 +1222,8 @@ void Algor_train_following(Algor_Blocks * ABs, int debug){
     if(((prev > 0 && !BP[0]->blocked) || prev == 0) && BN[0]->blocked && BN[0]->train && !B->train){
       //REVERSED
       loggerf(WARNING, "REVERSE BLOCK %02i:%02i", B->module, B->id);
-      Block_Reverse(ABs);
+      // Block_Reverse(ABs);
+      B->reverse();
 
       if(!dircmp(B, BP[0])){
         // B->IOchanged = 1;
@@ -1238,7 +1239,8 @@ void Algor_train_following(Algor_Blocks * ABs, int debug){
             continue;
 
 
-          Block_Reverse(&BP[i]->Alg);
+          // Block_Reverse(&BP[i]->Alg);
+          BP[i]->reverse();
           // BN[i]->IOchanged;
         }
       }
@@ -1254,27 +1256,31 @@ void Algor_train_following(Algor_Blocks * ABs, int debug){
 
         if(!dircmp(B, BN[i])){
           loggerf(WARNING, "REVERSE NEXT SWITCH BLOCK %02i:%02i", BN[i]->module, BN[i]->id);
-          Block_Reverse(&BN[i]->Alg);
+          BN[i]->reverse();
         }
 
         if(tB->state != RESERVED_SWITCH){
           if(!dircmp(B, tB)){
             loggerf(WARNING, "REVERSE BLOCK %02i:%02i after switchlane", tB->module, tB->id);
-            Block_Reverse(&tB->Alg);
-            Block_reserve(tB);
+            tB->reverse();
+            tB->reserve();
+            // Block_Reverse(&tB->Alg);
+            // Block_reserve(tB);
             //void Block_Reverse(B);
             Block_Reverse_To_Next_Switch(tB);
           }
           else if(tB->state != RESERVED){
             loggerf(WARNING, "RESERVE BLOCK %02i:%02i until switchlane", tB->module, tB->id);
             //reserve untill next switchlane
-            Block_reserve(tB);
+            tB->reserve();
+            // Block_reserve(tB);
             Reserve_To_Next_Switch(tB);
           }
         }
         else if(!dircmp(B, tB)){
           loggerf(WARNING, "REVERSE SWITCH BLOCK %02i:%02i", tB->module, tB->id);
-          Block_Reverse(&tB->Alg);
+          tB->reverse();
+          // Block_Reverse(&tB->Alg);
           continue;
         }
 
@@ -1327,7 +1333,8 @@ void Algor_train_following(Algor_Blocks * ABs, int debug){
   if(prev > 0 && next > 0 && B->blocked && BP[0]->blocked && !BN[0]->blocked && !dircmp(B, BN[0])) {
     //Reversed ahead
     loggerf(INFO, "%x Reversed ahead (%02i:%02i)", (unsigned int)B, BN[0]->module, BN[0]->id);
-    Block_Reverse(&BN[0]->Alg);
+    // Block_Reverse(&BN[0]->Alg);
+    BN[0]->reverse();
     // Block_Reverse_To_Next_Switch(BN.B[0]);
   }
 
@@ -1415,9 +1422,9 @@ void Algor_signal_state(Algor_Blocks AB, int debug){
   Block ** N =  AB.N;
 
   if(B->NextSignal)
-    check_Signal(B->NextSignal);
+    B->NextSignal->check();
   if(B->PrevSignal)
-    check_Signal(B->PrevSignal);
+    B->PrevSignal->check();
    
   for(uint8_t i = 0; i < AB.prev; i++){
     Block * tB = P[i];
@@ -1426,9 +1433,9 @@ void Algor_signal_state(Algor_Blocks AB, int debug){
       continue;
 
     if(tB->NextSignal)
-      check_Signal(tB->NextSignal);
+      tB->NextSignal->check();
     if(tB->PrevSignal)
-      check_Signal(tB->PrevSignal);
+      tB->PrevSignal->check();
   }
   for(uint8_t i = 0; i < AB.next; i++){
     Block * tB = N[i];
@@ -1437,9 +1444,9 @@ void Algor_signal_state(Algor_Blocks AB, int debug){
       continue;
 
     if(tB->NextSignal)
-      check_Signal(tB->NextSignal);
+      tB->NextSignal->check();
     if(tB->PrevSignal)
-      check_Signal(tB->PrevSignal);
+      tB->PrevSignal->check();
   }
 }
 

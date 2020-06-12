@@ -10,7 +10,7 @@
 
 #define UART_COM_t_Length 64
 
-#include "signals.h"
+#include "switchboard/signals.h"
 
 struct train;
 

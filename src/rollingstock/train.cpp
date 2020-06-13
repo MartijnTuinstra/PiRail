@@ -32,7 +32,7 @@ Train::Train(char * name, int nr_stock, struct train_comp_ws * comps, uint8_t ca
 
     if(comps[i].type == 0){
       loggerf(DEBUG, "Add engine %i", comps[i].id);
-      Engine * E = engines[comps[i].id];
+      Engine * E = ::engines[comps[i].id];
       //Engine
       if(comps[i].id >= engines_len || E == 0){
         loggerf(ERROR, "Engine (%i) doesn't exist", comps[i].id);

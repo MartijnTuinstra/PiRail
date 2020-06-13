@@ -172,9 +172,9 @@ void WS_stc_UpdateTrain(RailTrain * T){
   msg->speed_high = (T->speed & 0x0F00) >> 8;
   msg->speed_low  = (T->speed & 0xFF);
 
-  if(T->type == TRAIN_ENGINE_TYPE){
+  if(T->type == RAILTRAIN_ENGINE_TYPE){
     for(uint8_t i = 0; i < 29; i++){
-      if(((Engines *)T->p)->function[i].state){
+      if(T->p.E->function[i].state){
         msg->functions[i / 8] |= (0x80 >> (i % 8));
       }
     }
@@ -197,7 +197,7 @@ void WS_stc_UpdateTrain(RailTrain * T){
   }
 }
 
-void WS_stc_DCCEngineUpdate(Engines * E){
+void WS_stc_DCCEngineUpdate(Engine * E){
   loggerf(TRACE, "WS_cts_DCCEngineUpdate");
 
   if(!E)

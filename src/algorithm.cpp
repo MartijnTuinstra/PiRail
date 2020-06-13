@@ -209,7 +209,7 @@ void Algor_process(Block * B, int flags){
 
   // Find all surrounding blocks only if direction has changed or nearby switches
   if(B->IOchanged && B->algorchanged){
-    Algor_search_Blocks(B, flags);
+    B->AlgorSearch(flags);
   }
 
   B->IOchanged = 0;
@@ -242,7 +242,7 @@ void Algor_process(Block * B, int flags){
   Algor_train_following(&B->Alg, flags);
   if (B->IOchanged){
     loggerf(INFO, "Block Train ReProcess");
-    Algor_clear_Blocks(&B->Alg);
+    B->AlgorClear();
     if(flags & _LOCK){
       loggerf(WARNING, "UNLOCK");
       unlock_Algor_process();
@@ -254,7 +254,7 @@ void Algor_process(Block * B, int flags){
   Algor_Switch_Checker(&B->Alg, flags);
   if (B->IOchanged){
     loggerf(DEBUG, "Block Switch ReProcess");
-    Algor_clear_Blocks(&B->Alg);
+    B->AlgorClear();
     if(flags & _LOCK)
       unlock_Algor_process();
     return;
@@ -279,7 +279,7 @@ void Algor_process(Block * B, int flags){
     else{
       // Stop train no next block!!
       loggerf(INFO, "EMEG BRAKE, NO B_LOCK");
-      train_change_speed(B->train, 0, IMMEDIATE_SPEED);
+      B->train->changeSpeed(0, IMMEDIATE_SPEED);
     }
   }
 
@@ -288,14 +288,6 @@ void Algor_process(Block * B, int flags){
     unlock_Algor_process();
   }
   loggerf(TRACE, "Done");
-}
-
-
-void Algor_clear_Blocks(Algor_Blocks * ABs){
-  memset(ABs->P, 0, 10*sizeof(void *));
-  memset(ABs->N, 0, 10*sizeof(void *));
-  ABs->prev = 0;
-  ABs->next = 0;
 }
 
 // void Algor_Unset_Special_Block(Algor_Blocks * ABs, Block * B){
@@ -334,7 +326,7 @@ void Algor_Set_Changed(Algor_Blocks * ABs){
 
     ABs->P[i]->algorchanged = 1;
     ABs->P[i]->IOchanged = 1;
-    Algor_clear_Blocks(&ABs->P[i]->Alg);
+    ABs->P[i]->AlgorClear();
   }
   for(int i = 0; i < ABs->next; i++){
     if(!ABs->N[i])
@@ -342,137 +334,12 @@ void Algor_Set_Changed(Algor_Blocks * ABs){
     
     ABs->N[i]->algorchanged = 1;
     ABs->N[i]->IOchanged = 1;
-    Algor_clear_Blocks(&ABs->N[i]->Alg);
+    ABs->N[i]->AlgorClear();
   }
 
   if(ABs->B){
     ABs->B->algorchanged = 1;
     ABs->B->IOchanged = 1;
-  }
-}
-
-void Algor_search_Blocks(Block * B, int debug){
-  loggerf(TRACE, "Algor_search_Blocks - %02i:%02i", B->module, B->id);
-  Block * next = 0;
-  Block * prev = 0;
-
-  if(B->type == TURNTABLE){
-    Algor_turntable_search_Blocks(B, debug);
-    // Algor_print_block_debug(B);
-    return;
-  }
-
-  Algor_Blocks * ABs = &B->Alg;
-  Block * tmpB = B;
-
-  Algor_clear_Blocks(ABs);
-
-  // loggerf(DEBUG, "Search blocks %02i:%02i", B->module, B->id);
-
-  // int next_level = 1;
-  // int prev_level = 1;
-
-  next = B->_Next(0 | SWITCH_CARE,1);
-  prev = B->_Next(1 | SWITCH_CARE,1);
-
-  //Select all surrounding blocks
-  uint8_t i = 0;
-  uint8_t j = 0;
-  uint8_t level = 1;
-  uint16_t length = 0;
-  if(next){
-    do{
-      if(i == 0 && ABs->next == 0){
-        tmpB = next;
-      }
-      else{
-        tmpB = B->_Next(NEXT | SWITCH_CARE, level);
-      }
-
-      if(!tmpB){
-        break;
-      }
-
-      ABs->N[i] = tmpB;
-
-      length += tmpB->length;
-
-      ABs->next += 1;
-
-      i++;
-      level++;
-
-      if(length > Block_Minimum_Size){
-        if(j == 0)
-          ABs->next1 = ABs->next;
-        else if(j == 1)
-          ABs->next2 = ABs->next;
-        else if(j == 2)
-          ABs->next3 = ABs->next;
-        length = 0;
-        j++;
-      }
-    }
-    while(j < 3 && i < 10);
-
-    // If not all blocks were available
-    // Not 3 times Minimum Size
-    if (j == 2)
-      ABs->next3 = ABs->next;
-    else if (j == 1)
-      ABs->next2 = ABs->next;
-    else if (j == 0)
-      ABs->next1 = ABs->next;
-  }
-
-  i = 0;
-  j = 0;
-  level = 1;
-  length = 0;
-
-  if(prev){
-    do{
-      if(i == 0 && ABs->prev == 0){
-        tmpB = prev;
-      }
-      else{
-        tmpB = B->_Next(PREV | SWITCH_CARE, level);
-      }
-
-      if(!tmpB){
-        break;
-      }
-
-      ABs->P[i] = tmpB->Alg.B;
-
-      length += tmpB->length;
-
-      ABs->prev += 1;
-
-      i++;
-      level++;
-
-      if(length > Block_Minimum_Size){
-        if(j == 0)
-          ABs->prev1 = ABs->prev;
-        else if(j == 1)
-          ABs->prev2 = ABs->prev;
-        else if(j == 2)
-          ABs->prev3 = ABs->prev;
-        length = 0;
-        j++;
-      }
-    }
-    while(j < 3 && i < 10);
-
-    // If not all blocks were available
-    // Not 3 times Minimum Size
-    if (j == 2)
-      ABs->prev3 = ABs->prev;
-    else if (j == 1)
-      ABs->prev2 = ABs->prev;
-    else if (j == 0)
-      ABs->prev1 = ABs->prev;
   }
 }
 
@@ -1296,7 +1163,7 @@ void Algor_train_following(Algor_Blocks * ABs, int debug){
     //NEW TRAIN
     // find a new follow id
     // loggerf(ERROR, "FOLLOW ID INCREMENT, bTrain");
-    B->train = new_railTrain();
+    B->train = new RailTrain();
 
     B->train->B = B;
 
@@ -1385,32 +1252,32 @@ void Algor_train_control(Algor_Blocks * ABs, int debug){
 
   if(N[0]->blocked){
     loggerf(WARNING, "Train Next block Blocked");
-    train_change_speed(T, 0, IMMEDIATE_SPEED);
+    T->changeSpeed(0, IMMEDIATE_SPEED);
   }
   else if(N[0]->state == DANGER){
     loggerf(WARNING, "Train Next block Blocked %02i:%02i", N[0]->module, N[0]->id);
-    train_change_speed(T, 0, GRADUAL_FAST_SPEED);
+    T->changeSpeed(0, GRADUAL_FAST_SPEED);
   }
   else if(N[0]->state == RESTRICTED){
     loggerf(WARNING, "Train Next block Restricted %02i:%02i", N[0]->module, N[0]->id);
-    train_change_speed(T, 10, GRADUAL_FAST_SPEED);
+    T->changeSpeed(10, GRADUAL_FAST_SPEED);
   }
   else if(N[0]->state == CAUTION){
     if(T->speed > CAUTION_SPEED){
       loggerf(WARNING, "Train Next block Caution %02i:%02i", N[0]->module, N[0]->id);
-      train_change_speed(T, CAUTION_SPEED, GRADUAL_FAST_SPEED);
+      T->changeSpeed(CAUTION_SPEED, GRADUAL_FAST_SPEED);
     }
   }
   else if(T->control != TRAIN_MANUAL && (T->target_speed > N[0]->max_speed || T->speed > N[0]->max_speed)){
     loggerf(DEBUG, "Next block speed limit");
-    train_change_speed(T, N[0]->max_speed, GRADUAL_SLOW_SPEED);
+    T->changeSpeed(N[0]->max_speed, GRADUAL_SLOW_SPEED);
   }
   else if(T->control != TRAIN_MANUAL && N[0]->max_speed > T->speed && ABs->next > 1 && N[1]->max_speed >= N[0]->max_speed) {
     loggerf(DEBUG, "Train Speed Up");
     if(N[0]->max_speed <= T->max_speed)
-      train_change_speed(T, N[0]->max_speed, GRADUAL_FAST_SPEED);
+      T->changeSpeed(N[0]->max_speed, GRADUAL_FAST_SPEED);
     else if(T->speed != T->max_speed)
-      train_change_speed(T, T->max_speed, GRADUAL_FAST_SPEED);
+      T->changeSpeed(T->max_speed, GRADUAL_FAST_SPEED);
   }
 }
 

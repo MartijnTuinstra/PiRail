@@ -243,13 +243,13 @@ uint8_t websocket_client_first_connect(struct web_client_t * client, char * buf,
       struct s_opc_LinkTrain msg;
       msg.follow_id = i;
       if(train_link[i]->type){
-        loggerf(WARNING, "Sending railtrain T %i\t(%i) %s", i, ((Trains *)train_link[i]->p)->id, ((Trains *)train_link[i]->p)->name);
-        msg.real_id = ((Trains *)train_link[i]->p)->id;
+        loggerf(WARNING, "Sending railtrain T %i\t(%i) %s", i, train_link[i]->p.T->id, train_link[i]->p.T->name);
+        msg.real_id = train_link[i]->p.T->id;
         msg.type = 0;
       }
       else{
-        loggerf(WARNING, "Sending railtrain E %i\t(%i) %s", i, ((Engines *)train_link[i]->p)->id, ((Engines *)train_link[i]->p)->name);
-        msg.real_id = ((Engines *)train_link[i]->p)->id;
+        loggerf(WARNING, "Sending railtrain E %i\t(%i) %s", i, train_link[i]->p.E->id, train_link[i]->p.E->name);
+        msg.real_id = train_link[i]->p.E->id;
         msg.type = 1;
       }
       msg.message_id_H = 0;

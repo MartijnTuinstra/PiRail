@@ -21,7 +21,7 @@ typedef struct s_IO_Port IO_Port;
 typedef struct s_node_adr Node_adr;
 
 // Train.h
-typedef struct rail_train RailTrain;
+class RailTrain;
 
 #define U_B(U, A) Units[U]->B[A]
 #define RESTRICTED_SPEED 40
@@ -145,6 +145,9 @@ class Block {
 
     void reverse();
     void reserve();
+
+    void AlgorClear();
+    void AlgorSearch(int debug);
 };
 
 

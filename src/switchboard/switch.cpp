@@ -142,7 +142,7 @@ void Switch::setState(uint8_t state, uint8_t lock){
 
   Units[this->module]->switch_state_changed |= 1;
 
-  Algor_search_Blocks(this->Detection, 0);
+  this->Detection->AlgorSearch(0);
 
   Algor_Set_Changed(&this->Detection->Alg);
 

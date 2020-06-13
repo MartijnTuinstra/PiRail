@@ -135,19 +135,19 @@ void *TRAIN_SIMA(void * args){
 
   B->train->control = TRAIN_SEMI_AUTO;
 
-  while(!B->train->p){
+  while(!B->train->p.p){
     usleep(10000);
   }
 
   train.T = B->train;
 
-  if(train.T->type == TRAIN_ENGINE_TYPE){
+  if(train.T->type == RAILTRAIN_ENGINE_TYPE){
     //Engine only
-    train.train_length = ((Engines *)train.T->p)->length / 10;
+    train.train_length = train.T->p.E->length / 10;
   }
   else{
     //Train
-    train.train_length = ((Trains *)train.T->p)->length / 10;
+    train.train_length = train.T->p.T->length / 10;
   }
   loggerf(INFO, "train length %icm", train.train_length);
 
@@ -221,19 +221,19 @@ void *TRAIN_SIMB(void * args){
 
   B->train->control = TRAIN_SEMI_AUTO;
 
-  while(!B->train->p){
+  while(!B->train->p.p){
     usleep(10000);
   }
 
   train.T = B->train;
 
-  if(train.T->type == TRAIN_ENGINE_TYPE){
+  if(train.T->type == RAILTRAIN_ENGINE_TYPE){
     //Engine only
-    train.train_length = ((Engines *)train.T->p)->length / 10;
+    train.train_length = train.T->p.E->length / 10;
   }
   else{
     //Train
-    train.train_length = ((Trains *)train.T->p)->length / 10;
+    train.train_length = train.T->p.T->length / 10;
   }
   loggerf(INFO, "train length %icm", train.train_length);
 

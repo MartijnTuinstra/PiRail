@@ -15,6 +15,7 @@ GCC = g++ -std=c++14 -g3 $(GCC_INCLUDE) $(GCC_ERROR_FLAGS) $(GCC_LIBS) $(GCC_FLA
 BAAN_FILES = baan system logger mem modules config IO algorithm encryption \
              Z21 Z21_msg train submodule com sim pathfinding
 
+BAAN_FILES += rollingstock/train rollingstock/engine rollingstock/car rollingstock/railtrain
 BAAN_FILES += switchboard/rail switchboard/switch switchboard/msswitch switchboard/unit switchboard/station switchboard/signals
 
 BAAN_FILES += websocket websocket_cts websocket_stc websocket_control scheduler
@@ -78,8 +79,8 @@ clean:
 	@rm -f baan.so
 	@rm -f config_reader
 	@rm -f comtest
-	@rm -rf bin/*.o
-	@rm -rf bin/*.d
-	@rm -rf bin/*.so
+	@find bin -type f -name "*.o" -delete
+	@find bin -type f -name "*.so" -delete
+	@find bin -type f -name "*.d" -delete
 
 cleanall: cleanavr clean

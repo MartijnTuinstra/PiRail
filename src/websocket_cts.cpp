@@ -18,6 +18,10 @@
 #include "switchboard/station.h"
 #include "switchboard/switch.h"
 #include "switchboard/msswitch.h"
+
+#include "rollingstock/train.h"
+#include "rollingstock/engine.h"
+#include "rollingstock/car.h"
 #include "train.h"
 #include "logger.h"
 #include "config.h"
@@ -289,13 +293,16 @@ void WS_cts_LinkTrain(struct s_opc_LinkTrain * msg, struct web_client_t * client
   // uint8_t fID = data[0]; //follow ID
   // uint8_t tID = data[1]; //TrainID
   // uint16_t mID = ((data[2] & 0x1F) << 8)+data[3];
-  char return_value;
+  char return_value = 0;
   if(msg->type == 0)
     loggerf(INFO, "Linking train %i with T-%s\n",msg->follow_id, trains[msg->real_id]->name);
   else
     loggerf(INFO, "Linking train %i with E-%s\n",msg->follow_id, engines[msg->real_id]->name);
 
-  if((return_value = link_train(msg->follow_id, msg->real_id, msg->type)) == 1){
+  if(train_link[msg->follow_id])
+    return_value = train_link[msg->follow_id]->link(msg->real_id, msg->type);
+
+  if(return_value == 1){
     WS_stc_LinkTrain(msg);
 
     WS_clear_message((msg->message_id_H << 8) + msg->message_id_L, 1);
@@ -332,8 +339,8 @@ void WS_cts_SetTrainFunction(struct s_opc_SetTrainFunction * m, struct web_clien
     return;
   }
 
-  if(T->type == TRAIN_ENGINE_TYPE){
-    Engines * E = (Engines *)T->p;
+  if(T->type == RAILTRAIN_ENGINE_TYPE){
+    Engine * E = T->p.E;
 
     if(E->function[m->function].button == TRAIN_FUNCTION_TOGGLE){
       m->type = 2;
@@ -368,17 +375,17 @@ void WS_cts_SetTrainSpeed(struct s_opc_SetTrainSpeed * m, struct web_client_t * 
   T->target_speed = speed;
   T->dir   = m->dir;
 
-  if(T->type == TRAIN_ENGINE_TYPE){
-    Engines * E = (Engines *)T->p;
+  if(T->type == RAILTRAIN_ENGINE_TYPE){
+    Engine * E = T->p.E;
     E->dir = m->dir;
-    engine_set_speed(E, speed);
+    E->setSpeed(speed);
     Z21_Set_Loco_Drive_Engine(E);
   }
   else{
-    Trains * tmpT = (Trains *)T->p;
-    tmpT->cur_speed = speed;
+    Train * tmpT = T->p.T;
+    // tmpT->cur_speed = ;
     tmpT->dir = m->dir;
-    train_calc_speed(tmpT);
+    tmpT->setSpeed(speed);
     Z21_Set_Loco_Drive_Train(tmpT);
   }
 
@@ -438,11 +445,11 @@ void WS_cts_TrainRoute(struct s_opc_TrainRoute * data, struct web_client_t * cli
 
   Station * St = Units[data->module_id]->St[data->station_id];
 
-  train_set_route(T, St->blocks[0]);
+  T->setRoute(St->blocks[0]);
 }
 
 void WS_cts_DCCEngineSpeed(struct s_opc_DCCEngineSpeed * m, struct web_client_t * client){
-  Engines * E = engines[m->id];
+  Engine * E = engines[m->id];
 
   if(!E)
     return;
@@ -450,14 +457,14 @@ void WS_cts_DCCEngineSpeed(struct s_opc_DCCEngineSpeed * m, struct web_client_t 
   uint16_t speed = (m->speed_high << 8) + m->speed_low;
 
   E->dir = m->dir;
-  engine_set_speed(E, speed);
+  E->setSpeed(speed);
   Z21_Set_Loco_Drive_Engine(E);
 }
 
 void WS_cts_DCCEngineFunction(struct s_opc_DCCEngineFunction * m, struct web_client_t * client){
   loggerf(INFO, "WS_cts_DCCEngineFunction");
 
-  Engines * E = engines[m->id];
+  Engine * E = engines[m->id];
 
   if(!E){
     loggerf(WARNING, "No Engine %i", m->id);
@@ -519,7 +526,7 @@ void WS_cts_AddCartoLib(struct s_opc_AddNewCartolib * data, struct web_client_t 
   }
 
 
-  Create_Car(name, data->nr, icon, data->type, data->length, data->max_speed);
+  new Car(name, data->nr, icon, data->type, data->length, data->max_speed);
 
   char * dicon = (char *)_calloc(strlen(icon)+10, char);
 
@@ -550,7 +557,7 @@ void WS_cts_Edit_Car(struct s_opc_EditCarlib * data, struct web_client_t * clien
 
   if(data->remove){
     if(cars[id]){
-      Clear_Car(&cars[id]);
+      delete cars[id];
 
       rdata->data.opc_AddNewCartolib_res.response = 1;
     }
@@ -568,7 +575,7 @@ void WS_cts_Edit_Car(struct s_opc_EditCarlib * data, struct web_client_t * clien
     return;
   }
 
-  Cars * C = cars[id];
+  Car * C = cars[id];
 
   C->name = (char *)_realloc(C->name, data->data.name_len + 1, char);
   memcpy(C->name, &data->data.strings, data->data.name_len);
@@ -689,7 +696,7 @@ void WS_cts_AddEnginetoLib(struct s_opc_AddNewEnginetolib * data, struct web_cli
     sprintf(sicon, "%s.%04i.%s", "web/tmp_icon", icon_time, "jpg");
   }
 
-  Create_Engine(name, data->DCC_ID, img, icon, data->type, data->length, data->steps, (struct engine_speed_steps *)steps, data->functions);
+  new Engine(name, data->DCC_ID, img, icon, data->type, data->length, data->steps, (struct engine_speed_steps *)steps, data->functions);
 
   char * dimg = (char *)_calloc(strlen(img)+20, char);
   char * dicon = (char *)_calloc(strlen(icon)+20, char);
@@ -724,7 +731,7 @@ void WS_cts_Edit_Engine(struct s_opc_EditEnginelib * msg, struct web_client_t * 
   struct s_WS_Data * rdata = (struct s_WS_Data *)_calloc(1, struct s_WS_Data);
 
   uint16_t id = msg->id_l + (msg->id_h << 8);
-  Engines * E = engines[id];
+  Engine * E = engines[id];
 
   if(msg->remove){
     // Remove Engine
@@ -733,7 +740,7 @@ void WS_cts_Edit_Engine(struct s_opc_EditEnginelib * msg, struct web_client_t * 
     remove(E->icon_path);
     DCC_train[E->DCC_ID] = NULL;
 
-    Clear_Engine(&E);
+    delete E;
 
     for(int i = id; i < (engines_len - 1); i++){
       engines[i] = engines[i+1];
@@ -869,7 +876,7 @@ void WS_cts_AddTraintoLib(struct s_opc_AddNewTraintolib * data, struct web_clien
   // Copy configuration
   memcpy(comps, &data->strings + data->name_len, data->nr_stock*3);
 
-  Create_Train(name, data->nr_stock, (struct train_comp_ws *)comps, data->catagory, data->save);
+  new Train(name, data->nr_stock, (struct train_comp_ws *)comps, data->catagory, data->save);
 
   write_rolling_Configs();
 
@@ -890,7 +897,7 @@ void WS_cts_Edit_Train(struct s_opc_EditTrainlib * data, struct web_client_t * c
   uint16_t id = data->id_l + (data->id_h << 8);
   if(data->remove){
     if(trains[id]){
-      Clear_Train(&trains[id]);
+      delete trains[id];
       rdata->data.opc_AddNewTraintolib_res.response = 1;
     }
     else
@@ -899,7 +906,7 @@ void WS_cts_Edit_Train(struct s_opc_EditTrainlib * data, struct web_client_t * c
     return;
   }
 
-  Trains * T = trains[id];
+  Train * T = trains[id];
 
   //Copy name
   T->name = (char *)_realloc(T->name, data->data.name_len + 1, char);

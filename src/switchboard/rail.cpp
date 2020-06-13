@@ -274,6 +274,141 @@ void Block::reserve(){
 }
 
 
+
+void Block::AlgorClear(){
+  memset(this->Alg.P, 0, 10*sizeof(void *));
+  memset(this->Alg.N, 0, 10*sizeof(void *));
+  this->Alg.prev = 0;
+  this->Alg.next = 0;
+}
+
+
+void Block::AlgorSearch(int debug){
+  loggerf(TRACE, "Blocks::AlgorSearch - %02i:%02i", this->module, this->id);
+  Block * next = 0;
+  Block * prev = 0;
+
+  if(this->type == TURNTABLE){
+    loggerf(ERROR, "Block is a turntable");
+    // Algor_turntable_search_Blocks(B, debug);
+    // Algor_print_block_debug(B);
+    return;
+  }
+
+  Algor_Blocks * ABs = &this->Alg;
+  Block * tmpB = this;
+
+  AlgorClear();
+
+  loggerf(TRACE, "Search blocks %02i:%02i", this->module, this->id);
+
+  next = this->_Next(0 | SWITCH_CARE,1);
+  prev = this->_Next(1 | SWITCH_CARE,1);
+
+  //Select all surrounding blocks
+  uint8_t i = 0;
+  uint8_t j = 0;
+  uint8_t level = 1;
+  uint16_t length = 0;
+  if(next){
+    do{
+      if(i == 0 && ABs->next == 0){
+        tmpB = next;
+      }
+      else{
+        tmpB = this->_Next(NEXT | SWITCH_CARE, level);
+      }
+
+      if(!tmpB){
+        break;
+      }
+
+      ABs->N[i] = tmpB;
+
+      length += tmpB->length;
+
+      ABs->next += 1;
+
+      i++;
+      level++;
+
+      if(length > Block_Minimum_Size){
+        if(j == 0)
+          ABs->next1 = ABs->next;
+        else if(j == 1)
+          ABs->next2 = ABs->next;
+        else if(j == 2)
+          ABs->next3 = ABs->next;
+        length = 0;
+        j++;
+      }
+    }
+    while(j < 3 && i < 10);
+
+    // If not all blocks were available
+    // Not 3 times Minimum Size
+    if (j == 2)
+      ABs->next3 = ABs->next;
+    else if (j == 1)
+      ABs->next2 = ABs->next;
+    else if (j == 0)
+      ABs->next1 = ABs->next;
+  }
+
+  i = 0;
+  j = 0;
+  level = 1;
+  length = 0;
+
+  if(prev){
+    do{
+      if(i == 0 && ABs->prev == 0){
+        tmpB = prev;
+      }
+      else{
+        tmpB = this->_Next(PREV | SWITCH_CARE, level);
+      }
+
+      if(!tmpB){
+        break;
+      }
+
+      // ABs->P[i] = tmpB->Alg.B;
+      ABs->P[i] = tmpB;
+
+      length += tmpB->length;
+
+      ABs->prev += 1;
+
+      i++;
+      level++;
+
+      if(length > Block_Minimum_Size){
+        if(j == 0)
+          ABs->prev1 = ABs->prev;
+        else if(j == 1)
+          ABs->prev2 = ABs->prev;
+        else if(j == 2)
+          ABs->prev3 = ABs->prev;
+        length = 0;
+        j++;
+      }
+    }
+    while(j < 3 && i < 10);
+
+    // If not all blocks were available
+    // Not 3 times Minimum Size
+    if (j == 2)
+      ABs->prev3 = ABs->prev;
+    else if (j == 1)
+      ABs->prev2 = ABs->prev;
+    else if (j == 0)
+      ABs->prev1 = ABs->prev;
+  }
+}
+
+
+
 // int main(void){
 //     C_Block B = C_Block(1, {0, 0, {0, 0, 255}, {0, 0, 255}, {0, 0}, {0, 1}, 90, 100, 0});
   

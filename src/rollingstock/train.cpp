@@ -12,7 +12,7 @@ struct train_composition ** trains_comp;
 int trains_comp_len = 0;
 
 Train::Train(char * name, int nr_stock, struct train_comp_ws * comps, uint8_t catagory, uint8_t save){
-//   Train * Z = (Train *)_calloc(1, Train);
+  loggerf(DEBUG, "Create Train %s", name);
   memset(this, 0, sizeof(Train));
 
   this->nr_stock = nr_stock;

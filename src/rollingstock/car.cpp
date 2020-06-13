@@ -10,20 +10,22 @@ Car ** cars;
 int cars_len = 0;
 
 Car::Car(char * name,int nr, char * icon, char type, uint16_t length, uint16_t speed){
-  Car * Z = (Car *)_calloc(1, Car);
+  loggerf(DEBUG, "Create Car %s", name);
 
-  Z->name = name;
-  Z->icon_path = icon;
+  memset(this, 0, sizeof(Car));
 
-  Z->nr = nr;
-  Z->length = length;
-  Z->max_speed = speed;
+  this->name = name;
+  this->icon_path = icon;
 
-  Z->type = type;
+  this->nr = nr;
+  this->length = length;
+  this->max_speed = speed;
+
+  this->type = type;
 
   int index = find_free_index(cars, cars_len);
 
-  cars[index] = Z;
+  cars[index] = this;
 
   loggerf(DEBUG, "Car \"%s\" created",name);
 }

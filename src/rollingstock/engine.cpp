@@ -12,55 +12,59 @@ int engines_len = 0;
 Engine * DCC_train[9999];
 
 Engine::Engine(char * name,int DCC,char * img, char * icon, char type, int length, int steps_len, struct engine_speed_steps * steps, uint8_t functions[28]){
+  loggerf(DEBUG, "Create Engine %s", name);
+
   //DCC cant be used twice
   for(int i = 0;i<engines_len;i++){
     if(engines[i] && engines[i]->DCC_ID == DCC){
       loggerf(WARNING,"create_engine: found duplicate: %s",engines[i]->name);
     }
   }
-  Engine * Z = (Engine *)_calloc(1, Engine);
 
-  Z->name = name;
-  Z->img_path = img;
-  Z->icon_path = icon;
+  memset(this, 0, sizeof(Engine));
 
-  Z->DCC_ID = DCC;
-  DCC_train[DCC] = Z;
+  this->name = name;
+  this->img_path = img;
+  this->icon_path = icon;
 
-  Z->length = length;
+  this->DCC_ID = DCC;
+  DCC_train[DCC] = this;
+
+  this->length = length;
   //TODO add to arguments
-  Z->speed_step_type = ENGINE_128_FAHR_STUFEN;
+  this->speed_step_type = ENGINE_128_FAHR_STUFEN;
 
-  Z->type = type;
+  this->type = type;
 
-  Z->steps_len = steps_len;
-  Z->steps = steps;
+  this->steps_len = steps_len;
+  this->steps = steps;
 
 
   // Copy each speed step
   for(uint8_t i = 0; i < steps_len; i++){
-    if(Z->max_speed < steps[i].speed){
-      Z->max_speed = steps[i].speed;
+    if(this->max_speed < steps[i].speed){
+      this->max_speed = steps[i].speed;
     }
   }
 
   // Copy each function
   for(uint8_t i = 0; i < 29; i++){
-    Z->function[i].button = functions[i] >> 6;
-    Z->function[i].type = functions[i] & 0x3F;
+    this->function[i].button = functions[i] >> 6;
+    this->function[i].type = functions[i] & 0x3F;
 
-    // loggerf(INFO, "Engine %i - Function %i - type %i - %i", DCC, i, Z->function[i].type, Z->function[i].button);
+    // loggerf(INFO, "Engine %i - Function %i - type %i - %i", DCC, i, this->function[i].type, this->function[i].button);
   }
 
   int index = find_free_index(engines, engines_len);
 
-  engines[index] = Z;
-  Z->id = index;
+  engines[index] = this;
+  this->id = index;
 
-  loggerf(DEBUG, "Engine \"%s\" created", name);
+  loggerf(INFO, "Engine \"%s\" created, %x, engines[%i] = %x", name, (unsigned int)this, index, engines[index]);
 }
 
 Engine::~Engine(){
+  loggerf(WARNING, "Destructor Engine %s", this->name);
   _free(this->name);
   _free(this->img_path);
   _free(this->icon_path);

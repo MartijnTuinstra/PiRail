@@ -1156,7 +1156,14 @@ websocket.add_opcodes([
       recv: function(data){
         console.log(data);
         function JsonParse(obj){
-          return Function('"use strict";return (' + obj + ')')();
+          try {
+            return Function('"use strict";return (' + obj + ')')();
+          }
+          catch(err){
+            console.warn("JsonParse Error: "+err);
+            console.warn(obj);
+            return {};
+          }
         };
 
         var newdata = JsonParse(String.fromCharCode.apply(null, data.slice(1)));

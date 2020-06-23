@@ -78,7 +78,10 @@ class RailTrain {
     void unlink();
 
     void setRoute(Block * dest);
+
 };
+
+void RailTrain_ContinueCheck(void * args);
 
 extern RailTrain ** train_link;
 extern int train_link_len;

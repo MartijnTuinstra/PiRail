@@ -118,7 +118,7 @@ Unit::~Unit(){
 
 void Unit::insertBlock(Block * B){
   if(this->block_len <= B->id){
-    loggerf(INFO, "Expand block len %i", block_len+8);
+    // loggerf(INFO, "Expand block len %i", block_len+8);
     this->B = (Block **)_realloc(this->B, (block_len + 8), Block *);
 
     memset(&this->B[block_len], 0, 8 * sizeof(Block *));
@@ -136,7 +136,7 @@ void Unit::insertBlock(Block * B){
 
 void Unit::insertSwitch(Switch * Sw){
   if(switch_len <= Sw->id){
-    loggerf(INFO, "Expand block len %i", switch_len+8);
+    // loggerf(INFO, "Expand block len %i", switch_len+8);
     this->Sw = (Switch **)_realloc(this->Sw, (switch_len + 8), Switch *);
 
     memset(&this->Sw[switch_len], 0, 8 * sizeof(Switch *));
@@ -154,28 +154,27 @@ void Unit::insertSwitch(Switch * Sw){
 
 void Unit::insertMSSwitch(MSSwitch * MSSw){
   if(this->msswitch_len <= MSSw->id){
-    loggerf(INFO, "Expand block len %i", this->msswitch_len+8);
-    this->MSSw = (MSSwitch **)_realloc(this->MSSw, (this->switch_len + 8), MSSwitch *);
+    loggerf(INFO, "Expand msswitch len %i", this->msswitch_len+8);
+    this->MSSw = (MSSwitch **)_realloc(this->MSSw, (this->msswitch_len + 8), MSSwitch *);
 
-    memset(&this->Sw[this->switch_len], 0, 8 * sizeof(MSSwitch *));
+    memset(&this->MSSw[this->msswitch_len], 0, 8 * sizeof(MSSwitch *));
 
-    this->switch_len += 8;
-  
-    // If id is already in use
-    if(this->MSSw[MSSw->id]){
-        loggerf(ERROR, "Duplicate MSSwitch %i", MSSw->id);
-        delete this->MSSw[MSSw->id];
-    }
-    this->MSSw[MSSw->id] = MSSw;
+    this->msswitch_len += 8;
   }
+  // If id is already in use
+  if(this->MSSw[MSSw->id]){
+      loggerf(ERROR, "Duplicate MSSwitch %i", MSSw->id);
+      delete this->MSSw[MSSw->id];
+  }
+  this->MSSw[MSSw->id] = MSSw;
 }
 
 
-void Create_Unit(uint16_t M, uint8_t Nodes, char points){
-  new Unit(M, Nodes, points);
-}
+// void Create_Unit(uint16_t M, uint8_t Nodes, char points){
+//   new Unit(M, Nodes, points);
+// }
 
-Unit * Clear_Unit(Unit * U){
-  delete U;
-  return 0;
-}
+// Unit * Clear_Unit(Unit * U){
+//   delete U;
+//   return 0;
+// }

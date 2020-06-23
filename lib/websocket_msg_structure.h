@@ -11,8 +11,8 @@ packedstruct s_opc_ChangeBroadcast {
 // 0x20
 packedstruct s_opc_SetSwitch {
   uint8_t module;
-  uint8_t mssw:1;
   uint8_t id:7;
+  uint8_t mssw:1;
   uint8_t state;
 };
 

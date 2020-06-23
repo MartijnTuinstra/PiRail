@@ -59,12 +59,10 @@ Engine::Engine(char * name,int DCC,char * img, char * icon, char type, int lengt
 
   engines[index] = this;
   this->id = index;
-
-  loggerf(INFO, "Engine \"%s\" created, %x, engines[%i] = %x", name, (unsigned int)this, index, engines[index]);
 }
 
 Engine::~Engine(){
-  loggerf(WARNING, "Destructor Engine %s", this->name);
+  loggerf(INFO, "Destructor Engine %s", this->name);
   _free(this->name);
   _free(this->img_path);
   _free(this->icon_path);

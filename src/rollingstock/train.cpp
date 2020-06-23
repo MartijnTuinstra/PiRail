@@ -76,8 +76,6 @@ Train::Train(char * name, int nr_stock, struct train_comp_ws * comps, uint8_t ca
 
   trains[index] = this;
   this->id = index;
-
-  loggerf(DEBUG, "Train created at %i",index);
 }
 
 Train::~Train(){

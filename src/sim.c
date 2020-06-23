@@ -753,7 +753,7 @@ void * rail_link_pointer(struct rail_link link){
   else if((link.type == RAIL_LINK_S || link.type == RAIL_LINK_s) && U->Sw[link.id]){
     return U->Sw[link.id];
   }
-  else if((link.type >= RAIL_LINK_MA && link.type <= RAIL_LINK_MB) && U->MSSw[link.id]){
+  else if(((link.type >= RAIL_LINK_MA && link.type <= RAIL_LINK_MB_inside) || link.type == RAIL_LINK_TT) && U->MSSw[link.id]){
     return U->MSSw[link.id];
   }
   return 0;
@@ -1022,15 +1022,15 @@ void SIM_Connect_Rail_links(){
       tSw->div.p.p = rail_link_pointer(tSw->div);
     }
 
-    for(int i = 0; i<tU->msswitch_len; i++){
+    for(int i = 0; i < tU->msswitch_len; i++){
       if(!tU->MSSw[i]){
         continue;
       }
 
       MSSwitch * tMSSw = tU->MSSw[i];
 
-      tMSSw->sideA.p.p = rail_link_pointer(tMSSw->sideA);
       for(int s = 0; s < tMSSw->state_len; s++){
+        tMSSw->sideA[s].p.p = rail_link_pointer(tMSSw->sideA[s]);
         tMSSw->sideB[s].p.p = rail_link_pointer(tMSSw->sideB[s]);
       }
     }

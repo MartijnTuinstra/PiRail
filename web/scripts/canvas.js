@@ -961,7 +961,9 @@ class canvas_line {
 		stroke(this.m.blocks[this.b], 0, cnvs);
 		if(this.if != undefined){
 			for (var i = this.if.length - 1; i >= 0; i--) {
-				if(this.m.switches[this.if[i].sw] != this.if[i].st)
+				if(this.if[i].sw != undefined && this.m.switches[this.if[i].sw] != this.if[i].st)
+					return true; // Print on background
+				if(this.if[i].mssw != undefined && this.m.msswitches[this.if[i].mssw] != this.if[i].st)
 					return true; // Print on background
 			}
 		}
@@ -985,7 +987,9 @@ class canvas_line {
 		if(this.if != undefined){
 			var counter = 0;
 			for (var i = this.if.length - 1; i >= 0; i--) {
-				if(this.m.switches[this.if[i].sw] == this.if[i].st)
+				if(this.if[i].sw != undefined && this.m.switches[this.if[i].sw] == this.if[i].st)
+					counter++;
+				if(this.if[i].mssw != undefined && this.m.msswitches[this.if[i].mssw] == this.if[i].st)
 					counter++;
 			}
 			if(counter == this.if.length){
@@ -2083,16 +2087,16 @@ class canvas_module {
 	}
 
 	add_dot(dot){
-		for(var i = 0; i < this.dotmatrix.length; i++){
-			if(this.dotmatrix[i].equals(dot)){
-				this.dotmatrix[i].combine(dot);
-				break;
-			}
+		// for(var i = 0; i < this.dotmatrix.length; i++){
+		// 	if(this.dotmatrix[i].equals(dot)){
+		// 		this.dotmatrix[i].combine(dot);
+		// 		break;
+		// 	}
 
-			if(i == (this.dotmatrix.length-1)){
-				this.dotmatrix.push(dot);
-			}
-		}
+		// 	if(i == (this.dotmatrix.length-1)){
+		// 		this.dotmatrix.push(dot);
+		// 	}
+		// }
 
 		if(this.dotmatrix.length == 0){
 			this.dotmatrix.push(dot);

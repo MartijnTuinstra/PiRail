@@ -88,16 +88,6 @@ void Block::addSwitch(Switch * Sw){
   this->Sw[id] = Sw;
 }
 
-void Block::addMSSwitch(MSSwitch * MSSw){
-  if(this->msswitch_len == 0){
-    this->MSSw = (MSSwitch **)_calloc(1, MSSwitch *);
-    this->msswitch_len = 1;
-  }
-
-  int id = find_free_index(this->MSSw, this->msswitch_len);
-  this->MSSw[id] = MSSw;
-}
-
 // Get next block, or i-th next block
 struct rail_link * Block::NextLink(int flags){
   // dir: 0 next, 1 prev
@@ -171,7 +161,7 @@ Block * Block::_Next(int flags, int level){
 
   flags = (flags & 0xF0) + (dir & 0x0F);
 
-  // loggerf(INFO, "Next     : dir:%i/%x\t%i:%i => %i:%i:%i\t%i\n", this->dir, dir, this->module, this->id, next->module, next->id, next->type, level);
+  // loggerf(TRACE, "Next     : dir:%i/%x\t%i:%i => %i:%i:%i\t%i", this->dir, dir, this->module, this->id, next->module, next->id, next->type, level);
 
   if(!next->p.p){
     if(next->type != RAIL_LINK_E && next->type != RAIL_LINK_C)
@@ -188,10 +178,22 @@ Block * Block::_Next(int flags, int level){
   else if(next->type == RAIL_LINK_s && next->p.Sw->approachable(this, flags)){
     return next->p.Sw->Next_Block(next->type, flags, level);
   }
-  else if(next->type == RAIL_LINK_MA){
+  else if(next->type == RAIL_LINK_MA && next->p.MSSw->approachableA(this, flags)){
     return next->p.MSSw->Next_Block(next->type, flags, level);
   }
-  else if(next->type == RAIL_LINK_MB && next->p.MSSw->approachable(this, flags)){
+  else if(next->type == RAIL_LINK_MB && next->p.MSSw->approachableB(this, flags)){
+    return next->p.MSSw->Next_Block(next->type, flags, level);
+  }
+  else if(next->type == RAIL_LINK_MA_inside || next->type == RAIL_LINK_MB_inside){
+    return next->p.MSSw->Next_Block(next->type, flags, level);
+  }
+  else if(next->type == RAIL_LINK_TT){
+    if(next->p.MSSw->approachableA(this, flags)){
+      next->type = RAIL_LINK_MA;
+    }
+    else if(next->p.MSSw->approachableB(this, flags)){
+      next->type = RAIL_LINK_MB;
+    }
     return next->p.MSSw->Next_Block(next->type, flags, level);
   }
     // if(Next_check_Switch(this, *next, flags)){
@@ -276,6 +278,7 @@ void Block::reserve(){
 
 
 void Block::AlgorClear(){
+  loggerf(INFO, "Block %02i:%02i AlgorClear", this->module, this->id);
   memset(this->Alg.P, 0, 10*sizeof(void *));
   memset(this->Alg.N, 0, 10*sizeof(void *));
   this->Alg.prev = 0;
@@ -288,12 +291,12 @@ void Block::AlgorSearch(int debug){
   Block * next = 0;
   Block * prev = 0;
 
-  if(this->type == TURNTABLE){
-    loggerf(ERROR, "Block is a turntable");
-    // Algor_turntable_search_Blocks(B, debug);
-    // Algor_print_block_debug(B);
-    return;
-  }
+  // if(this->type == TURNTABLE || this->type == CROSSING){
+  //   loggerf(ERROR, "Block is a turntable/crossover");
+  //   AlgorSearchMSSwitch(debug);
+  //   Algor_print_block_debug(this);
+  //   return;
+  // }
 
   Algor_Blocks * ABs = &this->Alg;
   Block * tmpB = this;
@@ -373,7 +376,6 @@ void Block::AlgorSearch(int debug){
         break;
       }
 
-      // ABs->P[i] = tmpB->Alg.B;
       ABs->P[i] = tmpB;
 
       length += tmpB->length;
@@ -408,6 +410,87 @@ void Block::AlgorSearch(int debug){
 }
 
 
+void Block::AlgorSearchMSSwitch(int debug){
+  loggerf(WARNING, "Algor_turntable_search_Blocks - %02i:%02i", this->module, this->id);
+  Block * next = 0;
+  Block * prev = 0;
+
+  Algor_Blocks * ABs = &this->Alg;
+  Block * tmpB = this;
+
+  AlgorClear();
+
+  if(!this->MSSw){
+    loggerf(ERROR, "Turntable has more than no msswitch");
+    return;
+  }
+
+  next = this->MSSw->Next_Block(RAIL_LINK_TT, NEXT | SWITCH_CARE, 1);
+  prev = this->MSSw->Next_Block(RAIL_LINK_TT, PREV | SWITCH_CARE, 1);
+
+  if(next)
+    loggerf(WARNING, "%02i:%02i", next->module, next->id);
+  if(prev)
+    loggerf(WARNING, "%02i:%02i", prev->module, prev->id);
+
+  //Select all surrounding blocks
+  uint8_t i = 0;
+  uint8_t level = 1;
+  uint16_t length = 0;
+  if(next){
+    do{
+      if(i == 0 && ABs->next == 0){
+        tmpB = next;
+      }
+      else{
+        tmpB = this->MSSw->Next_Block(RAIL_LINK_TT, NEXT | SWITCH_CARE, level);
+      }
+
+      if(!tmpB){
+        break;
+      }
+
+      ABs->N[i] = tmpB;
+
+      length += tmpB->length;
+
+      ABs->next += 1;
+
+      i++;
+      level++;
+    }
+    while(length < 3*Block_Minimum_Size && level < 10 && i < 10);
+  }
+
+  i = 0;
+  level = 1;
+  length = 0;
+
+  if(prev){
+    do{
+      if(i == 0 && ABs->prev == 0){
+        tmpB = prev;
+      }
+      else{
+        tmpB = this->MSSw->Next_Block(RAIL_LINK_TT, PREV | SWITCH_CARE, level);
+      }
+
+      if(!tmpB){
+        break;
+      }
+
+      ABs->P[i] = tmpB;
+
+      length += tmpB->length;
+
+      ABs->prev += 1;
+
+      i++;
+      level++;
+    }
+    while(length < 3*Block_Minimum_Size && level < 10 && i < 10);
+  }
+}
 
 // int main(void){
 //     C_Block B = C_Block(1, {0, 0, {0, 0, 255}, {0, 0, 255}, {0, 0}, {0, 1}, 90, 100, 0});
@@ -458,7 +541,7 @@ void Reserve_To_Next_Switch(Block * B){
       else{
         Prev_Block = Next_Block;
         Next_Block = Next_Block->Alg.N[0];
-        if(Next_Block->switch_len || Next_Block->msswitch_len)
+        if(Next_Block->switch_len || Next_Block->MSSw)
           Next_Block = 0;
       }
     }

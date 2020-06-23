@@ -22,7 +22,8 @@ bool z21_connected = 0;
 pthread_mutex_t z21_send_mutex;
 uint8_t * z21_send_buffer;
 
-struct s_Z21_info Z21_info = {0,0,0,0,0,0,0,0,{192,168,2,160},{2,2}};
+// struct s_Z21_info Z21_info = {0,0,0,0,0,0,0,0,{192,168,2,160},{2,2}};
+struct s_Z21_info Z21_info;
 
 void Z21_boot(){
   memset(&Z21_info, 0, sizeof(struct s_Z21_info));
@@ -36,6 +37,29 @@ void * Z21(void * args){
   pthread_join(SYS->Z21.th, NULL);
   z21_connected = 1;
   SYS_set_state(&SYS->Z21.state, Module_Init);
+
+  // Load Z21 config
+  FILE * fp = fopen("configs/Z21.bin","rb");
+
+  if (!fp){
+    loggerf(INFO, "Failed to open Z21 config file.");
+    FILE * fp = fopen("configs/Z21.bin", "wb");
+    if (!fp){
+      loggerf(ERROR, "Failed to create new Z21 config file.");
+      SYS_set_state(&SYS->Z21.state, Module_Fail);
+      return 0;
+    }
+    Z21_info.IP[0] = 192;
+    Z21_info.IP[1] = 168;
+    Z21_info.IP[2] = 1;
+    Z21_info.IP[3] = 111;
+    fwrite(Z21_info.IP, 4, 1, fp);
+    fclose(fp);
+  }
+  else{
+    fread(Z21_info.IP, 4, 1, fp);
+    fclose(fp);
+  }
 
   loggerf(INFO, "Connecting to Z21");
   int ret = 0;
@@ -64,7 +88,7 @@ void * Z21(void * args){
 }
 
 int Z21_client(char * ip, uint16_t port){
-  loggerf(DEBUG, "Z21: Connecting %s:%d", ip, port);
+  loggerf(INFO, "Z21: Connecting %s:%d", ip, port);
   struct sockaddr_in z21_addr;
 
   z21_fd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -143,7 +167,6 @@ void * Z21_run(void * args){
   struct SchedulerEvent * keepalive_event = scheduler->addEvent("Z21_KeepAlive", {20, 0});
   keepalive_event->function = &Z21_KeepAliveFunc;
   scheduler->enableEvent(keepalive_event);
-  scheduler->update();
 
   if(!z21_connected){
     return 0;

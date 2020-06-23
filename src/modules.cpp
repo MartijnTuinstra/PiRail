@@ -60,7 +60,7 @@ void read_module_Config(uint16_t M){
   }
 
 
-  Create_Unit(M, config->header.IO_Nodes, config->header.connections);
+  new Unit(M, config->header.IO_Nodes, config->header.connections);
 
   //Raw copy
   Units[M]->raw_length = fsize-2;
@@ -228,7 +228,8 @@ void unload_module_Configs(){
 
   for(int i = 0;i<unit_len;i++){
     if(Units[i]){
-      Units[i] = Clear_Unit(Units[i]);
+      delete Units[i];
+      Units[i] = 0;
     }
   }
   _free(Units);

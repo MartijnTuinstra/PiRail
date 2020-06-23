@@ -7,6 +7,9 @@
 #include "switchboard/rail.h"
 
 void print_link(char ** debug, struct s_link_conf link){
+  const char * typestring[7] = {
+    "R", "S", "s", "MA", "MB", "MAi", "MBi"
+  };
   if(link.type == RAIL_LINK_C){
     *debug += sprintf(*debug, "C %2i:%2i  \t", link.module, link.id);
   }
@@ -15,20 +18,10 @@ void print_link(char ** debug, struct s_link_conf link){
   }
   else{
     *debug += sprintf(*debug, "%2i:%2i:", link.module, link.id);
-    if(link.type == RAIL_LINK_R)
-      *debug += sprintf(*debug, "%c  \t", 'R');
-    else if(link.type == RAIL_LINK_S)
-      *debug += sprintf(*debug, "%c  \t", 'S');
-    else if(link.type == RAIL_LINK_s)
-      *debug += sprintf(*debug, "%c  \t", 's');
-    else if(link.type == RAIL_LINK_MA)
-      *debug += sprintf(*debug, "%s  \t", "MA");
-    else if(link.type == RAIL_LINK_MB)
-      *debug += sprintf(*debug, "%s  \t", "MB");
-    else if(link.type == RAIL_LINK_TT)
-      *debug += sprintf(*debug, "%c%c \t", 'T', 'T');
+    if(link.type <= RAIL_LINK_MB_inside)
+      *debug += sprintf(*debug, "%3s\t", typestring[link.type]);
     else
-      *debug += sprintf(*debug, "%i  \t", link.type);
+      *debug += sprintf(*debug, "%2x \t", link.type);
   }
 }
 
@@ -51,11 +44,12 @@ void print_Node(struct node_conf node){
 }
 
 void print_Block(struct s_block_conf block){
-  const char * rail_types_string[4] = {
+  const char * rail_types_string[5] = {
     "MAIN",
     "STATION",
     "NOSTOP",
-    "TURNTABLE"
+    "TURNTABLE",
+    "CROSSOVER"
   };
 
   char debug[300];
@@ -103,12 +97,14 @@ void print_MSSwitch(struct ms_switch_conf Switch){
   char debug[1000];
   char * debugptr = debug;
 
-  debugptr += sprintf(debugptr, "%i\t%i\t%i\t%2i -> [%2i:%2i",
+  debugptr += sprintf(debugptr, "%i\t%i\t%i\t%2i -> [",
                 Switch.id,
                 Switch.det_block,
                 Switch.nr_states,
-                Switch.IO,
-                Switch.IO_Ports[0].Node, Switch.IO_Ports[0].Adr);
+                Switch.IO);
+  
+  if(Switch.IO)
+    debugptr += sprintf(debugptr, "%2i:%2i", Switch.IO_Ports[0].Node, Switch.IO_Ports[0].Adr);
 
   for(int i = 1; i < Switch.IO; i++){
     debugptr += sprintf(debugptr, ", %2i:%2i", Switch.IO_Ports[i].Node, Switch.IO_Ports[i].Adr);
@@ -968,6 +964,7 @@ void modify_MSSwitch(struct module_config * config, char cmd){
     id = config->header.MSSwitches++;
 
     //Set child pointers
+    config->MSSwitches[id].id = id;
     config->MSSwitches[id].nr_states = 1;
     config->MSSwitches[id].states = (struct s_ms_switch_state_conf *)_calloc(1, struct s_ms_switch_state_conf);
     config->MSSwitches[id].IO = 1;
@@ -998,6 +995,10 @@ void modify_MSSwitch(struct module_config * config, char cmd){
     printf("MSSwitch Nr States (%2i)      | ", config->MSSwitches[id].nr_states);
     fgets(_cmd, 20, stdin);
     if(sscanf(_cmd, "%i", &tmp) > 0){
+      if(tmp == 0){
+        loggerf(ERROR, "Invalid number of states.");
+        tmp = 1;
+      }
       config->MSSwitches[id].nr_states = tmp;
       config->MSSwitches[id].states = (struct s_ms_switch_state_conf *)_realloc(config->MSSwitches[id].states, tmp, struct s_ms_switch_state_conf);
     }
@@ -1007,6 +1008,8 @@ void modify_MSSwitch(struct module_config * config, char cmd){
     if(sscanf(_cmd, "%i", &tmp) > 0){
       if(tmp <= 16){
         config->MSSwitches[id].IO = tmp;
+        if(tmp == 0)
+          tmp = 1;
         config->MSSwitches[id].IO_Ports = (struct s_IO_port_conf *)_realloc(config->MSSwitches[id].IO_Ports, tmp, struct s_IO_port_conf);
       }
       else{
@@ -1017,7 +1020,7 @@ void modify_MSSwitch(struct module_config * config, char cmd){
     for(int i = 0; i < config->MSSwitches[id].nr_states; i++){
       printf("MSSwitch State %2i\n", i);
       
-      printf(" - Link A (%2i:%2i:%2x)         | ",
+      printf(" - Link A (%2i:%2i:%2x)        | ",
                 config->MSSwitches[id].states[i].sideA.module,
                 config->MSSwitches[id].states[i].sideA.id,
                 config->MSSwitches[id].states[i].sideA.type);
@@ -1029,7 +1032,7 @@ void modify_MSSwitch(struct module_config * config, char cmd){
         config->MSSwitches[id].states[i].sideA.type = tmp2;
       }
       
-      printf(" - Link B (%2i:%2i:%2x)         | ",
+      printf(" - Link B (%2i:%2i:%2x)        | ",
                 config->MSSwitches[id].states[i].sideB.module,
                 config->MSSwitches[id].states[i].sideB.id,
                 config->MSSwitches[id].states[i].sideB.type);

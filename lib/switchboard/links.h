@@ -9,6 +9,8 @@ enum link_types {
   RAIL_LINK_s,
   RAIL_LINK_MA,
   RAIL_LINK_MB,
+  RAIL_LINK_MA_inside,
+  RAIL_LINK_MB_inside,
   RAIL_LINK_TT = 0x10, // Turntable
   RAIL_LINK_C  = 0xfe,
   RAIL_LINK_E  = 0xff

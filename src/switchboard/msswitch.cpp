@@ -25,14 +25,14 @@ void create_msswitch_from_conf(uint8_t module, struct ms_switch_conf conf){
   connect.id = conf.id;
   connect.states = conf.nr_states;
 
+  connect.sideA = (struct rail_link *)_calloc(conf.nr_states, struct rail_link);
   connect.sideB = (struct rail_link *)_calloc(conf.nr_states, struct rail_link);
-  
-  connect.sideA.module = conf.states[0].sideA.module;
-  connect.sideA.id = conf.states[0].sideA.id;
-  connect.sideA.type = (enum link_types)conf.states[0].sideA.type;
-
 
   for(uint8_t i = 0; i < conf.nr_states; i++){
+    connect.sideA[i].module = conf.states[i].sideA.module;
+    connect.sideA[i].id = conf.states[i].sideA.id;
+    connect.sideA[i].type = (enum link_types)conf.states[i].sideA.type;
+    
     connect.sideB[i].module = conf.states[i].sideB.module;
     connect.sideB[i].id = conf.states[i].sideB.id;
     connect.sideB[i].type = (enum link_types)conf.states[i].sideB.type;
@@ -44,7 +44,7 @@ void create_msswitch_from_conf(uint8_t module, struct ms_switch_conf conf){
 }
 
 MSSwitch::MSSwitch(struct s_msswitch_connect connect, uint8_t block_id, uint8_t output_len, struct s_IO_port_conf * output_pins, uint16_t * output_states){
-  loggerf(DEBUG, "Create MSSw %i:%i", connect.module, connect.id);
+  loggerf(INFO, "Create MSSw %i:%i", connect.module, connect.id);
   memset(this, 0, sizeof(MSSwitch));
 
   this->module = connect.module;
@@ -70,12 +70,17 @@ MSSwitch::MSSwitch(struct s_msswitch_connect connect, uint8_t block_id, uint8_t 
 
   Units[this->module]->insertMSSwitch(this);
 
+  // Add msswitch to detection block 
   if(Units[this->module]->block_len > block_id && U_B(this->module, block_id)){
     this->Detection = U_B(this->module, block_id);
-    this->Detection->addMSSwitch(this);
+
+    if(this->Detection->MSSw)
+      loggerf(WARNING, "Block %02i:%02i has duplicate msswitch, overwritting ...", this->Detection->module, this->Detection->id);
+
+    this->Detection->MSSw = this;
   }
   else{
-    loggerf(WARNING, "SWITCH %i:%i has no detection block %i", connect.module, connect.id, block_id);
+    loggerf(WARNING, "MSSWITCH %i:%i has no detection block %i", connect.module, connect.id, block_id);
   }
 }
 
@@ -87,14 +92,27 @@ MSSwitch::~MSSwitch(){
   // _free(this->preferences);
 }
 
-bool MSSwitch::approachable(void * p, int flags){
-  loggerf(TRACE, "MSSwitch::approachable (%x, %x, %x)", (unsigned int)this, (unsigned int)p, flags);
+bool MSSwitch::approachableA(void * p, int flags){
+  loggerf(TRACE, "MSSwitch::approachableA (%x, %x, %x)", (unsigned int)this, (unsigned int)p, flags);
   if((flags & 0x80) == 0){
     //No SWITCH_CARE
     return 1;
   }
 
-  if(this->sideB[this->state].p.p == p){
+  if(this->sideA[this->state & 0x7F].p.p == p){
+    return 1;
+  }
+  return 0;
+}
+
+bool MSSwitch::approachableB(void * p, int flags){
+  loggerf(TRACE, "MSSwitch::approachableB (%x, %x, %x)", (unsigned int)this, (unsigned int)p, flags);
+  if((flags & 0x80) == 0){
+    //No SWITCH_CARE
+    return 1;
+  }
+
+  if(this->sideB[this->state & 0x7F].p.p == p){
     return 1;
   }
   return 0;
@@ -103,32 +121,27 @@ bool MSSwitch::approachable(void * p, int flags){
 Block * MSSwitch::Next_Block(enum link_types type, int flags, int level){
   struct rail_link * next;
 
-  if(flags & SWITCH_CARE){
-    loggerf(CRITICAL, "Fix next_msswitch_block switch state care");
-  }
-
   if(type == RAIL_LINK_TT){
-    //turntable
-    if(this->Detection){
-      if(this->Detection->dir & 0x4){ // reversed
-        if(flags & PREV)
-          next = &this->sideB[this->state & 0x7F];
-        else
-          next = &this->sideA;
-      }
-      else{
-        if(flags & PREV)
-          next = &this->sideA;
-        else
-          next = &this->sideB[this->state & 0x7F];
-      }
-    }
+    return 0;
   }
-  else if(type == RAIL_LINK_MA){
+  
+  if(level <= 0 && !(type == RAIL_LINK_MB_inside || type == RAIL_LINK_MA_inside)){
+    return this->Detection;
+  }
+  
+  if(type == RAIL_LINK_MA){
+    return this->Detection->_Next(flags, level);
+    // next = &this->sideB[this->state & 0x7F];
+    // level--;
+  }else if(type == RAIL_LINK_MB_inside){
     next = &this->sideB[this->state & 0x7F];
   }
   else if(type == RAIL_LINK_MB){
-    next = &this->sideA;
+    return this->Detection->_Next(flags, level);
+    // next = &this->sideA[this->state & 0x7F];
+    // level--;
+  }else if(type == RAIL_LINK_MA_inside){
+    next = &this->sideA[this->state & 0x7F];
   }
 
   if(!next->p.p){
@@ -137,16 +150,10 @@ Block * MSSwitch::Next_Block(enum link_types type, int flags, int level){
     return 0;
   }
 
+  loggerf(INFO, "Next     :        \t%i:%i => %i:%i:%i\t%i", this->module, this->id, next->module, next->id, next->type, level);
+
   if(next->type == RAIL_LINK_R){
-    if(this->Detection != next->p.B){
-      level--;
-    }
-    if(level <= 0){
-      return next->p.B;
-    }
-    else{
-      return next->p.B->_Next(flags, level);
-    }
+    return next->p.B->_Next(flags, level);
   }
   else if(next->type == RAIL_LINK_S){
     return next->p.Sw->Next_Block(next->type, flags, level);
@@ -154,10 +161,20 @@ Block * MSSwitch::Next_Block(enum link_types type, int flags, int level){
   else if(next->type == RAIL_LINK_s && next->p.Sw->approachable(this, flags)){
     return next->p.Sw->Next_Block(next->type, flags, level);
   }
-  else if(next->type == RAIL_LINK_MA || next->type == RAIL_LINK_MB){
-    // if(Next_check_Switch(S, *next, flags)){
-    //   return Next_MSSwitch_Block(next->p.MSSw, next->type, flags, level);
-    // }
+  else if(next->type == RAIL_LINK_MA && next->p.MSSw->approachableA(this, flags)){
+    return next->p.MSSw->Next_Block(next->type, flags, level);
+  }
+  else if(next->type == RAIL_LINK_MB && next->p.MSSw->approachableB(this, flags)){
+    return next->p.MSSw->Next_Block(next->type, flags, level);
+  }
+  else if(next->type == RAIL_LINK_TT){
+    if(next->p.MSSw->approachableA(this, flags)){
+      next->type = RAIL_LINK_MA;
+    }
+    else if(next->p.MSSw->approachableB(this, flags)){
+      next->type = RAIL_LINK_MB;
+    }
+    return next->p.MSSw->Next_Block(next->type, flags, level);
   }
   else if(next->type == RAIL_LINK_E){
     return 0;

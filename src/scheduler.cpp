@@ -64,8 +64,6 @@ void * Scheduler::thread(void * args){
             context->scheduler_wait.tv_sec += 1;
         }
 
-        context->print_events();
-
         pthread_mutex_lock(&context->mutex);
         pthread_cond_timedwait(&context->condition, &context->mutex, &context->scheduler_wait);
         pthread_mutex_unlock(&context->mutex);

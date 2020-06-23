@@ -58,7 +58,4 @@ class Unit {
 extern int unit_len;
 extern Unit ** Units;
 
-void Create_Unit(uint16_t M, uint8_t Nodes, char points);
-Unit * Clear_Unit(Unit * U);
-
 #endif

@@ -112,15 +112,20 @@ Block * Switch::Next_Block(enum link_types type, int flags, int level){
   else if(next->type == RAIL_LINK_s && next->p.Sw->approachable(this, flags)){
     return next->p.Sw->Next_Block(next->type, flags, level);
   }
-  else if(next->type == RAIL_LINK_MA || next->type == RAIL_LINK_MB){
-    // TODO
-    // MSSwitch * N = next->p.MSSw;
-    // if(N->Detection && this->Detection != N->Detection && level == 1){
-    //   return N->Detection;
-    // }
-    // else if(Next_check_Switch(S, next, flags)){
-    //   return Next_MSSwitch_Block(N, next->type, flags, level);
-    // }
+  else if(next->type == RAIL_LINK_MA && next->p.MSSw->approachableA(this, flags)){
+    return next->p.MSSw->Next_Block(next->type, flags, level);
+  }
+  else if(next->type == RAIL_LINK_MB && next->p.MSSw->approachableB(this, flags)){
+    return next->p.MSSw->Next_Block(next->type, flags, level);
+  }
+  else if(next->type == RAIL_LINK_TT){
+    if(next->p.MSSw->approachableA(this, flags)){
+      next->type = RAIL_LINK_MA;
+    }
+    else if(next->p.MSSw->approachableB(this, flags)){
+      next->type = RAIL_LINK_MB;
+    }
+    return next->p.MSSw->Next_Block(next->type, flags, level);
   }
   else if(next->type == RAIL_LINK_E){
     return 0;
@@ -273,14 +278,14 @@ int Switch_Set_Path(void * p, struct rail_link link, int flags){
   else if(link.type == RAIL_LINK_MA){
     loggerf(ERROR, "IMPLEMENT");
     MSSwitch * N = link.p.MSSw;
-    if(N->sideB[N->state].p.p == p){
+    if(N->sideB[N->state & 0x7F].p.p == p){
       return 1;
     }
   }
   else if(link.type == RAIL_LINK_MB){
     loggerf(ERROR, "IMPLEMENT");
     MSSwitch * N = link.p.MSSw;
-    if(N->sideA.p.p == p){
+    if(N->sideA[N->state & 0x7F].p.p == p){
       return 1;
     }
   }
@@ -345,14 +350,14 @@ int Switch_Reserve_Path(void * p, struct rail_link link, int flags){
   else if(link.type == RAIL_LINK_MA){
     loggerf(ERROR, "IMPLEMENT");
     MSSwitch * N = link.p.MSSw;
-    if(N->sideB[N->state].p.p == p){
+    if(N->sideB[N->state & 0x7F].p.p == p){
       return 1;
     }
   }
   else if(link.type == RAIL_LINK_MB){
     loggerf(ERROR, "IMPLEMENT");
     MSSwitch * N = link.p.MSSw;
-    if(N->sideA.p.p == p){
+    if(N->sideA[N->state & 0x7F].p.p == p){
       return 1;
     }
   }
@@ -411,14 +416,14 @@ int Switch_Check_Path(void * p, struct rail_link link, int flags){
   else if(link.type == RAIL_LINK_MA){
     loggerf(WARNING, "IMPLEMENT");
     MSSwitch * N = link.p.MSSw;
-    if(N->sideB[N->state].p.p == p){
+    if(N->sideB[N->state & 0x7F].p.p == p){
       return 1;
     }
   }
   else if(link.type == RAIL_LINK_MB){
     loggerf(WARNING, "IMPLEMENT");
     MSSwitch * N = link.p.MSSw;
-    if(N->sideA.p.p == p){
+    if(N->sideA[N->state & 0x7F].p.p == p){
       return 1;
     }
   }

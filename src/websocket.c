@@ -10,6 +10,7 @@
 #include "websocket.h"
 #include "websocket_control.h"
 #include "algorithm.h"
+#include "submodule.h"
 
 #include "websocket_cts.h"
 #include "websocket_stc.h"
@@ -59,10 +60,15 @@ int websocket_parse(uint8_t data[1024], struct web_client_t * client){
 
     }
     else if(data[0] == WSopc_Z21_Settings){
-      Z21_info.IP[0] = data[1];
-      Z21_info.IP[1] = data[2];
-      Z21_info.IP[2] = data[3];
-      Z21_info.IP[3] = data[4];
+      memcpy(Z21_info.IP, &data[1], 4);
+
+      FILE * fp = fopen("configs/Z21.bin", "wb");
+      if (!fp){
+        loggerf(ERROR, "Failed to create new Z21 config file.");
+        return 0;
+      }
+      fwrite(Z21_info.IP, 4, 1, fp);
+      fclose(fp);
       WS_stc_Z21_IP(0);
     }
     else if(data[0] == WSopc_SubModuleState){
@@ -70,9 +76,12 @@ int websocket_parse(uint8_t data[1024], struct web_client_t * client){
     }
     else if(data[0] == WSopc_RestartApplication){
       loggerf(TRACE, "WSopc_RestartApplication");
-
+      SYS_set_state(&SYS->WebSocket.state, Module_STOP);
+      Z21_stop();
+      Algor_stop();
+      SYS_set_state(&SYS->SimA.state, Module_STOP);
+      SYS_set_state(&SYS->SimB.state, Module_STOP);
     }
-
   }else if((data[0] & 0xC0) == 0xC0){ //Admin settings
     loggerf(TRACE, "Admin Settings  %02X", data[0]);
     if((client->type & 0x10) == 0){

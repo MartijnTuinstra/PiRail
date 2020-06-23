@@ -131,7 +131,7 @@ void WS_stc_SubmoduleState(struct web_client_t * client){
   char data[5];
   data[0] = WSopc_SubModuleState;
 
-  loggerf(INFO, "WS_stc_SubmoduleState %x %x %x %x %x", SYS->WebSocket.state, SYS->Z21.state, SYS->UART.state, SYS->LC.state, SYS->TC.state);
+  // loggerf(INFO, "WS_stc_SubmoduleState %x %x %x %x %x", SYS->WebSocket.state, SYS->Z21.state, SYS->UART.state, SYS->LC.state, SYS->TC.state);
 
   data[1] = ((SYS->WebSocket.state & 0xF) << 4) | (SYS->Z21.state & 0xF);
   data[2] = ((SYS->UART.state & 0xF) << 4) | (SYS->LC.state & 0xF);
@@ -244,7 +244,6 @@ void WS_stc_EnginesLib(struct web_client_t * client){
     if(!engines[i]){
       continue;
     }
-    loggerf(WARNING, "Exporting engine %i, %s", i, engines[i]->name);
 
     data[len++] = engines[i]->DCC_ID & 0xFF;
     data[len++] = engines[i]->DCC_ID >> 8;

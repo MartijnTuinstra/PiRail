@@ -20,6 +20,8 @@
 
 #include "websocket.h"
 
+#include "scheduler.h"
+
 // #include "pathfinding.h"
 
 // #include "./../lib/pathfinding.h"
@@ -35,6 +37,8 @@ int train_P_cat_len = 0;
 struct cat_conf * train_C_cat;
 int train_C_cat_len = 0;
 
+struct SchedulerEvent * railtraincontinue_event;
+
 int load_rolling_Configs(){
   loggerf(INFO, "Initializing cars/engines/trains");
 
@@ -49,6 +53,10 @@ int load_rolling_Configs(){
   trains_comp_len = 10;
   train_link = (RailTrain **)_calloc(10,RailTrain *);
   train_link_len = 10;
+  
+  railtraincontinue_event = scheduler->addEvent("RailTrain_continue", {2, 0});
+  railtraincontinue_event->function = &RailTrain_ContinueCheck;
+  scheduler->enableEvent(railtraincontinue_event);
 
   read_rolling_Configs();
 
@@ -315,6 +323,8 @@ void write_rolling_Configs(){
 }
 
 void unload_rolling_Configs(){
+  scheduler->removeEvent(railtraincontinue_event);
+
   logger("Clearing trains memory",INFO);
 
   for(int i = 0;i<trains_len;i++){

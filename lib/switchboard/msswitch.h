@@ -24,7 +24,7 @@ struct s_msswitch_connect {
 
   uint8_t states;
 
-  struct rail_link sideA;
+  struct rail_link * sideA;
   struct rail_link * sideB;
 };
 
@@ -52,7 +52,7 @@ class MSSwitch {
     IO_Port ** IO;
     uint16_t * IO_states;
 
-    struct rail_link sideA;
+    struct rail_link * sideA;
     struct rail_link * sideB;
 
     uint8_t state_len;
@@ -71,7 +71,8 @@ class MSSwitch {
     MSSwitch(struct s_msswitch_connect connect, uint8_t block_id, uint8_t output_len, struct s_IO_port_conf * output_pins, uint16_t * output_states);
     ~MSSwitch();
 
-    bool approachable(void * p, int flags);
+    bool approachableA(void * p, int flags);
+    bool approachableB(void * p, int flags);
     Block * Next_Block(enum link_types type, int flags, int level);
 
     void setState(uint8_t state, uint8_t lock);

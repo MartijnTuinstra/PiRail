@@ -34,6 +34,7 @@ RailTrain::~RailTrain(){
 }
 
 void RailTrain::setSpeedZ21(uint16_t speed){
+  this->speed = speed;
   if(this->type == RAILTRAIN_ENGINE_TYPE){
     this->p.E->setSpeed(this->speed);
     Z21_Set_Loco_Drive_Engine(this->p.E);
@@ -134,6 +135,23 @@ void RailTrain::unlink(){
     for(int i = 0; i < T->nr_engines; i++){
       T->engines[i]->use = 0;
       T->engines[i]->RT = 0;
+    }
+  }
+}
+
+void RailTrain_ContinueCheck(void * args){
+  // Check if trains can accelerate when they are stationary.
+
+  loggerf(TRACE, "RailTrain ContinueCheck");
+  for(uint8_t i = 0; i < train_link_len; i++){
+    RailTrain * T = train_link[i];
+    if(!T)
+      continue;
+
+    if(T->p.p && T->speed == 0 && T->B->Alg.next > 0 && T->B->Alg.N[0]->state > DANGER){
+      loggerf(ERROR, "RailTrain ContinueCheck accelerating train %i", i);
+      T->setSpeedZ21(20);
+      WS_stc_UpdateTrain(T);
     }
   }
 }

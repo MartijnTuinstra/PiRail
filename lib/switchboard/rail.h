@@ -60,7 +60,8 @@ enum Rail_types {
   MAIN,
   STATION,
   NOSTOP,
-  TURNTABLE
+  TURNTABLE,
+  CROSSING
 };
 
 enum Rail_states {
@@ -128,8 +129,7 @@ class Block {
     int switch_len;
     Switch ** Sw;
 
-    int msswitch_len;
-    MSSwitch ** MSSw;
+    MSSwitch * MSSw;
 
     //Algorithm selected blocks
     Algor_Blocks Alg;
@@ -138,7 +138,6 @@ class Block {
     ~Block(); // Destructor
 
     void addSwitch(Switch * Sw);
-    void addMSSwitch(MSSwitch * MSSw);
 
     struct rail_link * NextLink(int flags);
     Block * _Next(int flags, int level);
@@ -148,6 +147,7 @@ class Block {
 
     void AlgorClear();
     void AlgorSearch(int debug);
+    void AlgorSearchMSSwitch(int debug);
 };
 
 

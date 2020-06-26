@@ -139,6 +139,18 @@ void RailTrain::unlink(){
   }
 }
 
+bool RailTrain::ContinueCheck(){
+  if(this->B->Alg.next > 0){
+    //if(this->Route && Switch_Check_Path(this->B)){
+    //  return true;
+    //}
+    if(this->B->Alg.N[0]->state > DANGER){
+      return true;
+    }
+  }
+  return false;
+}
+
 void RailTrain_ContinueCheck(void * args){
   // Check if trains can accelerate when they are stationary.
 
@@ -148,9 +160,9 @@ void RailTrain_ContinueCheck(void * args){
     if(!T)
       continue;
 
-    if(T->p.p && T->speed == 0 && T->B->Alg.next > 0 && T->B->Alg.N[0]->state > DANGER){
+    if(T->p.p && T->speed == 0 && T->ContinueCheck()){
       loggerf(ERROR, "RailTrain ContinueCheck accelerating train %i", i);
-      T->setSpeedZ21(20);
+      T->changeSpeed(20, GRADUAL_FAST_SPEED);
       WS_stc_UpdateTrain(T);
     }
   }

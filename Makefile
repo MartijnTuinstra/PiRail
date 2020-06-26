@@ -21,6 +21,7 @@ BAAN_FILES += switchboard/rail switchboard/switch switchboard/msswitch switchboa
 BAAN_FILES += websocket websocket_cts websocket_stc websocket_control scheduler
 
 COMTEST_FILES = comtest system logger mem modules config IO algorithm encryption Z21 Z21_msg train submodule com sim pathfinding websocket websocket_cts websocket_stc websocket_control scheduler
+COMTEST_FILES += rollingstock/train rollingstock/engine rollingstock/car rollingstock/railtrain
 
 COMTEST_FILES += switchboard/rail switchboard/switch switchboard/msswitch switchboard/unit switchboard/station switchboard/signals
 

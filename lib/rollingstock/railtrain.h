@@ -79,6 +79,8 @@ class RailTrain {
 
     void setRoute(Block * dest);
 
+    bool ContinueCheck();
+
 };
 
 void RailTrain_ContinueCheck(void * args);

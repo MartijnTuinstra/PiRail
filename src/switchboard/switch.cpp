@@ -101,9 +101,6 @@ Block * Switch::Next_Block(enum link_types type, int flags, int level){
   }
 
   if(next->type == RAIL_LINK_R){
-    //if(this->Detection != next->p){
-    //  level--;
-    //}
     return next->p.B->_Next(flags, level);
   }
   else if(next->type == RAIL_LINK_S){

@@ -20,6 +20,8 @@ void print_link(char ** debug, struct s_link_conf link){
     *debug += sprintf(*debug, "%2i:%2i:", link.module, link.id);
     if(link.type <= RAIL_LINK_MB_inside)
       *debug += sprintf(*debug, "%3s\t", typestring[link.type]);
+    else if(link.type == RAIL_LINK_TT)
+      *debug += sprintf(*debug, "%3s\t", "TT");
     else
       *debug += sprintf(*debug, "%2x \t", link.type);
   }
@@ -97,6 +99,8 @@ void print_MSSwitch(struct ms_switch_conf Switch){
   char debug[1000];
   char * debugptr = debug;
 
+  const char * typestring[3] = {"Crossing", "Turntable", "Traverse Table"};
+
   debugptr += sprintf(debugptr, "%i\t%i\t%i\t%2i -> [",
                 Switch.id,
                 Switch.det_block,
@@ -109,7 +113,7 @@ void print_MSSwitch(struct ms_switch_conf Switch){
   for(int i = 1; i < Switch.IO; i++){
     debugptr += sprintf(debugptr, ", %2i:%2i", Switch.IO_Ports[i].Node, Switch.IO_Ports[i].Adr);
   }
-  debugptr += sprintf(debugptr, "]\n");
+  debugptr += sprintf(debugptr, "]\t%i - %s\n", Switch.type, typestring[Switch.type]);
 
   for(int i = 0; i < Switch.nr_states; i++){
     debugptr += sprintf(debugptr, "\t\t\t%2i >\t", i);
@@ -992,6 +996,12 @@ void modify_MSSwitch(struct module_config * config, char cmd){
     if(sscanf(_cmd, "%i", &tmp) > 0)
       config->MSSwitches[id].det_block = tmp;
 
+    const char * typestring[3] = {"Crossing", "Turntable", "Traverse Table"};
+    printf("MSSwitch Type (%10s) | ", typestring[config->MSSwitches[id].type]);
+    fgets(_cmd, 20, stdin);
+    if(sscanf(_cmd, "%i", &tmp) > 0)
+      config->MSSwitches[id].type = tmp;
+
     printf("MSSwitch Nr States (%2i)      | ", config->MSSwitches[id].nr_states);
     fgets(_cmd, 20, stdin);
     if(sscanf(_cmd, "%i", &tmp) > 0){
@@ -1058,6 +1068,14 @@ void modify_MSSwitch(struct module_config * config, char cmd){
       fgets(_cmd, 20, stdin);
       if(sscanf(_cmd, "%x", &tmp) > 0){
         config->MSSwitches[id].states[i].output_sequence = tmp;
+      }
+      
+      printf(" - Direction (%c)         | ",
+                config->MSSwitches[id].states[i].dir ? 'F' : 'R');
+
+      fgets(_cmd, 20, stdin);
+      if(sscanf(_cmd, "%d", &tmp) > 0){
+        config->MSSwitches[id].states[i].dir = tmp;
       }
     }
 

@@ -213,6 +213,117 @@ Block * Block::_Next(int flags, int level){
   return 0;
 }
 
+uint8_t Block::_NextList(Block ** blocks, uint8_t block_counter, int flags, int length){
+  loggerf(TRACE, "NextList(%02i:%02i, %i, %i)", this->module, this->id, block_counter, length);
+  // Find next (detection) block in direction dir. Could be used recurse for x-levels
+  int dir = flags & 0x0F;
+  // dir: 0 next, 1 prev
+
+  struct rail_link * next;
+
+  uint8_t pdir = (dir >> 1);
+
+  if(block_counter >= 10){
+    return block_counter;
+  }
+  else if(length < 0){
+    return block_counter;
+  }
+
+  length -= this->length;
+
+  // If not Init
+  if(flags & NEXT_FIRST_TIME_SKIP){
+    // If toggle request
+    if((pdir ^ 0b100) == this->dir){
+      dir ^= 0b1;
+    }
+    // prev -> next
+    // reverse(1) -> normal(2)
+    // normal(2) -> reverse(1)
+    // reverse(1) -> normal(0)
+    // normal(0) -> reverse(1)
+    else if((pdir == 1 && this->dir == 2) || (pdir == 2 && this->dir == 1) ||
+            (pdir == 1 && this->dir == 0) || (pdir == 0 && this->dir == 1)){
+      dir ^= 0b1;
+    }
+
+    
+    blocks[block_counter++] = this;
+  }
+  else
+    flags |= NEXT_FIRST_TIME_SKIP;
+
+  loggerf(TRACE, "dir: %i:%i-%x %x\t%i", this->module, this->id, dir, this->dir, pdir);
+  //NEXT == 0
+  //PREV == 1
+  next = this->NextLink(dir & 1);
+
+  dir = (dir & 1) + (this->dir << 1);
+
+  flags = (flags & 0xF0) + (dir & 0x0F);
+
+  loggerf(TRACE, "Next     : dir:%i/%x\t%i:%i => %i:%i:%i\t%i", this->dir, dir, this->module, this->id, next->module, next->id, next->type, block_counter);
+
+  if(!next->p.p){
+    if(next->type != RAIL_LINK_E && next->type != RAIL_LINK_C)
+      loggerf(ERROR, "NO POINTERS %i:%i", this->module, this->id);
+    return block_counter;
+  }
+
+  if(next->type == RAIL_LINK_R){
+    return next->p.B->_NextList(blocks, block_counter, flags, length);
+  }
+  else if(next->type == RAIL_LINK_S){
+    return next->p.Sw->NextList_Block(blocks, block_counter, next->type, flags, length);
+  }
+  else if(next->type == RAIL_LINK_s && next->p.Sw->approachable(this, flags)){
+    return next->p.Sw->NextList_Block(blocks, block_counter, next->type, flags, length);
+  }
+  else if(next->type == RAIL_LINK_MA && next->p.MSSw->approachableA(this, flags)){
+    return next->p.MSSw->NextList_Block(blocks, block_counter, next->type, flags, length);
+  }
+  else if(next->type == RAIL_LINK_MB && next->p.MSSw->approachableB(this, flags)){
+    return next->p.MSSw->NextList_Block(blocks, block_counter, next->type, flags, length);
+  }
+  else if(next->type == RAIL_LINK_MA_inside || next->type == RAIL_LINK_MB_inside){
+    return next->p.MSSw->NextList_Block(blocks, block_counter, next->type, flags, length);
+  }
+  else if(next->type == RAIL_LINK_TT){
+    if(next->p.MSSw->approachableA(this, flags)){
+      next->type = RAIL_LINK_MA;
+
+      // If turntable is turned around
+      if(next->p.MSSw->NextLink(flags)->p.p != this){
+        flags ^= 0b1;
+      }
+    }
+    else if(next->p.MSSw->approachableB(this, flags)){
+      next->type = RAIL_LINK_MB;
+
+      // If turntable is turned around
+      if(next->p.MSSw->NextLink(flags)->p.p != this){
+        flags ^= 0b1;
+      }
+    }
+    return next->p.MSSw->NextList_Block(blocks, block_counter, next->type, flags, length);
+  }
+  //   // if(Next_check_Switch(this, *next, flags)){
+  //     // if(level <= 0 && (next->p.MSSw)->Detection != B){
+  //     //   // printf("Detection block\n");
+  //     //   return (next->p.MSSw)->Detection;
+  //     // }
+  //     // else{
+  //       // return Next_MSSwitch_Block(next->p.MSSw, next->type, flags, level);
+  //     // }
+  //   // }
+  // // }
+  // else if(next->type == RAIL_LINK_E && next->module == 0 && next->id == 0){
+  //   return 0;
+  // }
+
+  return block_counter;
+}
 
 void Block::reverse(){
   Algor_Blocks * AB = &this->Alg;
@@ -278,7 +389,7 @@ void Block::reserve(){
 
 
 void Block::AlgorClear(){
-  loggerf(INFO, "Block %02i:%02i AlgorClear", this->module, this->id);
+  loggerf(TRACE, "Block %02i:%02i AlgorClear", this->module, this->id);
   memset(this->Alg.P, 0, 10*sizeof(void *));
   memset(this->Alg.N, 0, 10*sizeof(void *));
   this->Alg.prev = 0;
@@ -299,7 +410,7 @@ void Block::AlgorSearch(int debug){
   // }
 
   Algor_Blocks * ABs = &this->Alg;
-  Block * tmpB = this;
+  // Block * tmpB = this;
 
   AlgorClear();
 
@@ -309,104 +420,110 @@ void Block::AlgorSearch(int debug){
   prev = this->_Next(1 | SWITCH_CARE,1);
 
   //Select all surrounding blocks
-  uint8_t i = 0;
-  uint8_t j = 0;
-  uint8_t level = 1;
-  uint16_t length = 0;
+  // uint8_t i = 0;
+  // uint8_t j = 0;
+  // uint8_t level = 1;
+  // uint16_t length = 0;
   if(next){
-    do{
-      if(i == 0 && ABs->next == 0){
-        tmpB = next;
-      }
-      else{
-        tmpB = this->_Next(NEXT | SWITCH_CARE, level);
-      }
-
-      if(!tmpB){
-        break;
-      }
-
-      ABs->N[i] = tmpB;
-
-      length += tmpB->length;
-
-      ABs->next += 1;
-
-      i++;
-      level++;
-
-      if(length > Block_Minimum_Size){
-        if(j == 0)
-          ABs->next1 = ABs->next;
-        else if(j == 1)
-          ABs->next2 = ABs->next;
-        else if(j == 2)
-          ABs->next3 = ABs->next;
-        length = 0;
-        j++;
-      }
-    }
-    while(j < 3 && i < 10);
-
-    // If not all blocks were available
-    // Not 3 times Minimum Size
-    if (j == 2)
-      ABs->next3 = ABs->next;
-    else if (j == 1)
-      ABs->next2 = ABs->next;
-    else if (j == 0)
-      ABs->next1 = ABs->next;
+    ABs->next = this->_NextList(ABs->N, 0, NEXT | SWITCH_CARE, 400);
   }
-
-  i = 0;
-  j = 0;
-  level = 1;
-  length = 0;
-
   if(prev){
-    do{
-      if(i == 0 && ABs->prev == 0){
-        tmpB = prev;
-      }
-      else{
-        tmpB = this->_Next(PREV | SWITCH_CARE, level);
-      }
-
-      if(!tmpB){
-        break;
-      }
-
-      ABs->P[i] = tmpB;
-
-      length += tmpB->length;
-
-      ABs->prev += 1;
-
-      i++;
-      level++;
-
-      if(length > Block_Minimum_Size){
-        if(j == 0)
-          ABs->prev1 = ABs->prev;
-        else if(j == 1)
-          ABs->prev2 = ABs->prev;
-        else if(j == 2)
-          ABs->prev3 = ABs->prev;
-        length = 0;
-        j++;
-      }
-    }
-    while(j < 3 && i < 10);
-
-    // If not all blocks were available
-    // Not 3 times Minimum Size
-    if (j == 2)
-      ABs->prev3 = ABs->prev;
-    else if (j == 1)
-      ABs->prev2 = ABs->prev;
-    else if (j == 0)
-      ABs->prev1 = ABs->prev;
+    ABs->prev = this->_NextList(ABs->P, 0, PREV | SWITCH_CARE, 400);
   }
+  /* if(next){
+      do{
+        if(i == 0 && ABs->next == 0){
+          tmpB = next;
+        }
+        else{
+          tmpB = this->_Next(NEXT | SWITCH_CARE, level);
+        }
+
+        if(!tmpB){
+          break;
+        }
+
+        ABs->N[i] = tmpB;
+
+        length += tmpB->length;
+
+        ABs->next += 1;
+
+        i++;
+        level++;
+
+        if(length > Block_Minimum_Size){
+          if(j == 0)
+            ABs->next1 = ABs->next;
+          else if(j == 1)
+            ABs->next2 = ABs->next;
+          else if(j == 2)
+            ABs->next3 = ABs->next;
+          length = 0;
+          j++;
+        }
+      }
+      while(j < 3 && i < 10);
+
+      // If not all blocks were available
+      // Not 3 times Minimum Size
+      if (j == 2)
+        ABs->next3 = ABs->next;
+      else if (j == 1)
+        ABs->next2 = ABs->next;
+      else if (j == 0)
+        ABs->next1 = ABs->next;
+    }
+
+    i = 0;
+    j = 0;
+    level = 1;
+    length = 0;
+
+    if(prev){
+      do{
+        if(i == 0 && ABs->prev == 0){
+          tmpB = prev;
+        }
+        else{
+          tmpB = this->_Next(PREV | SWITCH_CARE, level);
+        }
+
+        if(!tmpB){
+          break;
+        }
+
+        ABs->P[i] = tmpB;
+
+        length += tmpB->length;
+
+        ABs->prev += 1;
+
+        i++;
+        level++;
+
+        if(length > Block_Minimum_Size){
+          if(j == 0)
+            ABs->prev1 = ABs->prev;
+          else if(j == 1)
+            ABs->prev2 = ABs->prev;
+          else if(j == 2)
+            ABs->prev3 = ABs->prev;
+          length = 0;
+          j++;
+        }
+      }
+      while(j < 3 && i < 10);
+
+      // If not all blocks were available
+      // Not 3 times Minimum Size
+      if (j == 2)
+        ABs->prev3 = ABs->prev;
+      else if (j == 1)
+        ABs->prev2 = ABs->prev;
+      else if (j == 0)
+        ABs->prev1 = ABs->prev;
+  } */
 }
 
 

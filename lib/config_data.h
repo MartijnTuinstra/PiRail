@@ -92,13 +92,15 @@ struct switch_conf {
 struct s_ms_switch_state_conf {
   struct s_link_conf sideA;
   struct s_link_conf sideB;
-  uint8_t speed;
-  uint16_t output_sequence;
+  uint16_t speed;
+  uint8_t dir;
+  uint8_t output_sequence;
 };
 
 struct __attribute__((__packed__)) s_ms_switch_conf {
   uint8_t id;
   uint8_t det_block;
+  uint8_t type;
 
   uint8_t nr_states;
   uint8_t IO;
@@ -107,6 +109,7 @@ struct __attribute__((__packed__)) s_ms_switch_conf {
 struct ms_switch_conf {
   uint8_t id;
   uint8_t det_block;
+  uint8_t type;
 
   uint8_t nr_states;
   uint8_t IO;

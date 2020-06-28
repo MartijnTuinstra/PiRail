@@ -131,6 +131,74 @@ Block * Switch::Next_Block(enum link_types type, int flags, int level){
   return 0;
 }
 
+uint Switch::NextList_Block(Block ** blocks, uint8_t block_counter, enum link_types type, int flags, int length){
+  loggerf(TRACE, "Switch::NextList_Block(%02i:%02i, %i, %2x)", this->module, this->id, block_counter, flags);
+  struct rail_link * next;
+
+  if(type == RAIL_LINK_s){
+    next = &this->app;
+  }
+  else{
+    if((this->state & 0x7F) == 0){
+      next = &this->str;
+    }
+    else{
+      next = &this->div;
+    }
+  }
+
+  // printf("N%cL%i\t",next.type,level);
+
+  if(next->type == RAIL_LINK_E || next->type == RAIL_LINK_C){
+    return block_counter;
+  }
+
+  if(!next->p.p){
+    loggerf(ERROR, "NO POINTERS");
+    return block_counter;
+  }
+
+  if(next->type == RAIL_LINK_R){
+    return next->p.B->_NextList(blocks, block_counter, flags, length);
+  }
+  else if(next->type == RAIL_LINK_S){
+    return next->p.Sw->NextList_Block(blocks, block_counter, next->type, flags, length);
+  }
+  else if(next->type == RAIL_LINK_s && next->p.Sw->approachable(this, flags)){
+    return next->p.Sw->NextList_Block(blocks, block_counter, next->type, flags, length);
+  }
+  else if(next->type == RAIL_LINK_MA && next->p.MSSw->approachableA(this, flags)){
+    return next->p.MSSw->NextList_Block(blocks, block_counter, next->type, flags, length);
+  }
+  else if(next->type == RAIL_LINK_MB && next->p.MSSw->approachableB(this, flags)){
+    return next->p.MSSw->NextList_Block(blocks, block_counter, next->type, flags, length);
+  }
+  else if(next->type == RAIL_LINK_TT){
+    if(next->p.MSSw->approachableA(this, flags)){
+      next->type = RAIL_LINK_MA;
+
+      // If turntable is turned around
+      if(next->p.MSSw->NextLink(flags)->p.p != this){
+        flags ^= 0b10;
+      }
+    }
+    else if(next->p.MSSw->approachableB(this, flags)){
+      next->type = RAIL_LINK_MB;
+
+      // If turntable is turned around
+      if(next->p.MSSw->NextLink(flags)->p.p != this){
+        flags ^= 0b10;
+      }
+    }
+    return next->p.MSSw->NextList_Block(blocks, block_counter, next->type, flags, length);
+  }
+  // else if(next->type == RAIL_LINK_E){
+  //   return 0;
+  // }
+  // printf("RET END\n");
+  return block_counter;
+}
+
 void Switch::setState(uint8_t state, uint8_t lock){
   loggerf(TRACE, "Switch::setState (%x, %i, %i)", (unsigned int)this, state, lock);
 

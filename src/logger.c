@@ -3,6 +3,7 @@
 #include <string.h>
 #include <time.h>
 #include <pthread.h>
+#include <stdint.h>
 
 #include "logger.h"
 #include "mem.h"
@@ -97,7 +98,7 @@ void floggerf(enum logging_levels level, const char * file, int line, const char
 
   vsprintf(arg, text, arglist);
 
-  sprintf(msg, "%s.%ld - %s%s - %20s:%4i - %s%s\n",c_time,clock.tv_nsec,logging_levels_colour[level], logging_levels_str[level],file,line, arg, logging_levels_colour[7]);
+  sprintf(msg, "%s.%03d %s%s -%20s:%4i- %s%s\n",c_time,(uint16_t)(clock.tv_nsec / 1e6),logging_levels_colour[level], logging_levels_str[level],file,line, arg, logging_levels_colour[7]);
 
 
   if(stdoutPrint && level <= logger_set_print_lvl)

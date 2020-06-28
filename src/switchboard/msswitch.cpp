@@ -27,6 +27,7 @@ void create_msswitch_from_conf(uint8_t module, struct ms_switch_conf conf){
 
   connect.sideA = (struct rail_link *)_calloc(conf.nr_states, struct rail_link);
   connect.sideB = (struct rail_link *)_calloc(conf.nr_states, struct rail_link);
+  connect.dir = (uint8_t *)_calloc(conf.nr_states, uint8_t);
 
   for(uint8_t i = 0; i < conf.nr_states; i++){
     connect.sideA[i].module = conf.states[i].sideA.module;
@@ -36,14 +37,16 @@ void create_msswitch_from_conf(uint8_t module, struct ms_switch_conf conf){
     connect.sideB[i].module = conf.states[i].sideB.module;
     connect.sideB[i].id = conf.states[i].sideB.id;
     connect.sideB[i].type = (enum link_types)conf.states[i].sideB.type;
+
+    connect.dir[i] = conf.states[i].dir;
   }
 
   _free(conf.states);
 
-  new MSSwitch(connect, conf.det_block, conf.IO, conf.IO_Ports, 0);
+  new MSSwitch(connect, conf.type, conf.det_block, conf.IO, conf.IO_Ports, 0);
 }
 
-MSSwitch::MSSwitch(struct s_msswitch_connect connect, uint8_t block_id, uint8_t output_len, struct s_IO_port_conf * output_pins, uint16_t * output_states){
+MSSwitch::MSSwitch(struct s_msswitch_connect connect, uint8_t type, uint8_t block_id, uint8_t output_len, struct s_IO_port_conf * output_pins, uint16_t * output_states){
   loggerf(INFO, "Create MSSw %i:%i", connect.module, connect.id);
   memset(this, 0, sizeof(MSSwitch));
 
@@ -52,6 +55,7 @@ MSSwitch::MSSwitch(struct s_msswitch_connect connect, uint8_t block_id, uint8_t 
 
   this->sideA = connect.sideA;
   this->sideB = connect.sideB;
+  this->state_direction = connect.dir;
 
   this->state_len = connect.states;
 
@@ -85,7 +89,9 @@ MSSwitch::MSSwitch(struct s_msswitch_connect connect, uint8_t block_id, uint8_t 
 }
 
 MSSwitch::~MSSwitch(){
+  _free(this->sideA);
   _free(this->sideB);
+  _free(this->state_direction);
   _free(this->IO);
   _free(this->IO_states);
   // _free(this->links);
@@ -116,6 +122,21 @@ bool MSSwitch::approachableB(void * p, int flags){
     return 1;
   }
   return 0;
+}
+
+struct rail_link * MSSwitch::NextLink(int flags){
+  struct rail_link * next = 0;
+
+  Block * B = this->Detection;
+
+  next = B->NextLink(flags);
+
+  if(next->type == RAIL_LINK_MA)
+    next = &this->sideA[this->state & 0x7F];
+  else
+    next = &this->sideB[this->state & 0x7F];
+
+  return next;
 }
 
 Block * MSSwitch::Next_Block(enum link_types type, int flags, int level){
@@ -150,7 +171,7 @@ Block * MSSwitch::Next_Block(enum link_types type, int flags, int level){
     return 0;
   }
 
-  loggerf(INFO, "Next     :        \t%i:%i => %i:%i:%i\t%i", this->module, this->id, next->module, next->id, next->type, level);
+  loggerf(TRACE, "Next     :        \t%i:%i => %i:%i:%i\t%i", this->module, this->id, next->module, next->id, next->type, level);
 
   if(next->type == RAIL_LINK_R){
     return next->p.B->_Next(flags, level);
@@ -183,6 +204,90 @@ Block * MSSwitch::Next_Block(enum link_types type, int flags, int level){
   return 0;
 }
 
+uint MSSwitch::NextList_Block(Block ** blocks, uint8_t block_counter, enum link_types type, int flags, int length){
+  loggerf(TRACE, "MSSwitch::NextList_Block(%02i:%02i, %i, %2x)", this->module, this->id, block_counter, flags);
+  struct rail_link * next;
+
+  if(type == RAIL_LINK_TT){
+    return block_counter;
+  }
+  
+  
+  if(type == RAIL_LINK_MA){
+    blocks[block_counter++] = this->Detection;
+    next = &this->sideB[this->state & 0x7F];
+    // return this->Detection->_NextList(blocks, block_counter, flags, length);
+  }else if(type == RAIL_LINK_MB_inside){
+    next = &this->sideB[this->state & 0x7F];
+    flags |= NEXT_FIRST_TIME_SKIP;
+
+    uint8_t dir = (flags & 1) + (this->Detection->dir << 1);
+    flags = (flags & 0xF0) + (dir & 0x0F);
+  }
+  else if(type == RAIL_LINK_MB){
+    blocks[block_counter++] = this->Detection;
+    next = &this->sideA[this->state & 0x7F];
+    // return this->Detection->_NextList(blocks, block_counter, flags, length);
+  }else if(type == RAIL_LINK_MA_inside){
+    next = &this->sideA[this->state & 0x7F];
+    flags |= NEXT_FIRST_TIME_SKIP;
+
+    uint8_t dir = (flags & 1) + (this->Detection->dir << 1);
+    flags = (flags & 0xF0) + (dir & 0x0F);
+  }
+
+  if(!next->p.p){
+    if(next->type != RAIL_LINK_E)
+      loggerf(ERROR, "NO POINTERS");
+    return block_counter;
+  }
+
+  loggerf(TRACE, "Next     :        \t%i:%i => %i:%i:%i\t%i", this->module, this->id, next->module, next->id, next->type, block_counter);
+
+  if(next->type == RAIL_LINK_R){
+    return next->p.B->_NextList(blocks, block_counter, flags, length);
+  }
+  else if(next->type == RAIL_LINK_S){
+    return next->p.Sw->NextList_Block(blocks, block_counter, next->type, flags, length);
+  }
+  else if(next->type == RAIL_LINK_s && next->p.Sw->approachable(this, flags)){
+    return next->p.Sw->NextList_Block(blocks, block_counter, next->type, flags, length);
+  }
+  else if(next->type == RAIL_LINK_MA && next->p.MSSw->approachableA(this, flags)){
+    return next->p.MSSw->NextList_Block(blocks, block_counter, next->type, flags, length);
+  }
+  else if(next->type == RAIL_LINK_MB && next->p.MSSw->approachableB(this, flags)){
+    return next->p.MSSw->NextList_Block(blocks, block_counter, next->type, flags, length);
+  }
+  else if(next->type == RAIL_LINK_MA_inside || next->type == RAIL_LINK_MB_inside){
+    return next->p.MSSw->NextList_Block(blocks, block_counter, next->type, flags, length);
+  }
+  else if(next->type == RAIL_LINK_TT){
+    if(next->p.MSSw->approachableA(this, flags)){
+      next->type = RAIL_LINK_MA;
+
+      // If turntable is turned around
+      if(next->p.MSSw->NextLink(flags)->p.p != this){
+        flags ^= 0b10;
+      }
+    }
+    else if(next->p.MSSw->approachableB(this, flags)){
+      next->type = RAIL_LINK_MB;
+
+      // If turntable is turned around
+      if(next->p.MSSw->NextLink(flags)->p.p != this){
+        flags ^= 0b10;
+      }
+    }
+    return next->p.MSSw->NextList_Block(blocks, block_counter, next->type, flags, length);
+  }
+  // else if(next->type == RAIL_LINK_E){
+  //   return 0;
+  // }
+
+  return block_counter;
+}
+
 void MSSwitch::setState(uint8_t state, uint8_t lock){
   loggerf(TRACE, "throw_msswitch");
 
@@ -191,6 +296,9 @@ void MSSwitch::setState(uint8_t state, uint8_t lock){
 
   Algor_Set_Changed(&this->Detection->Alg);
   putList_AlgorQueue(this->Detection->Alg, 0);
+
+  if (this->state_direction[this->state] != this->state_direction[state])
+    this->Detection->dir ^= 0b100;
 
   this->state = (state & 0x0f) | 0x80;
 

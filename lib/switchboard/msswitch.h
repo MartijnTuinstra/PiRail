@@ -26,8 +26,12 @@ struct s_msswitch_connect {
 
   struct rail_link * sideA;
   struct rail_link * sideB;
+  uint8_t * dir;
 };
 
+#define MSSW_TYPE_CROSSING 0
+#define MSSW_TYPE_TURNTABLE 1
+#define MSSW_TYPE_TRAVERSETABLE 2
 
 class MSSwitch {
   public:
@@ -40,6 +44,8 @@ class MSSwitch {
 
     uint8_t  module;
     uint16_t id;
+
+    uint8_t type;
 
     bool hold;
 
@@ -54,6 +60,7 @@ class MSSwitch {
 
     struct rail_link * sideA;
     struct rail_link * sideB;
+    uint8_t * state_direction;
 
     uint8_t state_len;
     uint8_t default_state;
@@ -68,12 +75,15 @@ class MSSwitch {
     struct switch_preference * preferences;
 
     // Switch(uint8_t module, struct s_switch_conf config);
-    MSSwitch(struct s_msswitch_connect connect, uint8_t block_id, uint8_t output_len, struct s_IO_port_conf * output_pins, uint16_t * output_states);
+    MSSwitch(struct s_msswitch_connect connect, uint8_t type, uint8_t block_id, uint8_t output_len, struct s_IO_port_conf * output_pins, uint16_t * output_states);
     ~MSSwitch();
+
+    struct rail_link * NextLink(int flags);
 
     bool approachableA(void * p, int flags);
     bool approachableB(void * p, int flags);
     Block * Next_Block(enum link_types type, int flags, int level);
+    uint NextList_Block(Block ** blocks, uint8_t block_counter, enum link_types type, int flags, int length);
 
     void setState(uint8_t state, uint8_t lock);
 };

@@ -142,6 +142,8 @@ class Block {
     struct rail_link * NextLink(int flags);
     Block * _Next(int flags, int level);
 
+    uint8_t _NextList(Block ** blocks, uint8_t block_counter, int flags, int length);
+
     void reverse();
     void reserve();
 

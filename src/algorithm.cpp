@@ -324,6 +324,9 @@ void Algor_Set_Changed(Algor_Blocks * ABs){
     if(!ABs->P[i])
       continue;
 
+    if(ABs->P[i] == ABs->B)
+      continue;
+
     ABs->P[i]->algorchanged = 1;
     ABs->P[i]->IOchanged = 1;
     ABs->P[i]->AlgorClear();
@@ -331,7 +334,10 @@ void Algor_Set_Changed(Algor_Blocks * ABs){
   for(int i = 0; i < ABs->next; i++){
     if(!ABs->N[i])
       continue;
-    
+
+    if(ABs->N[i] == ABs->B)
+      continue;
+
     ABs->N[i]->algorchanged = 1;
     ABs->N[i]->IOchanged = 1;
     ABs->N[i]->AlgorClear();
@@ -696,28 +702,33 @@ void Algor_print_block_debug(Block * B){
 
   Algor_Blocks * ABs = &B->Alg;
 
-  for(int i = 9; i >= 0; i--){
-    if(ABs->prev > i){
-      if(ABs->P[i]){
-        ptr += sprintf(ptr, "%02i:%02i", ABs->P[i]->module, ABs->P[i]->id);
-        if(ABs->P[i]->blocked)
-          ptr += sprintf(ptr, "B ");
-        else if(ABs->P[i]->state == RESERVED_SWITCH)
-          ptr += sprintf(ptr, "S ");
-        else if(ABs->P[i]->state == RESERVED)
-          ptr += sprintf(ptr, "R ");
-        else
-          ptr += sprintf(ptr, "  ");
-      }
-      else
-        ptr += sprintf(ptr, "------ ");
-    }
-    else{
+  for(int i = 7; i >= 0; i--){
+    if(ABs->prev <= i){
       ptr += sprintf(ptr, "       ");
+      continue;
     }
+
+    if(ABs->prev > 8 && i == 7){
+      ptr += sprintf(ptr, "<<<-%2d ", ABs->prev);
+      continue;
+    }
+
+    if(ABs->P[i]){
+      ptr += sprintf(ptr, "%02i:%02i", ABs->P[i]->module, ABs->P[i]->id);
+      if(ABs->P[i]->blocked)
+        ptr += sprintf(ptr, "B ");
+      else if(ABs->P[i]->state == RESERVED_SWITCH)
+        ptr += sprintf(ptr, "S ");
+      else if(ABs->P[i]->state == RESERVED)
+        ptr += sprintf(ptr, "R ");
+      else
+        ptr += sprintf(ptr, "  ");
+    }
+    else
+      ptr += sprintf(ptr, "------ ");
   }
 
-  ptr += sprintf(ptr, " A%3i %2x%02i:%02i;",B->length,B->type,B->module,B->id);
+  ptr += sprintf(ptr, " A%3i %2x%02i:%02i;", B->length, B->type, B->module, B->id);
   if(B->train){
     ptr += sprintf(ptr, "T");
   }
@@ -729,15 +740,20 @@ void Algor_print_block_debug(Block * B){
     ptr += sprintf(ptr, "b");
   else
     ptr += sprintf(ptr, " ");
-  if(ABs->B->blocked)
-    ptr += sprintf(ptr, "B");
-  else
-    ptr += sprintf(ptr, " ");
 
   ptr += sprintf(ptr, "  ");
 
 
-  for(uint8_t i = 0; i < ABs->next; i++){
+  for(uint8_t i = 0; i < 8; i++){
+    if(ABs->next <= i){
+      break;
+    }
+
+    if(ABs->next > 8 && i == 7){
+      ptr += sprintf(ptr, "%-2d->>>", ABs->next);
+      break;
+    }
+
     if(ABs->N[i]){
       ptr += sprintf(ptr, "%02i:%02i", ABs->N[i]->module, ABs->N[i]->id);
       if(ABs->N[i]->blocked)
@@ -858,6 +874,7 @@ void Algor_Switch_Checker(Algor_Blocks * ABs, int debug){
 }
 
 void Algor_set_block_state(Block * B, enum Rail_states state){
+  loggerf(INFO, "Algor_set_block_state %02d:%02d, %d", B->module, B->id, state);
   B->state = state;
   B->statechanged = 1;
   Units[B->module]->block_state_changed |= 1;
@@ -870,6 +887,7 @@ void Algor_set_blocks_state(Block ** B, uint8_t length, enum Rail_states state){
 }
 
 void Algor_set_block_reversed_state(Block * B, enum Rail_states state){
+  loggerf(INFO, "Algor_set_block_reversed_state %02d:%02d, %d", B->module, B->id, state);
   B->reverse_state = state;
   B->statechanged = 1;
   Units[B->module]->block_state_changed |= 1;
@@ -882,7 +900,7 @@ void Algor_set_blocks_reversed_state(Block ** B, uint8_t length, enum Rail_state
 }
 
 void Algor_rail_state(Algor_Blocks AllBlocks, int debug){
-  loggerf(TRACE, "Algor_rail_state");
+  loggerf(INFO, "Algor_rail_state %02d:%02d", AllBlocks.B->module, AllBlocks.B->id);
   //Unpack AllBlocks
   uint8_t prev  = AllBlocks.prev;
   Block ** BP   = AllBlocks.P;

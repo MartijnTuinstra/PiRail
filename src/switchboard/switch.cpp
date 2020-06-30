@@ -8,11 +8,27 @@
 #include "system.h"
 #include "algorithm.h"
 
-// Switch::Switch(uint8_t module, struct s_switch_conf config){
+Switch::Switch(uint8_t Module, struct switch_conf s){
+  // struct switch_conf s = read_s_switch_conf(buf_ptr);
+  struct s_switch_connect connect;
 
-// }
+  connect.module = Module;
+  connect.id = s.id;
+  connect.app.module = s.App.module; connect.app.id = s.App.id; connect.app.type = (enum link_types)s.App.type;
+  connect.str.module = s.Str.module; connect.str.id = s.Str.id; connect.str.type = (enum link_types)s.Str.type;
+  connect.div.module = s.Div.module; connect.div.id = s.Div.id; connect.div.type = (enum link_types)s.Div.type;
 
-Switch::Switch(struct s_switch_connect connect, uint8_t block_id, uint8_t output_len, Node_adr * output_pins, uint8_t * output_states){
+  Node_adr * Adrs = (Node_adr *)_calloc(s.IO & 0x0f, Node_adr);
+
+  for(int i = 0; i < (s.IO & 0x0f); i++){
+    Adrs[i].Node = s.IO_Ports[i].Node;
+    Adrs[i].io = s.IO_Ports[i].Adr;
+  }
+  uint8_t * States = (uint8_t *)_calloc(2, uint8_t);
+  States[0] = 1 + (0 << 1); //State 0 - Address 0 hight, address 1 low
+  States[1] = 0 + (1 << 1); //State 1 - Address 1 hight, address 0 low
+
+  // new Switch(connect, s.det_block, s.IO & 0x0f, Adrs, States);
   loggerf(MEMORY, "Create Sw %i:%i", connect.module, connect.id);
   // Switch * Z = (Switch *)_calloc(1, Switch);
   memset(this, 0, sizeof(Switch));
@@ -24,27 +40,65 @@ Switch::Switch(struct s_switch_connect connect, uint8_t block_id, uint8_t output
   this->str = connect.str;
   this->app = connect.app;
 
-  this->IO = (IO_Port **)_calloc(output_len, IO_Port *);
+  this->IO_len = s.IO & 0x0F;
+  this->IO = (IO_Port **)_calloc(this->IO_len, IO_Port *);
 
-  for(int i = 0; i < output_len; i++){
-    Init_IO(Units[connect.module], output_pins[i], this);
+  for(int i = 0; i < this->IO_len; i++){
+    Init_IO(Units[connect.module], Adrs[i], this);
 
-    this->IO[i] = Units[connect.module]->Node[output_pins[i].Node].io[output_pins[i].io];
+    this->IO[i] = Units[connect.module]->Node[Adrs[i].Node].io[Adrs[i].io];
   }
 
-  this->IO_len = output_len;
-  this->IO_states = output_states;
+  this->IO_states = (uint8_t *)_calloc(this->IO_len, uint8_t);
+  memcpy(this->IO_states, States, this->IO_len * sizeof(uint8_t));
+  _free(States);
 
   Units[this->module]->insertSwitch(this);
 
-  if(Units[this->module]->block_len > block_id && U_B(this->module, block_id)){
-    this->Detection = U_B(this->module, block_id);
+  if(Units[this->module]->block_len > s.det_block && U_B(this->module, s.det_block)){
+    this->Detection = U_B(this->module, s.det_block);
     this->Detection->addSwitch(this);
   }
   else{
-    loggerf(WARNING, "SWITCH %i:%i has no detection block %i", connect.module, connect.id, block_id);
+    loggerf(WARNING, "SWITCH %i:%i has no detection block %i", connect.module, connect.id, s.det_block);
   }
+
+  _free(Adrs);
 }
+
+// Switch::Switch(struct s_switch_connect connect, uint8_t block_id, uint8_t output_len, Node_adr * output_pins, uint8_t * output_states){
+//   loggerf(MEMORY, "Create Sw %i:%i", connect.module, connect.id);
+//   // Switch * Z = (Switch *)_calloc(1, Switch);
+//   memset(this, 0, sizeof(Switch));
+
+//   this->module = connect.module;
+//   this->id = connect.id;
+
+//   this->div = connect.div;
+//   this->str = connect.str;
+//   this->app = connect.app;
+
+//   this->IO = (IO_Port **)_calloc(output_len, IO_Port *);
+
+//   for(int i = 0; i < output_len; i++){
+//     Init_IO(Units[connect.module], output_pins[i], this);
+
+//     this->IO[i] = Units[connect.module]->Node[output_pins[i].Node].io[output_pins[i].io];
+//   }
+
+//   this->IO_len = output_len;
+//   this->IO_states = output_states;
+
+//   Units[this->module]->insertSwitch(this);
+
+//   if(Units[this->module]->block_len > block_id && U_B(this->module, block_id)){
+//     this->Detection = U_B(this->module, block_id);
+//     this->Detection->addSwitch(this);
+//   }
+//   else{
+//     loggerf(WARNING, "SWITCH %i:%i has no detection block %i", connect.module, connect.id, block_id);
+//   }
+// }
 
 Switch::~Switch(){
   loggerf(MEMORY, "Switch %i:%i Destructor", module, id);

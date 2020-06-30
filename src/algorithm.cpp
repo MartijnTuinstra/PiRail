@@ -125,12 +125,12 @@ void * Algor_Run(void * args){
           Algor_process(Units[i]->B[j], _FORCE);
         }
       }
-      for(int j = 0; j <= Units[i]->switch_len; j++){
+      for(int j = 0; j < Units[i]->switch_len; j++){
         if(U_Sw(i, j)){
           U_Sw(i, j)->state |= 0x80;
         }
       }
-      for(int j = 0; j <= Units[i]->msswitch_len; j++){
+      for(int j = 0; j < Units[i]->msswitch_len; j++){
         if(U_MSSw(i, j)){
           U_MSSw(i, j)->state |= 0x80;
         }

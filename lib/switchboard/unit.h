@@ -2,6 +2,7 @@
 #define _INCLUDE_SWITCHBOARD_UNIT_H
 
 #include "switchboard/declares.h"
+#include "config/ModuleConfig.h"
 
 typedef struct s_IO_Node IO_Node;
 
@@ -48,6 +49,7 @@ class Unit {
     char * raw;
 
     Unit(uint16_t M, uint8_t Nodes, char points);
+    Unit(ModuleConfig * Config);
     ~Unit();
 
     void insertBlock(Block * B);

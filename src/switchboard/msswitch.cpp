@@ -9,7 +9,7 @@
 #include "algorithm.h"
 
 
-void create_msswitch_from_conf(uint8_t module, struct ms_switch_conf conf){
+MSSwitch::MSSwitch(uint8_t module, struct ms_switch_conf conf){
 
   // uint8_t id;
   // uint8_t det_block;
@@ -41,12 +41,10 @@ void create_msswitch_from_conf(uint8_t module, struct ms_switch_conf conf){
     connect.dir[i] = conf.states[i].dir;
   }
 
-  _free(conf.states);
+  // new MSSwitch(connect, conf.type, conf.det_block, conf.IO, conf.IO_Ports, 0);
+// }
 
-  new MSSwitch(connect, conf.type, conf.det_block, conf.IO, conf.IO_Ports, 0);
-}
-
-MSSwitch::MSSwitch(struct s_msswitch_connect connect, uint8_t type, uint8_t block_id, uint8_t output_len, struct s_IO_port_conf * output_pins, uint16_t * output_states){
+// MSSwitch::MSSwitch(struct s_msswitch_connect connect, uint8_t type, uint8_t block_id, uint8_t output_len, struct s_IO_port_conf * output_pins, uint16_t * output_states){
   loggerf(INFO, "Create MSSw %i:%i", connect.module, connect.id);
   memset(this, 0, sizeof(MSSwitch));
 
@@ -58,25 +56,26 @@ MSSwitch::MSSwitch(struct s_msswitch_connect connect, uint8_t type, uint8_t bloc
   this->state_direction = connect.dir;
 
   this->state_len = connect.states;
+  this->type = type;
 
-  this->IO = (IO_Port **)_calloc(output_len, IO_Port *);
+  this->IO_len = conf.IO;
+  this->IO = (IO_Port **)_calloc(this->IO_len, IO_Port *);
 
-  for(int i = 0; i < output_len; i++){
-    Init_IO_from_conf(Units[connect.module], output_pins[i], this);
+  for(int i = 0; i < this->IO_len; i++){
+    Init_IO_from_conf(Units[connect.module], conf.IO_Ports[i], this);
 
-    this->IO[i] = Units[connect.module]->Node[output_pins[i].Node].io[output_pins[i].Adr];
+    this->IO[i] = Units[connect.module]->Node[conf.IO_Ports[i].Node].io[conf.IO_Ports[i].Adr];
   }
-  if(output_pins)
-    _free(output_pins);
 
-  this->IO_len = output_len;
-  this->IO_states = output_states;
+  loggerf(ERROR, "TODO: implement outputstates");
+  // this->IO_states = (uint16_t *)_calloc(this->IO_len, uint16_t);
+  // memcpy(this->IO_states, conf.IO_Ports, this->IO_len * sizeof(uint16_t));
 
   Units[this->module]->insertMSSwitch(this);
 
   // Add msswitch to detection block 
-  if(Units[this->module]->block_len > block_id && U_B(this->module, block_id)){
-    this->Detection = U_B(this->module, block_id);
+  if(Units[this->module]->block_len > conf.det_block && U_B(this->module, conf.det_block)){
+    this->Detection = U_B(this->module, conf.det_block);
 
     if(this->Detection->MSSw)
       loggerf(WARNING, "Block %02i:%02i has duplicate msswitch, overwritting ...", this->Detection->module, this->Detection->id);
@@ -84,8 +83,12 @@ MSSwitch::MSSwitch(struct s_msswitch_connect connect, uint8_t type, uint8_t bloc
     this->Detection->MSSw = this;
   }
   else{
-    loggerf(WARNING, "MSSWITCH %i:%i has no detection block %i", connect.module, connect.id, block_id);
+    loggerf(WARNING, "MSSWITCH %i:%i has no detection block %i", connect.module, connect.id, conf.det_block);
   }
+
+
+
+  _free(conf.states);
 }
 
 MSSwitch::~MSSwitch(){

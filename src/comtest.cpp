@@ -111,7 +111,14 @@ int main(int argc, char *argv[]){
       int M = atoi(cmds[1]);
 
       if(!Units[M]){
-        read_module_Config(M);
+        char filename[30];
+        sprintf(filename, "configs/units/%d.bin", M);
+        auto configfile = new ModuleConfig(filename);
+        configfile->read();
+
+        new Unit(configfile);
+
+        delete configfile;
       }
 
       update_IO_Module(M);

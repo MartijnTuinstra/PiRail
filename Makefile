@@ -17,6 +17,7 @@ BAAN_FILES = baan system logger mem modules config IO algorithm encryption \
 
 BAAN_FILES += rollingstock/train rollingstock/engine rollingstock/car rollingstock/railtrain
 BAAN_FILES += switchboard/rail switchboard/switch switchboard/msswitch switchboard/unit switchboard/station switchboard/signals
+BAAN_FILES += config/ModuleConfig config/RollingConfig
 
 BAAN_FILES += websocket websocket_cts websocket_stc websocket_control scheduler
 
@@ -24,8 +25,10 @@ COMTEST_FILES = comtest system logger mem modules config IO algorithm encryption
 COMTEST_FILES += rollingstock/train rollingstock/engine rollingstock/car rollingstock/railtrain
 
 COMTEST_FILES += switchboard/rail switchboard/switch switchboard/msswitch switchboard/unit switchboard/station switchboard/signals
+COMTEST_FILES += config/ModuleConfig config/RollingConfig
 
 CONFIG_READER_FILES = config_reader config logger mem
+CONFIG_READER_FILES += config/ModuleConfig config/RollingConfig
 
 .DEFAULT_GOAL := all
 

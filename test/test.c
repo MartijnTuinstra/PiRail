@@ -7,13 +7,24 @@
 #include "logger.h"
 #include "mem.h"
 #include "modules.h"
-#include "rail.h"
-#include "signals.h"
+
+#include "switchboard/rail.h"
+#include "switchboard/switch.h"
+#include "switchboard/msswitch.h"
+#include "switchboard/station.h"
+#include "switchboard/signals.h"
+#include "switchboard/unit.h"
+
 #include "sim.h"
 #include "submodule.h"
-#include "switch.h"
 #include "system.h"
-#include "train.h"
+
+#include "rollingstock/train.h"
+#include "rollingstock/car.h"
+#include "rollingstock/engine.h"
+#include "rollingstock/functions.h"
+#include "rollingstock/railtrain.h"
+
 #include "websocket.h"
 #include "websocket_control.h"
 #include "websocket_cts.h"
@@ -66,13 +77,14 @@ START_TEST (loadTest)
 	fail_unless(U_B(0,0)->next.type == 254);
 
 	// Check Station
+	#define U_St(U, S) Units[U]->St[S]
 	fail_unless(U_St(0,0)->blocks_len == 5);
 	fail_unless(U_B(0,3)->station == U_St(0,0));
 	fail_unless(U_B(0,4)->station == U_St(0,0));
 	fail_unless(U_B(0,5)->station == U_St(0,0));
 	fail_unless(U_B(0,6)->station == U_St(0,0));
 	fail_unless(U_B(0,7)->station == U_St(0,0));
-	fail_unless(strcmp(U_St(0,0)->name, "Spoor_1") == 0);
+	fail_unless(strcmp(Units[0]->St[0]->name, "Spoor_1") == 0);
 
 	unload_module_Configs();
 
@@ -123,10 +135,13 @@ START_TEST (BlockAlgorithmTest)
 	init_main();
 	init_logger("testresults/BlockAlgorithmTest.txt");
 	set_level(INFO);
+  	set_logger_print_level(INFO);
 
 	Units = (Unit **)_calloc(30, Unit *);
 	unit_len = 30;
 
+	Block ** pblocks = (Block **)_calloc(10, Block *);
+	Block ** nblocks = (Block **)_calloc(10, Block *);
 	read_module_Config(0);
 	SIM_Connect_Rail_links();
 
@@ -135,6 +150,27 @@ START_TEST (BlockAlgorithmTest)
 			continue;
 		Algor_process(U_B(0,i), _FORCE);
 	}
+
+	mark_point();
+
+	loggerf(INFO, "Test");
+	U_B(0,5)->_NextList(nblocks, 0, 0, 1000);
+	U_B(0,5)->_NextList(pblocks, 0, PREV, 1000);
+
+	printf("Found PREV-Block:");
+	for(uint8_t i = 0; i < 10; i++){
+		if(pblocks[i])
+			printf(" %02i:%02i", pblocks[i]->module, pblocks[i]->id);
+	}
+	printf("\n");
+	printf("Found NEXT-Block:");
+	for(uint8_t i = 0; i < 10; i++){
+		if(nblocks[i])
+			printf(" %02i:%02i", nblocks[i]->module, nblocks[i]->id);
+	}
+	printf("\n");
+	mark_point();
+
 
 	// Check Algor Blocks
 	fail_unless(U_B(0,5)->Alg.next == 5);
@@ -182,10 +218,10 @@ START_TEST (BlockAlgorithmTest)
 	mark_point();
 
 	loggerf(WARNING, "Throw switch");
-	throw_switch(U_Sw(0,0), 1, 0);
-	throw_switch(U_Sw(0,1), 1, 0);
-	throw_switch(U_Sw(0,2), 1, 0);
-	throw_switch(U_Sw(0,3), 1, 0);
+	U_Sw(0,0)->setState(1, 0);
+	U_Sw(0,1)->setState(1, 0);
+	U_Sw(0,2)->setState(1, 0);
+	U_Sw(0,3)->setState(1, 0);
 
 	processAlgorQueue();
 

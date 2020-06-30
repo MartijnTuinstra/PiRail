@@ -6,514 +6,10 @@
 #include "mem.h"
 #include "switchboard/rail.h"
 
-void print_link(char ** debug, struct s_link_conf link){
-  const char * typestring[7] = {
-    "R", "S", "s", "MA", "MB", "MAi", "MBi"
-  };
-  if(link.type == RAIL_LINK_C){
-    *debug += sprintf(*debug, "C %2i:%2i  \t", link.module, link.id);
-  }
-  else if(link.type == RAIL_LINK_E){
-    *debug += sprintf(*debug, "E        \t");
-  }
-  else{
-    *debug += sprintf(*debug, "%2i:%2i:", link.module, link.id);
-    if(link.type <= RAIL_LINK_MB_inside)
-      *debug += sprintf(*debug, "%3s\t", typestring[link.type]);
-    else if(link.type == RAIL_LINK_TT)
-      *debug += sprintf(*debug, "%3s\t", "TT");
-    else
-      *debug += sprintf(*debug, "%2x \t", link.type);
-  }
-}
+#include "config/ModuleConfig.h"
+#include "config/RollingConfig.h"
 
-void print_Node(struct node_conf node){
-  char debug[300];
-  char * debugptr = debug;
-  const char hexset[17] = "0123456789ABCDEF";
-
-  debugptr += sprintf(debugptr, "%i\t%i\t", node.Node, node.size);
-
-  for(int j = 0; j < node.size; j++){
-    debugptr[0] = hexset[(node.data[j/2] >> (4 * (j%2))) & 0xF];
-    debugptr++;
-  }
-
-  debugptr[0] = '\n';
-  debugptr[1] = 0;
-
-  printf("%s", debug);
-}
-
-void print_Block(struct s_block_conf block){
-  const char * rail_types_string[5] = {
-    "MAIN",
-    "STATION",
-    "NOSTOP",
-    "TURNTABLE",
-    "CROSSOVER"
-  };
-
-  char debug[300];
-  char * debugptr = debug;
-
-  debugptr += sprintf(debugptr, "%i\t%11s\t",
-                block.id,
-                rail_types_string[block.type]);
-  print_link(&debugptr, block.next);
-  print_link(&debugptr, block.prev);
-  debugptr += sprintf(debugptr, "%i\t%i\t%i\t%i\t%i\t%i:%i\t%i:%i",
-                block.speed,
-                (block.fl & 0x6) >> 1,
-                block.length,
-                block.fl & 0x1,
-                (block.fl & 0x8) >> 3,
-                block.IO_In.Node, block.IO_In.Adr,
-                block.IO_Out.Node, block.IO_Out.Adr);
-
-  printf( "%s\n", debug);
-}
-
-void print_Switch(struct switch_conf Switch){
-  char debug[300];
-  char * debugptr = debug;
-
-  debugptr += sprintf(debugptr, "%i\t%i\t",
-                Switch.id,
-                Switch.det_block);
-  print_link(&debugptr, Switch.App);
-  print_link(&debugptr, Switch.Str);
-  print_link(&debugptr, Switch.Div);
-  debugptr += sprintf(debugptr, "%x\t%i %i",
-                Switch.IO,
-                Switch.speed_Str, Switch.speed_Div);
-
-  for(int j = 0; j < (Switch.IO & 0x0f); j++){
-    debugptr += sprintf(debugptr, "\t%i:%i", Switch.IO_Ports[j].Node, Switch.IO_Ports[j].Adr);
-  }
-
-  printf( "%s\n", debug);
-}
-
-void print_MSSwitch(struct ms_switch_conf Switch){
-  char debug[1000];
-  char * debugptr = debug;
-
-  const char * typestring[3] = {"Crossing", "Turntable", "Traverse Table"};
-
-  debugptr += sprintf(debugptr, "%i\t%i\t%i\t%2i -> [",
-                Switch.id,
-                Switch.det_block,
-                Switch.nr_states,
-                Switch.IO);
-  
-  if(Switch.IO)
-    debugptr += sprintf(debugptr, "%2i:%2i", Switch.IO_Ports[0].Node, Switch.IO_Ports[0].Adr);
-
-  for(int i = 1; i < Switch.IO; i++){
-    debugptr += sprintf(debugptr, ", %2i:%2i", Switch.IO_Ports[i].Node, Switch.IO_Ports[i].Adr);
-  }
-  debugptr += sprintf(debugptr, "]\t%i - %s\n", Switch.type, typestring[Switch.type]);
-
-  for(int i = 0; i < Switch.nr_states; i++){
-    debugptr += sprintf(debugptr, "\t\t\t%2i >\t", i);
-    print_link(&debugptr, Switch.states[i].sideA);
-    print_link(&debugptr, Switch.states[i].sideB);
-    debugptr += sprintf(debugptr, "%i\t%x\n", Switch.states[i].speed, Switch.states[i].output_sequence);
-  }
-
-  printf( "%s", debug);
-}
-
-void print_Signals(struct signal_conf signal){
-  char debug[400];
-  char * debugptr = debug;
-
-  debugptr += sprintf(debugptr, "%i\t%i\t%i", signal.id, signal.blockId, signal.output_len);
-  for(int i = 0;i < signal.output_len; i++){
-    debugptr += sprintf(debugptr, "\n\t\t\t%02i:%02i - ", signal.output[i].Node, signal.output[i].Adr);
-    for(int j = 0; j < 8; j++){
-      debugptr += sprintf(debugptr, "%i ", signal.stating[i].event[j]);
-    }
-  }
-
-  printf("%s\n", debug);
-}
-
-void print_Stations(struct station_conf stations){
-  char debug[250];
-  char * debugptr = debug;
-
-  debugptr += sprintf(debugptr, "%i\t%9s\t",
-                stations.type,
-                stations.name);
-
-  for(int j = 0; j < stations.nr_blocks; j++){
-    debugptr += sprintf(debugptr, "%i ", stations.blocks[j]);
-  }
-
-  printf( "%s\n", debug);
-}
-
-void print_Layout(struct module_config * config){
-  printf("Length: %i\n", config->Layout_length);
-  printf("Data:\n%s\n\n", config->Layout);
-}
-
-void print_Cars(struct cars_conf car){
-  char debug[200];
-
-  sprintf(debug, "%i\t%x\t%i\t%i\t%-20s\t%-20s",
-                car.nr,
-                car.type & 0x0f,
-                car.max_speed,
-                car.length,
-                car.name,
-                car.icon_path);
-
-  printf( "%s\n", debug);
-}
-
-void print_Engines(struct engines_conf engine){
-  char debug[200];
-
-  sprintf(debug, "%i\t%x\t%x\t%i\t%-20s\t%-20s\t%-20s",
-                engine.DCC_ID,
-                engine.type >> 4,
-                engine.type & 0x0f,
-                engine.length,
-                engine.name,
-                engine.img_path,
-                engine.icon_path);
-
-  printf( "%s\n", debug);
-}
-
-void print_Trains(struct trains_conf train){
-  char debug[220];
-  char * debugptr = debug;
-
-  debugptr += sprintf(debugptr, "%-20s\t%i\t\t",
-                train.name,
-                train.nr_stock);
-
-  for(int i = 0; i < train.nr_stock; i++){
-    debugptr += sprintf(debugptr, "%i:%i\t", train.composition[i].type, train.composition[i].id);
-  }
-
-  printf( "%s\n", debug);
-}
-
-void print_Catagories(struct train_config * config){
-  uint8_t max_cats = config->header.P_Catagories;
-  if (config->header.C_Catagories > max_cats)
-    max_cats = config->header.C_Catagories;
-
-  printf("\tPerson\t\t\t\tCargo\n");
-  for(int i = 0; i < max_cats; i++){
-    if(i < config->header.P_Catagories)
-      printf("%3i\t%-20s\t", i, config->P_Cat[i].name);
-    else
-      printf("   \t                                        ");
-
-    if(i < config->header.C_Catagories)
-      printf("%3i\t%-20s\n", i + 0x80, config->C_Cat[i].name);
-    else
-      printf("\n");
-  }
-}
-
-void print_module_config(struct module_config * config, char ** cmds, uint8_t cmd_len){
-  if(!cmds)
-    return;
-  
-  cmds = &cmds[1];
-  cmd_len -= 1;
-
-  uint16_t mask = 0;
-
-  for(uint8_t i = 0; i < cmd_len;){
-    if(strcmp(cmds[i], "-h") == 0){
-      // Help
-      printf("Arguments for Print config: \n");
-      printf("\t-H\tHeaders\n");
-      printf("\t-n\tNodes\n");
-      printf("\t-b\tBlocks\n");
-      printf("\t-p\tSwitches/Points\n");
-      printf("\t-m\tMSSwitches\n");
-      printf("\t-s\tSignals\n");
-      printf("\t-t\tStations\n");
-      printf("\t-A\tAll\n");
-      return;
-    }
-    else if(strcmp(cmds[i], "-H") == 0){
-      mask |= 1;
-    }
-    else if(strcmp(cmds[i], "-n") == 0){
-      mask |= 2;
-    }
-    else if(strcmp(cmds[i], "-b") == 0){
-      mask |= 8;
-    }
-    else if(strcmp(cmds[i], "-p") == 0){
-      mask |= 16;
-    }
-    else if(strcmp(cmds[i], "-m") == 0){
-      mask |= 32;
-    }
-    else if(strcmp(cmds[i], "-s") == 0){
-      mask |= 64;
-    }
-    else if(strcmp(cmds[i], "-t") == 0){
-      mask |= 128;
-    }
-    else if(strcmp(cmds[i], "-A") == 0){
-      mask |= 255;
-    }
-    i++;
-  }
-
-  if(mask == 0){
-    // Help
-    printf("Arguments for Print config: \n");
-    printf("\t-h\tHeaders\n");
-    printf("\t-n\tNodes\n");
-    printf("\t-b\tBlocks\n");
-    printf("\t-p\tSwitches/Points\n");
-    printf("\t-m\tMSSwitches\n");
-    printf("\t-s\tSignals\n");
-    printf("\t-t\tStations\n");
-    printf("\t-A\tAll");
-    return;
-  }
-
-  printf("\n");
-  if(mask & 1){
-    printf( "Modules:     %i\n", config->header.module);
-    printf( "Connections: %i\n", config->header.connections);
-    printf( "IO_Nodes:    %i\n", config->header.IO_Nodes);
-    printf( "Blocks:      %i\n", config->header.Blocks);
-    printf( "Switches:    %i\n", config->header.Switches);
-    printf( "MSSwitches:  %i\n", config->header.MSSwitches);
-    printf( "Signals:     %i\n", config->header.Signals);
-    printf( "Stations:    %i\n", config->header.Stations);
-  }
-  
-  if(mask & 2){
-    printf( "IO Nodes\n");
-    printf( "id\tSize\n");
-    for(int i = 0; i < config->header.IO_Nodes; i++){
-      print_Node(config->Nodes[i]);
-    }
-  }
-
-  if(mask & 8){
-    printf( "Block\n");
-    printf( "id\ttype\t\tNext    \tPrev    \tMax_sp\tdir\tlen\tOneWay\tOut en\tIO_in\tIO_out\n");
-    for(int i = 0; i < config->header.Blocks; i++){
-      print_Block(config->Blocks[i]);
-    }
-  }
-  
-  if(mask & 16){
-    printf( "Switch\n");
-    printf( "id\tblock\tApp       \tStr       \tDiv       \tIO\tSpeed\n");
-    for(int i = 0; i < config->header.Switches; i++){
-      print_Switch(config->Switches[i]);
-    }
-  }
-
-  if(mask & 32){
-    printf( "MSSwitch\n");
-    printf( "id\tblock\tstates\tIO\tSideA     \tSideB     \tSpeed\tSequence\t...\n");
-    for(int i = 0; i < config->header.MSSwitches; i++){
-      print_MSSwitch(config->MSSwitches[i]);
-    }
-  }
-
-  if(mask & 64){
-    printf( "Signals\n");
-    printf( "id\tBlockID\tOutput Length\t\tOutput states\n");
-    for(int i = 0; i < config->header.Signals; i++){
-      print_Signals(config->Signals[i]);
-    }
-  }
-
-  if(mask & 128){
-    printf( "Station\n");
-    printf( "type\tName\t\tblocks\n");
-    for(int i = 0; i < config->header.Stations; i++){
-      print_Stations(config->Stations[i]);
-    }
-  }
-}
-
-void print_train_config(struct train_config * config){
-  printf( "Cars:    %i\n", config->header.Cars);
-  printf( "Engines: %i\n", config->header.Engines);
-  printf( "Trains:  %i\n", config->header.Trains);
-
-  printf("\nCatagories\n");
-  print_Catagories(config);
-  printf("\n\n");
-
-  printf( "Cars\n");
-  printf( "id\tNr\tType\tSpeed\tLength\tName\t\t\tIcon_path\n");
-  for(int i = 0; i < config->header.Cars; i++){
-    printf("%i\t", i);
-    print_Cars(config->Cars[i]);
-  }
-  
-  printf( "Engines\n");
-  printf( "id\tDCC\tSteps\tType\tLength\tName\t\t\tImg_path\t\tIcon_path\n");
-  for(int i = 0; i < config->header.Engines; i++){
-    printf("%i\t", i);
-    print_Engines(config->Engines[i]);
-  }
-
-  printf( "Trains\n");
-  printf( "id\tName\t\t\tRolling Stock\t...\n");
-  for(int i = 0; i < config->header.Trains; i++){
-    printf("%i\t", i);
-    print_Trains(config->Trains[i]);
-  }
-}
-
-int read_module_config(struct module_config * config, FILE * fp){
-
-
-  char * header = (char *)_calloc(2, char);
-
-  fread(header, 1, 1, fp);
-
-  fseek(fp, 0, SEEK_END);
-  long fsize = ftell(fp);
-  fseek(fp, 0, SEEK_SET);
-
-  char * buffer = (char *)_calloc(fsize + 10, char);
-  char * buffer_start = &buffer[0];
-  fread(buffer, fsize, 1, fp);
-
-  uint8_t ** buf_ptr = (uint8_t **)&buffer;
-
-  *buf_ptr += 1;
-
-  config->header = read_s_unit_conf(buf_ptr);
-
-  if (header[0] != MODULE_CONF_VERSION) {
-    loggerf(WARNING, "Module %i not correct version", config->header.module);
-    return -1;
-  }
-
-  config->Nodes = (struct node_conf *)_calloc(config->header.IO_Nodes, struct node_conf);
-  
-  for(int i = 0; i < config->header.IO_Nodes; i++){
-    config->Nodes[i]  = read_s_node_conf(buf_ptr);
-  }
-
-  config->Blocks = (struct s_block_conf *)_calloc(config->header.Blocks, struct s_block_conf);
-
-  
-  for(int i = 0; i < config->header.Blocks; i++){
-    config->Blocks[i]  = read_s_block_conf(buf_ptr);
-  }
-
-  config->Switches = (struct switch_conf *)_calloc(config->header.Switches, struct switch_conf);
-
-  for(int i = 0; i < config->header.Switches; i++){
-    config->Switches[i]  = read_s_switch_conf(buf_ptr);
-  }
-
-  config->MSSwitches = (struct ms_switch_conf *)_calloc(config->header.MSSwitches, struct ms_switch_conf);
-
-  for(int i = 0; i < config->header.MSSwitches; i++){
-    config->MSSwitches[i]  = read_s_ms_switch_conf(buf_ptr);
-  }
-
-  config->Signals = (struct signal_conf *)_calloc(config->header.Signals, struct signal_conf);
-
-  for(int i = 0; i < config->header.Signals; i++){
-    config->Signals[i]  = read_s_signal_conf(buf_ptr);
-  }
-
-  config->Stations = (struct station_conf *)_calloc(config->header.Stations, struct station_conf);
-
-  for(int i = 0; i < config->header.Stations; i++){
-    config->Stations[i]  = read_s_station_conf(buf_ptr);
-  }
-
-  //Layout
-  memcpy(&config->Layout_length, *buf_ptr, sizeof(uint16_t));
-  *buf_ptr += sizeof(uint16_t) + 1;
-
-  config->Layout = (char *)_calloc(config->Layout_length + 1, char);
-  memcpy(config->Layout, *buf_ptr, config->Layout_length);
-
-  _free(header);
-  _free(buffer_start);
-
-  return 1;
-}
-
-int read_train_config(struct train_config * config, FILE * fp){
-  char * header = (char *)_calloc(2, char);
-
-  fread(header, 1, 1, fp);
-
-  fseek(fp, 0, SEEK_END);
-  long fsize = ftell(fp);
-  fseek(fp, 0, SEEK_SET);
-
-  char * buffer = (char *)_calloc(fsize, char);
-  char * buffer_start = &buffer[0];
-  fread(buffer, fsize, 1, fp);
-
-  uint8_t ** buf_ptr = (uint8_t **)&buffer;
-
-  *buf_ptr += 1;
-
-  config->header = read_s_train_header_conf(buf_ptr);
-
-  if (header[0] != TRAIN_CONF_VERSION) {
-    loggerf(ERROR, "Not correct version");
-    return -1;
-    // config->header.IO_Nodes = 0;
-    // loggerf(WARNING, "Please re-save to update", config->header.module);
-  }
-
-  config->P_Cat = (struct cat_conf *)_calloc(config->header.P_Catagories, struct cat_conf);
-  config->C_Cat = (struct cat_conf *)_calloc(config->header.C_Catagories, struct cat_conf);
-  config->Engines = (struct engines_conf *)_calloc(config->header.Engines, struct engines_conf);
-  config->Cars = (struct cars_conf *)_calloc(config->header.Cars, struct cars_conf);
-  config->Trains = (struct trains_conf *)_calloc(config->header.Trains, struct trains_conf);
-  
-  for(int i = 0; i < config->header.P_Catagories; i++){
-    config->P_Cat[i]  = read_cat_conf(buf_ptr);
-  }
-  
-  for(int i = 0; i < config->header.C_Catagories; i++){
-    config->C_Cat[i]  = read_cat_conf(buf_ptr);
-  }
-  
-  for(int i = 0; i < config->header.Engines; i++){
-    config->Engines[i]  = read_engines_conf(buf_ptr);
-  }
-  
-  for(int i = 0; i < config->header.Cars; i++){
-    config->Cars[i]  = read_cars_conf(buf_ptr);
-  }
-  
-  for(int i = 0; i < config->header.Trains; i++){
-    config->Trains[i]  = read_trains_conf(buf_ptr);
-  }
-
-  _free(header);
-  _free(buffer_start);
-
-  return 1;
-}
-
-void modify_Node(struct module_config * config, char ** cmds, uint8_t cmd_len){
+void modify_Node(struct ModuleConfig * config, char ** cmds, uint8_t cmd_len){
   if(!cmds)
     return;
 
@@ -620,7 +116,7 @@ void modify_Node(struct module_config * config, char ** cmds, uint8_t cmd_len){
   }
 }
 
-void modify_Block(struct module_config * config, char ** cmds, uint8_t cmd_len){
+void modify_Block(struct ModuleConfig * config, char ** cmds, uint8_t cmd_len){
   if(!cmds)
     return;
   
@@ -829,7 +325,7 @@ void modify_Block(struct module_config * config, char ** cmds, uint8_t cmd_len){
   }
 }
 
-void modify_Switch(struct module_config * config, char cmd){
+void modify_Switch(struct ModuleConfig * config, char cmd){
   int id;
   char _cmd[20];
   int tmp, tmp1, tmp2;
@@ -939,7 +435,7 @@ void modify_Switch(struct module_config * config, char cmd){
   }
 }
 
-void modify_MSSwitch(struct module_config * config, char cmd){
+void modify_MSSwitch(struct ModuleConfig * config, char cmd){
   int id;
   char _cmd[20];
   int tmp, tmp1, tmp2;
@@ -1110,7 +606,7 @@ void modify_MSSwitch(struct module_config * config, char cmd){
   }
 }
 
-void modify_Signal(struct module_config * config, char cmd){
+void modify_Signal(struct ModuleConfig * config, char cmd){
   int id;
   char _cmd[20];
   int tmp, tmp1;//, tmp2;
@@ -1226,7 +722,7 @@ void modify_Signal(struct module_config * config, char cmd){
   }
 }
 
-void modify_Station(struct module_config * config, char cmd){
+void modify_Station(struct ModuleConfig * config, char cmd){
   int id;
   char _cmd[20];
   int tmp;//, tmp1, tmp2;
@@ -1324,7 +820,7 @@ void modify_Station(struct module_config * config, char cmd){
   }
 }
 
-void export_Layout(struct module_config * config, char * location){
+void export_Layout(struct ModuleConfig * config, char * location){
   FILE * fp;
   /* open the file for writing*/
   if(location)
@@ -1344,7 +840,7 @@ void export_Layout(struct module_config * config, char * location){
   fclose (fp);
 }
 
-void import_Layout(struct module_config * config, char * location){
+void import_Layout(struct ModuleConfig * config, char * location){
   FILE * fp;
 
   if(!location){
@@ -1385,7 +881,7 @@ void import_Layout(struct module_config * config, char * location){
   fclose (fp);
 }
 
-void modify_Car(struct train_config * config, char cmd){
+void modify_Car(struct RollingConfig * config, char cmd){
   int id;
   char _cmd[80];
   int tmp;//, tmp1, tmp2;
@@ -1507,7 +1003,7 @@ void modify_Car(struct train_config * config, char cmd){
   }
 }
 
-void modify_Engine(struct train_config * config, char ** cmds, uint8_t cmd_len){
+void modify_Engine(struct RollingConfig * config, char ** cmds, uint8_t cmd_len){
   int id;
   int tmp, tmp1;//, tmp2;
   char mode = cmds[0][0];
@@ -1694,7 +1190,7 @@ void modify_Engine(struct train_config * config, char ** cmds, uint8_t cmd_len){
   //   //   &tmp.IO_Out.Node, &tmp.IO_Out.Adr);
 }
 
-void modify_Train(struct train_config * config, char cmd){
+void modify_Train(struct RollingConfig * config, char cmd){
   int id;
   char _cmd[20];
   int tmp, tmp1;//, tmp2;
@@ -1797,7 +1293,7 @@ void modify_Train(struct train_config * config, char cmd){
   }
 }
 
-void modify_Catagory(struct train_config * config, char type, char cmd){
+void modify_Catagory(struct RollingConfig * config, char type, char cmd){
   int id;
   char _cmd[20];
   int tmp;//, tmp2;
@@ -1889,9 +1385,7 @@ int edit_module(){
 
   sprintf(filename, "%s%i.bin", filepath, file);
 
-  FILE * fp = fopen(filename,"rb");
-
-  struct module_config config;
+  auto config = ModuleConfig(filename);
 
   if(file <= 0 || file > 254){
     loggerf(ERROR, "Only module numbers between 1-254 supportede");
@@ -1909,7 +1403,9 @@ int edit_module(){
       return -1;
   }
 
-  if(!fp){
+  config.read();
+
+  if(!config.parsed){
     loggerf(ERROR, "Failed to open file");
     loggerf(INFO,  "Creating New File");
     
@@ -1918,26 +1414,10 @@ int edit_module(){
     printf("How many sides does the module connect? ");
     scanf("%i", &connections);
 
-    config.header.module = file;
-    config.header.connections = connections;
-    config.header.IO_Nodes = 0;
-    config.header.Blocks = 0;
-    config.header.Switches = 0;
-    config.header.MSSwitches = 0;
-    config.header.Signals = 0;
-    config.header.Stations = 0;
+    config.newModule(file, connections);
   }
-  else{
-    if(read_module_config(&config, fp) == -1){
-      return 0;
-    };
-    if(config.header.module != file){
-      loggerf(CRITICAL, "INVALID MODULE ID");
-      return 0;
-    }
-    fclose(fp);
-  }
-  print_module_config(&config, 0, 0);
+
+  config.print();
 
   char cmd[300];
   char ** cmds = (char **)_calloc(20, char *);
@@ -2019,10 +1499,10 @@ int edit_module(){
       print_Layout(&config);
     }
     else if(strcmp(cmds[0], "s") == 0){
-      write_module_from_conf(&config, filename);
+      config.write();
     }
     else if(strcmp(cmds[0], "p") == 0){
-      print_module_config(&config, cmds, cmds_len);
+      config.print(cmds, cmds_len);
     }
   //   else
   //     printf("Not a command\n");
@@ -2070,26 +1550,20 @@ int edit_module(){
   return exit;
 }
 
-struct train_config * global_config;
-
 int edit_rolling_stock(){
   printf("Reading file\n");
 
-  FILE * fp = fopen(TRAIN_CONF_PATH,"rb");
+  auto config = RollingConfig(TRAIN_CONF_PATH);
 
-  struct train_config config;
+  config.read();
 
-  if(!fp){
+  if(!config.parsed){
     loggerf(ERROR, "Failed to open file");
     printf("No File");
     return -1;
   }
-  else{
-    read_train_config(&config, fp);
-    fclose(fp);
-  }
-  print_train_config(&config);
-  global_config = &config;
+
+  config.print();
 
   char cmd[300];
   char ** cmds = (char **)_calloc(20, char *);
@@ -2148,10 +1622,10 @@ int edit_rolling_stock(){
       }
     }
     else if(strcmp(cmds[0], "s") == 0){
-      write_train_from_conf(&config, TRAIN_CONF_PATH);
+      config.write();
     }
     else if(strcmp(cmds[0], "p") == 0){
-      print_train_config(&config);
+      config.print();
     }
     else
       printf("Not a command\n");

@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <string.h>
 
+#include "config/ModuleConfig.h"
 #include "switch.h"
 #include "switchboard/rail.h"
 #include "IO.h"
@@ -85,7 +86,8 @@ class Switch {
     struct switch_preference * preferences;
 
     // Switch(uint8_t module, struct s_switch_conf config);
-    Switch(struct s_switch_connect connect, uint8_t block_id, uint8_t output_len, Node_adr * output_pins, uint8_t * output_states);
+    Switch(uint8_t Module, struct switch_conf s);
+    // Switch(struct s_switch_connect connect, uint8_t block_id, uint8_t output_len, Node_adr * output_pins, uint8_t * output_states);
     ~Switch();
 
     bool approachable(void * p, int flags);

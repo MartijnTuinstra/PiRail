@@ -12,8 +12,11 @@ struct train_composition ** trains_comp;
 int trains_comp_len = 0;
 
 Train::Train(char * name, int nr_stock, struct train_comp_ws * comps, uint8_t catagory, uint8_t save){
-  loggerf(DEBUG, "Create Train %s", name);
+  loggerf(INFO, "Create Train %s", name);
   memset(this, 0, sizeof(Train));
+
+  this->name = (char *)_calloc(strlen(name), char);
+  strcpy(this->name, name);
 
   this->nr_stock = nr_stock;
   this->composition = (struct train_comp *)_calloc(nr_stock, struct train_comp);
@@ -68,9 +71,6 @@ Train::Train(char * name, int nr_stock, struct train_comp_ws * comps, uint8_t ca
       this->composition[i].p = cars[comps[i].id];
     }
   }
-
-  this->name = name;
-  _free(comps);
 
   int index = find_free_index(trains, trains_len);
 

@@ -4,22 +4,130 @@
 #include "mem.h"
 #include "config.h"
 #include "config/RollingConfig.h"
+#include "rollingstock/train.h"
+#include "rollingstock/engine.h"
+#include "rollingstock/car.h"
 
 RollingConfig::RollingConfig(char * filename){
+  memset(this, 0, sizeof(RollingConfig));
   strcpy(this->filename, filename);
   this->parsed = false;
 }
 
 RollingConfig::RollingConfig(const char * filename){
+  memset(this, 0, sizeof(RollingConfig));
   strcpy(this->filename, filename);
   this->parsed = false;
+}
+
+void RollingConfig::addTrain(Train * T){
+  if(!T)
+    return;
+
+  if(!this->Trains)
+    this->Trains = (struct trains_conf *)_calloc(this->header.Trains + 1, struct trains_conf);
+  else
+    this->Trains = (struct trains_conf *)_realloc(this->Trains, this->header.Trains + 1, struct trains_conf);
+
+  struct trains_conf * cT = &this->Trains[this->header.Trains++];
+
+  cT->name_len = strlen(T->name);
+  cT->name = (char *)_calloc(cT->name_len, char);
+  strcpy(cT->name, T->name);
+
+  cT->nr_stock = T->nr_stock;
+  cT->catagory = T->type;
+
+  cT->composition = (struct train_comp_ws *)_calloc(T->nr_stock, struct train_comp_ws);
+
+  for(int i = 0; i < T->nr_stock; i++){
+    cT->composition[i].type = T->composition[i].type;
+    cT->composition[i].id = T->composition[i].id;
+  }
+}
+
+void RollingConfig::addEngine(Engine * E){
+  if(!E)
+    return;
+
+  if(!this->Engines)
+    this->Engines = (struct engines_conf *)_calloc(this->header.Engines + 1, struct engines_conf);
+  else
+    this->Engines = (struct engines_conf *)_realloc(this->Engines, this->header.Engines + 1, struct engines_conf);
+
+  struct engines_conf * cE = &this->Engines[this->header.Engines++];
+
+  cE->DCC_ID = E->DCC_ID;
+  cE->length = E->length;
+  cE->type = E->type;
+  cE->config_steps = E->steps_len;
+  cE->name_len = strlen(E->name);
+  cE->img_path_len = strlen(E->img_path);
+  cE->icon_path_len = strlen(E->icon_path);
+  for(uint8_t i = 0; i < 29; i++){
+    cE->functions[i] = (E->function[i].button << 6) | (E->function[i].type & 0x3F);
+  }
+  
+  cE->name = (char *)_calloc(strlen(E->name), char);
+  strcpy(cE->name, E->name);
+  cE->img_path = (char *)_calloc(strlen(E->img_path), char);
+  strcpy(cE->img_path, E->img_path);
+  cE->icon_path = (char *)_calloc(strlen(E->icon_path), char);
+  strcpy(cE->icon_path, E->icon_path);
+
+  cE->speed_steps = (struct engine_speed_steps *)_calloc(E->steps_len, sizeof(struct engine_speed_steps));
+  memcpy(cE->speed_steps, E->steps, sizeof(struct engine_speed_steps) * E->steps_len);
+}
+void RollingConfig::addCar(Car * C){
+  if(!C)
+    return;
+
+  if(!this->Cars)
+    this->Cars = (struct cars_conf *)_calloc(this->header.Cars + 1, struct cars_conf);
+  else
+    this->Cars = (struct cars_conf *)_realloc(this->Cars, this->header.Cars + 1, struct cars_conf);
+
+  struct cars_conf * cC = &this->Cars[this->header.Cars++];
+
+
+  cC->nr = C->nr;
+  cC->max_speed = C->max_speed;
+  cC->length = C->length;
+  cC->type = C->type;
+  cC->name_len = strlen(C->name);
+  cC->icon_path_len = strlen(C->icon_path);
+  for(uint8_t i = 0; i < 29; i++){
+    cC->functions[i] = (C->function[i].button << 6) | (C->function[i].type & 0x3F);
+  }
+
+  cC->name = (char *)_calloc(strlen(C->name), char);
+  strcpy(cC->name, C->name);
+  cC->icon_path = (char *)_calloc(strlen(C->icon_path), char);
+  strcpy(cC->icon_path, C->icon_path);
 }
 
 RollingConfig::~RollingConfig(){
   _free(this->P_Cat);
   _free(this->C_Cat);
+
+  for(uint8_t i = 0; i < this->header.Engines; i++){
+    _free(this->Engines[i].name);
+    _free(this->Engines[i].img_path);
+    _free(this->Engines[i].icon_path);
+    _free(this->Engines[i].speed_steps);
+  }
   _free(this->Engines);
+
+  for(uint8_t i = 0; i < this->header.Cars; i++){
+    _free(this->Cars[i].name);
+    _free(this->Cars[i].icon_path);
+  }
   _free(this->Cars);
+
+  for(uint8_t i = 0; i < this->header.Trains; i++){
+    _free(this->Trains[i].name);
+    _free(this->Trains[i].composition);
+  }
   _free(this->Trains);
 }
 
@@ -113,24 +221,20 @@ int RollingConfig::calc_size(){
     subsize += this->Engines[i].icon_path_len + 1;
     subsize += this->Engines[i].config_steps * sizeof(struct engine_speed_steps) + 1;
 
-    loggerf(INFO, "Engines %i bytes\n", subsize);
-
     size += subsize;
   }
 
-  loggerf(INFO, "Size Engines: %i\n", size);
+  loggerf(INFO, "Size Engines: %i", size);
 
   //Cars
   for(int i = 0; i < this->header.Cars; i++){
     subsize = sizeof(struct s_car_conf) + this->Cars[i].name_len + 2;
     subsize += this->Cars[i].icon_path_len + 2;
 
-    loggerf(INFO, "Car %i bytes\n", subsize);
-
     size += subsize;
   }
 
-  loggerf(INFO, "Size Cars: %i\n", size);
+  loggerf(INFO, "Size Cars: %i", size);
 
   //Trains
   for(int i = 0; i < this->header.Trains; i++){
@@ -138,10 +242,10 @@ int RollingConfig::calc_size(){
     subsize += this->Trains[i].name_len + 1;
     subsize += sizeof(struct train_comp_ws) * this->Trains[i].nr_stock + 1;
 
-    loggerf(INFO, "Train %i bytes\n", subsize);
-
     size += subsize;
   }
+
+  loggerf(INFO, "Size Trains: %i", size);
 
   return size;
 }

@@ -532,7 +532,12 @@ void WS_cts_AddCartoLib(struct s_opc_AddNewCartolib * data, struct web_client_t 
 
   sprintf(dicon, "%s%s", "web/trains_img/", icon);
 
-  move_file(sicon, dicon);
+  if(!move_file(sicon, dicon)){
+    //Failed to move
+    rdata->data.opc_AddNewCartolib_res.response = 0;
+    ws_send(client, (char *)rdata, WSopc_AddNewCartolib_res_len, 0xff);
+    return;
+  }
 
   write_rolling_Configs();
 
@@ -610,7 +615,12 @@ void WS_cts_Edit_Car(struct s_opc_EditCarlib * data, struct web_client_t * clien
     }
     dicon = (char *)_calloc(strlen(C->icon_path)+20, char);
     sprintf(dicon, "%s%s", "web/trains_img/", C->icon_path);
-    move_file(sicon, dicon);
+    if(!move_file(sicon, dicon)){
+      //Failed to move
+      rdata->data.opc_AddNewCartolib_res.response = 0;
+      ws_send(client, (char *)rdata, WSopc_AddNewCartolib_res_len, 0xff);
+      return;
+    }
 
     // Delete temp file
     remove(sicon);
@@ -625,7 +635,12 @@ void WS_cts_Edit_Car(struct s_opc_EditCarlib * data, struct web_client_t * clien
     dicon = (char *)_calloc(strlen(C->icon_path)+20, char);
     sprintf(dicon, "%s%s", "web/trains_img/", C->icon_path);
 
-    move_file(sicon, dicon);
+    if(!move_file(sicon, dicon)){
+      //Failed to move
+      rdata->data.opc_AddNewCartolib_res.response = 0;
+      ws_send(client, (char *)rdata, WSopc_AddNewCartolib_res_len, 0xff);
+      return;
+    }
 
     if(strcmp(sicon, dicon) != 0)
       remove(sicon);
@@ -703,8 +718,19 @@ void WS_cts_AddEnginetoLib(struct s_opc_AddNewEnginetolib * data, struct web_cli
   sprintf(dimg, "%s%s", "web/trains_img/", img);
   sprintf(dicon, "%s%s", "web/trains_img/", icon);
 
-  move_file(simg,  dimg);
-  move_file(sicon, dicon);
+  if(!move_file(simg, dimg)){
+    //Failed to move
+    rdata->data.opc_AddNewEnginetolib_res.response = 0;
+    ws_send(client, (char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
+    return;
+  }
+
+  if(!move_file(sicon, dicon)){
+    //Failed to move
+    rdata->data.opc_AddNewEnginetolib_res.response = 0;
+    ws_send(client, (char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
+    return;
+  }
 
   write_rolling_Configs();
 
@@ -802,6 +828,7 @@ void WS_cts_Edit_Engine(struct s_opc_EditEnginelib * msg, struct web_client_t * 
     uint16_t icon_time = (data->timing[1] & 0x0f) + (data->timing[2] << 4);
     icon_time = (icon_time / 60) * 100 + (icon_time % 60);
 
+    loggerf(INFO, "%02x%02x%02x", data->timing[0], data->timing[1], data->timing[2]);
     loggerf(ERROR, "%04i - %04i", image_time, icon_time);
 
     char * dimg = 0;
@@ -822,7 +849,12 @@ void WS_cts_Edit_Engine(struct s_opc_EditEnginelib * msg, struct web_client_t * 
     dimg = (char *)_calloc(strlen(E->img_path)+20, char);
     sprintf(dimg, "%s%s", "web/trains_img/", E->img_path);
     loggerf(INFO, "remove and move file %s -> %s", simg, dimg);
-    move_file(simg, dimg);
+    if(!move_file(simg, dimg)){
+      //Failed to move
+      rdata->data.opc_AddNewEnginetolib_res.response = 0;
+      ws_send(client, (char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
+      return;
+    }
 
     // Delete temp file
     remove(simg);
@@ -840,8 +872,13 @@ void WS_cts_Edit_Engine(struct s_opc_EditEnginelib * msg, struct web_client_t * 
     }
     dicon = (char *)_calloc(strlen(E->icon_path)+20, char);
     sprintf(dicon, "%s%s", "web/trains_img/", E->icon_path);
-    loggerf(INFO, "remove and move file %s -> %s", simg, dimg);
-    move_file(sicon, dicon);
+    loggerf(INFO, "remove and move file %s -> %s", sicon, dicon);
+    if(!move_file(sicon, dicon)){
+      //Failed to move
+      rdata->data.opc_AddNewEnginetolib_res.response = 0;
+      ws_send(client, (char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
+      return;
+    }
 
     // Delete temp file
     remove(sicon);

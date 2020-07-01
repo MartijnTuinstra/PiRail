@@ -2,6 +2,7 @@
 #define INCLUDE_CONFIG_ROLLINGCONFIG_H
 
 #include "config_data.h"
+#include "rollingstock/declares.h"
 
 class RollingConfig {
   public:
@@ -20,6 +21,10 @@ class RollingConfig {
     RollingConfig(const char * filename);
     RollingConfig(char * filename);
     ~RollingConfig();
+
+    void addTrain(Train * T);
+    void addEngine(Engine * E);
+    void addCar(Car * C);
 
     int read();
     void write();

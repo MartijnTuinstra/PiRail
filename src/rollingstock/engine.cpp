@@ -12,7 +12,7 @@ int engines_len = 0;
 Engine * DCC_train[9999];
 
 Engine::Engine(char * name,int DCC,char * img, char * icon, char type, int length, int steps_len, struct engine_speed_steps * steps, uint8_t functions[28]){
-  loggerf(DEBUG, "Create Engine %s", name);
+  loggerf(INFO, "Create Engine %s", name);
 
   //DCC cant be used twice
   for(int i = 0;i<engines_len;i++){
@@ -23,9 +23,12 @@ Engine::Engine(char * name,int DCC,char * img, char * icon, char type, int lengt
 
   memset(this, 0, sizeof(Engine));
 
-  this->name = name;
-  this->img_path = img;
-  this->icon_path = icon;
+  this->name = (char *)_calloc(strlen(name), char);
+  strcpy(this->name, name);
+  this->img_path = (char *)_calloc(strlen(img), char);
+  strcpy(this->img_path, img);
+  this->icon_path = (char *)_calloc(strlen(icon), char);
+  strcpy(this->icon_path, icon);
 
   this->DCC_ID = DCC;
   DCC_train[DCC] = this;
@@ -37,7 +40,8 @@ Engine::Engine(char * name,int DCC,char * img, char * icon, char type, int lengt
   this->type = type;
 
   this->steps_len = steps_len;
-  this->steps = steps;
+  this->steps = (struct engine_speed_steps *)_calloc(steps_len, struct engine_speed_steps);
+  memcpy(this->steps, steps, sizeof(struct engine_speed_steps) * steps_len);
 
 
   // Copy each speed step

@@ -10,10 +10,11 @@
 #include "mem.h"
 
 #include "train.h"
+#include "config/RollingConfig.h"
 #include "switchboard/switch.h"
 
 #include "logger.h"
-#include "config.h"
+// #include "config.h"
 
 #include "Z21_msg.h"
 #include "scheduler.h"
@@ -58,13 +59,37 @@ int load_rolling_Configs(){
   railtraincontinue_event->function = &RailTrain_ContinueCheck;
   scheduler->enableEvent(railtraincontinue_event);
 
-  read_rolling_Configs();
+  // read_rolling_Configs();
+
+  auto config = RollingConfig(TRAIN_CONF_PATH);
+
+  config.read();
+
+  train_P_cat = (struct cat_conf *)_calloc(config.header.P_Catagories, struct cat_conf);
+  train_P_cat_len = config.header.P_Catagories;
+  memcpy(train_P_cat, config.P_Cat, sizeof(struct cat_conf) * train_P_cat_len);
+
+  train_C_cat = (struct cat_conf *)_calloc(config.header.C_Catagories, struct cat_conf);
+  train_C_cat_len = config.header.C_Catagories;
+  memcpy(train_C_cat, config.C_Cat, sizeof(struct cat_conf) * train_C_cat_len);
+
+  for(int i = 0; i < config.header.Engines; i++){
+    create_engine_from_conf(config.Engines[i]);
+  }
+  
+  for(int i = 0; i < config.header.Cars; i++){
+    create_car_from_conf(config.Cars[i]);
+  }
+  
+  for(int i = 0; i < config.header.Trains; i++){
+    create_train_from_conf(config.Trains[i]);
+  }
 
   SYS->trains_loaded = 1;
 
   return 1;
 }
-
+/*
 int read_rolling_Configs(){
   FILE * fp = fopen("configs/stock.bin", "rb");
 
@@ -135,8 +160,32 @@ int read_rolling_Configs(){
   fclose(fp);
   return 1;
 }
+*/
 
 void write_rolling_Configs(){
+  auto config = RollingConfig(TRAIN_CONF_PATH);
+
+  config.header.P_Catagories = train_P_cat_len;
+  config.P_Cat = (struct cat_conf *)_calloc(config.header.P_Catagories, struct cat_conf);
+  memcpy(config.P_Cat, train_P_cat, sizeof(struct cat_conf) * train_P_cat_len);
+
+  config.header.C_Catagories = train_C_cat_len;
+  config.C_Cat = (struct cat_conf *)_calloc(config.header.C_Catagories, struct cat_conf);
+  memcpy(config.C_Cat, train_C_cat, sizeof(struct cat_conf) * train_C_cat_len);
+
+  for(uint8_t i = 0; i < trains_len; i++){
+    config.addTrain(trains[i]);
+  }
+  for(uint8_t i = 0; i < engines_len; i++){
+    config.addEngine(engines[i]);
+  }
+  for(uint8_t i = 0; i < cars_len; i++){
+    config.addCar(cars[i]);
+  }
+
+  config.write();
+}
+/*
   //Calculate size
   int size = 1; //header
   size += sizeof(struct s_train_header_conf) + 1;
@@ -321,7 +370,7 @@ void write_rolling_Configs(){
 
   free(data);
 }
-
+*/
 void unload_rolling_Configs(){
   scheduler->removeEvent(railtraincontinue_event);
 

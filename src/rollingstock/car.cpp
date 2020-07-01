@@ -10,12 +10,14 @@ Car ** cars;
 int cars_len = 0;
 
 Car::Car(char * name,int nr, char * icon, char type, uint16_t length, uint16_t speed){
-  loggerf(DEBUG, "Create Car %s", name);
+  loggerf(INFO, "Create Car %s", name);
 
   memset(this, 0, sizeof(Car));
 
-  this->name = name;
-  this->icon_path = icon;
+  this->name = (char *)_calloc(strlen(name), char);
+  strcpy(this->name, name);
+  this->icon_path = (char *)_calloc(strlen(icon), char);
+  strcpy(this->icon_path, icon);
 
   this->nr = nr;
   this->length = length;

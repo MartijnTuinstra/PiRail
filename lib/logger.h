@@ -5,6 +5,7 @@
 #include <string.h>
 
 enum logging_levels {
+  NONE,
   CRITICAL,
   ERROR,
   WARNING,
@@ -12,7 +13,7 @@ enum logging_levels {
   DEBUG,
   TRACE,
   MEMORY,
-  NONE
+  ALL
 };
 
 #define STR(x) #x

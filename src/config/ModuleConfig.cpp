@@ -13,35 +13,35 @@ ModuleConfig::ModuleConfig(char * filename){
 }
 
 ModuleConfig::~ModuleConfig(){
-  loggerf(INFO, "Destructor ModuleConfig %s", this->filename);
+  loggerf(DEBUG, "Destructor ModuleConfig %s", this->filename);
 
   for(int i = 0; i < this->header.IO_Nodes; i++){
     _free(this->Nodes[i].data);
   }
 
-  loggerf(DEBUG, "  Module Block");
+  loggerf(TRACE, "  Module Block");
 
   
   for(int i = 0; i < this->header.Blocks; i++){}
 
-  loggerf(DEBUG, "  Module Switch");
+  loggerf(TRACE, "  Module Switch");
 
   for(int i = 0; i < this->header.Switches; i++){
     _free(this->Switches[i].IO_Ports);
   }
 
-  loggerf(DEBUG, "  Module MSSwitch");
+  loggerf(TRACE, "  Module MSSwitch");
 
   for(int i = 0; i < this->header.MSSwitches; i++){}
 
-  loggerf(DEBUG, "  Module Signals");
+  loggerf(TRACE, "  Module Signals");
   
   for(int i = 0; i < this->header.Signals; i++){
     _free(this->Signals[i].stating);
     _free(this->Signals[i].output);
   }
 
-  loggerf(DEBUG, "  Module Stations");
+  loggerf(TRACE, "  Module Stations");
 
   for(int i = 0; i < this->header.Stations; i++){
     _free(this->Stations[i].name);
@@ -107,7 +107,7 @@ int ModuleConfig::read(){
     return -1;
   }
 
-  printf("Module start reading %d, %d, %d, %d, %d, %d\n", this->header.IO_Nodes, this->header.Blocks, this->header.Switches, this->header.MSSwitches, this->header.Signals, this->header.Stations);
+  loggerf(DEBUG, "Module start reading %d, %d, %d, %d, %d, %d\n", this->header.IO_Nodes, this->header.Blocks, this->header.Switches, this->header.MSSwitches, this->header.Signals, this->header.Stations);
 
   this->Nodes = (struct node_conf *)_calloc(this->header.IO_Nodes, struct node_conf);
   this->Blocks = (struct s_block_conf *)_calloc(this->header.Blocks, struct s_block_conf);
@@ -210,7 +210,7 @@ void ModuleConfig::write(){
 
   loggerf(INFO, "Writing %i bytes", size);
 
-  char * data = (char *)_calloc(size, char);
+  char * data = (char *)_calloc(size + 50, char);
 
   data[0] = MODULE_CONF_VERSION;
 
@@ -455,7 +455,11 @@ void print_Stations(struct station_conf stations){
   char debug[250];
   char * debugptr = debug;
 
-  debugptr += sprintf(debugptr, "%i\t%9s\t",
+  if(stations.parent != 0xFFFF){
+    debugptr += sprintf(debugptr, "%i", stations.parent);
+  }
+
+  debugptr += sprintf(debugptr, "\t%i\t%9s\t",
                 stations.type,
                 stations.name);
 
@@ -590,7 +594,7 @@ void ModuleConfig::print(char ** cmds, uint8_t cmd_len){
 
   if(mask & 128){
     printf( "Station\n");
-    printf( "type\tName\t\tblocks\n");
+    printf( "parent\ttype\tName\t\tblocks\n");
     for(int i = 0; i < this->header.Stations; i++){
       print_Stations(this->Stations[i]);
     }

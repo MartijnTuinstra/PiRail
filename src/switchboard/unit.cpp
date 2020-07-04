@@ -80,10 +80,7 @@ Unit::Unit(ModuleConfig * Config){
   loggerf(DEBUG, "  Module Stations");
 
   for(int i = 0; i < Config->header.Stations; i++){
-    // struct station_conf st = read_s_station_conf(buf_ptr);
-    struct station_conf st = Config->Stations[i];
-
-    new Station(this->module, i, st.name, st.name_len, (enum Station_types)st.type, st.nr_blocks, st.blocks);
+    new Station(this->module, i, Config->Stations[i]);
   }
 
   loggerf(DEBUG, "  Module Layout");
@@ -251,6 +248,32 @@ void Unit::insertMSSwitch(MSSwitch * MSSw){
   this->MSSw[MSSw->id] = MSSw;
 }
 
+void Unit::insertStation(Station * St){
+  // If block array is to small
+  if(this->station_len <= St->id){
+    loggerf(INFO, "Expand station len %i", this->station_len+8);
+    this->St = (Station * *)_realloc(this->St, (this->station_len + 8), Station *);
+
+    int i = this->station_len;
+    for(; i < this->station_len+8; i++){
+      this->St[i] = 0;
+    }
+    this->station_len += 8;
+  }
+
+  this->St[St->id] = St;
+}
+
+void Unit::link_all(){
+  link_all_blocks(this);
+  link_all_switches(this);
+  link_all_msswitches(this);
+
+  for(int i = 0; i < this->station_len; i++){
+    if(this->St[i]->blocks && this->St[i]->blocks[0] && !this->St[i]->blocks[0]->path)
+      new Path(this->St[i]->blocks[0]);
+  }
+}
 
 // void Create_Unit(uint16_t M, uint8_t Nodes, char points){
 //   new Unit(M, Nodes, points);

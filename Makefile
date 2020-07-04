@@ -16,19 +16,24 @@ BAAN_FILES = baan system logger mem modules config IO algorithm encryption \
              Z21 Z21_msg train submodule com sim pathfinding
 
 BAAN_FILES += rollingstock/train rollingstock/engine rollingstock/car rollingstock/railtrain
-BAAN_FILES += switchboard/rail switchboard/switch switchboard/msswitch switchboard/unit switchboard/station switchboard/signals
-BAAN_FILES += config/ModuleConfig config/RollingConfig
+BAAN_FILES += switchboard/links switchboard/rail switchboard/switch switchboard/msswitch switchboard/unit switchboard/station switchboard/signals
+BAAN_FILES += config/ModuleConfig config/RollingConfig path
 
 BAAN_FILES += websocket websocket_cts websocket_stc websocket_control scheduler
 
 COMTEST_FILES = comtest system logger mem modules config IO algorithm encryption Z21 Z21_msg train submodule com sim pathfinding websocket websocket_cts websocket_stc websocket_control scheduler
 COMTEST_FILES += rollingstock/train rollingstock/engine rollingstock/car rollingstock/railtrain
 
-COMTEST_FILES += switchboard/rail switchboard/switch switchboard/msswitch switchboard/unit switchboard/station switchboard/signals
-COMTEST_FILES += config/ModuleConfig config/RollingConfig
+COMTEST_FILES += switchboard/links switchboard/rail switchboard/switch switchboard/msswitch switchboard/unit switchboard/station switchboard/signals
+COMTEST_FILES += config/ModuleConfig config/RollingConfig path
 
 CONFIG_READER_FILES = config_reader config logger mem
 CONFIG_READER_FILES += config/ModuleConfig config/RollingConfig
+
+BAAN_CONFIGS = 1 2 3 10 20 21 22 23 25 26
+TEST_CONFIGS = PATH-1 SB-1.1 SB-2.1 SB-3.1
+
+TEST_STOCK_CONFIGS =
 
 .DEFAULT_GOAL := all
 
@@ -44,9 +49,17 @@ $(BIN)/%.o: $(SRC)/%.cpp
 	@$(GCC) -c $(SRC)/$*.cpp -MP -MMD -MT '$@ $(BIN)/$*.d' -o $(BIN)/$*.o
 	@$(GCC) -shared -o $(SRC)/$*.cpp -o $(BIN)/$*.so
 
-.PHONY: all test run debug avr clean cleanall cleanavr
+.PHONY: all test run debug avr clean cleanall cleanavr update_modules_config update_rolling_config update_configs
 
 all: config_reader baan comtest avr
+
+update_configs: update_modules_config update_rolling_config
+
+update_modules_config: $(addprefix configs/units/,$(addsuffix .bin,$(BAAN_CONFIGS))) $(addprefix test/testconfigs/,$(addsuffix .bin,$(TEST_CONFIGS)))
+	./config_reader --update --module $^
+
+update_rolling_config: configs/stock.bin $(addprefix test/testconfigs/,$(addsuffix .bin,$(TEST_STOCK_CONFIGS)))
+	./config_reader --update --rollingediting $^
 
 run: all
 	./baan

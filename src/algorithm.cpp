@@ -10,10 +10,12 @@
 #include "algorithm.h"
 #include "logger.h"
 
+#include "switchboard/rail.h"
 #include "switchboard/switch.h"
 #include "switchboard/msswitch.h"
-#include "train.h"
 #include "switchboard/signals.h"
+#include "switchboard/station.h"
+#include "train.h"
 
 #include "modules.h"
 #include "com.h"
@@ -265,7 +267,7 @@ void Algor_process(Block * B, int flags){
   //   Algor_print_block_debug(B);
 
   //Apply block stating
-  Algor_rail_state(B->Alg, flags);
+  Algor_rail_state(&B->Alg, flags);
 
   //Update signal stating
   Algor_signal_state(B->Alg, flags);
@@ -873,103 +875,93 @@ void Algor_Switch_Checker(Algor_Blocks * ABs, int debug){
   // }
 }
 
-void Algor_set_block_state(Block * B, enum Rail_states state){
-  loggerf(INFO, "Algor_set_block_state %02d:%02d, %d", B->module, B->id, state);
-  B->state = state;
-  B->statechanged = 1;
-  Units[B->module]->block_state_changed |= 1;
-  // loggerf(INFO, "%02i:%02i -> %s", B->module, B->id, rail_states_string[state]);
-}
-
-void Algor_set_blocks_state(Block ** B, uint8_t length, enum Rail_states state){
-  for(uint8_t i = 0; i < length; i++)
-    Algor_set_block_state(B[i], state);
-}
-
-void Algor_set_block_reversed_state(Block * B, enum Rail_states state){
-  loggerf(INFO, "Algor_set_block_reversed_state %02d:%02d, %d", B->module, B->id, state);
-  B->reverse_state = state;
-  B->statechanged = 1;
-  Units[B->module]->block_state_changed |= 1;
-  loggerf(TRACE, "%02i:%02i -> R-%s", B->module, B->id, rail_states_string[state]);
-}
-
-void Algor_set_blocks_reversed_state(Block ** B, uint8_t length, enum Rail_states state){
-  for(uint8_t i = 0; i < length; i++)
-    Algor_set_block_reversed_state(B[i], state);
-}
-
-void Algor_rail_state(Algor_Blocks AllBlocks, int debug){
-  loggerf(INFO, "Algor_rail_state %02d:%02d", AllBlocks.B->module, AllBlocks.B->id);
-  //Unpack AllBlocks
-  uint8_t prev  = AllBlocks.prev;
-  Block ** BP   = AllBlocks.P;
-  Block *  B    = AllBlocks.B;
-  Block ** BN   = AllBlocks.N;
-  uint8_t next  = AllBlocks.next;
+void Algor_rail_state(Algor_Blocks * ABs, int debug){
+  loggerf(INFO, "Algor_rail_state %02d:%02d", ABs->B->module, ABs->B->id);
+  //Unpack ABs
+  uint8_t prev  = ABs->prev;
+  Block ** BP   = ABs->P;
+  Block *  B    = ABs->B;
+  uint8_t next  = ABs->next;
 
   if(!B->blocked){
     if(!B->reserved){
-      Algor_set_block_reversed_state(B, PROCEED);
+      B->setReversedState(PROCEED);
     }
     else{
-      Algor_set_block_reversed_state(B, DANGER);
+      B->setReversedState(DANGER);
     }
   }
   else{
-    Algor_set_block_state(B, BLOCKED);
+    B->setState(BLOCKED);
   }
 
-  if(B->blocked && prev > 0 && !BP[0]->blocked){
-    if(dircmp(B, BP[0])){
-      Algor_set_block_state(BP[0], DANGER);
-    }
-    if(prev > 1 && !BP[1]->blocked && dircmp(B, BP[1])){
-      Algor_set_block_state(BP[1], CAUTION);
-    }
+  if(B->blocked){
+    enum Rail_states prev1state = DANGER;
+    enum Rail_states prev2state = CAUTION;
+    enum Rail_states prev3state = PROCEED;
 
-    if(prev > 2 && !BP[0]->blocked && !BP[2]->blocked && dircmp(B, BP[2])){
-      if(BP[2]->reserved)
-        Algor_set_block_state(BP[2], RESERVED);
-      else
-        Algor_set_block_state(BP[2], PROCEED);
-    }
-  }
-  else if(!B->blocked && next == 0){
-    // If switch block
-    Algor_set_block_state(B, CAUTION);
-    if(prev > 0 && !BP[0]->blocked){
-      if(BP[0]->reserved)
-        Algor_set_block_state(BP[0], RESERVED);
-      else
-        Algor_set_block_state(BP[0], PROCEED);
-    }
-    if(prev > 1 && !BP[1]->blocked){
-      if(BP[1]->reserved)
-        Algor_set_block_state(BP[1], RESERVED);
-      else
-        Algor_set_block_state(BP[1], PROCEED);
-    }
-  }
-  else if(!B->blocked && next > 0 && !BN[0]->blocked && BN[0]->reserved && !dircmp(B, BN[0])) {
-    Algor_set_block_state(B, DANGER);
+    if(B->type == STATION && B->station->type >= STATION_YARD)
+      prev1state = RESTRICTED;
 
-    if(prev > 0 && !BP[0]->blocked){
-      Algor_set_block_state(BP[0], CAUTION);
+    for(uint8_t i = 0; i < ABs->prev; i++){
+      if(!BP[i])
+        break;
+      else if(BP[i]->blocked)
+        break;
+      else if(i < ABs->prev1)
+        BP[i]->setState(prev1state);
+    
+      else if(i == ABs->prev1){
+        if(BP[i]->type == STATION && B->type == STATION){
+          if(BP[i]->station == B->station){
+            prev2state = DANGER;
+            prev3state = CAUTION;
+          }
+          else if(i > 0 && BP[i-1]->type == NOSTOP){
+            prev2state = RESTRICTED;
+            prev3state = CAUTION;
+          }
+          else{
+            prev2state = DANGER;
+            prev3state = CAUTION;
+          }
+        }
+
+        BP[i]->setState(prev2state);
+      }
+      else if(i < ABs->prev2){
+        BP[i]->setState(prev2state);
+      }
+    
+      else if(i < ABs->prev3)
+        BP[i]->setState(prev3state);
+
+      else
+        BP[i]->setState(PROCEED);
+
     }
   }
-  else if(!B->blocked && next > 1 && prev > 1 && !BN[0]->blocked && !BN[1]->blocked && !BP[0]->blocked && !BP[1]->blocked){
-    // Algor_print_block_debug(AllBlocks);
-    if(B->reserved)
-      Algor_set_block_state(B, RESERVED);
-    else if(B->state != UNKNOWN)
-      Algor_set_block_state(B, PROCEED);
-  }
-  else if(!B->blocked && ((next > 1 && !BN[0]->blocked && !BN[1]->blocked) || (next == 1 && !BN[0]->blocked))){
-    if(B->reserved)
-      Algor_set_block_state(B, RESERVED);
-    else if(B->state != UNKNOWN)
-      Algor_set_block_state(B, PROCEED);
+  else if(next == 0){
+    if(B->type != NOSTOP){
+      B->setState(CAUTION);
+    }
+    else{
+      B->setState(DANGER);
+
+      uint16_t length = 0;
+      for(uint8_t i = 0; i < prev; i++){
+        if(BP[i]->type != NOSTOP){
+          length += BP[i]->length;
+          BP[i]->setState(CAUTION);
+        }
+        else if(length == 0){
+          BP[i]->setState(DANGER);
+        }
+        else{
+          BP[i]->setState(CAUTION);
+        }
+      }
+    }
   }
 }
 
@@ -985,8 +977,7 @@ void Algor_train_following(Algor_Blocks * ABs, int debug){
 
   if(!B->blocked && B->train != 0){
     if(prev > 0 && next > 0 && !BN[0]->blocked && !BP[0]->blocked){
-      Algor_set_block_state(B, UNKNOWN);
-      B->statechanged = 1;
+      B->setState(UNKNOWN);
       loggerf(WARNING, "LOST Train block %x", (unsigned int)B);
     }
     else{

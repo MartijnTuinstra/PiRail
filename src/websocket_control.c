@@ -5,6 +5,7 @@
 #include "modules.h"
 #include "config.h"
 #include "scheduler.h"
+#include "sim.h"
 
 #include "websocket_control.h"
 #include "websocket_stc.h"
@@ -264,7 +265,7 @@ uint8_t websocket_client_first_connect(struct web_client_t * client, char * buf,
   }
   WS_stc_Z21_IP(client);
 
-  //SIM_Client_Connect_cb();
+  SIM_Client_Connect_cb();
 
   return 1;
 }

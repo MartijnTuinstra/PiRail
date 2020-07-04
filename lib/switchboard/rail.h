@@ -8,13 +8,15 @@
 #include <string.h>
 
 #include "switchboard/declares.h"
+#include "path.h"
 #include "config_data.h"
 
 #define NEXT 0
 #define PREV 1
 
-#define NEXT_FIRST_TIME_SKIP 0x40
 #define SWITCH_CARE 0x80
+#define DIRECTION_CARE 0x40
+#define NEXT_FIRST_TIME_SKIP 0x20
 
 // IO.h
 typedef struct s_IO_Port IO_Port;
@@ -109,6 +111,8 @@ class Block {
 
     Station * station;
 
+    Path * path;
+
     uint16_t max_speed;
 
     enum Rail_states state;
@@ -146,6 +150,9 @@ class Block {
 
     void reverse();
     void reserve();
+
+    void setState(enum Rail_states state);
+    void setReversedState(enum Rail_states state);
 
     void AlgorClear();
     void AlgorSearch(int debug);

@@ -64,6 +64,12 @@ MSSwitch::MSSwitch(uint8_t module, struct ms_switch_conf conf){
   for(int i = 0; i < this->IO_len; i++){
     Init_IO_from_conf(Units[connect.module], conf.IO_Ports[i], this);
 
+    if (!Units[connect.module]->Node[conf.IO_Ports[i].Node].io)
+      continue;
+
+    if(!Units[connect.module]->Node[conf.IO_Ports[i].Node].io[conf.IO_Ports[i].Adr])
+      continue;
+
     this->IO[i] = Units[connect.module]->Node[conf.IO_Ports[i].Node].io[conf.IO_Ports[i].Adr];
   }
 

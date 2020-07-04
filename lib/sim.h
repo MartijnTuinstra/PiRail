@@ -9,7 +9,6 @@ void * TRAIN_SIMB(void * args);
 int init_connect_Algor(struct ConnectList * List);
 bool find_and_connect(uint8_t ModuleA, char anchor_A, uint8_t ModuleB, char anchor_B);
 int connect_Algor(struct ConnectList * list);
-void * rail_link_pointer(struct rail_link link);
 
 void SIM_JoinModules();
 void SIM_Connect_Rail_links();

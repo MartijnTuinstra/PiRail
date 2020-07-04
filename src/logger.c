@@ -25,11 +25,11 @@
 
 char * logger_file = 0;
 
-const char * logging_levels_str[8] = {
-  "CRITICAL", "  ERROR ", " WARNING", "  INFO  ", "  DEBUG ", "  TRACE ", " MEMORY ", "        "
+const char * logging_levels_str[9] = {
+  "NONE", "CRITICAL", "  ERROR ", " WARNING", "  INFO  ", "  DEBUG ", "  TRACE ", " MEMORY ", "        "
 };
-const char * logging_levels_colour[8] = {
-  "\x1b[31m", "\x1b[31m", "\x1b[33m", "\x1b[32m", "", "", "", "\x1b[0m"
+const char * logging_levels_colour[9] = {
+  "", "\x1b[31m", "\x1b[31m", "\x1b[33m", "\x1b[32m", "", "", "", "\x1b[0m"
 };
 
 bool stdoutPrint = 1;
@@ -98,7 +98,7 @@ void floggerf(enum logging_levels level, const char * file, int line, const char
 
   vsprintf(arg, text, arglist);
 
-  sprintf(msg, "%s.%03d %s%s -%20s:%4i- %s%s\n",c_time,(uint16_t)(clock.tv_nsec / 1e6),logging_levels_colour[level], logging_levels_str[level],file,line, arg, logging_levels_colour[7]);
+  sprintf(msg, "%s.%03d %s%s -%20s:%4i- %s%s\n",c_time,(uint16_t)(clock.tv_nsec / 1e6),logging_levels_colour[level], logging_levels_str[level],file,line, arg, logging_levels_colour[8]);
 
 
   if(stdoutPrint && level <= logger_set_print_lvl)

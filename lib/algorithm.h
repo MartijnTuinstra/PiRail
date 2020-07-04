@@ -61,7 +61,7 @@ void Algor_turntable_search_Blocks(Block * B, int debug);
 void Algor_Switch_Checker(Algor_Blocks * ABs, int debug);
 void Algor_train_following(Algor_Blocks * ABs, int debug);
 // void Algor_GetBlocked_Blocks(struct algor_blocks AllBlocks);
-void Algor_rail_state(struct algor_blocks AllBlocks, int debug);
+void Algor_rail_state(struct algor_blocks * ABs, int debug);
 // void Algor_apply_rail_state(Algor_Block blocks, enum Rail_states state);
 void Algor_signal_state(Algor_Blocks AB, int debug);
 void Algor_train_control(Algor_Blocks * ABs, int debug);

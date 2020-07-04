@@ -1,6 +1,7 @@
 #ifndef _INCLUDE_SWITCHBOARD_LINK_H 
 #define _INCLUDE_SWITCHBOARD_LINK_H
 
+#include <stdint.h>
 #include "switchboard/declares.h"
 
 enum link_types {
@@ -28,5 +29,10 @@ struct rail_link {
       void * p;
   } p;
 };
+
+void * rail_link_pointer(struct rail_link link);
+void link_all_blocks(Unit * U);
+void link_all_switches(Unit * U);
+void link_all_msswitches(Unit * U);
 
 #endif

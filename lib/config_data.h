@@ -106,7 +106,7 @@ struct __attribute__((__packed__)) s_ms_switch_conf {
   uint8_t IO;
 };
 
-struct ms_switch_conf {
+struct __attribute__((__packed__)) ms_switch_conf {
   uint8_t id;
   uint8_t det_block;
   uint8_t type;
@@ -123,12 +123,17 @@ struct __attribute__((__packed__)) s_station_conf {
   uint8_t type;
   uint8_t nr_blocks;
   uint8_t name_len;
+  uint8_t reserved;
+  uint16_t parent;
 };
 
-struct station_conf {
+struct  station_conf {
     uint8_t type;
     uint8_t nr_blocks;
     uint8_t name_len;
+    uint8_t reserved;
+    uint16_t parent;
+
     uint8_t * blocks;
     char * name;
 };

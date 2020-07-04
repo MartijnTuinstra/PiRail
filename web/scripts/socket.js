@@ -639,6 +639,11 @@ websocket.add_opcodes([
 
         msg[7] = data.speedsteps.length;
 
+        // Functions
+        for(var i = 0; i < 29; i++){
+          msg[8+i] = 0;
+        }
+
         //Upload timestamps
         var time = data.image_name.split(".");
         time = time[time.length - 2].split("");
@@ -650,9 +655,9 @@ websocket.add_opcodes([
 
         var time_icon = parseInt(time[0]) * 600 + parseInt(time[1]) * 60 + parseInt(time[2]) * 10 + parseInt(time[3]);
 
-        msg[8] = time_image & 0xFF;
-        msg[9] = ((time_image >> 4) & 0xF0) | (time_icon & 0x0F);
-        msg[10] = (time_icon >> 4);
+        msg[37] = time_image & 0xFF;
+        msg[38] = ((time_image >> 4) & 0xF0) | (time_icon & 0x0F);
+        msg[39] = (time_icon >> 4);
 
         for (var i = 0; i < data.name.length; i++) {
           msg.push(data.name.charCodeAt(i));
@@ -713,6 +718,11 @@ websocket.add_opcodes([
         msg[8] = data.name.length;
         msg[9] = data.speedsteps.length;
 
+        // Functions
+        for(var i = 0; i < 29; i++){
+          msg[10+i] = 0;
+        }
+
         //Upload timestamps
         var time = data.image_name.split(".");
         var time_image = 0xFFF;
@@ -731,9 +741,9 @@ websocket.add_opcodes([
           time_icon = parseInt(time[0]) * 600 + parseInt(time[1]) * 60 + parseInt(time[2]) * 10 + parseInt(time[3]);
         }
 
-        msg[10] = time_image & 0xFF;
-        msg[11] = ((time_image >> 4) & 0xF0) | (time_icon & 0x0F);
-        msg[12] = (time_icon >> 4) & 0xFF;
+        msg[39] = time_image & 0xFF;
+        msg[40] = ((time_image >> 4) & 0xF0) | (time_icon & 0x0F);
+        msg[41] = (time_icon >> 4) & 0xFF;
 
         for (var i = 0; i < data.name.length; i++) {
           msg.push(data.name.charCodeAt(i));

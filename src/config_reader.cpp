@@ -146,6 +146,12 @@ void modify_Block(struct ModuleConfig * config, char ** cmds, uint8_t cmd_len){
     memset(&config->Blocks[config->header.Blocks], 0, sizeof(struct s_block_conf));
     config->Blocks[config->header.Blocks].id = config->header.Blocks;
     id = config->header.Blocks++;
+
+    config->Blocks[id].next.module = config->header.module;
+    config->Blocks[id].next.id = id + 1;
+
+    config->Blocks[id].prev.module = config->header.module;
+    config->Blocks[id].prev.id = id - 1;
   }
   else if(mode == 'r'){
     if(cmd_len > 2){
@@ -776,6 +782,11 @@ void modify_Station(struct ModuleConfig * config, char cmd){
     if(sscanf(_cmd, "%i", &tmp) > 0)
       config->Stations[id].type = tmp;
 
+    printf("Station Parrent (%i)        | ", config->Stations[id].parent);
+    fgets(_cmd, 20, stdin);
+    if(sscanf(_cmd, "%d", &tmp) > 0)
+      config->Stations[id].parent = tmp;
+
     printf("Station Name (%s)\n\t\t\t | ", config->Stations[id].name);
     fgets(_cmd, 20, stdin);
     if(sscanf(_cmd, "%s", _cmd) > 0){
@@ -1374,34 +1385,8 @@ void modify_Catagory(struct RollingConfig * config, char type, char cmd){
   }
 }
 
-int edit_module(){
-  const char filepath[20] = "configs/units/";
-  char filename[40];
-  int file;
-
-  printf("Open module: ");
-
-  scanf("%i", &file);
-
-  sprintf(filename, "%s%i.bin", filepath, file);
-
+int edit_module(char * filename, bool update){
   auto config = ModuleConfig(filename);
-
-  if(file <= 0 || file > 254){
-    loggerf(ERROR, "Only module numbers between 1-254 supportede");
-
-    if(file == 0){
-      printf("Open Test Module? ");
-      char c;
-      scanf("%c", &c);
-      scanf("%c", &c);
-      printf("%c",c);
-      if(c != 'y')
-        return -1;
-    }
-    else
-      return -1;
-  }
 
   config.read();
 
@@ -1409,12 +1394,19 @@ int edit_module(){
     loggerf(ERROR, "Failed to open file");
     loggerf(INFO,  "Creating New File");
     
-    int connections;
+    int connections, id;
 
+    printf("ID? ");
+    scanf("%i", &id);
     printf("How many sides does the module connect? ");
     scanf("%i", &connections);
 
-    config.newModule(file, connections);
+    config.newModule(id, connections);
+  }
+
+  if(update){
+    config.write();
+    return -1;
   }
 
   config.print();
@@ -1517,49 +1509,52 @@ int edit_module(){
 
   _free(cmds);
 
-  //free switches
-  for(int i = 0; i < config.header.Switches; i++){
-    _free(config.Switches[i].IO_Ports);
-  }
+  // //free switches
+  // for(int i = 0; i < config.header.Switches; i++){
+  //   _free(config.Switches[i].IO_Ports);
+  // }
 
-  //free msswitches
-  for(int i = 0; i < config.header.MSSwitches; i++){
-    _free(config.MSSwitches[i].states);
-    _free(config.MSSwitches[i].IO_Ports);
-  }
+  // //free msswitches
+  // for(int i = 0; i < config.header.MSSwitches; i++){
+  //   _free(config.MSSwitches[i].states);
+  //   _free(config.MSSwitches[i].IO_Ports);
+  // }
 
-  //free signals
-  for(int i = 0; i < config.header.Signals; i++){
-    _free(config.Signals[i].output);
-    _free(config.Signals[i].stating);
-  }
+  // //free signals
+  // for(int i = 0; i < config.header.Signals; i++){
+  //   _free(config.Signals[i].output);
+  //   _free(config.Signals[i].stating);
+  // }
 
-  //free station
-  for(int i = 0; i < config.header.Stations; i++){
-    _free(config.Stations[i].name);
-    _free(config.Stations[i].blocks);
-  }
+  // //free station
+  // for(int i = 0; i < config.header.Stations; i++){
+  //   _free(config.Stations[i].name);
+  //   _free(config.Stations[i].blocks);
+  // }
 
-  _free(config.Nodes);
-  _free(config.Blocks);
-  _free(config.Switches);
-  _free(config.MSSwitches);
-  _free(config.Signals);
-  _free(config.Stations);
+  // _free(config.Nodes);
+  // _free(config.Blocks);
+  // _free(config.Switches);
+  // _free(config.MSSwitches);
+  // _free(config.Signals);
+  // _free(config.Stations);
 
   return exit;
 }
 
-int edit_rolling_stock(){
-  printf("Reading file\n");
-
-  auto config = RollingConfig(TRAIN_CONF_PATH);
+int edit_rolling_stock(char * filename, bool update){
+  auto config = RollingConfig(filename);
 
   config.read();
 
   if(!config.parsed){
     loggerf(ERROR, "Failed to open file");
     printf("No File");
+    return -1;
+  }
+
+  if(update){
+    config.write();
     return -1;
   }
 
@@ -1631,49 +1626,82 @@ int edit_rolling_stock(){
       printf("Not a command\n");
   }
 
-  _free(config.Cars);
-  _free(config.Engines);
-  _free(config.Trains);
-
-  exit_logger();
-
   printf("Done\n");
   return 1;
 }
 
-int main(){
+int main(int argc, char ** argv){
   init_logger("log_config.txt");
   set_level(MEMORY);
-  set_logger_print_level(MEMORY);
+  set_logger_print_level(INFO);
 
-  printf("Edit module or rolling stock? ");
-  char cmd[40] = "";
-  int val;
+  bool moduleediting;
+  bool rollingediting;
+  bool filename_arg;
+  bool update;
+  char filename[100] = {0};
+  std::vector<char *> extrafiles;
+
+  for(int i = 1; i < argc; i++){
+    if(!argv[i])
+      break;
+
+    printf("cmd arg: %s\n", argv[i]);
+
+    if(strcmp(argv[i], "--update") == 0)
+      update = true;
+    else if(strcmp(argv[i], "--module") == 0){
+      if(rollingediting == false)
+        moduleediting = true;
+    }
+    else if(strcmp(argv[i], "--rollingediting") == 0){
+      if(moduleediting == false)
+        rollingediting = true;
+    }
+    else{ // filename
+      if(!filename_arg){
+        filename_arg = true;
+        strcpy(filename, argv[i]);
+      }
+      else{
+        char * str = (char *)_calloc(strlen(argv[i])+5, char);
+        printf("%x  %d", (unsigned int)str, strlen(argv[i]));
+        strcpy(str, argv[i]);
+        extrafiles.push_back(str);
+      }
+    }
+  }
+
+  printf("moduleediting %i\nrollingediting %i\nfilename_arg %i %s\nupdate %i\n", moduleediting, rollingediting, filename_arg, filename, update);
 
   restart:
 
-  memset(cmd,0,40);
-
-  fgets(cmd, 20, stdin);
-  sscanf(cmd, "%s", cmd);
-
-  if(strcmp(cmd, "module") == 0 || strcmp(cmd, "Module") == 0){
-    val = edit_module();
+  if(moduleediting && filename_arg){
+    edit_module(filename, update);
   }
-  else if(strcmp(cmd, "Train") == 0 || strcmp(cmd, "Car") == 0 || strcmp(cmd, "Engine") == 0 || strcmp(cmd, "rolling stock") == 0){
-    edit_rolling_stock();
+  else if(rollingediting){
+    if(filename_arg)
+      edit_rolling_stock(filename, update);
+    else
+      edit_rolling_stock(TRAIN_CONF_PATH, update);
   }
   else{
     printf("Unknown command");
   }
 
-  if(val == -1){
-    printf("Restart!!\n");
+  if(extrafiles.size() > 0){
+    printf("Extra files Restart!!\n");
+    strcpy(filename, extrafiles[0]);
+    _free(extrafiles[0]);
+    extrafiles.erase(extrafiles.begin());
+
     goto restart;
   }
 
   printf("Done");
 
+  for(auto i: extrafiles)
+    _free(i);
   
   loggerf(INFO, "STOPPED");
   exit_logger(); //Close logger

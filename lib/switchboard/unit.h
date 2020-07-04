@@ -55,6 +55,9 @@ class Unit {
     void insertBlock(Block * B);
     void insertSwitch(Switch * Sw);
     void insertMSSwitch(MSSwitch * MSSw);
+    void insertStation(Station * St);
+
+    void link_all();
 };
 
 extern int unit_len;

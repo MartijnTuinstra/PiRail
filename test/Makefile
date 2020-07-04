@@ -1,23 +1,53 @@
+BIN=bin
+SRC=src
+LIB=../lib
 
-files=system logger mem modules config train IO algorithm encryption scheduler \
-      websocket websocket_cts websocket_stc websocket_control Z21 Z21_msg submodule com sim pathfinding \
-      switchboard/rail switchboard/switch switchboard/unit switchboard/msswitch switchboard/station switchboard/signals \
-	  rollingstock/train rollingstock/engine rollingstock/car rollingstock/railtrain
-BIN=../bin
-object=$(addprefix $(BIN)/,$(addsuffix .o, $(files)))
+GCC_DEPFLAGS = -MT $@ -MMD -MP -MF $(DEPDIR)/$*.d
+GCC_INCLUDE = -I $(LIB) -I .
+GCC_ERROR_FLAGS = -Werror=unused-variable -Wno-packed-bitfield-compat -Wno-unused-parameter -Wall
+GCC_LIBS = -lpthread -lssl -lcrypto -lm
+GCC_FLAGS = -D _DEFAULT_SOURCE
 
-configs/units/0.bin: ../configs/units/0.bin
-	cp ../configs/units/0.bin configs/units/0.bin
+GCC = g++ -std=c++14 -g3 $(GCC_INCLUDE) $(GCC_ERROR_FLAGS) $(GCC_LIBS) $(GCC_FLAGS)
 
-test: test.c
-	@echo Clear Test Results
-	@rm -rf testresults
-	@mkdir testresults
-	@echo Copy Shared Object
+TEST_FILES = main switchboard/rail switchboard/switch switchboard/msswitch src/path src/algorithm
+
+.DEFAULT_GOAL := all
+
+$(BIN)/%.o: %.c
+	@echo '(  GCC  ) -$@'
+	@$(GCC) -c $*.c -MP -MMD -MT '$@ $(BIN)/$*.d' -o $(BIN)/$*.o
+
+$(BIN)/%.o: %.cpp
+	@echo '(  G++  ) -$@'
+	@$(GCC) -c $*.cpp -MP -MMD -MT '$@ $(BIN)/$*.d' -o $(BIN)/$*.o
+
+libbaan.so: FORCE
+	@echo "( BUILD ) baan"
+	@make -C .. baan
 	@cp ../baan.so libbaan.so
-	@echo Compile
-	@g++ -I../lib -c test.c -o test.o -lpthread -lssl -lcrypto -lm -lcheck -lcheck_pic -lrt -lsubunit -g3
-	@g++ test.o $(object) -o test -lpthread -lssl -lcrypto -lm -lcheck -lcheck_pic -lrt -lsubunit -g3
-	@echo Test
-	@./test
-	@rm test
+
+maintest: $(addprefix $(BIN)/,$(addsuffix .o, $(TEST_FILES))) libbaan.so
+	@echo "( BUILD ) maintest"
+	@$(GCC) -o $@ $(addprefix $(BIN)/,$(addsuffix .o, $(TEST_FILES))) -L . -lbaan -Wl,-rpath=/var/www/html/baan/pirail_avr/test/
+
+.PHONY: all run clean_test clean_build clean build
+FORCE: ;
+
+build: maintest
+all: run
+clean: clean_test clean_build
+
+run: clean_test maintest
+	@echo "Starting Testing"
+	@./maintest -r console
+
+clean_test:
+	@echo "Clear Test Results"
+	@rm -rf testresults/*
+
+clean_build:
+	@echo "Clear build"
+	@find bin -type f -name "*.o" -delete
+	@find bin -type f -name "*.so" -delete
+	@find bin -type f -name "*.d" -delete

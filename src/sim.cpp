@@ -740,25 +740,6 @@ int connect_Algor(struct ConnectList * List){
 //   // Purge from list
 // }
 
-void * rail_link_pointer(struct rail_link link){
-  if(!Units[link.module])
-    return 0;
-  Unit * U = Units[link.module];
-  //if(link.module == 0 || Units[link.module] == 0){
-  //	  return 0;
-  //}
-  if(link.type == RAIL_LINK_R && U->B[link.id]){
-    return U->B[link.id];
-  }
-  else if((link.type == RAIL_LINK_S || link.type == RAIL_LINK_s) && U->Sw[link.id]){
-    return U->Sw[link.id];
-  }
-  else if(((link.type >= RAIL_LINK_MA && link.type <= RAIL_LINK_MB_inside) || link.type == RAIL_LINK_TT) && U->MSSw[link.id]){
-    return U->MSSw[link.id];
-  }
-  return 0;
-}
-
 
 void SIM_JoinModules(){
   Units[10]->on_layout = 1;
@@ -990,6 +971,8 @@ void SIM_JoinModules(){
 
 void SIM_Connect_Rail_links(){
   // add pointer to the rail_link
+  pathlist.clear();
+
   for(int m = 0; m<unit_len; m++){
     if(!Units[m]){
       continue;
@@ -999,56 +982,27 @@ void SIM_Connect_Rail_links(){
 
     Unit * tU = Units[m];
 
-    for(int i = 0; i<tU->block_len; i++){
-      if(!tU->B[i]){
-        continue;
-      }
-
-      Block * tB = tU->B[i];
-
-      tB->next.p.p = rail_link_pointer(tB->next);
-      tB->prev.p.p = rail_link_pointer(tB->prev);
-    }
-
-    for(int i = 0; i<tU->switch_len; i++){
-      if(!tU->Sw[i]){
-        continue;
-      }
-
-      Switch * tSw = tU->Sw[i];
-
-      tSw->app.p.p = rail_link_pointer(tSw->app);
-      tSw->str.p.p = rail_link_pointer(tSw->str);
-      tSw->div.p.p = rail_link_pointer(tSw->div);
-    }
-
-    for(int i = 0; i < tU->msswitch_len; i++){
-      if(!tU->MSSw[i]){
-        continue;
-      }
-
-      MSSwitch * tMSSw = tU->MSSw[i];
-
-      for(int s = 0; s < tMSSw->state_len; s++){
-        tMSSw->sideA[s].p.p = rail_link_pointer(tMSSw->sideA[s]);
-        tMSSw->sideB[s].p.p = rail_link_pointer(tMSSw->sideB[s]);
-      }
-    }
+    link_all_blocks(tU);
+    link_all_switches(tU);
+    link_all_msswitches(tU);
   }
+
+  pathlist_find();
 }
 
 void SIM_Client_Connect_cb(){
   // SimA_start();
   // SimB_start();
-  if(SYS->LC.state == Module_STOP){
-    Algor_start();
-    while(SYS->LC.state != Module_Run){}
-    struct paths return_value = pathfinding(U_B(20,8), U_B(20,14));
-    if(return_value.forward || return_value.reverse)
-      printf("CHEERS");
-    // pathfinding_print(instr);
-    free_pathinstructions(return_value.forward);
-    free_pathinstructions(return_value.reverse);
-  }
+  Algor_start();
+  // if(SYS->LC.state == Module_STOP){
+  //   Algor_start();
+  //   while(SYS->LC.state != Module_Run){}
+  //   struct paths return_value = pathfinding(U_B(20,8), U_B(20,14));
+  //   if(return_value.forward || return_value.reverse)
+  //     printf("CHEERS");
+  //   // pathfinding_print(instr);
+  //   free_pathinstructions(return_value.forward);
+  //   free_pathinstructions(return_value.reverse);
+  // }
   loggerf(INFO, "Done SIM_Client_Connect_cb");
 }

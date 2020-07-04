@@ -13,7 +13,8 @@ web/tmp_*
 *.~vsdx
 *.~docx
 test/libbaan.so
-test/test.o
+test/maintest
+test/bin/*
 test/testresults/*
 comtest
 uartlog.txt

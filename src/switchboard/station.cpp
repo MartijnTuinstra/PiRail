@@ -6,36 +6,48 @@
 Station ** stations;
 int stations_len;
 
-Station::Station(int module, int id, char * name, char name_len, enum Station_types type, int len, uint8_t * blocks){
+const char * station_types_string[5] = {
+  "STATION_PERSON",
+  "STATION_CARGO",
+  "STATION_YARD",
+  "STATION_PERSON_YARD",
+  "STATION_CARGO_YARD" 
+};
+
+Station::Station(int module, int id, struct station_conf conf){
   memset(this, 0, sizeof(Station));
+
+  /*
+  uint8_t type;
+  uint8_t nr_blocks;
+  uint8_t name_len;
+  uint16_t parent;
+  uint8_t * blocks;
+  char * name;
+  */
 
   this->module = module;
   this->id = id;
-  this->type = type;
+  this->type = (enum Station_types)conf.type;
 
-  this->name = (char *)_calloc(name_len+1, char);
-  strncpy(this->name, name, name_len);
+  this->name = (char *)_calloc(conf.name_len + 1, char);
+  strncpy(this->name, conf.name, conf.name_len);
 
-  // If block array is to small
-  if(Units[this->module]->station_len <= this->id){
-    loggerf(INFO, "Expand station len %i", Units[this->module]->station_len+8);
-    Units[this->module]->St = (Station * *)_realloc(Units[this->module]->St, (Units[this->module]->station_len + 8), Station *);
+  Units[this->module]->insertStation(this);
 
-    int i = Units[this->module]->station_len;
-    for(; i < Units[this->module]->station_len+8; i++){
-      Units[this->module]->St[i] = 0;
-    }
-    Units[this->module]->station_len += 8;
+  if(conf.parent != 0xFFFF && Units[this->module]->St[conf.parent]){
+    this->parent = Units[this->module]->St[conf.parent];
+    Units[this->module]->St[conf.parent]->childs.push_back(this);
   }
+  else
+    loggerf(WARNING, "Failed to link station '%s' to parent %d", this->name, conf.parent);
 
-  Units[this->module]->St[this->id] = this;
-
-  this->blocks_len = len;
+  this->blocks_len = conf.nr_blocks;
   this->blocks = (Block **)_calloc(this->blocks_len, Block *);
 
-  for(int i = 0; i < len; i++){
-    this->blocks[i] = U_B(module, blocks[i]);
-    U_B(module, blocks[i])->station = this;
+  for(int i = 0; i < conf.nr_blocks; i++){
+    this->blocks[i] = U_B(module, conf.blocks[i]);
+    U_B(module, conf.blocks[i])->station = this;
   }
 
   if(!stations){

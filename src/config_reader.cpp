@@ -670,22 +670,19 @@ void modify_Signal(struct ModuleConfig * config, char cmd){
       config->Signals[id].blockId = tmp;
     
     
-    if(config->Signals[id].side == 1) // NEXT
-      printf("Signals Block side (N)| ");
-    else
-      printf("Signals Block side (P)| ");
+    printf("Signals Block direction (%c)| ", config->Signals[id].direction ? 'F' : 'R');
     
     fgets(_cmd, 20, stdin);
     char tmp_char;
     if(sscanf(_cmd, "%c", &tmp_char) > 0){
       printf("Got %i\n", tmp_char);
-      if(tmp_char == 'N')
-        config->Signals[id].side = 1; // NEXT
-      else if(tmp_char == 'P')
-        config->Signals[id].side = 0; // PREV
+      if(tmp_char == 'F')
+        config->Signals[id].direction = 1; // NEXT
+      else if(tmp_char == 'R')
+        config->Signals[id].direction = 0; // PREV
     }
     
-    printf("Signals Outputs (%i) | ", config->Signals[id].output_len);
+    printf("Signals Outputs (%2i)  | ", config->Signals[id].output_len);
     fgets(_cmd, 20, stdin);
     if(sscanf(_cmd, "%i", &tmp) > 0){
       config->Signals[id].output = (struct s_IO_port_conf *)_realloc(config->Signals[id].output, tmp, struct s_IO_port_conf);
@@ -694,6 +691,7 @@ void modify_Signal(struct ModuleConfig * config, char cmd){
     }
 
     for(int i = 0; i < config->Signals[id].output_len; i++){
+      printf("-----------------------\n");
       printf(" - IO-Address: (%02i:%02i) | ", config->Signals[id].output[i].Node, config->Signals[id].output[i].Adr);
       fgets(_cmd, 20, stdin);
       if(sscanf(_cmd, "%i%*c%i", &tmp, &tmp1) > 0){
@@ -701,13 +699,48 @@ void modify_Signal(struct ModuleConfig * config, char cmd){
         config->Signals[id].output[i].Adr = tmp1;
       }
       for(int j = 0; j < 8; j++){
-        printf("   IO-Event %i: (%i)    | ", j, config->Signals[id].stating[i].event[j]);
+        printf("   IO-Event %i: (%2i)    | ", j, config->Signals[id].stating[i].event[j]);
         fgets(_cmd, 20, stdin);
         if(sscanf(_cmd, "%i", &tmp) > 0){
           config->Signals[id].stating[i].event[j] = tmp;
         }
       }
     }
+    printf("-----------------------\n");
+    
+    printf("Signals Switches (%2i) | ", config->Signals[id].Switch_len);
+    fgets(_cmd, 20, stdin);
+    if(sscanf(_cmd, "%i", &tmp) > 0){
+      config->Signals[id].Switches = (struct s_Signal_DependentSwitch *)_realloc(config->Signals[id].output, tmp, struct s_Signal_DependentSwitch);
+      config->Signals[id].Switch_len = tmp;
+    }
+
+    for(int i = 0; i < config->Signals[id].Switch_len; i++){
+      printf("-----------------------\n");
+      printf(" - Switch %2i          |\n", i);
+      printf(" - Switch type %4s   | ", config->Signals[id].Switches[i].type ? "MSSw" : "Sw");
+      fgets(_cmd, 20, stdin);
+      char tmpc;
+      if(sscanf(_cmd, "%c", &tmpc) > 0){
+        if(tmpc == 'M'){
+          config->Signals[id].Switches[i].type = 1;
+        }
+        else if(tmpc == 'S'){
+          config->Signals[id].Switches[i].type = 0;
+        }
+      }
+      printf(" - Switch %2i          | ", config->Signals[id].Switches[i].Sw);
+      fgets(_cmd, 20, stdin);
+      if(sscanf(_cmd, "%i", &tmp) > 0){
+        config->Signals[id].Switches[i].Sw = tmp;
+      }
+      printf(" - State %2i           | ", config->Signals[id].Switches[i].state);
+      fgets(_cmd, 20, stdin);
+      if(sscanf(_cmd, "%i", &tmp) > 0){
+        config->Signals[id].Switches[i].state = tmp;
+      }
+    }
+    printf("-----------------------\n");
 
     printf("New:      \t");
     print_Signals(config->Signals[id]);

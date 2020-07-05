@@ -37,8 +37,10 @@ ModuleConfig::~ModuleConfig(){
   loggerf(TRACE, "  Module Signals");
   
   for(int i = 0; i < this->header.Signals; i++){
-    _free(this->Signals[i].stating);
-    _free(this->Signals[i].output);
+    if(this->Signals[i].stating)
+      _free(this->Signals[i].stating);
+    if(this->Signals[i].output)
+      _free(this->Signals[i].output);
   }
 
   loggerf(TRACE, "  Module Stations");
@@ -188,6 +190,7 @@ int ModuleConfig::calc_size(){
     size += sizeof(struct s_signal_conf) + 1;
     size += this->Signals[i].output_len * sizeof(struct s_IO_port_conf) + 1;
     size += this->Signals[i].output_len * sizeof(struct s_IO_signal_event_conf) + 1;
+    size += this->Signals[i].Switch_len * sizeof(struct s_Signal_DependentSwitch) + 1;
   }
 
   //Stations
@@ -282,6 +285,9 @@ void ModuleConfig::write(){
 
     memcpy(p, this->Signals[i].stating, this->Signals[i].output_len * sizeof(struct s_IO_signal_event_conf));
     p += this->Signals[i].output_len * sizeof(struct s_IO_signal_event_conf) + 1;
+
+    memcpy(p, this->Signals[i].Switches, this->Signals[i].Switch_len * sizeof(struct s_Signal_DependentSwitch));
+    p += this->Signals[i].Switch_len * sizeof(struct s_Signal_DependentSwitch) + 1;
   }
 
   //Copy Stations

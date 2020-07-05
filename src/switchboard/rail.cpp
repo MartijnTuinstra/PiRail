@@ -3,6 +3,7 @@
 #include "switchboard/rail.h"
 #include "switchboard/switch.h"
 #include "switchboard/msswitch.h"
+#include "switchboard/signals.h"
 
 #include "system.h"
 #include "mem.h"
@@ -52,6 +53,9 @@ Block::Block(uint8_t module, struct s_block_conf block){
   this->state = PROCEED;
   this->reverse_state = PROCEED;
 
+  this->forward_signal = new std::vector<Signal *>();
+  this->reverse_signal = new std::vector<Signal *>();
+
   // struct s_node_adr in;
   // in.Node = block.IO_In.Node;
   // in.io = block.IO_In.Adr;
@@ -74,6 +78,9 @@ Block::~Block(){
   loggerf(MEMORY, "Block %i:%i Destructor\n", module, id);
   if(this->Sw)
     _free(this->Sw);
+
+  delete this->forward_signal;
+  delete this->reverse_signal;
 
   this->Sw = 0;
 }
@@ -403,14 +410,37 @@ void Block::reserve(){
 
 void Block::setState(enum Rail_states state){
   this->state = state;
+
+  uint8_t signalsize = this->forward_signal->size();
+  for(uint8_t i = 0; i < signalsize; i++){
+    this->forward_signal->operator[](i)->set(state);
+  }
+
   this->statechanged = 1;
   Units[this->module]->block_state_changed |= 1;
 }
 
 void Block::setReversedState(enum Rail_states state){
   this->reverse_state = state;
+
+  uint8_t signalsize = this->reverse_signal->size();
+  for(uint8_t i = 0; i < signalsize; i++){
+    this->reverse_signal->operator[](i)->set(state);
+  }
+
   this->statechanged = 1;
   Units[this->module]->block_state_changed |= 1;
+}
+
+enum Rail_states Block::addSignal(Signal * Sig){
+  if(Sig->direction){
+    this->forward_signal->push_back(Sig);
+    return this->state;
+  }
+  else{
+    this->reverse_signal->push_back(Sig);
+    return this->reverse_state;
+  }
 }
 
 

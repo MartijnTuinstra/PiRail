@@ -160,10 +160,13 @@ struct signal_conf read_s_signal_conf(uint8_t ** p){
 
   memcpy(&s, *p, sizeof(struct s_signal_conf));
 
+  print_hex((char *)*p, sizeof(struct s_signal_conf));
+
   *p += sizeof(struct s_signal_conf);
 
   s.output = (struct s_IO_port_conf *)_calloc(s.output_len, struct s_IO_port_conf);
   s.stating = (struct s_IO_signal_event_conf *)_calloc(s.output_len, struct s_IO_signal_event_conf);
+  s.Switches = (struct s_Signal_DependentSwitch *)_calloc(s.Switch_len, struct s_Signal_DependentSwitch);
 
   if(!check_Spacing(p))
     return s;
@@ -176,6 +179,12 @@ struct signal_conf read_s_signal_conf(uint8_t ** p){
 
   memcpy(s.stating, *p, s.output_len * sizeof(struct s_IO_signal_event_conf));
   *p += s.output_len * sizeof(struct s_IO_signal_event_conf);
+
+  if(!check_Spacing(p))
+    return s;
+
+  memcpy(s.Switches, *p, s.Switch_len * sizeof(struct s_Signal_DependentSwitch));
+  *p += s.Switch_len * sizeof(struct s_Signal_DependentSwitch);
 
   check_Spacing(p);
 

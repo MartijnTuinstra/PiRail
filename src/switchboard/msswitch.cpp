@@ -1,5 +1,6 @@
 #include "switchboard/switch.h"
 #include "switchboard/msswitch.h"
+#include "switchboard/signals.h"
 
 #include "mem.h"
 #include "logger.h"
@@ -105,6 +106,11 @@ MSSwitch::~MSSwitch(){
   _free(this->IO_states);
   // _free(this->links);
   // _free(this->preferences);
+}
+
+void MSSwitch::addSignal(Signal * Sig){
+  loggerf(INFO, "AddSignal %i to switch %i", Sig->id, this->id);
+  this->Signals.push_back(Sig);
 }
 
 bool MSSwitch::approachableA(void * p, int flags){
@@ -306,12 +312,7 @@ void MSSwitch::setState(uint8_t state, uint8_t lock){
   Algor_Set_Changed(&this->Detection->Alg);
   putList_AlgorQueue(this->Detection->Alg, 0);
 
-  if (this->state_direction[this->state] != this->state_direction[state])
-    this->Detection->dir ^= 0b100;
-
-  this->state = (state & 0x0f) | 0x80;
-
-  Units[this->module]->msswitch_state_changed |= 1;
+  this->updateState(state);
 
   this->Detection->AlgorSearch(0);
 
@@ -323,3 +324,18 @@ void MSSwitch::setState(uint8_t state, uint8_t lock){
 
   putAlgorQueue(this->Detection, lock);
 }
+
+void MSSwitch::updateState(uint8_t state){
+  if (this->state_direction[this->state] != this->state_direction[state])
+    this->Detection->dir ^= 0b100;
+
+  this->state = (state & 0x0f) | 0x80;
+  this->updatedState = true;
+
+  for(auto Sig: this->Signals){
+    Sig->switchUpdate();
+  }
+
+  Units[this->module]->switch_state_changed |= 1;
+}
+

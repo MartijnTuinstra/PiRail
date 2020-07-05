@@ -138,15 +138,22 @@ struct  station_conf {
     char * name;
 };
 
+struct __attribute__((__packed__)) s_Signal_DependentSwitch {
+  uint8_t type;
+  uint8_t Sw;
+  uint8_t state;
+};
 
 struct __attribute__((__packed__)) signal_conf {
-  uint16_t side:1;
+  uint16_t direction:1;
   uint16_t id:15;
   uint16_t blockId;
   uint8_t output_len;
+  uint8_t Switch_len;
 
   struct s_IO_port_conf * output;
   struct s_IO_signal_event_conf * stating;
+  struct s_Signal_DependentSwitch * Switches;
 };
 
 struct __attribute__((__packed__)) s_IO_signal_event_conf {
@@ -154,10 +161,11 @@ struct __attribute__((__packed__)) s_IO_signal_event_conf {
 };
 
 struct __attribute__((__packed__)) s_signal_conf {
-  uint16_t side:1;
+  uint16_t direction:1;
   uint16_t id:15;
   uint16_t blockId;
   uint8_t output_len;
+  uint8_t Switch_len;
 };
 
 

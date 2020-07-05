@@ -127,8 +127,8 @@ class Block {
     uint8_t algorchanged:1;
     uint8_t oneWay:1;
 
-    Signal * NextSignal;
-    Signal * PrevSignal;
+    std::vector<Signal *> * forward_signal;
+    std::vector<Signal *> * reverse_signal;
 
     int switch_len;
     Switch ** Sw;
@@ -153,6 +153,8 @@ class Block {
 
     void setState(enum Rail_states state);
     void setReversedState(enum Rail_states state);
+
+    enum Rail_states addSignal(Signal * Sig);
 
     void AlgorClear();
     void AlgorSearch(int debug);

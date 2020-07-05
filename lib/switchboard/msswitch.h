@@ -48,6 +48,7 @@ class MSSwitch {
     uint8_t type;
 
     bool hold;
+    bool updatedState;
 
     bool feedback_en;
     uint8_t feedback_len;
@@ -57,6 +58,8 @@ class MSSwitch {
     uint8_t IO_len;
     IO_Port ** IO;
     uint16_t * IO_states;
+
+    std::vector<Signal *> Signals;
 
     struct rail_link * sideA;
     struct rail_link * sideB;
@@ -78,6 +81,8 @@ class MSSwitch {
     MSSwitch(uint8_t module, struct ms_switch_conf conf);//(struct s_msswitch_connect connect, uint8_t type, uint8_t block_id, uint8_t output_len, struct s_IO_port_conf * output_pins, uint16_t * output_states);
     ~MSSwitch();
 
+    void addSignal(Signal * Sig);
+
     struct rail_link * NextLink(int flags);
 
     bool approachableA(void * p, int flags);
@@ -86,6 +91,7 @@ class MSSwitch {
     uint NextList_Block(Block ** blocks, uint8_t block_counter, enum link_types type, int flags, int length);
 
     void setState(uint8_t state, uint8_t lock);
+    void updateState(uint8_t state);
 };
 
 #endif

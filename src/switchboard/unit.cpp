@@ -72,9 +72,7 @@ Unit::Unit(ModuleConfig * Config){
   loggerf(DEBUG, "  Module Signals");
   
   for(int i = 0; i < Config->header.Signals; i++){
-    // struct signal_conf sig = read_s_signal_conf(buf_ptr);
-
-    create_signal_from_conf(this->module, Config->Signals[i]);
+    new Signal(this->module, Config->Signals[i]);
   }
 
   loggerf(DEBUG, "  Module Stations");
@@ -273,6 +271,27 @@ void Unit::link_all(){
     if(this->St[i]->blocks && this->St[i]->blocks[0] && !this->St[i]->blocks[0]->path)
       new Path(this->St[i]->blocks[0]);
   }
+}
+
+void Unit::insertSignal(Signal * Sig){
+  if(this->signal_len <= Sig->id){
+    loggerf(INFO, "Expand signals len %i", this->signal_len+8);
+    this->Sig = (Signal * *)_realloc(this->St, (this->signal_len + 8), Signal *);
+
+    int i = this->signal_len;
+    for(; i < this->signal_len+8; i++){
+      this->Sig[i] = 0;
+    }
+    this->signal_len += 8;
+  }
+
+  if(this->Sig[Sig->id]){
+    loggerf(WARNING, "Duplicate signal id %02i:%02i, overwriting ... ", module, Sig->id);
+    delete this->Sig[Sig->id];
+    this->Sig[Sig->id] = 0;
+  }
+
+  this->Sig[Sig->id] = Sig;
 }
 
 // void Create_Unit(uint16_t M, uint8_t Nodes, char points){

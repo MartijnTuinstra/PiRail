@@ -10,7 +10,7 @@ GCC_FLAGS = -D _DEFAULT_SOURCE
 
 GCC = g++ -std=c++14 -g3 $(GCC_INCLUDE) $(GCC_ERROR_FLAGS) $(GCC_LIBS) $(GCC_FLAGS)
 
-TEST_FILES = main switchboard/rail switchboard/switch switchboard/msswitch src/path src/algorithm
+TEST_FILES = main switchboard/rail switchboard/switch switchboard/msswitch switchboard/signal src/path src/algorithm
 
 .DEFAULT_GOAL := all
 
@@ -24,7 +24,7 @@ $(BIN)/%.o: %.cpp
 
 libbaan.so: FORCE
 	@echo "( BUILD ) baan"
-	@make -C .. baan
+	@$(MAKE) -C .. baan
 	@cp ../baan.so libbaan.so
 
 maintest: $(addprefix $(BIN)/,$(addsuffix .o, $(TEST_FILES))) libbaan.so

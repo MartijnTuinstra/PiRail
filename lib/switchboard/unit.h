@@ -56,6 +56,7 @@ class Unit {
     void insertSwitch(Switch * Sw);
     void insertMSSwitch(MSSwitch * MSSw);
     void insertStation(Station * St);
+    void insertSignal(Signal * Sig);
 
     void link_all();
 };

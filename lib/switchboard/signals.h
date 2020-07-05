@@ -3,6 +3,9 @@
 
 #include "IO.h"
 #include "switchboard/rail.h"
+#include "switchboard/switch.h"
+#include "switchboard/msswitch.h"
+#include "config.h"
 
 /**///Signal passing speed
 //Flashing Red speed
@@ -16,10 +19,21 @@ struct s_signal_stating {
   union u_IO_event state[8];
 };
 
+struct SignalSwitchLink {
+  bool MSSw;
+  union {
+    Switch * Sw;
+    MSSwitch * MSSw;
+    void * p;
+  } p;
+  uint8_t state;
+};
+
 class Signal {
   public:
     uint16_t id;            // Signal ID
     uint8_t module;         // Module number
+    bool direction;         // Forward?
     Block * B;              // Parent block
     enum Rail_states state; // State of the signal
 
@@ -28,16 +42,21 @@ class Signal {
     IO_Port ** output;      // List of IO_port pointers
     struct s_signal_stating * output_stating;
 
-    Signal(uint8_t module, uint8_t blockId, uint16_t signalId, bool side, char output_len, struct s_IO_port_conf * output, struct s_IO_signal_event_conf * stating);
+    bool switchDanger;
+    std::vector<struct SignalSwitchLink> Switches;
+
+    Signal(uint8_t module, struct signal_conf conf);
     ~Signal();
 
     void check();
     void set(enum Rail_states state);
+    void setIO();
+    void switchUpdate();
 };
 
 #define U_Sig(M, S) Units[M]->Sig[S]
 
-#define create_signal_from_conf(module, data) new Signal(module, data.blockId, data.id, data.side, data.output_len, data.output, data.stating)
+
 // void Create_Signal(uint8_t module, uint8_t blockId, uint16_t signalId, bool side, char output_len, struct s_IO_port_conf * output, struct s_IO_signal_event_conf * stating);
 // Signal * Clear_Signal(Signal * Sig);
 

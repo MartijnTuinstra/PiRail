@@ -269,8 +269,6 @@ void Algor_process(Block * B, int flags){
   //Apply block stating
   Algor_rail_state(&B->Alg, flags);
 
-  //Update signal stating
-  Algor_signal_state(B->Alg, flags);
   //Train Control
   // Apply train algorithm only if there is a train on the block and is the front of the train
   if(B->train){
@@ -1197,42 +1195,6 @@ void Algor_train_control(Algor_Blocks * ABs, int debug){
       T->changeSpeed(N[0]->max_speed, GRADUAL_FAST_SPEED);
     else if(T->speed != T->max_speed)
       T->changeSpeed(T->max_speed, GRADUAL_FAST_SPEED);
-  }
-}
-
-void Algor_signal_state(Algor_Blocks AB, int debug){
-  loggerf(TRACE, "Algor_signal_state");
-
-  Block ** P =  AB.P;
-  Block *  B =  AB.B;
-  Block ** N =  AB.N;
-
-  if(B->NextSignal)
-    B->NextSignal->check();
-  if(B->PrevSignal)
-    B->PrevSignal->check();
-   
-  for(uint8_t i = 0; i < AB.prev; i++){
-    Block * tB = P[i];
-
-    if(!tB)
-      continue;
-
-    if(tB->NextSignal)
-      tB->NextSignal->check();
-    if(tB->PrevSignal)
-      tB->PrevSignal->check();
-  }
-  for(uint8_t i = 0; i < AB.next; i++){
-    Block * tB = N[i];
-
-    if(!tB)
-      continue;
-
-    if(tB->NextSignal)
-      tB->NextSignal->check();
-    if(tB->PrevSignal)
-      tB->PrevSignal->check();
   }
 }
 

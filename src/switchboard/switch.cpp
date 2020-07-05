@@ -1,5 +1,6 @@
 #include "switchboard/switch.h"
 #include "switchboard/msswitch.h"
+#include "switchboard/signals.h"
 
 #include "mem.h"
 #include "logger.h"
@@ -45,6 +46,9 @@ Switch::Switch(uint8_t Module, struct switch_conf s){
 
   for(int i = 0; i < this->IO_len; i++){
     Init_IO(Units[connect.module], Adrs[i], this);
+
+    if(!(Units[connect.module]->Node && Units[connect.module]->Node[Adrs[i].Node].io[Adrs[i].io]))
+      continue;
 
     this->IO[i] = Units[connect.module]->Node[Adrs[i].Node].io[Adrs[i].io];
   }
@@ -107,6 +111,11 @@ Switch::~Switch(){
   _free(this->IO_states);
   _free(this->coupled);
   _free(this->preferences);
+}
+
+void Switch::addSignal(Signal * Sig){
+  loggerf(INFO, "AddSignal %i to switch %i", Sig->id, this->id);
+  this->Signals.push_back(Sig);
 }
 
 bool Switch::approachable(void * p, int flags){
@@ -262,9 +271,7 @@ void Switch::setState(uint8_t state, uint8_t lock){
   Algor_Set_Changed(&this->Detection->Alg);
   putList_AlgorQueue(this->Detection->Alg, 0);
 
-  this->state = (state & 0x0f) | 0x80;
-
-  Units[this->module]->switch_state_changed |= 1;
+  this->updateState(state);
 
   this->Detection->AlgorSearch(0);
 
@@ -275,6 +282,17 @@ void Switch::setState(uint8_t state, uint8_t lock){
   putList_AlgorQueue(this->Detection->Alg, 0);
 
   putAlgorQueue(this->Detection, lock);
+}
+
+void Switch::updateState(uint8_t state){
+  this->state = (state & 0x0f) | 0x80;
+  this->updatedState = true;
+
+  for(auto Sig: this->Signals){
+    Sig->switchUpdate();
+  }
+
+  Units[this->module]->switch_state_changed |= 1;
 }
 
 

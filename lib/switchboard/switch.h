@@ -15,6 +15,9 @@
 
 #define U_Sw(U, A) Units[U]->Sw[A]
 
+#define STRAIGHT_SWITCH 0
+#define DIVERGING_SWITCH 1
+
 
 struct switch_list {
   uint8_t len;
@@ -60,6 +63,7 @@ class Switch {
     uint16_t id;
 
     bool hold;
+    bool updatedState;
 
     bool feedback_en;
     uint8_t feedback_len;
@@ -69,6 +73,8 @@ class Switch {
     uint8_t IO_len;
     IO_Port ** IO;
     uint8_t * IO_states;
+
+    std::vector<Signal *> Signals;
 
     struct rail_link div;
     struct rail_link str;
@@ -90,11 +96,14 @@ class Switch {
     // Switch(struct s_switch_connect connect, uint8_t block_id, uint8_t output_len, Node_adr * output_pins, uint8_t * output_states);
     ~Switch();
 
+    void addSignal(Signal * Sig);
+
     bool approachable(void * p, int flags);
     Block * Next_Block(enum link_types type, int flags, int level);
     uint NextList_Block(Block ** blocks, uint8_t block_counter, enum link_types type, int flags, int length);
 
     void setState(uint8_t state, uint8_t lock);
+    void updateState(uint8_t state);
 };
 
 

@@ -31,7 +31,7 @@ CONFIG_READER_FILES = config_reader config logger mem
 CONFIG_READER_FILES += config/ModuleConfig config/RollingConfig
 
 BAAN_CONFIGS = 1 2 3 10 20 21 22 23 25 26
-TEST_CONFIGS = PATH-1 SB-1.1 SB-1.2 SB-1.3 SB-2.1 SB-3.1 SB-4.1
+TEST_CONFIGS = PATH-1 IO-1 SB-1.1 SB-1.2 SB-1.3 SB-2.1 SB-3.1 SB-4.1
 
 TEST_STOCK_CONFIGS =
 

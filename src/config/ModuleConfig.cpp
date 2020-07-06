@@ -32,7 +32,10 @@ ModuleConfig::~ModuleConfig(){
 
   loggerf(TRACE, "  Module MSSwitch");
 
-  for(int i = 0; i < this->header.MSSwitches; i++){}
+  for(int i = 0; i < this->header.MSSwitches; i++){
+    _free(this->MSSwitches[i].states);
+    _free(this->MSSwitches[i].IO_Ports);
+  }
 
   loggerf(TRACE, "  Module Signals");
   
@@ -78,6 +81,11 @@ void ModuleConfig::newModule(uint8_t file, uint8_t connections){
 }
 
 int ModuleConfig::read(){
+  if(this->parsed){
+    loggerf(WARNING, "Allready parsed, aborting!");
+    return -1;
+  }
+
   loggerf(INFO, "Reading Module Config from %s", filename);
   FILE * fp = fopen(filename, "rb");
 
@@ -109,7 +117,7 @@ int ModuleConfig::read(){
     return -1;
   }
 
-  loggerf(DEBUG, "Module start reading %d, %d, %d, %d, %d, %d\n", this->header.IO_Nodes, this->header.Blocks, this->header.Switches, this->header.MSSwitches, this->header.Signals, this->header.Stations);
+  loggerf(DEBUG, "Module start reading %d, %d, %d, %d, %d, %d", this->header.IO_Nodes, this->header.Blocks, this->header.Switches, this->header.MSSwitches, this->header.Signals, this->header.Stations);
 
   this->Nodes = (struct node_conf *)_calloc(this->header.IO_Nodes, struct node_conf);
   this->Blocks = (struct s_block_conf *)_calloc(this->header.Blocks, struct s_block_conf);

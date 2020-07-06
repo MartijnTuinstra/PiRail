@@ -313,18 +313,20 @@ void COM_Parse(struct fifobuffer * buf){
     if(!Units[module] || node >= Units[module]->IO_Nodes)
       return;
 
-    IO_Node * IO = &Units[module]->Node[node];
+    IO_Node * IO = Units[module]->Node[node];
 
     //uint8_t node = data[3];
     uint8_t l = data[3];
     for(uint8_t i = 0; i < l*8; i++){
       if(data[i/8+4] & (1 << (i%8))){
         loggerf(INFO, "%d IO %i HIGH", data[0], i);
-        IO_set_input(IO->io[i], 1);
+        IO->io[i]->setInput(1);
+        // IO_set_input(IO->io[i], 1);
       }
       else{
         loggerf(INFO, "%d IO %i LOW", data[0], i);
-        IO_set_input(IO->io[i], 0);
+        IO->io[i]->setInput(0);
+        // IO_set_input(IO->io[i], 0);
       }
     }
   }

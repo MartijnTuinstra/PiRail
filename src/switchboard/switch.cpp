@@ -19,16 +19,6 @@ Switch::Switch(uint8_t Module, struct switch_conf s){
   connect.str.module = s.Str.module; connect.str.id = s.Str.id; connect.str.type = (enum link_types)s.Str.type;
   connect.div.module = s.Div.module; connect.div.id = s.Div.id; connect.div.type = (enum link_types)s.Div.type;
 
-  Node_adr * Adrs = (Node_adr *)_calloc(s.IO & 0x0f, Node_adr);
-
-  for(int i = 0; i < (s.IO & 0x0f); i++){
-    Adrs[i].Node = s.IO_Ports[i].Node;
-    Adrs[i].io = s.IO_Ports[i].Adr;
-  }
-  uint8_t * States = (uint8_t *)_calloc(2, uint8_t);
-  States[0] = 1 + (0 << 1); //State 0 - Address 0 hight, address 1 low
-  States[1] = 0 + (1 << 1); //State 1 - Address 1 hight, address 0 low
-
   // new Switch(connect, s.det_block, s.IO & 0x0f, Adrs, States);
   loggerf(MEMORY, "Create Sw %i:%i", connect.module, connect.id);
   // Switch * Z = (Switch *)_calloc(1, Switch);
@@ -44,30 +34,44 @@ Switch::Switch(uint8_t Module, struct switch_conf s){
   this->IO_len = s.IO & 0x0F;
   this->IO = (IO_Port **)_calloc(this->IO_len, IO_Port *);
 
-  for(int i = 0; i < this->IO_len; i++){
-    Init_IO(Units[connect.module], Adrs[i], this);
+  Unit * U = Units[connect.module];
 
-    if(!(Units[connect.module]->Node && Units[connect.module]->Node[Adrs[i].Node].io[Adrs[i].io]))
+
+  // ============== IO ==============
+  Node_adr * Adrs = (Node_adr *)_calloc(s.IO & 0x0f, Node_adr);
+
+  for(int i = 0; i < (s.IO & 0x0f); i++){
+    Adrs[i].Node = s.IO_Ports[i].Node;
+    Adrs[i].io = s.IO_Ports[i].Adr;
+  }
+  for(int i = 0; i < this->IO_len; i++){
+    if(!U->IO(s.IO_Ports[i]))
       continue;
 
-    this->IO[i] = Units[connect.module]->Node[Adrs[i].Node].io[Adrs[i].io];
+    this->IO[i] = U->linkIO(Adrs[i], this, IO_Output);
   }
+
+  _free(Adrs);
+
+  uint8_t * States = (uint8_t *)_calloc(2, uint8_t);
+  States[0] = 1 + (0 << 1); //State 0 - Address 0 high, address 1 low
+  States[1] = 0 + (1 << 1); //State 1 - Address 1 high, address 0 low
 
   this->IO_states = (uint8_t *)_calloc(this->IO_len, uint8_t);
   memcpy(this->IO_states, States, this->IO_len * sizeof(uint8_t));
   _free(States);
 
-  Units[this->module]->insertSwitch(this);
+  // =========== Detection ============
 
-  if(Units[this->module]->block_len > s.det_block && U_B(this->module, s.det_block)){
-    this->Detection = U_B(this->module, s.det_block);
+  U->insertSwitch(this);
+
+  if(U->block_len > s.det_block && U->B[s.det_block]){
+    this->Detection = U->B[s.det_block];
     this->Detection->addSwitch(this);
   }
   else{
     loggerf(WARNING, "SWITCH %i:%i has no detection block %i", connect.module, connect.id, s.det_block);
   }
-
-  _free(Adrs);
 }
 
 // Switch::Switch(struct s_switch_connect connect, uint8_t block_id, uint8_t output_len, Node_adr * output_pins, uint8_t * output_states){
@@ -127,8 +131,8 @@ bool Switch::approachable(void * p, int flags){
     return 1;
   }
 
-  loggerf(TRACE, "check s (state: %i, str.p: %x, div.p: %x)", (this->state & 0x7F), (unsigned int)this->str.p.p, (unsigned int)this->div.p.p);
-  if(((this->state & 0x7F) == 0 && this->str.p.p == p) || ((this->state & 0x7F) == 1 && this->div.p.p == p)){
+  loggerf(TRACE, "check s (state: %i, str.p: %x, div.p: %x)", this->state, (unsigned int)this->str.p.p, (unsigned int)this->div.p.p);
+  if((this->state == 0 && this->str.p.p == p) || (this->state == 1 && this->div.p.p == p)){
     return 1;
   }
 
@@ -144,7 +148,7 @@ Block * Switch::Next_Block(enum link_types type, int flags, int level){
     next = &this->app;
   }
   else{
-    if((this->state & 0x7F) == 0){
+    if(this->state == 0){
       next = &this->str;
     }
     else{
@@ -202,7 +206,7 @@ uint Switch::NextList_Block(Block ** blocks, uint8_t block_counter, enum link_ty
     next = &this->app;
   }
   else{
-    if((this->state & 0x7F) == 0){
+    if(this->state == 0){
       next = &this->str;
     }
     else{
@@ -285,7 +289,7 @@ void Switch::setState(uint8_t state, uint8_t lock){
 }
 
 void Switch::updateState(uint8_t state){
-  this->state = (state & 0x0f) | 0x80;
+  this->state = state;
   this->updatedState = true;
 
   for(auto Sig: this->Signals){
@@ -381,10 +385,10 @@ int Switch_Set_Path(void * p, struct rail_link link, int flags){
   if(link.type == RAIL_LINK_S){
     // Go to next switch
     Switch * Sw = link.p.Sw;
-    if((Sw->state & 0x7F) == 0 && Sw->str.type != RAIL_LINK_R && Sw->str.type != 'D'){
+    if(Sw->state == 0 && Sw->str.type != RAIL_LINK_R && Sw->str.type != 'D'){
       return Switch_Set_Path(Sw, Sw->str, flags);
     }
-    else if((Sw->state & 0x7F) == 1 && Sw->div.type != RAIL_LINK_R && Sw->div.type != 'D'){
+    else if(Sw->state == 1 && Sw->div.type != RAIL_LINK_R && Sw->div.type != 'D'){
       return Switch_Set_Path(Sw, Sw->div, flags);
     }
   }
@@ -392,8 +396,8 @@ int Switch_Set_Path(void * p, struct rail_link link, int flags){
     // Check if switch is in correct state
     // and continue to next switch
     Switch * N = link.p.Sw;
-    loggerf(TRACE, "set s %i (state: %i, str.p: %x, div.p: %x)", N->id, (N->state & 0x7F), (unsigned int)N->str.p.p, (unsigned int)N->div.p.p);
-    if((N->state & 0x7F) == 0){
+    loggerf(TRACE, "set s %i (state: %i, str.p: %x, div.p: %x)", N->id, N->state, (unsigned int)N->str.p.p, (unsigned int)N->div.p.p);
+    if(N->state == 0){
       if(N->str.p.p != p)
         N->setState(1, 1);
 
@@ -402,7 +406,7 @@ int Switch_Set_Path(void * p, struct rail_link link, int flags){
 
       return Switch_Set_Path(N, N->app, flags);
     }
-    else if((N->state & 0x7F) == 1){
+    else if(N->state == 1){
       if(N->div.p.p != p)
         N->setState(0, 1);
 
@@ -415,14 +419,14 @@ int Switch_Set_Path(void * p, struct rail_link link, int flags){
   else if(link.type == RAIL_LINK_MA){
     loggerf(ERROR, "IMPLEMENT");
     MSSwitch * N = link.p.MSSw;
-    if(N->sideB[N->state & 0x7F].p.p == p){
+    if(N->sideB[N->state].p.p == p){
       return 1;
     }
   }
   else if(link.type == RAIL_LINK_MB){
     loggerf(ERROR, "IMPLEMENT");
     MSSwitch * N = link.p.MSSw;
-    if(N->sideA[N->state & 0x7F].p.p == p){
+    if(N->sideA[N->state].p.p == p){
       return 1;
     }
   }
@@ -463,10 +467,10 @@ int Switch_Reserve_Path(void * p, struct rail_link link, int flags){
     Units[DB->module]->block_state_changed = 1;
     loggerf(TRACE, "Set switch %02i:%02i to RESERVED", Sw->module, Sw->id);
 
-    if((Sw->state & 0x7F) == 0 && Sw->str.type != RAIL_LINK_R && Sw->str.type != 'D'){
+    if(Sw->state == 0 && Sw->str.type != RAIL_LINK_R && Sw->str.type != 'D'){
       return Switch_Reserve_Path(Sw, Sw->str, flags);
     }
-    else if((Sw->state & 0x7F) == 1 && Sw->div.type != RAIL_LINK_R && Sw->div.type != 'D'){
+    else if(Sw->state == 1 && Sw->div.type != RAIL_LINK_R && Sw->div.type != 'D'){
       return Switch_Reserve_Path(Sw, Sw->div, flags);
     }
   }
@@ -487,14 +491,14 @@ int Switch_Reserve_Path(void * p, struct rail_link link, int flags){
   else if(link.type == RAIL_LINK_MA){
     loggerf(ERROR, "IMPLEMENT");
     MSSwitch * N = link.p.MSSw;
-    if(N->sideB[N->state & 0x7F].p.p == p){
+    if(N->sideB[N->state].p.p == p){
       return 1;
     }
   }
   else if(link.type == RAIL_LINK_MB){
     loggerf(ERROR, "IMPLEMENT");
     MSSwitch * N = link.p.MSSw;
-    if(N->sideA[N->state & 0x7F].p.p == p){
+    if(N->sideA[N->state].p.p == p){
       return 1;
     }
   }
@@ -531,21 +535,21 @@ int Switch_Check_Path(void * p, struct rail_link link, int flags){
   }
   else if(link.type == RAIL_LINK_S){
     Switch * Sw = link.p.Sw;
-    loggerf(TRACE, "check S %i (state: %i)", Sw->id, (Sw->state & 0x7F));
-    if((Sw->state & 0x7F) == 0){
+    loggerf(TRACE, "check S %i (state: %i)", Sw->id, Sw->state);
+    if(Sw->state == 0){
       return Switch_Check_Path(Sw, Sw->str, flags);
     }
-    else if((Sw->state & 0x7F) == 1){
+    else if(Sw->state == 1){
       return Switch_Check_Path(Sw, Sw->div, flags);
     }
   }
   else if(link.type == RAIL_LINK_s){
     Switch * N = link.p.Sw;
-    loggerf(TRACE, "check s %i (state: %i, str.p: %x, div.p: %x)", N->id, (N->state & 0x7F), (unsigned int)N->str.p.p, (unsigned int)N->div.p.p);
-    if((N->state & 0x7F) == 0 && N->str.p.p == p){
+    loggerf(TRACE, "check s %i (state: %i, str.p: %x, div.p: %x)", N->id, N->state, (unsigned int)N->str.p.p, (unsigned int)N->div.p.p);
+    if(N->state == 0 && N->str.p.p == p){
       return Switch_Check_Path(N, N->app, flags);
     }
-    else if((N->state & 0x7F) == 1 && N->div.p.p == p){
+    else if(N->state == 1 && N->div.p.p == p){
       return Switch_Check_Path(N, N->app, flags);
     }
     loggerf(ERROR, "wrong State %x", N->state);
@@ -553,14 +557,14 @@ int Switch_Check_Path(void * p, struct rail_link link, int flags){
   else if(link.type == RAIL_LINK_MA){
     loggerf(WARNING, "IMPLEMENT");
     MSSwitch * N = link.p.MSSw;
-    if(N->sideB[N->state & 0x7F].p.p == p){
+    if(N->sideB[N->state].p.p == p){
       return 1;
     }
   }
   else if(link.type == RAIL_LINK_MB){
     loggerf(WARNING, "IMPLEMENT");
     MSSwitch * N = link.p.MSSw;
-    if(N->sideA[N->state & 0x7F].p.p == p){
+    if(N->sideA[N->state].p.p == p){
       return 1;
     }
   }

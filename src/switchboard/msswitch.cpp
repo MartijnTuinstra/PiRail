@@ -62,27 +62,24 @@ MSSwitch::MSSwitch(uint8_t module, struct ms_switch_conf conf){
   this->IO_len = conf.IO;
   this->IO = (IO_Port **)_calloc(this->IO_len, IO_Port *);
 
+  Unit * U = Units[this->module];
+
   for(int i = 0; i < this->IO_len; i++){
-    Init_IO_from_conf(Units[connect.module], conf.IO_Ports[i], this);
-
-    if (!Units[connect.module]->Node[conf.IO_Ports[i].Node].io)
+    if(!U->IO(conf.IO_Ports[i]))
       continue;
 
-    if(!Units[connect.module]->Node[conf.IO_Ports[i].Node].io[conf.IO_Ports[i].Adr])
-      continue;
-
-    this->IO[i] = Units[connect.module]->Node[conf.IO_Ports[i].Node].io[conf.IO_Ports[i].Adr];
+    this->IO[i] = U->linkIO(conf.IO_Ports[i], this, IO_Output);
   }
 
   loggerf(ERROR, "TODO: implement outputstates");
   // this->IO_states = (uint16_t *)_calloc(this->IO_len, uint16_t);
   // memcpy(this->IO_states, conf.IO_Ports, this->IO_len * sizeof(uint16_t));
 
-  Units[this->module]->insertMSSwitch(this);
+  U->insertMSSwitch(this);
 
   // Add msswitch to detection block 
-  if(Units[this->module]->block_len > conf.det_block && U_B(this->module, conf.det_block)){
-    this->Detection = U_B(this->module, conf.det_block);
+  if(U->block_len > conf.det_block && U->B[conf.det_block]){
+    this->Detection = U->B[conf.det_block];
 
     if(this->Detection->MSSw)
       loggerf(WARNING, "Block %02i:%02i has duplicate msswitch, overwritting ...", this->Detection->module, this->Detection->id);
@@ -92,10 +89,6 @@ MSSwitch::MSSwitch(uint8_t module, struct ms_switch_conf conf){
   else{
     loggerf(WARNING, "MSSWITCH %i:%i has no detection block %i", connect.module, connect.id, conf.det_block);
   }
-
-
-
-  _free(conf.states);
 }
 
 MSSwitch::~MSSwitch(){
@@ -120,7 +113,7 @@ bool MSSwitch::approachableA(void * p, int flags){
     return 1;
   }
 
-  if(this->sideA[this->state & 0x7F].p.p == p){
+  if(this->sideA[this->state].p.p == p){
     return 1;
   }
   return 0;
@@ -133,7 +126,7 @@ bool MSSwitch::approachableB(void * p, int flags){
     return 1;
   }
 
-  if(this->sideB[this->state & 0x7F].p.p == p){
+  if(this->sideB[this->state].p.p == p){
     return 1;
   }
   return 0;
@@ -147,9 +140,9 @@ struct rail_link * MSSwitch::NextLink(int flags){
   next = B->NextLink(flags);
 
   if(next->type == RAIL_LINK_MA)
-    next = &this->sideA[this->state & 0x7F];
+    next = &this->sideA[this->state];
   else
-    next = &this->sideB[this->state & 0x7F];
+    next = &this->sideB[this->state];
 
   return next;
 }
@@ -167,17 +160,17 @@ Block * MSSwitch::Next_Block(enum link_types type, int flags, int level){
   
   if(type == RAIL_LINK_MA){
     return this->Detection->_Next(flags, level);
-    // next = &this->sideB[this->state & 0x7F];
+    // next = &this->sideB[this->state];
     // level--;
   }else if(type == RAIL_LINK_MB_inside){
-    next = &this->sideB[this->state & 0x7F];
+    next = &this->sideB[this->state];
   }
   else if(type == RAIL_LINK_MB){
     return this->Detection->_Next(flags, level);
-    // next = &this->sideA[this->state & 0x7F];
+    // next = &this->sideA[this->state];
     // level--;
   }else if(type == RAIL_LINK_MA_inside){
-    next = &this->sideA[this->state & 0x7F];
+    next = &this->sideA[this->state];
   }
 
   if(!next->p.p){
@@ -230,10 +223,10 @@ uint MSSwitch::NextList_Block(Block ** blocks, uint8_t block_counter, enum link_
   
   if(type == RAIL_LINK_MA){
     blocks[block_counter++] = this->Detection;
-    next = &this->sideB[this->state & 0x7F];
+    next = &this->sideB[this->state];
     // return this->Detection->_NextList(blocks, block_counter, flags, length);
   }else if(type == RAIL_LINK_MB_inside){
-    next = &this->sideB[this->state & 0x7F];
+    next = &this->sideB[this->state];
     flags |= NEXT_FIRST_TIME_SKIP;
 
     uint8_t dir = (flags & 1) + (this->Detection->dir << 1);
@@ -241,10 +234,10 @@ uint MSSwitch::NextList_Block(Block ** blocks, uint8_t block_counter, enum link_
   }
   else if(type == RAIL_LINK_MB){
     blocks[block_counter++] = this->Detection;
-    next = &this->sideA[this->state & 0x7F];
+    next = &this->sideA[this->state];
     // return this->Detection->_NextList(blocks, block_counter, flags, length);
   }else if(type == RAIL_LINK_MA_inside){
-    next = &this->sideA[this->state & 0x7F];
+    next = &this->sideA[this->state];
     flags |= NEXT_FIRST_TIME_SKIP;
 
     uint8_t dir = (flags & 1) + (this->Detection->dir << 1);
@@ -329,7 +322,7 @@ void MSSwitch::updateState(uint8_t state){
   if (this->state_direction[this->state] != this->state_direction[state])
     this->Detection->dir ^= 0b100;
 
-  this->state = (state & 0x0f) | 0x80;
+  this->state = state;
   this->updatedState = true;
 
   for(auto Sig: this->Signals){

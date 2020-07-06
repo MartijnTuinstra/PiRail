@@ -576,7 +576,7 @@ void WS_stc_SwitchesUpdate(struct web_client_t * client){
         if(!S)
           continue;
 
-        if((S->state & 0x80) != 0x80){
+        if(!S->updatedState){
           loggerf(TRACE, "%i:%i no new state", S->module, S->id);
           continue;
         }
@@ -585,9 +585,9 @@ void WS_stc_SwitchesUpdate(struct web_client_t * client){
 
         buf[(q-1)*3+1] = S->module;
         buf[(q-1)*3+2] = S->id & 0x7F;
-        buf[(q-1)*3+3] = S->state & 0x7F;
+        buf[(q-1)*3+3] = S->state;
 
-        S->state &= ~0x80;
+        S->updatedState = false;
 
         loggerf(DEBUG, "%i,%i,%i", S->module, S->id, S->state);
         q++;
@@ -606,16 +606,22 @@ void WS_stc_SwitchesUpdate(struct web_client_t * client){
     content = 1;
     for(int j = 0;j<=Units[i]->msswitch_len;j++){
       MSSwitch * Sw = Units[i]->MSSw[j];
-      if(Sw){
-        buf[(q-1)*4+1+buf_l] = Sw->module;
-        buf[(q-1)*4+2+buf_l] = (Sw->id & 0x7F) + 0x80;
-        buf[(q-1)*4+3+buf_l] = Sw->state & 0x7F;
-        buf[(q-1)*4+4+buf_l] = Sw->state_len;
+      if(!Sw)
+        continue;
 
-        Sw->state &= ~0x80;
-
-        q++;
+      if(!Sw->updatedState){
+        loggerf(TRACE, "%i:%i no new state", Sw->module, Sw->id);
+        continue;
       }
+
+      buf[(q-1)*4+1+buf_l] = Sw->module;
+      buf[(q-1)*4+2+buf_l] = (Sw->id & 0x7F) + 0x80;
+      buf[(q-1)*4+3+buf_l] = Sw->state;
+      buf[(q-1)*4+4+buf_l] = Sw->state_len;
+
+      Sw->updatedState = false;
+
+      q++;
     }
   }
   
@@ -697,7 +703,7 @@ void WS_stc_NewClient_track_Switch_Update(struct web_client_t * client){
           content = 1;
           buf[(q-1)*3+1] = S->module;
           buf[(q-1)*3+2] = S->id & 0x7F;
-          buf[(q-1)*3+3] = S->state & 0x7F;
+          buf[(q-1)*3+3] = S->state;
           // printf(",%i,%i,%i",S->Module,S->id,S->state);
           q++;
         }

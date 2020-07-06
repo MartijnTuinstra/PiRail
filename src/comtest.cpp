@@ -7,6 +7,8 @@
 #include "mem.h"
 #include "system.h"
 
+#include "switchboard/unit.h"
+
 #include "../avr/RNet_msg.h"
 
 struct s_systemState * SYS;
@@ -121,7 +123,7 @@ int main(int argc, char *argv[]){
         delete configfile;
       }
 
-      update_IO_Module(M);
+      Units[M]->updateIO(0);
     }
     else if(strcmp(cmds[0], "REQIN") == 0){
       if(cmds_len <= 1)

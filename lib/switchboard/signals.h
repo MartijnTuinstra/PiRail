@@ -43,7 +43,7 @@ class Signal {
     struct s_signal_stating * output_stating;
 
     bool switchDanger;
-    std::vector<struct SignalSwitchLink> Switches;
+    std::vector<struct SignalSwitchLink *> Switches;
 
     Signal(uint8_t module, struct signal_conf conf);
     ~Signal();

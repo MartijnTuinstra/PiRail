@@ -1,13 +1,14 @@
+#include "system.h"
+#include "mem.h"
+#include "logger.h"
+
+// #include "modules.h"
+#include "config_data.h"
+
 #include "switchboard/switch.h"
 #include "switchboard/msswitch.h"
 #include "switchboard/signals.h"
-
-#include "system.h"
-#include "mem.h"
-
-#include "config_data.h"
-#include "modules.h"
-#include "logger.h"
+#include "switchboard/unit.h"
 
 Signal::Signal(uint8_t module, struct signal_conf conf){ //, uint8_t blockId, uint16_t signalId, bool side, char output_len, struct s_IO_port_conf * output, struct s_IO_signal_event_conf * stating){
   // #define create_signal_from_conf(module, data) new Signal(module, data.blockId, data.id, data.side, data.output_len, data.output, data.stating)
@@ -24,25 +25,19 @@ Signal::Signal(uint8_t module, struct signal_conf conf){ //, uint8_t blockId, ui
   this->output = (IO_Port **)_calloc(this->output_len, IO_Port *);
   this->output_stating = (struct s_signal_stating *)_calloc(this->output_len, struct s_signal_stating);
 
+  Unit * U = Units[module];
+
   for(int i = 0; i < this->output_len; i++){
-    if(Units[module]->Node[conf.output[i].Node].io_ports <= conf.output[i].Adr){
-      // if(this->output_len == output_len){
-      //   this->output_len = i;
-      //   loggerf(ERROR, "Failed to link IO to Signal %02i:%02i", module, signalId);
-      // }
+    if(!U->IO(conf.output[i])){
       loggerf(WARNING, "IO outside range (Port %02i:%02i:%02i)", module, conf.output[i].Node, conf.output[i].Adr);
       continue;
     }
 
-    this->output[i] = U_IO(module, conf.output[i].Node, conf.output[i].Adr);
+    this->output[i] = U->linkIO(conf.output[i], this, IO_Output);
+
     for(int j = 0; j <= UNKNOWN; j++){
       this->output_stating[i].state[j].value = conf.stating[i].event[j];
     }
-    struct s_node_adr out;
-    out.Node = conf.output[i].Node;
-    out.io = conf.output[i].Adr;
-
-    Init_IO(Units[module], out, this);
   }
 
   for(uint8_t i = 0; i < conf.Switch_len; i++){
@@ -58,13 +53,15 @@ Signal::Signal(uint8_t module, struct signal_conf conf){ //, uint8_t blockId, ui
       p = Units[module]->Sw[conf.Switches[i].Sw];
     }
 
-    struct SignalSwitchLink link = {0,0,0};
-    link.MSSw = conf.Switches[i].type;
-    link.p.p = p;
-    link.state = conf.Switches[i].state;
+    struct SignalSwitchLink * link = (struct SignalSwitchLink *)_calloc(1, struct SignalSwitchLink);
+    link->MSSw = conf.Switches[i].type;
+    link->p.p = p;
+    link->state = conf.Switches[i].state;
 
     this->Switches.push_back(link);
   }
+
+  this->switchUpdate();
 
   Units[module]->insertSignal(this);
   
@@ -74,6 +71,9 @@ Signal::Signal(uint8_t module, struct signal_conf conf){ //, uint8_t blockId, ui
 }
 
 Signal::~Signal(){
+  for(auto link: this->Switches){
+    _free(link);
+  }
   _free(this->output);
   _free(this->output_stating);
 }
@@ -95,8 +95,8 @@ void Signal::set(enum Rail_states state){
 void Signal::switchUpdate(){
   this->switchDanger = false;
 
-  for(auto i: this->Switches){
-    if((i.MSSw && i.p.MSSw->state != i.state) || (!i.MSSw && i.p.Sw->state != i.state)){
+  for(auto link: this->Switches){
+    if((link->MSSw && link->p.MSSw->state != link->state) || (!link->MSSw && link->p.Sw->state != link->state)){
       this->switchDanger = true;
       break;
     }
@@ -113,10 +113,8 @@ void Signal::setIO(){
     state = DANGER;
 
   for(int i = 0; i < this->output_len; i++){
-    this->output[i]->w_state = this->output_stating[i].state[state];
+    this->output[i]->setOutput(this->output_stating[i].state[state]);
   }
-
-  Units[this->module]->io_out_changed |= 1;
 }
 
 void Signal::check(){

@@ -1,13 +1,14 @@
 
 #include "mem.h"
 #include "logger.h"
+#include "com.h"
 
 #include "switchboard/rail.h"
 #include "switchboard/switch.h"
 #include "switchboard/msswitch.h"
 #include "switchboard/station.h"
 #include "switchboard/signals.h"
-#include "IO.h"
+#include "switchboard/unit.h"
 
 int unit_len;
 Unit ** Units;
@@ -35,7 +36,7 @@ Unit::Unit(ModuleConfig * Config){
   this->signal_len = Config->header.Signals;
   this->station_len = Config->header.Stations;
 
-  this->Node = (IO_Node *)_calloc(this->IO_Nodes, IO_Node);
+  this->Node = (IO_Node **)_calloc(this->IO_Nodes, IO_Node*);
   this->B = (Block **)_calloc(this->block_len, Block*);
   this->Sw = (Switch **)_calloc(this->switch_len, Switch*);
   this->MSSw = (MSSwitch **)_calloc(this->switch_len, MSSwitch*);
@@ -45,9 +46,7 @@ Unit::Unit(ModuleConfig * Config){
   loggerf(DEBUG, "  Module nodes");
 
   for(int i = 0; i < Config->header.IO_Nodes; i++){
-    // struct node_conf node = read_s_node_conf(buf_ptr);
-    loggerf(CRITICAL, "TODO IMPLEMENT node data");
-    Add_IO_Node(Units[this->module], Config->Nodes[i]);
+    new IO_Node(Units[this->module], Config->Nodes[i]);
   }
 
   loggerf(DEBUG, "  Module Block");
@@ -106,7 +105,7 @@ Unit::Unit(uint16_t M, uint8_t Nodes, char points){
   this->connection = (Unit **)_calloc(points, Unit *);
 
   this->IO_Nodes = Nodes;
-  this->Node = (IO_Node *)_calloc(this->IO_Nodes, IO_Node);
+  this->Node = (IO_Node **)_calloc(this->IO_Nodes, IO_Node *);
 
   this->block_len = 8;
   this->B = (Block **)_calloc(this->block_len, Block*);
@@ -132,10 +131,7 @@ Unit::~Unit(){
 
   //Clear IO
   for(int j = 0; j < this->IO_Nodes; j++){
-    for(int k =0; k < this->Node[j].io_ports; k++){
-      _free(this->Node[j].io[k]);
-    }
-    _free(this->Node[j].io);
+    delete this->Node[j];
   }
   _free(this->Node);
 
@@ -262,17 +258,6 @@ void Unit::insertStation(Station * St){
   this->St[St->id] = St;
 }
 
-void Unit::link_all(){
-  link_all_blocks(this);
-  link_all_switches(this);
-  link_all_msswitches(this);
-
-  for(int i = 0; i < this->station_len; i++){
-    if(this->St[i]->blocks && this->St[i]->blocks[0] && !this->St[i]->blocks[0]->path)
-      new Path(this->St[i]->blocks[0]);
-  }
-}
-
 void Unit::insertSignal(Signal * Sig){
   if(this->signal_len <= Sig->id){
     loggerf(INFO, "Expand signals len %i", this->signal_len+8);
@@ -292,6 +277,87 @@ void Unit::insertSignal(Signal * Sig){
   }
 
   this->Sig[Sig->id] = Sig;
+}
+
+IO_Port * Unit::linkIO(Node_adr adr, void * pntr, enum e_IO_type type){
+  loggerf(INFO, "Linking IO %02d:%02d", adr.Node, adr.io);
+  this->Node[adr.Node]->io[adr.io]->link(pntr, type);
+  return this->Node[adr.Node]->io[adr.io];
+}
+
+IO_Port * Unit::linkIO(struct s_IO_port_conf adr, void * pntr, enum e_IO_type type){
+  Node_adr newadr = {adr.Node, adr.Adr};
+  return this->linkIO(newadr, pntr, type);
+}
+
+IO_Port * Unit::IO(Node_adr adr){
+  if(adr.Node >= this->IO_Nodes)
+    return 0;
+  else if(adr.io >= this->Node[adr.Node]->io_ports)
+    return 0;
+
+  return this->Node[adr.Node]->io[adr.io];
+}
+
+IO_Port * Unit::IO(struct s_IO_port_conf adr){
+  Node_adr newadr = {adr.Node, adr.Adr};
+  return this->IO(newadr);
+}
+
+
+void Unit::updateIO(int uart_filestream){
+  struct COM_t tx;
+  uint8_t check = 0;
+
+  for(int n = 0; n < this->IO_Nodes; n++){
+    IO_Node * N = this->Node[n];
+
+    tx.data[0] = module;
+    tx.data[1] = COMopc_SetAllOut;
+    tx.data[2] = N->io_ports;
+    check = UART_CHECKSUM_SEED ^ tx.data[1] ^ tx.data[2];
+
+    memset(&tx.data[3], 0, UART_COM_t_Length);
+
+    for(int io = 0; io < N->io_ports; io++){
+      IO_Port * IO = N->io[io];
+
+      if(IO->type == IO_Undefined)
+        continue;
+
+      // loggerf(WARNING, "Update io %02i:%02i:%02i %s (%i)", module, n, io, IO_event_string[U_IO(module, n, io)->type][U_IO(module, n, io)->w_state.value], U_IO(module, n, io)->w_state.value);
+      if(IO->type <= IO_Output_PWM && IO->w_state.value != IO->r_state.value){
+        IO->r_state.value = IO->w_state.value;
+      }
+
+      tx.data[io/4 + 3] |= IO->w_state.value << ((io % 4) * 2);
+
+      if(io%4 == 3)
+        check ^= tx.data[io/4 + 2];
+
+      if(IO->type == IO_Output && IO->w_state.output == IO_event_Pulse){ // Reset When pulsing output
+        IO->w_state.output = IO_event_Low;
+        IO->r_state.value = IO->w_state.value;
+      }
+    }
+    tx.data[N->io_ports/4 + 3] = check;
+    tx.length = N->io_ports/4 + 4;
+    
+    if(uart_filestream)
+      COM_Send(&tx);
+  }
+}
+
+
+void Unit::link_all(){
+  link_all_blocks(this);
+  link_all_switches(this);
+  link_all_msswitches(this);
+
+  for(int i = 0; i < this->station_len; i++){
+    if(this->St[i]->blocks && this->St[i]->blocks[0] && !this->St[i]->blocks[0]->path)
+      new Path(this->St[i]->blocks[0]);
+  }
 }
 
 // void Create_Unit(uint16_t M, uint8_t Nodes, char points){

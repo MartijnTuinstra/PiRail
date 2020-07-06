@@ -19,7 +19,7 @@
 #define NEXT_FIRST_TIME_SKIP 0x20
 
 // IO.h
-typedef struct s_IO_Port IO_Port;
+class IO_Port;
 typedef struct s_node_adr Node_adr;
 
 // Train.h

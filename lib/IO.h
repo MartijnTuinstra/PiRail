@@ -3,10 +3,11 @@
 
 #include <stdlib.h>
 #include <stdint.h>
-#include "modules.h"
+
+// #include "modules.h"
+#include "switchboard/declares.h"
 #include "config_data.h"
 
-// typedef struct s_unit Unit;
 
 typedef struct s_node_adr {
   uint8_t Node;
@@ -62,39 +63,67 @@ union u_IO_event {
   uint8_t value;
 };
 
-typedef struct s_IO_Port {
-  uint8_t id;
-  union u_IO_event w_state;
-  union u_IO_event r_state;
-  enum e_IO_type type;
+class IO_Node;
 
-  void * object;
-} IO_Port;
+class IO_Port {
+  public:
+    uint8_t id;
+    union u_IO_event w_state;
+    union u_IO_event r_state;
+    enum e_IO_type type;
 
-typedef struct s_IO_Node {
-  uint8_t id;
-  uint16_t io_ports;
-  IO_Port ** io;
-} IO_Node;
+    union {
+      Block * B;
+      Switch * Sw;
+      MSSwitch * MSSw;
+      void * p;
+    } p;
+
+    IO_Node * Node;
+
+    IO_Port(IO_Node * Node, uint8_t id, enum e_IO_type type);
+
+    void link(void * pntr, enum e_IO_type type);
+
+    void setInput(uint8_t state);
+    void setOutput(uint8_t state);
+    void setOutput(union u_IO_event state);
+};
+
+class IO_Node {
+  public:
+    uint8_t id;
+    uint16_t io_ports;
+    IO_Port ** io;
+
+    Unit * U;
+
+    bool updated;
+
+    IO_Node(Unit * U, struct node_conf conf);
+    ~IO_Node();
+
+    inline void update();
+};
 
 extern const char * IO_type_str[6];
 extern const char * IO_event_str[13];
+extern const char * IO_enum_type_string[9];
+extern const char ** IO_event_string[9];
 
 #define U_IO(a, b, c) Units[a]->Node[b].io[c]
 
 
-extern const char * IO_enum_type_string[9];
-extern const char ** IO_event_string[9];
 
 
-void Add_IO_Node(Unit * U, struct node_conf node);
+// void Add_IO_Node(Unit * U, struct node_conf node);
 
-void Init_IO_from_conf(Unit * U, struct s_IO_port_conf adr, void * pntr);
-void Init_IO(Unit * U, Node_adr adr, void * pntr);
+// void Init_IO_from_conf(Unit * U, struct s_IO_port_conf adr, void * pntr);
+// void Init_IO(Unit * U, Node_adr adr, void * pntr);
 
 void update_IO();
 void update_IO_Module(uint8_t module);
 
-void IO_set_input(IO_Port * port, uint8_t state);
+// void IO_set_input(IO_Port * port, uint8_t state);
 
 #endif

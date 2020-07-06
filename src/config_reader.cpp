@@ -406,8 +406,10 @@ void modify_Switch(struct ModuleConfig * config, char cmd){
 
     printf("Switch IO_Ports  (%2i)       | ", config->Switches[id].IO & 0x0f);
     fgets(_cmd, 20, stdin);
-    if(sscanf(_cmd, "%i", &tmp) > 0)
+    if(sscanf(_cmd, "%i", &tmp) > 0){
       config->Switches[id].IO = (tmp & 0x0f) + (config->Switches[id].IO & 0xf0);
+      config->Switches[id].IO_Ports = (struct s_IO_port_conf *)_realloc(config->Switches[id].IO_Ports, config->Switches[id].IO & 0x0f, struct s_IO_port_conf);
+    }
 
     printf("Switch IO Type   (%i)        | ", config->Switches[id].IO >> 4);
     fgets(_cmd, 20, stdin);

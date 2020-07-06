@@ -25,7 +25,7 @@ const char * rail_states_string[8] = {
 };
 
 Block::Block(uint8_t module, struct s_block_conf block){
-  loggerf(MEMORY, "Block Constructor %02i:%02i", module, block.id);
+  loggerf(DEBUG, "Block Constructor %02i:%02i", module, block.id);
   memset(this, 0, sizeof(Block));
   this->module = module;
   this->id = block.id;
@@ -56,22 +56,17 @@ Block::Block(uint8_t module, struct s_block_conf block){
   this->forward_signal = new std::vector<Signal *>();
   this->reverse_signal = new std::vector<Signal *>();
 
-  // struct s_node_adr in;
-  // in.Node = block.IO_In.Node;
-  // in.io = block.IO_In.Adr;
+  Unit * U = Units[this->module];
 
-  // // Init_IO(Units[this->module], in, this);
+  if(U->IO(block.IO_In))
+    this->In = U->linkIO(block.IO_In, this, IO_Input_Block);
 
-  // if(block.fl & 0x8){
-  //     struct s_node_adr out;
-  //     out.Node = block.IO_Out.Node;
-  //     out.io = block.IO_Out.Adr;
-
-  //     // Init_IO(Units[this->module], out, this);
-  // }
+  if(block.fl & 0x8 && U->IO(block.IO_Out)){
+    this->dir_Out = U->linkIO(block.IO_Out, this, IO_Output);
+  }
 
   // Insert block into Unit
-  Units[this->module]->insertBlock(this);
+  U->insertBlock(this);
 }
 
 Block::~Block(){

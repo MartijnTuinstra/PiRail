@@ -3,8 +3,7 @@
 
 #include "switchboard/declares.h"
 #include "config/ModuleConfig.h"
-
-typedef struct s_IO_Node IO_Node;
+#include "IO.h"
 
 class Unit {
   public:
@@ -14,7 +13,7 @@ class Unit {
     Unit ** connection;
 
     uint8_t IO_Nodes;
-    IO_Node * Node;
+    IO_Node ** Node;
 
     int block_len;
     Block ** B;
@@ -38,7 +37,7 @@ class Unit {
     uint8_t msswitch_state_changed:1;
     uint8_t signal_state_changed:1;
 
-    uint8_t io_out_changed:1;
+    bool io_updated;
 
     uint8_t on_layout:1;
 
@@ -57,6 +56,13 @@ class Unit {
     void insertMSSwitch(MSSwitch * MSSw);
     void insertStation(Station * St);
     void insertSignal(Signal * Sig);
+
+    IO_Port * linkIO(Node_adr adr, void * pntr, enum e_IO_type type);
+    IO_Port * linkIO(struct s_IO_port_conf adr, void * pntr, enum e_IO_type type);
+    IO_Port * IO(Node_adr adr);
+    IO_Port * IO(struct s_IO_port_conf adr);
+
+    void updateIO(int uart_filestream);
 
     void link_all();
 };

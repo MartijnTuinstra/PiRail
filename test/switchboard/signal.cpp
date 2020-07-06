@@ -17,7 +17,7 @@
 
 TEST_CASE( "Signal", "[SB-4.1]" ) {
   set_level(NONE);
-  set_logger_print_level(INFO);
+  set_logger_print_level(NONE);
 
   Units = (Unit **)_calloc(30, Unit *);
   unit_len = 30;
@@ -39,9 +39,12 @@ TEST_CASE( "Signal", "[SB-4.1]" ) {
   //
   //       o>
   //       |
-  //  1.4->  ------1.5->  --1.6->
-  //      |  -/
-  //
+  //  1.4->  ---------1.5->  --1.6->
+  //       o>     /
+  //       |     /
+  //  1.7->  ---/
+  //           /
+  //      |  -'
   */
 
   REQUIRE(U->B[1]->forward_signal != 0);
@@ -65,11 +68,16 @@ TEST_CASE( "Signal", "[SB-4.1]" ) {
     U->B[5]->setState(CAUTION);
 
     CHECK(U->Sig[2]->state == CAUTION);
+    CHECK(U->Sig[3]->state == CAUTION);
+    CHECK(U->Sig[3]->switchDanger == true);
 
-    // U->B[5]->setState(DANGER);
     U->Sw[0]->updateState(DIVERGING_SWITCH);
 
-    // CHECK(U->Sig[2]->state == DANGER);
     CHECK(U->Sig[2]->switchDanger == true);
+    CHECK(U->Sig[3]->switchDanger == true);
+
+    U->Sw[1]->updateState(DIVERGING_SWITCH);
+
+    CHECK(U->Sig[3]->switchDanger == false);
   }
 }

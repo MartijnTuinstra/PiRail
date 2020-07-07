@@ -10,7 +10,7 @@ GCC_FLAGS = -D _DEFAULT_SOURCE
 
 GCC = g++ -std=c++14 -g3 $(GCC_INCLUDE) $(GCC_ERROR_FLAGS) $(GCC_LIBS) $(GCC_FLAGS)
 
-TEST_FILES = main switchboard/rail switchboard/switch switchboard/msswitch switchboard/signal src/path src/algorithm
+TEST_FILES = main switchboard/rail switchboard/switch switchboard/msswitch switchboard/signal src/path src/algorithm src/io
 
 .DEFAULT_GOAL := all
 

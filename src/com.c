@@ -28,7 +28,7 @@
 #include "modules.h"
 
 #include "submodule.h"
-#include "websocket_stc.h"
+#include "websocket/stc.h"
 
 #include "../avr/RNet_msg.h"
 

@@ -3,7 +3,7 @@
 #include "switchboard/msswitch.h"
 #include "mem.h"
 #include "logger.h"
-#include "websocket_stc.h"
+#include "websocket/stc.h"
 #include "modules.h"
 
 struct paths pathfinding(Block * start, Block * end){

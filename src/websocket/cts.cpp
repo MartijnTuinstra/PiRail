@@ -7,9 +7,12 @@
 #include <pthread.h>
 
 //Websocket opcodes
-#include "websocket_control.h"
-#include "websocket_cts.h"
-#include "websocket.h"
+#include "websocket/server.h"
+#include "websocket/client.h"
+#include "websocket/message.h"
+#include "websocket/structure.h"
+#include "websocket/stc.h"
+#include "websocket/cts.h"
 
 #include "system.h"
 #include "mem.h"
@@ -44,11 +47,11 @@ websocket_cts_func websocket_cts[256] = {
   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 
   // 0x10 WSopc_EmergencyStop
-  (void (*)(void *, struct web_client_t *))&WS_cts_SetEmergencyStop,
+  (websocket_cts_func)&WS_cts_SetEmergencyStop,
   // 0x11 WSopc_ShortCircuitStop
   0,
   // 0x12 WSopc_ClearEmergency
-  (void (*)(void *, struct web_client_t *))&WS_cts_ClearEmergency,
+  (websocket_cts_func)&WS_cts_ClearEmergency,
   // 0x13 WSopc_NewMessage
   0,
   // 0x14 WSopc_UpdateMessage
@@ -65,9 +68,9 @@ websocket_cts_func websocket_cts[256] = {
   0,0,0,0,0,0,0,
 
   // 0x20 WSopc_SetSwitch
-  (void (*)(void *, struct web_client_t *))&WS_cts_SetSwitch,
+  (websocket_cts_func)&WS_cts_SetSwitch,
   // 0x21 WSopc_SetMultiSwitch
-  (void (*)(void *, struct web_client_t *))&WS_cts_SetMultiSwitch,
+  (websocket_cts_func)&WS_cts_SetMultiSwitch,
   // 0x22 WSopc_SetSwitchReserved
   0,
   // 0x23 WSopc_ChangeSwitchReserved
@@ -86,11 +89,11 @@ websocket_cts_func websocket_cts[256] = {
   // 0x30 WSopc_TrackLayoutOnlyRawData
   0,
   // 0x31
-  (void (*)(void *, struct web_client_t *))&WS_cts_TrackLayoutRawData,
+  (websocket_cts_func)&WS_cts_TrackLayoutRawData,
   // 0x32 Reserved
   0,
   // 0x33
-  (void (*)(void *, struct web_client_t *))&WS_cts_TrackLayoutUpdate,
+  (websocket_cts_func)&WS_cts_TrackLayoutUpdate,
   // 0x34 - 0x35 Reserved
   0,0,
   // 0x36 WSopc_StationLibrary
@@ -101,46 +104,46 @@ websocket_cts_func websocket_cts[256] = {
   // 0x40 Reserved
   0,
   // 0x41
-  (void (*)(void *, struct web_client_t *))&WS_cts_LinkTrain,
+  (websocket_cts_func)&WS_cts_LinkTrain,
   // 0x42
-  (void (*)(void *, struct web_client_t *))&WS_cts_SetTrainSpeed,
+  (websocket_cts_func)&WS_cts_SetTrainSpeed,
   // 0x43
-  (void (*)(void *, struct web_client_t *))&WS_cts_SetTrainFunction,
+  (websocket_cts_func)&WS_cts_SetTrainFunction,
   // 0x44
-  (void (*)(void *, struct web_client_t *))&WS_cts_TrainControl,
+  (websocket_cts_func)&WS_cts_TrainControl,
   // 0x45 WSopc_TrainUpdate
   0,
   // 0x46 SetTrainRoute
-  (void (*)(void *, struct web_client_t *))&WS_cts_TrainRoute,
+  (websocket_cts_func)&WS_cts_TrainRoute,
   // 0x47-0x49 Reserved
   0,0,0,
   // 0x4A IndependentEngineUpdate (stc only)
   0,
   // 0x4B IndependentEngineSpeed
-  (void (*)(void *, struct web_client_t *))&WS_cts_DCCEngineSpeed,
+  (websocket_cts_func)&WS_cts_DCCEngineSpeed,
   // 0x4C IndependentEngineFunction
-  (void (*)(void *, struct web_client_t *))&WS_cts_DCCEngineFunction,
+  (websocket_cts_func)&WS_cts_DCCEngineFunction,
   // 0x4D-0x4E Reserved
   0,0,
   // 0x4F
-  (void (*)(void *, struct web_client_t *))&WS_cts_TrainSubscribe,
+  (websocket_cts_func)&WS_cts_TrainSubscribe,
 
   // 0x50
-  (void (*)(void *, struct web_client_t *))&WS_cts_AddEnginetoLib,
+  (websocket_cts_func)&WS_cts_AddEnginetoLib,
   // 0x51
-  (void (*)(void *, struct web_client_t *))&WS_cts_Edit_Engine,
+  (websocket_cts_func)&WS_cts_Edit_Engine,
   // 0x52 WSopc_EnginesLibrary
   0,
   // 0x53
-  (void (*)(void *, struct web_client_t *))&WS_cts_AddCartoLib,
+  (websocket_cts_func)&WS_cts_AddCartoLib,
   // 0x54 WSopc_EditCarlib
-  (void (*)(void *, struct web_client_t *))&WS_cts_Edit_Car,
+  (websocket_cts_func)&WS_cts_Edit_Car,
   // 0x55 WSopc_CarsLibrary
   0,
   // 0x56 WSopc_AddNewTraintolib
-  (void (*)(void *, struct web_client_t *))&WS_cts_AddTraintoLib,
+  (websocket_cts_func)&WS_cts_AddTraintoLib,
   // 0x57 WSopc_EditTrainlib
-  (void (*)(void *, struct web_client_t *))&WS_cts_Edit_Train,
+  (websocket_cts_func)&WS_cts_Edit_Train,
   // 0x58 WSopc_TrainsLibrary
   0,
   // 0x59 Reserved
@@ -155,11 +158,11 @@ websocket_cts_func websocket_cts[256] = {
   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 8x
 
   // 0x90 WSopc_EnableSubModule
-  (void (*)(void *, struct web_client_t *))&WS_cts_Enable_SubmoduleState,
+  (websocket_cts_func)&WS_cts_Enable_SubmoduleState,
   // 0x91 WSopc_DisableSubModule
-  (void (*)(void *, struct web_client_t *))&WS_cts_Disable_SubmoduleState,
+  (websocket_cts_func)&WS_cts_Disable_SubmoduleState,
   // 0x92 WSopc_SubModuleState
-  (void (*)(void *, struct web_client_t *))&WS_cts_SubmoduleState,
+  (websocket_cts_func)&WS_cts_SubmoduleState,
   // 0x93 - 0x9E Reserved
   0,0,0,0,0,0,0,0,0,0,0,0,
   // 0x9F WSopc_RestartApplication
@@ -175,16 +178,16 @@ websocket_cts_func websocket_cts[256] = {
   // 0xC2 - 0xCD Reserved
   0,0,0,0,0,0,0,0,0,0,0,0,
   // 0xCE WSopc_Admin_Logout
-  (void (*)(void *, struct web_client_t *))&WS_cts_Admin_Logout,
+  (websocket_cts_func)&WS_cts_Admin_Logout,
   // 0xCF WSopc_Admin_Login
-  (void (*)(void *, struct web_client_t *))&WS_cts_Admin_Login,
+  (websocket_cts_func)&WS_cts_Admin_Login,
 
   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // Dx
   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // Ex
   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // Fx
 };
 
-void WS_cts_SetSwitch(struct s_opc_SetSwitch * data, struct web_client_t * client){
+void WS_cts_SetSwitch(struct s_opc_SetSwitch * data, Websocket::Client * client){
   lock_Algor_process();
   if(data->mssw){
     loggerf(INFO, "SetMSSw %2x %2x", data->module, data->id);
@@ -207,24 +210,24 @@ void WS_cts_SetSwitch(struct s_opc_SetSwitch * data, struct web_client_t * clien
   unlock_Algor_process();
 }
 
-void WS_cts_SetMultiSwitch(struct s_opc_SetMultiSwitch * data, struct web_client_t * client){
+void WS_cts_SetMultiSwitch(struct s_opc_SetMultiSwitch * data, Websocket::Client * client){
   loggerf(INFO, "Throw multiple switches\n");
   lock_Algor_process();
   throw_multiple_switches(data->nr, (char *)data->switches);
   unlock_Algor_process();
 }
 
-void WS_cts_SetEmergencyStop(void * data, struct web_client_t * client){
+void WS_cts_SetEmergencyStop(void * data, Websocket::Client * client){
   WS_stc_EmergencyStop();
   Z21_TRACKPOWER_OFF;
 }
 
-void WS_cts_ClearEmergency(void * data, struct web_client_t * client){
+void WS_cts_ClearEmergency(void * data, Websocket::Client * client){
   WS_stc_ClearEmergency();
   Z21_TRACKPOWER_ON;
 }
 
-void WS_cts_ChangeBroadcast(struct s_opc_ChangeBroadcast * data, struct web_client_t * client){
+void WS_cts_ChangeBroadcast(struct s_opc_ChangeBroadcast * data, Websocket::Client * client){
   if(data->flags & 0x10){ //Admin flag
     loggerf(WARNING, "Changing admin flag: NOT ALLOWED");
     return; //Not allowed to set admin flag
@@ -232,13 +235,13 @@ void WS_cts_ChangeBroadcast(struct s_opc_ChangeBroadcast * data, struct web_clie
     client->type = data->flags;
     loggerf(DEBUG, "Changing flags");
   }
-  loggerf(DEBUG,"Websocket:\t%02x - New flag for client %d\n",client->type, client->id);
+  loggerf(DEBUG,"Websocket:\t%02x - New flag for client %d\n",client->type, client->fd);
   char msg[2] = {WSopc_ChangeBroadcast,(char)client->type};
-  ws_send(client, msg, 2, 255);
+  client->send(msg, 2, 255);
 }
 
 //System Messages
-void WS_cts_Enable_SubmoduleState(struct s_opc_enabledisableSubmoduleState * state, struct web_client_t * client){
+void WS_cts_Enable_SubmoduleState(struct s_opc_enabledisableSubmoduleState * state, Websocket::Client * client){
   loggerf(INFO, "WSopc_EnableSubModule");
   if(state->flags & 0x80){ //Websocket
     SYS_set_state(&SYS->WebSocket.state, Module_Run);
@@ -259,7 +262,7 @@ void WS_cts_Enable_SubmoduleState(struct s_opc_enabledisableSubmoduleState * sta
     SimB_start();
   }
 }
-void WS_cts_Disable_SubmoduleState(struct s_opc_enabledisableSubmoduleState * state, struct web_client_t * client){
+void WS_cts_Disable_SubmoduleState(struct s_opc_enabledisableSubmoduleState * state, Websocket::Client * client){
   loggerf(INFO, "WSopc_DisableSubModule");
   if(state->flags & 0x80){  //Websocket
     SYS_set_state(&SYS->WebSocket.state, Module_Init);
@@ -281,14 +284,14 @@ void WS_cts_Disable_SubmoduleState(struct s_opc_enabledisableSubmoduleState * st
   }
 }
 
-void WS_cts_SubmoduleState(void * d, struct web_client_t * client){
+void WS_cts_SubmoduleState(void * d, Websocket::Client * client){
   WS_stc_SubmoduleState(client);
 }
 
 //Admin Messages
 
 //Train Messages
-void WS_cts_LinkTrain(struct s_opc_LinkTrain * msg, struct web_client_t * client){
+void WS_cts_LinkTrain(struct s_opc_LinkTrain * msg, Websocket::Client * client){
   // uint8_t * data = (uint8_t *)msg;
   // uint8_t fID = data[0]; //follow ID
   // uint8_t tID = data[1]; //TrainID
@@ -315,7 +318,7 @@ void WS_cts_LinkTrain(struct s_opc_LinkTrain * msg, struct web_client_t * client
   }
 }
 
-void WS_cts_TrainControl(struct s_opc_TrainControl * m, struct web_client_t * client){
+void WS_cts_TrainControl(struct s_opc_TrainControl * m, Websocket::Client * client){
 
   if(!train_link[m->follow_id]){
     loggerf(WARNING, "Trying to set speed of undefined RailTrain");
@@ -329,7 +332,7 @@ void WS_cts_TrainControl(struct s_opc_TrainControl * m, struct web_client_t * cl
   T->control = m->control;
 }
 
-void WS_cts_SetTrainFunction(struct s_opc_SetTrainFunction * m, struct web_client_t * client){
+void WS_cts_SetTrainFunction(struct s_opc_SetTrainFunction * m, Websocket::Client * client){
   loggerf(INFO, "WS_cts_SetTrainFunction");
 
   RailTrain * T = train_link[m->id];
@@ -354,7 +357,7 @@ void WS_cts_SetTrainFunction(struct s_opc_SetTrainFunction * m, struct web_clien
   }
 }
 
-void WS_cts_SetTrainSpeed(struct s_opc_SetTrainSpeed * m, struct web_client_t * client){
+void WS_cts_SetTrainSpeed(struct s_opc_SetTrainSpeed * m, Websocket::Client * client){
   // uint16_t id = m.follow_id;
   // uint16_t speed = m.speed;
 
@@ -405,18 +408,18 @@ void WS_cts_SetTrainSpeed(struct s_opc_SetTrainSpeed * m, struct web_client_t * 
   // }
 }
 
-void WS_cts_TrainSubscribe(struct s_opc_SubscribeTrain * m, struct web_client_t * client){
-  client->trains[0] = m->followA;
-  client->trains[1] = m->followB;
+void WS_cts_TrainSubscribe(struct s_opc_SubscribeTrain * m, Websocket::Client * client){
+  client->subscribedTrains[0] = m->followA;
+  client->subscribedTrains[1] = m->followB;
 
-  if(client->trains[0] < 0xFF && train_link[client->trains[0]]){
-    WS_stc_UpdateTrain(train_link[client->trains[0]]);
+  if(client->subscribedTrains[0] < 0xFF && train_link[client->subscribedTrains[0]]){
+    WS_stc_UpdateTrain(train_link[client->subscribedTrains[0]]);
   }
-  if(client->trains[1] < 0xFF && train_link[client->trains[1]]){
-    WS_stc_UpdateTrain(train_link[client->trains[1]]);
+  if(client->subscribedTrains[1] < 0xFF && train_link[client->subscribedTrains[1]]){
+    WS_stc_UpdateTrain(train_link[client->subscribedTrains[1]]);
   }
 
-  loggerf(INFO, "WS_cts_TrainSubscribe client %i = %i, %i", client->id, client->trains[0], client->trains[1]);
+  loggerf(INFO, "WS_cts_TrainSubscribe client %i = %i, %i", client->fd, client->subscribedTrains[0], client->subscribedTrains[1]);
 }
 
 /*
@@ -440,7 +443,7 @@ void Web_Train_Split(int i,char tID,char B[]){
 }
 */
 
-void WS_cts_TrainRoute(struct s_opc_TrainRoute * data, struct web_client_t * client){
+void WS_cts_TrainRoute(struct s_opc_TrainRoute * data, Websocket::Client * client){
   RailTrain * T = train_link[data->train_id];
 
   Station * St = Units[data->module_id]->St[data->station_id];
@@ -448,7 +451,7 @@ void WS_cts_TrainRoute(struct s_opc_TrainRoute * data, struct web_client_t * cli
   T->setRoute(St->blocks[0]);
 }
 
-void WS_cts_DCCEngineSpeed(struct s_opc_DCCEngineSpeed * m, struct web_client_t * client){
+void WS_cts_DCCEngineSpeed(struct s_opc_DCCEngineSpeed * m, Websocket::Client * client){
   Engine * E = engines[m->id];
 
   if(!E)
@@ -461,7 +464,7 @@ void WS_cts_DCCEngineSpeed(struct s_opc_DCCEngineSpeed * m, struct web_client_t 
   Z21_Set_Loco_Drive_Engine(E);
 }
 
-void WS_cts_DCCEngineFunction(struct s_opc_DCCEngineFunction * m, struct web_client_t * client){
+void WS_cts_DCCEngineFunction(struct s_opc_DCCEngineFunction * m, Websocket::Client * client){
   loggerf(INFO, "WS_cts_DCCEngineFunction");
 
   Engine * E = engines[m->id];
@@ -494,7 +497,7 @@ void WS_cts_DCCEngineFunction(struct s_opc_DCCEngineFunction * m, struct web_cli
 //   ws_send_all(s_data,9,WS_Flag_Trains);
 // }
 
-void WS_cts_AddCartoLib(struct s_opc_AddNewCartolib * data, struct web_client_t * client){
+void WS_cts_AddCartoLib(struct s_opc_AddNewCartolib * data, Websocket::Client * client){
   loggerf(DEBUG, "WS_cts_AddCartoLib");
   struct s_WS_Data * rdata = (struct s_WS_Data *)_calloc(1, struct s_WS_Data);
 
@@ -535,7 +538,7 @@ void WS_cts_AddCartoLib(struct s_opc_AddNewCartolib * data, struct web_client_t 
   if(!move_file(sicon, dicon)){
     //Failed to move
     rdata->data.opc_AddNewCartolib_res.response = 0;
-    ws_send(client, (char *)rdata, WSopc_AddNewCartolib_res_len, 0xff);
+    client->send((char *)rdata, WSopc_AddNewCartolib_res_len, 0xff);
     return;
   }
 
@@ -545,13 +548,13 @@ void WS_cts_AddCartoLib(struct s_opc_AddNewCartolib * data, struct web_client_t 
   remove(sicon);
 
   rdata->data.opc_AddNewCartolib_res.response = 1;
-  ws_send(client, (char *)rdata, WSopc_AddNewCartolib_res_len, 0xff);
+  client->send((char *)rdata, WSopc_AddNewCartolib_res_len, 0xff);
 
   _free(dicon);
   _free(sicon);
 }
 
-void WS_cts_Edit_Car(struct s_opc_EditCarlib * data, struct web_client_t * client){
+void WS_cts_Edit_Car(struct s_opc_EditCarlib * data, Websocket::Client * client){
   loggerf(DEBUG, "WS_cts_Edit_Car");
   struct s_WS_Data * rdata = (struct s_WS_Data *)_calloc(1, struct s_WS_Data);
 
@@ -569,14 +572,14 @@ void WS_cts_Edit_Car(struct s_opc_EditCarlib * data, struct web_client_t * clien
     else
       rdata->data.opc_AddNewCartolib_res.response = 0;
 
-    ws_send(client, (char *)rdata, WSopc_AddNewCartolib_res_len, 0xff);
+    client->send((char *)rdata, WSopc_AddNewCartolib_res_len, 0xff);
     return;
   }
 
   // Check if car exists
   if(!cars[id]){
     rdata->data.opc_AddNewCartolib_res.response = 0;
-    ws_send(client, (char *)rdata, WSopc_AddNewCartolib_res_len, 0xff);
+    client->send((char *)rdata, WSopc_AddNewCartolib_res_len, 0xff);
     return;
   }
 
@@ -618,7 +621,7 @@ void WS_cts_Edit_Car(struct s_opc_EditCarlib * data, struct web_client_t * clien
     if(!move_file(sicon, dicon)){
       //Failed to move
       rdata->data.opc_AddNewCartolib_res.response = 0;
-      ws_send(client, (char *)rdata, WSopc_AddNewCartolib_res_len, 0xff);
+      client->send((char *)rdata, WSopc_AddNewCartolib_res_len, 0xff);
       return;
     }
 
@@ -638,7 +641,7 @@ void WS_cts_Edit_Car(struct s_opc_EditCarlib * data, struct web_client_t * clien
     if(!move_file(sicon, dicon)){
       //Failed to move
       rdata->data.opc_AddNewCartolib_res.response = 0;
-      ws_send(client, (char *)rdata, WSopc_AddNewCartolib_res_len, 0xff);
+      client->send((char *)rdata, WSopc_AddNewCartolib_res_len, 0xff);
       return;
     }
 
@@ -647,7 +650,7 @@ void WS_cts_Edit_Car(struct s_opc_EditCarlib * data, struct web_client_t * clien
   }
 
   rdata->data.opc_AddNewCartolib_res.response = 1;
-  ws_send(client, (char *)rdata, WSopc_AddNewCartolib_res_len, 0xff);
+  client->send((char *)rdata, WSopc_AddNewCartolib_res_len, 0xff);
 
   _free(dicon);
   _free(sicon);
@@ -656,7 +659,7 @@ void WS_cts_Edit_Car(struct s_opc_EditCarlib * data, struct web_client_t * clien
   WS_stc_CarsLib(0);
 }
 
-void WS_cts_AddEnginetoLib(struct s_opc_AddNewEnginetolib * data, struct web_client_t * client){
+void WS_cts_AddEnginetoLib(struct s_opc_AddNewEnginetolib * data, Websocket::Client * client){
   loggerf(DEBUG, "WS_cts_AddEnginetoLib");
   struct s_WS_Data * rdata = (struct s_WS_Data *)_calloc(1, struct s_WS_Data);
 
@@ -665,7 +668,7 @@ void WS_cts_AddEnginetoLib(struct s_opc_AddNewEnginetolib * data, struct web_cli
   if (DCC_train[data->DCC_ID]){
     loggerf(ERROR, "DCC %i allready in use", data->DCC_ID);
     rdata->data.opc_AddNewEnginetolib_res.response = 255;
-    ws_send(client, (char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
+    client->send((char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
     return;
   }
 
@@ -721,14 +724,14 @@ void WS_cts_AddEnginetoLib(struct s_opc_AddNewEnginetolib * data, struct web_cli
   if(!move_file(simg, dimg)){
     //Failed to move
     rdata->data.opc_AddNewEnginetolib_res.response = 0;
-    ws_send(client, (char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
+    client->send((char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
     return;
   }
 
   if(!move_file(sicon, dicon)){
     //Failed to move
     rdata->data.opc_AddNewEnginetolib_res.response = 0;
-    ws_send(client, (char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
+    client->send((char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
     return;
   }
 
@@ -739,7 +742,7 @@ void WS_cts_AddEnginetoLib(struct s_opc_AddNewEnginetolib * data, struct web_cli
   remove(simg);
 
   rdata->data.opc_AddNewEnginetolib_res.response = 1;
-  ws_send(client, (char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
+  client->send((char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
 
   _free(dimg);
   _free(dicon);
@@ -751,7 +754,7 @@ void WS_cts_AddEnginetoLib(struct s_opc_AddNewEnginetolib * data, struct web_cli
   WS_stc_EnginesLib(0);
 }
 
-void WS_cts_Edit_Engine(struct s_opc_EditEnginelib * msg, struct web_client_t * client){
+void WS_cts_Edit_Engine(struct s_opc_EditEnginelib * msg, Websocket::Client * client){
   loggerf(DEBUG, "WS_cts_Edit_Engine");
 
   struct s_WS_Data * rdata = (struct s_WS_Data *)_calloc(1, struct s_WS_Data);
@@ -776,7 +779,7 @@ void WS_cts_Edit_Engine(struct s_opc_EditEnginelib * msg, struct web_client_t * 
 
     // Send succes response
     rdata->data.opc_AddNewEnginetolib_res.response = 1;
-    ws_send(client, (char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
+    client->send((char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
   }
   else{
     // Edit engine
@@ -787,7 +790,7 @@ void WS_cts_Edit_Engine(struct s_opc_EditEnginelib * msg, struct web_client_t * 
     if (DCC_train[data->DCC_ID] && data->DCC_ID != E->DCC_ID){
       loggerf(ERROR, "DCC %i (%i) allready in use", data->DCC_ID, E->DCC_ID);
       rdata->data.opc_AddNewEnginetolib_res.response = 255;
-      ws_send(client, (char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
+      client->send((char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
       return;
     }
 
@@ -852,7 +855,7 @@ void WS_cts_Edit_Engine(struct s_opc_EditEnginelib * msg, struct web_client_t * 
     if(!move_file(simg, dimg)){
       //Failed to move
       rdata->data.opc_AddNewEnginetolib_res.response = 0;
-      ws_send(client, (char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
+      client->send((char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
       return;
     }
 
@@ -876,7 +879,7 @@ void WS_cts_Edit_Engine(struct s_opc_EditEnginelib * msg, struct web_client_t * 
     if(!move_file(sicon, dicon)){
       //Failed to move
       rdata->data.opc_AddNewEnginetolib_res.response = 0;
-      ws_send(client, (char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
+      client->send((char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
       return;
     }
 
@@ -885,7 +888,7 @@ void WS_cts_Edit_Engine(struct s_opc_EditEnginelib * msg, struct web_client_t * 
 
     // Send succes response
     rdata->data.opc_AddNewEnginetolib_res.response = 1;
-    ws_send(client, (char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
+    client->send((char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
 
     _free(dimg);
     _free(dicon);
@@ -898,7 +901,7 @@ void WS_cts_Edit_Engine(struct s_opc_EditEnginelib * msg, struct web_client_t * 
   WS_stc_EnginesLib(0);
 }
 
-void WS_cts_AddTraintoLib(struct s_opc_AddNewTraintolib * data, struct web_client_t * client){
+void WS_cts_AddTraintoLib(struct s_opc_AddNewTraintolib * data, Websocket::Client * client){
   loggerf(DEBUG, "WS_cts_AddTraintoLib");
   struct s_WS_Data * rdata = (struct s_WS_Data *)_calloc(1, struct s_WS_Data);
 
@@ -919,13 +922,13 @@ void WS_cts_AddTraintoLib(struct s_opc_AddNewTraintolib * data, struct web_clien
 
   // Send succes response
   rdata->data.opc_AddNewTraintolib_res.response = 1;
-  ws_send(client, (char *)rdata, WSopc_AddNewTraintolib_res_len, 0xff);
+  client->send((char *)rdata, WSopc_AddNewTraintolib_res_len, 0xff);
 
   //Update clients Train Library
   WS_stc_TrainsLib(0);
 }
 
-void WS_cts_Edit_Train(struct s_opc_EditTrainlib * data, struct web_client_t * client){
+void WS_cts_Edit_Train(struct s_opc_EditTrainlib * data, Websocket::Client * client){
   loggerf(ERROR, "WS_cts_Edit_Train ");
   struct s_WS_Data * rdata = (struct s_WS_Data *)_calloc(1, struct s_WS_Data);
 
@@ -939,7 +942,7 @@ void WS_cts_Edit_Train(struct s_opc_EditTrainlib * data, struct web_client_t * c
     }
     else
       rdata->data.opc_AddNewTraintolib_res.response = 0;
-    ws_send(client, (char *)rdata, WSopc_AddNewTraintolib_res_len, 0xff);
+    client->send((char *)rdata, WSopc_AddNewTraintolib_res_len, 0xff);
     return;
   }
 
@@ -968,17 +971,17 @@ void WS_cts_Edit_Train(struct s_opc_EditTrainlib * data, struct web_client_t * c
 
   // Send success response
   rdata->data.opc_AddNewTraintolib_res.response = 1;
-  ws_send(client, (char *)rdata, WSopc_AddNewTraintolib_res_len, 0xff);
+  client->send((char *)rdata, WSopc_AddNewTraintolib_res_len, 0xff);
 
   write_rolling_Configs();
   WS_stc_TrainsLib(0);
 }
 
-void WS_cts_TrackLayoutRawData(struct s_opc_TrackLayoutRawData * data, struct web_client_t * client){
+void WS_cts_TrackLayoutRawData(struct s_opc_TrackLayoutRawData * data, Websocket::Client * client){
   WS_stc_TrackLayoutRawData(data->module, client);
 }
 
-void WS_cts_TrackLayoutUpdate(struct s_opc_TrackLayoutUpdate * data, struct web_client_t * client){
+void WS_cts_TrackLayoutUpdate(struct s_opc_TrackLayoutUpdate * data, Websocket::Client * client){
   loggerf(CRITICAL, "IMPLEMENT WS_cts_TrackLayoutUpdate");
 
 
@@ -987,11 +990,11 @@ void WS_cts_TrackLayoutUpdate(struct s_opc_TrackLayoutUpdate * data, struct web_
 
   rdata->opcode = WSopc_TrackLayoutUpdateRaw;
   rdata->data.opc_AddNewTraintolib_res.response = 0;
-  ws_send(client, (char *)rdata, WSopc_AddNewTraintolib_res_len, 0xff);
+  client->send((char *)rdata, WSopc_AddNewTraintolib_res_len, 0xff);
 }
 
-void WS_cts_Admin_Login(struct s_opc_AdminLogin * data, struct web_client_t * client){
-  if(strcmp((char *)data->password,WS_password) == 0){
+void WS_cts_Admin_Login(struct s_opc_AdminLogin * data, Websocket::Client * client){
+  if(strcmp((char *)data->password, client->Server->password) == 0){
     loggerf(INFO, "SUCCESSFULL LOGIN");
     //0xc3,0xbf,0x35,0x66,0x34,0x64,0x63,0x63,0x33,0x62,0x35,0x61,0x61,0x37,0x36,0x35,0x64,0x36,0x31,0x64,0x38,0x33,0x32,0x37,0x64,0x65,0x62,0x38,0x38,0x32,0x63,0x66,0x39,0x39
     client->type |= 0x10;
@@ -999,17 +1002,17 @@ void WS_cts_Admin_Login(struct s_opc_AdminLogin * data, struct web_client_t * cl
     loggerf(INFO, "Change client flags to %x", client->type);
 
     char msg[2] = {WSopc_ChangeBroadcast, (char)client->type};
-    ws_send(client, msg, 2, 255);
+    client->send(msg, 2, 255);
   }else{
-    loggerf(INFO, "FAILED LOGIN!! %d", strcmp((char *)data->password,WS_password));
+    loggerf(INFO, "FAILED LOGIN!! %d", strcmp((char *)data->password, client->Server->password));
     loggerf(INFO, "%s", data->password);
-    loggerf(INFO, "%s", WS_password);
+    loggerf(INFO, "%s", client->Server->password);
   }
 }
 
-void WS_cts_Admin_Logout(void * data, struct web_client_t * client){
+void WS_cts_Admin_Logout(void * data, Websocket::Client * client){
   client->type &= ~0x10;
 
   char msg[2] = {WSopc_ChangeBroadcast, (char)client->type};
-  ws_send(client, msg, 2, 255);
+  client->send(msg, 2, 255);
 }

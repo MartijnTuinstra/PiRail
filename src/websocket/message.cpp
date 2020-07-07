@@ -1,26 +1,21 @@
-#include "system.h"
-#include "config.h"
+#include "websocket/message.h"
+#include "websocket/message_structure.h"
+#include "websocket/stc.h"
+
+#include "logger.h"
 #include "mem.h"
-#include "train.h"
-#include "switchboard/switch.h"
-#include "switchboard/msswitch.h"
-#include "modules.h"
-#include "Z21.h"
-#include "Z21_msg.h"
-#include "websocket.h"
-#include "websocket_control.h"
-#include "algorithm.h"
+#include "system.h"
+
 #include "submodule.h"
+#include "Z21.h"
+#include "algorithm.h"
+#include "config.h"
 
-#include "websocket_cts.h"
-#include "websocket_stc.h"
+const char websocket_magic_string[] = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
-pthread_mutex_t m_websocket_send;
+namespace Websocket {
 
-
-// websocket_cts[WSopc_LinkTrain] = WS_cts_LinkTrain;
-
-int websocket_parse(uint8_t data[1024], struct web_client_t * client){
+int Parse(uint8_t data[1024], Client * client){
   // Flag Admin Settings    0x80
   // Train stuff flag       0x40
   // Rail stuff flag        0x20
@@ -136,7 +131,7 @@ int websocket_parse(uint8_t data[1024], struct web_client_t * client){
   return 0;
 }
 
-int websocket_get_msg(int fd, char outbuf[], int * length_out){
+int MessageGet(int fd, char outbuf[], int * length_out){
   char * buf = (char *)_calloc(1024, char);
   usleep(10000);
   int32_t recvlength = recv(fd,buf,1024,0);
@@ -205,7 +200,7 @@ int websocket_get_msg(int fd, char outbuf[], int * length_out){
   return 1;
 }
 
-void websocket_create_msg(char * input, int length_in, char * output, int * length_out){
+void MessageCreate(char * input, int length_in, char * output, int * length_out){
   char buf[10];
   int header_len = 0;
   buf[0] = WEBSOCKET_FIN | WEBSOCKET_BIN_FRAME;
@@ -228,72 +223,4 @@ void websocket_create_msg(char * input, int length_in, char * output, int * leng
   *length_out = header_len + length_in;
 }
 
-void ws_send(struct web_client_t * client, char * data, int length, int flag){
-  char * outbuf = (char *)_calloc(length + 100, char);
-  int outlength = 0;
-
-  if(!(SYS->WebSocket.state == Module_Run || SYS->WebSocket.state == Module_Init)){
-    _free(outbuf);
-    return;
-  }
-
-  websocket_create_msg(data, length, outbuf, &outlength);
-
-  pthread_mutex_lock(&m_websocket_send);
-
-  if(write(client->fd, outbuf, outlength) == -1){
-    if(errno == EPIPE){
-      printf("Broken Pipe!!!!!\n\n");
-    }
-    else if(errno == EFAULT){
-      loggerf(ERROR, "EFAULT ERROR");
-    }
-    else{
-      loggerf(ERROR, "Unknown write error, closing connection");
-    }
-    close(client->fd);
-    SYS->Clients--;
-    client->state = 2;
-  };
-
-  pthread_mutex_unlock(&m_websocket_send);
-
-  _free(outbuf);
-}
-
-void ws_send_all(char * data,int length,int flag){
-  char * outbuf = (char *)_calloc(length + 100, char);
-  int outlength = 0;
-
-  if(!(SYS->WebSocket.state == Module_Run || SYS->WebSocket.state == Module_Init)){
-    _free(outbuf);
-    return;
-  }
-
-  websocket_create_msg(data, length, outbuf, &outlength);
-
-  // printf("WS send (all)\t");
-  // print_hex(data, length);
-
-  pthread_mutex_lock(&m_websocket_send);
-
-  for(int i = 0; i<MAX_WEB_CLIENTS; i++){
-    if(websocket_clients[i].state == 1 && (websocket_clients[i].type & flag) != 0){
-      if(write(websocket_clients[i].fd, outbuf, outlength) == -1){
-        loggerf(WARNING, "socket write error %x", errno); 
-        if(errno == EPIPE){
-          printf("Broken Pipe!!!!!\n\n");
-        }
-        else if(errno == EFAULT){
-          loggerf(ERROR, "EFAULT ERROR");
-        }
-        close(websocket_clients[i].fd);
-        SYS->Clients--;
-        websocket_clients[i].state = 2;
-      }
-    }
-  }
-  pthread_mutex_unlock(&m_websocket_send);
-
-  _free(outbuf);
-}
+} // Namespace

@@ -1,29 +1,33 @@
-#ifndef _INCLUDE_WEBSOCKET_H
-#define _INCLUDE_WEBSOCKET_H
+#ifndef _INCLUDE_WEBSOCKET_MESSAGE_H
+#define _INCLUDE_WEBSOCKET_MESSAGE_H
 
-struct web_client_t;
+#include "websocket/client.h"
 
-#include "websocket_control.h"
-#include "websocket_msg_structure.h"
+namespace Websocket {
 
-extern pthread_mutex_t m_websocket_send;
+int Parse(uint8_t data[1024], Websocket::Client * client);
+int MessageGet(int fd, char outbuf[], int * length_out);
+void MessageCreate(char * input, int length_in, char * output, int * length_out);
 
-struct websocket_client_thread_args;
+} // Namespace
 
-int websocket_get_msg(int fd_client, char outbuf[], int * L);
-
-void websocket_create_msg(char * input, int length_in, char * output, int * length_out);
-
-void ws_send(struct web_client_t * client, char * data, int length, int flag);
-
-void ws_send_all(char * data,int length,int flag);
-
-int websocket_parse(uint8_t data[1024], struct web_client_t * client);
-
-typedef void (*websocket_cts_func)(void *, struct web_client_t *);
+typedef void (*websocket_cts_func)(void *, Websocket::Client *);
 extern websocket_cts_func websocket_cts[256];
 
+extern const char websocket_magic_string[];
+
 #define WEBSOCKET_CLIENT_TIMEOUT 5
+
+//Websocket fram flags
+#define WEBSOCKET_FIN 0x80
+#define WEBSOCKET_CONT_FRAME 0x00
+#define WEBSOCKET_TEXT_FRAME 0x01
+#define WEBSOCKET_BIN_FRAME 0x02
+
+#define WEBSOCKET_CLOSE 0x08
+#define WEBSOCKET_PING 0x09
+#define WEBSOCKET_PONG 0x0A
+
 
 //Broadcast Flag
 #define WS_Flag_Trains   0x01
@@ -108,4 +112,5 @@ extern websocket_cts_func websocket_cts[256];
 #define WSopc_ChangeBroadcast    0x16
 #define WSopc_Service_State      0x17
 #define WSopc_Canvas_Data        0x18
+
 #endif

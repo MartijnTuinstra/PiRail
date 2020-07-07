@@ -19,7 +19,7 @@
 
 #include "modules.h"
 #include "com.h"
-#include "websocket_stc.h"
+#include "websocket/stc.h"
 
 #include "sim.h"
 
@@ -1232,7 +1232,7 @@ void Algor_Connect_Rails(){
           data[k++] = j;
         }
       }
-      ws_send_all(data,k,0x10);
+      WSServer->send_all(data, k, 0x10);
     }
     i++;
     prev_j = cur_j;

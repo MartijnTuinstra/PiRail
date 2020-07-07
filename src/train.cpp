@@ -19,7 +19,8 @@
 #include "Z21_msg.h"
 #include "scheduler.h"
 
-#include "websocket.h"
+#include "websocket/server.h"
+#include "websocket/stc.h"
 
 #include "scheduler.h"
 

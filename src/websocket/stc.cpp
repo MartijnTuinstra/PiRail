@@ -7,9 +7,11 @@
 #include <pthread.h>
 
 //Websocket opcodes
-#include "websocket_control.h"
-#include "websocket_stc.h"
-#include "websocket.h"
+#include "websocket/server.h"
+#include "websocket/client.h"
+#include "websocket/message.h"
+#include "websocket/structure.h"
+#include "websocket/stc.h"
 
 #include "system.h"
 #include "mem.h"
@@ -53,10 +55,10 @@ void WS_stc_Partial_Layout(uint8_t M){
       data[q++] = 0;
   }
 
-  ws_send_all(data,q,WS_Flag_Admin);
+  WSServer->send_all(data,q,WS_Flag_Admin);
 }
 
-void WS_stc_Track_Layout(struct web_client_t * client){
+void WS_stc_Track_Layout(Websocket::Client * client){
 
   char data[100];
   int q = 1;
@@ -83,15 +85,15 @@ void WS_stc_Track_Layout(struct web_client_t * client){
 
   if(q > 1){
     if(client){
-      ws_send(client, data,q,WS_Flag_Track);
+      client->send(data,q,WS_Flag_Track);
     }
     else{
-      ws_send_all(data,q,WS_Flag_Track);
+      WSServer->send_all(data,q,WS_Flag_Track);
     }
   }
 }
 
-void WS_stc_Z21_info(struct web_client_t * client){
+void WS_stc_Z21_info(Websocket::Client * client){
   uint8_t data[20];
   data[0] = WSopc_Track_Info;
   data[1] = Z21_info.MainCurrent & 0xFF;
@@ -110,24 +112,24 @@ void WS_stc_Z21_info(struct web_client_t * client){
   data[14] = Z21_info.CentralStateEx;
 
   if(client)
-    ws_send(client, (char *)data, 15, 0xff);
+    client->send((char *)data, 15, 0xff);
   else
-    ws_send_all((char *)data, 15, 0xff);
+    WSServer->send_all((char *)data, 15, 0xff);
 }
 
-void WS_stc_Z21_IP(struct web_client_t * client){
+void WS_stc_Z21_IP(Websocket::Client * client){
   uint8_t data[10];
   data[0] = WSopc_Z21_Settings;
   memcpy(&data[1], &Z21_info.IP[0], 4);
   memcpy(&data[5], &Z21_info.Firmware[0], 2);
 
   if(client)
-    ws_send(client, (char *)data, 7, 0xff);
+    client->send((char *)data, 7, 0xff);
   else
-    ws_send_all((char *)data, 7, 0xff);
+    WSServer->send_all((char *)data, 7, 0xff);
 }
 
-void WS_stc_SubmoduleState(struct web_client_t * client){
+void WS_stc_SubmoduleState(Websocket::Client * client){
   char data[5];
   data[0] = WSopc_SubModuleState;
 
@@ -139,9 +141,9 @@ void WS_stc_SubmoduleState(struct web_client_t * client){
   data[4] = ((SYS->SimA.state & 0xF) << 4) | (SYS->SimB.state & 0xF);
 
   if(client)
-    ws_send(client, (char *)data, 5, 0xff);
+    client->send((char *)data, 5, 0xff);
   else
-    ws_send_all((char *)data, 5, 0xff);
+    WSServer->send_all((char *)data, 5, 0xff);
 }
 
 //Admin Messages
@@ -154,7 +156,7 @@ void WS_stc_LinkTrain(struct s_opc_LinkTrain * msg){
   return_msg.data.opc_LinkTrain.message_id_H = 0;
   return_msg.data.opc_LinkTrain.message_id_L = 0;
   
-  ws_send_all((char *)&return_msg, 5, 0xFF);
+  WSServer->send_all((char *)&return_msg, 5, 0xFF);
 }
 
 void WS_stc_UpdateTrain(RailTrain * T){
@@ -189,10 +191,10 @@ void WS_stc_UpdateTrain(RailTrain * T){
 
   loggerf(DEBUG, "train Update_Train id: %i, d: %i, c: %i, sp: %x%02x", msg->follow_id, msg->dir, msg->control, msg->speed_high, msg->speed_low);
 
-  for(int i = 0; i<MAX_WEB_CLIENTS; i++){
-    if((websocket_clients[i].trains[0] == T->link_id) || 
-       (websocket_clients[i].trains[1] == T->link_id)){
-      ws_send(&websocket_clients[i], (char *)&return_msg, sizeof(struct s_opc_UpdateTrain) + 1, WS_Flag_Trains);
+  for(uint8_t i = 0; i < WSServer->clients.size(); i++){
+    if((WSServer->clients[i]->subscribedTrains[0] == T->link_id) || 
+       (WSServer->clients[i]->subscribedTrains[1] == T->link_id)){
+      WSServer->clients[i]->send((char *)&return_msg, sizeof(struct s_opc_UpdateTrain) + 1, WS_Flag_Trains);
     }
   }
 }
@@ -224,10 +226,10 @@ void WS_stc_DCCEngineUpdate(Engine * E){
 
   loggerf(DEBUG, "train Update_Train id: %i, d: %i, c: %i, sp: %x%02x", msg->follow_id, msg->dir, msg->control, msg->speed_high, msg->speed_low);
 
-  ws_send_all((char *)&return_msg, sizeof(struct s_opc_DCCEngineUpdate) + 1, WS_Flag_Trains);
+  WSServer->send_all((char *)&return_msg, sizeof(struct s_opc_DCCEngineUpdate) + 1, WS_Flag_Trains);
 }
 
-void WS_stc_EnginesLib(struct web_client_t * client){
+void WS_stc_EnginesLib(Websocket::Client * client){
   int buffer_size = 1024;
 
   char * data = (char *)_calloc(buffer_size, char);
@@ -283,14 +285,14 @@ void WS_stc_EnginesLib(struct web_client_t * client){
     }
   }
   if(client)
-    ws_send(client, data, len, WS_Flag_Trains);
+    client->send(data, len, WS_Flag_Trains);
   else
-    ws_send_all(data, len, WS_Flag_Trains);
+    WSServer->send_all(data, len, WS_Flag_Trains);
   
   _free(data);
 }
 
-void WS_stc_CarsLib(struct web_client_t * client){
+void WS_stc_CarsLib(Websocket::Client * client){
   loggerf(INFO, "CarsLib for client %i", client);
   int buffer_size = 1024;
 
@@ -326,14 +328,14 @@ void WS_stc_CarsLib(struct web_client_t * client){
     }
   }
   if(client)
-    ws_send(client, data, len, WS_Flag_Trains);
+    client->send(data, len, WS_Flag_Trains);
   else
-    ws_send_all(data, len, WS_Flag_Trains);
+    WSServer->send_all(data, len, WS_Flag_Trains);
   
   _free(data);
 }
 
-void WS_stc_TrainsLib(struct web_client_t * client){
+void WS_stc_TrainsLib(Websocket::Client * client){
   loggerf(INFO, "TrainsLib for client %i", client);
   int buffer_size = 1024;
 
@@ -376,14 +378,14 @@ void WS_stc_TrainsLib(struct web_client_t * client){
     }
   }
   if(client)
-    ws_send(client, data, len, WS_Flag_Trains);
+    client->send(data, len, WS_Flag_Trains);
   else
-    ws_send_all(data, len, WS_Flag_Trains);
+    WSServer->send_all(data, len, WS_Flag_Trains);
   
   _free(data);
 }
 
-void WS_stc_TrainCategories(struct web_client_t * client){
+void WS_stc_TrainCategories(Websocket::Client * client){
   loggerf(INFO, "TrainCategories for client %i", client);
   int buffer_size = 1024;
 
@@ -422,9 +424,9 @@ void WS_stc_TrainCategories(struct web_client_t * client){
   }
 
   if(client)
-    ws_send(client, data, len, WS_Flag_Trains);
+    client->send(data, len, WS_Flag_Trains);
   else
-    ws_send_all(data, len, WS_Flag_Trains);
+    WSServer->send_all(data, len, WS_Flag_Trains);
   
   _free(data);
 }
@@ -443,7 +445,7 @@ void WS_stc_NewTrain(RailTrain * T,char M,char B){
   data[3] = T->link_id;
   data[4] = M;
   data[5] = B;
-  ws_send_all(data,6,WS_Flag_Messages);
+  WSServer->send_all(data,6,WS_Flag_Messages);
   WS_add_Message(msg_ID,6,data);
 }
 
@@ -463,7 +465,7 @@ void WS_stc_TrainSplit(RailTrain * T, char M1,char B1,char M2,char B2){
   data[5] = B1;
   data[6] = M2;
   data[7] = B2;
-  ws_send_all(data,8,WS_Flag_Messages);
+  WSServer->send_all(data,8,WS_Flag_Messages);
   WS_add_Message(msg_ID,8,data);
 }
 
@@ -477,11 +479,11 @@ void Web_Train_Split(int i,char tID,char B[]){
     data[2] = tID;
     data[3] = B[0];
     data[4] = B[1];
-    ws_send_all(data,5,1);
+    WSServer->send_all(data,5,1);
   }else if(i == RELEASE){
     data[1] = 6;
     data[2] = tID;
-    ws_send_all(data,3,1);
+    WSServer->send_all(data,3,1);
   }else{
     return;
   }
@@ -503,11 +505,11 @@ void WS_stc_TrainRoute(){}
 //   return;
 //   // s_data[1] = DCC_train[((s_data[2] << 8) + s_data[3])]->ID;
 
-//   ws_send_all(s_data,9,WS_Flag_Trains);
+//   WSServer->send_all(s_data,9,WS_Flag_Trains);
 // }
 
 //Track Messages
-void WS_stc_trackUpdate(struct web_client_t * client){
+void WS_stc_trackUpdate(Websocket::Client * client){
   loggerf(TRACE, "WS_trackUpdate");
   mutex_lock(&mutex_lockB, "Lock Mutex B");
   char data[4096];
@@ -545,15 +547,15 @@ void WS_stc_trackUpdate(struct web_client_t * client){
 
   if(content == 1){
     if(client){
-      ws_send(client, data, data_len, WS_Flag_Track);
+      client->send(data, data_len, WS_Flag_Track);
     }else{
-      ws_send_all(data, data_len, WS_Flag_Track);
+      WSServer->send_all(data, data_len, WS_Flag_Track);
     }
   }
   mutex_unlock(&mutex_lockB, "UnLock Mutex B");
 }
 
-void WS_stc_SwitchesUpdate(struct web_client_t * client){
+void WS_stc_SwitchesUpdate(Websocket::Client * client){
   loggerf(TRACE, "WS_SwitchesUpdate (%x)", (unsigned int)client);
   mutex_lock(&mutex_lockB, "Lock Mutex B");
   char buf[4096];
@@ -628,9 +630,9 @@ void WS_stc_SwitchesUpdate(struct web_client_t * client){
   buf_l += (q-1)*4+1;
   if(content == 1){
     if(client){
-      ws_send(client, buf, buf_l, WS_Flag_Switches);
+      client->send(buf, buf_l, WS_Flag_Switches);
     }else{
-      ws_send_all(buf, buf_l, WS_Flag_Switches);
+      WSServer->send_all(buf, buf_l, WS_Flag_Switches);
     }
   }
   else
@@ -639,7 +641,7 @@ void WS_stc_SwitchesUpdate(struct web_client_t * client){
   mutex_unlock(&mutex_lockB, "UnLock Mutex B");
 }
 
-void WS_stc_NewClient_track_Switch_Update(struct web_client_t * client){
+void WS_stc_NewClient_track_Switch_Update(Websocket::Client * client){
   mutex_lock(&mutex_lockB, "Lock Mutex B");
 
   //Track
@@ -676,9 +678,9 @@ void WS_stc_NewClient_track_Switch_Update(struct web_client_t * client){
 
   if(content == 1){
     if(client){
-      ws_send(client, buf, data_len, WS_Flag_Track);
+      client->send(buf, data_len, WS_Flag_Track);
     }else{
-      ws_send_all(buf, data_len, WS_Flag_Track);
+      WSServer->send_all(buf, data_len, WS_Flag_Track);
     }
   }
 
@@ -733,9 +735,9 @@ void WS_stc_NewClient_track_Switch_Update(struct web_client_t * client){
 
   if(content == 1){
     if(client){
-      ws_send(client,buf,buf_len,WS_Flag_Switches);
+      client->send(buf, buf_len, WS_Flag_Switches);
     }else{
-      ws_send_all(buf,buf_len,WS_Flag_Switches);
+      WSServer->send_all(buf, buf_len, WS_Flag_Switches);
     }
   }
 
@@ -761,9 +763,9 @@ void WS_stc_NewClient_track_Switch_Update(struct web_client_t * client){
 
   if(data == 1){
     if(client){
-      ws_send(client, buf, buf_len, WS_Flag_Switches);
+      client->send(buf, buf_len, WS_Flag_Switches);
     }else{
-      ws_send_all(buf, buf_len, WS_Flag_Switches);
+      WSServer->send_all(buf, buf_len, WS_Flag_Switches);
     }
   }
 
@@ -782,7 +784,7 @@ void WS_stc_NewClient_track_Switch_Update(struct web_client_t * client){
   mutex_unlock(&mutex_lockB, "UnLock Mutex B");
 }
 
-void WS_stc_reset_switches(struct web_client_t * client){
+void WS_stc_reset_switches(Websocket::Client * client){
   //Check if client has admin rights
   char admin = 1;
   if(admin){
@@ -800,7 +802,7 @@ void WS_stc_reset_switches(struct web_client_t * client){
   }
 }
 
-void WS_stc_Track_LayoutDataOnly(int unit, struct web_client_t * client){
+void WS_stc_Track_LayoutDataOnly(int unit, Websocket::Client * client){
   loggerf(DEBUG, "WS_Track_LayoutDataOnly");
 
   char * data = (char *)_calloc(Units[unit]->Layout_length + 20, char);
@@ -811,15 +813,15 @@ void WS_stc_Track_LayoutDataOnly(int unit, struct web_client_t * client){
 
 
   if(client){
-    ws_send(client, data, Units[unit]->Layout_length+2, WS_Flag_Track);
+    client->send(data, Units[unit]->Layout_length+2, WS_Flag_Track);
   }else{
-    ws_send_all(data, Units[unit]->Layout_length+2, WS_Flag_Track);
+    WSServer->send_all(data, Units[unit]->Layout_length+2, WS_Flag_Track);
   }
 
   _free(data);
 }
 
-void WS_stc_TrackLayoutRawData(int unit, struct web_client_t * client){
+void WS_stc_TrackLayoutRawData(int unit, Websocket::Client * client){
   Unit * U = Units[unit];
   char * data = (char *)_calloc(U->raw_length+2, char);
   data[0] = WSopc_TrackLayoutRawData;
@@ -828,16 +830,16 @@ void WS_stc_TrackLayoutRawData(int unit, struct web_client_t * client){
   memcpy(&data[2], U->raw, U->raw_length);
 
   if(client){
-    ws_send(client, data, U->raw_length+2, WS_Flag_Track);
+    client->send(data, U->raw_length+2, WS_Flag_Track);
   }
   else{
-    ws_send_all(data, U->raw_length+2, WS_Flag_Track);
+    WSServer->send_all(data, U->raw_length+2, WS_Flag_Track);
   }
 
   _free(data);
 }
 
-void WS_stc_StationLib(struct web_client_t * client){
+void WS_stc_StationLib(Websocket::Client * client){
   char * data = (char *)_calloc(stations_len, Station);
   data[0] = WSopc_StationLibrary;
   char * length = &data[1];
@@ -858,10 +860,10 @@ void WS_stc_StationLib(struct web_client_t * client){
   }
 
   if(client){
-    ws_send(client, data, d - data, WS_Flag_Track);
+    client->send(data, d - data, WS_Flag_Track);
   }
   else{
-    ws_send_all(data, d - data, WS_Flag_Track);
+    WSServer->send_all(data, d - data, WS_Flag_Track);
   }
 
   _free(data);
@@ -871,19 +873,19 @@ void WS_stc_StationLib(struct web_client_t * client){
 void WS_stc_EmergencyStop(){
   loggerf(WARNING, "EMERGENCY STOP");
   char msg[1] = {WSopc_EmergencyStop};
-  ws_send_all(msg, 1, 0xFF); //Everyone
+  WSServer->send_all(msg, 1, 0xFF); //Everyone
 }
 
 void WS_stc_ShortCircuit(){
   loggerf(WARNING, "SHORT CIRCUIT");
   char msg[1] = {WSopc_ShortCircuitStop};
-  ws_send_all(msg, 1, 0xFF); //Everyone
+  WSServer->send_all(msg, 1, 0xFF); //Everyone
 }
 
 void WS_stc_ClearEmergency(){
   loggerf(INFO, "EMERGENCY Released");
   char msg[1] = {WSopc_ClearEmergency};
-  ws_send_all(msg, 1, 0xFF); //Everyone
+  WSServer->send_all(msg, 1, 0xFF); //Everyone
 }
 
 
@@ -913,10 +915,10 @@ void WS_add_Message(uint16_t ID, char length,char data[16]){
   loggerf(INFO, "create_message %x", ID);
 }
 
-void WS_send_open_Messages(struct web_client_t * client){
+void WS_send_open_Messages(Websocket::Client * client){
   for(int i = 0;i<=0x1FFF;i++){
     if(MessageList[i].type & 0x8000){
-      ws_send(client, MessageList[i].data, MessageList[i].data_length, 0xFF);
+      client->send(MessageList[i].data, MessageList[i].data_length, 0xFF);
     }
   }
 }
@@ -931,5 +933,5 @@ void WS_clear_message(uint16_t ID, char ret_code){
   msg[0] = WSopc_ClearMessage;
   msg[1] = (char)( ((ID >> 8) & 0x1F) + (ret_code << 5) );
   msg[2] = (char)(ID & 0xFF);
-  ws_send_all(msg, 3, 0xFF);
+  WSServer->send_all(msg, 3, 0xFF);
 }

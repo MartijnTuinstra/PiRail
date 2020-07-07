@@ -11,7 +11,7 @@
 
 #include "submodule.h"
 #include "algorithm.h"
-#include "websocket_stc.h"
+#include "websocket/stc.h"
 #include "pathfinding.h"
 
 extern pthread_mutex_t mutex_lockA;
@@ -784,7 +784,7 @@ void SIM_JoinModules(){
           data[k++] = j;
         }
       }
-      ws_send_all(data,k,0x10);
+      WSServer->send_all(data, k, 0x10);
     }
     i++;
     usleep(JOIN_SIM_INTERVAL);

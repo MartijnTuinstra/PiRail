@@ -12,7 +12,7 @@
 #include<sys/socket.h>
 
 #include "config.h"
-#include "websocket_stc.h"
+#include "websocket/stc.h"
 #include "scheduler.h"
 // #include "submodule.h"
 

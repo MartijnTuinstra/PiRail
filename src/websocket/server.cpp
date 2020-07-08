@@ -164,8 +164,12 @@ void * Server::ClearUnusedSockets(Server * context){
   for(uint8_t i = 0; i < context->clients.size(); i++){
     if(!context->clients[i]->connected){
       loggerf(INFO, "Stopping websocket client %i thread", i);
-      pthread_join(context->clients[i]->thread, NULL);
+      if(context->clients[i]->thread_started)
+        pthread_join(context->clients[i]->thread, NULL);
+      else
+        loggerf(WARNING, "Client not even started");
       delete context->clients[i];
+      context->clients.erase(context->clients.begin() + i);
       i--;
     }
   }
@@ -253,6 +257,8 @@ void Server::newClientCallback(Client * client){
   WS_stc_Z21_IP(client);
 
   SIM_Client_Connect_cb();
+
+  loggerf(INFO, "Client Connected Done");
 
 }
 

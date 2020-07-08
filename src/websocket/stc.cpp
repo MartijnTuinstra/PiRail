@@ -699,7 +699,7 @@ void WS_stc_NewClient_track_Switch_Update(Websocket::Client * client){
     for(int i = 0;i<unit_len;i++){
       if(!Units[i] || !Units[i]->on_layout)
         continue;
-      for(int j = 0;j<=Units[i]->switch_len;j++){
+      for(int j = 0; j < Units[i]->switch_len;j++){
         Switch * S = Units[i]->Sw[j];
         if(S){
           content = 1;
@@ -751,7 +751,7 @@ void WS_stc_NewClient_track_Switch_Update(Websocket::Client * client){
   if(stations_len>0){
     data = 1;
   }
-  for(int i = 0; i<stations_len;i++){
+  for(int i = 0; i < stations_len;i++){
 
     buf[buf_len]   = stations[i]->module;
     buf[buf_len+1] = stations[i]->id;

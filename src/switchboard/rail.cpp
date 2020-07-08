@@ -232,10 +232,7 @@ uint8_t Block::_NextList(Block ** blocks, uint8_t block_counter, int flags, int 
 
   uint8_t pdir = (dir >> 1);
 
-  if(block_counter >= 10){
-    return block_counter;
-  }
-  else if(length < 0){
+  if(length < 0){
     return block_counter;
   }
 
@@ -270,6 +267,9 @@ uint8_t Block::_NextList(Block ** blocks, uint8_t block_counter, int flags, int 
     flags |= NEXT_FIRST_TIME_SKIP;
     length += this->length;
   }
+
+  if(block_counter >= 10)
+    return block_counter;
 
   loggerf(TRACE, "dir: %i:%i-%x %x\t%i", this->module, this->id, dir, this->dir, pdir);
   //NEXT == 0
@@ -460,7 +460,7 @@ void Block::AlgorSearch(int debug){
 
   loggerf(TRACE, "Search blocks %02i:%02i", this->module, this->id);
 
-  next = this->_Next(0 | SWITCH_CARE,1);
+  next = this->_Next(0 | SWITCH_CARE, 1);
   prev = this->_Next(1 | SWITCH_CARE | DIRECTION_CARE,1);
 
   if(next){
@@ -514,7 +514,7 @@ void Block::AlgorSearch(int debug){
   }
 }
 
-
+/*
 void Block::AlgorSearchMSSwitch(int debug){
   loggerf(WARNING, "Algor_turntable_search_Blocks - %02i:%02i", this->module, this->id);
   Block * next = 0;
@@ -596,7 +596,7 @@ void Block::AlgorSearchMSSwitch(int debug){
     while(length < 3*Block_Minimum_Size && level < 10 && i < 10);
   }
 }
-
+*/
 // int main(void){
 //     C_Block B = C_Block(1, {0, 0, {0, 0, 255}, {0, 0, 255}, {0, 0}, {0, 1}, 90, 100, 0});
   

@@ -9,5 +9,7 @@ class MSSwitch;
 class Signal;
 class Station;
 
+class Path;
+
 
 #endif

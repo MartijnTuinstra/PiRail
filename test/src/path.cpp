@@ -9,9 +9,12 @@
 #include "switchboard/msswitch.h"
 #include "switchboard/station.h"
 #include "switchboard/unit.h"
+
+#include "rollingstock/railtrain.h"
+
 #include "path.h"
 
-TEST_CASE( "Path Construction", "[PATH-1]" ) {
+TEST_CASE( "Path Construction", "[PATH][PATH-1]" ) {
   set_level(NONE);
   set_logger_print_level(NONE);
 
@@ -194,4 +197,97 @@ TEST_CASE( "Path Construction", "[PATH-1]" ) {
     CHECK(P[0] != P[6]);
     CHECK(P[1] != P[6]);
   }
+}
+
+TEST_CASE( "Path Reverse", "[PATH][PATH-2]") {
+  set_level(NONE);
+  set_logger_print_level(DEBUG);
+
+  Units = (Unit **)_calloc(30, Unit *);
+  unit_len = 30;
+  train_link = (RailTrain **)_calloc(10,RailTrain *);
+  train_link_len = 10;
+
+  char filename[30] = "./testconfigs/PATH-2.bin";
+  auto config = ModuleConfig(filename);
+  config.read();
+
+  REQUIRE(config.parsed);
+  pathlist.clear();
+
+  new Unit(&config);
+  Unit * U = Units[1];
+
+  U->link_all();
+
+  pathlist_find();
+
+  REQUIRE(U->B[0]->path == U->B[10]->path);
+  Path * P = U->B[0]->path;
+
+  U->B[2]->blocked = 1;
+  U->B[2]->train = new RailTrain(U->B[2]);
+
+  U->B[8]->blocked = 1;
+  U->B[8]->train = new RailTrain(U->B[8]);
+
+  REQUIRE(train_link[0]->dir == 0);
+  REQUIRE(train_link[1]->dir == 0);
+
+  P->reverse();
+
+  CHECK(P->direction == 1);
+
+  for(uint8_t i = 0; i < 11; i++)
+    CHECK(U->B[i]->dir == 0b100);
+
+  CHECK(train_link[0]->dir == 1);
+  CHECK(train_link[1]->dir == 1);
+
+  train_link[0]->speed = 10;
+
+  P->reverse();
+
+  CHECK(P->direction == 1);
+
+  for(uint8_t i = 0; i < 11; i++)
+    CHECK(U->B[i]->dir == 0b100);
+
+  CHECK(train_link[0]->dir == 1);
+  CHECK(train_link[1]->dir == 1);
+}
+
+
+TEST_CASE( "Path Reserve", "[PATH][PATH-3]") {
+  set_level(NONE);
+  set_logger_print_level(DEBUG);
+
+  Units = (Unit **)_calloc(30, Unit *);
+  unit_len = 30;
+  train_link = (RailTrain **)_calloc(10,RailTrain *);
+  train_link_len = 10;
+
+  char filename[30] = "./testconfigs/PATH-2.bin";
+  auto config = ModuleConfig(filename);
+  config.read();
+
+  REQUIRE(config.parsed);
+  pathlist.clear();
+
+  new Unit(&config);
+  Unit * U = Units[1];
+
+  U->link_all();
+
+  pathlist_find();
+
+  REQUIRE(U->B[0]->path == U->B[10]->path);
+  Path * P = U->B[0]->path;
+
+  P->reserve();
+
+  CHECK(P->reserved == 1);
+
+  for(uint8_t i = 0; i < 11; i++)
+    CHECK(U->B[i]->reserved == 1);
 }

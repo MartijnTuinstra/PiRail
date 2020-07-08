@@ -12,24 +12,22 @@ GCC_FLAGS = -D _DEFAULT_SOURCE
 
 GCC = g++ -std=c++14 -g3 $(GCC_INCLUDE) $(GCC_ERROR_FLAGS) $(GCC_LIBS) $(GCC_FLAGS)
 
-BAAN_FILES = baan system logger mem modules config IO algorithm encryption \
-             Z21 Z21_msg train submodule com sim pathfinding scheduler
+FILES_CONFIG = $(addprefix config/,ModuleConfig RollingConfig)
+FILES_SWITCHBOARD = $(addprefix switchboard/,links rail switch msswitch unit station signals)
+FILES_WEBSOCKET = $(addprefix websocket/,server client stc cts message)
+FILES_ROLLING = $(addprefix rollingstock/,train engine car railtrain)
 
-BAAN_FILES += websocket/client websocket/server websocket/stc websocket/cts websocket/message
-BAAN_FILES += rollingstock/train rollingstock/engine rollingstock/car rollingstock/railtrain
-BAAN_FILES += switchboard/links switchboard/rail switchboard/switch switchboard/msswitch switchboard/unit switchboard/station switchboard/signals
-BAAN_FILES += config/ModuleConfig config/RollingConfig path
+BAAN_FILES = baan system logger mem modules config IO algorithm encryption \
+             Z21 Z21_msg train submodule com sim path pathfinding scheduler
+
+BAAN_FILES += $(FILES_ROLLING) $(FILES_WEBSOCKET) $(FILES_SWITCHBOARD) $(FILES_CONFIG)
 
 #BAAN_FILES += websocket websocket_cts websocket_stc websocket_control
 
-COMTEST_FILES = comtest system logger mem modules config IO algorithm encryption Z21 Z21_msg train submodule com sim pathfinding websocket websocket_cts websocket_stc websocket_control scheduler
-COMTEST_FILES += rollingstock/train rollingstock/engine rollingstock/car rollingstock/railtrain
+COMTEST_FILES = comtest system logger mem modules config IO algorithm encryption Z21 Z21_msg train submodule com sim path pathfinding scheduler
+COMTEST_FILES += $(FILES_ROLLING) $(FILES_WEBSOCKET) $(FILES_SWITCHBOARD) $(FILES_CONFIG)
 
-COMTEST_FILES += switchboard/links switchboard/rail switchboard/switch switchboard/msswitch switchboard/unit switchboard/station switchboard/signals
-COMTEST_FILES += config/ModuleConfig config/RollingConfig path
-
-CONFIG_READER_FILES = config_reader config logger mem
-CONFIG_READER_FILES += config/ModuleConfig config/RollingConfig
+CONFIG_READER_FILES = config_reader config logger mem $(FILES_CONFIG)
 
 BAAN_CONFIGS = 1 2 3 10 20 21 22 23 25 26
 TEST_CONFIGS = PATH-1 IO-1 SB-1.1 SB-1.2 SB-1.3 SB-2.1 SB-3.1 SB-4.1

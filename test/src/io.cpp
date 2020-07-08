@@ -74,7 +74,7 @@ TEST_CASE( "IO  Creation and linking", "[IO][IO-1]" ) {
 
 TEST_CASE( "IO Output", "[IO][IO-2]"){
   set_level(NONE);
-  set_logger_print_level(INFO);
+  set_logger_print_level(NONE);
 
   Units = (Unit **)_calloc(30, Unit *);
   unit_len = 30;

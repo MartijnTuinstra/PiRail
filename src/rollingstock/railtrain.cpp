@@ -6,18 +6,24 @@
 #include "mem.h"
 #include "logger.h"
 #include "scheduler.h"
+#include "system.h"
 
-#include "websocket_stc.h"
+#include "websocket/stc.h"
 #include "Z21_msg.h"
 
 RailTrain ** train_link;
 int train_link_len;
 
-RailTrain::RailTrain(){
+RailTrain::RailTrain(Block * B){
   memset(this, 0, sizeof(RailTrain));
 
   uint16_t id = find_free_index(train_link, train_link_len);
   this->link_id = id;
+  this->B = B;
+  if(this->B->path)
+    this->B->path->trains.push_back(this);
+
+  this->assigned = false;
 
   char name[64];
   sprintf(name, "Railtrain_%i_SpeedEvent", id);
@@ -35,6 +41,10 @@ RailTrain::~RailTrain(){
 
 void RailTrain::setSpeedZ21(uint16_t speed){
   this->speed = speed;
+
+  if(!this->assigned)
+    return;
+
   if(this->type == RAILTRAIN_ENGINE_TYPE){
     this->p.E->setSpeed(this->speed);
     Z21_Set_Loco_Drive_Engine(this->p.E);
@@ -120,6 +130,8 @@ int RailTrain::link(int tid, char type){
     }
   }
 
+  this->assigned = true;
+
   return 1;
 }
 
@@ -137,6 +149,8 @@ void RailTrain::unlink(){
       T->engines[i]->RT = 0;
     }
   }
+
+  this->assigned = false;
 }
 
 bool RailTrain::ContinueCheck(){

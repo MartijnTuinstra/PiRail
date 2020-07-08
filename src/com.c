@@ -284,13 +284,14 @@ void COM_Parse(struct fifobuffer * buf){
     //Add device to device list
     
     for(uint16_t i = 0;i<255;i++){
-      if(Units[i])
-        Units[i]->on_layout = 0;
+      if(!Units[i])
+        continue;
+
+      Units[i]->on_layout = 0;
 
       if(data[i/8+2] & (1 << (i%8))){
         loggerf(INFO, "UART Found Module %d", i);
-        if(Units[i])
-          Units[i]->on_layout = 1;
+        Units[i]->on_layout = 1;
       }
     }
 
@@ -307,26 +308,29 @@ void COM_Parse(struct fifobuffer * buf){
       return;
     }
 
-    uint8_t module = data[0];
+    Unit * U = Units[data[0]];
+
+    // uint8_t module = data[0];
     uint8_t node = data[2];
 
-    if(!Units[module] || node >= Units[module]->IO_Nodes)
+    if(!U)
       return;
 
-    IO_Node * IO = Units[module]->Node[node];
+    IO_Node * Node = U->Node[node];
+
+    if(!Node)
+      return;
 
     //uint8_t node = data[3];
     uint8_t l = data[3];
     for(uint8_t i = 0; i < l*8; i++){
       if(data[i/8+4] & (1 << (i%8))){
         loggerf(INFO, "%d IO %i HIGH", data[0], i);
-        IO->io[i]->setInput(1);
-        // IO_set_input(IO->io[i], 1);
+        Node->io[i]->setInput(IO_event_High);
       }
       else{
         loggerf(INFO, "%d IO %i LOW", data[0], i);
-        IO->io[i]->setInput(0);
-        // IO_set_input(IO->io[i], 0);
+        Node->io[i]->setInput(IO_event_Low);
       }
     }
   }

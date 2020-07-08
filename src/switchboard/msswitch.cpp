@@ -108,8 +108,7 @@ void MSSwitch::addSignal(Signal * Sig){
 
 bool MSSwitch::approachableA(void * p, int flags){
   loggerf(TRACE, "MSSwitch::approachableA (%x, %x, %x)", (unsigned int)this, (unsigned int)p, flags);
-  if((flags & 0x80) == 0){
-    //No SWITCH_CARE
+  if((flags & SWITCH_CARE) == 0){
     return 1;
   }
 
@@ -121,8 +120,7 @@ bool MSSwitch::approachableA(void * p, int flags){
 
 bool MSSwitch::approachableB(void * p, int flags){
   loggerf(TRACE, "MSSwitch::approachableB (%x, %x, %x)", (unsigned int)this, (unsigned int)p, flags);
-  if((flags & 0x80) == 0){
-    //No SWITCH_CARE
+  if((flags & SWITCH_CARE) == 0){
     return 1;
   }
 
@@ -249,6 +247,9 @@ uint MSSwitch::NextList_Block(Block ** blocks, uint8_t block_counter, enum link_
       loggerf(ERROR, "NO POINTERS");
     return block_counter;
   }
+
+  if(block_counter >= 10)
+    return block_counter;
 
   loggerf(TRACE, "Next     :        \t%i:%i => %i:%i:%i\t%i", this->module, this->id, next->module, next->id, next->type, block_counter);
 

@@ -56,6 +56,8 @@ class RailTrain {
     uint8_t stop:1;            // 
     uint8_t dir:1;             // TRAIN_FORWARD / TRAIN_REVERSE
 
+    bool assigned;
+
     struct SchedulerEvent * speed_event;
     struct TrainSpeedEventData * speed_event_data;
 
@@ -63,7 +65,7 @@ class RailTrain {
 
     // struct pathinstruction * instructions;
 
-    RailTrain();
+    RailTrain(Block * B);
     ~RailTrain();
 
     void inline setSpeed(uint16_t speed){

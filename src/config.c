@@ -160,8 +160,6 @@ struct signal_conf read_s_signal_conf(uint8_t ** p){
 
   memcpy(&s, *p, sizeof(struct s_signal_conf));
 
-  print_hex((char *)*p, sizeof(struct s_signal_conf));
-
   *p += sizeof(struct s_signal_conf);
 
   s.output = (struct s_IO_port_conf *)_calloc(s.output_len, struct s_IO_port_conf);

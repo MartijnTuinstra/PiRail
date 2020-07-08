@@ -1,10 +1,12 @@
+#include "path.h"
+#include "logger.h"
 
 #include "switchboard/rail.h"
 #include "switchboard/switch.h"
 #include "switchboard/msswitch.h"
 #include "switchboard/station.h"
-#include "path.h"
-#include "logger.h"
+
+#include "rollingstock/railtrain.h"
 
 std::vector<Path *> pathlist;
 
@@ -294,6 +296,37 @@ void Path::print(){
   char buffer[200];
   this->sprint(buffer);
   printf("%s\n", buffer);
+}
+
+void Path::reverse(){
+  loggerf(INFO, "Path::reverse");
+
+  for(RailTrain * T: this->trains){
+    if(T->speed){
+      loggerf(INFO, "Path has a train with speed");
+      return;
+    }
+  }
+
+  this->direction ^= 1;
+
+  for(Block * B: this->Blocks){
+    B->reverse();
+  }
+
+  for(RailTrain * T: this->trains){
+    loggerf(INFO, "Reverse Train");
+    T->dir ^= 1;
+    T->setSpeedZ21(0);
+  }
+}
+
+void Path::reserve(){
+  this->reserved = 1;
+
+  for(Block * B: this->Blocks){
+    B->reserve();
+  }
 }
 
 void pathlist_find(){

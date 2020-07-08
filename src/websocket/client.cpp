@@ -55,12 +55,15 @@ Client::Client(Websocket::Server * Server, int fd){
 
   this->Server->newClientCallback(this);
 
+  this->thread_started = true;
   pthread_create(&this->thread, NULL, (void* (*)(void*))&this->run, (void *) this);
 
 
 }
 
-Client::~Client(){}
+Client::~Client(){
+  loggerf(INFO, "Client Destructor");
+}
 
 void Client::disconnect(){
   loggerf(DEBUG, "Disconnect Client %i", this->fd);

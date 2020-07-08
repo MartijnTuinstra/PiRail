@@ -126,7 +126,7 @@ bool Switch::approachable(void * p, int flags){
   // Check if the switch is approachable from the div/str side.
 
   loggerf(TRACE, "Switch::approachable (%x, %x, %x)", (unsigned int)this, (unsigned int)p, flags);
-  if((flags & 0x80) == 0){
+  if((flags & SWITCH_CARE) == 0){
     //No SWITCH_CARE
     return 1;
   }
@@ -362,8 +362,7 @@ int throw_multiple_switches(uint8_t len, char * msg){
 
 int Switch_Set_Path(void * p, struct rail_link link, int flags){
   loggerf(TRACE, "Switch_Set_Path (%x, %x, %i)", (unsigned int)p, (unsigned int)&link, flags);
-  if((flags & 0x80) == 0){
-    //No SWITCH_CARE
+  if((flags & SWITCH_CARE) == 0){
     return 1;
   }
 
@@ -450,8 +449,7 @@ int Switch_Set_Path(void * p, struct rail_link link, int flags){
 
 int Switch_Reserve_Path(void * p, struct rail_link link, int flags){
   loggerf(TRACE, "reserve_switch_path (%x, %x, %i)", (unsigned int)p, (unsigned int)&link, flags);
-  if((flags & 0x80) == 0){
-    //No SWITCH_CARE
+  if((flags & SWITCH_CARE) == 0){
     return 1;
   }
 
@@ -529,8 +527,7 @@ int Switch_Check_Path(void * p, struct rail_link link, int flags){
     return 1;
   }
 
-  if((flags & 0x80) == 0){
-    //No SWITCH_CARE
+  if((flags & SWITCH_CARE) == 0){
     return 1;
   }
   else if(link.type == RAIL_LINK_S){

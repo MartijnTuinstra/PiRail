@@ -315,6 +315,7 @@ void Unit::updateIO(int uart_filestream){
     tx.data[0] = module;
     tx.data[1] = COMopc_SetAllOut;
     tx.data[2] = N->io_ports;
+
     check = UART_CHECKSUM_SEED ^ tx.data[1] ^ tx.data[2];
 
     memset(&tx.data[3], 0, UART_COM_t_Length);

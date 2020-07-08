@@ -16,6 +16,7 @@ class Client {
     uint8_t subscribedTrains[2] = {0xFF,0xFF};
     
     pthread_t thread;
+    bool thread_started = false;
     int type; /*Flags for client type
                         255 = All messages
                         1  = Trains

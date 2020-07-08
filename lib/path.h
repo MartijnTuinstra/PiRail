@@ -3,6 +3,7 @@
 
 #include <vector>
 #include "switchboard/rail.h"
+#include "rollingstock/declares.h"
 
 class Path {
   public:
@@ -19,6 +20,8 @@ class Path {
 
     Block * end;
     bool end_direction;
+
+    std::vector<RailTrain *> trains;
 
     Path(Block * B);
     ~Path();

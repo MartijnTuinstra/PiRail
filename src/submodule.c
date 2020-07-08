@@ -12,6 +12,11 @@
 
 
 void Algor_start(){
+  if(SYS->LC.state != Module_Fail && SYS->LC.state != Module_STOP){
+    loggerf(WARNING, "Algor allraedy running/started");
+    return;
+  }
+
   pthread_join(SYS->LC.th, NULL);
 
   if(SYS->UART.state == Module_STOP)
@@ -32,6 +37,11 @@ void Algor_stop(){
 }
 
 void UART_start(){
+  if(SYS->UART.state != Module_Fail && SYS->UART.state != Module_STOP){
+    loggerf(WARNING, "UART allraedy running/started");
+    return;
+  }
+
   pthread_join(SYS->UART.th, NULL);
   pthread_create(&SYS->UART.th, NULL, UART, NULL);
 
@@ -51,6 +61,11 @@ void UART_stop(){
 pthread_t pt_train_simA;
 
 void SimA_start(){
+  if(SYS->SimA.state != Module_Fail && SYS->SimA.state != Module_STOP){
+    loggerf(WARNING, "SimA allraedy running/started");
+    return;
+  }
+
   pthread_join(SYS->SimA.th, NULL);
 
   SYS_set_state(&SYS->SimA.state, Module_Init_Parent);
@@ -68,6 +83,11 @@ void SimA_start(){
 }
 
 void SimB_start(){
+  if(SYS->SimB.state != Module_Fail && SYS->SimB.state != Module_STOP){
+    loggerf(WARNING, "SimB allraedy running/started");
+    return;
+  }
+
   pthread_join(SYS->SimB.th, NULL);
 
   SYS_set_state(&SYS->SimB.state, Module_Init_Parent);

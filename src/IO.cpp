@@ -109,6 +109,11 @@ void IO_Port::setInput(uint8_t state){
   }
 
   if(this->type == IO_Input_Block){
+    if(this->r_state.value == IO_event_High)
+      this->p.B->blocked = 1;
+    else
+      this->p.B->blocked = 0;
+
     this->p.B->IOchanged = 1;
     putAlgorQueue(this->p.B, 1);
   }

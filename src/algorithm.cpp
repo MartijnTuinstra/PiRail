@@ -129,12 +129,12 @@ void * Algor_Run(void * args){
       }
       for(int j = 0; j < Units[i]->switch_len; j++){
         if(U_Sw(i, j)){
-          U_Sw(i, j)->state |= 0x80;
+          U_Sw(i, j)->updatedState = true;
         }
       }
       for(int j = 0; j < Units[i]->msswitch_len; j++){
         if(U_MSSw(i, j)){
-          U_MSSw(i, j)->state |= 0x80;
+          U_MSSw(i, j)->updatedState = true;
         }
       }
     }
@@ -330,6 +330,9 @@ void Algor_Set_Changed(Algor_Blocks * ABs){
     ABs->P[i]->algorchanged = 1;
     ABs->P[i]->IOchanged = 1;
     ABs->P[i]->AlgorClear();
+
+    if(!ABs->P[i]->blocked)
+      ABs->P[i]->setState(PROCEED);
   }
   for(int i = 0; i < ABs->next; i++){
     if(!ABs->N[i])
@@ -341,11 +344,15 @@ void Algor_Set_Changed(Algor_Blocks * ABs){
     ABs->N[i]->algorchanged = 1;
     ABs->N[i]->IOchanged = 1;
     ABs->N[i]->AlgorClear();
+
+    if(!ABs->N[i]->blocked)
+      ABs->N[i]->setState(PROCEED);
   }
 
   if(ABs->B){
     ABs->B->algorchanged = 1;
     ABs->B->IOchanged = 1;
+    ABs->B->setState(PROCEED);
   }
 }
 
@@ -702,6 +709,8 @@ void Algor_print_block_debug(Block * B){
 
   Algor_Blocks * ABs = &B->Alg;
 
+  char blockstates[10] = "BDRC rsU";
+
   for(int i = 7; i >= 0; i--){
     if(ABs->prev <= i){
       ptr += sprintf(ptr, "       ");
@@ -714,15 +723,8 @@ void Algor_print_block_debug(Block * B){
     }
 
     if(ABs->P[i]){
-      ptr += sprintf(ptr, "%02i:%02i", ABs->P[i]->module, ABs->P[i]->id);
-      if(ABs->P[i]->blocked)
-        ptr += sprintf(ptr, "B ");
-      else if(ABs->P[i]->state == RESERVED_SWITCH)
-        ptr += sprintf(ptr, "S ");
-      else if(ABs->P[i]->state == RESERVED)
-        ptr += sprintf(ptr, "R ");
-      else
-        ptr += sprintf(ptr, "  ");
+      ptr += sprintf(ptr, "%02i:%02i%c%c", ABs->P[i]->module, ABs->P[i]->id, blockstates[ABs->P[i]->state],
+                                           (i == ABs->prev1 || i == ABs->prev2 || i == ABs->prev3) ? '|' : ' ');
     }
     else
       ptr += sprintf(ptr, "------ ");
@@ -874,12 +876,13 @@ void Algor_Switch_Checker(Algor_Blocks * ABs, int debug){
 }
 
 void Algor_rail_state(Algor_Blocks * ABs, int debug){
-  loggerf(INFO, "Algor_rail_state %02d:%02d", ABs->B->module, ABs->B->id);
+  loggerf(TRACE, "Algor_rail_state %02d:%02d", ABs->B->module, ABs->B->id);
   //Unpack ABs
-  uint8_t prev  = ABs->prev;
+  // uint8_t prev  = ABs->prev;
   Block ** BP   = ABs->P;
   Block *  B    = ABs->B;
-  uint8_t next  = ABs->next;
+  // Block ** BN   = ABs->N;
+  // uint8_t next  = ABs->next;
 
   if(!B->blocked){
     if(!B->reserved){
@@ -939,28 +942,54 @@ void Algor_rail_state(Algor_Blocks * ABs, int debug){
 
     }
   }
-  else if(next == 0){
+  else if(ABs->next == 0){
     if(B->type != NOSTOP){
       B->setState(CAUTION);
-    }
-    else{
-      B->setState(DANGER);
 
-      uint16_t length = 0;
-      for(uint8_t i = 0; i < prev; i++){
-        if(BP[i]->type != NOSTOP){
-          length += BP[i]->length;
-          BP[i]->setState(CAUTION);
-        }
-        else if(length == 0){
-          BP[i]->setState(DANGER);
-        }
-        else{
+      if(B->type == STATION){
+        for(uint8_t i = 0; i < ABs->prev1; i++){
+          if(BP[i]->blocked)
+            break;
+
           BP[i]->setState(CAUTION);
         }
       }
     }
+    else{
+      B->setState(DANGER);
+
+      uint8_t maxblocks = ABs->prev2;
+      enum Rail_states nostopper = DANGER;
+
+      for(uint8_t i = 0; i < maxblocks; i++){
+        if(BP[i]->blocked)
+          break;
+
+        if(BP[i]->type != NOSTOP){
+          BP[i]->setState(CAUTION);
+
+          nostopper = CAUTION;
+
+          if(i == 0)
+            maxblocks = ABs->prev1;
+        }
+        else
+          BP[i]->setState(nostopper);
+      }
+    }
   }
+  // else{
+  //   bool blocked = false;
+  //   for(uint8_t i = 0; i < ABs->next3; i++){
+  //     if(BN[i]->blocked){
+  //       blocked = true;
+  //       break;
+  //     }
+  //   }
+
+  //   if(!blocked)
+  //     B->setState(PROCEED);
+  // }
 }
 
 void Algor_train_following(Algor_Blocks * ABs, int debug){
@@ -1080,9 +1109,7 @@ void Algor_train_following(Algor_Blocks * ABs, int debug){
     //NEW TRAIN
     // find a new follow id
     // loggerf(ERROR, "FOLLOW ID INCREMENT, bTrain");
-    B->train = new RailTrain();
-
-    B->train->B = B;
+    B->train = new RailTrain(B);
 
     if(B->reserved){
       B->reserved--;

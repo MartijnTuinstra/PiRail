@@ -284,7 +284,7 @@ void COM_Parse(struct fifobuffer * buf){
     //Add device to device list
     
     for(uint16_t i = 0;i<255;i++){
-      if(!Units[i])
+      if(!Units[i] || i >= unit_len)
         continue;
 
       Units[i]->on_layout = 0;

@@ -18,6 +18,17 @@ TEST_CASE( "Block Link", "[SB-1.1]" ) {
   set_level(NONE);
   set_logger_print_level(NONE);
 
+  if(Units){
+    for(uint8_t u = 0; u < unit_len; u++){
+      if(!Units[u])
+        continue;
+
+      delete Units[u];
+      Units[u] = 0;
+    }
+    _free(Units);
+  }
+
   Units = (Unit **)_calloc(30, Unit *);
   unit_len = 30;
 
@@ -87,6 +98,17 @@ TEST_CASE( "Block Link", "[SB-1.1]" ) {
 TEST_CASE( "Block Algorithm Search", "[SB-1.2]" ) {
   set_level(NONE);
   set_logger_print_level(NONE);
+
+  if(Units){
+    for(uint8_t u = 0; u < unit_len; u++){
+      if(!Units[u])
+        continue;
+
+      delete Units[u];
+      Units[u] = 0;
+    }
+    _free(Units);
+  }
 
   Units = (Unit **)_calloc(30, Unit *);
   unit_len = 30;
@@ -329,6 +351,17 @@ TEST_CASE( "Block Algorithm Stating", "[SB-1.3]" ) {
   init_main();
   set_level(NONE);
   set_logger_print_level(NONE);
+
+  if(Units){
+    for(uint8_t u = 0; u < unit_len; u++){
+      if(!Units[u])
+        continue;
+
+      delete Units[u];
+      Units[u] = 0;
+    }
+    _free(Units);
+  }
 
   Units = (Unit **)_calloc(30, Unit *);
   unit_len = 30;

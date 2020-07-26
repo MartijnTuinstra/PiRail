@@ -7,13 +7,13 @@ LIB=lib
 GCC_DEPFLAGS = -MT $@ -MMD -MP -MF $(DEPDIR)/$*.d
 GCC_INCLUDE = -I $(LIB)
 GCC_ERROR_FLAGS = -Werror=unused-variable -Wno-packed-bitfield-compat -Wno-unused-parameter -Wall
-GCC_LIBS = -lpthread -lssl -lcrypto -lm
+GCC_LIBS = -pthread -lssl -lcrypto -lm
 GCC_FLAGS = -D _DEFAULT_SOURCE
 
 GCC = g++ -std=c++14 -g3 $(GCC_INCLUDE) $(GCC_ERROR_FLAGS) $(GCC_LIBS) $(GCC_FLAGS)
 
 FILES_CONFIG = $(addprefix config/,ModuleConfig RollingConfig)
-FILES_SWITCHBOARD = $(addprefix switchboard/,links rail switch msswitch unit station signals)
+FILES_SWITCHBOARD = $(addprefix switchboard/,blockconnector links rail switch msswitch unit station signals)
 FILES_WEBSOCKET = $(addprefix websocket/,server client stc cts message)
 FILES_ROLLING = $(addprefix rollingstock/,train engine car railtrain)
 
@@ -29,8 +29,8 @@ COMTEST_FILES += $(FILES_ROLLING) $(FILES_WEBSOCKET) $(FILES_SWITCHBOARD) $(FILE
 
 CONFIG_READER_FILES = config_reader config logger mem $(FILES_CONFIG)
 
-BAAN_CONFIGS = 1 2 3 10 20 21 22 23 25 26
-TEST_CONFIGS = PATH-1 IO-1 SB-1.1 SB-1.2 SB-1.3 SB-2.1 SB-3.1 SB-4.1
+BAAN_CONFIGS = 1 2 3 4 10 20 21 22 23 25 26
+TEST_CONFIGS = PATH-1 PATH-2 IO-1 SB-1.1 SB-1.2 SB-1.3 SB-2.1 SB-3.1 SB-4.1
 
 TEST_STOCK_CONFIGS =
 

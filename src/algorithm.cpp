@@ -15,6 +15,7 @@
 #include "switchboard/msswitch.h"
 #include "switchboard/signals.h"
 #include "switchboard/station.h"
+#include "switchboard/blockconnector.h"
 #include "train.h"
 
 #include "modules.h"
@@ -1226,33 +1227,22 @@ void Algor_train_control(Algor_Blocks * ABs, int debug){
 }
 
 void Algor_Connect_Rails(){
-  struct ConnectList List;
-  List.length = 0;
-  List.list_index = 8;
-  List.R_L = (struct rail_link **)_calloc(8, struct rail_link *);
+  
+  auto connectors = Algorithm_find_connectors();
+  uint16_t maxConnectors = connectors.size();
 
-  int i = 0;
-  int x = 0;
-  int max_j = init_connect_Algor(&List);
-  int cur_j = max_j;
-  int prev_j = max_j;
+  loggerf(INFO, "Have %i connectors", connectors.size());
 
-  while(SYS->LC.state == Module_Run && SYS->stop == 0 && SYS->modules_linked == 0){
+  while(SYS->LC.state == Module_LC_Connecting && !SYS->stop && SYS->modules_linked == 0){
     sem_wait(&AlgorQueueNoEmpty);
     
-    cur_j = connect_Algor(&List);
-    printf("?\n");
-    if(i > 1){
-      printf(" (%02i/%02i)\n",cur_j,max_j);
-      i = 0;
-      x++;
-    }
-    if(prev_j != cur_j){
+    if(uint8_t * findResult = Algorithm_find_connectable(&connectors)){
+      Algorithm_connect_connectors(&connectors, findResult);
 
       char data[20];
       data[0] = 0x82;
-      data[1] = cur_j;
-      data[2] = max_j;
+      data[1] = connectors.size();
+      data[2] = maxConnectors;
       int k = 3;
       for(int j = 0;j<unit_len;j++){
         if(Units[j]){
@@ -1261,11 +1251,30 @@ void Algor_Connect_Rails(){
       }
       WSServer->send_all(data, k, 0x10);
     }
-    i++;
-    prev_j = cur_j;
+
+    if(connectors.size() == 0)
+      break;
 
     //IF ALL JOINED
     //BREAK
+
+    for(uint8_t j = 0; j < unit_len; j++){
+      if(!Units[j])
+        continue;
+      Unit * U = Units[j];
+
+      U->block_state_changed = 1;
+
+      for(uint8_t k = 0; k < U->block_len; k++){
+        if(!U->B[k])
+          continue;
+
+        if(U->B[k]->blocked)
+          U->B[k]->state = BLOCKED;
+        else
+          U->B[k]->state = PROCEED;
+      }
+    }
 
     mutex_lock(&algor_mutex, "Algor Mutex");
     //Notify clients
@@ -1273,7 +1282,7 @@ void Algor_Connect_Rails(){
 
     mutex_unlock(&algor_mutex, "Algor Mutex");
 
-    usleep(1000);
+    usleep(100);
   }
 
   SYS->modules_linked = 1;

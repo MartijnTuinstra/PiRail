@@ -34,6 +34,8 @@ class Signal {
     uint16_t id;            // Signal ID
     uint8_t module;         // Module number
     bool direction;         // Forward?
+
+    struct rail_link block_link;
     Block * B;              // Parent block
     enum Rail_states state; // State of the signal
 

@@ -134,6 +134,7 @@ var Train_Control = {
 
 
     $('.train-box .train-dir-box .btn-toggle').on("click", function(evt){
+      console.log("Train-dir-box clicked");
       evt.preventDefault();
       $('.btn-toggle', $(evt.target).closest(".train-box, .btn-toggle-group")).removeClass('btn-secondary');
       $('.btn-toggle', $(evt.target).closest(".train-box, .btn-toggle-group")).addClass('btn-outline-secondary');
@@ -145,6 +146,7 @@ var Train_Control = {
       var box = this.get_box(evt.currentTarget);
 
       this.set_dir(box, dir);
+      this.send_speed(box);
     }.bind(this));
 
     $('.train-box .train-stop > button.btn').on("click", function(evt){

@@ -12,7 +12,6 @@
 #include "IO.h"
 #include "algorithm.h"
 
-
 const char * rail_states_string[8] = {
   "BLOCKED",
   "DANGER",
@@ -444,8 +443,15 @@ void Block::AlgorClear(){
   loggerf(TRACE, "Block %02i:%02i AlgorClear", this->module, this->id);
   memset(this->Alg.P, 0, 10*sizeof(void *));
   memset(this->Alg.N, 0, 10*sizeof(void *));
-  this->Alg.prev = 0;
+  this->Alg.prev  = 0;
+  this->Alg.prev1 = 0;
+  this->Alg.prev2 = 0;
+  this->Alg.prev3 = 0;
+
   this->Alg.next = 0;
+  this->Alg.next1 = 0;
+  this->Alg.next2 = 0;
+  this->Alg.next3 = 0;
 }
 #define ALGORLENGTH 100
 

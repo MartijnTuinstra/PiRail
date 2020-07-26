@@ -249,12 +249,13 @@ websocket.add_opcodes([
             }
           }
 
+          i += module.connections.length;
+
           if(noanchor){
             continue;
           }
 
           console.log("Module "+data[i]+" connect ", module.connection_link, {x: module.OffsetX, y:module.OffsetY, r:module.r});
-          i += module.connections.length;
 
           module.connect();
         }
@@ -549,6 +550,7 @@ websocket.add_opcodes([
       opcode: 0x4B,
       name: "DCCEngineSpeed",
       send: function(data){
+	console.log("DCCEngineSpeed", JSON.stringify(data));
         return [data.engine.id, (data.engine.dir & 1) << 4 | (data.engine.speed & 0xF00) >> 8,
                 data.engine.speed & 0xFF];
       },
@@ -1583,6 +1585,6 @@ websocket.add_opcodes([
 
 $(document).ready(function(){
   setTimeout(function(){
-    websocket.connect("ws://192.168.2.92:9000/", 0xFF);
+    websocket.connect("ws://192.168.2.160:9000/", 0xFF);
   }, 500);
 });

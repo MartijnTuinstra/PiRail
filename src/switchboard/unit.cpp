@@ -316,9 +316,11 @@ void Unit::updateIO(int uart_filestream){
     tx.data[1] = COMopc_SetAllOut;
     tx.data[2] = N->io_ports;
 
+    bool data = 0;
+
     check = UART_CHECKSUM_SEED ^ tx.data[1] ^ tx.data[2];
 
-    memset(&tx.data[3], 0, UART_COM_t_Length);
+    memset(&tx.data[3], 0, UART_COM_t_Length - 3);
 
     for(int io = 0; io < N->io_ports; io++){
       IO_Port * IO = N->io[io];
@@ -327,11 +329,11 @@ void Unit::updateIO(int uart_filestream){
         continue;
 
       // loggerf(WARNING, "Update io %02i:%02i:%02i %s (%i)", module, n, io, IO_event_string[U_IO(module, n, io)->type][U_IO(module, n, io)->w_state.value], U_IO(module, n, io)->w_state.value);
-      if(IO->type <= IO_Output_PWM && IO->w_state.value != IO->r_state.value){
+      if(IO->type <= IO_Output_PWM){
         IO->r_state.value = IO->w_state.value;
+        tx.data[io/4 + 3] |= IO->w_state.value << ((io % 4) * 2);
+        data = 1;
       }
-
-      tx.data[io/4 + 3] |= IO->w_state.value << ((io % 4) * 2);
 
       if(io%4 == 3)
         check ^= tx.data[io/4 + 2];
@@ -343,9 +345,11 @@ void Unit::updateIO(int uart_filestream){
     }
     tx.data[N->io_ports/4 + 3] = check;
     tx.length = N->io_ports/4 + 4;
-    
-    if(uart_filestream)
-      COM_Send(&tx);
+
+    if(!data)
+      continue;
+
+    COM_Send(&tx);
   }
 }
 

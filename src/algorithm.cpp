@@ -105,7 +105,14 @@ void * Algor_Run(void * args){
     usleep(1000000);
   }
   else{
-    COM_Reset();
+    while(SYS->UART.state != Module_Run){
+      usleep(1000);
+      if(SYS->UART.state == Module_Fail || SYS->UART.state == Module_STOP){
+        SYS_set_state(&SYS->LC.state, Module_Fail);
+        return 0;
+      }
+    }
+    COM_DevReset();
     while(!SYS->UART.modules_found){
       usleep(1000);
     }
@@ -117,6 +124,7 @@ void * Algor_Run(void * args){
   }
   else{
     Algor_Connect_Rails();
+    SIM_Connect_Rail_links();
   }
   WS_stc_Track_Layout(0);
   // scan_All();
@@ -219,7 +227,7 @@ void Algor_process(Block * B, int flags){
   B->algorchanged = 0;
   // B->statechanged = 1;
 
-  if(!B->blocked && B->train){
+  if(!B->blocked && B->state == BLOCKED){
     if(B->Alg.next > 0 && B->Alg.N[0]->blocked){
       B->Alg.N[0]->algorchanged = 1;
       putAlgorQueue(B->Alg.N[0], 1);
@@ -242,7 +250,7 @@ void Algor_process(Block * B, int flags){
   // }
 
   //Follow the train arround the layout
-  Algor_train_following(&B->Alg, flags);
+  // Algor_train_following(&B->Alg, flags);
   if (B->IOchanged){
     loggerf(INFO, "Block Train ReProcess");
     B->AlgorClear();
@@ -254,7 +262,7 @@ void Algor_process(Block * B, int flags){
   }
 
   //Set oncomming switch to correct state
-  Algor_Switch_Checker(&B->Alg, flags);
+  // Algor_Switch_Checker(&B->Alg, flags);
   if (B->IOchanged){
     loggerf(DEBUG, "Block Switch ReProcess");
     B->AlgorClear();
@@ -945,7 +953,7 @@ void Algor_rail_state(Algor_Blocks * ABs, int debug){
   }
   else if(ABs->next == 0){
     if(B->type != NOSTOP){
-      B->setState(CAUTION);
+      B->setState(PROCEED); // FIXME: change back to CAUTION
 
       if(B->type == STATION){
         for(uint8_t i = 0; i < ABs->prev1; i++){

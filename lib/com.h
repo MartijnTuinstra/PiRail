@@ -45,6 +45,7 @@ void COM_Parse(struct fifobuffer * buf);
 void COM_Send(struct COM_t * DATA);
 
 void COM_Reset();
+void COM_DevReset();
 
 void COM_change_Output(int M);
 void COM_set_single_Output(int M, int io, union u_IO_event type);

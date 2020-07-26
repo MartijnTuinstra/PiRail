@@ -31,7 +31,7 @@ var Modals = {
       open_cb: function(data, ref){
         $('.modal-body', ref).append('<input name="fid" type="number" class="modal-form" style="display: none;" value="'+data.fid+'"/>');
         $('.modal-body', ref).append('<input name="msg_id" type="number" class="modal-form" style="display: none;" value="'+data.msg_id+'"/>');
-        $('.modal-body', ref).append("<div style='width:100%; overflow:hidden; max-height: 600px'><div style='width:125%;position: relative; overflow: overlay;'><div class='cont' style='width:80%;'><ul class='list-unstyled btn-toggle-group train-list'><li class='empty'><i>No trains available</i></li></ul></div></div></div>");
+        $('.modal-body', ref).append("<div style='width:100%; overflow: auto; max-height: 600px'><div style='width:125%;position: relative; overflow: auto;'><div class='cont' style='width:80%;'><ul class='list-unstyled btn-toggle-group train-list'><li class='empty'><i>No trains available</i></li></ul></div></div></div>");
         $('.modal-body ul.train-list', ref).after("<ul class='list-unstyled btn-toggle-group engine-list'><li class='empty'><i>No engines available</i></li></ul>");
 
         $('.modal-body > div').css("max-height", "calc("+(window.innerHeight*0.8-71)+"px - 3em)");

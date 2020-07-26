@@ -18,13 +18,19 @@
 
 struct s_systemState * SYS;
 
-char * UART_Serial_Port;
+char * UART_Serial_Port = 0;
 
-int main(){
+int main(int argc, char * argv[]){
   init_main();
   init_logger("log.txt");
-  set_level(TRACE);
+  set_level(MEMORY);
   set_logger_print_level(DEBUG);
+
+  if(argc > 1){
+    printf("Got argument %s\n", argv[1]);
+    UART_Serial_Port = (char *)_calloc(strlen(argv[1])+5, char);
+    strcpy(UART_Serial_Port, argv[1]);
+  }
 
   // Stop program when receiving SIGINT
   if (signal(SIGINT, sigint_func) == SIG_ERR){

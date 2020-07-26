@@ -38,6 +38,7 @@ pthread_mutex_t mutex_UART;
 //Is described in the techincal documentation.
 
 int uart0_filestream = -1;
+char * uart_tmp_databuffer;
 
 char COM_ACK = 0;
 char COM_NACK = 0;
@@ -70,7 +71,9 @@ void * UART(void * args){
     return 0;
   }
 
-  loggerf(INFO, "UART %s opened", Serial_Port);
+  loggerf(INFO, "UART %s opened", UART_Serial_Port);
+
+  uart_tmp_databuffer = (char *)_calloc(256, char);
 
   //CONFIGURE THE UART
   struct termios options;
@@ -100,35 +103,42 @@ void * UART(void * args){
 
   SYS_set_state(&SYS->UART.state, Module_STOP);
 
+  _free(uart_tmp_databuffer);
+
   return 0;
 }
 
 void COM_Reset(){
   uint8_t DTS_FLAG = TIOCM_DTR;
   ioctl(uart0_filestream,TIOCMBIS,&DTS_FLAG);
-  usleep(100000); 
+  usleep(100000);
+  tcflush(uart0_filestream,TCIOFLUSH);
   ioctl(uart0_filestream,TIOCMBIC,&DTS_FLAG);
+  usleep(100000);
 }
 
 void COM_Send(struct COM_t * DATA){
-  if (SYS->UART.state == Module_SIM_State){
-    return;
-  }
-  else if (SYS->UART.state != Module_Run){
-    loggerf(ERROR, "No UART");
-    return;
-  }
-
-  tcflush(uart0_filestream, TCIFLUSH);
-
-
   char debug[200];
   char *ptr = debug;
 
   for(uint8_t i = 0;i<DATA->length;i++){
     ptr += sprintf(ptr, "%02x ", DATA->data[i]);
   }
+
+  if (SYS->UART.state == Module_SIM_State){
+    loggerf(INFO, "SIM COM TX - %s", debug);
+    return;
+  }
+  else if (SYS->UART.state != Module_Run){
+    loggerf(ERROR, "No UART");
+    return;
+  }
+  else if(uart0_filestream <= 0)
+    return;
+
   loggerf(INFO, "COM TX - %s", debug);
+
+  // tcflush(uart0_filestream, TCIFLUSH);
 
   int count = write(uart0_filestream, &DATA->data[0], DATA->length);    //Filestream, bytes to write, number of bytes to write
   if (count < 0)
@@ -137,7 +147,7 @@ void COM_Send(struct COM_t * DATA){
   }else{
     //printf("Count: %i\n",count);
   }
-  tcdrain(uart0_filestream);
+  // tcdrain(uart0_filestream);
 }
 
 int COM_Recv(struct fifobuffer * buf){
@@ -238,7 +248,7 @@ uint8_t COM_Packet_Length(struct fifobuffer * buf){
     return buf->buffer[(r+2)%UART_BUFFER_SIZE] + 5;
   }
 
-  loggerf(CRITICAL, "Lost frame spacing");
+  loggerf(CRITICAL, "Lost frame spacing, opcode: %02x", buf->buffer[r]);
   return 1;
 }
 
@@ -251,7 +261,7 @@ void COM_Parse(struct fifobuffer * buf){
   if(length > (uint8_t)(buf->write - buf->read) % UART_BUFFER_SIZE)
     return;
 
-  uint8_t * data = (uint8_t *)_calloc(length, uint8_t);
+  char * data = uart_tmp_databuffer;
 
   //Check Checksum
   uint8_t Check = UART_CHECKSUM_SEED;
@@ -270,6 +280,10 @@ void COM_Parse(struct fifobuffer * buf){
   }
 
   loggerf(INFO, "COM RECV - (%d) %s", length, debug);
+
+
+  if(length == 1)
+    return;
 
 
   if(data[1] == RNet_OPC_ACK){
@@ -324,12 +338,13 @@ void COM_Parse(struct fifobuffer * buf){
     //uint8_t node = data[3];
     uint8_t l = data[3];
     for(uint8_t i = 0; i < l*8; i++){
+      if(i >= Node->io_ports)
+        break;
+
       if(data[i/8+4] & (1 << (i%8))){
-        loggerf(INFO, "%d IO %i HIGH", data[0], i);
         Node->io[i]->setInput(IO_event_High);
       }
       else{
-        loggerf(INFO, "%d IO %i LOW", data[0], i);
         Node->io[i]->setInput(IO_event_Low);
       }
     }
@@ -402,9 +417,9 @@ void COM_set_single_Output(int M, int io, union u_IO_event type){
   struct COM_t TX;
   TX.data[0] = M;
   TX.data[1] = RNet_OPC_SetOutput;
-  TX.data[2] = io + 48;
+  TX.data[2] = io;
   TX.data[3] = type.value;
-  TX.data[4] = UART_CHECKSUM_SEED ^ RNet_OPC_SetOutput ^ (io + 48) ^ type.value;
+  TX.data[4] = UART_CHECKSUM_SEED ^ RNet_OPC_SetOutput ^ io ^ type.value;
   TX.length = 5;
   COM_Send(&TX);
 }

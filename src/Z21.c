@@ -218,7 +218,7 @@ void Z21_recv(char * data, int length){
   // loggerf(INFO, "Checksum %i | %x != %x", check, checksum, data[d_length-1]);
 
   if(header == 0x10){ // LAN_GET_SERIAL_NUMBER
-    loggerf(INFO, "LAN_GET_SERIAL_NUMBER %02x.%02x", data[4], data[5]);
+    loggerf(DEBUG, "LAN_GET_SERIAL_NUMBER %02x.%02x", data[4], data[5]);
   }
   else if(header == 0x40){
     if(!check)
@@ -262,7 +262,7 @@ void Z21_recv(char * data, int length){
       loggerf(TRACE, "LAN_X_GET_FIRMWARE_VERSION");
     }
     else if(XHeader == 0xEF){ // LAN_X_LOCO_INFO
-      loggerf(INFO, "LAN_X_LOCO_INFO");
+      loggerf(DEBUG, "LAN_X_LOCO_INFO");
       Z21_LAN_X_LOCO_INFO(length - 6, &data[5]);
     }
   }
@@ -270,7 +270,7 @@ void Z21_recv(char * data, int length){
     loggerf(TRACE, "LAN_GET_BROADCASTFLAGS");
   }
   else if(header == 0x84){ //LAN_SYSTEMSTATE_DATACHANGED
-    loggerf(INFO, "LAN_SYSTEMSTATE_DATACHANGED");
+    loggerf(DEBUG, "LAN_SYSTEMSTATE_DATACHANGED");
     Z21_info.MainCurrent = (int16_t)(data[4] + (data[5] << 8));
     Z21_info.ProgCurrent = (int16_t)(data[6] + (data[7] << 8));
     Z21_info.FilteredMainCurrent = (int16_t)(data[8] + (data[9] << 8));

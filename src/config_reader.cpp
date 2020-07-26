@@ -9,6 +9,17 @@
 #include "config/ModuleConfig.h"
 #include "config/RollingConfig.h"
 
+const char * rail_states_string[8] = {
+  "BLOCKED",
+  "DANGER",
+  "RESTRICTED",
+  "CAUTION",
+  "PROCEED",
+  "RESERVED",
+  "RESERVED_SWITCH",
+  "UNKNOWN" 
+};
+
 void modify_Node(struct ModuleConfig * config, char ** cmds, uint8_t cmd_len){
   if(!cmds)
     return;
@@ -666,10 +677,14 @@ void modify_Signal(struct ModuleConfig * config, char cmd){
 
 
   if(cmd == 'e' || cmd == 'a'){
-    printf("Signals Block id (%i)| ", config->Signals[id].blockId);
+    int tmp2;
+    printf("Signals Block link (%2i:%2i:%2x)  | ", config->Signals[id].Block.module, config->Signals[id].Block.id, config->Signals[id].Block.type);
     fgets(_cmd, 20, stdin);
-    if(sscanf(_cmd, "%i", &tmp) > 0)
-      config->Signals[id].blockId = tmp;
+    if(sscanf(_cmd, "%i%*c%i%*c%i", &tmp, &tmp1, &tmp2) > 2){
+      config->Signals[id].Block.module = tmp;
+      config->Signals[id].Block.id = tmp1;
+      config->Signals[id].Block.type = tmp2;
+    }
     
     
     printf("Signals Block direction (%c)| ", config->Signals[id].direction ? 'F' : 'R');
@@ -701,7 +716,7 @@ void modify_Signal(struct ModuleConfig * config, char cmd){
         config->Signals[id].output[i].Adr = tmp1;
       }
       for(int j = 0; j < 8; j++){
-        printf("   IO-Event %i: (%2i)    | ", j, config->Signals[id].stating[i].event[j]);
+        printf("   IO-Event %15s: (%2i)    | ", rail_states_string[j], config->Signals[id].stating[i].event[j]);
         fgets(_cmd, 20, stdin);
         if(sscanf(_cmd, "%i", &tmp) > 0){
           config->Signals[id].stating[i].event[j] = tmp;
@@ -713,7 +728,7 @@ void modify_Signal(struct ModuleConfig * config, char cmd){
     printf("Signals Switches (%2i) | ", config->Signals[id].Switch_len);
     fgets(_cmd, 20, stdin);
     if(sscanf(_cmd, "%i", &tmp) > 0){
-      config->Signals[id].Switches = (struct s_Signal_DependentSwitch *)_realloc(config->Signals[id].output, tmp, struct s_Signal_DependentSwitch);
+      config->Signals[id].Switches = (struct s_Signal_DependentSwitch *)_realloc(config->Signals[id].Switches, tmp, struct s_Signal_DependentSwitch);
       config->Signals[id].Switch_len = tmp;
     }
 
@@ -1440,6 +1455,13 @@ int edit_module(char * filename, bool update){
   }
 
   if(update){
+    uint8_t len = strlen(config.filename);
+    config.filename[len] = '_';
+    config.filename[len+1] = 'b';
+    config.filename[len+2] = 'u';
+    config.filename[len+3] = 0;
+    config.write();
+    config.filename[len] = 0;
     config.write();
     return -1;
   }
@@ -1692,6 +1714,9 @@ int main(int argc, char ** argv){
     else if(strcmp(argv[i], "--rollingediting") == 0){
       if(moduleediting == false)
         rollingediting = true;
+    }
+    else if(strcmp(argv[i], "--verbose") == 0 || strcmp(argv[i], "-v") == 0){
+      set_logger_print_level(DEBUG);
     }
     else{ // filename
       if(!filename_arg){

@@ -147,7 +147,8 @@ struct __attribute__((__packed__)) s_Signal_DependentSwitch {
 struct __attribute__((__packed__)) signal_conf {
   uint16_t direction:1;
   uint16_t id:15;
-  uint16_t blockId;
+  // uint16_t blockId;
+  struct s_link_conf Block;
   uint8_t output_len;
   uint8_t Switch_len;
 
@@ -163,7 +164,7 @@ struct __attribute__((__packed__)) s_IO_signal_event_conf {
 struct __attribute__((__packed__)) s_signal_conf {
   uint16_t direction:1;
   uint16_t id:15;
-  uint16_t blockId;
+  struct s_link_conf Block;
   uint8_t output_len;
   uint8_t Switch_len;
 };

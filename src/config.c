@@ -35,6 +35,7 @@ int check_Spacing(uint8_t ** p){
 }
 
 struct node_conf read_s_node_conf(uint8_t ** p){
+  loggerf(DEBUG, "Reading Node");
   struct node_conf n;
   memcpy(&n, *p, sizeof(struct s_node_conf));
 
@@ -53,6 +54,7 @@ struct node_conf read_s_node_conf(uint8_t ** p){
 }
 
 struct s_unit_conf read_s_unit_conf(uint8_t ** p){
+  loggerf(DEBUG, "Reading Unit");
   struct s_unit_conf s;
   memcpy(&s, *p, sizeof(struct s_unit_conf));
 
@@ -64,6 +66,7 @@ struct s_unit_conf read_s_unit_conf(uint8_t ** p){
 }
 
 struct s_block_conf read_s_block_conf(uint8_t ** p){
+  loggerf(DEBUG, "Reading Block");
   struct s_block_conf s;
   memcpy(&s, *p, sizeof(struct s_block_conf));
 
@@ -75,6 +78,7 @@ struct s_block_conf read_s_block_conf(uint8_t ** p){
 }
 
 struct switch_conf read_s_switch_conf(uint8_t ** p){
+  loggerf(DEBUG, "Reading Switch");
   struct switch_conf s;
 
   memcpy(&s, *p, sizeof(struct s_switch_conf));
@@ -97,6 +101,7 @@ struct switch_conf read_s_switch_conf(uint8_t ** p){
 }
 
 struct ms_switch_conf read_s_ms_switch_conf(uint8_t ** p){
+  loggerf(DEBUG, "Reading MSSwitch");
   struct ms_switch_conf s;
 
   memcpy(&s, *p, sizeof(struct s_ms_switch_conf));
@@ -129,6 +134,7 @@ struct ms_switch_conf read_s_ms_switch_conf(uint8_t ** p){
 }
 
 struct station_conf read_s_station_conf(uint8_t ** p){
+  loggerf(DEBUG, "Reading Station");
   struct station_conf s;
 
   memcpy(&s, *p, sizeof(struct s_station_conf));
@@ -156,9 +162,12 @@ struct station_conf read_s_station_conf(uint8_t ** p){
 }
 
 struct signal_conf read_s_signal_conf(uint8_t ** p){
+  loggerf(DEBUG, "Reading Signal");
   struct signal_conf s;
 
   memcpy(&s, *p, sizeof(struct s_signal_conf));
+
+  print_hex((char *)*p, sizeof(struct s_signal_conf));
 
   *p += sizeof(struct s_signal_conf);
 

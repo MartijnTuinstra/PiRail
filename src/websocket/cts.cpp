@@ -10,7 +10,7 @@
 #include "websocket/server.h"
 #include "websocket/client.h"
 #include "websocket/message.h"
-#include "websocket/structure.h"
+#include "websocket/message_structure.h"
 #include "websocket/stc.h"
 #include "websocket/cts.h"
 
@@ -366,7 +366,7 @@ void WS_cts_SetTrainSpeed(struct s_opc_SetTrainSpeed * m, Websocket::Client * cl
     return;
   }
 
-  uint16_t speed = (m->speed_high << 8) + m->speed_low;
+  uint16_t speed = ((m->speed_high & 0x0F) << 8) + m->speed_low;
 
   loggerf(INFO, "WS_cts_SetTrainSpeed %i -> %i", m->follow_id, speed);
 
@@ -376,18 +376,18 @@ void WS_cts_SetTrainSpeed(struct s_opc_SetTrainSpeed * m, Websocket::Client * cl
 
   T->speed = speed;
   T->target_speed = speed;
-  T->dir   = m->dir;
+  T->dir   = (m->speed_high & 0x10) >> 4;
 
   if(T->type == RAILTRAIN_ENGINE_TYPE){
     Engine * E = T->p.E;
-    E->dir = m->dir;
+    E->dir = T->dir;
     E->setSpeed(speed);
     Z21_Set_Loco_Drive_Engine(E);
   }
   else{
     Train * tmpT = T->p.T;
     // tmpT->cur_speed = ;
-    tmpT->dir = m->dir;
+    tmpT->dir = T->dir;
     tmpT->setSpeed(speed);
     Z21_Set_Loco_Drive_Train(tmpT);
   }
@@ -457,9 +457,12 @@ void WS_cts_DCCEngineSpeed(struct s_opc_DCCEngineSpeed * m, Websocket::Client * 
   if(!E)
     return;
 
-  uint16_t speed = (m->speed_high << 8) + m->speed_low;
+  uint16_t speed = ((m->speed_high & 0x0F) << 8) + m->speed_low;
 
-  E->dir = m->dir;
+  E->dir = (m->speed_high & 0x10) >> 4;
+
+  loggerf(WARNING, "Set DCCENGINESPEED %02x %02x %02x", m->id, m->speed_high, m->speed_low); 
+  loggerf(WARNING, "Set DCCEngineSpeed %i, dir: %i", speed, E->dir);
   E->setSpeed(speed);
   Z21_Set_Loco_Drive_Engine(E);
 }

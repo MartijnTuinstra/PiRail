@@ -10,7 +10,7 @@
 #include "websocket/server.h"
 #include "websocket/client.h"
 #include "websocket/message.h"
-#include "websocket/structure.h"
+#include "websocket/message_structure.h"
 #include "websocket/stc.h"
 
 #include "system.h"
@@ -635,8 +635,8 @@ void WS_stc_SwitchesUpdate(Websocket::Client * client){
       WSServer->send_all(buf, buf_l, WS_Flag_Switches);
     }
   }
-  else
-    loggerf(DEBUG, "WS Switches no content");
+  // else
+  //   loggerf(DEBUG, "WS Switches no content");
 
   mutex_unlock(&mutex_lockB, "UnLock Mutex B");
 }

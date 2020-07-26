@@ -454,7 +454,10 @@ void print_Signals(struct signal_conf signal){
   char debug[400];
   char * debugptr = debug;
 
-  debugptr += sprintf(debugptr, "%i\t%i\t%i", signal.id, signal.blockId, signal.output_len);
+  debugptr += sprintf(debugptr, "%i\t", signal.id);
+  print_link(&debugptr, signal.Block);
+  debugptr += sprintf(debugptr, "\t%i", signal.output_len);
+
   for(int i = 0;i < signal.output_len; i++){
     debugptr += sprintf(debugptr, "\n\t\t\t%02i:%02i - ", signal.output[i].Node, signal.output[i].Adr);
     for(int j = 0; j < 8; j++){

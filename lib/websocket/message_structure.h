@@ -46,9 +46,7 @@ packedstruct s_opc_LinkTrain {
 // 0x42
 packedstruct s_opc_SetTrainSpeed {
   uint8_t follow_id;
-  uint8_t empty1:3;
-  uint8_t dir:1;
-  uint8_t speed_high:4;
+  uint8_t speed_high; // xxxD SSSS  , D=dir, S = speed
   uint8_t speed_low;
 };
 
@@ -99,9 +97,7 @@ packedstruct s_opc_DCCEngineUpdate {
 // 0x4B
 packedstruct s_opc_DCCEngineSpeed {
   uint8_t id;
-  uint8_t empty1:3;
-  uint8_t dir:1;
-  uint8_t speed_high:4;
+  uint8_t speed_high; // xxxD SSSS  , D=dir, S = speed
   uint8_t speed_low;
 };
 

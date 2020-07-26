@@ -94,32 +94,39 @@ void IO_Port::setOutput(union u_IO_event state){
 }
 
 void IO_Port::setInput(uint8_t state){
+  if(this->type == IO_Undefined)
+    return;
+
   if(this->type < IO_Input){
     loggerf(WARNING, "setInput on output port");
     return;
   }
 
-  if(state){ // High
-    this->w_state.value = IO_event_High;
-    this->r_state.value = IO_event_High;
-  }
-  else{ // Low
-    this->w_state.value = IO_event_Low;
-    this->r_state.value = IO_event_Low;
+  this->w_state.value = state;
+
+  if(!this->p.p && this->type >= IO_Input_Block){
+    loggerf(WARNING, "IO without any link");
+    return;
   }
 
-  if(this->type == IO_Input_Block){
-    if(this->r_state.value == IO_event_High)
-      this->p.B->blocked = 1;
-    else
-      this->p.B->blocked = 0;
+  if(this->w_state.value != this->r_state.value){
+    if(this->type == IO_Input_Block){
+      if(this->w_state.value == IO_event_High)
+        this->p.B->blocked = 1;
+      else
+        this->p.B->blocked = 0;
 
-    this->p.B->IOchanged = 1;
-    putAlgorQueue(this->p.B, 1);
+      loggerf(INFO, "IO updated %02i:%02i:%02i\t%s", this->Node->U->module, this->Node->id, this->id, IO_event_string[1][this->w_state.value]);
+
+      this->p.B->IOchanged = 1;
+      putAlgorQueue(this->p.B, 1);
+    }
+    else{
+      loggerf(CRITICAL, "Unknown io type %i", this->type);
+    }
   }
-  else{
-    loggerf(CRITICAL, "Unknown io type %i", this->type);
-  }
+
+  this->r_state.value = this->w_state.value;
 }
 
 // IO_Port::update(){

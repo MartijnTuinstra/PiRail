@@ -317,7 +317,7 @@ void Path::reverse(){
   for(RailTrain * T: this->trains){
     loggerf(INFO, "Reverse Train");
     T->dir ^= 1;
-    T->setSpeedZ21(0);
+    // T->setSpeedZ21(0);
   }
 }
 

@@ -14,9 +14,22 @@ Signal::Signal(uint8_t module, struct signal_conf conf){ //, uint8_t blockId, ui
   // #define create_signal_from_conf(module, data) new Signal(module, data.blockId, data.id, data.side, data.output_len, data.output, data.stating)
   memset(this, 0, sizeof(Signal));
 
-  this->B = U_B(module, conf.blockId);
+  // this->B = U_B(module, conf.blockId);
+  this->block_link.module = conf.Block.module;
+  this->block_link.id = conf.Block.id;
+  this->block_link.type = (enum link_types)conf.Block.type;
+
   this->direction = conf.direction;
-  this->state = this->B->addSignal(this);
+
+  if(this->block_link.type == RAIL_LINK_R){
+    this->B = (Block *)rail_link_pointer(this->block_link);
+
+    this->state = this->B->addSignal(this);
+  }
+  else if(this->block_link.type != RAIL_LINK_C){
+    loggerf(WARNING, "Failed to create Signal, invalid block link.");
+    return;
+  }
 
   this->id = conf.id;
   this->module = module;
@@ -65,7 +78,7 @@ Signal::Signal(uint8_t module, struct signal_conf conf){ //, uint8_t blockId, ui
 
   Units[module]->insertSignal(this);
   
-  loggerf(DEBUG, "Create signal %02i:%02i, %s, block %02i:%02i", this->module, this->id, this->direction ? "Forward" : "Reverse", this->B->module, this->B->id);
+  loggerf(DEBUG, "Create signal %02i:%02i, %s, block %08x", this->module, this->id, this->direction ? "Forward" : "Reverse", this->B);
 
   set(UNKNOWN);
 }
@@ -79,7 +92,10 @@ Signal::~Signal(){
 }
 
 void print_signal_state(Signal * Si, enum Rail_states state){
-  loggerf(INFO, "%02i:%02i Sig %i  %i %s -> %i %s", Si->B->module, Si->B->id, Si->id, Si->state, rail_states_string[Si->state], state, rail_states_string[state]);
+  if(Si->B)
+    loggerf(INFO, "%02i:%02i Sig %i  %i %s -> %i %s", Si->B->module, Si->B->id, Si->id, Si->state, rail_states_string[Si->state], state, rail_states_string[state]);
+  else
+    loggerf(INFO, "--:-- Sig %i  %i %s -> %i %s", Si->id, Si->state, rail_states_string[Si->state], state, rail_states_string[state]);
 }
 
 void Signal::set(enum Rail_states state){

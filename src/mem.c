@@ -19,7 +19,7 @@ void init_allocs(){
 void * my_calloc(int elements, int size, const char * file, const int line){
   void * p = calloc(elements, size);
   floggerf(MEMORY, file, line, "calloc \tsize: %i \tpointer: %08x", elements * size, p);
-
+/*
   pthread_mutex_lock(&mem_lock);
   for(unsigned int i = 0; i < allocs; i++){
     if(!allocations[i].pointer){
@@ -31,6 +31,7 @@ void * my_calloc(int elements, int size, const char * file, const int line){
   }
   pthread_mutex_unlock(&mem_lock);
 
+  */
   return p;
 }
 

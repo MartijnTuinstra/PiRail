@@ -38,9 +38,9 @@ Switch::Switch(uint8_t Module, struct switch_conf s){
 
 
   // ============== IO ==============
-  Node_adr * Adrs = (Node_adr *)_calloc(s.IO & 0x0f, Node_adr);
+  Node_adr * Adrs = (Node_adr *)_calloc(this->IO_len, Node_adr);
 
-  for(int i = 0; i < (s.IO & 0x0f); i++){
+  for(int i = 0; i < (this->IO_len); i++){
     Adrs[i].Node = s.IO_Ports[i].Node;
     Adrs[i].io = s.IO_Ports[i].Adr;
   }
@@ -354,7 +354,7 @@ int throw_multiple_switches(uint8_t len, char * msg){
     }
   }
 
-  algor_queue_enable(1);
+  // algor_queue_enable(1);
 
   // COM_change_switch(0);
   return 1;

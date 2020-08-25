@@ -1423,7 +1423,7 @@ websocket.add_opcodes([
       recv: function(data){
         var msg = {};
         msg.id = data[1] + ((data[0] & 0x1F) << 8);
-        msg.type = (data[1] & 0xE0);
+        msg.type = (data[0] & 0xE0);
         msg.data = data.slice(2);
 
         Messages.add(msg);

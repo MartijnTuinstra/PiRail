@@ -109,3 +109,13 @@ void SYS_set_state(volatile enum e_SYS_Module_State * system, enum e_SYS_Module_
   loggerf(INFO, "Setting module to state %s", e_SYS_Module_State_string[state]);
   WS_stc_SubmoduleState(0);
 }
+
+bool SYS_wait_for_state(volatile enum e_SYS_Module_State * system, enum e_SYS_Module_State state){
+  while(*system != state){
+    usleep(1000);
+    if(*system == Module_Fail || *system == Module_STOP){
+      return false;
+    }
+  }
+  return true;
+}

@@ -39,6 +39,13 @@ extern const char websocket_magic_string[];
 #define WS_Flag_40       0x40
 #define WS_Flag_80       0x80
 
+// Messages
+#define WS_MESSAGE_NEWTRAIN 0
+#define WS_MESSAGE_SPLITTRAIN 1
+#define WS_MESSAGE_YARDSPLIT 2
+
+#define WS_MESSAGE_SCANSTATUS 7
+
 
 //Opcodes
 //System

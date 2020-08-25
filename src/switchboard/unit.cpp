@@ -27,7 +27,13 @@ Unit::Unit(ModuleConfig * Config){
 
 
   this->connections_len = Config->header.connections;
-  this->connection = (Unit **)_calloc(Config->header.connections, Unit *);
+  if(this->connections_len > 5){
+    loggerf(ERROR, "To many connection for module %i", this->module);
+    this->connections_len = 5;
+  }
+
+  memset(this->connection, 0, sizeof(struct unit_connector));
+  // this->connection = (Unit **)_calloc(Config->header.connections, Unit *);
 
   this->IO_Nodes = Config->header.IO_Nodes;
   this->block_len = Config->header.Blocks;
@@ -102,7 +108,6 @@ Unit::Unit(uint16_t M, uint8_t Nodes, char points){
   this->module = M;
 
   this->connections_len = points;
-  this->connection = (Unit **)_calloc(points, Unit *);
 
   this->IO_Nodes = Nodes;
   this->Node = (IO_Node **)_calloc(this->IO_Nodes, IO_Node *);
@@ -125,9 +130,6 @@ Unit::Unit(uint16_t M, uint8_t Nodes, char points){
 
 Unit::~Unit(){
   loggerf(INFO, "Clearing module %i", this->module);
-
-  //Clear unit connections array
-  _free(this->connection);
 
   //Clear IO
   for(int j = 0; j < this->IO_Nodes; j++){
@@ -346,8 +348,10 @@ void Unit::updateIO(int uart_filestream){
     tx.data[N->io_ports/4 + 3] = check;
     tx.length = N->io_ports/4 + 4;
 
-    if(!data)
+    if(!data){
+      loggerf(INFO, "No data");
       continue;
+    }
 
     COM_Send(&tx);
   }

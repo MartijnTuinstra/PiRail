@@ -244,7 +244,7 @@ uint8_t COM_Packet_Length(struct fifobuffer * buf){
     if( (uint8_t)(buf->write - buf->read) % UART_BUFFER_SIZE < 4){
       return UART_Msg_NotComplete; // Not enough bytes
     }
-    loggerf(INFO, "OPC RIN, READEEPROM %x -> len %d", buf->buffer[(r+2) % UART_BUFFER_SIZE], buf->buffer[(r+2) % UART_BUFFER_SIZE] + 5);
+    loggerf(TRACE, "OPC RIN, READEEPROM %x -> len %d", buf->buffer[(r+2) % UART_BUFFER_SIZE], buf->buffer[(r+2) % UART_BUFFER_SIZE] + 5);
     return buf->buffer[(r+2)%UART_BUFFER_SIZE] + 5;
   }
 
@@ -279,7 +279,7 @@ void COM_Parse(struct fifobuffer * buf){
     buf->read = (buf->read + 1) % UART_BUFFER_SIZE;
   }
 
-  loggerf(INFO, "COM RECV - (%d) %s", length, debug);
+  loggerf(TRACE, "COM RECV - (%d) %s", length, debug);
 
 
   if(length == 1)
@@ -315,7 +315,7 @@ void COM_Parse(struct fifobuffer * buf){
     SYS->UART.modules_found = 1;
   }
   else if(data[1] == RNet_OPC_ReadInput){
-    loggerf(INFO, "READIN - %s", &debug[6]);
+    loggerf(TRACE, "READIN - %s", &debug[6]);
 
     if(Check != 0){
       loggerf(WARNING, "Failed Checksum %x", Check);

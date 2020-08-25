@@ -67,6 +67,7 @@ void Algor_rail_state(struct algor_blocks * ABs, int debug);
 void Algor_train_control(Algor_Blocks * ABs, int debug);
 
 void Algor_Connect_Rails();
+void Algor_save_setup();
 
 // void procces_accessoire();
 

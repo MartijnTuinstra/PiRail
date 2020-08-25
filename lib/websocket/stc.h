@@ -15,6 +15,7 @@ struct WS_Message {
 };
 
 //System Messages
+uint16_t WS_stc_ScanStatus(uint16_t msgID, uint16_t x, uint16_t y);
 void WS_stc_Partial_Layout(uint8_t M_A);
 void WS_stc_Track_Layout(Websocket::Client * client);
 
@@ -58,7 +59,7 @@ void WS_stc_ShortCircuit();
 void WS_stc_ClearEmergency();
 
 void WS_init_Message_List();
-char WS_init_Message(char type);
+uint16_t WS_init_Message(char type);
 void WS_add_Message(uint16_t ID, char length,char data[16]);
 void WS_send_open_Messages(Websocket::Client * client);
 void WS_clear_message(uint16_t ID, char ret_code);

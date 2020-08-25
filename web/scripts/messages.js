@@ -1,4 +1,3 @@
-
 class message {
 	constructor(id, type, data={}){
 		this.id = id;
@@ -9,6 +8,8 @@ class message {
 	}
 
 	draw(){
+		$('.messages ul .message-id-'+this.id).remove();
+
 		var header, content, color;
 		if(this.type == 0){ // New train
 			header = "New train";
@@ -25,6 +26,12 @@ class message {
 			header = "Train split";
 			content = "at "+this.data.location;
 			color = "danger";
+		}
+		else if(this.type == 0xE0){
+			header = "Scan Progress";
+			content = this.data.x + " done out of "+ this.data.y;
+			color = "warning";
+			this.modal = "layout.load";
 		}
 		else if(this.type == 0xff){
 			header = "Disconnected";
@@ -64,59 +71,16 @@ var Messages = {
 
 		//Check type
 		if(msg.type == 0){ //New train
-			// msg.data[0] // Folow ID
-			// msg.data[1] // Found on module
-			// msg.data[2] // and Section
 			m = new message(id, 0, {fid: msg.data[0], location: msg.data[1]+":"+msg.data[2]});
-			// text = '<div class="message mID'+id+'">'+
-			// 		'<div class="color-box warning"></div>'+
-			// 		'<div class="header">A new Train</div>'+
-			// 		'<div class="content">Near '+msg.data[1]+':'+msg.data[2]+'</div>'+
-			// 	   '</div>'
-
-			// $('#settings .messages').append(text);
-			// this.show(text,id);
-
-			// $('#settings .messages .mID'+id+', #message_popup .messages .mID'+id).css("cursor", "pointer");
-			// $('#settings .messages .mID'+id+', #message_popup .messages .mID'+id).on("click", function(evt){
-				// Train.linker.open(msg);
-				// Messages.hide(id);
-			// });
-
-			// setTimeout(function(){Messages.hide(id);},5000);
 		}
 		else if(msg.type == 0x20){ //Split train in yard
-			// msg.data[0] // Folow ID
-			// msg.data[1] // Found A on module
-			// msg.data[2] // and Section
-			// msg.data[3] // Found B on module
-			// msg.data[4] // and Section
 			m = new message(id, 0x20, {fid: msg.data[0], locationA: msg.data[1]+":"+msg.data[2], locationB: msg.data[3]+":"+msg.data[4]});
-			// text = '<div class="message mID'+id+'">'+
-			// 		'<div class="color-box warning"></div>'+
-			// 		'<div class="header">Train has split in a yard</div>'+
-			// 		'<div class="content">Near '+msg.data[1]+':'+msg.data[2]+'</div>'+
-			// 	   '</div>'
-
-			// $('#settings .messages').append(text);
-			// this.show(text,id);
-			// setTimeout(function(){Messages.hide(id);},5000);
 		}
 		else if(msg.type == 0x40){ //Split train on mainline
-			// msg.data[0] // Folow ID
-			// msg.data[1] // Found A on module
-			// msg.data[2] // and Section
-			// msg.data[3] // Found B on module
-			// msg.data[4] // and Section
 			m = new message(id, 0x40, {fid: msg.data[0], locationA: msg.data[1]+":"+msg.data[2], locationB: msg.data[3]+":"+msg.data[4]});
-			// text = '<div class="message mID'+id+'">'+
-			// 		'<div class="color-box servere"></div>'+
-			// 		'<div class="header">Train has split on main line</div>'+
-			// 		'<div class="content">Near '+msg.data[1]+':'+msg.data[2]+'</div>'+
-			// 	   '</div>'
-
-			// $('#settings .messages').append(text);
-			// this.show(text,id);
+		}
+		else if(msg.type == 0xE0){ //ScanProgress
+			m = new message(id, 0xE0, {x: msg.data[0], y: msg.data[1]});
 		}
 		else if(msg.type == 0xFF){ // Disconnected
 			m = new message(0, 0xFF);

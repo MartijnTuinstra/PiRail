@@ -470,7 +470,7 @@ void Block::AlgorSearch(int debug){
   prev = this->_Next(1 | SWITCH_CARE | DIRECTION_CARE,1);
 
   if(next){
-    ABs->next = this->_NextList(ABs->N, 0, NEXT | SWITCH_CARE, 400);
+    ABs->next = this->_NextList(ABs->N, 0, NEXT | SWITCH_CARE, 600);
 
     ABs->next1 = ABs->next;
     ABs->next2 = ABs->next;
@@ -495,7 +495,7 @@ void Block::AlgorSearch(int debug){
     }
   }
   if(prev){
-    ABs->prev = this->_NextList(ABs->P, 0, PREV | SWITCH_CARE | DIRECTION_CARE, 400);
+    ABs->prev = this->_NextList(ABs->P, 0, PREV | SWITCH_CARE | DIRECTION_CARE, 600);
 
     ABs->prev1 = ABs->prev;
     ABs->prev2 = ABs->prev;

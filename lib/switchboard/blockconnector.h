@@ -50,4 +50,6 @@ BlockConnectors Algorithm_find_connectors();
 uint8_t * Algorithm_find_connectable(BlockConnectors * Connectors);
 void Algorithm_connect_connectors(BlockConnectors * Connectors, uint8_t * blockedConnectors);
 
+int Algorithm_load_setup(char * filename, BlockConnectors * Connectors);
+
 #endif

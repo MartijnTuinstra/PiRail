@@ -27,6 +27,17 @@ var Modals = {
         danger: {visible: true, content: "Cancel", cb: undefined, wait: false},
       }
     },
+
+    "layout.load":{
+      title: "Load a previous setup",
+      content: "Just a list of setups",
+      buttons: {
+        success: {visible: true, content: "Cancel", cb: undefined, wait: false},
+        warning: {visible: false, content: ""},
+        danger: {visible: false, content: ""},
+      }
+    },
+
     "train.link":{
       open_cb: function(data, ref){
         $('.modal-body', ref).append('<input name="fid" type="number" class="modal-form" style="display: none;" value="'+data.fid+'"/>');

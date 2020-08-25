@@ -5,12 +5,18 @@
 #include "config/ModuleConfig.h"
 #include "IO.h"
 
+struct unit_connector {
+  uint8_t unit;
+  uint8_t connector; //remote connector
+  bool crossover;
+};
+
 class Unit {
   public:
     uint8_t module;
 
     uint8_t connections_len;
-    Unit ** connection;
+    struct unit_connector connection[5];
 
     uint8_t IO_Nodes;
     IO_Node ** Node;

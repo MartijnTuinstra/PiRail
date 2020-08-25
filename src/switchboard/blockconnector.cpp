@@ -44,12 +44,15 @@ void BlockConnector::connect(BlockConnector * BC, bool crossover){
     if(BC->Sig[j])
       BlockConnectorMatrix[3][A](BC, this, j, i);
 
-    loggerf(INFO, "MATRIX %i<>%i", A, B);
     BlockConnectorMatrix[A][B](this, BC, i, j);
   }
 
-  Units[this->unit]->connection[this->connector - 1] = Units[BC->unit];
-  Units[BC->unit]->connection[BC->connector - 1] = Units[this->unit];
+  Units[this->unit]->connection[this->connector - 1].unit = BC->unit;
+  Units[this->unit]->connection[this->connector - 1].connector = BC->connector;
+  Units[this->unit]->connection[this->connector - 1].crossover = crossover;
+  Units[BC->unit]->connection[BC->connector - 1].unit = this->unit;
+  Units[BC->unit]->connection[BC->connector - 1].connector = this->connector;
+  Units[BC->unit]->connection[BC->connector - 1].crossover = crossover;
 
   WS_stc_Partial_Layout(this->unit);
   WS_stc_Partial_Layout(BC->unit);
@@ -137,40 +140,6 @@ void BlockConnectBlockMSSwitch(BlockConnector * A, BlockConnector * B, uint8_t p
 }
 void BlockConnectSwitchBlock(BlockConnector * A, BlockConnector * B, uint8_t portA, uint8_t portB){
   BlockConnectBlockSwitch(B, A, portB, portA);
-  // Switch * bA = A->Sw[portA];
-  // Block * bB = B->B[portB];
-
-  // enum link_types switchsideA;
-
-  // if(bA->str.type == RAIL_LINK_C){
-  //   switchsideA = RAIL_LINK_s;
-  //   bA->str.module = bB->module;
-  //   bA->str.id = bB->id;
-  //   bA->str.type = RAIL_LINK_R;
-  // }
-  // else if(bA->div.type == RAIL_LINK_C){
-  //   switchsideA = RAIL_LINK_s;
-  //   bA->div.module = bB->module;
-  //   bA->div.id = bB->id;
-  //   bA->div.type = RAIL_LINK_R;
-  // }
-  // else{ // App
-  //   switchsideA = RAIL_LINK_S;
-  //   bA->str.module = bB->module;
-  //   bA->str.id = bB->id;
-  //   bA->str.type = RAIL_LINK_R;
-  // }
-
-  // if(bB->next.type == RAIL_LINK_C){
-  //   bB->next.module = bA->module;
-  //   bB->next.id = bA->id;
-  //   bB->next.type = switchsideA;
-  // }
-  // else{
-  //   bB->prev.module = bA->module;
-  //   bB->prev.id = bA->id;
-  //   bB->prev.type = switchsideA;
-  // }
 }
 
 void BlockConnectSwitchSwitch(BlockConnector * A, BlockConnector * B, uint8_t portA, uint8_t portB){
@@ -439,7 +408,6 @@ BlockConnectors Algorithm_find_connectors(){
         uint8_t connector = Sig->block_link.module;
         uint8_t port = Sig->block_link.id;
 
-        loggerf(INFO,"found Signal %i:%i\n",i,j);
         bool found = false;
         for(auto Connector: Connectors){
           if(Connector->unit == i && Connector->connector == connector){
@@ -467,19 +435,16 @@ uint8_t * Algorithm_find_connectable(BlockConnectors * Connectors){
   uint8_t found = 0;
 
   for(uint8_t j = 0; j < Connectors->size(); j++){ //auto Connector: Connectors){
-    loggerf(INFO, "New Connector %i", j);
     BlockConnector * C = Connectors->operator[](j);
 
     for(uint8_t i = 0; i < 10; i++){
       if(!C->B[i])
         continue;
 
-      loggerf(INFO, "Check Block %i:%i", C->unit, C->B[i]->id);
-
       if(!C->B[i]->blocked)
         continue;
 
-      loggerf(INFO, "Found blocked connector %i:%i", C->unit, C->connector);
+      loggerf(DEBUG, "Found blocked connector %i:%i", C->unit, C->connector);
 
       blockedConnector[found] = j;
       found++;
@@ -550,4 +515,89 @@ void Algorithm_connect_connectors(BlockConnectors * Connectors, uint8_t * blocke
   }
 
   _free(blockedConnectors);
+}
+
+int Algorithm_load_setup(char * filename, BlockConnectors * Connectors){
+  FILE * fp = fopen(filename, "rb");
+
+  if(!fp){
+    loggerf(ERROR, "Failed to open file '%s'", filename);
+    return -1;
+  }
+
+  fseek(fp, 0, SEEK_END);
+  long fsize = ftell(fp);
+  fseek(fp, 0, SEEK_SET);
+
+  char * buffer = (char *)_calloc(fsize + 10, char);
+  char * buffer_ptr = buffer;
+  fread(buffer, fsize, 1, fp);
+
+  // uint8_t ** buf_ptr = (uint8_t **)&buffer;
+
+  for(uint8_t i = 0; (buffer_ptr - buffer) < fsize; i++){
+    uint8_t unit = buffer_ptr[0];
+
+    Unit * U = Units[unit];
+    if(!U){
+      loggerf(ERROR, "Unknown Unit (%i) in setup!! Aborting!!", unit);
+      return -2;
+    }
+
+    uint8_t connections = buffer_ptr[1];
+    buffer_ptr += 2;
+
+    for(uint8_t j = 0; j < connections; j++){
+      uint8_t newunit = buffer_ptr[j * 3];
+      uint8_t newconnector = buffer_ptr[j * 3 + 1];
+      bool crossover = buffer_ptr[j * 3 + 2];
+
+      if(U->connection[j].unit){
+        if(!(U->connection[j].unit == newunit && U->connection[j].connector == newconnector))
+          loggerf(ERROR, "connection allready occupied");
+        continue;
+      }
+
+      BlockConnector * A = 0;
+      BlockConnector * B = 0;
+      uint16_t idA = 0, idB = 0;
+
+      for(uint8_t k = 0; k < Connectors->size(); k++){ //auto Connector: Connectors){
+        BlockConnector * C = Connectors->operator[](k);
+
+        if(C->unit == unit && C->connector == j + 1){
+          idA = k;
+          A = C;
+        }
+
+        if(C->unit == newunit && C->connector == newconnector){
+          idB = k;
+          B = C;
+        }
+      }
+
+      if(!A || !B){
+        loggerf(ERROR, "Cloud not find Connectors");
+        return -2;
+      }
+
+      A->connect(B, crossover);
+
+      delete A;
+      delete B;
+
+      if(idA < idB){
+        Connectors->erase(Connectors->begin() + idA);
+        Connectors->erase(Connectors->begin() + idB - 1);
+      }
+      else{
+        Connectors->erase(Connectors->begin() + idA);
+        Connectors->erase(Connectors->begin() + idB); 
+      }
+    }
+
+    buffer_ptr += 3 * connections;
+  }
+
+  return 1;
 }

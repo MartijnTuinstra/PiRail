@@ -100,12 +100,9 @@ void train_sim_tick(struct train_sim * t){
 }
 
 void *TRAIN_SIMA(void * args){
-  while(SYS->LC.state != Module_Run){
-    usleep(10000);
-    if(SYS->LC.state == Module_Fail || SYS->LC.state == Module_STOP){
-      SYS_set_state(&SYS->SimA.state, Module_Fail);
-      return NULL;
-    }
+  if(!SYS_wait_for_state(&SYS->LC.state, Module_Run)){
+    SYS_set_state(&SYS->SimA.state, Module_Fail);
+    return 0;
   }
 
   usleep(100000);
@@ -186,12 +183,9 @@ void *TRAIN_SIMA(void * args){
 }
 
 void *TRAIN_SIMB(void * args){
-  while(SYS->LC.state != Module_Run){
-    usleep(10000);
-    if(SYS->LC.state == Module_Fail || SYS->LC.state == Module_STOP){
-      SYS_set_state(&SYS->SimB.state, Module_Fail);
-      return NULL;
-    }
+  if(!SYS_wait_for_state(&SYS->LC.state, Module_Run)){
+    SYS_set_state(&SYS->SimA.state, Module_Fail);
+    return 0;
   }
 
   usleep(11000000);

@@ -105,7 +105,7 @@ void IO_Port::setInput(uint8_t state){
   this->w_state.value = state;
 
   if(!this->p.p && this->type >= IO_Input_Block){
-    loggerf(WARNING, "IO without any link");
+    loggerf(WARNING, "IO %02d:%02d:%02d without any link", this->Node->U->module, this->Node->id, this->id);
     return;
   }
 

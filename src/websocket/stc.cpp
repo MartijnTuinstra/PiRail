@@ -40,6 +40,25 @@ uint16_t MessageCounter = 0;
 
 
 //System Messages
+uint16_t WS_stc_ScanStatus(uint16_t msgID, uint16_t x, uint16_t y){ // x connected out of y (x/y)
+  if(msgID == (uint16_t)-1)
+    msgID = WS_init_Message(WS_MESSAGE_SCANSTATUS);
+
+
+  char data[6];
+  data[0] = WSopc_NewMessage;
+  data[1] = ((msgID >> 8) & 0x1F) + (WS_MESSAGE_SCANSTATUS << 5); //type = 0xE0 / 0x7
+  data[2] = (msgID & 0xFF);
+  data[3] = x;
+  data[4] = y;
+
+  loggerf(INFO, "WS_stc_ScanStatus %02x%02x", data[1], data[2]);
+  WSServer->send_all(data, 5, WS_Flag_Messages);
+  WS_add_Message(msgID, 5, data);
+
+  return msgID;
+}
+
 void WS_stc_Partial_Layout(uint8_t M){
   loggerf(DEBUG, "WS_stc_Partial_Layout %i", M);
   char data[20];
@@ -49,10 +68,7 @@ void WS_stc_Partial_Layout(uint8_t M){
 
   data[q++] = M;
   for(int i = 0;i<Units[M]->connections_len;i++){
-    if(Units[M]->connection[i])
-      data[q++] = Units[M]->connection[i]->module;
-    else
-      data[q++] = 0;
+    data[q++] = Units[M]->connection[i].unit;
   }
 
   WSServer->send_all(data,q,WS_Flag_Admin);
@@ -74,12 +90,7 @@ void WS_stc_Track_Layout(Websocket::Client * client){
     data[q++] = i;
 
     for(int j = 0;j<Units[i]->connections_len;j++){
-      if(Units[i]->connection[j]){
-        data[q++] = Units[i]->connection[j]->module;
-      }
-      else{
-        data[q++] = 0;
-      }
+      data[q++] = Units[i]->connection[j].unit;
     }
   }
 
@@ -890,11 +901,11 @@ void WS_stc_ClearEmergency(){
 
 
 void WS_init_Message_List(){
-  memset(MessageList,0,64);
+  memset(MessageList, 0, 0x1FFF * sizeof(WS_Message));
   MessageCounter = 0;
 }
 
-char WS_init_Message(char type){
+uint16_t WS_init_Message(char type){
   if(MessageCounter >= 0x1FFF){
     MessageCounter = 0;
   }
@@ -908,15 +919,15 @@ char WS_init_Message(char type){
   return MessageCounter++;
 }
 
-void WS_add_Message(uint16_t ID, char length,char data[16]){
-  memcpy(MessageList[ID].data,data,length);
+void WS_add_Message(uint16_t ID, char length, char * data){
+  memcpy(MessageList[ID].data, data, length);
   MessageList[ID].data_length = length;
 
   loggerf(INFO, "create_message %x", ID);
 }
 
 void WS_send_open_Messages(Websocket::Client * client){
-  for(int i = 0;i<=0x1FFF;i++){
+  for(int i = 0; i <= 0x1FFF; i++){
     if(MessageList[i].type & 0x8000){
       client->send(MessageList[i].data, MessageList[i].data_length, 0xFF);
     }

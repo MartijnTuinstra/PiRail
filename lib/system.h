@@ -103,6 +103,7 @@ void init_main();
 extern struct s_systemState * SYS; 
 
 void SYS_set_state(volatile enum e_SYS_Module_State * system, enum e_SYS_Module_State state);
+bool SYS_wait_for_state(volatile enum e_SYS_Module_State * system, enum e_SYS_Module_State state);
 
 #ifndef TRUE
 #define FALSE 0

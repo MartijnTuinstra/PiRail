@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <time.h>
 
 #include "system.h"
 #include "mem.h"
@@ -103,29 +104,22 @@ void * Algor_Run(void * args){
   if(SYS->UART.state == Module_SIM_State){
     SIM_JoinModules();
     usleep(1000000);
+    SYS_set_state(&SYS->LC.state, Module_LC_Connecting);
+    usleep(1000000);
   }
   else{
-    while(SYS->UART.state != Module_Run){
-      usleep(1000);
-      if(SYS->UART.state == Module_Fail || SYS->UART.state == Module_STOP){
-        SYS_set_state(&SYS->LC.state, Module_Fail);
-        return 0;
-      }
+    if(!SYS_wait_for_state(&SYS->UART.state, Module_Run)){
+      SYS_set_state(&SYS->LC.state, Module_Fail);
+      return 0;
     }
     COM_DevReset();
     while(!SYS->UART.modules_found){
       usleep(1000);
     }
-  }
-  SYS_set_state(&SYS->LC.state, Module_LC_Connecting);
-  if(SYS->UART.state == Module_SIM_State){
-    SIM_Connect_Rail_links();
-    usleep(1000000);
-  }
-  else{
+    SYS_set_state(&SYS->LC.state, Module_LC_Connecting);
     Algor_Connect_Rails();
-    SIM_Connect_Rail_links();
   }
+  SIM_Connect_Rail_links();
   WS_stc_Track_Layout(0);
   // scan_All();
   // Scan All Blocks
@@ -953,7 +947,8 @@ void Algor_rail_state(Algor_Blocks * ABs, int debug){
   }
   else if(ABs->next == 0){
     if(B->type != NOSTOP){
-      B->setState(PROCEED); // FIXME: change back to CAUTION
+      B->setState(CAUTION);
+
 
       if(B->type == STATION){
         for(uint8_t i = 0; i < ABs->prev1; i++){
@@ -1241,23 +1236,17 @@ void Algor_Connect_Rails(){
 
   loggerf(INFO, "Have %i connectors", connectors.size());
 
+  uint16_t msgID = -1;
+
+  msgID = WS_stc_ScanStatus(msgID, 0, maxConnectors);
+
   while(SYS->LC.state == Module_LC_Connecting && !SYS->stop && SYS->modules_linked == 0){
     sem_wait(&AlgorQueueNoEmpty);
     
     if(uint8_t * findResult = Algorithm_find_connectable(&connectors)){
       Algorithm_connect_connectors(&connectors, findResult);
 
-      char data[20];
-      data[0] = 0x82;
-      data[1] = connectors.size();
-      data[2] = maxConnectors;
-      int k = 3;
-      for(int j = 0;j<unit_len;j++){
-        if(Units[j]){
-          data[k++] = j;
-        }
-      }
-      WSServer->send_all(data, k, 0x10);
+      WS_stc_ScanStatus(msgID, maxConnectors - connectors.size(), maxConnectors);
     }
 
     if(connectors.size() == 0)
@@ -1293,5 +1282,46 @@ void Algor_Connect_Rails(){
     usleep(100);
   }
 
+  Algor_save_setup();
+
   SYS->modules_linked = 1;
+}
+
+void Algor_save_setup(){
+  char data[1024];
+  char * dataptr = data;
+
+  for(uint8_t i = 0; i < unit_len; i++){
+    if(!Units[i])
+      continue;
+
+    dataptr[0] = i;
+    dataptr[1] = Units[i]->connections_len;
+    dataptr += 2;
+
+    for(uint8_t j = 0; j < Units[i]->connections_len; j++){
+      dataptr[0] = Units[i]->connection[j].unit;
+      dataptr[1] = Units[i]->connection[j].connector;
+      dataptr[1] = Units[i]->connection[j].crossover;
+      dataptr += 3;
+    }
+  }
+
+  char filename[40];
+  time_t t = time(NULL);
+
+  struct tm tm = *localtime(&t);
+  sprintf(filename, "configs/setup-%04d%02d%02d-%02d%02d%02d.bin", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+
+
+  FILE * fp = fopen(filename, "wb");
+
+  if(!fp){
+    loggerf(ERROR, "Failed to open file for setup saving");
+    return;
+  }
+
+  fwrite(data, (int)dataptr - (int)data, 1, fp);
+
+  fclose(fp);
 }

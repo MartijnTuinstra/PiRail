@@ -1,11 +1,12 @@
 BIN=bin
 SRC=src
 LIB=lib
+SHARED_LIB=shared/lib
 #ARGS=-std=c99 -lpthread -lssl -lcrypto -lwiringPi -lm -g3 $(INCLUDE) -Werror=unused-variable -Wno-packed-bitfield-compat -Wno-unused-parameter -D _DEFAULT_SOURCE
 # GCC_ARGS=-std=c99 -lpthread -lssl -lcrypto -lm -g3 -Werror=unused-variable -Wno-packed-bitfield-compat -Wno-unused-parameter -D _DEFAULT_SOURCE
 
 GCC_DEPFLAGS = -MT $@ -MMD -MP -MF $(DEPDIR)/$*.d
-GCC_INCLUDE = -I $(LIB)
+GCC_INCLUDE = -I $(LIB) -I $(SHARED_LIB)
 GCC_ERROR_FLAGS = -Werror=unused-variable -Wno-packed-bitfield-compat -Wno-unused-parameter -Wall
 GCC_LIBS = -pthread -lssl -lcrypto -lm
 GCC_FLAGS = -D _DEFAULT_SOURCE
@@ -32,11 +33,23 @@ CONFIG_READER_FILES = config_reader config logger mem $(FILES_CONFIG)
 BAAN_CONFIGS = 1 2 3 4 10 20 21 22 23 25 26
 TEST_CONFIGS = PATH-1 PATH-2 IO-1 SB-1.1 SB-1.2 SB-1.3 SB-2.1 SB-3.1 SB-4.1
 
+SHARED_OBJ_FILES = circularbuffer
+
 TEST_STOCK_CONFIGS =
 
 .DEFAULT_GOAL := all
 
 -include $(BIN)/*.d
+
+$(BIN)/shared/%.o: shared/src/%.c
+	@echo '(  GCC  ) - $@ $<'
+	@$(GCC) -c shared/src/$*.c -MP -MMD -MT '$@ $(BIN)/shared/$*.d' -o $(BIN)/shared/$*.o
+	@$(GCC) -shared -o shared/src/$*.c -o $(BIN)/shared/$*.so
+
+$(BIN)/shared/%.o: shared/src/%.cpp
+	@echo '(  G++  ) - $@ $<'
+	@$(GCC) -c shared/src/$*.cpp -MP -MMD -MT '$@ $(BIN)/shared/$*.d' -o $(BIN)/shared/$*.o
+	@$(GCC) -shared -o shared/src/$*.cpp -o $(BIN)/shared/$*.so
 
 $(BIN)/%.o: $(SRC)/%.c
 	@echo '(  GCC  ) -$@'
@@ -72,7 +85,7 @@ test: all
 avr:
 	@+$(MAKE) -C avr all --no-print-directory
 
-baan: $(addprefix $(BIN)/,$(addsuffix .o, $(BAAN_FILES)))
+baan: $(addprefix $(BIN)/,$(addsuffix .o, $(BAAN_FILES))) $(addprefix $(BIN)/shared/,$(addsuffix .o, $(SHARED_OBJ_FILES)))
 	@echo '( GCCLD ) $@'
 	@echo $^
 	@$(GCC) -o $@ $^
@@ -82,7 +95,7 @@ config_reader: $(addprefix $(BIN)/,$(addsuffix .o, $(CONFIG_READER_FILES)))
 	@echo '( GCCLD ) $@'
 	@$(GCC) -o $@ $^
 
-comtest: $(addprefix $(BIN)/,$(addsuffix .o, $(COMTEST_FILES)))
+comtest: $(addprefix $(BIN)/,$(addsuffix .o, $(COMTEST_FILES))) $(addprefix $(BIN)/shared/,$(addsuffix .o, $(SHARED_OBJ_FILES)))
 	@echo '( GCCLD ) $@'
 	@$(GCC) -o $@ $^ 
 

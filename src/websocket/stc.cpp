@@ -107,20 +107,20 @@ void WS_stc_Track_Layout(Websocket::Client * client){
 void WS_stc_Z21_info(Websocket::Client * client){
   uint8_t data[20];
   data[0] = WSopc_Track_Info;
-  data[1] = Z21_info.MainCurrent & 0xFF;
-  data[2] = Z21_info.MainCurrent >> 8;
-  data[3] = Z21_info.FilteredMainCurrent & 0xFF;
-  data[4] = Z21_info.FilteredMainCurrent >> 8;
-  data[5] = Z21_info.ProgCurrent & 0xFF;
-  data[6] = Z21_info.ProgCurrent >> 8;
-  data[7] = Z21_info.VCCVoltage & 0xFF;
-  data[8] = Z21_info.VCCVoltage >> 8;
-  data[9] = Z21_info.SupplyVoltage & 0xFF;
-  data[10] = Z21_info.SupplyVoltage >> 8;
-  data[11] = Z21_info.Temperature & 0xFF;
-  data[12] = Z21_info.Temperature >> 8;
-  data[13] = Z21_info.CentralState;
-  data[14] = Z21_info.CentralStateEx;
+  data[1] = Z21->sensors.MainCurrent & 0xFF;
+  data[2] = Z21->sensors.MainCurrent >> 8;
+  data[3] = Z21->sensors.FilteredMainCurrent & 0xFF;
+  data[4] = Z21->sensors.FilteredMainCurrent >> 8;
+  data[5] = Z21->sensors.ProgCurrent & 0xFF;
+  data[6] = Z21->sensors.ProgCurrent >> 8;
+  data[7] = Z21->sensors.VCCVoltage & 0xFF;
+  data[8] = Z21->sensors.VCCVoltage >> 8;
+  data[9] = Z21->sensors.SupplyVoltage & 0xFF;
+  data[10] = Z21->sensors.SupplyVoltage >> 8;
+  data[11] = Z21->sensors.Temperature & 0xFF;
+  data[12] = Z21->sensors.Temperature >> 8;
+  data[13] = Z21->sensors.CentralState;
+  data[14] = Z21->sensors.CentralStateEx;
 
   if(client)
     client->send((char *)data, 15, 0xff);
@@ -131,8 +131,8 @@ void WS_stc_Z21_info(Websocket::Client * client){
 void WS_stc_Z21_IP(Websocket::Client * client){
   uint8_t data[10];
   data[0] = WSopc_Z21_Settings;
-  memcpy(&data[1], &Z21_info.IP[0], 4);
-  memcpy(&data[5], &Z21_info.Firmware[0], 2);
+  memcpy(&data[1], &Z21->IP[0], 4);
+  memcpy(&data[5], &Z21->Firmware[0], 2);
 
   if(client)
     client->send((char *)data, 7, 0xff);

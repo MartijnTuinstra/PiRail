@@ -119,7 +119,7 @@ void Z21_start(){
     loggerf(ERROR, "Z21 Allready running");
     return;
   }
-  pthread_create(&SYS->Z21.start_th, NULL, Z21, NULL);
+  Z21->start();
 }
 
 void Z21_stop(){

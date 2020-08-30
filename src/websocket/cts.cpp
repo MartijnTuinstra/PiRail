@@ -219,12 +219,16 @@ void WS_cts_SetMultiSwitch(struct s_opc_SetMultiSwitch * data, Websocket::Client
 
 void WS_cts_SetEmergencyStop(void * data, Websocket::Client * client){
   WS_stc_EmergencyStop();
-  Z21_TRACKPOWER_OFF;
+  // Z21_TRACKPOWER_OFF;
+
+  Z21_Release_EmergencyStop();
 }
 
 void WS_cts_ClearEmergency(void * data, Websocket::Client * client){
   WS_stc_ClearEmergency();
-  Z21_TRACKPOWER_ON;
+  // Z21_TRACKPOWER_ON;
+
+  Z21_Set_EmergencyStop();
 }
 
 void WS_cts_ChangeBroadcast(struct s_opc_ChangeBroadcast * data, Websocket::Client * client){

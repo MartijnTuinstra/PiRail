@@ -55,14 +55,14 @@ int Parse(uint8_t data[1024], Client * client){
 
     }
     else if(data[0] == WSopc_Z21_Settings){
-      memcpy(Z21_info.IP, &data[1], 4);
+      memcpy(Z21->IP, &data[1], 4);
 
       FILE * fp = fopen("configs/Z21.bin", "wb");
       if (!fp){
         loggerf(ERROR, "Failed to create new Z21 config file.");
         return 0;
       }
-      fwrite(Z21_info.IP, 4, 1, fp);
+      fwrite(Z21->IP, 4, 1, fp);
       fclose(fp);
       WS_stc_Z21_IP(0);
     }

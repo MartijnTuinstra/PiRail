@@ -30,7 +30,7 @@
 #include "submodule.h"
 #include "websocket/stc.h"
 
-#include "../avr/RNet_msg.h"
+#include "RNet_msg.h"
 
 pthread_mutex_t mutex_UART;
 

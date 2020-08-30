@@ -9,7 +9,9 @@
 
 #include "switchboard/unit.h"
 
-#include "../avr/RNet_msg.h"
+#include "RNet_msg.h"
+
+#include "Z21.h"
 
 struct s_systemState * SYS;
 pthread_t thread;
@@ -38,6 +40,9 @@ int main(int argc, char *argv[]){
   Units = (Unit **)_calloc(30, Unit *);
   unit_len = 30;
 
+  Z21 = new Z21_Client();
+
+/*
   pthread_create(&thread, NULL, UART, NULL);
 
   char cmd[300];
@@ -228,7 +233,7 @@ int main(int argc, char *argv[]){
   //   else
   //     printf("Not a command\n");
   }
-
+*/
   SYS_set_state(&SYS->UART.state, Module_STOP);
 
   pthread_join(thread, NULL);

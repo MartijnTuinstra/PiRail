@@ -14,7 +14,7 @@
 
 #include "pathfinding.h"
 // #include "train_sim.h"
-// #include "Z21.h"
+#include "Z21.h"
 
 struct s_systemState * SYS;
 
@@ -48,7 +48,8 @@ int main(int argc, char * argv[]){
 
   scheduler->start();
 
-  // Z21_boot();
+  Z21 = new Z21_Client();
+
   WSServer = new Websocket::Server();
   WSServer->init();
   WSServer->loop();

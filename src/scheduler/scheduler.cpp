@@ -6,7 +6,7 @@
 #include <sys/time.h>
 #include <pthread.h>
 
-#include "scheduler.h"
+#include "scheduler/scheduler.h"
 #include "logger.h"
 #include "mem.h"
 
@@ -213,24 +213,3 @@ void Scheduler::print_events(){
 }
 
 Scheduler * scheduler = new Scheduler();
-
-// void testA(void * args){
-//     printf("A\n");
-// }
-
-// int main(void){
-//     set_logger_print_level(DEBUG);
-//     // char name1[20] = "TestFuncA";
-    // struct SchedulerEvent event = {{2, 0}, &testA, NULL, "TestFuncA", {0, 0}};
-    // scheduler->addEvent(event);
-
-//     scheduler->print_events();
-
-//     scheduler->removeEvent("TestFuncB");
-
-//     scheduler->print_events();
-
-//     scheduler->removeEvent("TestFuncA");
-
-//     scheduler->print_events();
-// }

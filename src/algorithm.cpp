@@ -221,6 +221,8 @@ void Algor_process(Block * B, int flags){
   B->algorchanged = 0;
   // B->statechanged = 1;
 
+  B->blocked = (B->detectionblocked || B->virtualblocked);
+
   if(!B->blocked && B->state == BLOCKED){
     if(B->Alg.next > 0 && B->Alg.N[0]->blocked){
       B->Alg.N[0]->algorchanged = 1;
@@ -267,7 +269,7 @@ void Algor_process(Block * B, int flags){
   
   // Print all found blocks
   // if(flags & _DEBUG)
-  //   Algor_print_block_debug(B);
+     Algor_print_block_debug(B);
 
   //Apply block stating
   Algor_rail_state(&B->Alg, flags);

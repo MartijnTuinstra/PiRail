@@ -12,7 +12,7 @@ struct train_composition ** trains_comp;
 int trains_comp_len = 0;
 
 Train::Train(char * name, int nr_stock, struct train_comp_ws * comps, uint8_t catagory, uint8_t save){
-  loggerf(INFO, "Create Train %s", name);
+  loggerf(TRACE, "Create Train %s", name);
   memset(this, 0, sizeof(Train));
 
   this->name = (char *)_calloc(strlen(name), char);
@@ -28,6 +28,10 @@ Train::Train(char * name, int nr_stock, struct train_comp_ws * comps, uint8_t ca
 
   this->engines = (Engine **)_calloc(1, Engine *);
   this->nr_engines = 0;
+
+  this->detectables = 0;
+  this->splitdetectables = false;
+  bool testsplitdetectables = false;
 
   for(int i = 0;i<nr_stock;i++){
     this->composition[i].type = comps[i].type;
@@ -53,6 +57,10 @@ Train::Train(char * name, int nr_stock, struct train_comp_ws * comps, uint8_t ca
 
       this->engines[index] = E;
 
+      this->detectables += 1;
+      if(testsplitdetectables)
+        this->splitdetectables = true;
+
       loggerf(TRACE, "Train engine index: %d", index);
     }
     else{
@@ -69,8 +77,18 @@ Train::Train(char * name, int nr_stock, struct train_comp_ws * comps, uint8_t ca
       }
 
       this->composition[i].p = cars[comps[i].id];
+
+      if(cars[comps[i].id]->detectable)
+        this->detectables += 1;
+      else
+        testsplitdetectables = true;
     }
   }
+
+  if(this->detectables < nr_stock)
+    loggerf(INFO, "Train has cars that are not detectable"); // TODO
+  if(this->splitdetectables)
+    loggerf(INFO, "Train has undetectable cars in between two (multiple) engines"); // TODO
 
   int index = find_free_index(trains, trains_len);
 

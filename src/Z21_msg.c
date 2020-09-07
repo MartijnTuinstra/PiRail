@@ -6,15 +6,16 @@
 #include "Z21_msg.h"
 
 void Z21_Set_EmergencyStop(){
-
+  uint8_t tmp[7] = {0x07,0,0x40,0,0x21,0x80,0xA1};
+  Z21->send(7, tmp);
 }
 
 void Z21_Release_EmergencyStop(){
-
+  uint8_t tmp[7] = {0x07,0,0x40,0,0x21,0x81,0xA0};
+  Z21->send(7, tmp);
 }
 
 void Z21_Set_Loco_Drive_Engine(Engine * E){
-/*
   loggerf(TRACE, "Z21_Set_Loco_Drive_Engine %s", E->name);
   uint8_t data[11];
   data[0] = 0x0A;
@@ -38,18 +39,18 @@ void Z21_Set_Loco_Drive_Engine(Engine * E){
   data[8] = ((E->dir & 1) << 7) | (E->speed & 0x7F);
   data[9] = data[4] ^ data[5] ^ data[6] ^ data[7] ^ data[8];
 
-  Z21_send_data(data, 10);*/
+  Z21->send(10, data);
 }
 
 void Z21_Set_Loco_Drive_Train(Train * T){
-  /*loggerf(TRACE, "Z21_Set_Loco_Drive_Train %s", T->name);
+  loggerf(TRACE, "Z21_Set_Loco_Drive_Train %s", T->name);
   for(int e = 0; e < T->nr_engines; e++){
     Z21_Set_Loco_Drive_Engine(T->engines[e]);
-  }*/
+  }
 }
 
 void Z21_LAN_X_LOCO_INFO(uint8_t length, char * data){
-  /*loggerf(TRACE, "Z21_LAN_X_LOCO_INFO");
+  loggerf(TRACE, "Z21_LAN_X_LOCO_INFO");
   uint16_t DCC_ID = ((data[0] & 0x3F) << 8) + data[1];
   // uint8_t xbusRegeler = (data[2] & 0x8) >> 3;
   // uint8_t stufen = (data[2] & 0x7);
@@ -129,11 +130,11 @@ void Z21_LAN_X_LOCO_INFO(uint8_t length, char * data){
   }
   else{
     WS_stc_DCCEngineUpdate(E);
-  }*/
+  }
 }
 
 void Z21_get_train(RailTrain * RT){
-  /*if(RT->type == RAILTRAIN_ENGINE_TYPE){
+  if(RT->type == RAILTRAIN_ENGINE_TYPE){
     Z21_get_loco_info(RT->p.E->DCC_ID);
   }
   else{
@@ -142,11 +143,10 @@ void Z21_get_train(RailTrain * RT){
       Z21_get_loco_info(T->engines[i]->DCC_ID);
     }
   }
-  */
 }
 
 void Z21_get_loco_info(uint16_t DCC_id){
-  /*uint8_t data[10];
+  uint8_t data[10];
 
   data[0] = 0x09;
   data[1] = 0x00;
@@ -158,7 +158,7 @@ void Z21_get_loco_info(uint16_t DCC_id){
   data[7] = (DCC_id & 0xFF);
   data[8] = 0x13 ^ data[6] ^ data[7];
 
-  Z21_send_data(data, 9);*/
+  Z21->send(9, data);
 }
 
 void Z21_setLocoFunction(Engine * E, uint8_t function, uint8_t type){

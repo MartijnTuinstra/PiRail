@@ -17,12 +17,11 @@
 // #include "config.h"
 
 #include "Z21_msg.h"
-#include "scheduler.h"
 
 #include "websocket/server.h"
 #include "websocket/stc.h"
 
-#include "scheduler.h"
+#include "scheduler/scheduler.h"
 
 // #include "pathfinding.h"
 
@@ -74,14 +73,17 @@ int load_rolling_Configs(){
   train_C_cat_len = config.header.C_Catagories;
   memcpy(train_C_cat, config.C_Cat, sizeof(struct cat_conf) * train_C_cat_len);
 
+  loggerf(INFO, "Reading Engines");
   for(int i = 0; i < config.header.Engines; i++){
     create_engine_from_conf(config.Engines[i]);
   }
   
+  loggerf(INFO, "Reading Cars");
   for(int i = 0; i < config.header.Cars; i++){
     create_car_from_conf(config.Cars[i]);
   }
   
+  loggerf(INFO, "Reading Trains");
   for(int i = 0; i < config.header.Trains; i++){
     create_train_from_conf(config.Trains[i]);
   }

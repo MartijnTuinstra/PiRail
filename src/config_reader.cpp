@@ -976,7 +976,7 @@ void modify_Car(struct RollingConfig * config, char cmd){
     config->Cars[id].icon_path = (char *)_calloc(1, char);
   }
   else if(cmd == 'r'){
-    printf("Remove Station ID: ");
+    printf("Remove Car ID: ");
     fgets(_cmd, 80, stdin);
     fgets(_cmd, 80, stdin);
     if(sscanf(_cmd, "%i", &id) < 1)
@@ -1008,11 +1008,27 @@ void modify_Car(struct RollingConfig * config, char cmd){
       config->Cars[id].type = ((tmp & 0x0f) << 4) | (config->Cars[id].type & 0x0f);
     }
 
-    printf("Type  (%x)   | ", config->Cars[id].type & 0x0f);
-    fgets(_cmd, 80, stdin);
-    if(sscanf(_cmd, "%i", &tmp) > 0){
-      config->Cars[id].type = (tmp & 0x0f) | (config->Cars[id].type & 0xf0);
-    }
+	printf("Type  (%x)   | ", config->Cars[id].type & 0x0f);
+	fgets(_cmd, 80, stdin);
+	if (sscanf(_cmd, "%i", &tmp) > 0) {
+		config->Cars[id].type = (tmp & 0x0f) | (config->Cars[id].type & 0xf0);
+	}
+
+	printf("Detectable (%c)   | ", (config->Cars[id].flags & F_CAR_DETECTABLE) ? 'Y' : 'N');
+	fgets(_cmd, 80, stdin);
+	char tmpchar;
+	if (sscanf(_cmd, "%c", &tmpchar) > 0) {
+		if(tmpchar == 'Y' || tmpchar == 'y')
+			config->Cars[id].flags |= F_CAR_DETECTABLE;
+		else
+			config->Cars[id].flags &= ~F_CAR_DETECTABLE;
+	}
+
+	printf("Length  (%2i)   | ", config->Cars[id].length);
+	fgets(_cmd, 80, stdin);
+	if (sscanf(_cmd, "%i", &tmp) > 0) {
+		config->Cars[id].length = tmp;
+	}
 
     printf("Maximum speed    (%i)         | ", config->Cars[id].max_speed);
     fgets(_cmd, 80, stdin);
@@ -1037,12 +1053,6 @@ void modify_Car(struct RollingConfig * config, char cmd){
       memcpy(config->Cars[id].icon_path, _cmd, tmp);
       config->Cars[id].icon_path[tmp] = 0;
       config->Cars[id].icon_path_len = tmp;
-    }
-
-    printf("Length  (%2i)   | ", config->Cars[id].length);
-    fgets(_cmd, 80, stdin);
-    if(sscanf(_cmd, "%i", &tmp) > 0){
-      config->Cars[id].length = tmp;
     }
 
   //   printf("New:      \t");

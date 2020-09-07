@@ -120,6 +120,8 @@ class Block {
 
     uint8_t reserved:4;
     uint8_t blocked:1;
+    uint8_t virtualblocked:1;
+    uint8_t detectionblocked:1;
 
     RailTrain * train; //Follow id
     uint8_t IOchanged:1;

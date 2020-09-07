@@ -12,7 +12,7 @@ int engines_len = 0;
 Engine * DCC_train[9999];
 
 Engine::Engine(char * name,int DCC,char * img, char * icon, char type, int length, int steps_len, struct engine_speed_steps * steps, uint8_t functions[28]){
-  loggerf(INFO, "Create Engine %s", name);
+  loggerf(TRACE, "Create Engine %s", name);
 
   //DCC cant be used twice
   for(int i = 0;i<engines_len;i++){

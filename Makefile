@@ -19,13 +19,13 @@ FILES_WEBSOCKET = $(addprefix websocket/,server client stc cts message)
 FILES_ROLLING = $(addprefix rollingstock/,train engine car railtrain)
 
 BAAN_FILES = baan system logger mem modules config IO algorithm encryption \
-             Z21 Z21_msg train submodule com sim path pathfinding scheduler
+             Z21 Z21_msg train submodule com sim path pathfinding scheduler/scheduler
 
 BAAN_FILES += $(FILES_ROLLING) $(FILES_WEBSOCKET) $(FILES_SWITCHBOARD) $(FILES_CONFIG)
 
 #BAAN_FILES += websocket websocket_cts websocket_stc websocket_control
 
-COMTEST_FILES = comtest system logger mem modules config IO algorithm encryption Z21 Z21_msg train submodule com sim path pathfinding scheduler
+COMTEST_FILES = comtest system logger mem modules config IO algorithm encryption Z21 Z21_msg train submodule com sim path pathfinding scheduler/scheduler
 COMTEST_FILES += $(FILES_ROLLING) $(FILES_WEBSOCKET) $(FILES_SWITCHBOARD) $(FILES_CONFIG)
 
 CONFIG_READER_FILES = config_reader config logger mem $(FILES_CONFIG)
@@ -88,8 +88,8 @@ avr:
 baan: $(addprefix $(BIN)/,$(addsuffix .o, $(BAAN_FILES))) $(addprefix $(BIN)/shared/,$(addsuffix .o, $(SHARED_OBJ_FILES)))
 	@echo '( GCCLD ) $@'
 	@echo $^
-	@$(GCC) -o $@ $^
-	@$(GCC) -shared -o $@.so $^
+	@$(GCC) -o $@ $^ -D CB_NON_AVR
+	@$(GCC) -shared -o $@.so $^ -D CB_NON_AVR
 
 config_reader: $(addprefix $(BIN)/,$(addsuffix .o, $(CONFIG_READER_FILES)))
 	@echo '( GCCLD ) $@'

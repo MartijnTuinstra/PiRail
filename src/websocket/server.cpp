@@ -9,7 +9,7 @@
 
 #include "switchboard/unit.h"
 
-#include "scheduler.h"
+#include "scheduler/scheduler.h"
 #include "system.h"
 #include "logger.h"
 #include "mem.h"

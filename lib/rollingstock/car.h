@@ -14,19 +14,21 @@ class Car {
     uint8_t halt;
     uint16_t max_speed;
 
+    bool detectable;
+
     struct train_funcs function[29];
 
     uint16_t length;   //in mm
     char * name;
     char * icon_path;
 
-  Car(char * name,int nr, char * icon, char type, uint16_t length, uint16_t speed);
+  Car(char * name,int nr, char * icon, char type, uint16_t length, uint16_t speed, uint8_t flags);
   ~Car();
 };
 
 extern Car ** cars;
 extern int cars_len;
 
-#define create_car_from_conf(c) new Car(c.name, c.nr, c.icon_path, c.type, c.length, c.max_speed)
+#define create_car_from_conf(c) new Car(c.name, c.nr, c.icon_path, c.type, c.length, c.max_speed, c.flags)
 
 #endif

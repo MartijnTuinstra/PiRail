@@ -112,9 +112,9 @@ void IO_Port::setInput(uint8_t state){
   if(this->w_state.value != this->r_state.value){
     if(this->type == IO_Input_Block){
       if(this->w_state.value == IO_event_High)
-        this->p.B->blocked = 1;
+        this->p.B->detectionblocked = 1;
       else
-        this->p.B->blocked = 0;
+        this->p.B->detectionblocked = 0;
 
       loggerf(INFO, "IO updated %02i:%02i:%02i\t%s", this->Node->U->module, this->Node->id, this->id, IO_event_string[1][this->w_state.value]);
 

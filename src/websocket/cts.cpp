@@ -536,7 +536,7 @@ void WS_cts_AddCartoLib(struct s_opc_AddNewCartolib * data, Websocket::Client * 
   }
 
 
-  new Car(name, data->nr, icon, data->type, data->length, data->max_speed);
+  new Car(name, data->nr, icon, data->type, data->length, data->max_speed, 0); // FIXME
 
   char * dicon = (char *)_calloc(strlen(icon)+10, char);
 

@@ -6,6 +6,8 @@
 #define MODULE_CONF_VERSION 3
 #define TRAIN_CONF_VERSION 3
 
+#define F_CAR_DETECTABLE 0x01
+
 #define TRAIN_CONF_PATH "configs/stock.bin"
 
 struct __attribute__((__packed__)) s_unit_conf {
@@ -226,17 +228,21 @@ struct engines_conf {
 
 struct __attribute__((__packed__)) s_r_car_conf {
   uint16_t nr;
-  uint16_t length;
-  uint8_t type;   //in mm   
+  uint16_t max_speed;
+  uint16_t length; // in mm
+  uint8_t flags;
+  uint8_t type; 
   uint8_t name_len;
   uint8_t icon_path_len;
+  uint8_t functions[29];
 };
 
 struct __attribute__((__packed__)) s_car_conf {
   uint16_t nr;
   uint16_t max_speed;
-  uint16_t length;
-  uint8_t type;   //in mm   
+  uint16_t length; // in mm
+  uint8_t flags;
+  uint8_t type;   
   uint8_t name_len;
   uint8_t icon_path_len;
   uint8_t functions[29];
@@ -245,8 +251,9 @@ struct __attribute__((__packed__)) s_car_conf {
 struct cars_conf {
   uint16_t nr;
   uint16_t max_speed;
-  uint16_t length;
-  uint8_t type;   //in mm   
+  uint16_t length; // in mm
+  uint8_t flags;
+  uint8_t type;   
   uint8_t name_len;
   uint8_t icon_path_len;
   uint8_t functions[29];

@@ -13,7 +13,7 @@
 
 #include "config.h"
 #include "websocket/stc.h"
-#include "scheduler.h"
+#include "scheduler/scheduler.h"
 // #include "submodule.h"
 
 // pthread_mutex_t z21_send_mutex;
@@ -41,9 +41,9 @@ void * Z21_Client::start_thread(void * args){
   Z21_Client * context = (Z21_Client *)args;
 
   pthread_join(context->thread, NULL);
-  context->connected = 0;
   SYS_set_state(&SYS->Z21.state, Module_Init);
 
+  context->connected = 1;
   int8_t ret = context->connect(Z21_PORT);
   if(ret == -2){
     //Retry on second port
@@ -52,7 +52,6 @@ void * Z21_Client::start_thread(void * args){
   
   if(ret == 1){
     loggerf(INFO, "Connected Succesfully to Z21");
-    context->connected = 1;
 
     SYS_set_state(&SYS->Z21.state, Module_Run);
 
@@ -204,6 +203,9 @@ bool Z21_Client::recv_packet(){
     uint16_t packet_size = tmp_buffer[0] + (tmp_buffer[1] << 8);
     uint8_t size = recv(packet_size);
 
+    printf("Z21 Recv: ");
+    print_hex(buffer, packet_size);
+
     if(size == packet_size){
       return true;
     }
@@ -215,8 +217,13 @@ bool Z21_Client::recv_packet(){
 }
 
 int Z21_Client::send(uint16_t length, uint8_t * data){
-  if(!connected)
+  if(!connected){
+    printf("Z21 not connected for sending\n");
     return -1;
+  }
+
+  printf("Z21 Send: ");
+  print_hex((char *)data, length);
 
   pthread_mutex_lock(&send_mutex);
   int size = write(fd, data, length);

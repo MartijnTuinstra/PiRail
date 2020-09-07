@@ -10,10 +10,13 @@
 #include "train.h"
 #include "modules.h"
 
+#include "algorithm.h"
 #include "submodule.h"
 #include "algorithm.h"
 #include "websocket/stc.h"
 #include "pathfinding.h"
+
+#include "websocket/message_structure.h"
 
 extern pthread_mutex_t mutex_lockA;
 
@@ -27,23 +30,37 @@ extern pthread_mutex_t mutex_lockA;
 #define TRAIN_B_LEN   5 //cm
 #define TRAIN_B_SPEED 5 //cm/s
 
-#define TRAINSIM_INTERVAL_US 50000
-#define TRAINSIM_INTERVAL_SEC 0.05
+#define TRAINSIM_INTERVAL_US 500000
+#define TRAINSIM_INTERVAL_SEC 0.5
 
 #define JOIN_SIM_INTERVAL 1000
 
 void change_Block(Block * B, enum Rail_states state){
-  B->IOchanged = 1;
-  B->statechanged = 1;
-  Units[B->module]->block_state_changed = 1;
-  if (state == BLOCKED)
-    B->blocked = 1;
-  else
-    B->blocked = 0;
+  if (state == BLOCKED){
+    if(!B->detectionblocked){
+      B->IOchanged = 1;
+      B->statechanged = 1;
+      Units[B->module]->block_state_changed = 1;
+    }
+    B->detectionblocked = 1;
+  }
+  else{
+    if(B->detectionblocked){
+      B->IOchanged = 1;
+      B->statechanged = 1;
+      Units[B->module]->block_state_changed = 1;
+    }
+    B->detectionblocked = 0;
+  }
 
-  putAlgorQueue(B, 1);
+  putAlgorQueue(B, 0);
   // process(B, 3);
 }
+
+struct engine_sim {
+  uint16_t offset;
+  uint16_t length;
+};
 
 struct train_sim {
   char sim;
@@ -56,10 +73,12 @@ struct train_sim {
   float posRear;
 
   Block * Front;
-  uint8_t FrontSpecialCounter;
+  Block ** B;
+
+  struct engine_sim * engines;
+  uint8_t engines_len;
 
   uint8_t blocks;
-  Block ** B;
 };
 
 void train_sim_tick(struct train_sim * t){
@@ -71,10 +90,8 @@ void train_sim_tick(struct train_sim * t){
       t->B[i + 1] = t->B[i];
     }
     t->blocks++;
-    if(t->FrontSpecialCounter){
-      t->B[0] = t->Front->_Next(NEXT, ++t->FrontSpecialCounter);
-    }
-    else if(t->B[1]->Alg.next){
+
+    if(t->blocks > 1 && t->B[1]->Alg.next){
       t->B[0] = t->B[1]->Alg.N[0];
     }
     else{
@@ -84,6 +101,7 @@ void train_sim_tick(struct train_sim * t){
     loggerf(INFO, "%c  Step %02i:%02i", t->sim, t->B[0]->module, t->B[0]->id);
     t->posFront += t->B[0]->length;
     change_Block(t->B[0], BLOCKED);
+    change_Block(t->B[1], PROCEED);
   }
 
   if(t->posRear <= 0){
@@ -95,8 +113,49 @@ void train_sim_tick(struct train_sim * t){
   }
 
   // Advance train (km/h -> cm/s) / scale * tick interval (in sec)
-  t->posFront -= (t->T->speed / 3.6) * 100 / 160 * TRAINSIM_INTERVAL_SEC;
-  t->posRear  -= (t->T->speed / 3.6) * 100 / 160 * TRAINSIM_INTERVAL_SEC;
+  uint16_t distance = (t->T->speed / 3.6) * 100 / 160 * TRAINSIM_INTERVAL_SEC;
+  t->posFront -= distance;
+  t->posRear  -= distance;
+
+  uint16_t blockoffset = 0;
+
+  uint8_t stockid = 0;
+
+  for(uint8_t i = 0; i < t->blocks; i++){
+    bool blocktheblock = false;
+
+    Block * tB = t->B[i];
+
+    for(; stockid < t->engines_len; stockid++){
+      struct engine_sim * E = &t->engines[stockid];
+      uint16_t trainoffset = ((uint16_t)t->posFront) + E->offset;
+
+      // Either:
+      //   front side is in block
+      //   rear  side is in block
+      //   front and rear side are around block
+      if((blockoffset <= trainoffset && blockoffset + tB->length > trainoffset) ||
+         (blockoffset <= trainoffset + (E->length / 10) && blockoffset + tB->length > trainoffset + (E->length / 10)) || 
+         (blockoffset >= trainoffset && blockoffset + tB->length > trainoffset &&
+          blockoffset <= trainoffset + (E->length / 10) && blockoffset + tB->length < trainoffset + (E->length / 10)) ){
+        blocktheblock = true;
+        break;
+      }
+      else if(blockoffset + tB->length < trainoffset)
+        break; // Detectable is not in this block but maybe in the next.
+    }
+
+    if(blocktheblock){
+      change_Block(t->B[i], BLOCKED);
+      t->B[i]->train = t->T;
+    }
+    else
+      change_Block(t->B[i], PROCEED);
+
+    blockoffset += t->B[i]->length;
+  }
+
+  algor_queue_enable(1);
 }
 
 void *TRAIN_SIMA(void * args){
@@ -109,35 +168,52 @@ void *TRAIN_SIMA(void * args){
 
   Block *B = Units[25]->B[3];
 
-  struct train_sim train;
-  train.B = (Block **)_calloc(10, Block *);
-  train.sim = 'A';
-  train.posFront = 0;
-  train.posRear = B->length;
-  train.FrontSpecialCounter = 0;
-  train.Front = 0;
-
-  train.blocks = 0;
-  // train.B[0] = B;
+  struct train_sim train = {
+    .sim = 'A',
+    .train_length = 0,
+    .posFront = 0.0,
+    .posRear = 124.0,
+    .Front = 0,
+    .B = (Block **)_calloc(10, Block *),
+    .blocks = 1,
+  };
+  train.B[0] = B;
 
   while(!B->Alg.N[0] || !B->Alg.P[0]){}
   while(B->Alg.N[0]->blocked || B->blocked || B->Alg.P[0]->blocked){} // Wait for space
 
-  change_Block(B, BLOCKED);
+  // B->train = new RailTrain(B);
 
-  usleep(100000);
+  // change_Block(B, BLOCKED);
+  B->detectionblocked = 1;
+  B->statechanged = 1;
 
-  while(!B->train){
-      usleep(10000);
-  }
+  // usleep(100000);
 
-  B->train->control = TRAIN_SEMI_AUTO;
+  // while(!B->train){
+  //     usleep(10000);
+  // }
 
-  while(!B->train->p.p){
-    usleep(10000);
-  }
+  B->train = new RailTrain(B);
+
+  B->train->link(1, RAILTRAIN_TRAIN_TYPE);
+  struct s_opc_LinkTrain msg = {
+    .follow_id=B->train->link_id,
+    .real_id=1,
+    .message_id_H=0,
+    .type=RAILTRAIN_ENGINE_TYPE,
+    .message_id_L=0
+  };
+  WS_stc_LinkTrain(&msg);
+
+  B->train->control = TRAIN_MANUAL;//TRAIN_SEMI_AUTO;
+  train.train_length = B->train->length;
 
   train.T = B->train;
+
+  train.T->changeSpeed(50, IMMEDIATE_SPEED);
+ 
+  putAlgorQueue(B, 1);
 
   if(train.T->type == RAILTRAIN_ENGINE_TYPE){
     //Engine only
@@ -146,6 +222,29 @@ void *TRAIN_SIMA(void * args){
   else{
     //Train
     train.train_length = train.T->p.T->length / 10;
+
+    uint16_t offset = 0;
+
+    train.engines_len = train.T->p.T->detectables;
+    train.engines = (struct engine_sim *)_calloc(train.T->p.T->detectables, struct engine_sim);
+
+    uint8_t j = 0;
+
+    for(uint8_t i = 0; i < train.T->p.T->nr_stock; i++){
+      if(train.T->p.T->composition[i].type == 0){
+        train.engines[j].offset = offset;
+        train.engines[j++].length = ((Engine *)train.T->p.T->composition[i].p)->length;
+      }
+      else if(train.T->p.T->composition[i].type == 1 && ((Car *)train.T->p.T->composition[i].p)->detectable){
+        train.engines[j].offset = offset;
+        train.engines[j++].length = ((Car *)train.T->p.T->composition[i].p)->length;
+      }
+
+      if(train.T->p.T->composition[i].type == 0)
+        offset += ((Engine *)train.T->p.T->composition[i].p)->length / 10;
+      else
+        offset += ((Car *)train.T->p.T->composition[i].p)->length / 10;
+    }
   }
   loggerf(INFO, "train length %icm", train.train_length);
 
@@ -159,12 +258,14 @@ void *TRAIN_SIMA(void * args){
     train.blocks++;
 
     change_Block(B, BLOCKED);
-    loggerf(INFO, "Add block %i (%02i:%02i)", train.blocks, B->module, B->id);
+    algor_queue_enable(1);
 
     if(B->Alg.next){
       train.B[0] = B;
       B = B->Alg.N[0];
     }
+
+    usleep(TRAINSIM_INTERVAL_US);
   }
 
   train.posFront -= len;
@@ -197,7 +298,6 @@ void *TRAIN_SIMB(void * args){
   train.sim = 'B';
   train.posFront = 0;
   train.posRear = B->length;
-  train.FrontSpecialCounter = 0;
   train.Front = 0;
 
   train.blocks = 0;
@@ -457,6 +557,7 @@ void SIM_JoinModules(){
     for(uint8_t j = 0; j < Units[i]->block_len; j++){
       if(Units[i]->B[j]){
         Units[i]->B[j]->blocked = 0;
+        Units[20]->B[0]->state = PROCEED;
       }
     }
   }

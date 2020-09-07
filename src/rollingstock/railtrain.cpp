@@ -5,7 +5,7 @@
 
 #include "mem.h"
 #include "logger.h"
-#include "scheduler.h"
+#include "scheduler/scheduler.h"
 #include "system.h"
 
 #include "websocket/stc.h"
@@ -95,20 +95,22 @@ int RailTrain::link(int tid, char type){
   //  type = bool train or engine
 
   // If it is only a engine -> make it a train
-  if(type){
+  if(type == RAILTRAIN_ENGINE_TYPE){
     if(engines[tid]->use){
       loggerf(ERROR, "Engine allready used");
       return 3;
     }
 
     // Create train from engine
+    Engine * E = engines[tid];
     this->type = RAILTRAIN_ENGINE_TYPE;
-    this->p.E = engines[tid];
-    this->max_speed = engines[tid]->max_speed;
+    this->p.E = E;
+    this->max_speed = E->max_speed;
+    this->length = E->length;
 
     //Lock engines
-    engines[tid]->use = 1;
-    engines[tid]->RT = this;
+    E->use = 1;
+    E->RT = this;
   }
   else{
     for(int  i = 0; i < trains[tid]->nr_engines; i++){
@@ -119,14 +121,16 @@ int RailTrain::link(int tid, char type){
     }
 
     // Crate Rail Train
+    Train * T = trains[tid];
     this->type = RAILTRAIN_TRAIN_TYPE;
-    this->p.T = trains[tid];
-    this->max_speed = trains[tid]->max_speed;
+    this->p.T = T;
+    this->max_speed = T->max_speed;
+    this->length = T->length;
 
     //Lock all engines    
-    for(int i = 0; i < trains[tid]->nr_engines; i++){
-      trains[tid]->engines[i]->use = 1;
-      trains[tid]->engines[i]->RT = this;
+    for(int i = 0; i < T->nr_engines; i++){
+      T->engines[i]->use = 1;
+      T->engines[i]->RT = this;
     }
   }
 

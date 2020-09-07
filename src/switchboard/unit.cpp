@@ -332,9 +332,12 @@ void Unit::updateIO(int uart_filestream){
 
       // loggerf(WARNING, "Update io %02i:%02i:%02i %s (%i)", module, n, io, IO_event_string[U_IO(module, n, io)->type][U_IO(module, n, io)->w_state.value], U_IO(module, n, io)->w_state.value);
       if(IO->type <= IO_Output_PWM){
-        IO->r_state.value = IO->w_state.value;
         tx.data[io/4 + 3] |= IO->w_state.value << ((io % 4) * 2);
-        data = 1;
+
+        if(IO->r_state.value != IO->w_state.value)
+          data = 1;
+
+        IO->r_state.value = IO->w_state.value;
       }
 
       if(io%4 == 3)
@@ -349,7 +352,6 @@ void Unit::updateIO(int uart_filestream){
     tx.length = N->io_ports/4 + 4;
 
     if(!data){
-      loggerf(INFO, "No data");
       continue;
     }
 

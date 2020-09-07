@@ -9,8 +9,8 @@
 Car ** cars;
 int cars_len = 0;
 
-Car::Car(char * name,int nr, char * icon, char type, uint16_t length, uint16_t speed){
-  loggerf(INFO, "Create Car %s", name);
+Car::Car(char * name,int nr, char * icon, char type, uint16_t length, uint16_t speed, uint8_t flags){
+  loggerf(TRACE, "Create Car %s", name);
 
   memset(this, 0, sizeof(Car));
 
@@ -24,6 +24,11 @@ Car::Car(char * name,int nr, char * icon, char type, uint16_t length, uint16_t s
   this->max_speed = speed;
 
   this->type = type;
+
+  if(flags & 0x01) // F_CAR_DETECTABLE
+    this->detectable = true;
+  else
+    this->detectable = false;
 
   int index = find_free_index(cars, cars_len);
 

@@ -47,19 +47,24 @@ class RailTrain {
     uint16_t speed;        // Real speed
     uint16_t max_speed;    // Real max speed
 
+    // Variables for changing speed along one block
     uint16_t target_speed;
     uint16_t target_distance;
+    struct SchedulerEvent * speed_event;
+    struct TrainSpeedEventData * speed_event_data;
 
     uint8_t changing_speed:3;  // RAILTRAIN_SPEED_T_(INIT / CHANGING / UPDATE / DONE / FAIL)
     uint8_t control:2;         // TRAIN_(MANUAL / SEMI_AUTO / FULL_AUTO)
-    uint8_t route:1;           //
+    uint8_t route:1;           // TRAIN_ONROUTE = true
     uint8_t stop:1;            // 
     uint8_t dir:1;             // TRAIN_FORWARD / TRAIN_REVERSE
 
-    bool assigned;
+    // Only the engine is detectable, cars added virtually
+    // TODO: Fix double/multiple engine setups where engines are far appart
+    bool virtualLength;
+    uint16_t length;
 
-    struct SchedulerEvent * speed_event;
-    struct TrainSpeedEventData * speed_event_data;
+    bool assigned;
 
     uint8_t category;
 

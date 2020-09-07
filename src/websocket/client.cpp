@@ -279,7 +279,7 @@ int Client::ping(){
       return 0;
     }
 
-    print_hex(buf, recvlength);
+    log_hex("WS Client ping", buf, recvlength);
 
     // opcode
     int opcode = buf[0] & 0b00001111;

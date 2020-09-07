@@ -22,9 +22,10 @@ char * UART_Serial_Port = 0;
 
 int main(int argc, char * argv[]){
   init_main();
-  init_logger("log.txt");
-  set_level(MEMORY);
-  set_logger_print_level(DEBUG);
+  logger.setfilename("log.txt");
+  // init_logger("log.txt");
+  logger.setlevel(DEBUG);
+  logger.setlevel_stdout(DEBUG);
 
   if(argc > 1){
     printf("Got argument %s\n", argv[1]);
@@ -34,7 +35,7 @@ int main(int argc, char * argv[]){
 
   // Stop program when receiving SIGINT
   if (signal(SIGINT, sigint_func) == SIG_ERR){
-    logger("Cannot catch SIGINT", CRITICAL);
+    log("Cannot catch SIGINT", CRITICAL);
     return 0;
   }
 
@@ -68,7 +69,6 @@ int main(int argc, char * argv[]){
   unload_rolling_Configs();
 
   loggerf(INFO, "STOPPED");
-  exit_logger(); //Close logger
   delete WSServer;
   _free(SYS);
 

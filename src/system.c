@@ -27,7 +27,7 @@ void sigint_func(int sig){
 
 int _find_free_index(void *** list, int * length){
   if(!(*list)){
-    logger("LIST DOESNT EXIST",CRITICAL);
+    log("LIST DOESNT EXIST",CRITICAL);
     return -1;
   }
   for(int i = 0;i<(*length);i++){

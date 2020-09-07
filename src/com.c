@@ -57,7 +57,7 @@ void * UART(void * args){
 
   if(!UART_Serial_Port){
     SYS_set_state(&SYS->UART.state, Module_SIM_State);
-    logger("No UART Device", CRITICAL);
+    log("No UART Device", CRITICAL);
     return 0;
   }
 

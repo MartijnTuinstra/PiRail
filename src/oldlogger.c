@@ -18,19 +18,6 @@
 #define vlog_print(fp, ...) vfprintf(fp, __VA_ARGS__);
 #endif
 
-#define LOGGER_RED    "\x1b[31m"
-#define LOGGER_RESET  "\x1b[0m"
-#define LOGGER_YELLOW "\x1b[33m"
-#define LOGGER_GREEN  "\x1b[32m"
-
-char * logger_file = 0;
-
-const char * logging_levels_str[9] = {
-  "NONE", "CRITICAL", "  ERROR ", " WARNING", "  INFO  ", "  DEBUG ", "  TRACE ", " MEMORY ", "        "
-};
-const char * logging_levels_colour[9] = {
-  "", "\x1b[31m", "\x1b[31m", "\x1b[33m", "\x1b[32m", "", "", "", "\x1b[0m"
-};
 
 bool stdoutPrint = 1;
 

@@ -377,7 +377,7 @@ void write_rolling_Configs(){
 void unload_rolling_Configs(){
   scheduler->removeEvent(railtraincontinue_event);
 
-  logger("Clearing trains memory",INFO);
+  log("Clearing trains memory",INFO);
 
   for(int i = 0;i<trains_len;i++){
     if(!trains[i])

@@ -10,8 +10,6 @@ int calc_module_write_size(struct module_config * config);
 int calc_train_write_size(struct train_config * config);
 
 
-void print_hex(char * data, int size);
-
 void write_module_from_conf(struct module_config * config, const char * filename);
 
 void write_train_from_conf(struct train_config * config, const char * filename);

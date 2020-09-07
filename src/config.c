@@ -12,18 +12,6 @@ uint8_t read_byte_conf(uint8_t ** p){
 }
 
 
-void print_hex(char * data, int size){
-  // if(read_level() >= TRACE){
-    printf("print_hex:\n");
-    for(int i = 0; i < size; i++){
-      printf("%02x ", data[i]);
-      if((i % 16) == 15)
-        printf("\n");
-    }
-    printf("\n");
-  // }
-}
-
 int check_Spacing(uint8_t ** p){
   if(**p != 0){
     loggerf(CRITICAL, "Format missing sepperator, got %x", **p);

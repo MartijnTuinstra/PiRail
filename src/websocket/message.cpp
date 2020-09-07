@@ -141,7 +141,7 @@ int MessageGet(int fd, char outbuf[], int * length_out){
     return -7;
   }
 
-  print_hex(buf, recvlength);
+  log_hex("WS Recv Message", buf, recvlength);
 
   uint16_t byte = 0;
 
@@ -188,8 +188,7 @@ int MessageGet(int fd, char outbuf[], int * length_out){
 
   memcpy(outbuf, output, mes_length);
 
-  printf("websocket recv ");
-  print_hex(output, mes_length);
+  log_hex("WS Recv", output, mes_length);
 
   _free(buf);
 

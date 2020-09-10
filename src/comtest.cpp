@@ -33,9 +33,9 @@ int main(int argc, char *argv[]){
   init_main();
   init_allocs();
 
-  init_logger("uartlog.txt");
-  set_level(DEBUG);
-  set_logger_print_level(NONE);
+  logger.setfilename("log.txt");
+  logger.setlevel(DEBUG);
+  logger.setlevel_stdout(NONE);
 
   Units = (Unit **)_calloc(30, Unit *);
   unit_len = 30;

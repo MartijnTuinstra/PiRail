@@ -1698,9 +1698,9 @@ int edit_rolling_stock(char * filename, bool update){
 }
 
 int main(int argc, char ** argv){
-  init_logger("log_config.txt");
-  set_level(MEMORY);
-  set_logger_print_level(INFO);
+  logger.setfilename("log.txt");
+  logger.setlevel(MEMORY);
+  logger.setlevel_stdout(INFO);
 
   bool moduleediting;
   bool rollingediting;
@@ -1726,7 +1726,7 @@ int main(int argc, char ** argv){
         rollingediting = true;
     }
     else if(strcmp(argv[i], "--verbose") == 0 || strcmp(argv[i], "-v") == 0){
-      set_logger_print_level(DEBUG);
+      logger.setlevel_stdout(DEBUG);
     }
     else{ // filename
       if(!filename_arg){
@@ -1774,7 +1774,6 @@ int main(int argc, char ** argv){
     _free(i);
   
   loggerf(INFO, "STOPPED");
-  exit_logger(); //Close logger
 
   print_allocs();
 }

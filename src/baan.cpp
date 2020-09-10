@@ -23,7 +23,6 @@ char * UART_Serial_Port = 0;
 int main(int argc, char * argv[]){
   init_main();
   logger.setfilename("log.txt");
-  // init_logger("log.txt");
   logger.setlevel(DEBUG);
   logger.setlevel_stdout(DEBUG);
 

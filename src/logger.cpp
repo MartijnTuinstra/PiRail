@@ -28,6 +28,7 @@ bool Logger::open(){
   }
 
   enabled = true;
+  fileout = true;
   return true;
 }
 
@@ -35,6 +36,8 @@ void Logger::close(){
   if(!enabled)
     return;
 
+  enabled = stdout;
+  fileout = false;
   fclose(file);
 }
 uint16_t Logger::write(){
@@ -43,11 +46,15 @@ uint16_t Logger::write(){
 
 Logger::Logger(){
   enabled = false;
+  stdout = false;
+  fileout = false;
+  pthread_mutex_init(&mutex, NULL);
 }
 Logger::~Logger(){
   _free(filename);
   close();
   enabled = false;
+  pthread_mutex_destroy(&mutex);
 }
 
 void Logger::setfilename(const char * file_location){
@@ -66,6 +73,16 @@ void Logger::setlevel(enum logging_levels lvl){
 
 void Logger::setlevel_stdout(enum logging_levels lvl){
   stdout_lvl = lvl;
+
+  if(stdout_lvl == NONE){
+    enabled = fileout;
+    stdout = false;
+  }
+  else{
+    enabled = true;
+    stdout = true;
+  }
+
 }
 
 void Logger::f(enum logging_levels level, const char * file, const int line, const char * text, ...){
@@ -128,10 +145,10 @@ void Logger::f(enum logging_levels level, const char * file, const int line, con
   }
 
 
-  if(level <= stdout_lvl)
+  if(stdout && level <= stdout_lvl)
     printf("%s", msg);
 
-  if(level <= file_lvl){
+  if(fileout && level <= file_lvl){
     fprintf(this->file, "%s", msg);
   }
 

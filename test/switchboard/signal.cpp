@@ -18,9 +18,6 @@
 #include "rollingstock/railtrain.h"
 
 TEST_CASE( "Signal 1", "[SB-4.1]" ) {
-  set_level(NONE);
-  set_logger_print_level(NONE);
-
   if(Units){
     for(uint8_t u = 0; u < unit_len; u++){
       if(!Units[u])
@@ -102,9 +99,6 @@ TEST_CASE( "Signal 1", "[SB-4.1]" ) {
 }
 
 TEST_CASE( "Signal 2", "[SB-4.2]" ) {
-  set_level(NONE);
-  set_logger_print_level(DEBUG);
-
   if(Units){
     for(uint8_t u = 0; u < unit_len; u++){
       if(!Units[u])

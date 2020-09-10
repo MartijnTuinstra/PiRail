@@ -15,8 +15,6 @@
 #include "rollingstock/railtrain.h"
 
 TEST_CASE( "Block Link", "[SB-1.1]" ) {
-  set_level(NONE);
-  set_logger_print_level(NONE);
 
   if(Units){
     for(uint8_t u = 0; u < unit_len; u++){
@@ -96,9 +94,7 @@ TEST_CASE( "Block Link", "[SB-1.1]" ) {
 
 
 TEST_CASE( "Block Algorithm Search", "[SB-1.2]" ) {
-  set_level(NONE);
-  set_logger_print_level(NONE);
-
+  // logger.setlevel_stdout(DEBUG);
   if(Units){
     for(uint8_t u = 0; u < unit_len; u++){
       if(!Units[u])
@@ -349,8 +345,7 @@ TEST_CASE( "Block Algorithm Search", "[SB-1.2]" ) {
 
 TEST_CASE( "Block Algorithm Stating", "[SB-1.3]" ) {
   init_main();
-  set_level(NONE);
-  set_logger_print_level(NONE);
+  // logger.setlevel_stdout(DEBUG);
 
   if(Units){
     for(uint8_t u = 0; u < unit_len; u++){
@@ -432,7 +427,7 @@ TEST_CASE( "Block Algorithm Stating", "[SB-1.3]" ) {
   */
 
   SECTION("I - Standard"){
-    U->B[4]->blocked = 1;
+    U->B[4]->detectionblocked = 1;
 
     Algor_process(U->B[4], _FORCE);
     Algor_print_block_debug(U->B[4]);
@@ -443,7 +438,7 @@ TEST_CASE( "Block Algorithm Stating", "[SB-1.3]" ) {
   }
 
   SECTION("II - Block smaller than 1 meter"){
-    U->B[10]->blocked = 1;
+    U->B[10]->detectionblocked = 1;
 
     Algor_process(U->B[10], _FORCE);
     Algor_print_block_debug(U->B[10]);
@@ -499,7 +494,7 @@ TEST_CASE( "Block Algorithm Stating", "[SB-1.3]" ) {
   // }
 
   SECTION("V - Blocks and switch"){
-    U->B[19]->blocked = 1;
+    U->B[19]->detectionblocked = 1;
 
     Algor_process(U->B[19], _FORCE);
 
@@ -546,7 +541,7 @@ TEST_CASE( "Block Algorithm Stating", "[SB-1.3]" ) {
   // }
 
   SECTION("VII - Blocks and station"){
-    U->B[28]->blocked = 1;
+    U->B[28]->detectionblocked = 1;
 
     Algor_process(U->B[28], _FORCE);
     Algor_print_block_debug(U->B[28]);
@@ -559,7 +554,7 @@ TEST_CASE( "Block Algorithm Stating", "[SB-1.3]" ) {
   }
 
   SECTION("VIII - Blocks and yard"){
-    U->B[52]->blocked = 1;
+    U->B[52]->detectionblocked = 1;
 
     Algor_process(U->B[52], _FORCE);
     Algor_print_block_debug(U->B[52]);
@@ -572,7 +567,7 @@ TEST_CASE( "Block Algorithm Stating", "[SB-1.3]" ) {
   }
 
   SECTION("IX - Blocks and multistation"){
-    U->B[34]->blocked = 1;
+    U->B[34]->detectionblocked = 1;
 
     Algor_process(U->B[34], _FORCE);
     Algor_print_block_debug(U->B[34]);
@@ -584,11 +579,12 @@ TEST_CASE( "Block Algorithm Stating", "[SB-1.3]" ) {
   }
 
   SECTION("X - Blocks and switchedstation"){
-    U->B[41]->blocked = 1;
+    U->B[41]->detectionblocked = 1;
 
     Algor_process(U->B[41], _FORCE);
     Algor_print_block_debug(U->B[41]);
 
+    CHECK(U->B[41]->state == BLOCKED);
     CHECK(U->B[41]->Alg.P[0]->state == DANGER);
     CHECK(U->B[41]->Alg.P[1]->state == DANGER);
     CHECK(U->B[41]->Alg.P[2]->state == RESTRICTED);

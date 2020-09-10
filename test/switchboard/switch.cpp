@@ -11,9 +11,6 @@
 
 
 TEST_CASE( "Switch Link", "[SB-2.1]" ) {
-  set_level(NONE);
-  set_logger_print_level(NONE);
-
   if(Units){
     for(uint8_t u = 0; u < unit_len; u++){
       if(!Units[u])

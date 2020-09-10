@@ -15,8 +15,6 @@
 #include "path.h"
 
 TEST_CASE( "Path Construction", "[PATH][PATH-1]" ) {
-  set_level(NONE);
-  set_logger_print_level(NONE);
 
   if(Units){
     for(uint8_t u = 0; u < unit_len; u++){
@@ -211,8 +209,6 @@ TEST_CASE( "Path Construction", "[PATH][PATH-1]" ) {
 }
 
 TEST_CASE( "Path Reverse", "[PATH][PATH-2]") {
-  set_level(NONE);
-  set_logger_print_level(NONE);
 
   if(Units){
     for(uint8_t u = 0; u < unit_len; u++){
@@ -281,8 +277,6 @@ TEST_CASE( "Path Reverse", "[PATH][PATH-2]") {
 
 
 TEST_CASE( "Path Reserve", "[PATH][PATH-3]") {
-  set_level(NONE);
-  set_logger_print_level(NONE);
 
   if(Units){
     for(uint8_t u = 0; u < unit_len; u++){

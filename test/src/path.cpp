@@ -243,10 +243,10 @@ TEST_CASE( "Path Reverse", "[PATH][PATH-2]") {
   REQUIRE(U->B[0]->path == U->B[10]->path);
   Path * P = U->B[0]->path;
 
-  U->B[2]->blocked = 1;
+  U->B[2]->setDetection(1);
   U->B[2]->train = new RailTrain(U->B[2]);
 
-  U->B[8]->blocked = 1;
+  U->B[8]->setDetection(1);
   U->B[8]->train = new RailTrain(U->B[8]);
 
   REQUIRE(train_link[0]->dir == 0);

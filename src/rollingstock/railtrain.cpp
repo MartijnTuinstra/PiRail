@@ -7,6 +7,7 @@
 #include "logger.h"
 #include "scheduler/scheduler.h"
 #include "system.h"
+#include "algorithm.h"
 
 #include "websocket/stc.h"
 #include "Z21_msg.h"
@@ -18,25 +19,138 @@ RailTrain::RailTrain(Block * B){
   memset(this, 0, sizeof(RailTrain));
 
   uint16_t id = find_free_index(train_link, train_link_len);
-  this->link_id = id;
+  link_id = id;
   this->B = B;
-  if(this->B->path)
-    this->B->path->trains.push_back(this);
+  setBlock(B);
 
-  this->assigned = false;
+  if(B->path)
+    B->path->trains.push_back(this);
+
+  assigned = false;
 
   char name[64];
   sprintf(name, "Railtrain_%i_SpeedEvent", id);
-  this->speed_event = scheduler->addEvent(name, {0, 0});
-  this->speed_event_data = (struct TrainSpeedEventData *)_calloc(1, struct TrainSpeedEventData);
-  this->speed_event->function = (void (*)(void *))train_speed_event_tick;
-  this->speed_event->function_args = (void *)this->speed_event_data;
+  speed_event = scheduler->addEvent(name, {0, 0});
+  speed_event_data = (struct TrainSpeedEventData *)_calloc(1, struct TrainSpeedEventData);
+  speed_event->function = (void (*)(void *))train_speed_event_tick;
+  speed_event->function_args = (void *)speed_event_data;
 
   train_link[id] = this;
 }
 
 RailTrain::~RailTrain(){
+  train_link[link_id] = 0;
   _free(this->speed_event_data);
+}
+
+void RailTrain::setBlock(Block * sB){
+  loggerf(INFO, "train %i: setBlock %2i:%2i %x", link_id, sB->module, sB->id, (unsigned int)sB);
+  blocks.push_back(sB);
+}
+
+void RailTrain::releaseBlock(Block * rB){
+  loggerf(INFO, "train %i: releaseBlock %2i:%2i %x", link_id, rB->module, rB->id, (unsigned int)rB);
+  rB->train = 0;
+  blocks.erase(std::remove_if(blocks.begin(), blocks.end(), [rB](const auto & o) { return (o == rB); }), blocks.end());
+}
+
+void RailTrain::initVirtualBlocks(){
+  loggerf(TRACE, "initVirtualBlocks");
+  Block * tB = B;
+  uint8_t offset = 0;
+  int16_t len = length / 10;
+  while(len > 0){
+    len -= tB->length;
+
+    tB->setVirtualDetection(1);
+
+    if(tB->train != this){
+      if(tB->train){
+        if(tB->train->p.p)
+          loggerf(CRITICAL, "Virtual Train intersects with other train");
+
+        loggerf(INFO, "Virtual Train intersects with empty train");
+
+        delete tB->train;
+      }
+      tB->train = this;
+      tB->train->setBlock(tB);
+    }
+    putAlgorQueue(tB, 0);
+
+    // loggerf(INFO, "  block %2i:%2i   %i  %i  %i", tB->module, tB->id, B->Alg.prev, offset, len);
+
+    if(B->Alg.prev > offset){
+      tB = B->Alg.P[offset++];
+    }
+    else
+      break;
+  }
+
+  if(B->Alg.prev > offset){
+    tB->setVirtualDetection(0);
+    if(tB->train && !tB->detectionblocked)
+      tB->train->releaseBlock(tB);
+    putAlgorQueue(tB, 0);
+
+    // loggerf(INFO, "f block %2i:%2i", tB->module, tB->id);
+  }
+}
+
+void RailTrain::setVirtualBlocks(){
+  loggerf(TRACE, "setVirtualBlocks");
+  Block * tB = B->Alg.P[0];
+  uint8_t offset = 1;
+  int16_t len = length / 10;
+  while(len > 0){
+    len -= tB->length;
+
+    tB->setVirtualDetection(1);
+
+    if(tB->train != this){
+      tB->train = this;
+      tB->train->setBlock(tB);
+    }
+    putAlgorQueue(tB, 0);
+
+    // loggerf(INFO, "  block %2i:%2i   %i  %i  %i", tB->module, tB->id, B->Alg.prev, offset, len);
+
+    if(B->Alg.prev > offset){
+      tB = B->Alg.P[offset++];
+    }
+    else
+      break;
+  }
+
+  while(B->Alg.prev >= offset){
+    tB->setVirtualDetection(0);
+    if(tB->train && !tB->detectionblocked)
+      tB->train->releaseBlock(tB);
+
+    putAlgorQueue(tB, 0);
+
+    if(B->Alg.prev > offset){
+      tB = B->Alg.P[offset++];
+      if(tB->train == this)
+        continue;
+    }
+
+    break;
+    // loggerf(INFO, "f block %2i:%2i", tB->module, tB->id);
+  }
+}
+
+void RailTrain::moveForward(Block * tB){
+  loggerf(WARNING, "MoveForward RT %i to block %2i:%2i", link_id, tB->module, tB->id);
+  setBlock(tB);
+
+  if(B->Alg.next > 0 && B->Alg.N[0] == tB){
+    loggerf(ERROR, "Updating front block %2i:%2i", tB->module, tB->id);
+    B = tB;
+
+    if(virtualLength)
+      setVirtualBlocks();
+  }
 }
 
 void RailTrain::setSpeedZ21(uint16_t speed){
@@ -61,7 +175,7 @@ void RailTrain::changeSpeed(uint16_t target_speed, uint8_t type){
     return;
   }
 
-  loggerf(INFO, "train_change_speed %i -> %i", this->link_id, target_speed);
+  loggerf(DEBUG, "train_change_speed %i -> %i", this->link_id, target_speed);
   //this->target_speed = target_speed;
 
   if(type == IMMEDIATE_SPEED){
@@ -88,7 +202,7 @@ void RailTrain::setRoute(Block * dest){
 }
 
 
-int RailTrain::link(int tid, char type){
+int RailTrain::link(int tid, char type){  
   // Link train or engine to RailTrain class.
   //
   //  tID = id of train or engine
@@ -107,6 +221,7 @@ int RailTrain::link(int tid, char type){
     this->p.E = E;
     this->max_speed = E->max_speed;
     this->length = E->length;
+    virtualLength = false;
 
     //Lock engines
     E->use = 1;
@@ -132,9 +247,17 @@ int RailTrain::link(int tid, char type){
       T->engines[i]->use = 1;
       T->engines[i]->RT = this;
     }
+
+    virtualLength = false;
+    if(T->detectables != T->nr_stock){
+      virtualLength = true;
+      initVirtualBlocks();
+    }
   }
 
-  this->assigned = true;
+  assigned = true;
+
+  loggerf(INFO, "RailTrain linked train/engine, length: %i", length);
 
   return 1;
 }
@@ -188,7 +311,7 @@ void RailTrain_ContinueCheck(void * args){
 
 
 void train_speed_event_create(RailTrain * T, uint16_t targetSpeed, uint16_t distance){
-  loggerf(INFO, "train_speed_event_create %i", T->changing_speed);
+  loggerf(TRACE, "train_speed_event_create %i", T->changing_speed);
 
   if (T->speed == targetSpeed){
     return;
@@ -219,30 +342,28 @@ void train_speed_event_calc(struct TrainSpeedEventData * data){
   // t = sqrt((x - v0) / (0.5a))
   float start_speed = data->T->speed * 1.0;
 
-  loggerf(INFO, "train_speed_timer_calc %i %i %f", data->T->target_distance, data->T->target_speed, start_speed);
+  loggerf(DEBUG, "train_speed_timer_calc %i %i %f", data->T->target_distance, data->T->target_speed, start_speed);
 
   float real_distance = 160.0 * 0.00001 * (data->T->target_distance - 5); // km
   data->acceleration = (1 / (2 * real_distance));
   data->acceleration *= (data->T->target_speed - start_speed) * (data->T->target_speed + start_speed);
   // data->acceleration == km/h/h
 
-  loggerf(DEBUG, "Train_speed_timer_run (data->acceleration at %f km/h^2)", data->acceleration);
+  loggerf(TRACE, "Train_speed_timer_run (data->acceleration at %f km/h^2)", data->acceleration);
   if (data->acceleration > 64800.0){ // 5 m/s^2
-    loggerf(INFO, "data->acceleration to large, reduced to 5.0m/s^2)");
+    loggerf(DEBUG, "data->acceleration to large, reduced to 5.0m/s^2)");
     data->acceleration = 64800.0;
   }
   else if (data->acceleration < -129600.0){
-    loggerf(INFO, "Deccell to large, reduced to 10.0m/s^2)");
+    loggerf(DEBUG, "Deccell to large, reduced to 10.0m/s^2)");
     data->acceleration = -129600.0;
   }
 
   if (data->acceleration == 0 || data->acceleration == 0.0){
-    loggerf(INFO, "No speed difference");
+    loggerf(DEBUG, "No speed difference");
     data->T->changing_speed = RAILTRAIN_SPEED_T_DONE;
     return;
   }
-
-  loggerf(INFO, "train_speed  sqrt((2 * (%f - %f)) / (%f))", real_distance, start_speed, data->acceleration);
 
   data->time = sqrt(2 * (data->acceleration) * real_distance + data->T->speed * data->T->speed) - data->T->speed;
   data->time /= data->acceleration;
@@ -256,12 +377,10 @@ void train_speed_event_calc(struct TrainSpeedEventData * data){
   data->stepTime = ((data->time / data->steps) * 1000000L); // convert to usec
 
   data->startSpeed = data->T->speed;
-
-  loggerf(INFO, "train_speed time %f", data->time);
 }
 
 void train_speed_event_init(RailTrain * T){
-  loggerf(INFO, "train_speed_event_init (%i -> %ikm/h, %icm)\n", T->speed, T->target_speed, T->target_distance);
+  loggerf(TRACE, "train_speed_event_init (%i -> %ikm/h, %icm)\n", T->speed, T->target_speed, T->target_distance);
 
   T->speed_event_data->T = T;
 
@@ -279,7 +398,7 @@ void train_speed_event_init(RailTrain * T){
 void train_speed_event_tick(struct TrainSpeedEventData * data){
   data->stepCounter++;
 
-  loggerf(INFO, "train_speed_event_tick %i a:%f, s:(%i/%i), t:%i", data->T->speed, data->acceleration, data->stepCounter, data->steps, data->stepTime);
+  loggerf(TRACE, "train_speed_event_tick %i a:%f, s:(%i/%i), t:%i", data->T->speed, data->acceleration, data->stepCounter, data->steps, data->stepTime);
 
   RailTrain * T = data->T;
 
@@ -289,8 +408,6 @@ void train_speed_event_tick(struct TrainSpeedEventData * data){
   }
 
   T->speed = (data->startSpeed + data->acceleration * ((data->stepTime * data->stepCounter) / 1000000.0 / 3600.0)) + 0.01; // hours
-
-  loggerf(INFO, "train_speed_timer_run %i %f", T->speed, data->acceleration);
 
   T->setSpeedZ21(T->speed);
   WS_stc_UpdateTrain(T);

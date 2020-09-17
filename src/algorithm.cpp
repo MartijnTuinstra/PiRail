@@ -221,8 +221,6 @@ void Algor_process(Block * B, int flags){
   B->algorchanged = 0;
   // B->statechanged = 1;
 
-  B->blocked = (B->detectionblocked || B->virtualblocked);
-
   if(!B->blocked && B->state == BLOCKED){
     if(B->Alg.next > 0 && B->Alg.N[0]->blocked){
       B->Alg.N[0]->algorchanged = 1;
@@ -246,10 +244,9 @@ void Algor_process(Block * B, int flags){
   // }
 
   //Follow the train arround the layout
-  // Algor_train_following(&B->Alg, flags);
+  Algor_train_following(&B->Alg, flags);
   if (B->IOchanged){
     loggerf(INFO, "Block Train ReProcess");
-    B->AlgorClear();
     if(flags & _LOCK){
       loggerf(WARNING, "UNLOCK");
       unlock_Algor_process();
@@ -269,7 +266,6 @@ void Algor_process(Block * B, int flags){
   
   // Print all found blocks
   // if(flags & _DEBUG)
-     Algor_print_block_debug(B);
 
   //Apply block stating
   Algor_rail_state(&B->Alg, flags);
@@ -728,7 +724,11 @@ void Algor_print_block_debug(Block * B){
     }
 
     if(ABs->P[i]){
-      ptr += sprintf(ptr, "%02i:%02i%c%c", ABs->P[i]->module, ABs->P[i]->id, blockstates[ABs->P[i]->state],
+      char state = blockstates[ABs->P[i]->state];
+      if(ABs->P[i]->virtualblocked && !ABs->P[i]->detectionblocked)
+        state = 'V';
+
+      ptr += sprintf(ptr, "%02i:%02i%c%c", ABs->P[i]->module, ABs->P[i]->id, state,
                                            (i == ABs->prev1 || i == ABs->prev2 || i == ABs->prev3) ? '|' : ' ');
     }
     else
@@ -743,8 +743,10 @@ void Algor_print_block_debug(Block * B){
     ptr += sprintf(ptr, " ");
   }
   ptr += sprintf(ptr, "D%-2iS%x/%x", B->dir,B->state,B->reverse_state);
-  if(B->blocked)
+  if(B->detectionblocked)
     ptr += sprintf(ptr, "b");
+  else if(B->virtualblocked)
+    ptr += sprintf(ptr, "v");
   else
     ptr += sprintf(ptr, " ");
 
@@ -762,15 +764,11 @@ void Algor_print_block_debug(Block * B){
     }
 
     if(ABs->N[i]){
-      ptr += sprintf(ptr, "%02i:%02i", ABs->N[i]->module, ABs->N[i]->id);
-      if(ABs->N[i]->blocked)
-        ptr += sprintf(ptr, "B ");
-      else if(ABs->N[i]->state == RESERVED_SWITCH)
-          ptr += sprintf(ptr, "S ");
-      else if(ABs->N[i]->state == RESERVED)
-          ptr += sprintf(ptr, "R ");
-      else
-        ptr += sprintf(ptr, "  ");
+      char state = blockstates[ABs->N[i]->state];
+      if(ABs->N[i]->virtualblocked && !ABs->N[i]->detectionblocked)
+        state = 'V';
+
+      ptr += sprintf(ptr, "%02i:%02i%c ", ABs->N[i]->module, ABs->N[i]->id, state);
     }
     else
       ptr += sprintf(ptr, "------ ");
@@ -1007,178 +1005,200 @@ void Algor_train_following(Algor_Blocks * ABs, int debug){
   Block ** BN = ABs->N;
   uint8_t next = ABs->next;
 
-
+  // If block is not blocked but still containing a train
   if(!B->blocked && B->train != 0){
+    // Train is lost
+    //  If blocks around are also not blocked
     if(prev > 0 && next > 0 && !BN[0]->blocked && !BP[0]->blocked){
       B->setState(UNKNOWN);
       loggerf(WARNING, "LOST Train block %x", (unsigned int)B);
     }
-    else{
-      //Reset
+    else{ // Release the block
+      B->train->releaseBlock(B);
       B->train = 0;
 
       loggerf(DEBUG, "RESET Train block %x", (unsigned int)B);
       // Units[B->module]->changed |= Unit_Blocks_changed;
     }
   }
-  // else if(B->blocked && B->train == 0){
-  //   Units[B->module]->changed |= Unit_Blocks_changed;
+
+  // If block has no train but is blocked
+  if(B->blocked && B->train == 0){
+    char debugmsg[1000];
+    char * ptr = debugmsg;
+    ptr += sprintf(ptr, "Blocked Block without train");
+    if(prev > 0)
+      ptr += sprintf(ptr, "\nP: %02i:%02i %c%c%c %6x", BP[0]->module, BP[0]->id, BP[0]->blocked ? 'B':' ', BP[0]->detectionblocked ? 'D':' ', BP[0]->virtualblocked ? 'V':' ', BP[0]->train);
+    else
+      ptr += sprintf(ptr, "\n                   ");
+    if(next > 0)
+      ptr += sprintf(ptr, "\tN: %02i:%02i %c%c%c %6x", BN[0]->module, BN[0]->id, BN[0]->blocked ? 'B':' ', BN[0]->detectionblocked ? 'D':' ', BN[0]->virtualblocked ? 'V':' ', BN[0]->train);
+    else
+      ptr += sprintf(ptr, "\t                   ");
+
+    loggerf(INFO, "%s", debugmsg);
+    // Train moved forward
+    if(prev > 0 && BP[0]->blocked && BP[0]->train){
+      // Copy train id from previous block
+      B->train = BP[0]->train;
+      B->train->moveForward(B);
+
+      if(B->reserved){
+        B->reserved--;
+        if(B->reserved == 0){
+          B->state = PROCEED;
+          B->reverse_state = PROCEED;
+
+          B->statechanged = 1;
+          Units[B->module]->block_state_changed = 1;
+        }
+      }
+      // if(train_link[B->train])
+      //   train_link[B->train]->Block = B;
+      loggerf(INFO, "COPY_TRAIN from %02i:%02i to %02i:%02i", BP[0]->module, BP[0]->id, B->module, B->id);
+    }
+    // Train moved backwards
+    else if(false){}
+    else if( ((prev > 0 && !BP[0]->blocked) || prev == 0) && ((next > 0 && !BN[0]->blocked) || next == 0) ){
+      //NEW TRAIN
+      // find a new follow id
+      // loggerf(ERROR, "FOLLOW ID INCREMENT, bTrain");
+      B->train = new RailTrain(B);
+
+      if(B->reserved){
+        B->reserved--;
+        if(B->reserved == 0){
+          B->state = PROCEED;
+          B->reverse_state = PROCEED;
+
+          B->statechanged = 1;
+          Units[B->module]->block_state_changed = 1;
+        }
+      }
+
+      //Create a message for WebSocket
+      WS_stc_NewTrain(B->train, B->module, B->id);
+
+      loggerf(INFO, "NEW_TRAIN %x", (unsigned int)B->train);
+    }
+  }
+
+  // if(!B->blocked && B->train != 0){
+
   // }
-  // else if(B->blocked && B->train != 0 && train_link[B->train] && !train_link[B->train]->Block){
-  //   // Set block of train
-  //   train_link[B->train]->Block = B;
-  //   if(debug) printf("SET_BLOCK");
+  // // else if(B->blocked && B->train == 0){
+  // //   Units[B->module]->changed |= Unit_Blocks_changed;
+  // // }
+  // // else if(B->blocked && B->train != 0 && train_link[B->train] && !train_link[B->train]->Block){
+  // //   // Set block of train
+  // //   train_link[B->train]->Block = B;
+  // //   if(debug) printf("SET_BLOCK");
+  // // }
+
+  // // else if(B->blocked && BNN.blocks > 0 && !BN->blocked && !BNN.blocked){
+
+  // // }
+
+  // // Reverse track if block ahead is allready blocked but current is not blocked
+  // if(B->blocked && next > 0){
+  //   //If only current and next blocks are occupied
+  //   // Reverse immediate block
+  //   if(((prev > 0 && !BP[0]->blocked) || prev == 0) && BN[0]->blocked && BN[0]->train && !B->train){
+  //     //REVERSED
+  //     loggerf(WARNING, "REVERSE BLOCK %02i:%02i", B->module, B->id);
+  //     // Block_Reverse(ABs);
+  //     B->reverse();
+
+  //     if(!dircmp(B, BP[0])){
+  //       // B->IOchanged = 1;
+  //     // }
+  //     // else{
+  //       for(uint8_t i = 0; i < prev; i++){
+  //         if(!BP[i])
+  //           continue;
+  //         if(BP[i]->blocked){
+  //           loggerf(INFO, "%02i:%02i", BP[i]->module, BP[i]->id);
+  //         }
+  //         else
+  //           continue;
+
+
+  //         // Block_Reverse(&BP[i]->Alg);
+  //         BP[i]->reverse();
+  //         // BN[i]->IOchanged;
+  //       }
+  //     }
+
+  //     Block_Reverse_To_Next_Switch(B);
+  //     loggerf(INFO, "Done");
+  //   }
+
+  //   for(uint8_t i = 0; i < 4; i++){
+  //     if(next > i+1 && BN[i]->state == RESERVED_SWITCH){
+  //       loggerf(ERROR, "Blocked and next is switch lane %x", (unsigned int)B);
+  //       Block * tB = BN[i+1];
+
+  //       if(!dircmp(B, BN[i])){
+  //         loggerf(WARNING, "REVERSE NEXT SWITCH BLOCK %02i:%02i", BN[i]->module, BN[i]->id);
+  //         BN[i]->reverse();
+  //       }
+
+  //       if(tB->state != RESERVED_SWITCH){
+  //         if(!dircmp(B, tB)){
+  //           loggerf(WARNING, "REVERSE BLOCK %02i:%02i after switchlane", tB->module, tB->id);
+  //           tB->reverse();
+  //           tB->reserve();
+  //           // Block_Reverse(&tB->Alg);
+  //           // Block_reserve(tB);
+  //           //void Block_Reverse(B);
+  //           Block_Reverse_To_Next_Switch(tB);
+  //         }
+  //         else if(tB->state != RESERVED){
+  //           loggerf(WARNING, "RESERVE BLOCK %02i:%02i until switchlane", tB->module, tB->id);
+  //           //reserve untill next switchlane
+  //           tB->reserve();
+  //           // Block_reserve(tB);
+  //           Reserve_To_Next_Switch(tB);
+  //         }
+  //       }
+  //       else if(!dircmp(B, tB)){
+  //         loggerf(WARNING, "REVERSE SWITCH BLOCK %02i:%02i", tB->module, tB->id);
+  //         tB->reverse();
+  //         // Block_Reverse(&tB->Alg);
+  //         continue;
+  //       }
+
+	 //      break;
+  //     }
+  //   }
   // }
 
-  // else if(B->blocked && BNN.blocks > 0 && !BN->blocked && !BNN.blocked){
+  // // Split train: If current block is unoccupied and surrounding are occupied and have the same train pointer
+  // else if(next > 0 && prev > 0 && BN[0]->blocked && BP[0]->blocked && !B->blocked && BN[0]->train == BP[0]->train){
+  //   //A train has split
+  //   Block * tN = BN[0];
+  //   Block * tP = BP[0];
+  //   WS_stc_TrainSplit(BN[0]->train, tP->module,tP->id,tN->module,tN->id);
 
+  //   loggerf(INFO, "SPLIT_TRAIN");
   // }
 
-  // Reverse track if block ahead is allready blocked but current is not blocked
-  if(B->blocked && next > 0){
-    //If only current and next blocks are occupied
-    // Reverse immediate block
-    if(((prev > 0 && !BP[0]->blocked) || prev == 0) && BN[0]->blocked && BN[0]->train && !B->train){
-      //REVERSED
-      loggerf(WARNING, "REVERSE BLOCK %02i:%02i", B->module, B->id);
-      // Block_Reverse(ABs);
-      B->reverse();
+  // // If only current and prev blocks are occupied
+  // // and if next block is reversed
+  // //int dircmp_algor(Algor_Block * A, Algor_Block * B)
+  // if(prev > 0 && next > 0 && B->blocked && BP[0]->blocked && !BN[0]->blocked && !dircmp(B, BN[0])) {
+  //   //Reversed ahead
+  //   loggerf(INFO, "%x Reversed ahead (%02i:%02i)", (unsigned int)B, BN[0]->module, BN[0]->id);
+  //   // Block_Reverse(&BN[0]->Alg);
+  //   BN[0]->reverse();
+  //   // Block_Reverse_To_Next_Switch(BN.B[0]);
+  // }
 
-      if(!dircmp(B, BP[0])){
-        // B->IOchanged = 1;
-      // }
-      // else{
-        for(uint8_t i = 0; i < prev; i++){
-          if(!BP[i])
-            continue;
-          if(BP[i]->blocked){
-            loggerf(INFO, "%02i:%02i", BP[i]->module, BP[i]->id);
-          }
-          else
-            continue;
-
-
-          // Block_Reverse(&BP[i]->Alg);
-          BP[i]->reverse();
-          // BN[i]->IOchanged;
-        }
-      }
-
-      Block_Reverse_To_Next_Switch(B);
-      loggerf(INFO, "Done");
-    }
-
-    for(uint8_t i = 0; i < 4; i++){
-      if(next > i+1 && BN[i]->state == RESERVED_SWITCH){
-        loggerf(ERROR, "Blocked and next is switch lane %x", (unsigned int)B);
-        Block * tB = BN[i+1];
-
-        if(!dircmp(B, BN[i])){
-          loggerf(WARNING, "REVERSE NEXT SWITCH BLOCK %02i:%02i", BN[i]->module, BN[i]->id);
-          BN[i]->reverse();
-        }
-
-        if(tB->state != RESERVED_SWITCH){
-          if(!dircmp(B, tB)){
-            loggerf(WARNING, "REVERSE BLOCK %02i:%02i after switchlane", tB->module, tB->id);
-            tB->reverse();
-            tB->reserve();
-            // Block_Reverse(&tB->Alg);
-            // Block_reserve(tB);
-            //void Block_Reverse(B);
-            Block_Reverse_To_Next_Switch(tB);
-          }
-          else if(tB->state != RESERVED){
-            loggerf(WARNING, "RESERVE BLOCK %02i:%02i until switchlane", tB->module, tB->id);
-            //reserve untill next switchlane
-            tB->reserve();
-            // Block_reserve(tB);
-            Reserve_To_Next_Switch(tB);
-          }
-        }
-        else if(!dircmp(B, tB)){
-          loggerf(WARNING, "REVERSE SWITCH BLOCK %02i:%02i", tB->module, tB->id);
-          tB->reverse();
-          // Block_Reverse(&tB->Alg);
-          continue;
-        }
-
-	      break;
-      }
-    }
-  }
-
-
-  // Check for new or split train
-  // New train: If no surrounding blocks are occupied
-  if(prev > 0 && next > 0 && B->blocked && !B->train && !BN[0]->train && !BP[0]->train){
-    //NEW TRAIN
-    // find a new follow id
-    // loggerf(ERROR, "FOLLOW ID INCREMENT, bTrain");
-    B->train = new RailTrain(B);
-
-    if(B->reserved){
-      B->reserved--;
-      if(B->reserved == 0){
-        B->state = PROCEED;
-        B->reverse_state = PROCEED;
-
-        B->statechanged = 1;
-        Units[B->module]->block_state_changed = 1;
-      }
-    }
-
-    //Create a message for WebSocket
-    WS_stc_NewTrain(B->train, B->module, B->id);
-
-    loggerf(INFO, "NEW_TRAIN %x", (unsigned int)B->train);
-  }
-
-  // Split train: If current block is unoccupied and surrounding are occupied and have the same train pointer
-  else if(next > 0 && prev > 0 && BN[0]->blocked && BP[0]->blocked && !B->blocked && BN[0]->train == BP[0]->train){
-    //A train has split
-    Block * tN = BN[0];
-    Block * tP = BP[0];
-    WS_stc_TrainSplit(BN[0]->train, tP->module,tP->id,tN->module,tN->id);
-
-    loggerf(INFO, "SPLIT_TRAIN");
-  }
-
-  // If only current and prev blocks are occupied
-  // and if next block is reversed
-  //int dircmp_algor(Algor_Block * A, Algor_Block * B)
-  if(prev > 0 && next > 0 && B->blocked && BP[0]->blocked && !BN[0]->blocked && !dircmp(B, BN[0])) {
-    //Reversed ahead
-    loggerf(INFO, "%x Reversed ahead (%02i:%02i)", (unsigned int)B, BN[0]->module, BN[0]->id);
-    // Block_Reverse(&BN[0]->Alg);
-    BN[0]->reverse();
-    // Block_Reverse_To_Next_Switch(BN.B[0]);
-  }
-
-  if(prev > 0 && BP[0]->blocked && B->blocked && !B->train && BP[0]->train){
-    // Copy train id from previous block
-    B->train = BP[0]->train;
-
-    B->train->B = B;
-
-    if(B->reserved){
-      B->reserved--;
-      if(B->reserved == 0){
-        B->state = PROCEED;
-        B->reverse_state = PROCEED;
-
-        B->statechanged = 1;
-        Units[B->module]->block_state_changed = 1;
-      }
-    }
-    // if(train_link[B->train])
-    //   train_link[B->train]->Block = B;
-    loggerf(DEBUG, "COPY_TRAIN from %02i:%02i to %02i:%02i", BP[0]->module, BP[0]->id, B->module, B->id);
-  }
 }
 
 void Algor_train_control(Algor_Blocks * ABs, int debug){
-  loggerf(TRACE, "Algor_train_control");
+  char Debug[100];
+  sprintf(Debug, "Algor_train_control %2i:%2i\n", ABs->B->module, ABs->B->id);
   //Unpack AllBlocks
   Block *  B = ABs->B;
   Block ** N = ABs->N;
@@ -1201,29 +1221,29 @@ void Algor_train_control(Algor_Blocks * ABs, int debug){
     loggerf(DEBUG, "%i (xx:xx) -> %s (%02i:%02i)", T->link_id, rail_states_string[N[0]->state], N[0]->module, N[0]->id);
 
   if(N[0]->blocked){
-    loggerf(WARNING, "Train Next block Blocked");
+    loggerf(WARNING, "%sTrain Next block Blocked", Debug);
     T->changeSpeed(0, IMMEDIATE_SPEED);
   }
   else if(N[0]->state == DANGER){
-    loggerf(WARNING, "Train Next block Blocked %02i:%02i", N[0]->module, N[0]->id);
+    loggerf(WARNING, "%sTrain Next block Blocked %02i:%02i", Debug, N[0]->module, N[0]->id);
     T->changeSpeed(0, GRADUAL_FAST_SPEED);
   }
   else if(N[0]->state == RESTRICTED){
-    loggerf(WARNING, "Train Next block Restricted %02i:%02i", N[0]->module, N[0]->id);
+    loggerf(WARNING, "%sTrain Next block Restricted %02i:%02i", Debug, N[0]->module, N[0]->id);
     T->changeSpeed(10, GRADUAL_FAST_SPEED);
   }
   else if(N[0]->state == CAUTION){
     if(T->speed > CAUTION_SPEED){
-      loggerf(WARNING, "Train Next block Caution %02i:%02i", N[0]->module, N[0]->id);
+      loggerf(WARNING, "%sTrain Next block Caution %02i:%02i", Debug, N[0]->module, N[0]->id);
       T->changeSpeed(CAUTION_SPEED, GRADUAL_FAST_SPEED);
     }
   }
   else if(T->control != TRAIN_MANUAL && (T->target_speed > N[0]->max_speed || T->speed > N[0]->max_speed)){
-    loggerf(DEBUG, "Next block speed limit");
+    loggerf(DEBUG, "%sNext block speed limit", Debug);
     T->changeSpeed(N[0]->max_speed, GRADUAL_SLOW_SPEED);
   }
   else if(T->control != TRAIN_MANUAL && N[0]->max_speed > T->speed && ABs->next > 1 && N[1]->max_speed >= N[0]->max_speed) {
-    loggerf(DEBUG, "Train Speed Up");
+    loggerf(DEBUG, "%sTrain Speed Up", Debug);
     if(N[0]->max_speed <= T->max_speed)
       T->changeSpeed(N[0]->max_speed, GRADUAL_FAST_SPEED);
     else if(T->speed != T->max_speed)

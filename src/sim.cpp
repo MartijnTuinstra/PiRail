@@ -30,31 +30,19 @@ extern pthread_mutex_t mutex_lockA;
 #define TRAIN_B_LEN   5 //cm
 #define TRAIN_B_SPEED 5 //cm/s
 
-#define TRAINSIM_INTERVAL_US 500000
-#define TRAINSIM_INTERVAL_SEC 0.5
+#define TRAINSIM_INTERVAL_US 50000
+#define TRAINSIM_INTERVAL_SEC 0.05
 
 #define JOIN_SIM_INTERVAL 1000
 
 void change_Block(Block * B, enum Rail_states state){
-  if (state == BLOCKED){
-    if(!B->detectionblocked){
-      B->IOchanged = 1;
-      B->statechanged = 1;
-      Units[B->module]->block_state_changed = 1;
-    }
-    B->detectionblocked = 1;
-  }
-  else{
-    if(B->detectionblocked){
-      B->IOchanged = 1;
-      B->statechanged = 1;
-      Units[B->module]->block_state_changed = 1;
-    }
-    B->detectionblocked = 0;
-  }
+  if(state != B->state){
+    B->setDetection(state == BLOCKED);
 
-  putAlgorQueue(B, 0);
-  // process(B, 3);
+    loggerf(WARNING, "SIM set block %2i:%2i %i%i%i - %s>%s", B->module, B->id, B->blocked, B->detectionblocked, B->virtualblocked, rail_states_string[B->state], rail_states_string[state]);
+
+    putAlgorQueue(B, 0);
+  }
 }
 
 struct engine_sim {
@@ -100,20 +88,17 @@ void train_sim_tick(struct train_sim * t){
     }
     loggerf(INFO, "%c  Step %02i:%02i", t->sim, t->B[0]->module, t->B[0]->id);
     t->posFront += t->B[0]->length;
-    change_Block(t->B[0], BLOCKED);
-    change_Block(t->B[1], PROCEED);
   }
 
   if(t->posRear <= 0){
     // Remove block
     t->blocks--;
-    change_Block(t->B[t->blocks], PROCEED);
     t->B[t->blocks] = 0;
     t->posRear += t->B[t->blocks - 1]->length;
   }
 
   // Advance train (km/h -> cm/s) / scale * tick interval (in sec)
-  uint16_t distance = (t->T->speed / 3.6) * 100 / 160 * TRAINSIM_INTERVAL_SEC;
+  float distance = (t->T->speed / 3.6) * 100.0 / 160.0 * TRAINSIM_INTERVAL_SEC;
   t->posFront -= distance;
   t->posRear  -= distance;
 
@@ -147,7 +132,6 @@ void train_sim_tick(struct train_sim * t){
 
     if(blocktheblock){
       change_Block(t->B[i], BLOCKED);
-      t->B[i]->train = t->T;
     }
     else
       change_Block(t->B[i], PROCEED);
@@ -184,27 +168,30 @@ void *TRAIN_SIMA(void * args){
 
   // B->train = new RailTrain(B);
 
-  // change_Block(B, BLOCKED);
-  B->detectionblocked = 1;
-  B->statechanged = 1;
+  change_Block(B, BLOCKED);
+  algor_queue_enable(1);
+  // B->setDetection(1);
+  
 
   // usleep(100000);
 
-  // while(!B->train){
-  //     usleep(10000);
-  // }
+  while(!B->train){
+      usleep(10000);
+  }
 
-  B->train = new RailTrain(B);
+  // B->train = new RailTrain(B);
 
-  B->train->link(1, RAILTRAIN_TRAIN_TYPE);
+  B->train->link(2, RAILTRAIN_TRAIN_TYPE);
   struct s_opc_LinkTrain msg = {
     .follow_id=B->train->link_id,
-    .real_id=1,
+    .real_id=2,
     .message_id_H=0,
     .type=RAILTRAIN_ENGINE_TYPE,
     .message_id_L=0
   };
   WS_stc_LinkTrain(&msg);
+
+  loggerf(INFO, "SIMTrain linked %s", B->train->p.T->name);
 
   B->train->control = TRAIN_MANUAL;//TRAIN_SEMI_AUTO;
   train.train_length = B->train->length;
@@ -218,6 +205,11 @@ void *TRAIN_SIMA(void * args){
   if(train.T->type == RAILTRAIN_ENGINE_TYPE){
     //Engine only
     train.train_length = train.T->p.E->length / 10;
+
+    train.engines_len = 1;
+    train.engines = (struct engine_sim *)_calloc(1, struct engine_sim);
+    train.engines[0].offset = 0;
+    train.engines[0].length = train.T->p.E->length;
   }
   else{
     //Train
@@ -246,29 +238,9 @@ void *TRAIN_SIMA(void * args){
         offset += ((Car *)train.T->p.T->composition[i].p)->length / 10;
     }
   }
+  train.posFront = train.B[0]->length - (train.engines[0].length / 10);
+  train.posRear = train.B[0]->length;
   loggerf(INFO, "train length %icm", train.train_length);
-
-  int32_t len = train.train_length;
-  while(len > 0){
-    len -= B->length;
-
-    for(uint8_t i = train.blocks - 1; i >= 0 && i < 10; i--){
-      train.B[i + 1] = train.B[i];
-    }
-    train.blocks++;
-
-    change_Block(B, BLOCKED);
-    algor_queue_enable(1);
-
-    if(B->Alg.next){
-      train.B[0] = B;
-      B = B->Alg.N[0];
-    }
-
-    usleep(TRAINSIM_INTERVAL_US);
-  }
-
-  train.posFront -= len;
 
   SYS_set_state(&SYS->SimA.state, Module_Run);
 
@@ -409,146 +381,107 @@ void SIM_JoinModules(){
 
     if(x == 1){
       Units[20]->block_state_changed = 1;
-      Units[20]->B[5]->IOchanged = 1;
       Units[25]->block_state_changed = 1;
-      Units[25]->B[0]->IOchanged = 1;
 
-      Units[20]->B[5]->blocked = 1;
-      Units[25]->B[0]->blocked = 1;
+      Units[20]->B[5]->setDetection(1);
+      Units[25]->B[0]->setDetection(1);
       Units[20]->B[5]->state = BLOCKED;
       Units[25]->B[0]->state = BLOCKED;
-      printf("\n1\n");
     }else if(x == 2){
       Units[20]->block_state_changed = 1;
-      Units[20]->B[5]->IOchanged = 1;
       Units[25]->block_state_changed = 1;
-      Units[25]->B[0]->IOchanged = 1;
       
       Units[25]->block_state_changed = 1;
-      Units[25]->B[3]->IOchanged = 1;
       Units[22]->block_state_changed = 1;
-      Units[22]->B[0]->IOchanged = 1;
 
-      Units[25]->B[3]->blocked = 1;
-      Units[22]->B[0]->blocked = 1;
+      Units[25]->B[3]->setDetection(1);
+      Units[22]->B[0]->setDetection(1);
       Units[25]->B[3]->state = BLOCKED;
       Units[22]->B[0]->state = BLOCKED;
 
-      Units[20]->B[5]->blocked = 0;
-      Units[25]->B[0]->blocked = 0;
+      Units[20]->B[5]->setDetection(0);
+      Units[25]->B[0]->setDetection(0);
       Units[20]->B[5]->state = PROCEED;
       Units[25]->B[0]->state = PROCEED;
-      printf("\n2\n");
     }else if(x == 3){
       Units[25]->block_state_changed = 1;
-      Units[25]->B[3]->IOchanged = 1;
       Units[22]->block_state_changed = 1;
-      Units[22]->B[0]->IOchanged = 1;
 
       Units[22]->block_state_changed = 1;
-      Units[22]->B[1]->IOchanged = 1;
       Units[10]->block_state_changed = 1;
-      Units[10]->B[0]->IOchanged = 1;
 
-      Units[22]->B[1]->blocked = 1;
-      Units[10]->B[0]->blocked = 1;
+      Units[22]->B[1]->setDetection(1);
+      Units[10]->B[0]->setDetection(1);
       Units[22]->B[1]->state = BLOCKED;
       Units[10]->B[0]->state = BLOCKED;
 
-      Units[25]->B[3]->blocked = 0;
-      Units[22]->B[0]->blocked = 0;
+      Units[25]->B[3]->setDetection(0);
+      Units[22]->B[0]->setDetection(0);
       Units[25]->B[3]->state = PROCEED;
       Units[22]->B[0]->state = PROCEED;
-      printf("\n3\n");
     }else if(x == 4){
       Units[22]->block_state_changed = 1;
-      Units[22]->B[1]->IOchanged = 1;
       Units[10]->block_state_changed = 1;
-      Units[10]->B[0]->IOchanged = 1;
 
       Units[10]->block_state_changed = 1;
-      Units[10]->B[3]->IOchanged = 1;
       Units[21]->block_state_changed = 1;
-      Units[21]->B[0]->IOchanged = 1;
 
-      Units[10]->B[3]->blocked = 1;
-      Units[21]->B[0]->blocked = 1;
+      Units[10]->B[3]->setDetection(1);
+      Units[21]->B[0]->setDetection(1);
       Units[10]->B[3]->state = BLOCKED;
       Units[21]->B[0]->state = BLOCKED;
 
-      Units[22]->B[1]->blocked = 0;
-      Units[10]->B[0]->blocked = 0;
+      Units[22]->B[1]->setDetection(0);
+      Units[10]->B[0]->setDetection(0);
       Units[22]->B[1]->state = PROCEED;
       Units[10]->B[0]->state = PROCEED;
-      printf("\n4\n");
     }else if(x == 5){
       Units[10]->block_state_changed = 1;
-      Units[10]->B[3]->IOchanged = 1;
       Units[21]->block_state_changed = 1;
-      Units[21]->B[0]->IOchanged = 1;
       
       Units[21]->block_state_changed = 1;
-      Units[21]->B[3]->IOchanged = 1;
       Units[23]->block_state_changed = 1;
-      Units[23]->B[0]->IOchanged = 1;
 
-      Units[21]->B[3]->blocked = 1;
-      Units[23]->B[0]->blocked = 1;
+      Units[21]->B[3]->setDetection(1);
+      Units[23]->B[0]->setDetection(1);
       Units[21]->B[3]->state = BLOCKED;
       Units[23]->B[0]->state = BLOCKED;
 
-      Units[10]->B[3]->blocked = 0;
-      Units[21]->B[0]->blocked = 0;
+      Units[10]->B[3]->setDetection(0);
+      Units[21]->B[0]->setDetection(0);
       Units[10]->B[3]->state = PROCEED;
       Units[21]->B[0]->state = PROCEED;
-      printf("\n5\n");
     }else if(x == 6){
       Units[21]->block_state_changed = 1;
-      Units[21]->B[3]->IOchanged = 1;
       Units[23]->block_state_changed = 1;
-      Units[23]->B[0]->IOchanged = 1;
 
       Units[23]->block_state_changed = 1;
-      Units[23]->B[1]->IOchanged = 1;
       Units[20]->block_state_changed = 1;
-      Units[20]->B[0]->IOchanged = 1;
 
-      Units[23]->B[1]->blocked = 1;
-      Units[20]->B[0]->blocked = 1;
+      Units[23]->B[1]->setDetection(1);
+      Units[20]->B[0]->setDetection(1);
       Units[23]->B[1]->state = BLOCKED;
       Units[20]->B[0]->state = BLOCKED;
 
-      Units[21]->B[3]->blocked = 0;
-      Units[23]->B[0]->blocked = 0;
+      Units[21]->B[3]->setDetection(0);
+      Units[23]->B[0]->setDetection(0);
       Units[21]->B[3]->state = PROCEED;
       Units[23]->B[0]->state = PROCEED;
-      printf("\n6\n");
     }else if(x == 7){
       Units[23]->block_state_changed = 1;
-      Units[23]->B[1]->IOchanged = 1;
       Units[20]->block_state_changed = 1;
-      Units[20]->B[0]->IOchanged = 1;
 
-      Units[23]->B[1]->blocked = 0;
-      Units[20]->B[0]->blocked = 0;
+      Units[23]->B[1]->setDetection(0);
+      Units[20]->B[0]->setDetection(0);
       Units[23]->B[1]->state = PROCEED;
       Units[20]->B[0]->state = PROCEED;
-      printf("\n7\n");
-    }else if(x == 6){
-      printf("\nend\n");
     }
     else if(x == 10){
-      // _SYS_change(STATE_Modules_Coupled,1);
-      SYS->modules_linked = 1;
+      SYS->modules_linked = 1; // break condition
     }
 
     x++;
-    //IF ALL JOINED
-    //BREAK
   }
-  
-  Units[21]->B[0]->blocked = 0;
-  Units[22]->B[1]->blocked = 0;
 
   for(uint8_t i = 0; i < unit_len; i++){
     if(!Units[i])
@@ -556,13 +489,15 @@ void SIM_JoinModules(){
 
     for(uint8_t j = 0; j < Units[i]->block_len; j++){
       if(Units[i]->B[j]){
-        Units[i]->B[j]->blocked = 0;
-        Units[20]->B[0]->state = PROCEED;
+        Units[i]->B[j]->setDetection(0);
+        Units[i]->B[j]->setVirtualDetection(0);
+        Units[i]->B[j]->state = PROCEED;
       }
     }
   }
 
-  // WS_stc_Track_Layout();
+
+  WS_stc_Track_Layout(0);
 }
 
 void SIM_Connect_Rail_links(){

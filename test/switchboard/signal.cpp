@@ -148,8 +148,8 @@ TEST_CASE( "Signal 2", "[SB-4.2]" ) {
 
   loggerf(INFO, "Have %i connectors", connectors.size());
 
-  Units[1]->B[0]->blocked = 1;
-  Units[2]->B[0]->blocked = 1;
+  Units[1]->B[0]->setDetection(1);
+  Units[2]->B[0]->setDetection(1);
 
   if(uint8_t * findResult = Algorithm_find_connectable(&connectors))
     Algorithm_connect_connectors(&connectors, findResult);
@@ -159,8 +159,8 @@ TEST_CASE( "Signal 2", "[SB-4.2]" ) {
   link_all_blocks(Units[1]);
   link_all_blocks(Units[2]);
 
-  Units[1]->B[0]->blocked = 0;
-  Units[2]->B[0]->blocked = 0;
+  Units[1]->B[0]->setDetection(0);
+  Units[2]->B[0]->setDetection(0);
 
   REQUIRE(connectors.size() == 0);
 

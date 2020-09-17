@@ -282,7 +282,6 @@ void Unit::insertSignal(Signal * Sig){
 }
 
 IO_Port * Unit::linkIO(Node_adr adr, void * pntr, enum e_IO_type type){
-  loggerf(INFO, "Linking IO %02d:%02d", adr.Node, adr.io);
   this->Node[adr.Node]->io[adr.io]->link(pntr, type);
   return this->Node[adr.Node]->io[adr.io];
 }

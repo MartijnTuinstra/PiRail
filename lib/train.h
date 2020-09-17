@@ -47,7 +47,7 @@ extern int train_C_cat_len;
 
 int read_rolling_Configs();
 void write_rolling_Configs();
-int load_rolling_Configs();
+int load_rolling_Configs(const char * filename);
 void unload_rolling_Configs();
 
 // void unlink_train(int fid);

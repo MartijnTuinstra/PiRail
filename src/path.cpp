@@ -37,22 +37,21 @@ Path::Path(Block * B){
 Path::~Path(){
   char buffer[100];
   this->sprint(buffer);
-  loggerf(WARNING, "Path destroyed %s", buffer);
+  loggerf(DEBUG, "Path destroyed %s", buffer);
 }
 
 void Path::add(Block * B, bool side){
+  loggerf(DEBUG, "Add block to path %02d:%02d", B->module, B->id);
   if(side == NEXT){
     if(B->path){
       if(B->path != this){
         this->join(B->path);
-        loggerf(INFO, "Join path to path?i?end %02d:%02d", B->module, B->id);
         return;
       }
       else{
         return;
       }
     }
-    loggerf(INFO, "Adding block to path?i?front %02d:%02d", B->module, B->id);
     this->Blocks.push_back(B);
     this->front = B;
     this->front_direction = B->dir;
@@ -62,14 +61,12 @@ void Path::add(Block * B, bool side){
     if(B->path){
       if(B->path != this){
         this->join(B->path);
-        loggerf(INFO, "Join path to path?i?end %02d:%02d", B->module, B->id);
         return;
       }
       else{
         return;
       }
     }
-    loggerf(INFO, "Adding block to path?i?end %02d:%02d", B->module, B->id);
     this->Blocks.push_back(B);
     this->end = B;
     this->end_direction = B->dir;
@@ -78,10 +75,9 @@ void Path::add(Block * B, bool side){
 }
 
 void Path::join(Path * P){
-  loggerf(INFO, "Join path %02d<>%02d", this->direction, P->direction);
+  loggerf(DEBUG, "Join path %02d<>%02d", this->direction, P->direction);
   if(this->direction == P->direction){
     if(this->next->p.B == P->end){
-      loggerf(INFO, "Join path %02d:%02d<->%02d:%02d", this->next->p.B->module, this->next->p.B->id, P->end->module, P->end->id);
       char buffer[200];
       P->sprint(buffer);
       loggerf(WARNING, buffer);
@@ -112,7 +108,6 @@ void Path::join(Path * P){
     }
 
     if(this->prev->p.B == P->front){
-      loggerf(INFO, "Join path %02d:%02d<->%02d:%02d", this->prev->p.B->module, this->prev->p.B->id, P->front->module, P->front->id);
       char buffer[200];
       P->sprint(buffer);
       loggerf(WARNING, buffer);
@@ -124,7 +119,6 @@ void Path::join(Path * P){
         if (!i)
           continue;
 
-        loggerf(INFO, "  - reset block %02d:%02d", i->module, i->id);
         this->Blocks.push_back(i);
         i->path = this;
       }
@@ -146,7 +140,6 @@ void Path::join(Path * P){
   }
   else if(this->direction != P->direction){
     if(this->next->p.B == P->front){
-      loggerf(INFO, "Join path %02d:%02d<->%02d:%02d", this->next->p.B->module, this->next->p.B->id, P->end->module, P->end->id);
       char buffer[200];
       P->sprint(buffer);
       loggerf(WARNING, buffer);
@@ -174,7 +167,6 @@ void Path::join(Path * P){
     }
 
     else if(this->prev->p.B == P->end){
-      loggerf(INFO, "Join path %02d:%02d<->%02d:%02d", this->prev->p.B->module, this->prev->p.B->id, P->front->module, P->front->id);
       char buffer[200];
       P->sprint(buffer);
       loggerf(WARNING, buffer);
@@ -183,7 +175,6 @@ void Path::join(Path * P){
       this->prev = P->next;
 
       for(auto i: P->Blocks){
-        loggerf(INFO, "  - reset block %02d:%02d", i->module, i->id);
         this->Blocks.push_back(i);
         i->path = this;
       }

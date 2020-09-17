@@ -2,6 +2,8 @@
 #define _INCLUDE_ROLLINGSTOCK_RAILTRAIN_H
 
 #include <time.h>
+#include <algorithm>
+#include <vector>
 
 #include "rollingstock/declares.h"
 #include "rollingstock/engine.h"
@@ -40,7 +42,8 @@ class RailTrain {
     } p;
     char type;
 
-    Block * B;
+    Block * B; // FrontBlock
+    std::vector<Block *> blocks = {}; // All blocks that are blocked by the train (detection and virtual)
 
     uint8_t link_id;
 
@@ -60,7 +63,6 @@ class RailTrain {
     uint8_t dir:1;             // TRAIN_FORWARD / TRAIN_REVERSE
 
     // Only the engine is detectable, cars added virtually
-    // TODO: Fix double/multiple engine setups where engines are far appart
     bool virtualLength;
     uint16_t length;
 
@@ -72,6 +74,14 @@ class RailTrain {
 
     RailTrain(Block * B);
     ~RailTrain();
+
+    void setBlock(Block *);
+    void releaseBlock(Block *);
+
+    void initVirtualBlocks();
+    void setVirtualBlocks();
+
+    void moveForward(Block * B);
 
     void inline setSpeed(uint16_t speed){
       this->speed = speed;

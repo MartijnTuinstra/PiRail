@@ -217,7 +217,7 @@ bool Z21_Client::recv_packet(){
 
 int Z21_Client::send(uint16_t length, uint8_t * data){
   if(!connected){
-    printf("Z21 not connected for sending\n");
+    loggerf(DEBUG, "Z21 not connected for sending\n");
     return -1;
   }
 

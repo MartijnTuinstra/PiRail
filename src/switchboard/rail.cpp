@@ -426,6 +426,18 @@ void Block::setReversedState(enum Rail_states state){
   Units[this->module]->block_state_changed |= 1;
 }
 
+void Block::setDetection(bool d){
+  detectionblocked = d;
+  blocked = (detectionblocked || virtualblocked);
+  IOchanged = 1;
+}
+
+void Block::setVirtualDetection(bool d){
+  virtualblocked = d;
+  blocked = (detectionblocked || virtualblocked);
+  IOchanged = 1;
+}
+
 enum Rail_states Block::addSignal(Signal * Sig){
   if(Sig->direction){
     this->forward_signal->push_back(Sig);

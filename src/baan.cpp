@@ -44,7 +44,7 @@ int main(int argc, char * argv[]){
   srand(time(NULL));
   
   load_module_Configs();
-  load_rolling_Configs();
+  load_rolling_Configs(TRAIN_CONF_PATH);
 
   scheduler->start();
 

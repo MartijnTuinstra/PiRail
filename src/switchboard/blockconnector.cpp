@@ -464,7 +464,7 @@ uint8_t * Algorithm_find_connectable(BlockConnectors * Connectors){
 }
 
 void Algorithm_connect_connectors(BlockConnectors * Connectors, uint8_t * blockedConnectors){
-  printf("Try and connect");
+  loggerf(DEBUG, "Algorithm_connect_connectors");
   BlockConnector * A = Connectors->operator[](blockedConnectors[0]);
   BlockConnector * B = Connectors->operator[](blockedConnectors[1]);
 

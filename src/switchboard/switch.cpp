@@ -118,7 +118,7 @@ Switch::~Switch(){
 }
 
 void Switch::addSignal(Signal * Sig){
-  loggerf(INFO, "AddSignal %i to switch %i", Sig->id, this->id);
+  loggerf(DEBUG, "AddSignal %i to switch %i", Sig->id, this->id);
   this->Signals.push_back(Sig);
 }
 

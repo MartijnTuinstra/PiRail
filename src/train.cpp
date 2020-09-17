@@ -40,7 +40,7 @@ int train_C_cat_len = 0;
 
 struct SchedulerEvent * railtraincontinue_event;
 
-int load_rolling_Configs(){
+int load_rolling_Configs(const char * filename){
   loggerf(INFO, "Initializing cars/engines/trains");
 
   // Allocation Basic Space
@@ -61,7 +61,7 @@ int load_rolling_Configs(){
 
   // read_rolling_Configs();
 
-  auto config = RollingConfig(TRAIN_CONF_PATH);
+  auto config = RollingConfig(filename);
 
   config.read();
 

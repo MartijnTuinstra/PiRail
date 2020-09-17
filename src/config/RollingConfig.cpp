@@ -340,9 +340,10 @@ void RollingConfig::write(){
 void print_Cars(struct cars_conf car){
   char debug[200];
 
-  sprintf(debug, "%i\t%x\t%i\t%i\t%-20s\t%-20s",
+  sprintf(debug, "%i\t%x\t%x\t%i\t%i\t%-20s\t%-20s",
                 car.nr,
                 car.type & 0x0f,
+                car.flags,
                 car.max_speed,
                 car.length,
                 car.name,
@@ -410,7 +411,7 @@ void RollingConfig::print(char ** cmds, uint8_t cmd_len){
   printf("\n\n");
 
   printf( "Cars\n");
-  printf( "id\tNr\tType\tSpeed\tLength\tName\t\t\tIcon_path\n");
+  printf( "id\tNr\tType\tFlags\tSpeed\tLength\tName\t\t\tIcon_path\n");
   for(int i = 0; i < this->header.Cars; i++){
     printf("%i\t", i);
     print_Cars(this->Cars[i]);

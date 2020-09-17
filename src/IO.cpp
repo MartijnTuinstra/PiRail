@@ -60,7 +60,7 @@ inline void IO_Node::update(){
 
 
 IO_Port::IO_Port(IO_Node * Node, uint8_t id, enum e_IO_type type){
-  loggerf(INFO, "    IO %i - %s", id, IO_enum_type_string[type]);
+  loggerf(TRACE, "    IO %i - %s", id, IO_enum_type_string[type]);
   memset(this, 0, sizeof(IO_Port));
 
   this->Node = Node;

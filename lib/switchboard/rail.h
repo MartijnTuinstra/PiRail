@@ -118,16 +118,23 @@ class Block {
     enum Rail_states state;
     enum Rail_states reverse_state;
 
-    uint8_t reserved:4;
+    uint8_t reserved:2;
+    uint8_t switchReserved:2;
+
     uint8_t blocked:1;
     uint8_t virtualblocked:1;
     uint8_t detectionblocked:1;
 
     RailTrain * train; //Follow id
+    RailTrain * reservedBy; // Block with switches can be SWITCH_RESERVED. this point to the train that has reserved the switches.
+
     uint8_t IOchanged:1;
     uint8_t statechanged:1;
     uint8_t algorchanged:1;
+    uint8_t recalculate:1;
     uint8_t oneWay:1;
+
+    uint8_t SwitchWrongState:1; // Set block to DANGER/CAUTION if switch cannot be aligned properly
 
     std::vector<Signal *> * forward_signal;
     std::vector<Signal *> * reverse_signal;

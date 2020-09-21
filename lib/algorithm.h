@@ -31,6 +31,7 @@ void putAlgorQueue(Block * B, int enableQueue);
 void putList_AlgorQueue(struct algor_blocks AllBlocks, int enable);
 Block * getAlgorQueue();
 void processAlgorQueue();
+void clearAlgorithmQueue();
 
 void * Algor_Run(void * args);
 

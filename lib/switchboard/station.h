@@ -5,6 +5,8 @@
 #include "switchboard/switch.h"
 #include "switchboard/msswitch.h"
 
+#include "rollingstock/railtrain.h"
+
 enum Station_types {
   STATION_PERSON,
   STATION_CARGO,
@@ -22,7 +24,12 @@ class Station {
     int uid;
     char * name;
 
-    uint8_t state;
+    uint8_t state; // REMOVE
+    bool occupied;
+    bool occupiedChild;
+    bool stoppedTrain;
+
+    RailTrain * train;
 
     Block ** blocks;
     uint8_t blocks_len;
@@ -40,6 +47,12 @@ class Station {
     // Station(int module, int id, char * name, char name_len, enum Station_types type, int len, uint8_t * blocks);
     Station(int module, int id, struct station_conf conf);
     ~Station();
+
+    void occupy(RailTrain * T);
+    void release();
+    void releaseParent();
+
+    void setStoppedTrain(bool);
 };
 
 extern Station ** stations;

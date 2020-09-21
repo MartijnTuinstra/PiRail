@@ -1,5 +1,6 @@
 #include <math.h>
 
+#include "switchboard/station.h"
 #include "rollingstock/railtrain.h"
 #include "train.h"
 
@@ -52,6 +53,25 @@ void RailTrain::releaseBlock(Block * rB){
   loggerf(INFO, "train %i: releaseBlock %2i:%2i %x", link_id, rB->module, rB->id, (unsigned int)rB);
   rB->train = 0;
   blocks.erase(std::remove_if(blocks.begin(), blocks.end(), [rB](const auto & o) { return (o == rB); }), blocks.end());
+}
+
+void RailTrain::reserveBlock(Block * rB){
+  loggerf(INFO, "train %i: reserveBlock %2i:%2i", link_id, rB->module, rB->id);
+
+  rB->reservedBy = this;
+  rB->switchReserved = true;
+  reservedBlocks.push_back(rB);
+}
+
+void RailTrain::dereserveBlock(Block * rB){
+  loggerf(INFO, "train %i: dereserveBlock %2i:%2i", link_id, rB->module, rB->id);
+  rB->reservedBy = 0;
+  rB->switchReserved = false;
+
+  reservedBlocks.erase(std::remove_if(reservedBlocks.begin(),
+                                      reservedBlocks.end(),
+                                      [rB](const auto & o) { return (o == rB); }),
+                       reservedBlocks.end());
 }
 
 void RailTrain::initVirtualBlocks(){
@@ -153,41 +173,48 @@ void RailTrain::moveForward(Block * tB){
   }
 }
 
-void RailTrain::setSpeedZ21(uint16_t speed){
-  this->speed = speed;
+// void RailTrain::setSpeed(uint16_t _speed); INLINE FUNCTION DEFINE IN HEADER
 
-  if(!this->assigned)
+void RailTrain::setSpeedZ21(uint16_t _speed){
+  setSpeed(_speed);
+
+  if(!assigned)
     return;
 
-  if(this->type == RAILTRAIN_ENGINE_TYPE){
-    this->p.E->setSpeed(this->speed);
-    Z21_Set_Loco_Drive_Engine(this->p.E);
-  }
-  else{
-    this->p.T->setSpeed(this->speed);
-    Z21_Set_Loco_Drive_Train(this->p.T);
+  if(!p.p) return;
+  else if(type == RAILTRAIN_ENGINE_TYPE) Z21_Set_Loco_Drive_Engine(p.E);
+  else Z21_Set_Loco_Drive_Train(p.T);
+}
+
+void RailTrain::setStopped(bool stop){
+  stopped = stop;
+
+  for(auto b: blocks){
+    if(b->station){
+      b->station->setStoppedTrain(stop);
+    }
   }
 }
 
-void RailTrain::changeSpeed(uint16_t target_speed, uint8_t type){
-  if(!this->p.p){
+void RailTrain::changeSpeed(uint16_t _target_speed, uint8_t _type){
+  if(!p.p){
     loggerf(ERROR, "No Train");
     return;
   }
 
-  loggerf(DEBUG, "train_change_speed %i -> %i", this->link_id, target_speed);
-  //this->target_speed = target_speed;
+  loggerf(DEBUG, "train_change_speed %i -> %i", link_id, _target_speed);
+  //target_speed = target_speed;
 
-  if(type == IMMEDIATE_SPEED){
-    this->changing_speed = RAILTRAIN_SPEED_T_DONE;
-    this->setSpeed(target_speed);
+  if(_type == IMMEDIATE_SPEED){
+    changing_speed = RAILTRAIN_SPEED_T_DONE;
+    setSpeed(_target_speed);
     WS_stc_UpdateTrain(this);
   }
-  else if(type == GRADUAL_SLOW_SPEED){
-    train_speed_event_create(this, target_speed, this->B->length*2);
+  else if(_type == GRADUAL_SLOW_SPEED){
+    train_speed_event_create(this, _target_speed, B->length*2);
   }
-  else if(type == GRADUAL_FAST_SPEED){
-    train_speed_event_create(this, target_speed, this->B->length);
+  else if(_type == GRADUAL_FAST_SPEED){
+    train_speed_event_create(this, _target_speed, B->length);
   }
 }
 

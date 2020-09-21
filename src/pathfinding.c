@@ -96,7 +96,8 @@ struct paths pathfinding(Block * start, Block * end){
   _free(c.sw_data->mssw);
   _free(c.sw_data);
 
-  printf("Final block counter %i\n", final_instruction->prevcounter);
+  if(final_instruction)
+    printf("Final block counter %i\n", final_instruction->prevcounter);
 
   struct paths r = {result.instructions, result_backward.instructions};
 

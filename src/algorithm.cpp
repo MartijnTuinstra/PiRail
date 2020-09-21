@@ -74,13 +74,22 @@ Block * getAlgorQueue(){
   return result;
 }
 
+void clearAlgorithmQueue(){
+  mutex_lock(&AlgorQueueMutex, "AlgorQueueMutex");
+
+  AlgorQueue.readIndex = AlgorQueue.writeIndex;
+
+  mutex_unlock(&AlgorQueueMutex, "AlgorQueueMutex");
+}
+
 void processAlgorQueue(){
   Block * B = getAlgorQueue();
   while(B != 0){
     loggerf(TRACE, "Process %i:%i, %x, %x", B->module, B->id, B->IOchanged + (B->statechanged << 1) + (B->algorchanged << 2), B->state);
     Algor_process(B, 0);
-     if(B->IOchanged){
+     while(B->recalculate){
       loggerf(INFO, "ReProcess");
+      B->recalculate = 0;
       Algor_process(B, 0);
     }
     B = getAlgorQueue();
@@ -219,7 +228,6 @@ void Algor_process(Block * B, int flags){
 
   B->IOchanged = 0;
   B->algorchanged = 0;
-  // B->statechanged = 1;
 
   if(!B->blocked && B->state == BLOCKED){
     if(B->Alg.next > 0 && B->Alg.N[0]->blocked){
@@ -236,6 +244,7 @@ void Algor_process(Block * B, int flags){
   if(!B->Alg.B){
     loggerf(ERROR, "BLOCK %02i:%02i has no algo", B->module, B->id);
     B->Alg.B = B;
+    B->AlgorClear();
   }
 
 
@@ -245,7 +254,7 @@ void Algor_process(Block * B, int flags){
 
   //Follow the train arround the layout
   Algor_train_following(&B->Alg, flags);
-  if (B->IOchanged){
+  if (B->recalculate){
     loggerf(INFO, "Block Train ReProcess");
     if(flags & _LOCK){
       loggerf(WARNING, "UNLOCK");
@@ -255,10 +264,9 @@ void Algor_process(Block * B, int flags){
   }
 
   //Set oncomming switch to correct state
-  // Algor_Switch_Checker(&B->Alg, flags);
-  if (B->IOchanged){
+  Algor_Switch_Checker(&B->Alg, flags);
+  if (B->recalculate){
     loggerf(DEBUG, "Block Switch ReProcess");
-    B->AlgorClear();
     if(flags & _LOCK)
       unlock_Algor_process();
     return;
@@ -266,6 +274,14 @@ void Algor_process(Block * B, int flags){
   
   // Print all found blocks
   // if(flags & _DEBUG)
+
+  // Station Stating
+  if(B->station){
+    if(B->blocked && B->state != BLOCKED)
+      B->station->occupy(B->train);
+    else if(!B->blocked && B->state == BLOCKED)
+      B->station->release();
+  }
 
   //Apply block stating
   Algor_rail_state(&B->Alg, flags);
@@ -788,28 +804,46 @@ void Algor_Switch_Checker(Algor_Blocks * ABs, int debug){
   uint8_t next = ABs->next;
   //Block BNNN = *AllBlocks.BNNN;
 
-  if(!B->blocked)
+  if(!B->blocked || (B->train && B->train->stopped))
     return;
 
+  RailTrain * T = B->train;
   Block * tB;
 
   for(uint8_t i = 0; i < 4; i++){
     if(i > next)
       break;
 
-    if(i == 0){
-      tB = B;
-    }
-    else{
-      tB = N[i-1];
-    }
+    if(i == 0) tB = B;
+    else tB = N[i-1];
 
-    if(tB->blocked)
-      continue;
+    if(tB->blocked && tB != B)
+      break;
 
     struct rail_link * link = tB->NextLink(NEXT);
-    if (link->type != RAIL_LINK_R && link->type != RAIL_LINK_E && link->type != RAIL_LINK_C) {
-      loggerf(INFO, "Switch_Checker scan block (%i,%i)", tB->module, tB->id);
+    loggerf(INFO, "Switch_Checker scan block (%i,%i) - %i", tB->module, tB->id, link->type);
+
+    if((i >  0 && link->type == RAIL_LINK_S) || (link->type >= RAIL_LINK_s && link->type <= RAIL_LINK_MB_inside)){
+      bool reservePath = false;
+
+      if(B->train && B->train->route){
+        loggerf(WARNING, "SWITCH ROUTE CHECKING");
+      }
+      else{
+        loggerf(WARNING, "Switch CHECKING");
+        if (!Switch_Check_Path(tB, *link, NEXT | SWITCH_CARE)){
+          reservePath = Switch_Set_Free_Path(tB, *link, NEXT | SWITCH_CARE);
+        }
+
+        if(reservePath){
+          Switch_Reserve_Path(T, tB, *link, NEXT | SWITCH_CARE);
+          B->recalculate = 1;
+        }
+      }
+
+      return;
+
+    }
       // if(B->train && B->train->route == 1){
         // struct pathinstruction temp;
         // if(!Next_check_Switch_Route(tmp, *link, NEXT, B->train->instructions, &temp)){
@@ -832,26 +866,25 @@ void Algor_Switch_Checker(Algor_Blocks * ABs, int debug){
         // free_pathinstructions(&temp);
       // }
       // else
-      if (!Switch_Check_Path(tB, *link, NEXT | SWITCH_CARE)) {
-        loggerf(INFO, "Switch next path!! %02i:%02i", tB->module, tB->id);
+      // if (!Switch_Check_Path(tB, *link, NEXT | SWITCH_CARE)) {
+      //   loggerf(INFO, "Switch next path!! %02i:%02i", tB->module, tB->id);
 
-        if(Switch_Set_Path(tB, *link, NEXT | SWITCH_CARE)) {
-          loggerf(INFO, "Switch set path!! %02i:%02i", tB->module, tB->id);
-          tB->IOchanged = 1; // Recalculate
-          tB->algorchanged = 1; // Recalculate
-          Switch_Reserve_Path(tB, *link, NEXT | SWITCH_CARE);
-          return;
-        }
-        else{
-          loggerf(WARNING, "Failed switch set path");
-        }
-      }
-      else if(((link->type == RAIL_LINK_S  || link->type == RAIL_LINK_s ) &&   (link->p.Sw)->Detection &&   (link->p.Sw)->Detection->state != RESERVED_SWITCH) || 
-              ((link->type == RAIL_LINK_MA || link->type == RAIL_LINK_MB) && (link->p.MSSw)->Detection && (link->p.MSSw)->Detection->state != RESERVED_SWITCH)){
-        loggerf(WARNING, "reserve_switch_path");
-        Switch_Reserve_Path(tB, *link, NEXT | SWITCH_CARE);
-      }
-    }
+      //   if(Switch_Set_Path(tB, *link, NEXT | SWITCH_CARE)) {
+      //     loggerf(INFO, "Switch set path!! %02i:%02i", tB->module, tB->id);
+      //     tB->IOchanged = 1; // Recalculate
+      //     tB->algorchanged = 1; // Recalculate
+      //     Switch_Reserve_Path(tB, *link, NEXT | SWITCH_CARE);
+      //     return;
+      //   }
+      //   else{
+      //     loggerf(WARNING, "Failed switch set path");
+      //   }
+      // }
+      // else if(((link->type == RAIL_LINK_S  || link->type == RAIL_LINK_s ) &&   (link->p.Sw)->Detection &&   (link->p.Sw)->Detection->state != RESERVED_SWITCH) || 
+      //         ((link->type == RAIL_LINK_MA || link->type == RAIL_LINK_MB) && (link->p.MSSw)->Detection && (link->p.MSSw)->Detection->state != RESERVED_SWITCH)){
+      //   loggerf(WARNING, "reserve_switch_path");
+      //   Switch_Reserve_Path(tB, *link, NEXT | SWITCH_CARE);
+      // }
   }
 
   // //Check Next 1

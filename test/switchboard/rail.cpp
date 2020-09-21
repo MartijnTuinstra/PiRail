@@ -12,20 +12,15 @@
 
 #include "algorithm.h"
 
+#include "train.h"
+#include "modules.h"
 #include "rollingstock/railtrain.h"
 
 TEST_CASE( "Block Link", "[SB-1.1]" ) {
 
-  if(Units){
-    for(uint8_t u = 0; u < unit_len; u++){
-      if(!Units[u])
-        continue;
-
-      delete Units[u];
-      Units[u] = 0;
-    }
-    _free(Units);
-  }
+  unload_module_Configs();
+  unload_rolling_Configs();
+  clearAlgorithmQueue();
 
   Units = (Unit **)_calloc(30, Unit *);
   unit_len = 30;
@@ -95,16 +90,10 @@ TEST_CASE( "Block Link", "[SB-1.1]" ) {
 
 TEST_CASE( "Block Algorithm Search", "[SB-1.2]" ) {
   // logger.setlevel_stdout(DEBUG);
-  if(Units){
-    for(uint8_t u = 0; u < unit_len; u++){
-      if(!Units[u])
-        continue;
-
-      delete Units[u];
-      Units[u] = 0;
-    }
-    _free(Units);
-  }
+  
+  unload_module_Configs();
+  unload_rolling_Configs();
+  clearAlgorithmQueue();
 
   Units = (Unit **)_calloc(30, Unit *);
   unit_len = 30;
@@ -347,16 +336,9 @@ TEST_CASE( "Block Algorithm Stating", "[SB-1.3]" ) {
   init_main();
   // logger.setlevel_stdout(DEBUG);
 
-  if(Units){
-    for(uint8_t u = 0; u < unit_len; u++){
-      if(!Units[u])
-        continue;
-
-      delete Units[u];
-      Units[u] = 0;
-    }
-    _free(Units);
-  }
+  unload_module_Configs();
+  unload_rolling_Configs();
+  clearAlgorithmQueue();
 
   Units = (Unit **)_calloc(30, Unit *);
   unit_len = 30;

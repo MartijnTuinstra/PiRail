@@ -379,68 +379,84 @@ void unload_rolling_Configs(){
 
   log("Clearing trains memory",INFO);
 
-  for(int i = 0;i<trains_len;i++){
-    if(!trains[i])
-      continue;
+  if(trains){
+    for(int i = 0;i<trains_len;i++){
+      if(!trains[i])
+        continue;
 
-    delete trains[i];
-  }
-
-  for(int i = 0;i<engines_len;i++){
-    if(!engines[i])
-      continue;
-
-    delete engines[i];
-  }
-
-  for(int i = 0;i<cars_len;i++){
-    if(!cars[i])
-      continue;
-
-    delete cars[i];
-  }
-
-  for(int i = 0;i<trains_comp_len;i++){
-    if(trains_comp[i]){
-      trains_comp[i]->name = (char *)_free(trains_comp[i]->name);
-      trains_comp[i]->composition = (struct train_comp *)_free(trains_comp[i]->composition);
-      trains_comp[i] = (struct train_composition *)_free(trains_comp[i]);
+      delete trains[i];
     }
+    trains = (Train **)_free(trains);
   }
 
-  trains = (Train **)_free(trains);
-  engines = (Engine **)_free(engines);
-  cars = (Car **)_free(cars);
-  trains_comp = (train_composition **)_free(trains_comp);
+  if(engines){
+    for(int i = 0;i<engines_len;i++){
+      if(!engines[i])
+        continue;
 
-  for(int i = 0; i < train_link_len; i++){
-    if(!train_link[i])
-      continue;
-
-    scheduler->removeEvent(train_link[i]->speed_event);
-
-    _free(train_link[i]);
-    train_link[i] = 0;
+      delete engines[i];
+    }
+    engines = (Engine **)_free(engines);
   }
 
-  train_link = (RailTrain **)_free(train_link);
+  if(cars){
+    for(int i = 0;i<cars_len;i++){
+      if(!cars[i])
+        continue;
 
-  for(int i = 0; i < train_P_cat_len; i++){
-    _free(train_P_cat[i].name);
-  }
-  for(int i = 0; i < train_C_cat_len; i++){
-    _free(train_C_cat[i].name);
+      delete cars[i];
+    }
+    cars = (Car **)_free(cars);
   }
 
-  _free(train_P_cat);
-  _free(train_C_cat);
+  if(trains_comp){
+    for(int i = 0;i<trains_comp_len;i++){
+      if(trains_comp[i]){
+        trains_comp[i]->name = (char *)_free(trains_comp[i]->name);
+        trains_comp[i]->composition = (struct train_comp *)_free(trains_comp[i]->composition);
+        trains_comp[i] = (struct train_composition *)_free(trains_comp[i]);
+      }
+    }
+    trains_comp = (train_composition **)_free(trains_comp);
+  }
+
+  if(train_link){
+    for(int i = 0; i < train_link_len; i++){
+      if(!train_link[i])
+        continue;
+
+      scheduler->removeEvent(train_link[i]->speed_event);
+
+      _free(train_link[i]);
+      train_link[i] = 0;
+    }
+
+    train_link = (RailTrain **)_free(train_link);
+  }
+
+  if(train_P_cat){
+    for(int i = 0; i < train_P_cat_len; i++){
+      _free(train_P_cat[i].name);
+    }
+    train_P_cat = (cat_conf *)_free(train_P_cat);
+  }
+
+
+  if(train_C_cat){
+    for(int i = 0; i < train_C_cat_len; i++){
+      _free(train_C_cat[i].name);
+    }
+    train_C_cat = (cat_conf *)_free(train_C_cat);
+  }
+
 
   trains_len = 0;
   engines_len = 0;
   cars_len = 0;
   trains_comp_len = 0;
 
-  SYS->trains_loaded = 0;
+  if(SYS)
+    SYS->trains_loaded = 0;
 }
 
 

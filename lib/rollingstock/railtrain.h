@@ -44,6 +44,7 @@ class RailTrain {
 
     Block * B; // FrontBlock
     std::vector<Block *> blocks = {}; // All blocks that are blocked by the train (detection and virtual)
+    std::vector<Block *> reservedBlocks = {}; // All blocks with switches that are reserved by the train.
 
     uint8_t link_id;
 
@@ -59,7 +60,7 @@ class RailTrain {
     uint8_t changing_speed:3;  // RAILTRAIN_SPEED_T_(INIT / CHANGING / UPDATE / DONE / FAIL)
     uint8_t control:2;         // TRAIN_(MANUAL / SEMI_AUTO / FULL_AUTO)
     uint8_t route:1;           // TRAIN_ONROUTE = true
-    uint8_t stop:1;            // 
+    uint8_t stopped:1;         // 
     uint8_t dir:1;             // TRAIN_FORWARD / TRAIN_REVERSE
 
     // Only the engine is detectable, cars added virtually
@@ -78,17 +79,26 @@ class RailTrain {
     void setBlock(Block *);
     void releaseBlock(Block *);
 
+    void reserveBlock(Block *);
+    void dereserveBlock(Block *);
+
     void initVirtualBlocks();
     void setVirtualBlocks();
 
     void moveForward(Block * B);
 
-    void inline setSpeed(uint16_t speed){
-      this->speed = speed;
-      if(this->type == RAILTRAIN_ENGINE_TYPE) this->p.E->setSpeed(this->speed);
-      else this->p.T->setSpeed(this->speed);
+    void inline setSpeed(uint16_t _speed){
+      speed = _speed;
+
+      if(speed) setStopped(0);
+      else setStopped(1);
+
+      if(!p.p) return;
+      else if(type == RAILTRAIN_ENGINE_TYPE) p.E->setSpeed(speed);
+      else p.T->setSpeed(speed);
     }
-    void setSpeedZ21(uint16_t speed);
+    void setSpeedZ21(uint16_t);
+    void setStopped(bool);
     void changeSpeed(uint16_t target_speed, uint8_t type);
 
     int link(int tid, char type);

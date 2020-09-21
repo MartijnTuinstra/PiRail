@@ -14,20 +14,16 @@
 
 #include "algorithm.h"
 #include "sim.h"
+#include "train.h"
+#include "modules.h"
 
 #include "rollingstock/railtrain.h"
 
 TEST_CASE( "Signal 1", "[SB-4.1]" ) {
-  if(Units){
-    for(uint8_t u = 0; u < unit_len; u++){
-      if(!Units[u])
-        continue;
-
-      delete Units[u];
-      Units[u] = 0;
-    }
-    _free(Units);
-  }
+  
+  unload_module_Configs();
+  unload_rolling_Configs();
+  clearAlgorithmQueue();
 
   Units = (Unit **)_calloc(30, Unit *);
   unit_len = 30;
@@ -99,16 +95,10 @@ TEST_CASE( "Signal 1", "[SB-4.1]" ) {
 }
 
 TEST_CASE( "Signal 2", "[SB-4.2]" ) {
-  if(Units){
-    for(uint8_t u = 0; u < unit_len; u++){
-      if(!Units[u])
-        continue;
-
-      delete Units[u];
-      Units[u] = 0;
-    }
-    _free(Units);
-  }
+  
+  unload_module_Configs();
+  unload_rolling_Configs();
+  clearAlgorithmQueue();
 
   Units = (Unit **)_calloc(30, Unit *);
   unit_len = 30;

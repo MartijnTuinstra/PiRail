@@ -66,7 +66,8 @@ void load_module_Configs(){
 }
 
 void unload_module_Configs(){
-  SYS->modules_loaded = 0;
+  if(SYS)
+    SYS->modules_loaded = 0;
 
   for(int i = 0;i<unit_len;i++){
     if(Units[i]){
@@ -74,6 +75,9 @@ void unload_module_Configs(){
       Units[i] = 0;
     }
   }
-  _free(Units);
-  _free(stations);
+
+  if(Units)
+    Units = (Unit **)_free(Units);
+  if(stations)
+    stations = (Station **)_free(stations);
 }

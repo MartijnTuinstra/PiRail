@@ -15,20 +15,15 @@
 
 #include "rollingstock/railtrain.h"
 
+#include "modules.h"
 #include "train.h"
 #include "algorithm.h"
 
-TEST_CASE( "Alg-1", "[Alg][Alg-1]"){
-  if(Units){
-    for(uint8_t u = 0; u < unit_len; u++){
-      if(!Units[u])
-        continue;
-
-      delete Units[u];
-      Units[u] = 0;
-    }
-    _free(Units);
-  }
+TEST_CASE( "Connector Algorithm", "[Alg][Alg-1]"){
+  
+  unload_module_Configs();
+  unload_rolling_Configs();
+  clearAlgorithmQueue();
 
   Units = (Unit **)_calloc(30, Unit *);
   unit_len = 30;
@@ -145,19 +140,12 @@ TEST_CASE( "Alg-1", "[Alg][Alg-1]"){
   }
 }
 
-TEST_CASE( "Alg-2", "[Alg][Alg-2]"){
+TEST_CASE( "Train Following", "[Alg][Alg-2]"){
   // Train Following
 
-  if(Units){
-    for(uint8_t u = 0; u < unit_len; u++){
-      if(!Units[u])
-        continue;
-
-      delete Units[u];
-      Units[u] = 0;
-    }
-    _free(Units);
-  }
+  unload_module_Configs();
+  unload_rolling_Configs();
+  clearAlgorithmQueue();
 
   Units = (Unit **)_calloc(30, Unit *);
   unit_len = 30;
@@ -340,7 +328,6 @@ TEST_CASE( "Alg-2", "[Alg][Alg-2]"){
       CHECK(((b != U->B[6] && b != U->B[2]) && (b == U->B[3] || b == U->B[4] || b == U->B[5])));
       CHECK(b->train == T);
     }
-
   }
 
   SECTION("V - Train with split detectables"){
@@ -417,6 +404,226 @@ TEST_CASE( "Alg-2", "[Alg][Alg-2]"){
       CHECK(((b != U->B[6] && b != U->B[1]) && (b == U->B[2] || b == U->B[3] || b == U->B[4] || b == U->B[5])));
       CHECK(b->train == T);
     }
-
   }
+}
+
+TEST_CASE( "Algorithm Switch Setter", "[Alg][Alg-3]"){
+  init_main();
+
+  unload_module_Configs();
+  unload_rolling_Configs();
+  clearAlgorithmQueue();
+
+  Units = (Unit **)_calloc(30, Unit *);
+  unit_len = 30;
+
+
+  char filename[30] = "./testconfigs/Alg-3.bin";
+  ModuleConfig config = ModuleConfig(filename);
+  load_rolling_Configs("./testconfigs/stock.bin");
+
+  config.read();
+
+  REQUIRE(config.parsed);
+
+  new Unit(&config);
+
+  Units[1]->on_layout = true;
+  Unit * U = Units[1];
+
+  U->link_all();
+
+  /*           Sw0/--->
+  // 1.0> 1.1> 1.2----> 1.3>
+  //
+  //           ---\Sw1
+  // 1.4> 1.5> ----1.6> 1.7>
+  //
+  //                       |---St0---|
+  //              Sw2/---> 1.11> 1.12>
+  // 1.08> 1.09> 1.10----> 1.13> 1.14>
+  //                       |---St1---|
+  //
+  //                             |---St2---|
+  //                    Sw5/---> 1.20> 1.21>
+  // 1.15> 1.16> ------1.17----> 1.18> 1.19>
+  //                  /Sw4       |---St3---| 
+  //              Sw3/           |---St4---|
+  // 1.22> 1.23> 1.24----------> 1.25> 1.26>
+  */
+
+  for(uint8_t i = 0; i < 9; i++){
+    Algor_process(U->B[i], _FORCE);
+  }
+
+  U->Sw[0]->setState(0);
+  U->Sw[1]->setState(0);
+  U->Sw[2]->setState(0);
+  U->Sw[3]->setState(0);
+  U->Sw[4]->setState(0);
+  U->Sw[5]->setState(0);
+  processAlgorQueue();
+
+  SECTION("I - Approaching S side"){
+    U->B[0]->setDetection(1);
+    Algor_process(U->B[0], _FORCE);
+
+    CHECK(U->Sw[0]->state == 0);
+
+    U->Sw[0]->setState(1); // Set Diverging
+    processAlgorQueue();
+
+    Algor_process(U->B[0], _FORCE);
+
+    CHECK(U->Sw[0]->state == 0);
+    CHECK(U->Sw[0]->Detection->switchReserved);
+    CHECK(U->Sw[0]->Detection->reservedBy == U->B[0]->train);
+
+    if(U->B[1]->train)
+      delete U->B[1]->train;
+  }
+
+  SECTION("II - Approaching s side"){
+    U->B[4]->setDetection(1);
+    Algor_process(U->B[4], _FORCE);
+
+    CHECK(U->Sw[1]->state == 0);
+
+    U->Sw[1]->setState(1); // Set Diverging
+    processAlgorQueue();
+
+    Algor_process(U->B[4], _FORCE);
+
+    CHECK(U->Sw[1]->state == 0);
+    CHECK(U->Sw[1]->Detection->switchReserved);
+    CHECK(U->Sw[1]->Detection->reservedBy == U->B[4]->train);
+
+    if(U->B[4]->train)
+      delete U->B[4]->train;
+  }
+
+  SECTION("III - Approaching S side with station"){
+    U->B[8]->setDetection(1);
+    U->B[14]->setDetection(1);
+    Algor_process(U->B[8], _FORCE);
+    Algor_process(U->B[14], _FORCE);
+
+    U->St[1]->train->setSpeed(0);
+
+    CHECK(U->B[10]->state == DANGER);
+
+    CHECK(U->Sw[2]->state == 0);
+
+    Algor_process(U->B[8], _FORCE);
+
+    CHECK(U->Sw[2]->state == 1);
+    CHECK(U->Sw[2]->Detection->switchReserved);
+    CHECK(U->Sw[2]->Detection->reservedBy == U->B[8]->train);
+
+    if(U->B[8]->train)
+      delete U->B[8]->train;
+    if(U->B[14]->train)
+      delete U->B[14]->train;
+  }
+
+  SECTION("IV - Approaching S side with station fully blocked"){
+    U->B[8]->setDetection(1);
+    U->B[12]->setDetection(1);
+    U->B[14]->setDetection(1);
+    Algor_process(U->B[8], _FORCE);
+    Algor_process(U->B[12], _FORCE);
+    Algor_process(U->B[14], _FORCE);
+
+    U->St[0]->train->setSpeed(0);
+    U->St[1]->train->setSpeed(0);
+
+    // CHECK(U->B[5]->state == DANGER);
+    // CHECK(U->B[9]->state == DANGER);
+
+    CHECK(U->Sw[2]->state == 0);
+
+    Algor_process(U->B[2], _FORCE);
+
+    CHECK(U->Sw[2]->state == 0);
+    CHECK(U->Sw[2]->Detection->state == DANGER);
+
+    CHECK(!U->Sw[2]->Detection->switchReserved);
+    // CHECK(U->Sw[1]->Detection->SwitchWrongState);
+
+    if(U->B[2]->train)
+      delete U->B[2]->train;
+    if(U->B[8]->train)
+      delete U->B[8]->train;
+    if(U->B[12]->train)
+      delete U->B[12]->train;
+  }
+
+  SECTION("V - Approaching s side with station and switchblock"){
+    U->B[15]->setDetection(1);
+    U->B[19]->setDetection(1);
+    Algor_process(U->B[19], _FORCE);
+    Algor_process(U->B[15], _FORCE);
+
+    U->Sw[4]->setState(1);
+    processAlgorQueue();
+
+    U->St[3]->train->setSpeed(0);
+
+    Algor_process(U->B[15], _FORCE);
+
+    CHECK(U->Sw[4]->state == 0);
+    CHECK(U->Sw[5]->state == 1);
+
+    CHECK(U->Sw[4]->Detection->switchReserved);
+    CHECK(U->Sw[4]->Detection->reservedBy == U->B[15]->train);
+
+    if(U->B[15]->train)
+      delete U->B[15]->train;
+    if(U->B[19]->train)
+      delete U->B[19]->train;
+  }
+
+  SECTION("VI- Approaching S side with full station and switchblock"){
+    logger.setlevel_stdout(INFO);
+    U->B[15]->setDetection(1);
+    U->B[19]->setDetection(1);
+    U->B[21]->setDetection(1);
+    Algor_process(U->B[15], _FORCE);
+    Algor_process(U->B[19], _FORCE);
+    Algor_process(U->B[21], _FORCE);
+
+    U->Sw[4]->setState(1, 0);
+    Algor_process(U->B[16], 0);
+    Algor_process(U->B[17], 0);
+    Algor_process(U->B[18], 0);
+    Algor_process(U->B[19], 0);
+    Algor_process(U->B[20], 0);
+    Algor_process(U->B[21], 0);
+
+    U->St[2]->train->setSpeed(0);
+    U->St[3]->train->setSpeed(0);
+
+    CHECK(U->Sw[4]->state == 1);
+    CHECK(U->Sw[5]->state == 0);
+
+    Algor_process(U->B[15], _FORCE);
+
+    CHECK(U->Sw[4]->state == 1);
+    CHECK(U->Sw[5]->state == 0);
+
+    CHECK(!U->Sw[0]->Detection->switchReserved);
+
+    if(U->B[15]->train)
+      delete U->B[15]->train;
+    if(U->B[19]->train)
+      delete U->B[19]->train;
+    if(U->B[21]->train)
+      delete U->B[21]->train;
+  }
+
+  // SECTION("V - Approaching s side with route"){}
+
+  // SECTION("VI - Approaching S side with route"){}
+
+  logger.setlevel_stdout(NONE);
 }

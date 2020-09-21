@@ -1,3 +1,5 @@
+#include <algorithm>
+
 #include "path.h"
 #include "logger.h"
 
@@ -16,62 +18,75 @@ Path::Path(Block * B){
   if(B->path)
     loggerf(CRITICAL, "Block has allready a path");
 
-  this->direction = B->dir & 0b1;
+  direction = B->dir & 0b1;
 
-  this->next = &B->next;
-  this->prev = &B->prev;
+  next = &B->next;
+  prev = &B->prev;
 
-  this->front = B;
-  this->front_direction = this->direction;
+  front = B;
+  front_direction = direction;
 
-  this->end = B;
-  this->end_direction = this->direction;
+  end = B;
+  end_direction = direction;
 
-  this->Blocks.clear();
-  this->Blocks.push_back(B);
+  Blocks.clear();
+  Blocks.push_back(B);
 
   B->path = this;
   pathlist.push_back(this);
+
+  updateEntranceExit();
 }
 
 Path::~Path(){
   char buffer[100];
-  this->sprint(buffer);
+  sprint(buffer);
   loggerf(DEBUG, "Path destroyed %s", buffer);
+}
+
+void Path::updateEntranceExit(){
+  // Set Entrance/Exit right
+  if(!direction){
+    Entrance = end;
+    Exit = front;
+  }
+  else{
+    Entrance = front;
+    Exit = end;
+  }
 }
 
 void Path::add(Block * B, bool side){
   loggerf(DEBUG, "Add block to path %02d:%02d", B->module, B->id);
-  if(side == NEXT){
-    if(B->path){
-      if(B->path != this){
-        this->join(B->path);
-        return;
-      }
-      else{
-        return;
-      }
+
+  // If block has allready a path
+  //   join if different
+  //   stop if same
+  if(B->path){
+    if(B->path != this){
+      join(B->path);
+      updateEntranceExit();
     }
-    this->Blocks.push_back(B);
-    this->front = B;
-    this->front_direction = B->dir;
-    B->path = this;
+
+    return;
+  }
+
+  // Add block to block list
+  Blocks.push_back(B);
+
+  // Add block to the right side
+  if(side == NEXT){
+    front = B;
+    front_direction = B->dir;
   }
   else if(side == PREV){
-    if(B->path){
-      if(B->path != this){
-        this->join(B->path);
-        return;
-      }
-      else{
-        return;
-      }
-    }
-    this->Blocks.push_back(B);
-    this->end = B;
-    this->end_direction = B->dir;
-    B->path = this;
+    end = B;
+    end_direction = B->dir;
   }
+
+  // Link path from block
+  B->path = this;
+  updateEntranceExit();
 }
 
 void Path::join(Path * P){
@@ -276,16 +291,18 @@ void Path::sprint(char * string){
   for(auto b: this->Blocks){
     bufferptr += sprintf(bufferptr, "%02d:%02d ", b->module, b->id);
   }
-  sprintf(string, "---%02d->>\n%02d:%02d:%02x [%02d:%02d {%s} %02d:%02d] %02d:%02d:%02x", this->Blocks.size(), this->prev->module, this->prev->id, this->prev->type,
-                                                                                    this->end->module, this->end->id,
-                                                                                    buffer,
-                                                                                    this->front->module, this->front->id,
-                                                                                    this->next->module, this->next->id, this->next->type);
+  bufferptr = string;
+
+  string += sprintf(string, "%2i:%2i ---%02d->> %2i:%2i\n", Entrance->module, Entrance->id, Blocks.size(), Exit->module, Exit->id);
+
+  string += sprintf(string, "%02d:%02d:%02x ", prev->module, prev->id, prev->type);
+  string += sprintf(string, "[%02d:%02d {%s} %02d:%02d]", end->module, end->id, buffer, front->module, front->id);
+  string += sprintf(string, " %02d:%02d:%02x", next->module, next->id, next->type);
 }
 
 void Path::print(){
   char buffer[200];
-  this->sprint(buffer);
+  sprint(buffer);
   printf("%s\n", buffer);
 }
 
@@ -310,6 +327,8 @@ void Path::reverse(){
     T->dir ^= 1;
     // T->setSpeedZ21(0);
   }
+
+  std::swap(Entrance, Exit);
 }
 
 void Path::reserve(){

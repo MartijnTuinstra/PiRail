@@ -41,7 +41,7 @@ Station::Station(int module, int id, struct station_conf conf){
     this->parent = Units[this->module]->St[conf.parent];
     Units[this->module]->St[conf.parent]->childs.push_back(this);
   }
-  else
+  else if(conf.parent != 0xFFFF)
     loggerf(WARNING, "Failed to link station '%s' to parent %d", this->name, conf.parent);
 
   this->blocks_len = conf.nr_blocks;
@@ -73,4 +73,55 @@ Station::~Station(){
 
   _free(this->name);
   _free(this->blocks);
+}
+
+void Station::occupy(RailTrain * T){
+  if(parent)
+    parent->occupiedChild = true;
+
+  occupied = true;
+
+  train = T;
+}
+
+void Station::release(){
+  for(uint8_t i = 0; i < blocks_len; i++){
+    if(!blocks[i])
+      break;
+
+    if(blocks[i]->blocked)
+      return;
+  }
+
+  occupied = false;
+  train = 0;
+
+  if(parent)
+    parent->releaseParent();
+}
+
+void Station::releaseParent(){
+  for(auto st: childs){
+    if(st->occupied){
+      return;
+    }
+  }
+
+  occupiedChild = false;
+}
+
+void Station::setStoppedTrain(bool stop){
+  stoppedTrain = stop;
+
+  if(!parent)
+    return;
+
+  if(!stop){
+    for(auto st: parent->childs){
+      if(st->stoppedTrain)
+        return;
+    }
+  }
+
+  parent->stoppedTrain = stop;
 }

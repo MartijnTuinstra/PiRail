@@ -611,8 +611,9 @@ void ModuleConfig::print(char ** cmds, uint8_t cmd_len){
 
   if(mask & 128){
     printf( "Station\n");
-    printf( "parent\ttype\tName\t\tblocks\n");
+    printf( "id\tparent\ttype\tName\t\tblocks\n");
     for(int i = 0; i < this->header.Stations; i++){
+      printf("%i\t", i);
       print_Stations(this->Stations[i]);
     }
   }

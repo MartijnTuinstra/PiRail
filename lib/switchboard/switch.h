@@ -102,6 +102,7 @@ class Switch {
     Block * Next_Block(enum link_types type, int flags, int level);
     uint NextList_Block(Block ** blocks, uint8_t block_counter, enum link_types type, int flags, int length);
 
+    void setState(uint8_t _state);
     void setState(uint8_t state, uint8_t lock);
     void updateState(uint8_t state);
 };
@@ -110,8 +111,9 @@ class Switch {
 int throw_multiple_switches(uint8_t len, char * data);
 
 int Switch_Check_Path(void * p, struct rail_link link, int flags);
-int Switch_Reserve_Path(void * p, struct rail_link link, int flags);
-int Switch_Set_Path(void * p, struct rail_link link, int flags);
+int Switch_Reserve_Path(RailTrain * T, void * p, struct rail_link link, int flags);
+int Switch_Set_Free_Path(void * p, struct rail_link link, int flags);
+int Switch_Set_Route(struct pathinstruction * routeInstruction, void * p, struct rail_link link, int flags);
 
 
 #endif

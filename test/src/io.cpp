@@ -12,18 +12,13 @@
 #include "switchboard/unit.h"
 
 #include "IO.h"
+#include "train.h"
+#include "modules.h"
 
 TEST_CASE( "IO  Creation and linking", "[IO][IO-1]" ) {
-  if(Units){
-    for(uint8_t u = 0; u < unit_len; u++){
-      if(!Units[u])
-        continue;
-
-      delete Units[u];
-      Units[u] = 0;
-    }
-    _free(Units);
-  }
+  
+  unload_module_Configs();
+  unload_rolling_Configs();
 
   Units = (Unit **)_calloc(30, Unit *);
   unit_len = 30;
@@ -81,16 +76,9 @@ TEST_CASE( "IO  Creation and linking", "[IO][IO-1]" ) {
 }
 
 TEST_CASE( "IO Output", "[IO][IO-2]"){
-  if(Units){
-    for(uint8_t u = 0; u < unit_len; u++){
-      if(!Units[u])
-        continue;
-
-      delete Units[u];
-      Units[u] = 0;
-    }
-    _free(Units);
-  }
+  
+  unload_module_Configs();
+  unload_rolling_Configs();
 
   Units = (Unit **)_calloc(30, Unit *);
   unit_len = 30;

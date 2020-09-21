@@ -1,6 +1,7 @@
 #include "switchboard/switch.h"
 #include "switchboard/msswitch.h"
 #include "switchboard/signals.h"
+#include "switchboard/station.h"
 
 #include "mem.h"
 #include "logger.h"
@@ -266,37 +267,41 @@ uint Switch::NextList_Block(Block ** blocks, uint8_t block_counter, enum link_ty
   return block_counter;
 }
 
+void Switch::setState(uint8_t _state){
+  setState(_state, 1);
+}
+
 void Switch::setState(uint8_t state, uint8_t lock){
   loggerf(TRACE, "Switch::setState (%x, %i, %i)", (unsigned int)this, state, lock);
 
-  if(this->Detection && (this->Detection->state == BLOCKED || this->Detection->state == RESERVED_SWITCH))
+  if(Detection && (Detection->state == BLOCKED || Detection->state == RESERVED_SWITCH))
     return; // Switch is blocked
 
-  Algor_Set_Changed(&this->Detection->Alg);
-  putList_AlgorQueue(this->Detection->Alg, 0);
+  Algor_Set_Changed(&Detection->Alg);
+  putList_AlgorQueue(Detection->Alg, 0);
 
-  this->updateState(state);
+  updateState(state);
 
-  this->Detection->AlgorSearch(0);
+  Detection->AlgorSearch(0);
 
-  Algor_Set_Changed(&this->Detection->Alg);
+  Algor_Set_Changed(&Detection->Alg);
 
-  this->Detection->algorchanged = 0; // Block is allready search should not be researched
+  Detection->algorchanged = 0; // Block is allready search should not be researched
   
-  putList_AlgorQueue(this->Detection->Alg, 0);
+  putList_AlgorQueue(Detection->Alg, 0);
 
-  putAlgorQueue(this->Detection, lock);
+  putAlgorQueue(Detection, lock);
 }
 
-void Switch::updateState(uint8_t state){
-  this->state = state;
-  this->updatedState = true;
+void Switch::updateState(uint8_t _state){
+  state = _state;
+  updatedState = true;
 
-  for(auto Sig: this->Signals){
+  for(auto Sig: Signals){
     Sig->switchUpdate();
   }
 
-  Units[this->module]->switch_state_changed |= 1;
+  Units[module]->switch_state_changed |= 1;
 }
 
 
@@ -360,8 +365,8 @@ int throw_multiple_switches(uint8_t len, char * msg){
   return 1;
 }
 
-int Switch_Set_Path(void * p, struct rail_link link, int flags){
-  loggerf(TRACE, "Switch_Set_Path (%x, %x, %i)", (unsigned int)p, (unsigned int)&link, flags);
+int Switch_Set_Free_Path(void * p, struct rail_link link, int flags){
+  loggerf(DEBUG, "Switch_Set_Path (%x, %x, %i)", (unsigned int)p, (unsigned int)&link, flags);
   if((flags & SWITCH_CARE) == 0){
     return 1;
   }
@@ -373,7 +378,7 @@ int Switch_Set_Path(void * p, struct rail_link link, int flags){
       return 0;
     }
   }
-  else if (link.type >= RAIL_LINK_MA && link.type <= RAIL_LINK_MB) {
+  else if (link.type >= RAIL_LINK_MA && link.type <= RAIL_LINK_MB_inside) {
     if((link.p.MSSw)->Detection && (link.p.Sw)->Detection->state == RESERVED_SWITCH){
       loggerf(ERROR, "Switch allready Reserved");
       return 0;
@@ -384,71 +389,96 @@ int Switch_Set_Path(void * p, struct rail_link link, int flags){
   if(link.type == RAIL_LINK_S){
     // Go to next switch
     Switch * Sw = link.p.Sw;
-    if(Sw->state == 0 && Sw->str.type != RAIL_LINK_R && Sw->str.type != 'D'){
-      return Switch_Set_Path(Sw, Sw->str, flags);
-    }
-    else if(Sw->state == 1 && Sw->div.type != RAIL_LINK_R && Sw->div.type != 'D'){
-      return Switch_Set_Path(Sw, Sw->div, flags);
-    }
+    loggerf(INFO, "Switch S %i", Sw->id);
+    bool str, div;
+    str = Switch_Set_Free_Path(Sw, Sw->str, flags);
+    div = Switch_Set_Free_Path(Sw, Sw->div, flags);
+
+    loggerf(INFO, "SwitchSetFreePath: str: %i, div: %i", str, div);
+
+    if((Sw->state == 0 && str) || (Sw->state == 1 && div))
+      return 1;
+
+    if(str)
+      Sw->setState(0);
+    else if(div)
+      Sw->setState(1);
+    else
+      return 0;
+
+    return 1;
   }
   else if(link.type == RAIL_LINK_s){
     // Check if switch is in correct state
     // and continue to next switch
-    Switch * N = link.p.Sw;
-    loggerf(TRACE, "set s %i (state: %i, str.p: %x, div.p: %x)", N->id, N->state, (unsigned int)N->str.p.p, (unsigned int)N->div.p.p);
-    if(N->state == 0){
-      if(N->str.p.p != p)
-        N->setState(1, 1);
+    Switch * Sw = link.p.Sw;
+    loggerf(INFO, "Switch s %i", Sw->id);
+    bool path = Switch_Set_Free_Path(Sw, Sw->app, flags);
 
-      // if(N->str.p != p)
-      //   return 0; // Failed to set switch
+    if(!path)
+      return path;
 
-      return Switch_Set_Path(N, N->app, flags);
+    loggerf(INFO, "set s %i (state: %i, str.p: %x, div.p: %x)", Sw->id, Sw->state, (unsigned int)Sw->str.p.p, (unsigned int)Sw->div.p.p);
+    if(Sw->state == 0){
+      if(Sw->str.p.p != p)
+        Sw->setState(1, 1);
     }
-    else if(N->state == 1){
-      if(N->div.p.p != p)
-        N->setState(0, 1);
-
-      // if(N->div.p != p)
-      //   return 0; // Failed to set switch
-
-      return Switch_Set_Path(N, N->app, flags);
+    else if(Sw->state == 1){
+      if(Sw->div.p.p != p)
+        Sw->setState(0, 1);
     }
+
+    return path;
   }
-  else if(link.type == RAIL_LINK_MA){
-    loggerf(ERROR, "IMPLEMENT");
-    MSSwitch * N = link.p.MSSw;
-    if(N->sideB[N->state].p.p == p){
-      return 1;
-    }
-  }
-  else if(link.type == RAIL_LINK_MB){
-    loggerf(ERROR, "IMPLEMENT");
-    MSSwitch * N = link.p.MSSw;
-    if(N->sideA[N->state].p.p == p){
-      return 1;
-    }
-  }
+  // else if(link.type == RAIL_LINK_MA){
+  //   loggerf(ERROR, "IMPLEMENT");
+  //   MSSwitch * N = link.p.MSSw;
+  //   if(N->sideB[N->state].p.p == p){
+  //     return 1;
+  //   }
+  // }
+  // else if(link.type == RAIL_LINK_MB){
+  //   loggerf(ERROR, "IMPLEMENT");
+  //   MSSwitch * N = link.p.MSSw;
+  //   if(N->sideA[N->state].p.p == p){
+  //     return 1;
+  //   }
+  // }
 
   else if (link.type == RAIL_LINK_R){
     Block * B = link.p.B;
-    loggerf(TRACE, "check B %i", B->id);
-    if(B->type != NOSTOP)
-      return 1; // Train can stop on the block, so a possible path
+    loggerf(INFO, "check B %i", B->id);
+
+    // Block is part of station that is blocked by a train stopped on it. Not a solution
+    if(B->type == STATION && B->station && (B->station->stoppedTrain || 
+                                            (B->station->parent && B->station->parent->stoppedTrain)) ){
+      loggerf(INFO, "STATION FAIL");
+      return 0;
+    }
+
+    // If Block is the exit of a path
+    else if(B->path && B != B->path->Entrance && B->path->reserved){
+      loggerf(INFO, "PATH FAIL");
+      return 0;
+    }
+
+    // Train can stop on the block, so a solution
+    else if(B->type != NOSTOP){
+      loggerf(INFO, "NOSTOP SUCCESS");
+      return 1; 
+    }
 
     if(B->next.p.p == p)
-      return Switch_Set_Path(B, B->prev, flags);
+      return Switch_Set_Free_Path(B, B->prev, flags);
     else if(B->prev.p.p == p)
-      return Switch_Set_Path(B, B->next, flags);
+      return Switch_Set_Free_Path(B, B->next, flags);
   }
-  else if(link.type == 'D'){
-    return 1;
-  }
+
   return 0;
 }
 
-int Switch_Reserve_Path(void * p, struct rail_link link, int flags){
-  loggerf(TRACE, "reserve_switch_path (%x, %x, %i)", (unsigned int)p, (unsigned int)&link, flags);
+int Switch_Reserve_Path(RailTrain * T, void * p, struct rail_link link, int flags){
+  loggerf(TRACE, "reserve_switch_path (%x, %x, %x, %i)", (unsigned int)T, (unsigned int)p, (unsigned int)&link, flags);
   if((flags & SWITCH_CARE) == 0){
     return 1;
   }
@@ -460,17 +490,16 @@ int Switch_Reserve_Path(void * p, struct rail_link link, int flags){
     Block * DB = Sw->Detection;
 
     DB->state = RESERVED_SWITCH;
-    DB->reserved = 1;
+    if(DB->reservedBy != T)
+      T->reserveBlock(DB);
     DB->statechanged = 1;
     Units[DB->module]->block_state_changed = 1;
     loggerf(TRACE, "Set switch %02i:%02i to RESERVED", Sw->module, Sw->id);
 
-    if(Sw->state == 0 && Sw->str.type != RAIL_LINK_R && Sw->str.type != 'D'){
-      return Switch_Reserve_Path(Sw, Sw->str, flags);
-    }
-    else if(Sw->state == 1 && Sw->div.type != RAIL_LINK_R && Sw->div.type != 'D'){
-      return Switch_Reserve_Path(Sw, Sw->div, flags);
-    }
+    if(Sw->state == 0)
+      return Switch_Reserve_Path(T, Sw, Sw->str, flags);
+    else if(Sw->state == 1)
+      return Switch_Reserve_Path(T, Sw, Sw->div, flags);
   }
   else if(link.type == RAIL_LINK_s){
     // Check if switch is in correct state
@@ -479,12 +508,13 @@ int Switch_Reserve_Path(void * p, struct rail_link link, int flags){
     Block * DB = Sw->Detection;
 
     DB->state = RESERVED_SWITCH;
-    DB->reserved = 1;
+    if(DB->reservedBy != T)
+      T->reserveBlock(DB);
     DB->statechanged = 1;
     Units[DB->module]->block_state_changed = 1;
     loggerf(TRACE, "Set switch %02i:%02i to RESERVED", Sw->module, Sw->id);
 
-    return Switch_Reserve_Path(Sw, Sw->app, flags);
+    return Switch_Reserve_Path(T, Sw, Sw->app, flags);
   }
   else if(link.type == RAIL_LINK_MA){
     loggerf(ERROR, "IMPLEMENT");
@@ -508,9 +538,9 @@ int Switch_Reserve_Path(void * p, struct rail_link link, int flags){
       return 1; // Train can stop on the block, so a possible path
 
     if(B->next.p.p == p)
-      return Switch_Set_Path(B, B->prev, flags);
+      return Switch_Reserve_Path(T, B, B->prev, flags);
     else if(B->prev.p.p == p)
-      return Switch_Set_Path(B, B->next, flags);
+      return Switch_Reserve_Path(T, B, B->next, flags);
   }
   else if(link.type == 'D'){
     return 1;
@@ -521,10 +551,10 @@ int Switch_Reserve_Path(void * p, struct rail_link link, int flags){
 int Switch_Check_Path(void * p, struct rail_link link, int flags){
   // Check if switches are set to a good path
 
-  loggerf(TRACE, "Switch_Check_Path (%x, %x, %i)", (unsigned int)p, (unsigned int)&link, flags);
+  loggerf(INFO, "Switch_Check_Path (%x, %x, %i)", (unsigned int)p, (unsigned int)&link, flags);
   if(!link.p.p){
     loggerf(ERROR, "Empty LINK {%i:%i - %i}", link.module, link.id, link.type);
-    return 1;
+    return 0;
   }
 
   if((flags & SWITCH_CARE) == 0){
@@ -532,7 +562,7 @@ int Switch_Check_Path(void * p, struct rail_link link, int flags){
   }
   else if(link.type == RAIL_LINK_S){
     Switch * Sw = link.p.Sw;
-    loggerf(TRACE, "check S %i (state: %i)", Sw->id, Sw->state);
+    loggerf(INFO, "check S %i (state: %i)", Sw->id, Sw->state);
     if(Sw->state == 0){
       return Switch_Check_Path(Sw, Sw->str, flags);
     }
@@ -542,7 +572,7 @@ int Switch_Check_Path(void * p, struct rail_link link, int flags){
   }
   else if(link.type == RAIL_LINK_s){
     Switch * N = link.p.Sw;
-    loggerf(TRACE, "check s %i (state: %i, str.p: %x, div.p: %x)", N->id, N->state, (unsigned int)N->str.p.p, (unsigned int)N->div.p.p);
+    loggerf(INFO, "check s %i (state: %i, str.p: %x, div.p: %x)", N->id, N->state, (unsigned int)N->str.p.p, (unsigned int)N->div.p.p);
     if(N->state == 0 && N->str.p.p == p){
       return Switch_Check_Path(N, N->app, flags);
     }
@@ -570,9 +600,21 @@ int Switch_Check_Path(void * p, struct rail_link link, int flags){
 
     Block * B = link.p.B;
 
-    loggerf(TRACE, "check B %i", B->id);
-    if(B->type != NOSTOP)
-      return 1; // Train can stop on the block, so a possible path
+    loggerf(INFO, "check B %i", B->id);
+
+    // Block is part of station that is blocked by a train stopped on it. Not a solution
+    if(B->type == STATION && B->station && (B->station->stoppedTrain || 
+                                            (B->station->parent && B->station->parent->stoppedTrain)) )
+      return 0;
+
+    // If Block is the exit of a path
+    else if(B->path && B != B->path->Entrance && B->path->reserved)
+      return 0;
+
+    // Train can stop on the block, so a solution
+    else if(B->type != NOSTOP)
+      return 1; 
+
 
     if(B->next.p.p == p)
       return Switch_Check_Path(B, B->prev, flags);

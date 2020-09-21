@@ -9,18 +9,16 @@
 #include "switchboard/msswitch.h"
 #include "switchboard/unit.h"
 
+#include "train.h"
+#include "modules.h"
+#include "algorithm.h"
+
 
 TEST_CASE( "Switch Link", "[SB-2.1]" ) {
-  if(Units){
-    for(uint8_t u = 0; u < unit_len; u++){
-      if(!Units[u])
-        continue;
-
-      delete Units[u];
-      Units[u] = 0;
-    }
-    _free(Units);
-  }
+  
+  unload_module_Configs();
+  unload_rolling_Configs();
+  clearAlgorithmQueue();
 
   Units = (Unit **)_calloc(30, Unit *);
   unit_len = 30;

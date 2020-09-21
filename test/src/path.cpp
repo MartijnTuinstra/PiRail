@@ -12,20 +12,14 @@
 
 #include "rollingstock/railtrain.h"
 
+#include "train.h"
+#include "modules.h"
 #include "path.h"
 
 TEST_CASE( "Path Construction", "[PATH][PATH-1]" ) {
 
-  if(Units){
-    for(uint8_t u = 0; u < unit_len; u++){
-      if(!Units[u])
-        continue;
-
-      delete Units[u];
-      Units[u] = 0;
-    }
-    _free(Units);
-  }
+  unload_module_Configs();
+  unload_rolling_Configs();
 
   Units = (Unit **)_calloc(30, Unit *);
   unit_len = 30;
@@ -78,10 +72,18 @@ TEST_CASE( "Path Construction", "[PATH][PATH-1]" ) {
   */
   Path * P[10] = {0};
 
+
   SECTION("Same direction blocks"){
     P[0] = U->B[0]->path;
     CHECK(P[0] == U->B[1]->path);
     CHECK(P[0] == U->B[2]->path);
+
+    CHECK(P[0]->front == U->B[2]);
+    CHECK(P[0]->end == U->B[0]);
+    CHECK(P[0]->Entrance == U->B[0]);
+    CHECK(P[0]->Exit == U->B[2]);
+    CHECK(P[0]->next == &U->B[2]->next);
+    CHECK(P[0]->prev == &U->B[0]->prev);
   }
 
   SECTION("Blocks arround switch"){
@@ -210,16 +212,8 @@ TEST_CASE( "Path Construction", "[PATH][PATH-1]" ) {
 
 TEST_CASE( "Path Reverse", "[PATH][PATH-2]") {
 
-  if(Units){
-    for(uint8_t u = 0; u < unit_len; u++){
-      if(!Units[u])
-        continue;
-
-      delete Units[u];
-      Units[u] = 0;
-    }
-    _free(Units);
-  }
+  unload_module_Configs();
+  unload_rolling_Configs();
 
   Units = (Unit **)_calloc(30, Unit *);
   unit_len = 30;
@@ -254,6 +248,12 @@ TEST_CASE( "Path Reverse", "[PATH][PATH-2]") {
 
   P->reverse();
 
+  CHECK(P->Entrance == U->B[10]);
+  CHECK(P->Exit == U->B[0]);
+
+  CHECK(P->next == &U->B[0]->prev);
+  CHECK(P->prev == &U->B[10]->next);
+
   CHECK(P->direction == 1);
 
   for(uint8_t i = 0; i < 11; i++)
@@ -278,16 +278,8 @@ TEST_CASE( "Path Reverse", "[PATH][PATH-2]") {
 
 TEST_CASE( "Path Reserve", "[PATH][PATH-3]") {
 
-  if(Units){
-    for(uint8_t u = 0; u < unit_len; u++){
-      if(!Units[u])
-        continue;
-
-      delete Units[u];
-      Units[u] = 0;
-    }
-    _free(Units);
-  }
+  unload_module_Configs();
+  unload_rolling_Configs();
 
   Units = (Unit **)_calloc(30, Unit *);
   unit_len = 30;

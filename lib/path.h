@@ -12,8 +12,11 @@ class Path {
     bool direction;
     bool reserved = 0;
 
-    struct rail_link * next;
-    struct rail_link * prev;
+    Block * Entrance;
+    struct rail_link * prev; // Link to block before Entrance
+
+    Block * Exit;
+    struct rail_link * next; // Link to block after Exit
 
     Block * front;
     bool front_direction;
@@ -26,6 +29,7 @@ class Path {
     Path(Block * B);
     ~Path();
 
+    void updateEntranceExit();
     void add(Block * B, bool side);
     void join(Path * P);
     void find();

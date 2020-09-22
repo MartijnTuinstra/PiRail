@@ -58,41 +58,49 @@ TEST_CASE( "Path Finding", "[PF][PF-1]"){
   SECTION("I - Find Simple blocks"){
     auto route = PathFinding::find(U->B[3], U->B[6]);
 
-    CHECK(route.found_forward);
-    CHECK(!route.found_reverse);
+    CHECK(route->found_forward);
+    CHECK(!route->found_reverse);
+
+    delete route;
   }
 
   SECTION("II - Find Simple Switch S side"){
     auto route = PathFinding::find(U->B[3], U->B[9]);
 
-    CHECK(route.found_forward);
-    CHECK(!route.found_reverse);
+    CHECK(route->found_forward);
+    CHECK(!route->found_reverse);
 
-    CHECK(route.Sw_S[U->Sw[1]->uid]);
+    CHECK(route->Sw_S[U->Sw[1]->uid]);
+
+    delete route;
   }
 
   SECTION("III - Find Simple Switch s side"){
     auto route = PathFinding::find(U->B[1], U->B[6]);
     // struct paths path = pathfinding(U->B[3], U->B[6]);
 
-    CHECK(route.found_forward);
-    CHECK(!route.found_reverse);
+    CHECK(route->found_forward);
+    CHECK(!route->found_reverse);
 
-    CHECK(route.Sw_s[U->Sw[0]->uid]);
+    CHECK(route->Sw_s[U->Sw[0]->uid]);
+
+    delete route;
   }
 
   SECTION("IV - Find Circle"){
     auto route = PathFinding::find(U->B[16], U->B[13]);
     // struct paths path = pathfinding(U->B[3], U->B[6]);
 
-    CHECK(route.found_forward);
-    CHECK(route.found_reverse);
+    CHECK(route->found_forward);
+    CHECK(route->found_reverse);
 
-    REQUIRE(route.Sw_S[U->Sw[3]->uid]);
-    CHECK(route.Sw_S[U->Sw[3]->uid]->nrOptions == 2);
+    REQUIRE(route->Sw_S[U->Sw[3]->uid]);
+    CHECK(route->Sw_S[U->Sw[3]->uid]->nrOptions == 2);
 
-    REQUIRE(route.Sw_s[U->Sw[2]->uid]);
-    CHECK(route.Sw_s[U->Sw[2]->uid]->nrOptions == 1);
+    REQUIRE(route->Sw_s[U->Sw[2]->uid]);
+    CHECK(route->Sw_s[U->Sw[2]->uid]->nrOptions == 1);
+
+    delete route;
   }
 
   SECTION("IV - Find Circle with OneWay"){
@@ -100,14 +108,16 @@ TEST_CASE( "Path Finding", "[PF][PF-1]"){
     auto route = PathFinding::find(U->B[16], U->B[13]);
     // struct paths path = pathfinding(U->B[3], U->B[6]);
 
-    CHECK(route.found_forward);
-    CHECK(route.found_reverse);
+    CHECK(route->found_forward);
+    CHECK(route->found_reverse);
 
-    REQUIRE(route.Sw_S[U->Sw[3]->uid]);
-    CHECK(route.Sw_S[U->Sw[3]->uid]->nrOptions == 1);
+    REQUIRE(route->Sw_S[U->Sw[3]->uid]);
+    CHECK(route->Sw_S[U->Sw[3]->uid]->nrOptions == 1);
 
-    REQUIRE(route.Sw_s[U->Sw[2]->uid]);
-    CHECK(route.Sw_s[U->Sw[2]->uid]->nrOptions == 1);
+    REQUIRE(route->Sw_s[U->Sw[2]->uid]);
+    CHECK(route->Sw_s[U->Sw[2]->uid]->nrOptions == 1);
+
+    delete route;
   }
 
   logger.setlevel_stdout(NONE);

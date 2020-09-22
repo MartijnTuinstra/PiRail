@@ -24,7 +24,7 @@ const char * rail_states_string[8] = {
 };
 
 Block::Block(uint8_t _module, struct s_block_conf block){
-  loggerf(DEBUG, "Block Constructor %02i:%02i", module, block.id);
+  loggerf(DEBUG, "Block Constructor %02i:%02i", _module, block.id);
   memset(this, 0, sizeof(Block));
   module = _module;
   id = block.id;

@@ -18,6 +18,7 @@
 #include "modules.h"
 #include "train.h"
 #include "algorithm.h"
+#include "pathfinding.h"
 
 TEST_CASE( "Connector Algorithm", "[Alg][Alg-1]"){
   init_main();
@@ -595,6 +596,29 @@ TEST_CASE( "Algorithm Switch Setter", "[Alg][Alg-3]"){
       delete U->B[19]->train;
     if(U->B[21]->train)
       delete U->B[21]->train;
+  }
+
+  SECTION("VII - Approaching switch with route"){
+    logger.setlevel_stdout(INFO);
+    U->B[22]->setDetection(1);
+    Algor_process(U->B[22], _FORCE);
+
+    REQUIRE(U->B[24]->state != RESERVED_SWITCH);
+
+    auto route = PathFinding::find(U->B[22], U->B[21]);
+
+    REQUIRE(route->found_forward);
+    REQUIRE(U->B[22]->train);
+
+    U->B[22]->train->route = route;
+    U->B[22]->train->onroute = true;
+
+    Algor_process(U->B[22], _FORCE);
+
+    CHECK(U->Sw[3]->state == 1);
+    CHECK(U->Sw[4]->state == 1);
+    CHECK(U->Sw[5]->state == 1);
+
   }
 
   // SECTION("V - Approaching s side with route"){}

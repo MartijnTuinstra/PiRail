@@ -39,11 +39,9 @@ void Manager::addUnit(Unit * U){
   Units.insertAt(U, U->module);
 }
 uint16_t Manager::addBlock(Block * B){
-  loggerf(WARNING, "addBlock %2i:%2i at %i", B->module, B->id, uniqueBlock.lastIndex);
   return uniqueBlock.push_back(B);
 }
 uint16_t Manager::addSwitch(Switch * Sw){
-  loggerf(WARNING, "addSwitch %2i:%2i at %i", Sw->module, Sw->id, uniqueSwitch.lastIndex);
   return uniqueSwitch.push_back(Sw);
 }
 uint16_t Manager::addMSSwitch(MSSwitch * MSSw){

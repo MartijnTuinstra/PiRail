@@ -831,8 +831,11 @@ void Algor_Switch_Checker(Algor_Blocks * ABs, int debug){
     if((i >  0 && link->type == RAIL_LINK_S) || (link->type >= RAIL_LINK_s && link->type <= RAIL_LINK_MB_inside)){
       bool reservePath = false;
 
-      if(B->train && B->train->route){
+      if(B->train && B->train->onroute && B->train->route){
         loggerf(WARNING, "SWITCH ROUTE CHECKING");
+        if (!Switch_Check_Path(B->train->route, tB, *link, NEXT | SWITCH_CARE)){
+          reservePath = Switch_Set_Free_Path(B->train->route, tB, *link, NEXT | SWITCH_CARE);
+        }
       }
       else{
         loggerf(WARNING, "Switch CHECKING");
@@ -841,6 +844,7 @@ void Algor_Switch_Checker(Algor_Blocks * ABs, int debug){
         }
 
         if(reservePath){
+          loggerf(WARNING, "RESERVE SWITCHES");
           Switch_Reserve_Path(T, tB, *link, NEXT | SWITCH_CARE);
           B->recalculate = 1;
         }

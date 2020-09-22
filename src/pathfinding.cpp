@@ -11,7 +11,7 @@ using namespace switchboard;
 
 namespace PathFinding {
 
-struct route find(Block * start, Block * end){
+Route * find(Block * start, Block * end){
   struct control c = {
     .start = start,
     .end = end,
@@ -36,16 +36,7 @@ struct route find(Block * start, Block * end){
   loggerf(WARNING, "Searching Reverse");
   auto sr = findStep(c);
 
-  struct route r = {
-    .found_forward = sf.found,
-    .found_reverse = sr.found,
-    .length = (sf.length > sr.length) ? sf.length : sr.length,
-
-    .Sw_S = c.Sw_S,
-    .Sw_s = c.Sw_s,
-    .MSSw_A = c.MSSw_A,
-    .MSSw_B = c.MSSw_B,
-  };
+  Route * r = new Route(c, sf, sr);
 
   return r;
 
@@ -206,7 +197,7 @@ struct step findStep(struct control c){
 }
 
 void findStepSolveSwS(Switch * Sw, struct instruction * instr, struct step * str, struct step * div){
-  loggerf(INFO, "findStepSolveSwS: %i, %i", str->found, div->found);
+  loggerf(INFO, "findStepSolveSwS: (%2i:%2i) %i, %i", Sw->module, Sw->id, str->found, div->found);
 
   instr->type = RAIL_LINK_S;
   instr->p.Sw = Sw;
@@ -234,308 +225,37 @@ void findStepSolveSwS(Switch * Sw, struct instruction * instr, struct step * str
   }
 }
 
+Route::Route(struct control c, struct step forward, struct step reverse){
+  found_forward = forward.found;
+  found_reverse = reverse.found;
+  length = (forward.length > reverse.length) ? forward.length : reverse.length;
+
+  Sw_S = c.Sw_S;
+  Sw_s = c.Sw_s;
+  MSSw_A = c.MSSw_A;
+  MSSw_B = c.MSSw_B;
+}
+
+Route::~Route(){
+  for(uint16_t i = 0; i < SwManager->uniqueSwitch.size; i++){
+    if(Sw_S[i])
+      _free(Sw_S);
+
+    if(Sw_s[i])
+      _free(Sw_s);
+  }
+  _free(Sw_S);
+  _free(Sw_s);
+
+  for(uint16_t i = 0; i < SwManager->uniqueMSSwitch.size; i++){
+    if(MSSw_A[i])
+      _free(MSSw_A);
+
+    if(MSSw_B[i])
+      _free(MSSw_B);
+  }
+  _free(MSSw_A);
+  _free(MSSw_B);
+}
+
 };
-
-struct paths pathfinding(Block * start, Block * end){
-  struct pathfindingconfig c;
-  c.start = start;
-  c.current = start;
-  c.dir = NEXT;
-  c.link = c.current->NextLink(c.dir);
-  c.end = end;
-
-  struct pathinstruction * final_instruction = 0;
-  c.final_instruction = &final_instruction;
-  c.length = 0;
-  c.steps = 0;
-
-  loggerf(INFO, "Searching path %02i:%02i -> %02i:%02i", start->module, start->id, end->module, end->id);
-
-
-
-  c.sw_data = (struct pathfindingswitchdata *)_calloc(1, struct pathfindingswitchdata);
-  c.sw_data->sw   = (pathinstruction **)_calloc(SwManager->uniqueSwitch.size, void *);
-  c.sw_data->mssw = (pathinstruction **)_calloc(SwManager->uniqueMSSwitch.size, void *);
-
-  clock_t t;
-  t = clock();
-
-
-  struct pathfindingstep result = _pathfinding_step(c);
-  struct pathfindingstep result_backward;
-  if(!c.start->oneWay){
-    struct pathinstruction * final_instruction = 0;
-    c.final_instruction = &final_instruction;
-
-    loggerf(INFO, "Backwards");
-
-    c.dir = PREV;
-    c.link = c.current->NextLink(c.dir);
-    c.length = 0;
-    c.steps = 0;
-    result_backward = _pathfinding_step(c);
-  }
-
-  t = clock() - t;
-  printf ("It took me %ld clicks (%f seconds).\n",t,((float)t)/CLOCKS_PER_SEC);
-
-  if(result.found){
-    loggerf(ERROR, "FOUND");
-    pathfinding_print(result.instructions, 0);
-  }
-  else
-    result.instructions = 0;
-
-  if(result_backward.found){
-    loggerf(ERROR, "Found on other side");
-    pathfinding_print(result_backward.instructions, 0);
-  }
-  else
-    result_backward.instructions = 0;
-
-
-  for(uint8_t i = 0; i < SwManager->uniqueSwitch.size; i++){
-    struct pathinstruction * instr = c.sw_data->sw[i];
-    if(!instr)
-      continue;
-
-    if(instr->prevcounter == 0){
-      instr->prevcounter++;
-      free_pathinstructions(instr);
-    }
-  }
-
-  _free(c.sw_data->sw);
-  _free(c.sw_data->mssw);
-
-  _free(c.sw_data->sw);
-  _free(c.sw_data->mssw);
-  _free(c.sw_data);
-
-  if(final_instruction)
-    printf("Final block counter %i\n", final_instruction->prevcounter);
-
-  struct paths r = {result.instructions, result_backward.instructions};
-
-  return r;
-}
-
-// Recursive Function (tree search)
-struct pathfindingstep _pathfinding_step(struct pathfindingconfig c){
-  loggerf(INFO, "_pathfinding_step %02i:%02i:%2i  %x\t%x", c.current->module, c.current->id, c.link->type, c.final_instruction, c.final_instruction[0]);
-
-  c.steps++;
-
-  // Init return struct
-  struct pathfindingstep s = {
-    .found = 0,
-    .length = c.length,
-    .instructions = 0,
-  };
-
-  if(c.steps > PATHFINDING_MAX_LENGHT){
-    loggerf(ERROR, "ABORTING");
-    return s;
-  }
-
-  // If finish found return
-  if(c.current == c.end){
-    s.found = 1;
-    if(!c.final_instruction[0]){
-      struct pathinstruction * instr = (struct pathinstruction *)_calloc(1, struct pathinstruction);
-
-      instr->type = RAIL_LINK_R;
-      instr->prevcounter = 1;
-      instr->p = c.current;
-
-      c.final_instruction[0] = instr;
-      s.instructions = instr;
-    }
-    else{
-      c.final_instruction[0]->prevcounter++;
-      s.instructions = c.final_instruction[0];
-    }
-
-    return s;
-  }
-  else if(c.current == c.start && c.steps != 1){
-    return s;
-  }
-
-  loggerf(INFO, "next link type %i", c.link->type);
-
-  if(c.link->type == RAIL_LINK_R){
-    loggerf(INFO, "%02i:%02i %i %i\n", c.current->module, c.current->id, c.current->dir, c.dir);
-
-    if(!dircmp(c.current, c.link->p.B)){
-      c.dir ^= PREV;
-    }
-    c.current = c.link->p.B;
-    // if(c.current->oneWay)
-
-    if(c.dir == PREV && c.current->oneWay){
-      return s; // Wrongway
-    }
-    c.length += c.current->length;
-
-    c.link = c.current->NextLink(c.dir);
-
-    loggerf(INFO, "  next %02i:%02i:%02i", c.link->module, c.link->id, c.link->type);
-    return _pathfinding_step(c);
-  }
-
-  else if(c.link->type == RAIL_LINK_S){
-    Switch * S = c.link->p.Sw;
-    if(c.sw_data->sw[S->uid]){
-      s.instructions = c.sw_data->sw[S->uid];
-
-      if(!s.instructions->p)
-        s.found = 0;
-
-      if(s.instructions->states > 0){
-        s.found = 1;
-        c.sw_data->sw[S->uid]->prevcounter++;
-      }
-      return s;
-    }
-
-    struct pathinstruction * instr = (struct pathinstruction *)_calloc(1, struct pathinstruction);
-    c.sw_data->sw[S->uid] = instr;
-    instr->p = 0;
-
-    struct pathfindingstep str;
-    struct pathfindingstep div;
-    c.link = &S->str;
-    str = _pathfinding_step(c);
-    c.link = &S->div;
-    div = _pathfinding_step(c);
-
-    instr->type = RAIL_LINK_S;
-    instr->p = S;
-    instr->prevcounter = 0;
-    instr->optionalstates = (uint8_t *)_calloc(2, uint8_t);
-    instr->next_instruction = (struct pathinstruction **)_calloc(2, struct pathinstruction *);
-    instr->lengthstates = (uint16_t *)_calloc(2, uint16_t);
-    instr->states = 0;
-
-    if(str.found || div.found){
-      s.found = 1;
-      instr->prevcounter++;
-    }
-
-    if (str.found){
-      instr->optionalstates[instr->states] = 0;
-      instr->optionalstates[instr->states] |= (str.found == 3) << 7;
-      instr->next_instruction[instr->states] = str.instructions;
-      instr->lengthstates[instr->states] = str.length - c.length;
-      instr->states++;
-    }
-    if (div.found){
-      instr->optionalstates[instr->states] = 1;
-      instr->optionalstates[instr->states] |= (div.found == 3) << 7;
-      instr->next_instruction[instr->states] = div.instructions;
-      instr->lengthstates[instr->states] = div.length - c.length;
-      instr->states++;
-    }
-
-    if(str.length > div.length)
-      s.length = str.length;
-    else
-      s.length = div.length;
-
-    s.instructions = instr;
-    return s;
-  }
-  else if(c.link->type == RAIL_LINK_s){
-    loggerf(ERROR, "%i s", c.length);
-    c.link = &c.link->p.Sw->app;
-    return _pathfinding_step(c);
-  }
-  else if(c.link->type == RAIL_LINK_MA || c.link->type == RAIL_LINK_MB){
-    loggerf(ERROR, "%i M", c.length);
-  }
-  // else if(c.link->type == RAIL_LINK_ma || c.link->type == RAIL_LINK_mb){
-  //   loggerf(ERROR, "%i m", c.length);
-  // }
-  else{
-    // loggerf(ERROR, "%i ?", c.length);
-  }
-
-  return s;
-}
-
-void pathfinding_print(struct pathinstruction * instr, uint8_t level){
-  if(level > 10){
-    printf("\n");
-    return;
-  }
-  while(instr){
-    // for(uint8_t i = 0; i < level; i++)
-    //   printf(" ");
-
-    if(instr->type == RAIL_LINK_R){
-      printf("   B %02i:%02i\n", ((Block *)instr->p)->module, ((Block *)instr->p)->id);
-      return;
-    }
-    else if(instr->type == RAIL_LINK_S){
-      printf("  SW %02i:%02i\t", ((Switch *)instr->p)->module, ((Switch *)instr->p)->id);
-    }
-    else if(instr->type == RAIL_LINK_MA || instr->type == RAIL_LINK_MB){
-      printf("MSSW %02i:%02i\t", ((MSSwitch *)instr->p)->module, ((MSSwitch *)instr->p)->id);
-    }
-    else{
-      printf("adsfjkasdf\n");
-      return;
-    }
-
-    if(instr->states > 0){
-      for(uint8_t i = 0; i < instr->states; i++)
-        printf("%i:%i\t", instr->optionalstates[i] & 0x7F, instr->lengthstates[i]);
-      printf("\n");
-
-      for(uint8_t i = 0; i < instr->states; i++){
-
-        for(uint8_t j = 0; j < level; j++)
-          printf(" ");
-        printf(" -> ");
-        if(instr->optionalstates[i] & 0x80){
-          printf("R\n");
-          return;
-        }
-        else
-          pathfinding_print(instr->next_instruction[i], level + 1);
-        if(!instr->next_instruction[i])
-          printf("\n");
-      }
-      return;
-    }
-    else{
-      instr = 0;
-    }
-  }
-  printf("\n");
-}
-
-void free_pathinstructions(struct pathinstruction * instr){
-  if(!instr)
-    return;
-
-  if(--instr->prevcounter)
-    return;
-
-  if(instr->type == RAIL_LINK_R){
-    instr = (struct pathinstruction*)_free(instr);
-    return;
-  }
-
-  if(instr->next_instruction){
-    for(uint8_t i = 0; i < instr->states; i++){
-      free_pathinstructions(instr->next_instruction[i]);
-    }
-  }
-
-  instr->next_instruction = (struct pathinstruction **)_free(instr->next_instruction);
-  instr->optionalstates = (uint8_t *)_free(instr->optionalstates);
-  instr->lengthstates = (uint16_t *)_free(instr->lengthstates);
-  instr = (pathinstruction *)_free(instr);
-}

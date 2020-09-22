@@ -1,5 +1,5 @@
 
-
+#include "switchboard/manager.h"
 #include "switchboard/rail.h"
 #include "switchboard/switch.h"
 #include "switchboard/msswitch.h"
@@ -23,14 +23,14 @@ const char * rail_states_string[8] = {
   "UNKNOWN" 
 };
 
-Block::Block(uint8_t module, struct s_block_conf block){
+Block::Block(uint8_t _module, struct s_block_conf block){
   loggerf(DEBUG, "Block Constructor %02i:%02i", module, block.id);
   memset(this, 0, sizeof(Block));
-  this->module = module;
-  this->id = block.id;
+  module = _module;
+  id = block.id;
   this->type = (enum Rail_types)block.type;
 
-  //Unit * U = Units[this->module]; Never used
+  uid = switchboard::SwManager->addBlock(this);
 
   this->next.module = block.next.module;
   this->next.id = block.next.id;
@@ -55,7 +55,7 @@ Block::Block(uint8_t module, struct s_block_conf block){
   this->forward_signal = new std::vector<Signal *>();
   this->reverse_signal = new std::vector<Signal *>();
 
-  Unit * U = Units[this->module];
+  U = switchboard::Units(module);
 
   if(U->IO(block.IO_In))
     this->In = U->linkIO(block.IO_In, this, IO_Input_Block);
@@ -399,7 +399,7 @@ void Block::reserve(){
   this->reserved++;
 
   this->statechanged = 1;
-  Units[this->module]->block_state_changed = 1;
+  U->block_state_changed = 1;
 }
 
 void Block::setState(enum Rail_states state){
@@ -411,7 +411,7 @@ void Block::setState(enum Rail_states state){
   }
 
   this->statechanged = 1;
-  Units[this->module]->block_state_changed |= 1;
+  U->block_state_changed |= 1;
 }
 
 void Block::setReversedState(enum Rail_states state){
@@ -423,7 +423,7 @@ void Block::setReversedState(enum Rail_states state){
   }
 
   this->statechanged = 1;
-  Units[this->module]->block_state_changed |= 1;
+  U->block_state_changed |= 1;
 }
 
 void Block::setDetection(bool d){

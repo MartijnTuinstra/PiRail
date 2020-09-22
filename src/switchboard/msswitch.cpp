@@ -1,3 +1,4 @@
+#include "switchboard/manager.h"
 #include "switchboard/switch.h"
 #include "switchboard/msswitch.h"
 #include "switchboard/signals.h"
@@ -8,6 +9,8 @@
 #include "modules.h"
 #include "system.h"
 #include "algorithm.h"
+
+using namespace switchboard;
 
 
 MSSwitch::MSSwitch(uint8_t module, struct ms_switch_conf conf){
@@ -52,6 +55,8 @@ MSSwitch::MSSwitch(uint8_t module, struct ms_switch_conf conf){
   this->module = connect.module;
   this->id = connect.id;
 
+  uid = SwManager->addMSSwitch(this);
+
   this->sideA = connect.sideA;
   this->sideB = connect.sideB;
   this->state_direction = connect.dir;
@@ -62,7 +67,7 @@ MSSwitch::MSSwitch(uint8_t module, struct ms_switch_conf conf){
   this->IO_len = conf.IO;
   this->IO = (IO_Port **)_calloc(this->IO_len, IO_Port *);
 
-  Unit * U = Units[this->module];
+  U = Units(this->module);
 
   for(int i = 0; i < this->IO_len; i++){
     if(!U->IO(conf.IO_Ports[i]))
@@ -330,6 +335,6 @@ void MSSwitch::updateState(uint8_t state){
     Sig->switchUpdate();
   }
 
-  Units[this->module]->switch_state_changed |= 1;
+  U->switch_state_changed |= 1;
 }
 

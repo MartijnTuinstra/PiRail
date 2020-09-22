@@ -8,7 +8,10 @@
 #include "com.h"
 #include "algorithm.h"
 
+#include "switchboard/manager.h"
 #include "switchboard/unit.h"
+
+using namespace switchboard;
 
 IO_Node::IO_Node(Unit * U, struct node_conf conf){
   loggerf(DEBUG, "  Node %02i (0-%3i)", conf.Node, conf.size);
@@ -20,7 +23,7 @@ IO_Node::IO_Node(Unit * U, struct node_conf conf){
   this->io = (IO_Port **)_calloc(conf.size, IO_Port*);
   // this->io = new IO_Port[conf.size];
 
-  loggerf(CRITICAL, "TODO IMPLEMENT node data");
+  // loggerf(CRITICAL, "TODO IMPLEMENT node data"); // TODO: What is this?
 
   for(int i = 0; i < conf.size; i++){
     this->io[i] = new IO_Port(this, i, (enum e_IO_type)((conf.data[i/2] >> (4 * (i % 2))) & 0xF));
@@ -160,11 +163,11 @@ void IO_Port::setInput(uint8_t state){
 // }
 
 void update_IO(){
-  for(int u = 0; u < unit_len; u++){
-    if(!Units[u] || !Units[u]->io_updated)
+  for(int u = 0; u < SwManager->Units.size; u++){
+    if(!Units(u) || !Units(u)->io_updated)
       continue;
 
-    Units[u]->updateIO(0);
+    Units(u)->updateIO(0);
   }
 }
 

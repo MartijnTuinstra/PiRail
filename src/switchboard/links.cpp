@@ -1,5 +1,6 @@
 #include "switchboard/links.h"
 
+#include "switchboard/manager.h"
 #include "switchboard/unit.h"
 #include "switchboard/rail.h"
 #include "switchboard/switch.h"
@@ -7,9 +8,9 @@
 
 
 void * rail_link_pointer(struct rail_link link){
-  if(!Units[link.module])
+  Unit * U = switchboard::Units(link.module);
+  if(!U)
     return 0;
-  Unit * U = Units[link.module];
   //if(link.module == 0 || Units[link.module] == 0){
   //	  return 0;
   //}

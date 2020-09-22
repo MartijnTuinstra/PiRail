@@ -5,10 +5,13 @@
 // #include "modules.h"
 #include "config_data.h"
 
+#include "switchboard/manager.h"
 #include "switchboard/switch.h"
 #include "switchboard/msswitch.h"
 #include "switchboard/signals.h"
 #include "switchboard/unit.h"
+
+using namespace switchboard;
 
 Signal::Signal(uint8_t module, struct signal_conf conf){ //, uint8_t blockId, uint16_t signalId, bool side, char output_len, struct s_IO_port_conf * output, struct s_IO_signal_event_conf * stating){
   // #define create_signal_from_conf(module, data) new Signal(module, data.blockId, data.id, data.side, data.output_len, data.output, data.stating)
@@ -21,8 +24,19 @@ Signal::Signal(uint8_t module, struct signal_conf conf){ //, uint8_t blockId, ui
 
   this->direction = conf.direction;
 
+  this->module = module;
+  this->id = conf.id;
+
+  uid = SwManager->addSignal(this);
+  U = Units(module);
+
   if(this->block_link.type == RAIL_LINK_R){
     this->B = (Block *)rail_link_pointer(this->block_link);
+
+    if(!this->B){
+      loggerf(ERROR, "Failed to retrieve block (%2i:%2i) connected to signal %2i:%2i", block_link.module, block_link.id, module, id);
+      return;
+    }
 
     this->state = this->B->addSignal(this);
   }
@@ -31,14 +45,10 @@ Signal::Signal(uint8_t module, struct signal_conf conf){ //, uint8_t blockId, ui
     return;
   }
 
-  this->id = conf.id;
-  this->module = module;
   this->output_len = conf.output_len;
   
   this->output = (IO_Port **)_calloc(this->output_len, IO_Port *);
   this->output_stating = (struct s_signal_stating *)_calloc(this->output_len, struct s_signal_stating);
-
-  Unit * U = Units[module];
 
   for(int i = 0; i < this->output_len; i++){
     if(!U->IO(conf.output[i])){
@@ -57,13 +67,13 @@ Signal::Signal(uint8_t module, struct signal_conf conf){ //, uint8_t blockId, ui
     void * p = 0;
     if(conf.Switches[i].type){
       // MSSwitch
-      Units[module]->MSSw[conf.Switches[i].Sw]->addSignal(this);
-      p = Units[module]->MSSw[conf.Switches[i].Sw];
+      U->MSSw[conf.Switches[i].Sw]->addSignal(this);
+      p = U->MSSw[conf.Switches[i].Sw];
     }
     else{
       // Switch
-      Units[module]->Sw[conf.Switches[i].Sw]->addSignal(this);
-      p = Units[module]->Sw[conf.Switches[i].Sw];
+      U->Sw[conf.Switches[i].Sw]->addSignal(this);
+      p = U->Sw[conf.Switches[i].Sw];
     }
 
     struct SignalSwitchLink * link = (struct SignalSwitchLink *)_calloc(1, struct SignalSwitchLink);
@@ -76,7 +86,7 @@ Signal::Signal(uint8_t module, struct signal_conf conf){ //, uint8_t blockId, ui
 
   this->switchUpdate();
 
-  Units[module]->insertSignal(this);
+  U->insertSignal(this);
   
   loggerf(DEBUG, "Create signal %02i:%02i, %s, block %08x", this->module, this->id, this->direction ? "Forward" : "Reverse", this->B);
 

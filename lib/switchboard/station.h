@@ -22,6 +22,7 @@ class Station {
     int module;
     int id;
     int uid;
+    Unit * U;
     char * name;
 
     uint8_t state; // REMOVE

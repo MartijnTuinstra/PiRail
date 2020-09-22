@@ -16,6 +16,7 @@
 #include "system.h"
 #include "mem.h"
 
+#include "switchboard/manager.h"
 #include "switchboard/rail.h"
 #include "switchboard/station.h"
 #include "switchboard/switch.h"
@@ -32,6 +33,8 @@
 
 #define ACTIVATE 0
 #define RELEASE  1
+
+using namespace switchboard;
 
 pthread_mutex_t mutex_lockB;
 
@@ -67,8 +70,10 @@ void WS_stc_Partial_Layout(uint8_t M){
   data[0] = WSopc_Track_Layout_Update;
 
   data[q++] = M;
-  for(int i = 0;i<Units[M]->connections_len;i++){
-    data[q++] = Units[M]->connection[i].unit;
+
+  Unit * U = Units(M);
+  for(int i = 0;i< U->connections_len;i++){
+    data[q++] = U->connection[i].unit;
   }
 
   WSServer->send_all(data,q,WS_Flag_Admin);
@@ -83,14 +88,15 @@ void WS_stc_Track_Layout(Websocket::Client * client){
 
   loggerf(DEBUG, "WS_stc_Track_Layout");
 
-  for(int i = 0;i<unit_len;i++){
-    if(!Units[i] || !Units[i]->on_layout)
+  for(int i = 0;i< SwManager->Units.size;i++){
+    Unit * U = Units(i);
+    if(!U || !U->on_layout)
       continue;
 
     data[q++] = i;
 
-    for(int j = 0;j<Units[i]->connections_len;j++){
-      data[q++] = Units[i]->connection[j].unit;
+    for(int j = 0;j< U->connections_len;j++){
+      data[q++] = U->connection[j].unit;
     }
   }
 
@@ -532,14 +538,15 @@ void WS_stc_trackUpdate(Websocket::Client * client){
 
   int q = 1;
 
-  for(int i = 0;i<unit_len;i++){
-    if(!Units[i] || !Units[i]->on_layout || Units[i]->block_state_changed == 0)
+  for(int i = 0; i < SwManager->Units.size; i++){
+    Unit * U = Units(i);
+    if(!U || !U->on_layout || U->block_state_changed == 0)
       continue;
 
-    Units[i]->block_state_changed = 0;
+    U->block_state_changed = 0;
 
-    for(int j = 0;j<Units[i]->block_len;j++){
-      Block * B = Units[i]->B[j];
+    for(int j = 0;j<U->block_len;j++){
+      Block * B = U->B[j];
       if(B && (B->statechanged || B->IOchanged)){
         content = 1;
 
@@ -579,13 +586,14 @@ void WS_stc_SwitchesUpdate(Websocket::Client * client){
 
     int q = 1;
 
-    for(int i = 0;i<unit_len;i++){
-      if(!Units[i] || !Units[i]->on_layout)// || !Units[i]->switch_state_changed)
+    for(int i = 0; i < SwManager->Units.size; i++){
+      Unit * U = Units(i);
+      if(!U || !U->on_layout)// || !U->switch_state_changed)
         continue;
-      // Units[i]->switch_state_changed = 0;
+      // U->switch_state_changed = 0;
 
-      for(int j = 0;j<Units[i]->switch_len;j++){
-        Switch * S = Units[i]->Sw[j];
+      for(int j = 0;j<U->switch_len;j++){
+        Switch * S = U->Sw[j];
         if(!S)
           continue;
 
@@ -613,12 +621,13 @@ void WS_stc_SwitchesUpdate(Websocket::Client * client){
   //buf[0] = 5;
   // buf_l = 0;
   q = 1;
-  for(int i = 0;i<unit_len;i++){
-    if(!Units[i] || !Units[i]->msswitch_state_changed)
+  for(int i = 0; i < SwManager->Units.size; i++){
+    Unit * U = Units(i);
+    if(!U || !U->msswitch_state_changed)
       continue;
     content = 1;
-    for(int j = 0;j<=Units[i]->msswitch_len;j++){
-      MSSwitch * Sw = Units[i]->MSSw[j];
+    for(int j = 0;j<=U->msswitch_len;j++){
+      MSSwitch * Sw = U->MSSw[j];
       if(!Sw)
         continue;
 
@@ -665,12 +674,13 @@ void WS_stc_NewClient_track_Switch_Update(Websocket::Client * client){
 
   int q = 1;
 
-  for(int i = 0;i<unit_len;i++){
-    if(!Units[i] || !Units[i]->on_layout)
+  for(int i = 0; i < SwManager->Units.size; i++){
+    Unit * U = Units(i);
+    if(!U || !U->on_layout)
       continue;
 
-    for(int j = 0; j < Units[i]->block_len; j++){
-      Block * B = Units[i]->B[j];
+    for(int j = 0; j < U->block_len; j++){
+      Block * B = U->B[j];
       if(B){
         content = 1;
 
@@ -707,11 +717,12 @@ void WS_stc_NewClient_track_Switch_Update(Websocket::Client * client){
 
     q = 1; // Counter for switches
 
-    for(int i = 0;i<unit_len;i++){
-      if(!Units[i] || !Units[i]->on_layout)
+    for(int i = 0;i< SwManager->Units.size;i++){
+      Unit * U = Units(i);
+      if(!U || !U->on_layout)
         continue;
-      for(int j = 0; j < Units[i]->switch_len;j++){
-        Switch * S = Units[i]->Sw[j];
+      for(int j = 0; j < U->switch_len;j++){
+        Switch * S = U->Sw[j];
         if(S){
           content = 1;
           buf[(q-1)*3+1] = S->module;
@@ -759,17 +770,20 @@ void WS_stc_NewClient_track_Switch_Update(Websocket::Client * client){
   buf_len = 1;
     bool data = 0;
 
-  if(stations_len>0){
+  if(SwManager->uniqueStation.items > 0){
     data = 1;
   }
-  for(int i = 0; i < stations_len;i++){
+  for(int i = 0; i < SwManager->uniqueStation.size; i++){
+    Station * St = SwManager->uniqueStation[i];
+    if(!St)
+      continue;
 
-    buf[buf_len]   = stations[i]->module;
-    buf[buf_len+1] = stations[i]->id;
-    buf[buf_len+2] = strlen(stations[i]->name);
-    strcpy(&buf[buf_len+3],stations[i]->name);
+    buf[buf_len]   = St->module;
+    buf[buf_len+1] = St->id;
+    buf[buf_len+2] = strlen(St->name);
+    strcpy(&buf[buf_len+3],St->name);
 
-    buf_len+=3+strlen(stations[i]->name);
+    buf_len+=3+strlen(St->name);
   }
 
   if(data == 1){
@@ -800,10 +814,14 @@ void WS_stc_reset_switches(Websocket::Client * client){
   char admin = 1;
   if(admin){
     //Go through all switches
-    for(int i = 0;i<unit_len;i++){
-      for(int j = 0;j<Units[i]->switch_len;j++){
-        if(Units[i]->Sw[j]){
-          Units[i]->Sw[j]->state = Units[i]->Sw[j]->default_state + 0x80;
+    for(int i = 0; i < SwManager->Units.size; i++){
+      Unit * U = Units(i);
+      if(!U)
+        continue;
+
+      for(int j = 0; j < U->switch_len; j++){
+        if(U->Sw[j]){
+          U->Sw[j]->state = U->Sw[j]->default_state + 0x80;
         }
       }
     }
@@ -816,24 +834,26 @@ void WS_stc_reset_switches(Websocket::Client * client){
 void WS_stc_Track_LayoutDataOnly(int unit, Websocket::Client * client){
   loggerf(DEBUG, "WS_Track_LayoutDataOnly");
 
-  char * data = (char *)_calloc(Units[unit]->Layout_length + 20, char);
+  Unit * U = Units(unit);
+
+  char * data = (char *)_calloc(U->Layout_length + 20, char);
 
   data[0] = WSopc_TrackLayoutOnlyRawData;
   data[1] = unit;
-  memcpy(&data[2], Units[unit]->Layout, Units[unit]->Layout_length);
+  memcpy(&data[2], U->Layout, U->Layout_length);
 
 
   if(client){
-    client->send(data, Units[unit]->Layout_length+2, WS_Flag_Track);
+    client->send(data, U->Layout_length+2, WS_Flag_Track);
   }else{
-    WSServer->send_all(data, Units[unit]->Layout_length+2, WS_Flag_Track);
+    WSServer->send_all(data, U->Layout_length+2, WS_Flag_Track);
   }
 
   _free(data);
 }
 
 void WS_stc_TrackLayoutRawData(int unit, Websocket::Client * client){
-  Unit * U = Units[unit];
+  Unit * U = Units(unit);
   char * data = (char *)_calloc(U->raw_length+2, char);
   data[0] = WSopc_TrackLayoutRawData;
   data[1] = unit;
@@ -851,21 +871,22 @@ void WS_stc_TrackLayoutRawData(int unit, Websocket::Client * client){
 }
 
 void WS_stc_StationLib(Websocket::Client * client){
-  char * data = (char *)_calloc(stations_len, Station);
+  char * data = (char *)_calloc(SwManager->uniqueStation.size, Station);
   data[0] = WSopc_StationLibrary;
   char * length = &data[1];
   char * d = &data[2];
 
-  for(uint8_t i = 0; i < stations_len; i++){
-    if(!stations[i])
+  for(uint8_t i = 0; i < SwManager->uniqueStation.size; i++){
+    Station * St = SwManager->uniqueStation[i];
+    if(!St)
       continue;
 
     (*length)++;
-    d[0] = stations[i]->module;
-    d[1] = stations[i]->id;
-    d[2] = stations[i]->type;
-    d[3] = strlen(stations[i]->name);
-    memcpy(&d[4], stations[i]->name, d[3]);
+    d[0] = St->module;
+    d[1] = St->id;
+    d[2] = St->type;
+    d[3] = strlen(St->name);
+    memcpy(&d[4], St->name, d[3]);
 
     d += d[3] + 4;
   }

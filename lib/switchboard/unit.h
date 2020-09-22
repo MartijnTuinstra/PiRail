@@ -73,7 +73,4 @@ class Unit {
     void link_all();
 };
 
-extern int unit_len;
-extern Unit ** Units;
-
 #endif

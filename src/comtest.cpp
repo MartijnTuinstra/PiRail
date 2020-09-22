@@ -7,7 +7,8 @@
 #include "mem.h"
 #include "system.h"
 
-#include "switchboard/unit.h"
+#include "switchboard/manager.h"
+#include "modules.h"
 
 #include "RNet_msg.h"
 
@@ -37,8 +38,8 @@ int main(int argc, char *argv[]){
   logger.setlevel(DEBUG);
   logger.setlevel_stdout(NONE);
 
-  Units = (Unit **)_calloc(30, Unit *);
-  unit_len = 30;
+  switchboard::SwManager->openDir(ModuleConfigBasePath);
+  switchboard::SwManager->loadFiles();
 
   Z21 = new Z21_Client();
 
@@ -235,6 +236,8 @@ int main(int argc, char *argv[]){
   }
 */
   SYS_set_state(&SYS->UART.state, Module_STOP);
+
+  switchboard::SwManager->clear();
 
   pthread_join(thread, NULL);
 

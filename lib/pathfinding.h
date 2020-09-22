@@ -7,50 +7,110 @@
 
 #define PATHFINDING_MAX_LENGHT 40
 
+namespace PathFinding {
+
+struct route {
+  bool found_forward;
+  bool found_reverse;
+
+  uint16_t length;
+
+  struct instruction ** Sw_S;
+  struct instruction ** Sw_s;
+  struct instruction ** MSSw_A;
+  struct instruction ** MSSw_B;
+};
+
+struct control {
+  Block * start;
+  Block * end;
+
+  Block * prev;
+
+  uint8_t dir;
+  struct rail_link * link;
+
+  uint8_t searchDepth;
+
+  struct instruction ** Sw_S;
+  struct instruction ** Sw_s;
+  struct instruction ** MSSw_A;
+  struct instruction ** MSSw_B;
+};
+
+struct instruction {
+  uint8_t type;
+  union {
+    void * p;
+    Switch * Sw;
+    MSSwitch * MSSw;
+  } p;
+
+  uint8_t nrOptions;
+  uint8_t * options;
+  uint16_t * length;
+
+  struct instruction ** next;
+};
+
+struct step {
+  uint16_t length;
+  bool found;
+
+  struct instruction * next;
+};
+
+struct route find(Block * start, Block * end);
+struct step findStep(struct control c);
+
+void findStepSolveSwS(Switch * Sw, struct instruction * instr, struct step * str, struct step * div);
+
+}; // namespace PathFinding
+
 struct pathfindingswitchdata {
-	struct pathinstruction *** sw;
-	struct pathinstruction *** mssw;
+  struct pathinstruction ** sw;
+  struct pathinstruction ** mssw;
 };
 
 struct pathfindingconfig {
-	Block * start;
-	Block * current;
-	struct rail_link * link;
-	Block * end;
+  Block * start;
+  Block * end;
 
-	struct pathinstruction ** final_instruction;
+  Block * current;
+  struct rail_link * link;
 
-	uint8_t dir;
+  struct pathinstruction ** final_instruction;
 
-	uint8_t steps;
-	uint16_t length;
+  uint8_t dir;
 
-	struct pathfindingswitchdata * sw_data;
+  uint8_t steps;
+  uint16_t length;
+
+  struct pathfindingswitchdata * sw_data;
 };
 
 struct pathinstruction {
-	void * p;      // Switch or MSSwitch
-	uint8_t type;  //   type of p
+  void * p;      // Switch or MSSwitch
+  uint8_t type;  //   type of p
 
-	uint8_t prevcounter:4;
-	uint8_t states:4;
+  uint8_t prevcounter:4;
+  uint8_t states:4;
 
-	uint8_t * optionalstates;
-	uint16_t * lengthstates;
+  uint8_t * optionalstates;
+  uint16_t * lengthstates;
 
-
-	struct pathinstruction ** next_instruction;
+  struct pathinstruction ** next_instruction;
 };
 
 struct pathfindingstep {
-	uint8_t found;
-	uint16_t length;
-	struct pathinstruction * instructions;
+  uint8_t found;
+  uint16_t length;
+  struct pathinstruction * instructions;
 };
 
 struct paths {
-	struct pathinstruction * forward;
-	struct pathinstruction * reverse;
+  struct pathinstruction * forward;
+  struct pathinstruction * reverse;
 };
 
 struct paths pathfinding(Block * start, Block * end);

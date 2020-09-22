@@ -1,8 +1,11 @@
+#include "switchboard/manager.h"
 #include "switchboard/blockconnector.h"
 #include "logger.h"
 #include "mem.h"
 
 #include "websocket/stc.h"
+
+using namespace switchboard;
 
 BlockConnector::BlockConnector(uint8_t unit, uint16_t connector){
   memset(this, 0, sizeof(BlockConnector));
@@ -47,12 +50,14 @@ void BlockConnector::connect(BlockConnector * BC, bool crossover){
     BlockConnectorMatrix[A][B](this, BC, i, j);
   }
 
-  Units[this->unit]->connection[this->connector - 1].unit = BC->unit;
-  Units[this->unit]->connection[this->connector - 1].connector = BC->connector;
-  Units[this->unit]->connection[this->connector - 1].crossover = crossover;
-  Units[BC->unit]->connection[BC->connector - 1].unit = this->unit;
-  Units[BC->unit]->connection[BC->connector - 1].connector = this->connector;
-  Units[BC->unit]->connection[BC->connector - 1].crossover = crossover;
+  Unit * tU = Units(this->unit);
+  Unit * bcU = Units(BC->unit);
+  tU->connection[this->connector - 1].unit = BC->unit;
+  tU->connection[this->connector - 1].connector = BC->connector;
+  tU->connection[this->connector - 1].crossover = crossover;
+  bcU->connection[BC->connector - 1].unit = this->unit;
+  bcU->connection[BC->connector - 1].connector = this->connector;
+  bcU->connection[BC->connector - 1].crossover = crossover;
 
   WS_stc_Partial_Layout(this->unit);
   WS_stc_Partial_Layout(BC->unit);
@@ -315,18 +320,19 @@ void BlockConnectSignalMSSwitch(BlockConnector * A, BlockConnector * B, uint8_t 
 BlockConnectors Algorithm_find_connectors(){
   BlockConnectors Connectors;
 
-  for(uint8_t i = 0;i < unit_len;i++){
-    if(!Units[i])
+  for(uint8_t i = 0;i < SwManager->Units.size;i++){
+    Unit * U = Units(i);
+    if(!U)
       continue;
 
-    if(!Units[i]->on_layout)
+    if(!U->on_layout)
       continue;
 
-    for(uint16_t j = 0;j < Units[i]->block_len; j++){
-      if(!Units[i]->B[j])
+    for(uint16_t j = 0;j < U->block_len; j++){
+      if(!U->B[j])
         continue;
 
-      Block * B = Units[i]->B[j];
+      Block * B = U->B[j];
 
       if(B->next.type == RAIL_LINK_C || B->prev.type == RAIL_LINK_C){
         uint8_t connector;
@@ -358,11 +364,11 @@ BlockConnectors Algorithm_find_connectors(){
       }
     } // Block Loop
 
-    for(uint16_t j = 0;j < Units[i]->switch_len; j++){
-      if(!Units[i]->Sw[j])
+    for(uint16_t j = 0;j < U->switch_len; j++){
+      if(!U->Sw[j])
         continue;
 
-      Switch * Sw = Units[i]->Sw[j];
+      Switch * Sw = U->Sw[j];
 
       if(Sw->app.type == RAIL_LINK_C || Sw->div.type == RAIL_LINK_C || Sw->str.type == RAIL_LINK_C){
         uint8_t connector;
@@ -398,11 +404,11 @@ BlockConnectors Algorithm_find_connectors(){
       }
     } // Switch loop
 
-    for(uint16_t j = 0;j < Units[i]->signal_len; j++){
-      if(!Units[i]->Sig[j])
+    for(uint16_t j = 0;j < U->signal_len; j++){
+      if(!U->Sig[j])
         continue;
 
-      Signal * Sig = Units[i]->Sig[j];
+      Signal * Sig = U->Sig[j];
 
       if(Sig->block_link.type == RAIL_LINK_C){
         uint8_t connector = Sig->block_link.module;
@@ -538,7 +544,7 @@ int Algorithm_load_setup(char * filename, BlockConnectors * Connectors){
   for(uint8_t i = 0; (buffer_ptr - buffer) < fsize; i++){
     uint8_t unit = buffer_ptr[0];
 
-    Unit * U = Units[unit];
+    Unit * U = Units(unit);
     if(!U){
       loggerf(ERROR, "Unknown Unit (%i) in setup!! Aborting!!", unit);
       return -2;

@@ -6,6 +6,7 @@
 
 #include "config/ModuleConfig.h"
 
+#include "switchboard/manager.h"
 #include "switchboard/rail.h"
 #include "switchboard/switch.h"
 #include "switchboard/msswitch.h"
@@ -21,29 +22,25 @@
 #include "pathfinding.h"
 
 TEST_CASE( "Path Finding", "[PF][PF-1]"){
-  
-  unload_module_Configs();
+  logger.setlevel_stdout(DEBUG);
+  init_main();
+
+  switchboard::SwManager->clear();
   unload_rolling_Configs();
   clearAlgorithmQueue();
 
-  Units = (Unit **)_calloc(30, Unit *);
-  unit_len = 30;
-
-  init_main();
 
   char filename[30] = "./testconfigs/PF-1.bin";
-  ModuleConfig config = ModuleConfig(filename);
+  switchboard::SwManager->addFile(filename);
+  switchboard::SwManager->loadFiles();
+  
+  load_rolling_Configs("./testconfigs/stock.bin");
 
-  config.read();
+  Unit * U = switchboard::Units(1);
 
-  REQUIRE(config.parsed);
+  REQUIRE(U);
 
-  new Unit(&config);
-
-  Units[1]->on_layout = true;
-
-  Unit * U = Units[1];
-
+  U->on_layout = true;
   U->link_all();
 
   /*
@@ -51,10 +48,28 @@ TEST_CASE( "Path Finding", "[PF][PF-1]"){
   //  1.1> ---1.2> 1.3> 1.4> 1.5> 1.6> 1.7--> 1.9>
   */
 
-  SECTION("I - Find"){
-    struct paths path = pathfinding(U->B[1], U->B[9]);
+  SECTION("I - Find Simple blocks"){
+    struct PathFinding::step s = PathFinding::find(U->B[3], U->B[6]);
+    // struct paths path = pathfinding(U->B[3], U->B[6]);
 
-    CHECK(path.forward);
-    CHECK(!path.reverse);
+    CHECK(s.found);
+    CHECK(!s.next);
   }
+
+  SECTION("II - Find Simple Switch S side"){
+    struct PathFinding::step s = PathFinding::find(U->B[3], U->B[9]);
+    // struct paths path = pathfinding(U->B[3], U->B[6]);
+
+    CHECK(s.found);
+    CHECK(s.next);
+
+    loggerf(INFO, "s.next: %x", (unsigned int)s.next);
+
+    CHECK(s.next->nrOptions == 1);
+    CHECK(s.next->options[0] == 0);
+    CHECK(s.next->length[0] == U->B[9]->length);
+    CHECK(!s.next[0]->next);
+  }
+
+  logger.setlevel_stdout(NONE);
 }

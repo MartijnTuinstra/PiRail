@@ -13,7 +13,7 @@
 #include "switchboard/rail.h"
 #include "IO.h"
 
-#define U_Sw(U, A) Units[U]->Sw[A]
+#define U_Sw(U, A) Units(U)->Sw[A]
 
 #define STRAIGHT_SWITCH 0
 #define DIVERGING_SWITCH 1
@@ -61,6 +61,8 @@ class Switch {
 
     uint8_t  module;
     uint16_t id;
+    uint16_t uid;
+    Unit * U;
 
     bool hold;
     bool updatedState;

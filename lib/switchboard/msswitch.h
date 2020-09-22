@@ -14,7 +14,7 @@
 #include "IO.h"
 
 
-#define U_MSSw(U, A) Units[U]->MSSw[A]
+#define U_MSSw(U, A) Units(U)->MSSw[A]
 
 void create_msswitch_from_conf(uint8_t module, struct ms_switch_conf conf);
 
@@ -44,6 +44,8 @@ class MSSwitch {
 
     uint8_t  module;
     uint16_t id;
+    uint16_t uid;
+    Unit * U;
 
     uint8_t type;
 

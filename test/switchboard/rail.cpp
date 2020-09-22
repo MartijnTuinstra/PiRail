@@ -5,6 +5,7 @@
 #include "system.h"
 
 #include "config/ModuleConfig.h"
+#include "switchboard/manager.h"
 #include "switchboard/rail.h"
 #include "switchboard/switch.h"
 #include "switchboard/msswitch.h"
@@ -16,24 +17,20 @@
 #include "modules.h"
 #include "rollingstock/railtrain.h"
 
-TEST_CASE( "Block Link", "[SB-1.1]" ) {
+TEST_CASE( "Block Link", "[SB][SB-1][SB-1.1]" ) {
+  init_main();
 
-  unload_module_Configs();
+  switchboard::SwManager->clear();
   unload_rolling_Configs();
   clearAlgorithmQueue();
-
-  Units = (Unit **)_calloc(30, Unit *);
-  unit_len = 30;
+  pathlist.clear();
 
   char filename[30] = "./testconfigs/SB-1.1.bin";
-  auto config = ModuleConfig(filename);
-  config.read();
+  switchboard::SwManager->addFile(filename);
+  switchboard::SwManager->loadFiles();
 
-  REQUIRE(config.parsed);
-
-  new Unit(&config);
-  link_all_blocks(Units[1]);
-  Unit * U = Units[1];
+  Unit * U = switchboard::Units(1);
+  U->link_all();
 
   /*
   //  1.0->  --1.1->  --1.2->
@@ -87,28 +84,23 @@ TEST_CASE( "Block Link", "[SB-1.1]" ) {
   }
 }
 
+TEST_CASE( "Block Algorithm Search", "[SB][SB-1][SB-1.2]" ) {
+  init_main();
 
-TEST_CASE( "Block Algorithm Search", "[SB-1.2]" ) {
   // logger.setlevel_stdout(DEBUG);
-  
-  unload_module_Configs();
+  switchboard::SwManager->clear();
   unload_rolling_Configs();
   clearAlgorithmQueue();
-
-  Units = (Unit **)_calloc(30, Unit *);
-  unit_len = 30;
-
-  char filename[30] = "./testconfigs/SB-1.2.bin";
-  auto config = ModuleConfig(filename);
-  config.read();
-
-  REQUIRE(config.parsed);
   pathlist.clear();
 
-  new Unit(&config);
-  Unit * U = Units[1];
 
+  char filename[30] = "./testconfigs/SB-1.2.bin";
+  switchboard::SwManager->addFile(filename);
+  switchboard::SwManager->loadFiles();
+
+  Unit * U = switchboard::Units(1);
   U->link_all();
+  
 
   /*
   // SECTION I
@@ -332,27 +324,21 @@ TEST_CASE( "Block Algorithm Search", "[SB-1.2]" ) {
   }
 }
 
-TEST_CASE( "Block Algorithm Stating", "[SB-1.3]" ) {
+TEST_CASE( "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" ) {
   init_main();
   // logger.setlevel_stdout(DEBUG);
 
-  unload_module_Configs();
+  switchboard::SwManager->clear();
   unload_rolling_Configs();
   clearAlgorithmQueue();
-
-  Units = (Unit **)_calloc(30, Unit *);
-  unit_len = 30;
-
-  char filename[30] = "./testconfigs/SB-1.3.bin";
-  auto config = ModuleConfig(filename);
-  config.read();
-
-  REQUIRE(config.parsed);
   pathlist.clear();
 
-  new Unit(&config);
-  Unit * U = Units[1];
 
+  char filename[30] = "./testconfigs/SB-1.3.bin";
+  switchboard::SwManager->addFile(filename);
+  switchboard::SwManager->loadFiles();
+
+  Unit * U = switchboard::Units(1);
   U->link_all();
 
   for(uint8_t i = 0; i < U->block_len; i++){

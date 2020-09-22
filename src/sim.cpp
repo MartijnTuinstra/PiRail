@@ -3,6 +3,7 @@
 #include "system.h"
 
 #include "sim.h"
+#include "switchboard/manager.h"
 #include "switchboard/rail.h"
 #include "switchboard/switch.h"
 #include "switchboard/msswitch.h"
@@ -14,9 +15,11 @@
 #include "submodule.h"
 #include "algorithm.h"
 #include "websocket/stc.h"
-#include "pathfinding.h"
+// #include "pathfinding.h"
 
 #include "websocket/message_structure.h"
+
+using namespace switchboard;
 
 extern pthread_mutex_t mutex_lockA;
 
@@ -150,7 +153,7 @@ void *TRAIN_SIMA(void * args){
 
   usleep(100000);
 
-  Block *B = Units[25]->B[3];
+  Block *B = Units(25)->B[3];
 
   struct train_sim train = {
     .sim = 'A',
@@ -263,7 +266,7 @@ void *TRAIN_SIMB(void * args){
 
   usleep(11000000);
 
-  Block *B = Units[25]->B[3];
+  Block *B = Units(25)->B[3];
 
   struct train_sim train;
   train.B = (Block **)_calloc(10, Block *);
@@ -338,12 +341,12 @@ void *TRAIN_SIMB(void * args){
 
 
 void SIM_JoinModules(){
-  Units[10]->on_layout = 1;
-  Units[20]->on_layout = 1;
-  Units[21]->on_layout = 1;
-  Units[22]->on_layout = 1;
-  Units[23]->on_layout = 1;
-  Units[25]->on_layout = 1;
+  Units(10)->on_layout = 1;
+  Units(20)->on_layout = 1;
+  Units(21)->on_layout = 1;
+  Units(22)->on_layout = 1;
+  Units(23)->on_layout = 1;
+  Units(25)->on_layout = 1;
 
   WS_stc_Track_Layout(0);
   printf("Ready to join modules\n");
@@ -366,8 +369,8 @@ void SIM_JoinModules(){
       data[1] = (char)connectors.size();
       data[2] = maxConnectors;
       int k = 3;
-      for(int j = 0;j<unit_len;j++){
-        if(Units[j]){
+      for(int j = 0;j< SwManager->Units.size;j++){
+        if(Units(j)){
           data[k++] = j;
         }
       }
@@ -380,101 +383,101 @@ void SIM_JoinModules(){
     usleep(JOIN_SIM_INTERVAL);
 
     if(x == 1){
-      Units[20]->block_state_changed = 1;
-      Units[25]->block_state_changed = 1;
+      Units(20)->block_state_changed = 1;
+      Units(25)->block_state_changed = 1;
 
-      Units[20]->B[5]->setDetection(1);
-      Units[25]->B[0]->setDetection(1);
-      Units[20]->B[5]->state = BLOCKED;
-      Units[25]->B[0]->state = BLOCKED;
+      Units(20)->B[5]->setDetection(1);
+      Units(25)->B[0]->setDetection(1);
+      Units(20)->B[5]->state = BLOCKED;
+      Units(25)->B[0]->state = BLOCKED;
     }else if(x == 2){
-      Units[20]->block_state_changed = 1;
-      Units[25]->block_state_changed = 1;
+      Units(20)->block_state_changed = 1;
+      Units(25)->block_state_changed = 1;
       
-      Units[25]->block_state_changed = 1;
-      Units[22]->block_state_changed = 1;
+      Units(25)->block_state_changed = 1;
+      Units(22)->block_state_changed = 1;
 
-      Units[25]->B[3]->setDetection(1);
-      Units[22]->B[0]->setDetection(1);
-      Units[25]->B[3]->state = BLOCKED;
-      Units[22]->B[0]->state = BLOCKED;
+      Units(25)->B[3]->setDetection(1);
+      Units(22)->B[0]->setDetection(1);
+      Units(25)->B[3]->state = BLOCKED;
+      Units(22)->B[0]->state = BLOCKED;
 
-      Units[20]->B[5]->setDetection(0);
-      Units[25]->B[0]->setDetection(0);
-      Units[20]->B[5]->state = PROCEED;
-      Units[25]->B[0]->state = PROCEED;
+      Units(20)->B[5]->setDetection(0);
+      Units(25)->B[0]->setDetection(0);
+      Units(20)->B[5]->state = PROCEED;
+      Units(25)->B[0]->state = PROCEED;
     }else if(x == 3){
-      Units[25]->block_state_changed = 1;
-      Units[22]->block_state_changed = 1;
+      Units(25)->block_state_changed = 1;
+      Units(22)->block_state_changed = 1;
 
-      Units[22]->block_state_changed = 1;
-      Units[10]->block_state_changed = 1;
+      Units(22)->block_state_changed = 1;
+      Units(10)->block_state_changed = 1;
 
-      Units[22]->B[1]->setDetection(1);
-      Units[10]->B[0]->setDetection(1);
-      Units[22]->B[1]->state = BLOCKED;
-      Units[10]->B[0]->state = BLOCKED;
+      Units(22)->B[1]->setDetection(1);
+      Units(10)->B[0]->setDetection(1);
+      Units(22)->B[1]->state = BLOCKED;
+      Units(10)->B[0]->state = BLOCKED;
 
-      Units[25]->B[3]->setDetection(0);
-      Units[22]->B[0]->setDetection(0);
-      Units[25]->B[3]->state = PROCEED;
-      Units[22]->B[0]->state = PROCEED;
+      Units(25)->B[3]->setDetection(0);
+      Units(22)->B[0]->setDetection(0);
+      Units(25)->B[3]->state = PROCEED;
+      Units(22)->B[0]->state = PROCEED;
     }else if(x == 4){
-      Units[22]->block_state_changed = 1;
-      Units[10]->block_state_changed = 1;
+      Units(22)->block_state_changed = 1;
+      Units(10)->block_state_changed = 1;
 
-      Units[10]->block_state_changed = 1;
-      Units[21]->block_state_changed = 1;
+      Units(10)->block_state_changed = 1;
+      Units(21)->block_state_changed = 1;
 
-      Units[10]->B[3]->setDetection(1);
-      Units[21]->B[0]->setDetection(1);
-      Units[10]->B[3]->state = BLOCKED;
-      Units[21]->B[0]->state = BLOCKED;
+      Units(10)->B[3]->setDetection(1);
+      Units(21)->B[0]->setDetection(1);
+      Units(10)->B[3]->state = BLOCKED;
+      Units(21)->B[0]->state = BLOCKED;
 
-      Units[22]->B[1]->setDetection(0);
-      Units[10]->B[0]->setDetection(0);
-      Units[22]->B[1]->state = PROCEED;
-      Units[10]->B[0]->state = PROCEED;
+      Units(22)->B[1]->setDetection(0);
+      Units(10)->B[0]->setDetection(0);
+      Units(22)->B[1]->state = PROCEED;
+      Units(10)->B[0]->state = PROCEED;
     }else if(x == 5){
-      Units[10]->block_state_changed = 1;
-      Units[21]->block_state_changed = 1;
+      Units(10)->block_state_changed = 1;
+      Units(21)->block_state_changed = 1;
       
-      Units[21]->block_state_changed = 1;
-      Units[23]->block_state_changed = 1;
+      Units(21)->block_state_changed = 1;
+      Units(23)->block_state_changed = 1;
 
-      Units[21]->B[3]->setDetection(1);
-      Units[23]->B[0]->setDetection(1);
-      Units[21]->B[3]->state = BLOCKED;
-      Units[23]->B[0]->state = BLOCKED;
+      Units(21)->B[3]->setDetection(1);
+      Units(23)->B[0]->setDetection(1);
+      Units(21)->B[3]->state = BLOCKED;
+      Units(23)->B[0]->state = BLOCKED;
 
-      Units[10]->B[3]->setDetection(0);
-      Units[21]->B[0]->setDetection(0);
-      Units[10]->B[3]->state = PROCEED;
-      Units[21]->B[0]->state = PROCEED;
+      Units(10)->B[3]->setDetection(0);
+      Units(21)->B[0]->setDetection(0);
+      Units(10)->B[3]->state = PROCEED;
+      Units(21)->B[0]->state = PROCEED;
     }else if(x == 6){
-      Units[21]->block_state_changed = 1;
-      Units[23]->block_state_changed = 1;
+      Units(21)->block_state_changed = 1;
+      Units(23)->block_state_changed = 1;
 
-      Units[23]->block_state_changed = 1;
-      Units[20]->block_state_changed = 1;
+      Units(23)->block_state_changed = 1;
+      Units(20)->block_state_changed = 1;
 
-      Units[23]->B[1]->setDetection(1);
-      Units[20]->B[0]->setDetection(1);
-      Units[23]->B[1]->state = BLOCKED;
-      Units[20]->B[0]->state = BLOCKED;
+      Units(23)->B[1]->setDetection(1);
+      Units(20)->B[0]->setDetection(1);
+      Units(23)->B[1]->state = BLOCKED;
+      Units(20)->B[0]->state = BLOCKED;
 
-      Units[21]->B[3]->setDetection(0);
-      Units[23]->B[0]->setDetection(0);
-      Units[21]->B[3]->state = PROCEED;
-      Units[23]->B[0]->state = PROCEED;
+      Units(21)->B[3]->setDetection(0);
+      Units(23)->B[0]->setDetection(0);
+      Units(21)->B[3]->state = PROCEED;
+      Units(23)->B[0]->state = PROCEED;
     }else if(x == 7){
-      Units[23]->block_state_changed = 1;
-      Units[20]->block_state_changed = 1;
+      Units(23)->block_state_changed = 1;
+      Units(20)->block_state_changed = 1;
 
-      Units[23]->B[1]->setDetection(0);
-      Units[20]->B[0]->setDetection(0);
-      Units[23]->B[1]->state = PROCEED;
-      Units[20]->B[0]->state = PROCEED;
+      Units(23)->B[1]->setDetection(0);
+      Units(20)->B[0]->setDetection(0);
+      Units(23)->B[1]->state = PROCEED;
+      Units(20)->B[0]->state = PROCEED;
     }
     else if(x == 10){
       SYS->modules_linked = 1; // break condition
@@ -483,15 +486,16 @@ void SIM_JoinModules(){
     x++;
   }
 
-  for(uint8_t i = 0; i < unit_len; i++){
-    if(!Units[i])
+  for(uint8_t i = 0; i < SwManager->Units.size; i++){
+    Unit * U = Units(i);
+    if(!U)
       continue;
 
-    for(uint8_t j = 0; j < Units[i]->block_len; j++){
-      if(Units[i]->B[j]){
-        Units[i]->B[j]->setDetection(0);
-        Units[i]->B[j]->setVirtualDetection(0);
-        Units[i]->B[j]->state = PROCEED;
+    for(uint8_t j = 0; j < U->block_len; j++){
+      if(U->B[j]){
+        U->B[j]->setDetection(0);
+        U->B[j]->setVirtualDetection(0);
+        U->B[j]->state = PROCEED;
       }
     }
   }
@@ -504,14 +508,14 @@ void SIM_Connect_Rail_links(){
   // add pointer to the rail_link
   pathlist.clear();
 
-  for(int m = 0; m<unit_len; m++){
-    if(!Units[m]){
+  for(int m = 0; m< SwManager->Units.size; m++){
+    if(!Units(m)){
       continue;
     }
 
     loggerf(INFO, "LINKING UNIT %i", m);
 
-    Unit * tU = Units[m];
+    Unit * tU = Units(m);
 
     link_all_blocks(tU);
     link_all_switches(tU);

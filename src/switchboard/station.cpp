@@ -2,11 +2,14 @@
 #include "logger.h"
 #include "system.h"
 
+#include "switchboard/manager.h"
 #include "switchboard/station.h"
 #include "switchboard/unit.h"
 
-Station ** stations;
-int stations_len;
+// Station ** stations;
+// int stations_len;
+
+using namespace switchboard;
 
 const char * station_types_string[5] = {
   "STATION_PERSON",
@@ -30,16 +33,20 @@ Station::Station(int module, int id, struct station_conf conf){
 
   this->module = module;
   this->id = id;
+  U = Units(module);
+
+  uid = SwManager->addStation(this);
+
   this->type = (enum Station_types)conf.type;
 
   this->name = (char *)_calloc(conf.name_len + 1, char);
   strncpy(this->name, conf.name, conf.name_len);
 
-  Units[this->module]->insertStation(this);
+  U->insertStation(this);
 
-  if(conf.parent != 0xFFFF && Units[this->module]->St[conf.parent]){
-    this->parent = Units[this->module]->St[conf.parent];
-    Units[this->module]->St[conf.parent]->childs.push_back(this);
+  if(conf.parent != 0xFFFF && U->St[conf.parent]){
+    this->parent = U->St[conf.parent];
+    U->St[conf.parent]->childs.push_back(this);
   }
   else if(conf.parent != 0xFFFF)
     loggerf(WARNING, "Failed to link station '%s' to parent %d", this->name, conf.parent);
@@ -48,18 +55,9 @@ Station::Station(int module, int id, struct station_conf conf){
   this->blocks = (Block **)_calloc(this->blocks_len, Block *);
 
   for(int i = 0; i < conf.nr_blocks; i++){
-    this->blocks[i] = U_B(module, conf.blocks[i]);
-    U_B(module, conf.blocks[i])->station = this;
+    this->blocks[i] = U->B[conf.blocks[i]];
+    U->B[conf.blocks[i]]->station = this;
   }
-
-  if(!stations){
-    stations = (Station **)_calloc(1, Station *);
-    stations_len = 1;
-  }
-
-  this->uid = find_free_index(stations, stations_len);
-
-  stations[this->uid] = this;
 }
 
 Station::~Station(){

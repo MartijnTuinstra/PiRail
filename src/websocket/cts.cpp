@@ -17,6 +17,7 @@
 #include "system.h"
 #include "mem.h"
 
+#include "switchboard/manager.h"
 #include "switchboard/rail.h"
 #include "switchboard/station.h"
 #include "switchboard/switch.h"
@@ -39,6 +40,8 @@
 
 #define ACTIVATE 0
 #define RELEASE  1
+
+using namespace switchboard;
 
 extern pthread_mutex_t mutex_lockB;
 
@@ -189,22 +192,24 @@ websocket_cts_func websocket_cts[256] = {
 
 void WS_cts_SetSwitch(struct s_opc_SetSwitch * data, Websocket::Client * client){
   lock_Algor_process();
+  Unit * U = Units(data->module);
+
   if(data->mssw){
     loggerf(INFO, "SetMSSw %2x %2x", data->module, data->id);
-    if(Units[data->module] && U_MSSw(data->module, data->id)){
+    if(U && U->MSSw[data->id]){
       loggerf(INFO, "throw msswitch %i:%i to state: \t%i->%i",
-              data->module, data->id, U_MSSw(data->module, data->id)->state, data->state);
+              data->module, data->id, U->MSSw[data->id]->state, data->state);
 
-      U_MSSw(data->module, data->id)->setState(data->state, 1);
+      U->MSSw[data->id]->setState(data->state, 1);
     }
   }
   else{
     loggerf(INFO, "SetSw %2x %2x", data->module, data->id);
-    if(Units[data->module] && U_Sw(data->module, data->id)){ //Check if switch exists
+    if(U && U->Sw[data->id]){ //Check if switch exists
       loggerf(INFO, "throw switch %i:%i to state: \t%i->%i",
-              data->module, data->id, U_Sw(data->module, data->id)->state, !U_Sw(data->module, data->id)->state);
+              data->module, data->id, U->Sw[data->id]->state, !U->Sw[data->id]->state);
 
-      U_Sw(data->module, data->id)->setState(data->state, 1);
+      U->Sw[data->id]->setState(data->state, 1);
     }
   }
   unlock_Algor_process();
@@ -450,7 +455,7 @@ void Web_Train_Split(int i,char tID,char B[]){
 void WS_cts_TrainRoute(struct s_opc_TrainRoute * data, Websocket::Client * client){
   RailTrain * T = train_link[data->train_id];
 
-  Station * St = Units[data->module_id]->St[data->station_id];
+  Station * St = Units(data->module_id)->St[data->station_id];
 
   T->setRoute(St->blocks[0]);
 }

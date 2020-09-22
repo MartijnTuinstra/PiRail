@@ -15,6 +15,7 @@
 #include "system.h"
 
 // #include "rail.h"
+#include "switchboard/manager.h"
 #include "switchboard/switch.h"
 #include "switchboard/msswitch.h"
 #include "switchboard/signals.h"
@@ -31,6 +32,8 @@
 #include "websocket/stc.h"
 
 #include "RNet_msg.h"
+
+using namespace switchboard;
 
 pthread_mutex_t mutex_UART;
 
@@ -297,15 +300,16 @@ void COM_Parse(struct fifobuffer * buf){
   else if(data[1] == RNet_OPC_DEV_ID){ //Report ID
     //Add device to device list
     
-    for(uint16_t i = 0;i<255;i++){
-      if(!Units[i] || i >= unit_len)
+    for(uint16_t i = 0; i < 255; i++){
+      Unit * U = Units(i);
+      if(!U || i >= SwManager->Units.size)
         continue;
 
-      Units[i]->on_layout = 0;
+      U->on_layout = 0;
 
       if(data[i/8+2] & (1 << (i%8))){
         loggerf(INFO, "UART Found Module %d", i);
-        Units[i]->on_layout = 1;
+        U->on_layout = 1;
       }
     }
 
@@ -322,7 +326,7 @@ void COM_Parse(struct fifobuffer * buf){
       return;
     }
 
-    Unit * U = Units[data[0]];
+    Unit * U = Units(data[0]);
 
     // uint8_t module = data[0];
     uint8_t node = data[2];
@@ -644,12 +648,14 @@ void COM_change_switch(int M){
     uint8_t * ToggleAdr = (uint8_t *)malloc(1);
     char Pulse = 0;
 
-    for(int i = 0;i<Units[M]->switch_len;i++){
-      if(!Units[M]->Sw[i]){
+    Unit * U = Units(M);
+
+    for(int i = 0;i < U->switch_len;i++){
+      if(!U->Sw[i]){
         continue;
       }
       //for(int j = 0;j<Units[M]->Sw[i]->length;j++){
-      printf("Switch: %i\t",Units[M]->Sw[i]->id);
+      printf("Switch: %i\t",U->Sw[i]->id);
       loggerf(ERROR, "FIX Switch len");
       // if((Units[M]->Sw[i]->len & 0xC0) == 0){ //Pulse One Addresses
       //   printf("P%x\t",Units[M]->Sw[i]->state);

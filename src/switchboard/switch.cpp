@@ -1,3 +1,4 @@
+#include "switchboard/manager.h"
 #include "switchboard/switch.h"
 #include "switchboard/msswitch.h"
 #include "switchboard/signals.h"
@@ -9,6 +10,8 @@
 #include "modules.h"
 #include "system.h"
 #include "algorithm.h"
+
+using namespace switchboard;
 
 Switch::Switch(uint8_t Module, struct switch_conf s){
   // struct switch_conf s = read_s_switch_conf(buf_ptr);
@@ -28,6 +31,8 @@ Switch::Switch(uint8_t Module, struct switch_conf s){
   this->module = connect.module;
   this->id = connect.id;
 
+  uid = SwManager->addSwitch(this);
+
   this->div = connect.div;
   this->str = connect.str;
   this->app = connect.app;
@@ -35,7 +40,7 @@ Switch::Switch(uint8_t Module, struct switch_conf s){
   this->IO_len = s.IO & 0x0F;
   this->IO = (IO_Port **)_calloc(this->IO_len, IO_Port *);
 
-  Unit * U = Units[connect.module];
+  U = Units(connect.module);
 
 
   // ============== IO ==============
@@ -301,7 +306,7 @@ void Switch::updateState(uint8_t _state){
     Sig->switchUpdate();
   }
 
-  Units[module]->switch_state_changed |= 1;
+  U->switch_state_changed |= 1;
 }
 
 
@@ -323,7 +328,7 @@ int throw_multiple_switches(uint8_t len, char * msg){
     p.type = (data[1] & 0x80) >> 7;
     p.state = data[2];
 
-    if(!(Units[p.module] && (
+    if(!(Units(p.module) && (
       (p.type == 0 && U_Sw(p.module, p.id)) ||
       (p.type == 1 && U_MSSw(p.module, p.id)) )) ){
       loggerf(ERROR, "Switch doesnt exist");
@@ -493,7 +498,7 @@ int Switch_Reserve_Path(RailTrain * T, void * p, struct rail_link link, int flag
     if(DB->reservedBy != T)
       T->reserveBlock(DB);
     DB->statechanged = 1;
-    Units[DB->module]->block_state_changed = 1;
+    Units(DB->module)->block_state_changed = 1;
     loggerf(TRACE, "Set switch %02i:%02i to RESERVED", Sw->module, Sw->id);
 
     if(Sw->state == 0)
@@ -511,7 +516,7 @@ int Switch_Reserve_Path(RailTrain * T, void * p, struct rail_link link, int flag
     if(DB->reservedBy != T)
       T->reserveBlock(DB);
     DB->statechanged = 1;
-    Units[DB->module]->block_state_changed = 1;
+    Units(DB->module)->block_state_changed = 1;
     loggerf(TRACE, "Set switch %02i:%02i to RESERVED", Sw->module, Sw->id);
 
     return Switch_Reserve_Path(T, Sw, Sw->app, flags);

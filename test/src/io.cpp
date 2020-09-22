@@ -2,8 +2,10 @@
 
 #include "mem.h"
 #include "logger.h"
+#include "system.h"
 
 #include "config/ModuleConfig.h"
+#include "switchboard/manager.h"
 #include "switchboard/rail.h"
 #include "switchboard/switch.h"
 #include "switchboard/msswitch.h"
@@ -12,27 +14,24 @@
 #include "switchboard/unit.h"
 
 #include "IO.h"
+#include "algorithm.h"
 #include "train.h"
 #include "modules.h"
 
 TEST_CASE( "IO  Creation and linking", "[IO][IO-1]" ) {
-  
-  unload_module_Configs();
+  init_main();
+
+  switchboard::SwManager->clear();
   unload_rolling_Configs();
-
-  Units = (Unit **)_calloc(30, Unit *);
-  unit_len = 30;
-
-  char filename[30] = "./testconfigs/IO-1.bin";
-  auto config = ModuleConfig(filename);
-  config.read();
-
-  REQUIRE(config.parsed);
+  clearAlgorithmQueue();
   pathlist.clear();
 
-  new Unit(&config);
-  Unit * U = Units[1];
+  char filename[30] = "./testconfigs/IO-1.bin";
+  switchboard::SwManager->addFile(filename);
+  switchboard::SwManager->loadFiles();
 
+  Unit * U = switchboard::Units(1);
+  U->on_layout = true;
   U->link_all();
 
   SECTION("I - Size and type"){
@@ -76,23 +75,19 @@ TEST_CASE( "IO  Creation and linking", "[IO][IO-1]" ) {
 }
 
 TEST_CASE( "IO Output", "[IO][IO-2]"){
-  
-  unload_module_Configs();
+  init_main();
+
+  switchboard::SwManager->clear();
   unload_rolling_Configs();
-
-  Units = (Unit **)_calloc(30, Unit *);
-  unit_len = 30;
-
-  char filename[30] = "./testconfigs/IO-1.bin";
-  auto config = ModuleConfig(filename);
-  config.read();
-
-  REQUIRE(config.parsed);
+  clearAlgorithmQueue();
   pathlist.clear();
 
-  new Unit(&config);
-  Unit * U = Units[1];
-
+  char filename[30] = "./testconfigs/IO-1.bin";
+  switchboard::SwManager->addFile(filename);
+  switchboard::SwManager->loadFiles();
+  
+  Unit * U = switchboard::Units(1);
+  U->on_layout = true;
   U->link_all();
 
 

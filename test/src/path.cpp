@@ -2,8 +2,10 @@
 
 #include "mem.h"
 #include "logger.h"
+#include "system.h"
 
 #include "config/ModuleConfig.h"
+#include "switchboard/manager.h"
 #include "switchboard/rail.h"
 #include "switchboard/switch.h"
 #include "switchboard/msswitch.h"
@@ -12,28 +14,25 @@
 
 #include "rollingstock/railtrain.h"
 
+#include "algorithm.h"
 #include "train.h"
 #include "modules.h"
 #include "path.h"
 
 TEST_CASE( "Path Construction", "[PATH][PATH-1]" ) {
+  init_main();
 
-  unload_module_Configs();
+  switchboard::SwManager->clear();
   unload_rolling_Configs();
-
-  Units = (Unit **)_calloc(30, Unit *);
-  unit_len = 30;
-
-  char filename[30] = "./testconfigs/PATH-1.bin";
-  auto config = ModuleConfig(filename);
-  config.read();
-
-  REQUIRE(config.parsed);
+  clearAlgorithmQueue();
   pathlist.clear();
 
-  new Unit(&config);
-  Unit * U = Units[1];
+  char filename[30] = "./testconfigs/PATH-1.bin";
+  switchboard::SwManager->addFile(filename);
+  switchboard::SwManager->loadFiles();
 
+  Unit * U = switchboard::Units(1);
+  U->on_layout = true;
   U->link_all();
 
   pathlist_find();
@@ -211,25 +210,21 @@ TEST_CASE( "Path Construction", "[PATH][PATH-1]" ) {
 }
 
 TEST_CASE( "Path Reverse", "[PATH][PATH-2]") {
+  init_main();
 
-  unload_module_Configs();
+  switchboard::SwManager->clear();
   unload_rolling_Configs();
-
-  Units = (Unit **)_calloc(30, Unit *);
-  unit_len = 30;
-  train_link = (RailTrain **)_calloc(10,RailTrain *);
-  train_link_len = 10;
-
-  char filename[30] = "./testconfigs/PATH-2.bin";
-  auto config = ModuleConfig(filename);
-  config.read();
-
-  REQUIRE(config.parsed);
+  clearAlgorithmQueue();
   pathlist.clear();
 
-  new Unit(&config);
-  Unit * U = Units[1];
+  char filename[30] = "./testconfigs/PATH-2.bin";
+  switchboard::SwManager->addFile(filename);
+  switchboard::SwManager->loadFiles();
+  
+  load_rolling_Configs("./testconfigs/stock.bin");
 
+  Unit * U = switchboard::Units(1);
+  U->on_layout = true;
   U->link_all();
 
   pathlist_find();
@@ -245,6 +240,9 @@ TEST_CASE( "Path Reverse", "[PATH][PATH-2]") {
 
   REQUIRE(train_link[0]->dir == 0);
   REQUIRE(train_link[1]->dir == 0);
+
+  CHECK(P->next == &U->B[10]->next);
+  CHECK(P->prev == &U->B[0]->prev);
 
   P->reverse();
 
@@ -277,25 +275,22 @@ TEST_CASE( "Path Reverse", "[PATH][PATH-2]") {
 
 
 TEST_CASE( "Path Reserve", "[PATH][PATH-3]") {
+  init_main();
 
-  unload_module_Configs();
+  switchboard::SwManager->clear();
   unload_rolling_Configs();
-
-  Units = (Unit **)_calloc(30, Unit *);
-  unit_len = 30;
-  train_link = (RailTrain **)_calloc(10,RailTrain *);
-  train_link_len = 10;
-
-  char filename[30] = "./testconfigs/PATH-2.bin";
-  auto config = ModuleConfig(filename);
-  config.read();
-
-  REQUIRE(config.parsed);
+  clearAlgorithmQueue();
   pathlist.clear();
 
-  new Unit(&config);
-  Unit * U = Units[1];
 
+  char filename[30] = "./testconfigs/PATH-2.bin";
+  switchboard::SwManager->addFile(filename);
+  switchboard::SwManager->loadFiles();
+  
+  load_rolling_Configs("./testconfigs/stock.bin");
+
+  Unit * U = switchboard::Units(1);
+  U->on_layout = true;
   U->link_all();
 
   pathlist_find();

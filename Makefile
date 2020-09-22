@@ -14,14 +14,15 @@ GCC_FLAGS = -D _DEFAULT_SOURCE
 GCC = g++ -std=c++14 -g3 $(GCC_INCLUDE) $(GCC_ERROR_FLAGS) $(GCC_LIBS) $(GCC_FLAGS)
 
 FILES_CONFIG = $(addprefix config/,ModuleConfig RollingConfig)
-FILES_SWITCHBOARD = $(addprefix switchboard/,blockconnector links rail switch msswitch unit station signals)
+FILES_SWITCHBOARD = $(addprefix switchboard/,blockconnector links rail switch msswitch unit station signals manager)
 FILES_WEBSOCKET = $(addprefix websocket/,server client stc cts message)
 FILES_ROLLING = $(addprefix rollingstock/,train engine car railtrain)
+FILES_UTILS = $(addprefix utils/,)
 
 BAAN_FILES = baan system logger mem modules config IO algorithm encryption \
              Z21 Z21_msg train submodule com sim path pathfinding scheduler/scheduler
 
-BAAN_FILES += $(FILES_ROLLING) $(FILES_WEBSOCKET) $(FILES_SWITCHBOARD) $(FILES_CONFIG)
+BAAN_FILES += $(FILES_ROLLING) $(FILES_WEBSOCKET) $(FILES_SWITCHBOARD) $(FILES_CONFIG) $(FILES_UTILS)
 
 #BAAN_FILES += websocket websocket_cts websocket_stc websocket_control
 

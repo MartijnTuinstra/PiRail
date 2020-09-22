@@ -11,6 +11,7 @@
 #include "algorithm.h"
 #include "logger.h"
 
+#include "switchboard/manager.h"
 #include "switchboard/rail.h"
 #include "switchboard/switch.h"
 #include "switchboard/msswitch.h"
@@ -27,6 +28,8 @@
 
 #include "submodule.h"
 // #include "pathfinding.h"
+
+using namespace switchboard;
 
 pthread_mutex_t mutex_lockA;
 pthread_mutex_t algor_mutex;
@@ -132,22 +135,24 @@ void * Algor_Run(void * args){
   WS_stc_Track_Layout(0);
   // scan_All();
   // Scan All Blocks
-  for(int i = 0;i<unit_len;i++){
-    if(Units[i]){
-      for(int j = 0; j < Units[i]->block_len; j++){
-        if(U_B(i, j)){
-          Algor_process(Units[i]->B[j], _FORCE);
-        }
+  for(int i = 0; i < SwManager->Units.size; i++){
+    Unit * U = Units(i);
+    if(!U)
+      continue;
+
+    for(int j = 0; j < U->block_len; j++){
+      if(U->B[j]){
+        Algor_process(U->B[j], _FORCE);
       }
-      for(int j = 0; j < Units[i]->switch_len; j++){
-        if(U_Sw(i, j)){
-          U_Sw(i, j)->updatedState = true;
-        }
+    }
+    for(int j = 0; j < U->switch_len; j++){
+      if(U->Sw[j]){
+        U->Sw[j]->updatedState = true;
       }
-      for(int j = 0; j < Units[i]->msswitch_len; j++){
-        if(U_MSSw(i, j)){
-          U_MSSw(i, j)->updatedState = true;
-        }
+    }
+    for(int j = 0; j < U->msswitch_len; j++){
+      if(U->MSSw[j]){
+        U->MSSw[j]->updatedState = true;
       }
     }
   }
@@ -162,21 +167,21 @@ void * Algor_Run(void * args){
 
   // processAlgorQueue();
 
-  // Block_Reverse(&Units[20]->B[10]->Alg);
-  // Block_reserve(Units[20]->B[10]);
+  // Block_Reverse(&Units(20)->B[10]->Alg);
+  // Block_reserve(Units(20)->B[10]);
   // //void Block_Reverse(B);
-  // Block_Reverse_To_Next_Switch(Units[20]->B[10]);
+  // Block_Reverse_To_Next_Switch(Units(20)->B[10]);
 
-  // Block_Reverse(&Units[20]->B[11]->Alg);
+  // Block_Reverse(&Units(20)->B[11]->Alg);
 
   // processAlgorQueue();
   // WS_trackUpdate(0);
   // WS_SwitchesUpdate(0);
 
-  // Units[20]->B[10]->blocked = 1;
-  // Units[20]->B[10]->IOchanged = 1;
-  // Units[20]->B[10]->statechanged = 1;
-  // Units[Units[20]->B[10]->module]->block_state_changed = 1;
+  // Units(20)->B[10]->blocked = 1;
+  // Units(20)->B[10]->IOchanged = 1;
+  // Units(20)->B[10]->statechanged = 1;
+  // Units[Units(20)->B[10]->module]->block_state_changed = 1;
   // Algor_process(U_B(20, 10), 1);
 
   // throw_switch(U_Sw(20, 0), 1, 1);
@@ -1079,11 +1084,8 @@ void Algor_train_following(Algor_Blocks * ABs, int debug){
       if(B->reserved){
         B->reserved--;
         if(B->reserved == 0){
-          B->state = PROCEED;
-          B->reverse_state = PROCEED;
-
-          B->statechanged = 1;
-          Units[B->module]->block_state_changed = 1;
+          B->setState(PROCEED);
+          B->setReversedState(PROCEED);
         }
       }
       // if(train_link[B->train])
@@ -1101,11 +1103,8 @@ void Algor_train_following(Algor_Blocks * ABs, int debug){
       if(B->reserved){
         B->reserved--;
         if(B->reserved == 0){
-          B->state = PROCEED;
-          B->reverse_state = PROCEED;
-
-          B->statechanged = 1;
-          Units[B->module]->block_state_changed = 1;
+          B->setState(PROCEED);
+          B->setReversedState(PROCEED);
         }
       }
 
@@ -1310,10 +1309,10 @@ void Algor_Connect_Rails(){
     //IF ALL JOINED
     //BREAK
 
-    for(uint8_t j = 0; j < unit_len; j++){
-      if(!Units[j])
+    for(uint8_t j = 0; j < SwManager->Units.size; j++){
+      Unit * U = Units(j);
+      if(!U)
         continue;
-      Unit * U = Units[j];
 
       U->block_state_changed = 1;
 
@@ -1346,18 +1345,19 @@ void Algor_save_setup(){
   char data[1024];
   char * dataptr = data;
 
-  for(uint8_t i = 0; i < unit_len; i++){
-    if(!Units[i])
+  for(uint8_t i = 0; i < SwManager->Units.size; i++){
+    Unit * U = Units(i);
+    if(!U)
       continue;
 
     dataptr[0] = i;
-    dataptr[1] = Units[i]->connections_len;
+    dataptr[1] = U->connections_len;
     dataptr += 2;
 
-    for(uint8_t j = 0; j < Units[i]->connections_len; j++){
-      dataptr[0] = Units[i]->connection[j].unit;
-      dataptr[1] = Units[i]->connection[j].connector;
-      dataptr[1] = Units[i]->connection[j].crossover;
+    for(uint8_t j = 0; j < U->connections_len; j++){
+      dataptr[0] = U->connection[j].unit;
+      dataptr[1] = U->connection[j].connector;
+      dataptr[1] = U->connection[j].crossover;
       dataptr += 3;
     }
   }

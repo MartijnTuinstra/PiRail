@@ -31,8 +31,11 @@ struct SignalSwitchLink {
 
 class Signal {
   public:
-    uint16_t id;            // Signal ID
     uint8_t module;         // Module number
+    uint16_t id;            // Signal ID
+    uint16_t uid;
+    Unit * U;
+
     bool direction;         // Forward?
 
     struct rail_link block_link;

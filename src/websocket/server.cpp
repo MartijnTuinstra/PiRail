@@ -7,6 +7,7 @@
 #include "websocket/message_structure.h"
 #include "websocket/stc.h"
 
+#include "switchboard/manager.h"
 #include "switchboard/unit.h"
 
 #include "scheduler/scheduler.h"
@@ -193,8 +194,8 @@ void Server::newClientCallback(Client * client){
   //Send track layout and data
   if(SYS->modules_loaded){
     // Send Track Layout Data
-    for(int i = 0; i < unit_len; i++){
-      if(!Units[i])
+    for(int i = 0; i < switchboard::SwManager->Units.size; i++){
+      if(!switchboard::Units(i))
         continue;
 
       WS_stc_Track_LayoutDataOnly(i, client);

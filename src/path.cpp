@@ -328,6 +328,7 @@ void Path::reverse(){
     // T->setSpeedZ21(0);
   }
 
+  std::swap(next, prev);
   std::swap(Entrance, Exit);
 }
 

@@ -25,7 +25,7 @@ typedef struct s_node_adr Node_adr;
 // Train.h
 class RailTrain;
 
-#define U_B(U, A) Units[U]->B[A]
+#define U_B(U, A) Units(U)->B[A]
 #define RESTRICTED_SPEED 40
 #define CAUTION_SPEED 90
 
@@ -97,6 +97,8 @@ class Block {
 
     uint8_t  module;
     uint16_t id;
+    uint16_t uid;
+    Unit * U;
 
     //Input
     IO_Port * In;

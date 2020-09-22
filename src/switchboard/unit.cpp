@@ -3,6 +3,7 @@
 #include "logger.h"
 #include "com.h"
 
+#include "switchboard/manager.h"
 #include "switchboard/rail.h"
 #include "switchboard/switch.h"
 #include "switchboard/msswitch.h"
@@ -10,21 +11,12 @@
 #include "switchboard/signals.h"
 #include "switchboard/unit.h"
 
-int unit_len;
-Unit ** Units;
-
 Unit::Unit(ModuleConfig * Config){
   memset(this, 0, sizeof(Unit));
 
   this->module = Config->header.module;
-  if(this->module < unit_len){
-    Units[this->module] = this;
-  }
-  else{
-    loggerf(CRITICAL, "NEED TO EXPAND UNITS");
-    return;
-  }
 
+  switchboard::SwManager->addUnit(this);
 
   this->connections_len = Config->header.connections;
   if(this->connections_len > 5){
@@ -52,7 +44,7 @@ Unit::Unit(ModuleConfig * Config){
   loggerf(DEBUG, "  Module nodes");
 
   for(int i = 0; i < Config->header.IO_Nodes; i++){
-    new IO_Node(Units[this->module], Config->Nodes[i]);
+    new IO_Node(this, Config->Nodes[i]);
   }
 
   loggerf(DEBUG, "  Module Block");
@@ -97,13 +89,7 @@ Unit::Unit(ModuleConfig * Config){
 Unit::Unit(uint16_t M, uint8_t Nodes, char points){
   memset(this, 0, sizeof(Unit));
 
-  if(M < unit_len){
-    Units[M] = this;
-  }
-  else{
-    loggerf(CRITICAL, "NEED TO EXPAND UNITS");
-    return;
-  }
+  switchboard::SwManager->addUnit(this);
 
   this->module = M;
 

@@ -2,8 +2,10 @@
 
 #include "mem.h"
 #include "logger.h"
+#include "system.h"
 
 #include "config/ModuleConfig.h"
+#include "switchboard/manager.h"
 #include "switchboard/rail.h"
 #include "switchboard/switch.h"
 #include "switchboard/msswitch.h"
@@ -14,25 +16,20 @@
 #include "algorithm.h"
 
 
-TEST_CASE( "Switch Link", "[SB-2.1]" ) {
-  
-  unload_module_Configs();
+TEST_CASE( "Switch Link", "[SB][SB-2][SB-2.1]" ) {
+  init_main();
+
+  switchboard::SwManager->clear();
   unload_rolling_Configs();
   clearAlgorithmQueue();
-
-  Units = (Unit **)_calloc(30, Unit *);
-  unit_len = 30;
+  pathlist.clear();
 
   char filename[30] = "./testconfigs/SB-2.1.bin";
-  auto config = ModuleConfig(filename);
-  config.read();
+  switchboard::SwManager->addFile(filename);
+  switchboard::SwManager->loadFiles();
 
-  REQUIRE(config.parsed);
-
-  new Unit(&config);
-  link_all_blocks(Units[1]);
-  link_all_switches(Units[1]);
-  Unit * U = Units[1];
+  Unit * U = switchboard::Units(1);
+  U->link_all();
 
   /*
   //                      /- --1.3->

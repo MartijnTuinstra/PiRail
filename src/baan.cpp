@@ -7,6 +7,7 @@
 #include "train.h"
 #include "modules.h"
 
+#include "switchboard/manager.h"
 
 #include "scheduler/scheduler.h"
 
@@ -24,7 +25,7 @@ int main(int argc, char * argv[]){
   init_main();
   logger.setfilename("log.txt");
   logger.setlevel(DEBUG);
-  logger.setlevel_stdout(DEBUG);
+  logger.setlevel_stdout(INFO);
 
   if(argc > 1){
     printf("Got argument %s\n", argv[1]);
@@ -43,8 +44,13 @@ int main(int argc, char * argv[]){
   signal(SIGPIPE, SIG_IGN);
   srand(time(NULL));
   
-  load_module_Configs();
+  switchboard::SwManager->openDir(ModuleConfigBasePath);
+  switchboard::SwManager->loadFiles();
+
+  // load_module_Configs();
   load_rolling_Configs(TRAIN_CONF_PATH);
+
+  switchboard::SwManager->print();
 
   scheduler->start();
 
@@ -64,7 +70,8 @@ int main(int argc, char * argv[]){
 
   scheduler->stop();
 
-  unload_module_Configs();
+  // unload_module_Configs();
+  switchboard::SwManager->clear();
   unload_rolling_Configs();
 
   loggerf(INFO, "STOPPED");

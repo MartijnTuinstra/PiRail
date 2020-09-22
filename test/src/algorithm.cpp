@@ -5,7 +5,7 @@
 #include "system.h"
 
 #include "config/ModuleConfig.h"
-
+#include "switchboard/manager.h"
 #include "switchboard/rail.h"
 #include "switchboard/switch.h"
 #include "switchboard/msswitch.h"
@@ -20,38 +20,29 @@
 #include "algorithm.h"
 
 TEST_CASE( "Connector Algorithm", "[Alg][Alg-1]"){
-  
-  unload_module_Configs();
-  unload_rolling_Configs();
-  clearAlgorithmQueue();
-
-  Units = (Unit **)_calloc(30, Unit *);
-  unit_len = 30;
-
   init_main();
 
+  switchboard::SwManager->clear();
+  unload_rolling_Configs();
+  clearAlgorithmQueue();
+  pathlist.clear();
+
   char filename[4][30] = {"./testconfigs/Alg-1-1.bin", "./testconfigs/Alg-1-2.bin", "./testconfigs/Alg-1-3.bin", "./testconfigs/Alg-1-4.bin"};
-  ModuleConfig config[4] = {ModuleConfig(filename[0]), ModuleConfig(filename[1]), ModuleConfig(filename[2]), ModuleConfig(filename[3])};
+  switchboard::SwManager->addFile(filename[0]);
+  switchboard::SwManager->addFile(filename[1]);
+  switchboard::SwManager->addFile(filename[2]);
+  switchboard::SwManager->addFile(filename[3]);
+  switchboard::SwManager->loadFiles();
 
-  config[0].read();
-  config[1].read();
-  config[2].read();
-  config[3].read();
+  REQUIRE(switchboard::Units(1));
+  REQUIRE(switchboard::Units(2));
+  REQUIRE(switchboard::Units(3));
+  REQUIRE(switchboard::Units(4));
 
-  // REQUIRE(config[0].parsed);
-  // REQUIRE(config[1].parsed);
-  // REQUIRE(config[2].parsed);
-  // REQUIRE(config[3].parsed);
-
-  new Unit(&config[0]);
-  new Unit(&config[1]);
-  new Unit(&config[2]);
-  new Unit(&config[3]);
-
-  Units[1]->on_layout = true;
-  Units[2]->on_layout = true;
-  Units[3]->on_layout = true;
-  Units[4]->on_layout = true;
+  switchboard::Units(1)->on_layout = true;
+  switchboard::Units(2)->on_layout = true;
+  switchboard::Units(3)->on_layout = true;
+  switchboard::Units(4)->on_layout = true;
 
   /*                              --\
   //  1.0->  | --2.0-> --2.1->  |  --3.0-> --3.1-> | --4.0->
@@ -79,18 +70,18 @@ TEST_CASE( "Connector Algorithm", "[Alg][Alg-1]"){
         break;
 
       if(x == 1){
-        Units[1]->B[0]->setDetection(1);
-        Units[2]->B[0]->setDetection(1);
+        switchboard::Units(1)->B[0]->setDetection(1);
+        switchboard::Units(2)->B[0]->setDetection(1);
       }else if(x == 2){
-        Units[1]->B[0]->setDetection(0);
-        Units[2]->B[0]->setDetection(0);
-        Units[2]->B[1]->setDetection(1);
-        Units[3]->B[0]->setDetection(1);
+        switchboard::Units(1)->B[0]->setDetection(0);
+        switchboard::Units(2)->B[0]->setDetection(0);
+        switchboard::Units(2)->B[1]->setDetection(1);
+        switchboard::Units(3)->B[0]->setDetection(1);
       }else if(x == 3){
-        Units[2]->B[1]->setDetection(0);
-        Units[3]->B[0]->setDetection(0);
-        Units[3]->B[1]->setDetection(1);
-        Units[4]->B[0]->setDetection(1);
+        switchboard::Units(2)->B[1]->setDetection(0);
+        switchboard::Units(3)->B[0]->setDetection(0);
+        switchboard::Units(3)->B[1]->setDetection(1);
+        switchboard::Units(4)->B[0]->setDetection(1);
       }
       else if(x > 3){
         // _SYS_change(STATE_Modules_Coupled,1);
@@ -102,21 +93,21 @@ TEST_CASE( "Connector Algorithm", "[Alg][Alg-1]"){
       //BREAK
     }
     
-    Units[3]->B[1]->setDetection(0);
-    Units[4]->B[0]->setDetection(0);
+    switchboard::Units(3)->B[1]->setDetection(0);
+    switchboard::Units(4)->B[0]->setDetection(0);
 
-    link_all_blocks(Units[1]);
-    link_all_blocks(Units[2]);
-    link_all_blocks(Units[3]);
-    link_all_blocks(Units[4]);
+    link_all_blocks(switchboard::Units(1));
+    link_all_blocks(switchboard::Units(2));
+    link_all_blocks(switchboard::Units(3));
+    link_all_blocks(switchboard::Units(4));
 
     REQUIRE(connectors.size() == 0);
 
-    CHECK(Units[1]->B[0]->next.p.B == Units[2]->B[0]);
-    CHECK(Units[2]->B[0]->prev.p.B == Units[1]->B[0]);
+    CHECK(switchboard::Units(1)->B[0]->next.p.B == switchboard::Units(2)->B[0]);
+    CHECK(switchboard::Units(2)->B[0]->prev.p.B == switchboard::Units(1)->B[0]);
 
-    CHECK(Units[3]->B[1]->next.p.B == Units[4]->B[0]);
-    CHECK(Units[4]->B[0]->prev.p.B == Units[3]->B[1]);
+    CHECK(switchboard::Units(3)->B[1]->next.p.B == switchboard::Units(4)->B[0]);
+    CHECK(switchboard::Units(4)->B[0]->prev.p.B == switchboard::Units(3)->B[1]);
   }
 
   SECTION("II - Connect Stored Configuration"){
@@ -125,47 +116,39 @@ TEST_CASE( "Connector Algorithm", "[Alg][Alg-1]"){
 
     REQUIRE(ret > 0);
 
-    link_all_blocks(Units[1]);
-    link_all_blocks(Units[2]);
-    link_all_blocks(Units[3]);
-    link_all_blocks(Units[4]);
+    link_all_blocks(switchboard::Units(1));
+    link_all_blocks(switchboard::Units(2));
+    link_all_blocks(switchboard::Units(3));
+    link_all_blocks(switchboard::Units(4));
 
     REQUIRE(connectors.size() == 0);
 
-    CHECK(Units[1]->B[0]->next.p.B == Units[2]->B[0]);
-    CHECK(Units[2]->B[0]->prev.p.B == Units[1]->B[0]);
+    CHECK(switchboard::Units(1)->B[0]->next.p.B == switchboard::Units(2)->B[0]);
+    CHECK(switchboard::Units(2)->B[0]->prev.p.B == switchboard::Units(1)->B[0]);
 
-    CHECK(Units[3]->B[1]->next.p.B == Units[4]->B[0]);
-    CHECK(Units[4]->B[0]->prev.p.B == Units[3]->B[1]);
+    CHECK(switchboard::Units(3)->B[1]->next.p.B == switchboard::Units(4)->B[0]);
+    CHECK(switchboard::Units(4)->B[0]->prev.p.B == switchboard::Units(3)->B[1]);
   }
 }
 
 TEST_CASE( "Train Following", "[Alg][Alg-2]"){
   // Train Following
-
-  unload_module_Configs();
-  unload_rolling_Configs();
-  clearAlgorithmQueue();
-
-  Units = (Unit **)_calloc(30, Unit *);
-  unit_len = 30;
-
   init_main();
 
+  switchboard::SwManager->clear();
+  unload_rolling_Configs();
+  clearAlgorithmQueue();
+  pathlist.clear();
+
   char filename[30] = "./testconfigs/Alg-2.bin";
-  ModuleConfig config = ModuleConfig(filename);
+  switchboard::SwManager->addFile(filename);
+  switchboard::SwManager->loadFiles();
+  
   load_rolling_Configs("./testconfigs/stock.bin");
 
-  config.read();
-
-  REQUIRE(config.parsed);
-
-  new Unit(&config);
-
-  Units[1]->on_layout = true;
-  Unit * U = Units[1];
-
-  link_all_blocks(U);
+  Unit * U = switchboard::Units(1);
+  U->on_layout = true;
+  U->link_all();
 
   /*
   //  1.0> 1.1> 1.2> 1.3> 1.4> 1.5> 1.6> 1.7>
@@ -410,28 +393,21 @@ TEST_CASE( "Train Following", "[Alg][Alg-2]"){
 TEST_CASE( "Algorithm Switch Setter", "[Alg][Alg-3]"){
   init_main();
 
-  unload_module_Configs();
+  switchboard::SwManager->clear();
   unload_rolling_Configs();
   clearAlgorithmQueue();
-
-  Units = (Unit **)_calloc(30, Unit *);
-  unit_len = 30;
-
+  pathlist.clear();
 
   char filename[30] = "./testconfigs/Alg-3.bin";
-  ModuleConfig config = ModuleConfig(filename);
+  switchboard::SwManager->addFile(filename);
+  switchboard::SwManager->loadFiles();
+  
   load_rolling_Configs("./testconfigs/stock.bin");
 
-  config.read();
-
-  REQUIRE(config.parsed);
-
-  new Unit(&config);
-
-  Units[1]->on_layout = true;
-  Unit * U = Units[1];
-
+  Unit * U = switchboard::Units(1);
+  U->on_layout = true;
   U->link_all();
+
 
   /*           Sw0/--->
   // 1.0> 1.1> 1.2----> 1.3>

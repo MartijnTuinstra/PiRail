@@ -5,6 +5,7 @@
 #include "system.h"
 
 #include "config/ModuleConfig.h"
+#include "switchboard/manager.h"
 #include "switchboard/rail.h"
 #include "switchboard/switch.h"
 #include "switchboard/msswitch.h"
@@ -19,24 +20,20 @@
 
 #include "rollingstock/railtrain.h"
 
-TEST_CASE( "Signal 1", "[SB-4.1]" ) {
-  
-  unload_module_Configs();
+TEST_CASE( "Signal 1", "[SB][SB-4][SB-4.1]" ) {
+  init_main();
+
+  switchboard::SwManager->clear();
   unload_rolling_Configs();
   clearAlgorithmQueue();
-
-  Units = (Unit **)_calloc(30, Unit *);
-  unit_len = 30;
+  pathlist.clear();
 
   char filename[30] = "./testconfigs/SB-4.1.bin";
-  auto config = ModuleConfig(filename);
-  config.read();
+  switchboard::SwManager->addFile(filename);
+  switchboard::SwManager->loadFiles();
 
-  REQUIRE(config.parsed);
-
-  new Unit(&config);
-  link_all_blocks(Units[1]);
-  Unit * U = Units[1];
+  Unit * U = switchboard::Units(1);
+  U->link_all();
 
   /*       o>        <o
   //       |          |
@@ -94,31 +91,21 @@ TEST_CASE( "Signal 1", "[SB-4.1]" ) {
   }
 }
 
-TEST_CASE( "Signal 2", "[SB-4.2]" ) {
-  
-  unload_module_Configs();
+TEST_CASE( "Signal 2", "[SB][SB-4][SB-4.2]" ) {
+  init_main();
+
+  switchboard::SwManager->clear();
   unload_rolling_Configs();
   clearAlgorithmQueue();
+  pathlist.clear();
 
-  Units = (Unit **)_calloc(30, Unit *);
-  unit_len = 30;
+  switchboard::SwManager->addFile("./testconfigs/SB-4.2-1.bin");
+  switchboard::SwManager->addFile("./testconfigs/SB-4.2-2.bin");
+  switchboard::SwManager->loadFiles();
 
-  char filename[30] = "./testconfigs/SB-4.2-1.bin";
-  auto config1 = ModuleConfig(filename);
-  filename[21] = '2';
-  auto config2 = ModuleConfig(filename);
-
-  config1.read();
-  config2.read();
-
-  REQUIRE(config1.parsed);
-  REQUIRE(config2.parsed);
-
-  new Unit(&config1);
-  new Unit(&config2);
-  Unit * U1 = Units[1];
-  Unit * U2 = Units[2];
-
+  Unit * U1 = switchboard::Units(1);
+  Unit * U2 = switchboard::Units(2);
+  
   /*       o>
   //       |
   //  1.0->  | --2.0->
@@ -138,19 +125,19 @@ TEST_CASE( "Signal 2", "[SB-4.2]" ) {
 
   loggerf(INFO, "Have %i connectors", connectors.size());
 
-  Units[1]->B[0]->setDetection(1);
-  Units[2]->B[0]->setDetection(1);
+  U1->B[0]->setDetection(1);
+  U2->B[0]->setDetection(1);
 
   if(uint8_t * findResult = Algorithm_find_connectable(&connectors))
     Algorithm_connect_connectors(&connectors, findResult);
 
   loggerf(INFO, "Have %i connectors", connectors.size());
 
-  link_all_blocks(Units[1]);
-  link_all_blocks(Units[2]);
+  link_all_blocks(U1);
+  link_all_blocks(U2);
 
-  Units[1]->B[0]->setDetection(0);
-  Units[2]->B[0]->setDetection(0);
+  U1->B[0]->setDetection(0);
+  U2->B[0]->setDetection(0);
 
   REQUIRE(connectors.size() == 0);
 

@@ -18,17 +18,11 @@
 
 #include "rollingstock/railtrain.h"
 
+void init_test(char (* filenames)[30], int nr_files);
+
 TEST_CASE( "Station Stating", "[SB][SB-5][SB-5.1]" ) {
-  init_main();
-
-  switchboard::SwManager->clear();
-  unload_rolling_Configs();
-  clearAlgorithmQueue();
-  pathlist.clear();
-
-  char filename[30] = "./testconfigs/SB-1.3.bin";
-  switchboard::SwManager->addFile(filename);
-  switchboard::SwManager->loadFiles();
+  char filenames[1][30] = {"./testconfigs/SB-1.3.bin"};
+  init_test(filenames, 1);
 
   Unit * U = switchboard::Units(1);
   U->link_all();

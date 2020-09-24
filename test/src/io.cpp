@@ -18,17 +18,11 @@
 #include "train.h"
 #include "modules.h"
 
+void init_test(char (* filenames)[30], int nr_files);
+
 TEST_CASE( "IO  Creation and linking", "[IO][IO-1]" ) {
-  init_main();
-
-  switchboard::SwManager->clear();
-  unload_rolling_Configs();
-  clearAlgorithmQueue();
-  pathlist.clear();
-
-  char filename[30] = "./testconfigs/IO-1.bin";
-  switchboard::SwManager->addFile(filename);
-  switchboard::SwManager->loadFiles();
+  char filenames[1][30] = {"./testconfigs/IO-1.bin"};
+  init_test(filenames, 1);
 
   Unit * U = switchboard::Units(1);
   U->on_layout = true;
@@ -75,17 +69,9 @@ TEST_CASE( "IO  Creation and linking", "[IO][IO-1]" ) {
 }
 
 TEST_CASE( "IO Output", "[IO][IO-2]"){
-  init_main();
+  char filenames[1][30] = {"./testconfigs/IO-1.bin"};
+  init_test(filenames, 1);
 
-  switchboard::SwManager->clear();
-  unload_rolling_Configs();
-  clearAlgorithmQueue();
-  pathlist.clear();
-
-  char filename[30] = "./testconfigs/IO-1.bin";
-  switchboard::SwManager->addFile(filename);
-  switchboard::SwManager->loadFiles();
-  
   Unit * U = switchboard::Units(1);
   U->on_layout = true;
   U->link_all();

@@ -19,17 +19,11 @@
 #include "modules.h"
 #include "path.h"
 
+void init_test(char (* filenames)[30], int nr_files);
+
 TEST_CASE( "Path Construction", "[PATH][PATH-1]" ) {
-  init_main();
-
-  switchboard::SwManager->clear();
-  unload_rolling_Configs();
-  clearAlgorithmQueue();
-  pathlist.clear();
-
-  char filename[30] = "./testconfigs/PATH-1.bin";
-  switchboard::SwManager->addFile(filename);
-  switchboard::SwManager->loadFiles();
+  char filenames[2][30] = {"./testconfigs/PATH-1.bin"};
+  init_test(filenames, 1);
 
   Unit * U = switchboard::Units(1);
   U->on_layout = true;
@@ -210,18 +204,8 @@ TEST_CASE( "Path Construction", "[PATH][PATH-1]" ) {
 }
 
 TEST_CASE( "Path Reverse", "[PATH][PATH-2]") {
-  init_main();
-
-  switchboard::SwManager->clear();
-  unload_rolling_Configs();
-  clearAlgorithmQueue();
-  pathlist.clear();
-
-  char filename[30] = "./testconfigs/PATH-2.bin";
-  switchboard::SwManager->addFile(filename);
-  switchboard::SwManager->loadFiles();
-  
-  load_rolling_Configs("./testconfigs/stock.bin");
+  char filenames[1][30] = {"./testconfigs/PATH-2.bin"};
+  init_test(filenames, 1);
 
   Unit * U = switchboard::Units(1);
   U->on_layout = true;
@@ -275,19 +259,9 @@ TEST_CASE( "Path Reverse", "[PATH][PATH-2]") {
 
 
 TEST_CASE( "Path Reserve", "[PATH][PATH-3]") {
-  init_main();
-
-  switchboard::SwManager->clear();
-  unload_rolling_Configs();
-  clearAlgorithmQueue();
-  pathlist.clear();
-
-
-  char filename[30] = "./testconfigs/PATH-2.bin";
-  switchboard::SwManager->addFile(filename);
-  switchboard::SwManager->loadFiles();
+  char filenames[1][30] = {"./testconfigs/PATH-2.bin"};
+  init_test(filenames, 1);
   
-  load_rolling_Configs("./testconfigs/stock.bin");
 
   Unit * U = switchboard::Units(1);
   U->on_layout = true;

@@ -15,17 +15,11 @@
 #include "modules.h"
 #include "algorithm.h"
 
+void init_test(char (* filenames)[30], int nr_files);
+
 TEST_CASE( "MSSwitch Link", "[SB][SB-3][SB-3.1]" ) {
-  init_main();
-
-  switchboard::SwManager->clear();
-  unload_rolling_Configs();
-  clearAlgorithmQueue();
-  pathlist.clear();
-
-  char filename[30] = "./testconfigs/SB-3.1.bin";
-  switchboard::SwManager->addFile(filename);
-  switchboard::SwManager->loadFiles();
+  char filenames[1][30] = {"./testconfigs/SB-3.1.bin"};
+  init_test(filenames, 1);
 
   Unit * U = switchboard::Units(1);
   U->link_all();

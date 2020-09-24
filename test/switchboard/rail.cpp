@@ -17,17 +17,11 @@
 #include "modules.h"
 #include "rollingstock/railtrain.h"
 
+void init_test(char (* filenames)[30], int nr_files);
+
 TEST_CASE( "Block Link", "[SB][SB-1][SB-1.1]" ) {
-  init_main();
-
-  switchboard::SwManager->clear();
-  unload_rolling_Configs();
-  clearAlgorithmQueue();
-  pathlist.clear();
-
-  char filename[30] = "./testconfigs/SB-1.1.bin";
-  switchboard::SwManager->addFile(filename);
-  switchboard::SwManager->loadFiles();
+  char filenames[1][30] = {"./testconfigs/SB-1.1.bin"};
+  init_test(filenames, 1);
 
   Unit * U = switchboard::Units(1);
   U->link_all();
@@ -85,18 +79,8 @@ TEST_CASE( "Block Link", "[SB][SB-1][SB-1.1]" ) {
 }
 
 TEST_CASE( "Block Algorithm Search", "[SB][SB-1][SB-1.2]" ) {
-  init_main();
-
-  // logger.setlevel_stdout(DEBUG);
-  switchboard::SwManager->clear();
-  unload_rolling_Configs();
-  clearAlgorithmQueue();
-  pathlist.clear();
-
-
-  char filename[30] = "./testconfigs/SB-1.2.bin";
-  switchboard::SwManager->addFile(filename);
-  switchboard::SwManager->loadFiles();
+  char filenames[1][30] = {"./testconfigs/SB-1.2.bin"};
+  init_test(filenames, 1);
 
   Unit * U = switchboard::Units(1);
   U->link_all();
@@ -325,18 +309,8 @@ TEST_CASE( "Block Algorithm Search", "[SB][SB-1][SB-1.2]" ) {
 }
 
 TEST_CASE( "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" ) {
-  init_main();
-  // logger.setlevel_stdout(DEBUG);
-
-  switchboard::SwManager->clear();
-  unload_rolling_Configs();
-  clearAlgorithmQueue();
-  pathlist.clear();
-
-
-  char filename[30] = "./testconfigs/SB-1.3.bin";
-  switchboard::SwManager->addFile(filename);
-  switchboard::SwManager->loadFiles();
+  char filenames[1][30] = {"./testconfigs/SB-1.3.bin"};
+  init_test(filenames, 1);
 
   Unit * U = switchboard::Units(1);
   U->link_all();
@@ -362,10 +336,9 @@ TEST_CASE( "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" ) {
   //  <-1.43- <-1.44- <-1.45-> -1.46-> -1.47-> 
   //
   // SECTION V
-  //                    /Sw1:0
-  //                   /
-  //  1.16->  --1.17-> ---- --1.18-> --1.19-> --1.48->
-  //                     \- |end
+  //
+  //  1.16->  --1.17----> --1.18-> --1.19-> --1.48->
+  //              Sw0\--> |end
   //
   // SECTION VI
   //              /MSSw1:0
@@ -470,13 +443,25 @@ TEST_CASE( "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" ) {
     CHECK(U->B[19]->Alg.P[1]->state == DANGER);
     CHECK(U->B[19]->Alg.P[2]->state == CAUTION);
 
-    U->Sw[0]->state = 1;
+    U->Sw[0]->setState(1);
     Algor_process(U->B[17], _FORCE);
 
     REQUIRE(U->B[17]->Alg.prev == 1);
 
     CHECK(U->B[17]->state == DANGER);
     CHECK(U->B[17]->Alg.P[0]->state == CAUTION);
+
+    U->Sw[0]->state = 0; // Force update of all blocks
+    U->Sw[0]->setState(1);
+
+    U->Sw[0]->Detection->switchWrongState = true;
+    Algor_process(U->B[16], _FORCE);
+    Algor_process(U->B[17], _FORCE);
+    Algor_process(U->B[18], _FORCE);
+
+    CHECK(U->B[17]->switchWrongState);
+    CHECK(U->B[17]->state == DANGER);
+    CHECK(U->B[16]->state == CAUTION);
   }
 
   // SECTION("VI - Blocks and msswitch"){

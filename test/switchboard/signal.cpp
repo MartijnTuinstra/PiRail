@@ -20,17 +20,11 @@
 
 #include "rollingstock/railtrain.h"
 
+void init_test(char (* filenames)[30], int nr_files);
+
 TEST_CASE( "Signal 1", "[SB][SB-4][SB-4.1]" ) {
-  init_main();
-
-  switchboard::SwManager->clear();
-  unload_rolling_Configs();
-  clearAlgorithmQueue();
-  pathlist.clear();
-
-  char filename[30] = "./testconfigs/SB-4.1.bin";
-  switchboard::SwManager->addFile(filename);
-  switchboard::SwManager->loadFiles();
+  char filenames[1][30] = {"./testconfigs/SB-4.1.bin"};
+  init_test(filenames, 1);
 
   Unit * U = switchboard::Units(1);
   U->link_all();
@@ -92,16 +86,8 @@ TEST_CASE( "Signal 1", "[SB][SB-4][SB-4.1]" ) {
 }
 
 TEST_CASE( "Signal 2", "[SB][SB-4][SB-4.2]" ) {
-  init_main();
-
-  switchboard::SwManager->clear();
-  unload_rolling_Configs();
-  clearAlgorithmQueue();
-  pathlist.clear();
-
-  switchboard::SwManager->addFile("./testconfigs/SB-4.2-1.bin");
-  switchboard::SwManager->addFile("./testconfigs/SB-4.2-2.bin");
-  switchboard::SwManager->loadFiles();
+  char filenames[2][30] = {"./testconfigs/SB-4.2-1.bin", "./testconfigs/SB-4.2-2.bin"};
+  init_test(filenames, 2);
 
   Unit * U1 = switchboard::Units(1);
   Unit * U2 = switchboard::Units(2);

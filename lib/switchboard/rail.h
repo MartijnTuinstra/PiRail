@@ -136,7 +136,7 @@ class Block {
     uint8_t recalculate:1;
     uint8_t oneWay:1;
 
-    uint8_t SwitchWrongState:1; // Set block to DANGER/CAUTION if switch cannot be aligned properly
+    uint8_t switchWrongState:1; // Set block to DANGER/CAUTION if switch cannot be aligned properly
 
     std::vector<Signal *> * forward_signal;
     std::vector<Signal *> * reverse_signal;
@@ -160,7 +160,9 @@ class Block {
     uint8_t _NextList(Block ** blocks, uint8_t block_counter, int flags, int length);
 
     void reverse();
+
     void reserve();
+    void dereserve();
 
     void setState(enum Rail_states state);
     void setReversedState(enum Rail_states state);

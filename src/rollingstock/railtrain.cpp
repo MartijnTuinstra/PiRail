@@ -74,6 +74,16 @@ void RailTrain::dereserveBlock(Block * rB){
                        reservedBlocks.end());
 }
 
+void RailTrain::dereserveAll(){
+
+  for(auto b: reservedBlocks){
+    b->reservedBy = 0;
+    b->switchReserved = false;
+  }
+
+  reservedBlocks.clear();
+}
+
 void RailTrain::initVirtualBlocks(){
   loggerf(TRACE, "initVirtualBlocks");
   Block * tB = B;
@@ -173,7 +183,20 @@ void RailTrain::moveForward(Block * tB){
   }
 }
 
-// void RailTrain::setSpeed(uint16_t _speed); INLINE FUNCTION DEFINE IN HEADER
+void inline RailTrain::setSpeed(uint16_t _speed){
+  speed = _speed;
+
+  if(stopped && speed){
+    // Was stopped but starting to move
+  }
+
+  if(speed) setStopped(0);
+  else setStopped(1);
+
+  if(!p.p) return;
+  else if(type == RAILTRAIN_ENGINE_TYPE) p.E->setSpeed(speed);
+  else p.T->setSpeed(speed);
+}
 
 void RailTrain::setSpeedZ21(uint16_t _speed){
   setSpeed(_speed);
@@ -188,6 +211,9 @@ void RailTrain::setSpeedZ21(uint16_t _speed){
 
 void RailTrain::setStopped(bool stop){
   stopped = stop;
+
+  if(stop)
+    dereserveAll();
 
   for(auto b: blocks){
     if(b->station){

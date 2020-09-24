@@ -392,13 +392,23 @@ void Block::reverse(){
 }
 
 void Block::reserve(){
-  if(this->state >= PROCEED)
-    this->state = RESERVED;
-  this->reverse_state = DANGER;
+  if(state >= PROCEED)
+    state = RESERVED;
+  reverse_state = DANGER;
 
-  this->reserved++;
+  reserved++;
 
-  this->statechanged = 1;
+  statechanged = 1;
+  U->block_state_changed = 1;
+}
+
+void Block::dereserve(){
+  state = PROCEED;
+  reverse_state = PROCEED;
+
+  reserved--;
+
+  statechanged = 1;
   U->block_state_changed = 1;
 }
 
@@ -452,82 +462,80 @@ enum Rail_states Block::addSignal(Signal * Sig){
 
 
 void Block::AlgorClear(){
-  loggerf(TRACE, "Block %02i:%02i AlgorClear", this->module, this->id);
-  memset(this->Alg.P, 0, 10*sizeof(void *));
-  memset(this->Alg.N, 0, 10*sizeof(void *));
-  this->Alg.prev  = 0;
-  this->Alg.prev1 = 0;
-  this->Alg.prev2 = 0;
-  this->Alg.prev3 = 0;
+  loggerf(INFO, "Block %02i:%02i AlgorClear", module, id);
+  memset(Alg.P, 0, 10*sizeof(void *));
+  memset(Alg.N, 0, 10*sizeof(void *));
+  Alg.prev  = 0;
+  Alg.prev1 = 0;
+  Alg.prev2 = 0;
+  Alg.prev3 = 0;
 
-  this->Alg.next = 0;
-  this->Alg.next1 = 0;
-  this->Alg.next2 = 0;
-  this->Alg.next3 = 0;
+  Alg.next = 0;
+  Alg.next1 = 0;
+  Alg.next2 = 0;
+  Alg.next3 = 0;
 }
 #define ALGORLENGTH 100
 
 void Block::AlgorSearch(int debug){
-  loggerf(TRACE, "Blocks::AlgorSearch - %02i:%02i", this->module, this->id);
+  loggerf(TRACE, "Blocks::AlgorSearch - %02i:%02i", module, id);
   Block * next = 0;
   Block * prev = 0;
 
-  Algor_Blocks * ABs = &this->Alg;
-
   AlgorClear();
 
-  loggerf(TRACE, "Search blocks %02i:%02i", this->module, this->id);
+  loggerf(TRACE, "Search blocks %02i:%02i", module, id);
 
-  next = this->_Next(0 | SWITCH_CARE, 1);
-  prev = this->_Next(1 | SWITCH_CARE | DIRECTION_CARE,1);
+  next = _Next(0 | SWITCH_CARE, 1);
+  prev = _Next(1 | SWITCH_CARE | DIRECTION_CARE,1);
 
   if(next){
-    ABs->next = this->_NextList(ABs->N, 0, NEXT | SWITCH_CARE, 600);
+    Alg.next = _NextList(Alg.N, 0, NEXT | SWITCH_CARE, 600);
 
-    ABs->next1 = ABs->next;
-    ABs->next2 = ABs->next;
-    ABs->next3 = ABs->next;
+    Alg.next1 = Alg.next;
+    Alg.next2 = Alg.next;
+    Alg.next3 = Alg.next;
 
     uint16_t length = 0;
     uint8_t j = 0;
-    uint8_t * n[3] = {&ABs->next1, &ABs->next2, &ABs->next3};
+    uint8_t * n[3] = {&Alg.next1, &Alg.next2, &Alg.next3};
 
-    if(ABs->next > 0)
-      length = ABs->N[0]->length;
+    if(Alg.next > 0)
+      length = Alg.N[0]->length;
 
-    for(uint8_t i = 1; i < ABs->next; i++){
-      if(length >= ALGORLENGTH && j < 3 && ABs->N[i]->type != NOSTOP &&
-         ((!ABs->N[i]->station || (ABs->N[i-1]->station && ABs->N[i]->station != ABs->N[i-1]->station) || ABs->N[i-1]->type == NOSTOP) || !this->station)){
+    for(uint8_t i = 1; i < Alg.next; i++){
+      if(length >= ALGORLENGTH && j < 3 && Alg.N[i]->type != NOSTOP &&
+         ((!Alg.N[i]->station || (Alg.N[i-1]->station && Alg.N[i]->station != Alg.N[i-1]->station) || Alg.N[i-1]->type == NOSTOP) || !this->station)){
 
         *(n[j++]) = i;
         length = 0;
       }
 
-      length += ABs->N[i]->length;
+      length += Alg.N[i]->length;
     }
   }
   if(prev){
-    ABs->prev = this->_NextList(ABs->P, 0, PREV | SWITCH_CARE | DIRECTION_CARE, 600);
+    Alg.prev = _NextList(Alg.P, 0, PREV | SWITCH_CARE | DIRECTION_CARE, 600);
 
-    ABs->prev1 = ABs->prev;
-    ABs->prev2 = ABs->prev;
-    ABs->prev3 = ABs->prev;
+    Alg.prev1 = Alg.prev;
+    Alg.prev2 = Alg.prev;
+    Alg.prev3 = Alg.prev;
 
     uint16_t length = 0;
     uint8_t j = 0;
-    uint8_t * p[3] = {&ABs->prev1, &ABs->prev2, &ABs->prev3};
+    uint8_t * p[3] = {&Alg.prev1, &Alg.prev2, &Alg.prev3};
 
-    if(ABs->prev > 0)
-      length = ABs->P[0]->length;
+    if(Alg.prev > 0)
+      length = Alg.P[0]->length;
 
-    for(uint8_t i = 1; i < ABs->prev; i++){
-      if(length >= ALGORLENGTH && j < 3 && ABs->P[i]->type != NOSTOP &&
-         ((!ABs->P[i]->station || (ABs->P[i-1]->station && ABs->P[i]->station != ABs->P[i-1]->station) || ABs->P[i-1]->type == NOSTOP) || !this->station)){
+    for(uint8_t i = 1; i < Alg.prev; i++){
+      if(length >= ALGORLENGTH && j < 3 && Alg.P[i]->type != NOSTOP &&
+         ((!Alg.P[i]->station || (Alg.P[i-1]->station && Alg.P[i]->station != Alg.P[i-1]->station) || Alg.P[i-1]->type == NOSTOP) || !this->station)){
 
         *(p[j++]) = i;
         length = 0;
       }
-      length += ABs->P[i]->length;
+      length += Alg.P[i]->length;
     }
   }
 }

@@ -20,20 +20,11 @@
 #include "algorithm.h"
 #include "pathfinding.h"
 
+void init_test(char (* filenames)[30], int nr_files);
+
 TEST_CASE( "Connector Algorithm", "[Alg][Alg-1]"){
-  init_main();
-
-  switchboard::SwManager->clear();
-  unload_rolling_Configs();
-  clearAlgorithmQueue();
-  pathlist.clear();
-
-  char filename[4][30] = {"./testconfigs/Alg-1-1.bin", "./testconfigs/Alg-1-2.bin", "./testconfigs/Alg-1-3.bin", "./testconfigs/Alg-1-4.bin"};
-  switchboard::SwManager->addFile(filename[0]);
-  switchboard::SwManager->addFile(filename[1]);
-  switchboard::SwManager->addFile(filename[2]);
-  switchboard::SwManager->addFile(filename[3]);
-  switchboard::SwManager->loadFiles();
+  char filenames[4][30] = {"./testconfigs/Alg-1-1.bin", "./testconfigs/Alg-1-2.bin", "./testconfigs/Alg-1-3.bin", "./testconfigs/Alg-1-4.bin"};
+  init_test(filenames, 4);
 
   REQUIRE(switchboard::Units(1));
   REQUIRE(switchboard::Units(2));
@@ -133,19 +124,8 @@ TEST_CASE( "Connector Algorithm", "[Alg][Alg-1]"){
 }
 
 TEST_CASE( "Train Following", "[Alg][Alg-2]"){
-  // Train Following
-  init_main();
-
-  switchboard::SwManager->clear();
-  unload_rolling_Configs();
-  clearAlgorithmQueue();
-  pathlist.clear();
-
-  char filename[30] = "./testconfigs/Alg-2.bin";
-  switchboard::SwManager->addFile(filename);
-  switchboard::SwManager->loadFiles();
-  
-  load_rolling_Configs("./testconfigs/stock.bin");
+  char filenames[1][30] = {"./testconfigs/Alg-2.bin"};
+  init_test(filenames, 1);
 
   Unit * U = switchboard::Units(1);
   U->on_layout = true;
@@ -392,18 +372,8 @@ TEST_CASE( "Train Following", "[Alg][Alg-2]"){
 }
 
 TEST_CASE( "Algorithm Switch Setter", "[Alg][Alg-3]"){
-  init_main();
-
-  switchboard::SwManager->clear();
-  unload_rolling_Configs();
-  clearAlgorithmQueue();
-  pathlist.clear();
-
-  char filename[30] = "./testconfigs/Alg-3.bin";
-  switchboard::SwManager->addFile(filename);
-  switchboard::SwManager->loadFiles();
-  
-  load_rolling_Configs("./testconfigs/stock.bin");
+  char filenames[1][30] = {"./testconfigs/Alg-3.bin"};
+  init_test(filenames, 1);
 
   Unit * U = switchboard::Units(1);
   U->on_layout = true;
@@ -422,11 +392,13 @@ TEST_CASE( "Algorithm Switch Setter", "[Alg][Alg-3]"){
   //                       |---St1---|
   //
   //                             |---St2---|
-  //                    Sw5/---> 1.20> 1.21>
-  // 1.15> 1.16> ------1.17----> 1.18> 1.19>
-  //                  /Sw4       |---St3---| 
-  //              Sw3/           |---St4---|
-  // 1.22> 1.23> 1.24----------> 1.25> 1.26>
+  //                    Sw5/---> 1.20> 1.21> ---\Sw6
+  // 1.15> 1.16> ------1.17----> 1.18> 1.19> ----1.27> 1.28-> ----\
+  //                  /Sw4       |---St3---|            Sw7\       \
+  //              Sw3/           |---St4---|                \       \Sw8
+  // 1.22> 1.23> 1.24----------> 1.25> 1.26> ----1.29> ------1.30> ---1.31> 1.33>
+  //                                                       MSSw0  \
+  //                                                               \-> 1.32>   
   */
 
   for(uint8_t i = 0; i < 9; i++){
@@ -446,9 +418,18 @@ TEST_CASE( "Algorithm Switch Setter", "[Alg][Alg-3]"){
     Algor_process(U->B[0], _FORCE);
 
     CHECK(U->Sw[0]->state == 0);
+    CHECK(U->Sw[0]->Detection->switchReserved);
+    CHECK(U->Sw[0]->Detection->reservedBy == U->B[0]->train);
+
+    U->Sw[0]->Detection->switchReserved = 0;
+    U->Sw[0]->Detection->reservedBy = 0;
+    U->Sw[0]->Detection->state = PROCEED;
 
     U->Sw[0]->setState(1); // Set Diverging
+    CHECK(U->Sw[0]->state == 1);
+
     processAlgorQueue();
+
 
     Algor_process(U->B[0], _FORCE);
 
@@ -465,11 +446,17 @@ TEST_CASE( "Algorithm Switch Setter", "[Alg][Alg-3]"){
     Algor_process(U->B[4], _FORCE);
 
     CHECK(U->Sw[1]->state == 0);
+    CHECK(U->Sw[1]->Detection->switchReserved);
+    CHECK(U->Sw[1]->Detection->reservedBy == U->B[4]->train);
+
+    U->B[4]->train->dereserveBlock(U->Sw[1]->Detection);
 
     U->Sw[1]->setState(1); // Set Diverging
+    CHECK(U->Sw[1]->state == 1);
+
     processAlgorQueue();
 
-    Algor_process(U->B[4], _FORCE);
+    // Algor_process(U->B[4], _FORCE);
 
     CHECK(U->Sw[1]->state == 0);
     CHECK(U->Sw[1]->Detection->switchReserved);
@@ -490,6 +477,8 @@ TEST_CASE( "Algorithm Switch Setter", "[Alg][Alg-3]"){
     CHECK(U->B[10]->state == DANGER);
 
     CHECK(U->Sw[2]->state == 0);
+    CHECK(U->Sw[2]->Detection->switchReserved);
+    CHECK(U->Sw[2]->Detection->reservedBy == U->B[8]->train);
 
     Algor_process(U->B[8], _FORCE);
 
@@ -507,25 +496,19 @@ TEST_CASE( "Algorithm Switch Setter", "[Alg][Alg-3]"){
     U->B[8]->setDetection(1);
     U->B[12]->setDetection(1);
     U->B[14]->setDetection(1);
-    Algor_process(U->B[8], _FORCE);
     Algor_process(U->B[12], _FORCE);
     Algor_process(U->B[14], _FORCE);
 
     U->St[0]->train->setSpeed(0);
     U->St[1]->train->setSpeed(0);
 
-    // CHECK(U->B[5]->state == DANGER);
-    // CHECK(U->B[9]->state == DANGER);
-
-    CHECK(U->Sw[2]->state == 0);
-
-    Algor_process(U->B[2], _FORCE);
+    Algor_process(U->B[8], _FORCE);
 
     CHECK(U->Sw[2]->state == 0);
     CHECK(U->Sw[2]->Detection->state == DANGER);
 
     CHECK(!U->Sw[2]->Detection->switchReserved);
-    // CHECK(U->Sw[1]->Detection->SwitchWrongState);
+    CHECK(U->Sw[2]->Detection->switchWrongState);
 
     if(U->B[2]->train)
       delete U->B[2]->train;
@@ -539,12 +522,15 @@ TEST_CASE( "Algorithm Switch Setter", "[Alg][Alg-3]"){
     U->B[15]->setDetection(1);
     U->B[19]->setDetection(1);
     Algor_process(U->B[19], _FORCE);
-    Algor_process(U->B[15], _FORCE);
 
     U->Sw[4]->setState(1);
     processAlgorQueue();
 
-    U->St[3]->train->setSpeed(0);
+    // Algor_process(U->B[15], _FORCE);
+    // U->St[3]->train -> SIGSEV
+    CHECK(U->B[19]->station == U->St[3]);
+    CHECK(U->B[19]->train == U->St[3]->train);
+    U->B[19]->train->setSpeed(0);
 
     Algor_process(U->B[15], _FORCE);
 
@@ -561,7 +547,6 @@ TEST_CASE( "Algorithm Switch Setter", "[Alg][Alg-3]"){
   }
 
   SECTION("VI- Approaching S side with full station and switchblock"){
-    logger.setlevel_stdout(INFO);
     U->B[15]->setDetection(1);
     U->B[19]->setDetection(1);
     U->B[21]->setDetection(1);
@@ -569,16 +554,15 @@ TEST_CASE( "Algorithm Switch Setter", "[Alg][Alg-3]"){
     Algor_process(U->B[19], _FORCE);
     Algor_process(U->B[21], _FORCE);
 
-    U->Sw[4]->setState(1, 0);
-    Algor_process(U->B[16], 0);
-    Algor_process(U->B[17], 0);
-    Algor_process(U->B[18], 0);
-    Algor_process(U->B[19], 0);
-    Algor_process(U->B[20], 0);
-    Algor_process(U->B[21], 0);
+    // U->St[2]->train->setSpeed(0);
+    // U->St[3]->train->setSpeed(0);
+    U->B[19]->train->setSpeed(0);
+    U->B[21]->train->setSpeed(0);
 
-    U->St[2]->train->setSpeed(0);
-    U->St[3]->train->setSpeed(0);
+    U->B[15]->train->dereserveBlock(U->Sw[4]->Detection); // Allow switch to change
+
+    U->Sw[4]->setState(1, 0);
+    processAlgorQueue();
 
     CHECK(U->Sw[4]->state == 1);
     CHECK(U->Sw[5]->state == 0);
@@ -599,11 +583,10 @@ TEST_CASE( "Algorithm Switch Setter", "[Alg][Alg-3]"){
   }
 
   SECTION("VII - Approaching switch with route"){
-    logger.setlevel_stdout(INFO);
     U->B[22]->setDetection(1);
     Algor_process(U->B[22], _FORCE);
 
-    REQUIRE(U->B[24]->state != RESERVED_SWITCH);
+    CHECK(U->B[24]->reservedBy == U->B[22]->train);
 
     auto route = PathFinding::find(U->B[22], U->B[21]);
 
@@ -618,12 +601,71 @@ TEST_CASE( "Algorithm Switch Setter", "[Alg][Alg-3]"){
     CHECK(U->Sw[3]->state == 1);
     CHECK(U->Sw[4]->state == 1);
     CHECK(U->Sw[5]->state == 1);
-
   }
 
-  // SECTION("V - Approaching s side with route"){}
+  SECTION("VII - Approaching switch with route with blocked station"){
+    U->B[22]->setDetection(1);
+    U->B[21]->setDetection(1);
+    Algor_process(U->B[22], _FORCE);
+    Algor_process(U->B[21], _FORCE);
+
+    REQUIRE(U->B[21]->train);
+
+    U->B[21]->train->setSpeed(0);
+
+    REQUIRE(U->B[24]->state != RESERVED_SWITCH);
+
+    auto route = PathFinding::find(U->B[22], U->B[21]);
+
+    REQUIRE(route->found_forward);
+    REQUIRE(U->B[22]->train);
+
+    U->B[22]->train->route = route;
+    U->B[22]->train->onroute = true;
+
+    Algor_process(U->B[22], _FORCE);
+
+    CHECK(U->Sw[3]->state == 0);
+    CHECK(U->Sw[4]->state == 0);
+    CHECK(U->Sw[5]->state == 0);
+
+    CHECK(U->B[24]->switchWrongState);
+  }
+
+  SECTION("VIII - Approaching switch with route applying detour"){
+    loggerf(WARNING, "TEST VIII");
+    U->B[22]->setDetection(1);
+    U->B[26]->setDetection(1);
+    Algor_process(U->B[22], _FORCE);
+    Algor_process(U->B[26], _FORCE);
+
+    REQUIRE(U->B[26]->train);
+    auto route = PathFinding::find(U->B[22], U->B[33]);
+
+    U->B[26]->train->setSpeed(0);
+
+    CHECK(U->B[30]->reservedBy == 0);
+
+
+    char debug[1000];
+    route->print(debug);
+    loggerf(INFO, "%s", debug);
+
+    REQUIRE(route->found_forward);
+    REQUIRE(U->B[22]->train);
+
+    U->B[22]->train->route = route;
+    U->B[22]->train->onroute = true;
+
+    Algor_process(U->B[22], _FORCE);
+
+    CHECK(U->Sw[3]->state == 1);
+    CHECK(U->Sw[4]->state == 1);
+    CHECK(U->Sw[5]->state == 0);
+    CHECK(U->Sw[5]->updatedState == 0); // Switch should not be updated since it is allready in position
+
+    CHECK(U->B[24]->reservedBy == U->B[22]->train);
+  }
 
   // SECTION("VI - Approaching S side with route"){}
-
-  logger.setlevel_stdout(NONE);
 }

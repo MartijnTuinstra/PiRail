@@ -276,16 +276,24 @@ void Switch::setState(uint8_t _state){
   setState(_state, 1);
 }
 
-void Switch::setState(uint8_t state, uint8_t lock){
-  loggerf(TRACE, "Switch::setState (%x, %i, %i)", (unsigned int)this, state, lock);
+void Switch::setState(uint8_t _state, uint8_t lock){
+  loggerf(TRACE, "Switch::setState (%x, %i, %i)", (unsigned int)this, _state, lock);
 
-  if(Detection && (Detection->state == BLOCKED || Detection->state == RESERVED_SWITCH))
+  if(Detection && (Detection->state == BLOCKED || Detection->reservedBy)){
+    loggerf(WARNING, "Failed to setState switch %i to state %i", id, _state);
     return; // Switch is blocked
+  }
+
+  if(_state == state){
+    loggerf(INFO, "Switch allready in position");
+    return;
+  }
+
 
   Algor_Set_Changed(&Detection->Alg);
   putList_AlgorQueue(Detection->Alg, 0);
 
-  updateState(state);
+  updateState(_state);
 
   Detection->AlgorSearch(0);
 
@@ -370,201 +378,217 @@ int throw_multiple_switches(uint8_t len, char * msg){
   return 1;
 }
 
-int Switch_Set_Free_Path(void * p, struct rail_link link, int flags){
-  loggerf(DEBUG, "Switch_Set_Path (%x, %x, %i)", (unsigned int)p, (unsigned int)&link, flags);
-  if((flags & SWITCH_CARE) == 0){
-    return 1;
+namespace SwitchSolver {
+
+int solve(RailTrain * T, Block * B, Block * tB, struct rail_link link, int flags){
+  struct find f = {0, 0};
+
+  PathFinding::Route * r = 0;
+
+  if(T && B->train->onroute && B->train->route){
+    r = B->train->route;
   }
 
-  //Check if switch is occupied
-  if (link.type == RAIL_LINK_S || link.type == RAIL_LINK_s) {
-    if((link.p.Sw)->Detection && (link.p.Sw)->Detection->state == RESERVED_SWITCH){
-      loggerf(ERROR, "Switch allready Reserved");
-      return 0;
-    }
-  }
-  else if (link.type >= RAIL_LINK_MA && link.type <= RAIL_LINK_MB_inside) {
-    if((link.p.MSSw)->Detection && (link.p.Sw)->Detection->state == RESERVED_SWITCH){
-      loggerf(ERROR, "Switch allready Reserved");
-      return 0;
-    }
+  loggerf(WARNING, "SwitchSolver::solve -> findPath");
+  f = findPath(r, tB, link, flags);
+
+  if(r){
+    char debug[1000];
+    r->print(debug);
+    loggerf(INFO, "%s", debug);
   }
 
+  if(!r)
+    f.possible = 1;
 
-  if(link.type == RAIL_LINK_S){
-    // Go to next switch
+  // If route exists check if possible and if allready correct
+  // If no route exists only check if allready correct
+  if(!(r && !f.possible) && !f.allreadyCorrect){
+    // Path needs changes
+    loggerf(WARNING, "SwitchSolver::solve -> dereservePath");
+    dereservePath(T, r, tB, link, flags);
+
+    loggerf(WARNING, "SwitchSolver::solve -> setPath");
+    f.possible &= setPath(r, tB, link, flags);
+
+    if(f.possible)
+      B->recalculate = 1;
+  }
+
+  if(!f.possible){
+    loggerf(WARNING, "SwitchSolver::solve -> setWrong");
+    setWrong(r, tB, link, flags);
+  }
+  else{
+    loggerf(WARNING, "SwitchSolver::solve -> reservePath");
+    reservePath(T, r, tB, link, flags);
+  }
+
+  return 1;
+}
+
+struct find findPath(PathFinding::Route * r, void * p, struct rail_link link, int flags){
+  // Check if switches are set to a good path
+  loggerf(INFO, "SwitchSolver::findPath (%x, %x, %x, %i)", (unsigned int)r, (unsigned int)p, (unsigned int)&link, flags);
+
+  struct find f = {0, 0};
+
+  if(!link.p.p){
+    return f;
+  }
+  else if(link.type == RAIL_LINK_S){
     Switch * Sw = link.p.Sw;
-    loggerf(INFO, "Switch S %i", Sw->id);
-    bool str, div;
-    str = Switch_Set_Free_Path(Sw, Sw->str, flags);
-    div = Switch_Set_Free_Path(Sw, Sw->div, flags);
+    PathFinding::instruction * instr = 0;
+    if(r)
+      instr = r->Sw_S[Sw->uid];
 
-    loggerf(INFO, "SwitchSetFreePath: str: %i, div: %i", str, div);
+    if(!instr){
+      loggerf(INFO, "check S %i (state: %i) No Route", Sw->id, Sw->state);
+      //Default behaviour
+      if(Sw->state == 0)      return findPath(r, Sw, Sw->str, flags);
+      else if(Sw->state == 1) return findPath(r, Sw, Sw->div, flags);
+      else                    return f;
+    }
 
-    if((Sw->state == 0 && str) || (Sw->state == 1 && div))
-      return 1;
+    struct rail_link * link[2] = {&Sw->str, &Sw->div};
+    // int result[2] = {0, 0};
 
-    if(str)
-      Sw->setState(0);
-    else if(div)
-      Sw->setState(1);
-    else
-      return 0;
+    for(uint8_t i = 0; i < instr->nrOptions; i++){
+      uint8_t j = instr->options[i];
+      loggerf(INFO, "check S %i (state: %i->%i)", Sw->id, Sw->state, j);
+      struct find tf = findPath(r, Sw, *link[j], flags);
+      instr->possible[i] = tf.possible;
+      f.possible |= tf.possible;
+      f.allreadyCorrect |= (tf.allreadyCorrect && (Sw->state == j));
+    }
 
-    return 1;
+    loggerf(INFO, "check S result %i %i", f.allreadyCorrect, f.possible);
+
+    return f;
   }
   else if(link.type == RAIL_LINK_s){
-    // Check if switch is in correct state
-    // and continue to next switch
     Switch * Sw = link.p.Sw;
-    loggerf(INFO, "Switch s %i", Sw->id);
-    bool path = Switch_Set_Free_Path(Sw, Sw->app, flags);
+    loggerf(INFO, "check s %i (state: %i, str.p: %x, div.p: %x)", Sw->id, Sw->state, (unsigned int)Sw->str.p.p, (unsigned int)Sw->div.p.p);
+    f = findPath(r, Sw, Sw->app, flags);
+    f.allreadyCorrect &= Sw->approachable(p, flags);
 
-    if(!path)
-      return path;
-
-    loggerf(INFO, "set s %i (state: %i, str.p: %x, div.p: %x)", Sw->id, Sw->state, (unsigned int)Sw->str.p.p, (unsigned int)Sw->div.p.p);
-    if(Sw->state == 0){
-      if(Sw->str.p.p != p)
-        Sw->setState(1, 1);
-    }
-    else if(Sw->state == 1){
-      if(Sw->div.p.p != p)
-        Sw->setState(0, 1);
-    }
-
-    return path;
+    return f;
   }
-  // else if(link.type == RAIL_LINK_MA){
-  //   loggerf(ERROR, "IMPLEMENT");
-  //   MSSwitch * N = link.p.MSSw;
-  //   if(N->sideB[N->state].p.p == p){
-  //     return 1;
-  //   }
-  // }
-  // else if(link.type == RAIL_LINK_MB){
-  //   loggerf(ERROR, "IMPLEMENT");
-  //   MSSwitch * N = link.p.MSSw;
-  //   if(N->sideA[N->state].p.p == p){
-  //     return 1;
-  //   }
-  // }
+  else if(link.type == RAIL_LINK_MA){
+    loggerf(WARNING, "IMPLEMENT");
+    MSSwitch * N = link.p.MSSw;
+    if(N->sideB[N->state].p.p == p){
+      return f;
+    }
+  }
+  else if(link.type == RAIL_LINK_MB){
+    loggerf(WARNING, "IMPLEMENT");
+    MSSwitch * N = link.p.MSSw;
+    if(N->sideA[N->state].p.p == p){
+      return f;
+    }
+  }
 
   else if (link.type == RAIL_LINK_R){
+
     Block * B = link.p.B;
+
     loggerf(INFO, "check B %i", B->id);
 
     // Block is part of station that is blocked by a train stopped on it. Not a solution
     if(B->type == STATION && B->station && (B->station->stoppedTrain || 
                                             (B->station->parent && B->station->parent->stoppedTrain)) ){
-      loggerf(INFO, "STATION FAIL");
-      return 0;
+      loggerf(INFO, "FOUND BLOCKED STATION");
+      return f;
     }
 
     // If Block is the exit of a path
     else if(B->path && B != B->path->Entrance && B->path->reserved){
-      loggerf(INFO, "PATH FAIL");
-      return 0;
+      loggerf(INFO, "FOUND WRONG PATH DIRECTION");
+      return f;
     }
 
     // Train can stop on the block, so a solution
     else if(B->type != NOSTOP){
-      loggerf(INFO, "NOSTOP SUCCESS");
-      return 1; 
+      loggerf(INFO, "FOUND FREE BLOCK :)");
+      f.possible = 1;
+      f.allreadyCorrect = 1;
+      return f; 
     }
+
 
     if(B->next.p.p == p)
-      return Switch_Set_Free_Path(B, B->prev, flags);
+      return findPath(r, B, B->prev, flags);
     else if(B->prev.p.p == p)
-      return Switch_Set_Free_Path(B, B->next, flags);
+      return findPath(r, B, B->next, flags);
   }
 
-  return 0;
+  loggerf(ERROR, "Done checking");
+  return f;
 }
 
-int Switch_Set_Free_Path(PathFinding::Route * r, void * p, struct rail_link link, int flags){
-  loggerf(INFO, "Switch_Set_Path_Route (%x, %x, %i)", (unsigned int)p, (unsigned int)&link, flags);
-  if((flags & SWITCH_CARE) == 0){
-    return 1;
-  }
-
-  //Check if switch is occupied
-  if (link.type == RAIL_LINK_S || link.type == RAIL_LINK_s) {
-    if((link.p.Sw)->Detection && (link.p.Sw)->Detection->state == RESERVED_SWITCH){
-      loggerf(ERROR, "Switch allready Reserved");
-      return 0;
-    }
-  }
-  else if (link.type >= RAIL_LINK_MA && link.type <= RAIL_LINK_MB_inside) {
-    if((link.p.MSSw)->Detection && (link.p.Sw)->Detection->state == RESERVED_SWITCH){
-      loggerf(ERROR, "Switch allready Reserved");
-      return 0;
-    }
-  }
+int setPath(PathFinding::Route * r, void * p, struct rail_link link, int flags){
+  loggerf(INFO, "setPath (%x, %x, %x, %i)", (unsigned int)r, (unsigned int)p, (unsigned int)&link, flags);
+  // //Check if switch is occupied
+  // if (link.type == RAIL_LINK_S || link.type == RAIL_LINK_s) {
+  //   if((link.p.Sw)->Detection && (link.p.Sw)->Detection->state == RESERVED_SWITCH){
+  //     loggerf(ERROR, "Switch allready Reserved");
+  //     return 0;
+  //   }
+  // }
+  // else if (link.type >= RAIL_LINK_MA && link.type <= RAIL_LINK_MB_inside) {
+  //   if((link.p.MSSw)->Detection && (link.p.MSSw)->Detection->state == RESERVED_SWITCH){
+  //     loggerf(ERROR, "Switch allready Reserved");
+  //     return 0;
+  //   }
+  // }
 
 
   if(link.type == RAIL_LINK_S){
-    /*
-Switch * Sw = link.p.Sw;
-    PathFinding::instruction * instr = r->Sw_S[Sw->uid];
-
-    if(!instr){
-      loggerf(INFO, "check S %i (state: %i) No Route", Sw->id, Sw->state);
-      //Default behaviour
-      if(Sw->state == 0)      return Switch_Check_Path(r, Sw, Sw->str, flags);
-      else if(Sw->state == 1) return Switch_Check_Path(r, Sw, Sw->div, flags);
-      else                    return 0;
-    }
-    */
     // Go to next switch
     Switch * Sw = link.p.Sw;
-    PathFinding::instruction * instr = r->Sw_S[Sw->uid];
+    PathFinding::instruction * instr = 0;
+    if(r)
+      instr = r->Sw_S[Sw->uid];
 
+    // No Route or no instruction for this switch => default behaviour
     if(!instr){
       loggerf(INFO, "Switch S %i No Route", Sw->id);
       bool str, div;
-      str = Switch_Set_Free_Path(Sw, Sw->str, flags);
-      div = Switch_Set_Free_Path(Sw, Sw->div, flags);
+      str = setPath(r, Sw, Sw->str, flags);
+      div = setPath(r, Sw, Sw->div, flags);
 
       loggerf(INFO, "SwitchSetFreePath: str: %i, div: %i", str, div);
 
       if((Sw->state == 0 && str) || (Sw->state == 1 && div))
         return 1;
 
-      if(str)
-        Sw->setState(0);
-      else if(div)
-        Sw->setState(1);
-      else
-        return 0;
+      if(str)      Sw->setState(0);
+      else if(div) Sw->setState(1);
+      else         return 0;
 
       return 1;
     }
 
-    struct rail_link * link[2] = {&Sw->str, &Sw->div};
-    int result1[2] = {0, 0};
-    int result2[2] = {0, 0};
+    bool switchSet = 0;
+
+    struct rail_link * links[2] = {&Sw->str, &Sw->div};
 
     for(uint8_t i = 0; i < instr->nrOptions; i++){
-      uint8_t j = instr->options[i];
-      loggerf(INFO, "check S %i (state: %i->%i)", Sw->id, Sw->state, j);
-      result1[i] = Switch_Set_Free_Path(r, Sw, *link[j], flags);
-      result2[i] = result1[i] && (Sw->state == j);
+      // uint8_t j = instr->options[i]; state
+      loggerf(INFO, "check S %i (%i ? %i)", Sw->id, i, instr->possible[i]);
+
+      if(instr->possible[i]){
+        if(Sw->state != instr->options[i])
+          Sw->setState(instr->options[i]);
+
+        switchSet = setPath(r, Sw, *links[instr->options[i]], flags);
+        break;
+      }
+
     }
 
-    loggerf(INFO, "check S %i result %i %i", Sw->id, result1[0], result1[1]);
-    loggerf(INFO, "check S %i result %i %i", Sw->id, result2[0], result2[1]);
-    // If it is allready set correctly
-    if(result2[0] || result2[1])
-      return 1;
-
-    if(result1[0])
-      Sw->setState(instr->options[0]);
-    else if(result1[1])
-      Sw->setState(instr->options[1]);
-    else return 0;
-
-    return 1;
+    return switchSet;
 
   }
   else if(link.type == RAIL_LINK_s){
@@ -572,7 +596,7 @@ Switch * Sw = link.p.Sw;
     // and continue to next switch
     Switch * Sw = link.p.Sw;
     loggerf(INFO, "Switch s %i", Sw->id);
-    bool path = Switch_Set_Free_Path(r, Sw, Sw->app, flags);
+    bool path = setPath(r, Sw, Sw->app, flags);
 
     if(!path)
       return path;
@@ -628,37 +652,115 @@ Switch * Sw = link.p.Sw;
     }
 
     if(B->next.p.p == p)
-      return Switch_Set_Free_Path(r, B, B->prev, flags);
+      return setPath(r, B, B->prev, flags);
     else if(B->prev.p.p == p)
-      return Switch_Set_Free_Path(r, B, B->next, flags);
+      return setPath(r, B, B->next, flags);
   }
 
   return 0;
 }
 
-int Switch_Reserve_Path(RailTrain * T, void * p, struct rail_link link, int flags){
-  loggerf(TRACE, "reserve_switch_path (%x, %x, %x, %i)", (unsigned int)T, (unsigned int)p, (unsigned int)&link, flags);
-  if((flags & SWITCH_CARE) == 0){
+int setWrong(PathFinding::Route * r, void * p, struct rail_link link, int flags){
+  loggerf(INFO, "SwitchSolver::setWrong (%x, %x, %i)", (unsigned int)p, (unsigned int)&link, flags);
+
+  if(link.type == RAIL_LINK_S){
+    // Go to next switch
+    Switch * Sw = link.p.Sw;
+
+    loggerf(INFO, "Switch S %i", Sw->id);
+
+    if(Sw->state == 0)
+      setWrong(r, Sw, Sw->str, flags);
+    else
+      setWrong(r, Sw, Sw->div, flags);
+
+    if(Sw->Detection)
+      Sw->Detection->switchWrongState = true;
+
     return 1;
   }
+  else if(link.type == RAIL_LINK_s){
+    // Check if switch is in correct state
+    // and continue to next switch
+    Switch * Sw = link.p.Sw;
 
+    if(!Sw->approachable(p, flags))
+      return 0;
+
+    if(Sw->Detection)
+      Sw->Detection->switchWrongState = true;
+
+    loggerf(INFO, "Switch s %i", Sw->id);
+    setWrong(r, Sw, Sw->app, flags);
+
+    return 0;
+  }
+  // else if(link.type == RAIL_LINK_MA){
+  //   loggerf(ERROR, "IMPLEMENT");
+  //   MSSwitch * N = link.p.MSSw;
+  //   if(N->sideB[N->state].p.p == p){
+  //     return 1;
+  //   }
+  // }
+  // else if(link.type == RAIL_LINK_MB){
+  //   loggerf(ERROR, "IMPLEMENT");
+  //   MSSwitch * N = link.p.MSSw;
+  //   if(N->sideA[N->state].p.p == p){
+  //     return 1;
+  //   }
+  // }
+
+  else if (link.type == RAIL_LINK_R){
+    Block * B = link.p.B;
+    loggerf(INFO, "check B %i", B->id);
+
+    // Block is part of station that is blocked by a train stopped on it. Not a solution
+    if(B->type == STATION && B->station && (B->station->stoppedTrain || 
+                                            (B->station->parent && B->station->parent->stoppedTrain)) ){
+      loggerf(INFO, "STATION FAIL");
+      return 0;
+    }
+
+    // If Block is the exit of a path
+    else if(B->path && B != B->path->Entrance && B->path->reserved){
+      loggerf(INFO, "PATH FAIL");
+      return 0;
+    }
+
+    // Train can stop on the block, so a solution
+    else if(B->type != NOSTOP){
+      loggerf(INFO, "NOSTOP SUCCESS");
+      return 1; 
+    }
+
+    if(B->next.p.p == p)
+      return setWrong(r, B, B->prev, flags);
+    else if(B->prev.p.p == p)
+      return setWrong(r, B, B->next, flags);
+  }
+
+  return 0;
+}
+
+void dereservePath(RailTrain * T, PathFinding::Route * r, void * p, struct rail_link link, int flags){
+  loggerf(INFO, "DEreservePath (%x, %x, %x, %x, %i)", (unsigned int)T, (unsigned int)r, (unsigned int)p, (unsigned int)&link, flags);
 
   if(link.type == RAIL_LINK_S){
     // Go to next switch
     Switch * Sw = link.p.Sw;
     Block * DB = Sw->Detection;
 
-    DB->state = RESERVED_SWITCH;
-    if(DB->reservedBy != T)
-      T->reserveBlock(DB);
-    DB->statechanged = 1;
-    Units(DB->module)->block_state_changed = 1;
-    loggerf(TRACE, "Set switch %02i:%02i to RESERVED", Sw->module, Sw->id);
+    if(DB->reservedBy == T)
+      T->dereserveBlock(DB);
+    else
+      return;
+
+    loggerf(TRACE, "Set switch %02i:%02i to deRESERVED", Sw->module, Sw->id);
 
     if(Sw->state == 0)
-      return Switch_Reserve_Path(T, Sw, Sw->str, flags);
+      return dereservePath(T, r, Sw, Sw->str, flags);
     else if(Sw->state == 1)
-      return Switch_Reserve_Path(T, Sw, Sw->div, flags);
+      return dereservePath(T, r, Sw, Sw->div, flags);
   }
   else if(link.type == RAIL_LINK_s){
     // Check if switch is in correct state
@@ -666,14 +768,73 @@ int Switch_Reserve_Path(RailTrain * T, void * p, struct rail_link link, int flag
     Switch * Sw = link.p.Sw;
     Block * DB = Sw->Detection;
 
-    DB->state = RESERVED_SWITCH;
-    if(DB->reservedBy != T)
+    if(DB->reservedBy == T)
       T->reserveBlock(DB);
-    DB->statechanged = 1;
-    Units(DB->module)->block_state_changed = 1;
+    else
+      return;
+
     loggerf(TRACE, "Set switch %02i:%02i to RESERVED", Sw->module, Sw->id);
 
-    return Switch_Reserve_Path(T, Sw, Sw->app, flags);
+    return dereservePath(T, r, Sw, Sw->app, flags);
+  }
+  else if(link.type == RAIL_LINK_MA){
+    loggerf(ERROR, "IMPLEMENT");
+    MSSwitch * N = link.p.MSSw;
+    if(N->sideB[N->state].p.p == p){
+      return;
+    }
+  }
+  else if(link.type == RAIL_LINK_MB){
+    loggerf(ERROR, "IMPLEMENT");
+    MSSwitch * N = link.p.MSSw;
+    if(N->sideA[N->state].p.p == p){
+      return;
+    }
+  }
+
+  else if (link.type == RAIL_LINK_R){
+    Block * B = link.p.B;
+    loggerf(TRACE, "check B %i", B->id);
+    if(B->type != NOSTOP)
+      return; // Train can stop on the block, so a possible path
+
+    if(B->next.p.p == p)
+      return dereservePath(T, r, B, B->prev, flags);
+    else if(B->prev.p.p == p)
+      return dereservePath(T, r, B, B->next, flags);
+  }
+}
+
+int reservePath(RailTrain * T, PathFinding::Route * r, void * p, struct rail_link link, int flags){
+  loggerf(INFO, "reservePath (%x, %x, %x, %x, %i)", (unsigned int)T, (unsigned int)r, (unsigned int)p, (unsigned int)&link, flags);
+
+  if(link.type == RAIL_LINK_S){
+    // Go to next switch
+    Switch * Sw = link.p.Sw;
+    Block * DB = Sw->Detection;
+
+    if(DB->reservedBy != T)
+      T->reserveBlock(DB);
+
+    loggerf(TRACE, "Set switch %02i:%02i to RESERVED", Sw->module, Sw->id);
+
+    if(Sw->state == 0)
+      return reservePath(T, r, Sw, Sw->str, flags);
+    else if(Sw->state == 1)
+      return reservePath(T, r, Sw, Sw->div, flags);
+  }
+  else if(link.type == RAIL_LINK_s){
+    // Check if switch is in correct state
+    // and continue to next switch
+    Switch * Sw = link.p.Sw;
+    Block * DB = Sw->Detection;
+
+    if(DB->reservedBy != T)
+      T->reserveBlock(DB);
+
+    loggerf(TRACE, "Set switch %02i:%02i to RESERVED", Sw->module, Sw->id);
+
+    return reservePath(T, r, Sw, Sw->app, flags);
   }
   else if(link.type == RAIL_LINK_MA){
     loggerf(ERROR, "IMPLEMENT");
@@ -697,188 +858,37 @@ int Switch_Reserve_Path(RailTrain * T, void * p, struct rail_link link, int flag
       return 1; // Train can stop on the block, so a possible path
 
     if(B->next.p.p == p)
-      return Switch_Reserve_Path(T, B, B->prev, flags);
+      return reservePath(T, r, B, B->prev, flags);
     else if(B->prev.p.p == p)
-      return Switch_Reserve_Path(T, B, B->next, flags);
+      return reservePath(T, r, B, B->next, flags);
   }
-  else if(link.type == 'D'){
-    return 1;
-  }
+
   return 0;
 }
 
-int Switch_Check_Path(void * p, struct rail_link link, int flags){
-  // Check if switches are set to a good path
+};
 
-  loggerf(INFO, "Switch_Check_Path (%x, %x, %i)", (unsigned int)p, (unsigned int)&link, flags);
-  if(!link.p.p){
-    loggerf(ERROR, "Empty LINK {%i:%i - %i}", link.module, link.id, link.type);
-    return 0;
-  }
+// int Switch_Set_Free_Path(void * p, struct rail_link link, int flags){
+//   Switch_Set_Free_Path(0, p, link, flags);
+// }
 
-  if((flags & SWITCH_CARE) == 0){
-    return 1;
-  }
-  else if(link.type == RAIL_LINK_S){
-    Switch * Sw = link.p.Sw;
-    loggerf(INFO, "check S %i (state: %i)", Sw->id, Sw->state);
-    if(Sw->state == 0){
-      return Switch_Check_Path(Sw, Sw->str, flags);
-    }
-    else if(Sw->state == 1){
-      return Switch_Check_Path(Sw, Sw->div, flags);
-    }
-  }
-  else if(link.type == RAIL_LINK_s){
-    Switch * N = link.p.Sw;
-    loggerf(INFO, "check s %i (state: %i, str.p: %x, div.p: %x)", N->id, N->state, (unsigned int)N->str.p.p, (unsigned int)N->div.p.p);
-    if(N->state == 0 && N->str.p.p == p){
-      return Switch_Check_Path(N, N->app, flags);
-    }
-    else if(N->state == 1 && N->div.p.p == p){
-      return Switch_Check_Path(N, N->app, flags);
-    }
-    loggerf(ERROR, "wrong State %x", N->state);
-  }
-  else if(link.type == RAIL_LINK_MA){
-    loggerf(WARNING, "IMPLEMENT");
-    MSSwitch * N = link.p.MSSw;
-    if(N->sideB[N->state].p.p == p){
-      return 1;
-    }
-  }
-  else if(link.type == RAIL_LINK_MB){
-    loggerf(WARNING, "IMPLEMENT");
-    MSSwitch * N = link.p.MSSw;
-    if(N->sideA[N->state].p.p == p){
-      return 1;
-    }
-  }
+// int Switch_Set_Free_Path(PathFinding::Route * r, void * p, struct rail_link link, int flags){
+//   loggerf(INFO, "Switch_Set_Path_Route (%x, %x, %i)", (unsigned int)p, (unsigned int)&link, flags);
+//   if((flags & SWITCH_CARE) == 0){
+//     return 1;
+//   }
 
-  else if (link.type == RAIL_LINK_R){
+// }
 
-    Block * B = link.p.B;
+// int Switch_Reserve_Path(RailTrain * T, void * p, struct rail_link link, int flags){
+  
+// }
 
-    loggerf(INFO, "check B %i", B->id);
+// int Switch_Check_Path(void * p, struct rail_link link, int flags){
+//   Switch_Check_Path(0, p, link, flags);
+// }
 
-    // Block is part of station that is blocked by a train stopped on it. Not a solution
-    if(B->type == STATION && B->station && (B->station->stoppedTrain || 
-                                            (B->station->parent && B->station->parent->stoppedTrain)) )
-      return 0;
-
-    // If Block is the exit of a path
-    else if(B->path && B != B->path->Entrance && B->path->reserved)
-      return 0;
-
-    // Train can stop on the block, so a solution
-    else if(B->type != NOSTOP)
-      return 1; 
-
-
-    if(B->next.p.p == p)
-      return Switch_Check_Path(B, B->prev, flags);
-    else if(B->prev.p.p == p)
-      return Switch_Check_Path(B, B->next, flags);
-  }
-  else if(link.type == 'D'){
-    return 1;
-  }
-  loggerf(ERROR, "Done checking");
-  return 0;
-}
-
-int Switch_Check_Path(PathFinding::Route * r, void * p, struct rail_link link, int flags){
-  // Check if switches are set to a good path
-
-  loggerf(INFO, "Switch_Check_Path_Route (%x, %x, %x, %i)", (unsigned int)r, (unsigned int)p, (unsigned int)&link, flags);
-  if(!link.p.p){
-    loggerf(ERROR, "Empty LINK {%i:%i - %i}", link.module, link.id, link.type);
-    return 0;
-  }
-
-  if((flags & SWITCH_CARE) == 0){
-    return 1;
-  }
-  else if(link.type == RAIL_LINK_S){
-    Switch * Sw = link.p.Sw;
-    PathFinding::instruction * instr = r->Sw_S[Sw->uid];
-
-    if(!instr){
-      loggerf(INFO, "check S %i (state: %i) No Route", Sw->id, Sw->state);
-      //Default behaviour
-      if(Sw->state == 0)      return Switch_Check_Path(r, Sw, Sw->str, flags);
-      else if(Sw->state == 1) return Switch_Check_Path(r, Sw, Sw->div, flags);
-      else                    return 0;
-    }
-
-    struct rail_link * link[2] = {&Sw->str, &Sw->div};
-    int result[2] = {0, 0};
-
-    for(uint8_t i = 0; i < instr->nrOptions; i++){
-      uint8_t j = instr->options[i];
-      loggerf(INFO, "check S %i (state: %i->%i)", Sw->id, Sw->state, j);
-      result[j] = Switch_Check_Path(r, Sw, *link[j], flags) && (Sw->state == j);
-    }
-
-    loggerf(INFO, "check S result %i %i", result[0], result[1]);
-
-    return result[0] || result[1];
-  }
-  else if(link.type == RAIL_LINK_s){
-    Switch * N = link.p.Sw;
-    loggerf(INFO, "check s %i (state: %i, str.p: %x, div.p: %x)", N->id, N->state, (unsigned int)N->str.p.p, (unsigned int)N->div.p.p);
-    if(N->state == 0 && N->str.p.p == p){
-      return Switch_Check_Path(N, N->app, flags);
-    }
-    else if(N->state == 1 && N->div.p.p == p){
-      return Switch_Check_Path(N, N->app, flags);
-    }
-    loggerf(ERROR, "wrong State %x", N->state);
-  }
-  else if(link.type == RAIL_LINK_MA){
-    loggerf(WARNING, "IMPLEMENT");
-    MSSwitch * N = link.p.MSSw;
-    if(N->sideB[N->state].p.p == p){
-      return 1;
-    }
-  }
-  else if(link.type == RAIL_LINK_MB){
-    loggerf(WARNING, "IMPLEMENT");
-    MSSwitch * N = link.p.MSSw;
-    if(N->sideA[N->state].p.p == p){
-      return 1;
-    }
-  }
-
-  else if (link.type == RAIL_LINK_R){
-
-    Block * B = link.p.B;
-
-    loggerf(INFO, "check B %i", B->id);
-
-    // Block is part of station that is blocked by a train stopped on it. Not a solution
-    if(B->type == STATION && B->station && (B->station->stoppedTrain || 
-                                            (B->station->parent && B->station->parent->stoppedTrain)) )
-      return 0;
-
-    // If Block is the exit of a path
-    else if(B->path && B != B->path->Entrance && B->path->reserved)
-      return 0;
-
-    // Train can stop on the block, so a solution
-    else if(B->type != NOSTOP)
-      return 1; 
-
-
-    if(B->next.p.p == p)
-      return Switch_Check_Path(B, B->prev, flags);
-    else if(B->prev.p.p == p)
-      return Switch_Check_Path(B, B->next, flags);
-  }
-  else if(link.type == 'D'){
-    return 1;
-  }
-  loggerf(ERROR, "Done checking");
-  return 0;
-}
+// int Switch_Check_Path(PathFinding::Route * r, void * p, struct rail_link link, int flags){
+  
+// }
 

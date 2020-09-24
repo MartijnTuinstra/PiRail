@@ -829,26 +829,29 @@ void Algor_Switch_Checker(Algor_Blocks * ABs, int debug){
     loggerf(INFO, "Switch_Checker scan block (%i,%i) - %i", tB->module, tB->id, link->type);
 
     if((i >  0 && link->type == RAIL_LINK_S) || (link->type >= RAIL_LINK_s && link->type <= RAIL_LINK_MB_inside)){
-      bool reservePath = false;
+      SwitchSolver::solve(T, B, tB, *link, NEXT | SWITCH_CARE);
+      //   loggerf(WARNING, "SWITCH ROUTE CHECKING");
+      //   if (!Switch_Check_Path(B->train->route, tB, *link, NEXT | SWITCH_CARE)){
+      //     reservePath = Switch_Set_Free_Path(B->train->route, tB, *link, NEXT | SWITCH_CARE);
 
-      if(B->train && B->train->onroute && B->train->route){
-        loggerf(WARNING, "SWITCH ROUTE CHECKING");
-        if (!Switch_Check_Path(B->train->route, tB, *link, NEXT | SWITCH_CARE)){
-          reservePath = Switch_Set_Free_Path(B->train->route, tB, *link, NEXT | SWITCH_CARE);
-        }
-      }
-      else{
-        loggerf(WARNING, "Switch CHECKING");
-        if (!Switch_Check_Path(tB, *link, NEXT | SWITCH_CARE)){
-          reservePath = Switch_Set_Free_Path(tB, *link, NEXT | SWITCH_CARE);
-        }
+      //     if(!reservePath){
+      //       if(link->type == RAIL_LINK_S || link->type == RAIL_LINK_s)
+      //         link->p.Sw->Detection->switchWrongState = true;
+      //   }
+      //     }
+      // }
+      // else{
+      //   loggerf(WARNING, "Switch CHECKING");
+      //   if (!Switch_Check_Path(tB, *link, NEXT | SWITCH_CARE)){
+      //     reservePath = Switch_Set_Free_Path(tB, *link, NEXT | SWITCH_CARE);
+      //   }
 
-        if(reservePath){
-          loggerf(WARNING, "RESERVE SWITCHES");
-          Switch_Reserve_Path(T, tB, *link, NEXT | SWITCH_CARE);
-          B->recalculate = 1;
-        }
-      }
+      //   if(reservePath){
+      //     loggerf(WARNING, "RESERVE SWITCHES");
+      //     Switch_Reserve_Path(T, tB, *link, NEXT | SWITCH_CARE);
+      //     B->recalculate = 1;
+      //   }
+      // }
 
       return;
 
@@ -987,7 +990,7 @@ void Algor_rail_state(Algor_Blocks * ABs, int debug){
 
     }
   }
-  else if(ABs->next == 0){
+  else if(ABs->next == 0 || B->switchWrongState){
     if(B->type != NOSTOP){
       B->setState(CAUTION);
 

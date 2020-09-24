@@ -15,18 +15,11 @@
 #include "modules.h"
 #include "algorithm.h"
 
+void init_test(char (* filenames)[30], int nr_files);
 
 TEST_CASE( "Switch Link", "[SB][SB-2][SB-2.1]" ) {
-  init_main();
-
-  switchboard::SwManager->clear();
-  unload_rolling_Configs();
-  clearAlgorithmQueue();
-  pathlist.clear();
-
-  char filename[30] = "./testconfigs/SB-2.1.bin";
-  switchboard::SwManager->addFile(filename);
-  switchboard::SwManager->loadFiles();
+  char filenames[1][30] = {"./testconfigs/SB-2.1.bin"};
+  init_test(filenames, 1);
 
   Unit * U = switchboard::Units(1);
   U->link_all();
@@ -41,7 +34,7 @@ TEST_CASE( "Switch Link", "[SB][SB-2][SB-2.1]" ) {
   REQUIRE(U->B[2] != 0);
   REQUIRE(U->Sw[0] != 0);
 
-  SECTION( "link check"){
+  SECTION( "I - link check"){
     REQUIRE(U->B[1]->next.type == RAIL_LINK_S);
     REQUIRE(U->B[1]->next.p.p == U->Sw[0]);
 
@@ -52,7 +45,7 @@ TEST_CASE( "Switch Link", "[SB][SB-2][SB-2.1]" ) {
     REQUIRE(U->B[3]->prev.p.p == U->Sw[0]);
   }
 
-  SECTION( "NextBlock Switch Approach" ) {
+  SECTION( "II - NextBlock Switch Approach" ) {
     REQUIRE(U->B[1]->_Next(NEXT, 1) == U->B[2]);
 
     U->Sw[0]->state = 1;
@@ -60,7 +53,7 @@ TEST_CASE( "Switch Link", "[SB][SB-2][SB-2.1]" ) {
     REQUIRE(U->B[1]->_Next(NEXT, 1) == U->B[3]);
   }
 
-  SECTION( "NextBlock Switch Straight" ) {
+  SECTION( "III - NextBlock Switch Straight" ) {
     REQUIRE(U->B[2]->_Next(PREV, 1) == U->B[1]);
     REQUIRE(U->B[2]->_Next(PREV | SWITCH_CARE, 1) == U->B[1]);
 
@@ -70,7 +63,7 @@ TEST_CASE( "Switch Link", "[SB][SB-2][SB-2.1]" ) {
     REQUIRE(U->B[2]->_Next(PREV | SWITCH_CARE, 1) == 0);
   }
 
-  SECTION( "NextBlock Switch Diverging" ) {
+  SECTION( "IV - NextBlock Switch Diverging" ) {
     REQUIRE(U->B[3]->_Next(PREV, 1) == U->B[1]);
     REQUIRE(U->B[3]->_Next(PREV | SWITCH_CARE, 1) == 0);
 
@@ -80,4 +73,32 @@ TEST_CASE( "Switch Link", "[SB][SB-2][SB-2.1]" ) {
     REQUIRE(U->B[3]->_Next(PREV | SWITCH_CARE, 1) == U->B[1]);
   }
 
+  SECTION( "V - Search Check"){
+    for(uint8_t i = 0; i < 4; i++){
+      Algor_process(U->B[i], _FORCE);
+    }
+
+    REQUIRE(U->B[0]->Alg.next == 2);
+    REQUIRE(U->B[0]->Alg.N[0] == U->B[1]);
+    REQUIRE(U->B[0]->Alg.N[1] == U->B[2]);
+
+    U->Sw[0]->setState(1);
+    REQUIRE(U->Sw[0]->state == 1);
+
+    // Algor cleared
+    REQUIRE(U->B[0]->Alg.N[0] == 0);
+    REQUIRE(U->B[2]->Alg.P[0] == 0);
+
+    processAlgorQueue();
+
+    REQUIRE(U->B[0]->Alg.next == 2);
+    REQUIRE(U->B[0]->Alg.N[0] == U->B[1]);
+    REQUIRE(U->B[0]->Alg.N[1] == U->B[3]);
+
+    U->Sw[0]->setState(1);
+
+    // Algor not cleared, no new state
+    REQUIRE(U->B[0]->Alg.N[0] != 0);
+    REQUIRE(U->B[3]->Alg.P[0] != 0);
+  }
 }

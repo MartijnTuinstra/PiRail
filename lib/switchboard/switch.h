@@ -12,6 +12,7 @@
 #include "switch.h"
 #include "switchboard/rail.h"
 #include "IO.h"
+#include "pathfinding.h"
 
 #define U_Sw(U, A) Units(U)->Sw[A]
 
@@ -112,10 +113,35 @@ class Switch {
 
 int throw_multiple_switches(uint8_t len, char * data);
 
-int Switch_Check_Path(void * p, struct rail_link link, int flags);
-int Switch_Reserve_Path(RailTrain * T, void * p, struct rail_link link, int flags);
-int Switch_Set_Free_Path(void * p, struct rail_link link, int flags);
-int Switch_Set_Route(struct pathinstruction * routeInstruction, void * p, struct rail_link link, int flags);
+
+namespace SwitchSolver {
+
+int solve(RailTrain *, Block *, Block *, struct rail_link, int);
+
+struct find {
+  int possible;
+  int allreadyCorrect;
+};
+
+struct find findPath(PathFinding::Route *, void *, struct rail_link, int);
+int setPath(PathFinding::Route *, void *, struct rail_link, int);
+
+int setWrong(PathFinding::Route *, void *, struct rail_link, int);
+
+void dereservePath(RailTrain * T, PathFinding::Route * r, void * p, struct rail_link link, int flags);
+int reservePath(RailTrain *, PathFinding::Route *, void *, struct rail_link, int);
+
+};
+
+
+// int Switch_Check_Path(void * p, struct rail_link link, int flags);
+// int Switch_Check_Path(PathFinding::Route * r, void * p, struct rail_link link, int flags);
+
+// int Switch_Reserve_Path(RailTrain * T, void * p, struct rail_link link, int flags);
+// int Switch_Set_Free_Path(void * p, struct rail_link link, int flags);
+// int Switch_Set_Free_Path(PathFinding::Route * r, void * p, struct rail_link link, int flags);
+
+// int Switch_Set_Wrong_Route(PathFinding::Route * r, void * p, struct rail_link link, int flags);
 
 
 #endif

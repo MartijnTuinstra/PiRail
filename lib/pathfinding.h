@@ -9,16 +9,22 @@
 
 namespace PathFinding {
 
-struct route {
-  bool found_forward;
-  bool found_reverse;
+class Route {
+  public:
+    bool found_forward;
+    bool found_reverse;
 
-  uint16_t length;
+    uint16_t length;
 
-  struct instruction ** Sw_S;
-  struct instruction ** Sw_s;
-  struct instruction ** MSSw_A;
-  struct instruction ** MSSw_B;
+    struct instruction ** Sw_S;
+    struct instruction ** Sw_s;
+    struct instruction ** MSSw_A;
+    struct instruction ** MSSw_B;
+
+    Route(struct control, struct step, struct step);
+    ~Route();
+
+    void print(char * str);
 };
 
 struct control {
@@ -26,6 +32,7 @@ struct control {
   Block * end;
 
   Block * prev;
+  void * prevPtr;
 
   uint8_t dir;
   struct rail_link * link;
@@ -49,6 +56,7 @@ struct instruction {
   uint8_t nrOptions;
   uint8_t * options;
   uint16_t * length;
+  uint8_t * possible;
 
   struct instruction ** next;
 };
@@ -60,10 +68,11 @@ struct step {
   struct instruction * next;
 };
 
-struct route find(Block * start, Block * end);
+Route * find(Block * start, Block * end);
 struct step findStep(struct control c);
 
 void findStepSolveSwS(Switch * Sw, struct instruction * instr, struct step * str, struct step * div);
+void findStepSolveMSSw(MSSwitch *, struct instruction *, struct step *);
 
 }; // namespace PathFinding
 

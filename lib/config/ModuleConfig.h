@@ -21,10 +21,14 @@ class ModuleConfig {
     uint16_t Layout_length;
     char * Layout;
 
+    char * buffer;
+    uint32_t buffer_len;
+
     ModuleConfig(char * filename);
     ~ModuleConfig();
 
     int read();
+    void dump();
     void write();
     int calc_size();
 

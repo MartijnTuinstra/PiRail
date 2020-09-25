@@ -60,6 +60,7 @@ ModuleConfig::~ModuleConfig(){
   _free(this->Stations);
   _free(this->Signals);
   _free(this->Layout);
+  _free(buffer);
 }
 
 void ModuleConfig::newModule(uint8_t file, uint8_t connections){
@@ -102,11 +103,12 @@ int ModuleConfig::read(){
   long fsize = ftell(fp);
   fseek(fp, 0, SEEK_SET);
 
-  char * buffer = (char *)_calloc(fsize + 10, char);
-  char * buffer_start = &buffer[0];
+  buffer_len = fsize + 10;
+  buffer = (char *)_calloc(buffer_len, char);
   fread(buffer, fsize, 1, fp);
 
-  uint8_t ** buf_ptr = (uint8_t **)&buffer;
+  uint8_t * base_buf_ptr = (uint8_t *)&buffer[0];
+  uint8_t ** buf_ptr = &base_buf_ptr;
 
   *buf_ptr += 1;
 
@@ -158,7 +160,6 @@ int ModuleConfig::read(){
   memcpy(this->Layout, *buf_ptr, this->Layout_length);
 
   _free(header);
-  _free(buffer_start);
 
   this->parsed = true;
 
@@ -213,6 +214,16 @@ int ModuleConfig::calc_size(){
   size += 3 + this->Layout_length+3;
 
   return size;
+}
+
+void ModuleConfig::dump(){
+  FILE * fp = fopen(filename, "wb");
+
+  log_hex("SAVE DUMP: ", buffer, buffer_len - 10);
+
+  fwrite(buffer, buffer_len - 10, 1, fp);
+
+  fclose(fp);
 }
 
 void ModuleConfig::write(){

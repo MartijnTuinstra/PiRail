@@ -1470,7 +1470,7 @@ int edit_module(char * filename, bool update){
     config.filename[len+1] = 'b';
     config.filename[len+2] = 'u';
     config.filename[len+3] = 0;
-    config.write();
+    config.dump();
     config.filename[len] = 0;
     config.write();
     return -1;

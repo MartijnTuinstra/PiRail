@@ -10,7 +10,7 @@
 
 #include <string.h>
 
-#include "encryption.h"
+#include "utils/encryption.h"
 
 const char *BASE64_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 

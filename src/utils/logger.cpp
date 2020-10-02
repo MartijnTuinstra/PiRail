@@ -4,8 +4,8 @@
 #include <time.h>
 #include <stdint.h>
 
-#include "logger.h"
-#include "mem.h"
+#include "utils/logger.h"
+#include "utils/mem.h"
 
 Logger logger = Logger();
 

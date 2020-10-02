@@ -1,8 +1,3 @@
-#include "Z21.h"
-#include "mem.h"
-#include "logger.h"
-#include "Z21_msg.h"
-
 #include<stdio.h>
 #include<stdlib.h>
 #include<string.h>
@@ -10,6 +5,12 @@
 #include<pthread.h>
 #include<arpa/inet.h>
 #include<sys/socket.h>
+
+#include "Z21.h"
+#include "Z21_msg.h"
+
+#include "utils/mem.h"
+#include "utils/logger.h"
 
 #include "config.h"
 #include "websocket/stc.h"

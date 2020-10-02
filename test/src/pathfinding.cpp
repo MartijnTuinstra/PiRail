@@ -1,7 +1,7 @@
 #include "catch.hpp"
 
-#include "mem.h"
-#include "logger.h"
+#include "utils/mem.h"
+#include "utils/logger.h"
 #include "system.h"
 
 #include "config/ModuleConfig.h"
@@ -18,7 +18,6 @@
 
 #include "modules.h"
 #include "train.h"
-#include "algorithm.h"
 #include "pathfinding.h"
 
 void init_test(char (* filenames)[30], int nr_files);
@@ -28,7 +27,6 @@ TEST_CASE( "Path Finding", "[PF][PF-1]"){
   init_test(filenames, 1);
 
   Unit * U = switchboard::Units(1);
-
   REQUIRE(U);
 
   U->on_layout = true;

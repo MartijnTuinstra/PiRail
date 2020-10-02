@@ -12,7 +12,7 @@
 #include "switchboard/signals.h"
 #include "switchboard/station.h"
 
-#include "logger.h"
+#include "utils/logger.h"
 #include "system.h"
 
 namespace switchboard {

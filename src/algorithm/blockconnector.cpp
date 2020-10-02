@@ -2,7 +2,7 @@
 #include "switchboard/manager.h"
 #include "switchboard/rail.h"
 
-#include "logger.h"
+#include "utils/logger.h"
 
 namespace Algorithm {
 using namespace switchboard;

@@ -6,8 +6,8 @@
 
 #include "modules.h"
 #include "system.h"
-#include "logger.h"
-#include "mem.h"
+#include "utils/logger.h"
+#include "utils/mem.h"
 
 #include "switchboard/rail.h"
 #include "switchboard/switch.h"

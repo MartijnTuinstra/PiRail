@@ -2,8 +2,8 @@
 #include "websocket/message_structure.h"
 #include "websocket/stc.h"
 
-#include "logger.h"
-#include "mem.h"
+#include "utils/logger.h"
+#include "utils/mem.h"
 #include "system.h"
 
 #include "submodule.h"

@@ -7,13 +7,13 @@
 #include <math.h>
 
 #include "system.h"
-#include "mem.h"
+#include "utils/mem.h"
+#include "utils/logger.h"
 
 #include "train.h"
 #include "config/RollingConfig.h"
 #include "switchboard/switch.h"
 
-#include "logger.h"
 // #include "config.h"
 
 #include "Z21_msg.h"

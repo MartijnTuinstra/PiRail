@@ -1,7 +1,7 @@
 #include "catch.hpp"
 
-#include "mem.h"
-#include "logger.h"
+#include "utils/mem.h"
+#include "utils/logger.h"
 #include "system.h"
 
 #include "config/ModuleConfig.h"
@@ -14,7 +14,6 @@
 #include "switchboard/unit.h"
 
 #include "IO.h"
-#include "algorithm.h"
 #include "train.h"
 #include "modules.h"
 
@@ -25,6 +24,8 @@ TEST_CASE( "IO  Creation and linking", "[IO][IO-1]" ) {
   init_test(filenames, 1);
 
   Unit * U = switchboard::Units(1);
+  REQUIRE(U);
+
   U->on_layout = true;
   U->link_all();
 
@@ -73,6 +74,8 @@ TEST_CASE( "IO Output", "[IO][IO-2]"){
   init_test(filenames, 1);
 
   Unit * U = switchboard::Units(1);
+  REQUIRE(U);
+
   U->on_layout = true;
   U->link_all();
 
@@ -86,4 +89,59 @@ TEST_CASE( "IO Output", "[IO][IO-2]"){
 
   REQUIRE(U->Node[0]->io[22]->w_state.value == IO_event_High);
   REQUIRE(U->Node[0]->io[22]->r_state.value == IO_event_High);
+}
+
+TEST_CASE( "IO and Switchboard object", "[IO][IO-3]"){
+  char filenames[1][30] = {"./testconfigs/IO-3.bin"};
+  init_test(filenames, 1);
+
+  Unit * U = switchboard::Units(1);
+  REQUIRE(U);
+
+  U->on_layout = true;
+  U->link_all();
+
+  SECTION("I - Blocks"){
+    U->B[0]->In->setInput(IO_event_High);
+
+    CHECK(U->B[0]->detectionblocked);
+  }
+
+  SECTION("II - Switches"){
+    logger.setlevel_stdout(INFO);
+    loggerf(ERROR, "Setting Sw 0 to state 1");
+    // Solonoid operated switch
+    U->Sw[0]->setState(1);
+
+    CHECK(U->Sw[0]->IO[0]->w_state.output == IO_event_Low);
+    CHECK(U->Sw[0]->IO[1]->w_state.output == IO_event_Pulse);
+
+    // Constant signal operated switch
+    U->Sw[1]->setState(1);
+
+    CHECK(U->Sw[1]->IO[0]->w_state.output == IO_event_High); 
+
+    // Feedback
+    U->Sw[2]->setState(1);
+
+    CHECK(U->Sw[2]->feedbackWrongState);
+    CHECK(U->B[0]->switchWrongFeedback);
+
+    U->Sw[2]->feedback[0]->setInput(IO_event_High);
+
+    CHECK(!U->Sw[2]->feedbackWrongState);
+    CHECK(!U->B[0]->switchWrongFeedback);
+  }
+
+  // SECTION("III - MSSwitches"){
+
+  // }
+
+  // SECTION("IV - Signals"){
+
+  // }
+
+  // SECTION("V - Stations"){
+
+  // }
 }

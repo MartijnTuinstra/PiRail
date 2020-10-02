@@ -1,8 +1,8 @@
 #include "rollingstock/train.h"
 #include "train.h"
 
-#include "mem.h"
-#include "logger.h"
+#include "utils/mem.h"
+#include "utils/logger.h"
 #include "system.h"
 
 

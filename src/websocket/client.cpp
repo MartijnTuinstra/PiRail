@@ -6,9 +6,9 @@
 
 // #include "websocket.h"
 
-#include "encryption.h"
-#include "logger.h"
-#include "mem.h"
+#include "utils/encryption.h"
+#include "utils/logger.h"
+#include "utils/mem.h"
 #include "system.h"
 
 void print_hex(char * data, int size);

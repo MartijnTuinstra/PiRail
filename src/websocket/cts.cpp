@@ -15,7 +15,8 @@
 #include "websocket/cts.h"
 
 #include "system.h"
-#include "mem.h"
+#include "utils/mem.h"
+#include "utils/logger.h"
 
 #include "switchboard/manager.h"
 #include "switchboard/rail.h"
@@ -27,7 +28,6 @@
 #include "rollingstock/engine.h"
 #include "rollingstock/car.h"
 #include "train.h"
-#include "logger.h"
 #include "config.h"
 #include "algorithm/queue.h"
 

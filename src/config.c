@@ -2,8 +2,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "config.h"
-#include "logger.h"
-#include "mem.h"
+#include "utils/logger.h"
+#include "utils/mem.h"
 
 uint8_t read_byte_conf(uint8_t ** p){
   uint8_t byte = **p;

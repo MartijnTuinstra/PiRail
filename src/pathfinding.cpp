@@ -4,8 +4,8 @@
 #include "switchboard/manager.h"
 #include "switchboard/switch.h"
 #include "switchboard/msswitch.h"
-#include "mem.h"
-#include "logger.h"
+#include "utils/mem.h"
+#include "utils/logger.h"
 #include "websocket/stc.h"
 #include "modules.h"
 

@@ -1,7 +1,7 @@
 #include "catch.hpp"
 
-#include "mem.h"
-#include "logger.h"
+#include "utils/mem.h"
+#include "utils/logger.h"
 #include "system.h"
 
 #include "config/ModuleConfig.h"
@@ -14,7 +14,6 @@
 
 #include "rollingstock/railtrain.h"
 
-#include "algorithm.h"
 #include "train.h"
 #include "modules.h"
 #include "path.h"
@@ -22,10 +21,13 @@
 void init_test(char (* filenames)[30], int nr_files);
 
 TEST_CASE( "Path Construction", "[PATH][PATH-1]" ) {
+  loggerf(CRITICAL, "PATH-1 TEST");
   char filenames[2][30] = {"./testconfigs/PATH-1.bin"};
   init_test(filenames, 1);
 
   Unit * U = switchboard::Units(1);
+  REQUIRE(U);
+
   U->on_layout = true;
   U->link_all();
 
@@ -204,10 +206,13 @@ TEST_CASE( "Path Construction", "[PATH][PATH-1]" ) {
 }
 
 TEST_CASE( "Path Reverse", "[PATH][PATH-2]") {
+  loggerf(CRITICAL, "PATH-2 TEST");
   char filenames[1][30] = {"./testconfigs/PATH-2.bin"};
   init_test(filenames, 1);
 
   Unit * U = switchboard::Units(1);
+  REQUIRE(U);
+
   U->on_layout = true;
   U->link_all();
 
@@ -257,13 +262,14 @@ TEST_CASE( "Path Reverse", "[PATH][PATH-2]") {
   CHECK(train_link[1]->dir == 1);
 }
 
-
 TEST_CASE( "Path Reserve", "[PATH][PATH-3]") {
+  loggerf(CRITICAL, "PATH-3 TEST");
   char filenames[1][30] = {"./testconfigs/PATH-2.bin"};
   init_test(filenames, 1);
   
-
   Unit * U = switchboard::Units(1);
+  REQUIRE(U);
+
   U->on_layout = true;
   U->link_all();
 

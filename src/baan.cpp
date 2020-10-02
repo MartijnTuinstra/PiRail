@@ -1,7 +1,7 @@
 #include "system.h"
-#include "mem.h"
+#include "utils/mem.h"
+#include "utils/logger.h"
 
-#include "logger.h"
 // #include "rail.h"
 // #include "switch.h"
 #include "train.h"

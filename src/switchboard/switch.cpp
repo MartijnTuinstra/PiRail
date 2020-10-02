@@ -4,8 +4,8 @@
 #include "switchboard/signals.h"
 #include "switchboard/station.h"
 
-#include "mem.h"
-#include "logger.h"
+#include "utils/mem.h"
+#include "utils/logger.h"
 #include "IO.h"
 #include "modules.h"
 #include "system.h"

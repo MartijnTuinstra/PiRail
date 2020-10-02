@@ -2,9 +2,9 @@
 #include <termios.h>
 #include <sys/ioctl.h>
 
-#include "logger.h"
+#include "utils/logger.h"
+#include "utils/mem.h"
 #include "com.h"
-#include "mem.h"
 #include "system.h"
 
 #include "switchboard/manager.h"

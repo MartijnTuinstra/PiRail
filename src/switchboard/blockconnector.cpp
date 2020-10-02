@@ -1,7 +1,7 @@
 #include "switchboard/manager.h"
 #include "switchboard/blockconnector.h"
-#include "logger.h"
-#include "mem.h"
+#include "utils/logger.h"
+#include "utils/mem.h"
 
 #include "websocket/stc.h"
 

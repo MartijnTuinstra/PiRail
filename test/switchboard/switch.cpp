@@ -1,7 +1,7 @@
 #include "catch.hpp"
 
-#include "mem.h"
-#include "logger.h"
+#include "utils/mem.h"
+#include "utils/logger.h"
 #include "system.h"
 
 #include "config/ModuleConfig.h"
@@ -13,7 +13,9 @@
 
 #include "train.h"
 #include "modules.h"
-#include "algorithm.h"
+
+#include "algorithm/core.h"
+#include "algorithm/component.h"
 
 void init_test(char (* filenames)[30], int nr_files);
 
@@ -22,6 +24,8 @@ TEST_CASE( "Switch Link", "[SB][SB-2][SB-2.1]" ) {
   init_test(filenames, 1);
 
   Unit * U = switchboard::Units(1);
+  REQUIRE(U);
+
   U->link_all();
 
   /*
@@ -75,7 +79,7 @@ TEST_CASE( "Switch Link", "[SB][SB-2][SB-2.1]" ) {
 
   SECTION( "V - Search Check"){
     for(uint8_t i = 0; i < 4; i++){
-      Algor_process(U->B[i], _FORCE);
+      Algorithm::process(U->B[i], _FORCE);
     }
 
     REQUIRE(U->B[0]->Alg.next == 2);
@@ -89,7 +93,7 @@ TEST_CASE( "Switch Link", "[SB][SB-2][SB-2.1]" ) {
     REQUIRE(U->B[0]->Alg.N[0] == 0);
     REQUIRE(U->B[2]->Alg.P[0] == 0);
 
-    processAlgorQueue();
+    Algorithm::tick();
 
     REQUIRE(U->B[0]->Alg.next == 2);
     REQUIRE(U->B[0]->Alg.N[0] == U->B[1]);

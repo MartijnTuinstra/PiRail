@@ -9,7 +9,7 @@ GCC_DEPFLAGS = -MT $@ -MMD -MP -MF $(DEPDIR)/$*.d
 GCC_INCLUDE = -I $(LIB) -I $(SHARED_LIB)
 GCC_ERROR_FLAGS = -Werror=unused-variable -Wno-packed-bitfield-compat -Wno-unused-parameter -Wall
 GCC_LIBS = -pthread -lssl -lcrypto -lm
-GCC_FLAGS = -D _DEFAULT_SOURCE
+GCC_FLAGS = -D _DEFAULT_SOURCE -D _POSIX_C_SOURCE=600
 
 GCC = g++ -std=c++14 -g3 $(GCC_INCLUDE) $(GCC_ERROR_FLAGS) $(GCC_LIBS) $(GCC_FLAGS)
 
@@ -17,22 +17,23 @@ FILES_CONFIG = $(addprefix config/,ModuleConfig RollingConfig)
 FILES_SWITCHBOARD = $(addprefix switchboard/,blockconnector links rail switch msswitch unit station signals manager)
 FILES_WEBSOCKET = $(addprefix websocket/,server client stc cts message)
 FILES_ROLLING = $(addprefix rollingstock/,train engine car railtrain)
-FILES_UTILS = $(addprefix utils/,)
+FILES_UTILS = $(addprefix utils/,logger mem encryption)
+FILES_ALGORITHM = $(addprefix algorithm/,core component queue blockconnector)
 
-BAAN_FILES = baan system logger mem modules config IO algorithm encryption \
-             Z21 Z21_msg train submodule com sim path pathfinding scheduler/scheduler
-
-BAAN_FILES += $(FILES_ROLLING) $(FILES_WEBSOCKET) $(FILES_SWITCHBOARD) $(FILES_CONFIG) $(FILES_UTILS)
+BAAN_FILES = baan system modules config IO \
+             Z21 Z21_msg train submodule com sim path pathfinding scheduler/scheduler \
+             $(FILES_ROLLING) $(FILES_WEBSOCKET) $(FILES_SWITCHBOARD) \
+             $(FILES_CONFIG) $(FILES_ALGORITHM) $(FILES_UTILS)
 
 #BAAN_FILES += websocket websocket_cts websocket_stc websocket_control
 
-COMTEST_FILES = comtest system logger mem modules config IO algorithm encryption Z21 Z21_msg train submodule com sim path pathfinding scheduler/scheduler
-COMTEST_FILES += $(FILES_ROLLING) $(FILES_WEBSOCKET) $(FILES_SWITCHBOARD) $(FILES_CONFIG)
+COMTEST_FILES = comtest system modules config IO Z21 Z21_msg train submodule com sim path pathfinding scheduler/scheduler
+COMTEST_FILES += $(FILES_ROLLING) $(FILES_WEBSOCKET) $(FILES_SWITCHBOARD) $(FILES_CONFIG) $(FILES_ALGORITHM) $(FILES_UTILS)
 
-CONFIG_READER_FILES = config_reader config logger mem $(FILES_CONFIG)
+CONFIG_READER_FILES = config_reader config $(FILES_CONFIG) $(FILES_UTILS)
 
 BAAN_CONFIGS = 1 2 3 4 10 20 21 22 23 25 26
-TEST_CONFIGS = PATH-1 PATH-2 IO-1 SB-1.1 SB-1.2 SB-1.3 SB-2.1 SB-3.1 SB-4.1
+TEST_CONFIGS = PATH-1 PATH-2 IO-1 IO-3 SB-1.1 SB-1.2 SB-1.3 SB-2.1 SB-3.1 SB-4.1 SB-4.2-1 SB-4.2-2 Alg-1-1 Alg-1-2 Alg-1-3 Alg-1-4 Alg-2 Alg-3 PF-1
 
 SHARED_OBJ_FILES = circularbuffer
 
@@ -68,7 +69,10 @@ all: config_reader baan comtest avr
 
 update_configs: update_modules_config update_rolling_config
 
-update_modules_config: $(addprefix configs/units/,$(addsuffix .bin,$(BAAN_CONFIGS))) $(addprefix test/testconfigs/,$(addsuffix .bin,$(TEST_CONFIGS)))
+%.bin_bu_MKFL: %.bin
+	cp $^ $@
+
+update_modules_config: $(addprefix configs/units/,$(addsuffix .bin_bu_MKFL,$(BAAN_CONFIGS))) $(addprefix test/testconfigs/,$(addsuffix .bin_bu_MKFL,$(TEST_CONFIGS)))
 	./config_reader --update --module $^
 
 update_rolling_config: configs/stock.bin $(addprefix test/testconfigs/,$(addsuffix .bin,$(TEST_STOCK_CONFIGS)))

@@ -2,9 +2,9 @@
 #include <stdlib.h>
 #include "IO.h"
 
-#include "logger.h"
+#include "utils/logger.h"
+#include "utils/mem.h"
 #include "system.h"
-#include "mem.h"
 #include "com.h"
 #include "algorithm/queue.h"
 

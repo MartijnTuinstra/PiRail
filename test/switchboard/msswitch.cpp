@@ -1,7 +1,7 @@
 #include "catch.hpp"
 
-#include "mem.h"
-#include "logger.h"
+#include "utils/mem.h"
+#include "utils/logger.h"
 #include "system.h"
 
 #include "config/ModuleConfig.h"
@@ -13,7 +13,8 @@
 
 #include "train.h"
 #include "modules.h"
-#include "algorithm.h"
+
+#include "algorithm/core.h"
 
 void init_test(char (* filenames)[30], int nr_files);
 
@@ -22,6 +23,8 @@ TEST_CASE( "MSSwitch Link", "[SB][SB-3][SB-3.1]" ) {
   init_test(filenames, 1);
 
   Unit * U = switchboard::Units(1);
+  REQUIRE(U);
+
   U->link_all();
 
   /*              /1.0

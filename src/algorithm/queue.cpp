@@ -7,7 +7,7 @@
 
 #include "algorithm/queue.h"
 
-#include "logger.h"
+#include "utils/logger.h"
 
 AlgorQueue AlQueue = AlgorQueue();
 

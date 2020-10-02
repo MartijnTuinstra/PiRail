@@ -1,7 +1,7 @@
 #include "catch.hpp"
 
-#include "mem.h"
-#include "logger.h"
+#include "utils/mem.h"
+#include "utils/logger.h"
 #include "system.h"
 
 #include "config/ModuleConfig.h"
@@ -12,7 +12,8 @@
 #include "switchboard/station.h"
 #include "switchboard/unit.h"
 
-#include "algorithm.h"
+#include "algorithm/core.h"
+
 #include "train.h"
 #include "modules.h"
 
@@ -25,6 +26,8 @@ TEST_CASE( "Station Stating", "[SB][SB-5][SB-5.1]" ) {
   init_test(filenames, 1);
 
   Unit * U = switchboard::Units(1);
+  REQUIRE(U);
+
   U->link_all();
 
   for(uint8_t i = 0; i < U->block_len; i++){
@@ -84,8 +87,8 @@ TEST_CASE( "Station Stating", "[SB][SB-5][SB-5.1]" ) {
     loggerf(CRITICAL, "Station has parent %x", (unsigned int)U->St[0]->parent);
     U->B[28]->setDetection(1);
 
-    Algor_process(U->B[28], _FORCE);
-    Algor_print_block_debug(U->B[28]);
+    Algorithm::process(U->B[28], _FORCE);
+    Algorithm::print_block_debug(U->B[28]);
 
     U->B[28]->train->setSpeed(0);
 
@@ -99,10 +102,10 @@ TEST_CASE( "Station Stating", "[SB][SB-5][SB-5.1]" ) {
 
     // Move train out of station
     U->B[29]->setDetection(1);
-    Algor_process(U->B[29], _FORCE);
+    Algorithm::process(U->B[29], _FORCE);
 
     U->B[28]->setDetection(0);
-    Algor_process(U->B[28], _FORCE);
+    Algorithm::process(U->B[28], _FORCE);
 
     CHECK(!U->B[28]->blocked);
     CHECK(!U->St[0]->occupied);
@@ -112,8 +115,8 @@ TEST_CASE( "Station Stating", "[SB][SB-5][SB-5.1]" ) {
   SECTION("VIII - Blocks and yard"){
     U->B[52]->setDetection(1);
 
-    Algor_process(U->B[52], _FORCE);
-    Algor_print_block_debug(U->B[52]);
+    Algorithm::process(U->B[52], _FORCE);
+    Algorithm::print_block_debug(U->B[52]);
 
     CHECK(U->St[7]->occupied);
   }
@@ -121,8 +124,8 @@ TEST_CASE( "Station Stating", "[SB][SB-5][SB-5.1]" ) {
   SECTION("IX - Blocks and multistation"){
     U->B[32]->setDetection(1);
 
-    Algor_process(U->B[32], _FORCE);
-    Algor_print_block_debug(U->B[32]);
+    Algorithm::process(U->B[32], _FORCE);
+    Algorithm::print_block_debug(U->B[32]);
 
     U->B[32]->train->setSpeed(0);
 
@@ -142,13 +145,13 @@ TEST_CASE( "Station Stating", "[SB][SB-5][SB-5.1]" ) {
 
     // Move train to other station
     U->B[33]->setDetection(1);
-    Algor_process(U->B[33], _FORCE);
+    Algorithm::process(U->B[33], _FORCE);
 
     CHECK(U->St[2]->occupied);
     CHECK(U->St[3]->occupied);
 
     U->B[32]->setDetection(0);
-    Algor_process(U->B[32], _FORCE);
+    Algorithm::process(U->B[32], _FORCE);
 
     CHECK(!U->St[2]->occupied);
     CHECK(U->St[3]->occupied);
@@ -156,16 +159,16 @@ TEST_CASE( "Station Stating", "[SB][SB-5][SB-5.1]" ) {
     CHECK(U->St[1]->occupiedChild);
 
     U->B[34]->setDetection(1);
-    Algor_process(U->B[34], _FORCE);
+    Algorithm::process(U->B[34], _FORCE);
     U->B[33]->setDetection(0);
-    Algor_process(U->B[33], _FORCE);
+    Algorithm::process(U->B[33], _FORCE);
 
     // Move train out of station
     U->B[35]->setDetection(1);
-    Algor_process(U->B[35], _FORCE);
+    Algorithm::process(U->B[35], _FORCE);
 
     U->B[34]->setDetection(0);
-    Algor_process(U->B[34], _FORCE);
+    Algorithm::process(U->B[34], _FORCE);
 
     CHECK(!U->B[34]->blocked);
     CHECK(!U->St[3]->occupied);

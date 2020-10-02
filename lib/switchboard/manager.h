@@ -4,7 +4,7 @@
 #include <vector>
 #include <stdint.h>
 #include <cstring>
-#include "mem.h"
+#include "utils/mem.h"
 #include "utils/dynArray.h"
 
 #include "config/ModuleConfig.h"

@@ -7,8 +7,8 @@
 #include <pthread.h>
 
 #include "scheduler/scheduler.h"
-#include "logger.h"
-#include "mem.h"
+#include "utils/logger.h"
+#include "utils/mem.h"
 
 bool operator <(const struct timespec lhs, const struct timespec rhs)
 {

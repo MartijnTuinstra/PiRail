@@ -6,9 +6,9 @@
 #include "switchboard/signals.h"
 
 #include "system.h"
-#include "mem.h"
+#include "utils/mem.h"
+#include "utils/logger.h"
 #include "modules.h"
-#include "logger.h"
 #include "IO.h"
 
 #include "algorithm/core.h"

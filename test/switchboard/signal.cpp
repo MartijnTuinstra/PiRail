@@ -1,7 +1,7 @@
 #include "catch.hpp"
 
-#include "mem.h"
-#include "logger.h"
+#include "utils/mem.h"
+#include "utils/logger.h"
 #include "system.h"
 
 #include "config/ModuleConfig.h"
@@ -13,7 +13,7 @@
 #include "switchboard/unit.h"
 #include "switchboard/blockconnector.h"
 
-#include "algorithm.h"
+#include "algorithm/blockconnector.h"
 #include "sim.h"
 #include "train.h"
 #include "modules.h"
@@ -27,6 +27,8 @@ TEST_CASE( "Signal 1", "[SB][SB-4][SB-4.1]" ) {
   init_test(filenames, 1);
 
   Unit * U = switchboard::Units(1);
+  REQUIRE(U);
+
   U->link_all();
 
   /*       o>        <o
@@ -91,6 +93,9 @@ TEST_CASE( "Signal 2", "[SB][SB-4][SB-4.2]" ) {
 
   Unit * U1 = switchboard::Units(1);
   Unit * U2 = switchboard::Units(2);
+
+  REQUIRE(U1);
+  REQUIRE(U2);
   
   /*       o>
   //       |
@@ -107,15 +112,15 @@ TEST_CASE( "Signal 2", "[SB][SB-4][SB-4.2]" ) {
   U1->on_layout = 1;
   U2->on_layout = 1;
 
-  auto connectors = Algorithm_find_connectors();
+  auto connectors = Algorithm::find_connectors();
 
   loggerf(INFO, "Have %i connectors", connectors.size());
 
   U1->B[0]->setDetection(1);
   U2->B[0]->setDetection(1);
 
-  if(uint8_t * findResult = Algorithm_find_connectable(&connectors))
-    Algorithm_connect_connectors(&connectors, findResult);
+  if(uint8_t * findResult = Algorithm::find_connectable(&connectors))
+    Algorithm::connect_connectors(&connectors, findResult);
 
   loggerf(INFO, "Have %i connectors", connectors.size());
 

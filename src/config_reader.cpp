@@ -1,9 +1,9 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdio.h>
-#include "logger.h"
+#include "utils/logger.h"
+#include "utils/mem.h"
 #include "config.h"
-#include "mem.h"
 #include "switchboard/rail.h"
 
 #include "config/ModuleConfig.h"

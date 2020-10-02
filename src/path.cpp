@@ -1,7 +1,7 @@
 #include <algorithm>
 
 #include "path.h"
-#include "logger.h"
+#include "utils/logger.h"
 
 #include "switchboard/rail.h"
 #include "switchboard/switch.h"

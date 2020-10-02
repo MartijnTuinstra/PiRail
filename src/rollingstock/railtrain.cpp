@@ -4,8 +4,8 @@
 #include "rollingstock/railtrain.h"
 #include "train.h"
 
-#include "mem.h"
-#include "logger.h"
+#include "utils/mem.h"
+#include "utils/logger.h"
 #include "scheduler/scheduler.h"
 #include "system.h"
 #include "algorithm/queue.h"

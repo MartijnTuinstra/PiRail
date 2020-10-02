@@ -12,8 +12,8 @@
 
 #include "scheduler/scheduler.h"
 #include "system.h"
-#include "logger.h"
-#include "mem.h"
+#include "utils/logger.h"
+#include "utils/mem.h"
 #include "sim.h"
 
 pthread_mutex_t m_websocket_send;

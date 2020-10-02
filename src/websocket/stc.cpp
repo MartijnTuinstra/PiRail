@@ -14,7 +14,8 @@
 #include "websocket/stc.h"
 
 #include "system.h"
-#include "mem.h"
+#include "utils/mem.h"
+#include "utils/logger.h"
 
 #include "switchboard/manager.h"
 #include "switchboard/rail.h"
@@ -22,7 +23,6 @@
 #include "switchboard/switch.h"
 #include "switchboard/msswitch.h"
 #include "train.h"
-#include "logger.h"
 #include "config.h"
 
 #include "modules.h"

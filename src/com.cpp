@@ -20,11 +20,11 @@
 #include "switchboard/msswitch.h"
 #include "switchboard/signals.h"
 #include "train.h"
-#include "logger.h"
 #include "IO.h"
 #include "Z21.h"
 
-#include "mem.h"
+#include "utils/logger.h"
+#include "utils/mem.h"
 
 #include "modules.h"
 

@@ -1,7 +1,7 @@
 #include "catch.hpp"
 
-#include "mem.h"
-#include "logger.h"
+#include "utils/mem.h"
+#include "utils/logger.h"
 #include "system.h"
 
 #include "config/ModuleConfig.h"
@@ -11,7 +11,8 @@
 #include "switchboard/msswitch.h"
 #include "switchboard/unit.h"
 
-#include "algorithm.h"
+#include "algorithm/core.h"
+// #include "algorithm/component.h"
 
 #include "train.h"
 #include "modules.h"
@@ -24,6 +25,8 @@ TEST_CASE( "Block Link", "[SB][SB-1][SB-1.1]" ) {
   init_test(filenames, 1);
 
   Unit * U = switchboard::Units(1);
+  REQUIRE(U);
+
   U->link_all();
 
   /*
@@ -83,6 +86,8 @@ TEST_CASE( "Block Algorithm Search", "[SB][SB-1][SB-1.2]" ) {
   init_test(filenames, 1);
 
   Unit * U = switchboard::Units(1);
+  REQUIRE(U);
+
   U->link_all();
   
 
@@ -130,7 +135,7 @@ TEST_CASE( "Block Algorithm Search", "[SB][SB-1][SB-1.2]" ) {
 
   SECTION("I - Standard"){
     U->B[4]->AlgorSearch(0);
-    Algor_print_block_debug(U->B[4]);
+    Algorithm::print_block_debug(U->B[4]);
 
     REQUIRE(U->B[4]->Alg.next == 1);
     REQUIRE(U->B[4]->Alg.prev == 4);
@@ -149,7 +154,7 @@ TEST_CASE( "Block Algorithm Search", "[SB][SB-1][SB-1.2]" ) {
 
   SECTION("II - Block smaller than 1 meter"){
     U->B[10]->AlgorSearch(0);
-    Algor_print_block_debug(U->B[10]);
+    Algorithm::print_block_debug(U->B[10]);
 
     REQUIRE(U->B[10]->Alg.next == 1);
     REQUIRE(U->B[10]->Alg.prev == 4);
@@ -168,7 +173,7 @@ TEST_CASE( "Block Algorithm Search", "[SB][SB-1][SB-1.2]" ) {
 
   SECTION("III - Blocks change direction"){
     U->B[15]->AlgorSearch(0);
-    Algor_print_block_debug(U->B[15]);
+    Algorithm::print_block_debug(U->B[15]);
 
     REQUIRE(U->B[15]->Alg.next == 0);
     REQUIRE(U->B[15]->Alg.prev == 1);
@@ -180,7 +185,7 @@ TEST_CASE( "Block Algorithm Search", "[SB][SB-1][SB-1.2]" ) {
     U->B[13]->reverse();
     U->B[12]->reverse();
     U->B[15]->AlgorSearch(0);
-    Algor_print_block_debug(U->B[15]);
+    Algorithm::print_block_debug(U->B[15]);
 
     REQUIRE(U->B[15]->Alg.next == 0);
     REQUIRE(U->B[15]->Alg.prev == 3);
@@ -195,7 +200,7 @@ TEST_CASE( "Block Algorithm Search", "[SB][SB-1][SB-1.2]" ) {
 
   SECTION("III - Blocks change direction"){
     U->B[47]->AlgorSearch(0);
-    Algor_print_block_debug(U->B[47]);
+    Algorithm::print_block_debug(U->B[47]);
 
     REQUIRE(U->B[47]->Alg.next == 0);
     REQUIRE(U->B[47]->Alg.prev == 4);
@@ -215,10 +220,10 @@ TEST_CASE( "Block Algorithm Search", "[SB][SB-1][SB-1.2]" ) {
     U->B[18]->AlgorSearch(0);
     U->B[19]->AlgorSearch(0);
     U->B[48]->AlgorSearch(0);
-    Algor_print_block_debug(U->B[16]);
-    Algor_print_block_debug(U->B[18]);
-    Algor_print_block_debug(U->B[19]);
-    Algor_print_block_debug(U->B[48]);
+    Algorithm::print_block_debug(U->B[16]);
+    Algorithm::print_block_debug(U->B[18]);
+    Algorithm::print_block_debug(U->B[19]);
+    Algorithm::print_block_debug(U->B[48]);
 
     REQUIRE(U->B[16]->Alg.next == 3);
     REQUIRE(U->B[16]->Alg.prev == 0);
@@ -250,10 +255,10 @@ TEST_CASE( "Block Algorithm Search", "[SB][SB-1][SB-1.2]" ) {
     U->B[21]->AlgorSearch(0);
     U->B[23]->AlgorSearch(0);
     U->B[24]->AlgorSearch(0);
-    Algor_print_block_debug(U->B[20]);
-    Algor_print_block_debug(U->B[21]);
-    Algor_print_block_debug(U->B[23]);
-    Algor_print_block_debug(U->B[24]);
+    Algorithm::print_block_debug(U->B[20]);
+    Algorithm::print_block_debug(U->B[21]);
+    Algorithm::print_block_debug(U->B[23]);
+    Algorithm::print_block_debug(U->B[24]);
 
     REQUIRE(U->B[21]->Alg.next == 2);
     REQUIRE(U->B[21]->Alg.prev == 0);
@@ -276,7 +281,7 @@ TEST_CASE( "Block Algorithm Search", "[SB][SB-1][SB-1.2]" ) {
 
   SECTION("VII - Blocks and station"){
     U->B[28]->AlgorSearch(0);
-    Algor_print_block_debug(U->B[28]);
+    Algorithm::print_block_debug(U->B[28]);
 
     REQUIRE(U->B[28]->Alg.next == 1);
     REQUIRE(U->B[28]->Alg.prev == 3);
@@ -287,7 +292,7 @@ TEST_CASE( "Block Algorithm Search", "[SB][SB-1][SB-1.2]" ) {
 
   SECTION("VIII - Blocks and multistation"){
     U->B[34]->AlgorSearch(0);
-    Algor_print_block_debug(U->B[34]);
+    Algorithm::print_block_debug(U->B[34]);
 
     REQUIRE(U->B[34]->Alg.next == 1);
     REQUIRE(U->B[34]->Alg.prev == 4);
@@ -298,7 +303,7 @@ TEST_CASE( "Block Algorithm Search", "[SB][SB-1][SB-1.2]" ) {
 
   SECTION("IX - Blocks and switchedstation"){
     U->B[41]->AlgorSearch(0);
-    Algor_print_block_debug(U->B[41]);
+    Algorithm::print_block_debug(U->B[41]);
 
     REQUIRE(U->B[41]->Alg.next == 1);
     REQUIRE(U->B[41]->Alg.prev == 5);
@@ -313,6 +318,8 @@ TEST_CASE( "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" ) {
   init_test(filenames, 1);
 
   Unit * U = switchboard::Units(1);
+  REQUIRE(U);
+
   U->link_all();
 
   for(uint8_t i = 0; i < U->block_len; i++){
@@ -370,8 +377,8 @@ TEST_CASE( "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" ) {
   SECTION("I - Standard"){
     U->B[4]->setDetection(1);
 
-    Algor_process(U->B[4], _FORCE);
-    Algor_print_block_debug(U->B[4]);
+    Algorithm::process(U->B[4], _FORCE);
+    Algorithm::print_block_debug(U->B[4]);
 
     CHECK(U->B[4]->Alg.P[0]->state == DANGER);
     CHECK(U->B[4]->Alg.P[1]->state == CAUTION);
@@ -381,8 +388,8 @@ TEST_CASE( "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" ) {
   SECTION("II - Block smaller than 1 meter"){
     U->B[10]->setDetection(1);
 
-    Algor_process(U->B[10], _FORCE);
-    Algor_print_block_debug(U->B[10]);
+    Algorithm::process(U->B[10], _FORCE);
+    Algorithm::print_block_debug(U->B[10]);
 
     CHECK(U->B[10]->Alg.P[0]->state == DANGER);
     CHECK(U->B[10]->Alg.P[1]->state == DANGER);
@@ -392,7 +399,7 @@ TEST_CASE( "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" ) {
 
   // SECTION("III - Blocks change direction"){
   //   U->B[15]->AlgorSearch(0);
-  //   Algor_print_block_debug(U->B[15]);
+  //   Algorithm::print_block_debug(U->B[15]);
 
   //   REQUIRE(U->B[15]->Alg.next == 0);
   //   REQUIRE(U->B[15]->Alg.prev == 1);
@@ -404,7 +411,7 @@ TEST_CASE( "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" ) {
   //   U->B[13]->reverse();
   //   U->B[12]->reverse();
   //   U->B[15]->AlgorSearch(0);
-  //   Algor_print_block_debug(U->B[15]);
+  //   Algorithm::print_block_debug(U->B[15]);
 
   //   REQUIRE(U->B[15]->Alg.next == 0);
   //   REQUIRE(U->B[15]->Alg.prev == 3);
@@ -419,7 +426,7 @@ TEST_CASE( "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" ) {
 
   // SECTION("III - Blocks change direction"){
   //   U->B[47]->AlgorSearch(0);
-  //   Algor_print_block_debug(U->B[47]);
+  //   Algorithm::print_block_debug(U->B[47]);
 
   //   REQUIRE(U->B[47]->Alg.next == 0);
   //   REQUIRE(U->B[47]->Alg.prev == 4);
@@ -437,14 +444,14 @@ TEST_CASE( "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" ) {
   SECTION("V - Blocks and switch"){
     U->B[19]->setDetection(1);
 
-    Algor_process(U->B[19], _FORCE);
+    Algorithm::process(U->B[19], _FORCE);
 
     CHECK(U->B[19]->Alg.P[0]->state == DANGER);
     CHECK(U->B[19]->Alg.P[1]->state == DANGER);
     CHECK(U->B[19]->Alg.P[2]->state == CAUTION);
 
     U->Sw[0]->setState(1);
-    Algor_process(U->B[17], _FORCE);
+    Algorithm::process(U->B[17], _FORCE);
 
     REQUIRE(U->B[17]->Alg.prev == 1);
 
@@ -454,10 +461,39 @@ TEST_CASE( "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" ) {
     U->Sw[0]->state = 0; // Force update of all blocks
     U->Sw[0]->setState(1);
 
+    Algorithm::process(U->B[16], _FORCE);
+    Algorithm::process(U->B[17], _FORCE);
+    Algorithm::process(U->B[18], _FORCE);
+
+    CHECK(U->B[17]->switchWrongFeedback);
+    CHECK(U->B[17]->state == DANGER);
+    CHECK(U->B[16]->state == CAUTION);
+
+    U->Sw[0]->feedback[0]->setInput(IO_event_High); // Set feedback right
+
+    Algorithm::process(U->B[17], _FORCE);
+
+    CHECK(!U->B[17]->switchWrongFeedback);
+    CHECK(U->B[17]->state == DANGER);  // No blocks after, so still danger
+    CHECK(U->B[16]->state == CAUTION);
+
+    U->B[19]->setDetection(0);
+
+    U->Sw[0]->setState(0);
+    U->Sw[0]->feedback[0]->setInput(IO_event_Low); // Set feedback right
+
+    Algorithm::process(U->B[16], _FORCE);
+    Algorithm::process(U->B[17], _FORCE);
+    Algorithm::process(U->B[18], _FORCE);
+    Algorithm::process(U->B[19], _FORCE);
+
+    CHECK(!U->B[17]->switchWrongFeedback);
+
+    CHECK(U->B[17]->state == PROCEED);
+
     U->Sw[0]->Detection->switchWrongState = true;
-    Algor_process(U->B[16], _FORCE);
-    Algor_process(U->B[17], _FORCE);
-    Algor_process(U->B[18], _FORCE);
+
+    Algorithm::process(U->B[17], _FORCE);
 
     CHECK(U->B[17]->switchWrongState);
     CHECK(U->B[17]->state == DANGER);
@@ -469,10 +505,10 @@ TEST_CASE( "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" ) {
   //   U->B[21]->AlgorSearch(0);
   //   U->B[23]->AlgorSearch(0);
   //   U->B[24]->AlgorSearch(0);
-  //   Algor_print_block_debug(U->B[20]);
-  //   Algor_print_block_debug(U->B[21]);
-  //   Algor_print_block_debug(U->B[23]);
-  //   Algor_print_block_debug(U->B[24]);
+  //   Algorithm::print_block_debug(U->B[20]);
+  //   Algorithm::print_block_debug(U->B[21]);
+  //   Algorithm::print_block_debug(U->B[23]);
+  //   Algorithm::print_block_debug(U->B[24]);
 
   //   REQUIRE(U->B[21]->Alg.next == 2);
   //   REQUIRE(U->B[21]->Alg.prev == 0);
@@ -496,8 +532,8 @@ TEST_CASE( "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" ) {
   SECTION("VII - Blocks and station"){
     U->B[28]->setDetection(1);
 
-    Algor_process(U->B[28], _FORCE);
-    Algor_print_block_debug(U->B[28]);
+    Algorithm::process(U->B[28], _FORCE);
+    Algorithm::print_block_debug(U->B[28]);
 
     REQUIRE(U->B[28]->Alg.prev1 == 2);
 
@@ -509,8 +545,8 @@ TEST_CASE( "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" ) {
   SECTION("VIII - Blocks and yard"){
     U->B[52]->setDetection(1);
 
-    Algor_process(U->B[52], _FORCE);
-    Algor_print_block_debug(U->B[52]);
+    Algorithm::process(U->B[52], _FORCE);
+    Algorithm::print_block_debug(U->B[52]);
 
     REQUIRE(U->B[52]->Alg.prev1 == 2);
 
@@ -522,8 +558,8 @@ TEST_CASE( "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" ) {
   SECTION("IX - Blocks and multistation"){
     U->B[34]->setDetection(1);
 
-    Algor_process(U->B[34], _FORCE);
-    Algor_print_block_debug(U->B[34]);
+    Algorithm::process(U->B[34], _FORCE);
+    Algorithm::print_block_debug(U->B[34]);
 
     CHECK(U->B[34]->Alg.P[0]->state == DANGER);
     CHECK(U->B[34]->Alg.P[1]->state == DANGER);
@@ -534,8 +570,8 @@ TEST_CASE( "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" ) {
   SECTION("X - Blocks and switchedstation"){
     U->B[41]->setDetection(1);
 
-    Algor_process(U->B[41], _FORCE);
-    Algor_print_block_debug(U->B[41]);
+    Algorithm::process(U->B[41], _FORCE);
+    Algorithm::print_block_debug(U->B[41]);
 
     CHECK(U->B[41]->state == BLOCKED);
     CHECK(U->B[41]->Alg.P[0]->state == DANGER);

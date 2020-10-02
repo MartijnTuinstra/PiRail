@@ -128,7 +128,7 @@ class Block {
     uint8_t detectionblocked:1;
 
     RailTrain * train; //Follow id
-    RailTrain * reservedBy; // Block with switches can be SWITCH_RESERVED. this point to the train that has reserved the switches.
+    RailTrain * reservedBy; // Block with switches can be SWITCH_RESERVED. this points to the train that has reserved the switches.
 
     uint8_t IOchanged:1;
     uint8_t statechanged:1;
@@ -137,6 +137,7 @@ class Block {
     uint8_t oneWay:1;
 
     uint8_t switchWrongState:1; // Set block to DANGER/CAUTION if switch cannot be aligned properly
+    uint8_t switchWrongFeedback:1; // Set block to DANGER/CAUTION if switch is still moving
 
     std::vector<Signal *> * forward_signal;
     std::vector<Signal *> * reverse_signal;
@@ -175,6 +176,8 @@ class Block {
     void AlgorClear();
     void AlgorSearch(int debug);
     void AlgorSearchMSSwitch(int debug);
+
+    void checkSwitchFeedback(bool);
 };
 
 

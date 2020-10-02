@@ -9,7 +9,9 @@
 #include "IO.h"
 #include "modules.h"
 #include "system.h"
-#include "algorithm.h"
+
+#include "algorithm/core.h"
+#include "algorithm/queue.h"
 
 using namespace switchboard;
 
@@ -28,48 +30,68 @@ Switch::Switch(uint8_t Module, struct switch_conf s){
   // Switch * Z = (Switch *)_calloc(1, Switch);
   memset(this, 0, sizeof(Switch));
 
-  this->module = connect.module;
-  this->id = connect.id;
-
+  module = connect.module;
+  id = connect.id;
   uid = SwManager->addSwitch(this);
 
-  this->div = connect.div;
-  this->str = connect.str;
-  this->app = connect.app;
-
-  this->IO_len = s.IO & 0x0F;
-  this->IO = (IO_Port **)_calloc(this->IO_len, IO_Port *);
+  div = connect.div;
+  str = connect.str;
+  app = connect.app;
 
   U = Units(connect.module);
+  U->insertSwitch(this);
+
+  IO_len = s.IO_len;
+  IO = (IO_Port **)_calloc(IO_len, IO_Port *);
+
+  feedback_len = s.feedback_len;
 
 
   // ============== IO ==============
-  Node_adr * Adrs = (Node_adr *)_calloc(this->IO_len, Node_adr);
-
-  for(int i = 0; i < (this->IO_len); i++){
-    Adrs[i].Node = s.IO_Ports[i].Node;
-    Adrs[i].io = s.IO_Ports[i].Adr;
-  }
   for(int i = 0; i < this->IO_len; i++){
     if(!U->IO(s.IO_Ports[i]))
       continue;
 
-    this->IO[i] = U->linkIO(Adrs[i], this, IO_Output);
+    this->IO[i] = U->linkIO(s.IO_Ports[i], this, IO_Output);
   }
 
-  _free(Adrs);
+  // IO Stating
+  auto arrayIO = (union u_IO_event *)_calloc(2 * IO_len + 10, union u_IO_event);
 
-  uint8_t * States = (uint8_t *)_calloc(2, uint8_t);
-  States[0] = 1 + (0 << 1); //State 0 - Address 0 high, address 1 low
-  States[1] = 0 + (1 << 1); //State 1 - Address 1 high, address 0 low
+  IO_events[0] = &arrayIO[0];
+  IO_events[1] = &arrayIO[IO_len];
 
-  this->IO_states = (uint8_t *)_calloc(this->IO_len, uint8_t);
-  memcpy(this->IO_states, States, this->IO_len * sizeof(uint8_t));
-  _free(States);
+  for(uint8_t i = 0; i < (IO_len * 2); i++){
+    IO_events[i % 2][i / 2].value = s.IO_events[i];
+    loggerf(INFO, "SWITCH IO event: %i:%i -> %i", i%2, i/2, IO_events[i % 2][i / 2].value);
+  }
+
+  // ============== Feedback ==============
+  feedback_en = (s.feedback_len > 0);
+
+  if(feedback_en){
+    feedback = (IO_Port **)_calloc(feedback_len, IO_Port *);
+
+    for(int i = 0; i < feedback_len; i++){
+      if(!U->IO(s.FB_Ports[i]))
+        continue;
+
+      this->feedback[i] = U->linkIO(s.FB_Ports[i], this, IO_Input_Switch);
+    }
+
+    // Feedback IO Stating
+    auto arrayFB = (union u_IO_event *)_calloc(2 * feedback_len + 10, union u_IO_event);
+
+    feedback_events[0] = &arrayFB[0];
+    feedback_events[1] = &arrayFB[feedback_len];
+
+    for(uint8_t i = 0; i < (feedback_len * 2); i++){
+      feedback_events[i % 2][i / 2].value = s.FB_events[i];
+      loggerf(INFO, "SWITCH IO event: %i:%i -> %i", i%2, i/2, feedback_events[i % 2][i / 2].value);
+    }
+  }
 
   // =========== Detection ============
-
-  U->insertSwitch(this);
 
   if(U->block_len > s.det_block && U->B[s.det_block]){
     this->Detection = U->B[s.det_block];
@@ -116,11 +138,18 @@ Switch::Switch(uint8_t Module, struct switch_conf s){
 
 Switch::~Switch(){
   loggerf(MEMORY, "Switch %i:%i Destructor", module, id);
-  _free(this->feedback);
-  _free(this->IO);
-  _free(this->IO_states);
-  _free(this->coupled);
-  _free(this->preferences);
+  _free(feedback);
+  _free(IO);
+  // _free(IO_events[0]);
+
+  // if(feedback_en){
+    // _free(feedback);
+  //   _free(feedback_events[0]);
+  //   _free(feedback_events);
+  // }
+
+  _free(coupled);
+  _free(preferences);
 }
 
 void Switch::addSignal(Signal * Sig){
@@ -290,26 +319,38 @@ void Switch::setState(uint8_t _state, uint8_t lock){
   }
 
 
-  Algor_Set_Changed(&Detection->Alg);
-  putList_AlgorQueue(Detection->Alg, 0);
+  Algorithm::Set_Changed(&Detection->Alg);
+  AlQueue.puttemp(&Detection->Alg);
 
   updateState(_state);
 
   Detection->AlgorSearch(0);
 
-  Algor_Set_Changed(&Detection->Alg);
+  Algorithm::Set_Changed(&Detection->Alg);
 
   Detection->algorchanged = 0; // Block is allready search should not be researched
   
-  putList_AlgorQueue(Detection->Alg, 0);
-
-  putAlgorQueue(Detection, lock);
+  AlQueue.puttemp(&Detection->Alg);
+  AlQueue.puttemp(Detection);
+  AlQueue.cpytmp();
 }
 
 void Switch::updateState(uint8_t _state){
   state = _state;
   updatedState = true;
 
+  // Update IO
+  for(uint8_t i = 0; i < IO_len; i++){
+    IO[i]->setOutput(IO_events[state][i]);
+  }
+
+  if(feedback_en){
+    feedbackWrongState = true;
+    Detection->checkSwitchFeedback(true);
+
+  }
+
+  // Update linked Signals
   for(auto Sig: Signals){
     Sig->switchUpdate();
   }
@@ -317,6 +358,16 @@ void Switch::updateState(uint8_t _state){
   U->switch_state_changed |= 1;
 }
 
+void Switch::updateFeedback(){
+  for(uint8_t i = 0; i < feedback_len; i++){
+    if(feedback_events[state][i].value != feedback[i]->w_state.value)
+      return;
+  }
+
+  feedbackWrongState = false;
+
+  Detection->checkSwitchFeedback(false);
+}
 
 int throw_multiple_switches(uint8_t len, char * msg){
   struct switchdata {
@@ -867,28 +918,3 @@ int reservePath(RailTrain * T, PathFinding::Route * r, void * p, struct rail_lin
 }
 
 };
-
-// int Switch_Set_Free_Path(void * p, struct rail_link link, int flags){
-//   Switch_Set_Free_Path(0, p, link, flags);
-// }
-
-// int Switch_Set_Free_Path(PathFinding::Route * r, void * p, struct rail_link link, int flags){
-//   loggerf(INFO, "Switch_Set_Path_Route (%x, %x, %i)", (unsigned int)p, (unsigned int)&link, flags);
-//   if((flags & SWITCH_CARE) == 0){
-//     return 1;
-//   }
-
-// }
-
-// int Switch_Reserve_Path(RailTrain * T, void * p, struct rail_link link, int flags){
-  
-// }
-
-// int Switch_Check_Path(void * p, struct rail_link link, int flags){
-//   Switch_Check_Path(0, p, link, flags);
-// }
-
-// int Switch_Check_Path(PathFinding::Route * r, void * p, struct rail_link link, int flags){
-  
-// }
-

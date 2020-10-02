@@ -386,57 +386,97 @@ void modify_Switch(struct ModuleConfig * config, char cmd){
 
 
   if(cmd == 'e' || cmd == 'a'){
-    printf("Switch Detblock (%i)         | ", config->Switches[id].det_block);
+    struct switch_conf * Sw = &config->Switches[id];
+
+    printf("Switch Detblock (%i)         | ", Sw->det_block);
     fgets(_cmd, 20, stdin);
     if(sscanf(_cmd, "%i", &tmp) > 0)
-      config->Switches[id].det_block = tmp;
+      Sw->det_block = tmp;
 
-    printf("Switch Link App (%2i:%2i:%2x)  | ", config->Switches[id].App.module, config->Switches[id].App.id, config->Switches[id].App.type);
+    printf("Switch Link App (%2i:%2i:%2x)  | ", Sw->App.module, Sw->App.id, Sw->App.type);
     fgets(_cmd, 20, stdin);
     if(sscanf(_cmd, "%i%*c%i%*c%i", &tmp, &tmp1, &tmp2) > 2){
-      config->Switches[id].App.module = tmp;
-      config->Switches[id].App.id = tmp1;
-      config->Switches[id].App.type = tmp2;
+      Sw->App.module = tmp;
+      Sw->App.id = tmp1;
+      Sw->App.type = tmp2;
     }
 
-    printf("Switch Link Str (%2i:%2i:%2x)  | ", config->Switches[id].Str.module, config->Switches[id].Str.id, config->Switches[id].Str.type);
+    printf("Switch Link Str (%2i:%2i:%2x)  | ", Sw->Str.module, Sw->Str.id, Sw->Str.type);
     fgets(_cmd, 20, stdin);
     if(sscanf(_cmd, "%i%*c%i%*c%i", &tmp, &tmp1, &tmp2) > 2){
-      config->Switches[id].Str.module = tmp;
-      config->Switches[id].Str.id = tmp1;
-      config->Switches[id].Str.type = tmp2;
+      Sw->Str.module = tmp;
+      Sw->Str.id = tmp1;
+      Sw->Str.type = tmp2;
     }
 
-    printf("Switch Link Div (%2i:%2i:%2x)  | ", config->Switches[id].Div.module, config->Switches[id].Div.id, config->Switches[id].Div.type);
+    printf("Switch Link Div (%2i:%2i:%2x)  | ", Sw->Div.module, Sw->Div.id, Sw->Div.type);
     fgets(_cmd, 20, stdin);
     if(sscanf(_cmd, "%i%*c%i%*c%i", &tmp, &tmp1, &tmp2) > 2){
-      config->Switches[id].Div.module = tmp;
-      config->Switches[id].Div.id = tmp1;
-      config->Switches[id].Div.type = tmp2;
+      Sw->Div.module = tmp;
+      Sw->Div.id = tmp1;
+      Sw->Div.type = tmp2;
     }
 
-    printf("Switch IO_Ports  (%2i)       | ", config->Switches[id].IO & 0x0f);
+    printf("Switch IO_Ports  (%2i)       | ", Sw->IO_len);
     fgets(_cmd, 20, stdin);
     if(sscanf(_cmd, "%i", &tmp) > 0){
-      config->Switches[id].IO = (tmp & 0x0f) + (config->Switches[id].IO & 0xf0);
-      config->Switches[id].IO_Ports = (struct s_IO_port_conf *)_realloc(config->Switches[id].IO_Ports, config->Switches[id].IO & 0x0f, struct s_IO_port_conf);
+      Sw->IO_len = tmp;
+      Sw->IO_Ports = (struct s_IO_port_conf *)_realloc(Sw->IO_Ports, Sw->IO_len, struct s_IO_port_conf);
+      Sw->IO_events = (uint8_t *)_realloc(Sw->IO_events, Sw->IO_len * 2, uint8_t);
     }
 
-    printf("Switch IO Type   (%i)        | ", config->Switches[id].IO >> 4);
+    printf("Switch IO Type   (%i)        | ", Sw->IO_type);
     fgets(_cmd, 20, stdin);
     if(sscanf(_cmd, "%i", &tmp) > 0)
-      config->Switches[id].IO = (tmp & 0xf0) + (config->Switches[id].IO & 0x0f);;
+      Sw->IO_type = tmp;
 
-    for(int i = 0; i < (config->Switches[id].IO & 0x0f); i++){
-      printf("Switch IO%2i  (%2i:%2i)        | ", i, config->Switches[id].IO_Ports[i].Node, config->Switches[id].IO_Ports[i].Adr);
+    for(int i = 0; i < Sw->IO_len; i++){
+      printf("Switch IO%2i  (%2i:%2i)        | ", i, Sw->IO_Ports[i].Node, Sw->IO_Ports[i].Adr);
       fgets(_cmd, 20, stdin);
       if(sscanf(_cmd, "%i%*c%i", &tmp, &tmp1) > 0){
-        config->Switches[id].IO_Ports[i].Node = tmp;
-        config->Switches[id].IO_Ports[i].Adr = tmp1;
+        Sw->IO_Ports[i].Node = tmp;
+        Sw->IO_Ports[i].Adr = tmp1;
       }
     }
+
+    for(int i = 0; i < (Sw->IO_len * 2); i++){
+      printf("IO event %2i  (%2i:%2i %s->%i) | ", i/2, Sw->IO_Ports[i/2].Node, Sw->IO_Ports[i/2].Adr, (i % 2) ? "div" : "str", Sw->IO_events[i]);
+      fgets(_cmd, 20, stdin);
+      if(sscanf(_cmd, "%i", &tmp) > 0){
+        Sw->IO_events[i] = tmp;
+      }
+    }
+
+    printf("Enable Feedback (%i)         | ", Sw->feedback_len);
+    fgets(_cmd, 20, stdin);
+    if(sscanf(_cmd, "%i", &tmp) > 0){
+      Sw->feedback_len = tmp;
+      Sw->FB_Ports = (struct s_IO_port_conf *)_realloc(Sw->FB_Ports, Sw->feedback_len, struct s_IO_port_conf);
+      Sw->FB_events = (uint8_t *)_realloc(Sw->FB_events, Sw->feedback_len * 2, uint8_t);
+    }
+
+    if(Sw->feedback_len){
+
+      for(int i = 0; i < Sw->feedback_len; i++){
+        printf("Feedback IO%2i  (%2i:%2i)      | ", i, Sw->FB_Ports[i].Node, Sw->FB_Ports[i].Adr);
+        fgets(_cmd, 20, stdin);
+        if(sscanf(_cmd, "%i%*c%i", &tmp, &tmp1) > 0){
+          Sw->FB_Ports[i].Node = tmp;
+          Sw->FB_Ports[i].Adr = tmp1;
+        }
+      }
+
+      for(int i = 0; i < (Sw->feedback_len * 2); i++){
+        printf("FB event %2i  (%2i:%2i %s->%i) | ", i/2, Sw->FB_Ports[i/2].Node, Sw->FB_Ports[i/2].Adr, (i % 2) ? "div" : "str", Sw->FB_events[i]);
+        fgets(_cmd, 20, stdin);
+        if(sscanf(_cmd, "%i", &tmp) > 0){
+          Sw->FB_events[i] = tmp;
+        }
+      }
+
+    }
     printf("New:      \t");
-    print_Switch(config->Switches[id]);
+    print_Switch(*Sw);
     // struct s_block_conf tmp;
     // int dir, oneway, Out_en;
     // scanf("%i\t%i\t%2i:%2i:%c\t\t%2i:%2i:%c\t\t%i\t%i\t%i\t%i\t%i\t%i:%i\t%i:%i",

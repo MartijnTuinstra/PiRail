@@ -51,10 +51,12 @@ class MSSwitch {
 
     bool hold;
     bool updatedState;
+    bool feedbackWrongState;
 
     bool feedback_en;
     uint8_t feedback_len;
     IO_Port ** feedback;
+    union u_IO_event ** feedback_events;
     char * feedback_states;
 
     uint8_t IO_len;

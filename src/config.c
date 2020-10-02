@@ -76,14 +76,44 @@ struct switch_conf read_s_switch_conf(uint8_t ** p){
   if(!check_Spacing(p))
     return s;
 
-  s.IO_Ports = (struct s_IO_port_conf *)_calloc(s.IO & 0x0f, struct s_IO_port_conf);
+  s.IO_Ports = (struct s_IO_port_conf *)_calloc(s.IO_len, struct s_IO_port_conf);
 
-  for(int i = 0; i < (s.IO & 0x0f); i++){
+  for(int i = 0; i < s.IO_len; i++){
     memcpy(&s.IO_Ports[i], *p, 2);
     *p += sizeof(struct s_IO_port_conf);
   }
 
   check_Spacing(p);
+
+  s.IO_events = (uint8_t *)_calloc(s.IO_len * 2, uint8_t);
+
+  memcpy(s.IO_events, *p, s.IO_len * 2 * sizeof(uint8_t));
+  *p += sizeof(uint8_t) * s.IO_len * 2;
+
+  check_Spacing(p);
+
+  if(s.feedback_len){
+    loggerf(INFO, "READING Feedback io for switch_conf");
+    s.FB_Ports = (struct s_IO_port_conf *)_calloc(s.feedback_len, struct s_IO_port_conf);
+
+    memcpy(s.FB_Ports, *p, s.feedback_len * sizeof(struct s_IO_port_conf));
+    *p += sizeof(struct s_IO_port_conf) * s.feedback_len;
+
+    check_Spacing(p);
+
+    loggerf(INFO, "READING Feedback events for switch_conf");
+
+    s.FB_events = (uint8_t *)_calloc(s.feedback_len * 2, uint8_t);
+
+    memcpy(s.FB_events, *p, s.feedback_len * 2 * sizeof(uint8_t));
+    *p += sizeof(uint8_t) * s.feedback_len * 2;
+
+    check_Spacing(p);
+  }
+  else{
+    s.FB_Ports = 0;
+    s.FB_events = 0;
+  }
 
   return s;
 }

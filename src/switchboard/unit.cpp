@@ -273,8 +273,8 @@ IO_Port * Unit::linkIO(Node_adr adr, void * pntr, enum e_IO_type type){
 }
 
 IO_Port * Unit::linkIO(struct s_IO_port_conf adr, void * pntr, enum e_IO_type type){
-  Node_adr newadr = {adr.Node, adr.Adr};
-  return this->linkIO(newadr, pntr, type);
+  this->Node[adr.Node]->io[adr.Adr]->link(pntr, type);
+  return this->Node[adr.Node]->io[adr.Adr];
 }
 
 IO_Port * Unit::IO(Node_adr adr){

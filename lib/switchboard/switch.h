@@ -67,15 +67,16 @@ class Switch {
 
     bool hold;
     bool updatedState;
+    bool feedbackWrongState;
 
     bool feedback_en;
     uint8_t feedback_len;
     IO_Port ** feedback;
-    char * feedback_states;
+    union u_IO_event * feedback_events[2];
 
     uint8_t IO_len;
     IO_Port ** IO;
-    uint8_t * IO_states;
+    union u_IO_event * IO_events[2];
 
     std::vector<Signal *> Signals;
 
@@ -108,6 +109,8 @@ class Switch {
     void setState(uint8_t _state);
     void setState(uint8_t state, uint8_t lock);
     void updateState(uint8_t state);
+
+    void updateFeedback();
 };
 
 

@@ -6,7 +6,7 @@
 #include "system.h"
 #include "mem.h"
 #include "com.h"
-#include "algorithm.h"
+#include "algorithm/queue.h"
 
 #include "switchboard/manager.h"
 #include "switchboard/unit.h"
@@ -112,17 +112,20 @@ void IO_Port::setInput(uint8_t state){
     return;
   }
 
-  if(this->w_state.value != this->r_state.value){
-    if(this->type == IO_Input_Block){
-      if(this->w_state.value == IO_event_High)
-        this->p.B->detectionblocked = 1;
+  if(w_state.value != r_state.value){
+    if(type == IO_Input_Block){
+      if(state == IO_event_High)
+        p.B->detectionblocked = 1;
       else
-        this->p.B->detectionblocked = 0;
+        p.B->detectionblocked = 0;
 
-      loggerf(INFO, "IO updated %02i:%02i:%02i\t%s", this->Node->U->module, this->Node->id, this->id, IO_event_string[1][this->w_state.value]);
+      loggerf(INFO, "IO updated %02i:%02i:%02i\t%s", Node->U->module, Node->id, id, IO_event_string[1][w_state.value]);
 
-      this->p.B->IOchanged = 1;
-      putAlgorQueue(this->p.B, 1);
+      p.B->IOchanged = 1;
+      AlQueue.put(p.B);
+    }
+    else if(type == IO_Input_Switch){
+      p.Sw->updateFeedback();
     }
     else{
       loggerf(CRITICAL, "Unknown io type %i", this->type);

@@ -11,8 +11,6 @@
 
 #include "websocket/stc.h"
 
-extern sem_t AlgorQueueNoEmpty;
-
 void sigint_func(int sig){
   if(sig == SIGINT){
     loggerf(WARNING, "-- SIGINT -- STOPPING");
@@ -20,8 +18,6 @@ void sigint_func(int sig){
 
     // Request Stop
     SYS->stop = 1;
-
-    sem_post(&AlgorQueueNoEmpty);
   }
 }
 

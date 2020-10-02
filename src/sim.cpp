@@ -7,13 +7,15 @@
 #include "switchboard/rail.h"
 #include "switchboard/switch.h"
 #include "switchboard/msswitch.h"
-#include "switchboard/blockconnector.h"
+// #include "switchboard/blockconnector.h"
 #include "train.h"
 #include "modules.h"
 
-#include "algorithm.h"
+// #include "algorithm/core.h"
+#include "algorithm/queue.h"
+#include "algorithm/blockconnector.h"
+
 #include "submodule.h"
-#include "algorithm.h"
 #include "websocket/stc.h"
 // #include "pathfinding.h"
 
@@ -44,7 +46,7 @@ void change_Block(Block * B, enum Rail_states state){
 
     loggerf(WARNING, "SIM set block %2i:%2i %i%i%i - %s>%s", B->module, B->id, B->blocked, B->detectionblocked, B->virtualblocked, rail_states_string[B->state], rail_states_string[state]);
 
-    putAlgorQueue(B, 0);
+    AlQueue.puttemp(B);
   }
 }
 
@@ -142,7 +144,7 @@ void train_sim_tick(struct train_sim * t){
     blockoffset += t->B[i]->length;
   }
 
-  algor_queue_enable(1);
+  AlQueue.cpytmp();
 }
 
 void *TRAIN_SIMA(void * args){
@@ -172,7 +174,8 @@ void *TRAIN_SIMA(void * args){
   // B->train = new RailTrain(B);
 
   change_Block(B, BLOCKED);
-  algor_queue_enable(1);
+  // algor_queue_enable(1);
+  AlQueue.cpytmp();
   // B->setDetection(1);
   
 
@@ -203,7 +206,7 @@ void *TRAIN_SIMA(void * args){
 
   train.T->changeSpeed(50, IMMEDIATE_SPEED);
  
-  putAlgorQueue(B, 1);
+  AlQueue.put(B);
 
   if(train.T->type == RAILTRAIN_ENGINE_TYPE){
     //Engine only
@@ -351,7 +354,7 @@ void SIM_JoinModules(){
   WS_stc_Track_Layout(0);
   printf("Ready to join modules\n");
 
-  auto connectors = Algorithm_find_connectors();
+  auto connectors = Algorithm::find_connectors();
   uint16_t maxConnectors = connectors.size();
 
   loggerf(INFO, "Have %i connectors", connectors.size());
@@ -362,8 +365,8 @@ void SIM_JoinModules(){
   while(SYS->modules_linked == 0){
     WS_stc_trackUpdate(0);
     
-    if(uint8_t * findResult = Algorithm_find_connectable(&connectors)){
-      Algorithm_connect_connectors(&connectors, findResult);
+    if(uint8_t * findResult = Algorithm::find_connectable(&connectors)){
+      Algorithm::connect_connectors(&connectors, findResult);
 
       data[0] = 0x82;
       data[1] = (char)connectors.size();
@@ -515,11 +518,7 @@ void SIM_Connect_Rail_links(){
 
     loggerf(INFO, "LINKING UNIT %i", m);
 
-    Unit * tU = Units(m);
-
-    link_all_blocks(tU);
-    link_all_switches(tU);
-    link_all_msswitches(tU);
+    Units(m)->link_all();
   }
 
   pathlist_find();

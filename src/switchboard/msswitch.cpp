@@ -8,7 +8,9 @@
 #include "IO.h"
 #include "modules.h"
 #include "system.h"
-#include "algorithm.h"
+
+#include "algorithm/core.h"
+#include "algorithm/queue.h"
 
 using namespace switchboard;
 
@@ -302,26 +304,26 @@ uint MSSwitch::NextList_Block(Block ** blocks, uint8_t block_counter, enum link_
   return block_counter;
 }
 
-void MSSwitch::setState(uint8_t state, uint8_t lock){
+void MSSwitch::setState(uint8_t _state, uint8_t lock){
   loggerf(TRACE, "throw_msswitch");
 
-  if(this->Detection && (this->Detection->state == BLOCKED || this->Detection->state == RESERVED_SWITCH))
+  if(Detection && (Detection->state == BLOCKED || Detection->state == RESERVED_SWITCH))
     return; // Switch is blocked
 
-  Algor_Set_Changed(&this->Detection->Alg);
-  putList_AlgorQueue(this->Detection->Alg, 0);
+  Algorithm::Set_Changed(&Detection->Alg);
+  AlQueue.puttemp(&Detection->Alg);
 
-  this->updateState(state);
+  updateState(_state);
 
-  this->Detection->AlgorSearch(0);
+  Detection->AlgorSearch(0);
 
-  Algor_Set_Changed(&this->Detection->Alg);
+  Algorithm::Set_Changed(&Detection->Alg);
 
-  this->Detection->algorchanged = 0; // Block is allready search should not be researched
+  Detection->algorchanged = 0; // Block is allready search should not be researched
 
-  putList_AlgorQueue(this->Detection->Alg, 0);
-
-  putAlgorQueue(this->Detection, lock);
+  AlQueue.puttemp(&Detection->Alg);
+  AlQueue.puttemp(Detection);
+  AlQueue.cpytmp();
 }
 
 void MSSwitch::updateState(uint8_t state){

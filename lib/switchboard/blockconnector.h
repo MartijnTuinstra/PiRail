@@ -19,10 +19,26 @@ class BlockConnector {
 
   BlockConnector(uint8_t unit, uint16_t connector);
 
-  inline void update(uint8_t port, Block * B);
-  inline void update(uint8_t port, Switch * Sw);
-  inline void update(uint8_t port, MSSwitch * Sw);
-  inline void update(uint8_t port, Signal * Sig);
+  inline void update(uint8_t port, Block * B){
+    this->B[port - 1] = B;
+
+    if(this->ports <= port)
+      this->ports = port;
+  };
+
+  inline void update(uint8_t port, Switch * Sw){
+    this->Sw[port - 1] = Sw;
+    this->update(port, Sw->Detection);
+  };
+
+  inline void update(uint8_t port, MSSwitch * Sw){
+    this->MSSw[port - 1] = Sw;
+    this->update(port, Sw->Detection);
+  };
+
+  inline void update(uint8_t port, Signal * Sig){
+    this->Sig[port - 1] = Sig;
+  };
 
   void connect(BlockConnector * BC, bool crossover);
   void connectSignal(BlockConnector * BC, uint8_t port, bool crossover);
@@ -46,10 +62,5 @@ typedef void (*BlockConnectorMatrixFunc)(BlockConnector *, BlockConnector *, uin
 extern BlockConnectorMatrixFunc BlockConnectorMatrix[4][3];
 
 typedef std::vector<BlockConnector *> BlockConnectors;
-BlockConnectors Algorithm_find_connectors();
-uint8_t * Algorithm_find_connectable(BlockConnectors * Connectors);
-void Algorithm_connect_connectors(BlockConnectors * Connectors, uint8_t * blockedConnectors);
-
-int Algorithm_load_setup(char * filename, BlockConnectors * Connectors);
 
 #endif

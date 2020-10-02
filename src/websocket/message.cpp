@@ -8,7 +8,6 @@
 
 #include "submodule.h"
 #include "Z21.h"
-#include "algorithm.h"
 #include "config.h"
 
 const char websocket_magic_string[] = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";

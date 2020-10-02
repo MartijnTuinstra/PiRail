@@ -27,7 +27,13 @@ ModuleConfig::~ModuleConfig(){
   loggerf(TRACE, "  Module Switch");
 
   for(int i = 0; i < this->header.Switches; i++){
-    _free(this->Switches[i].IO_Ports);
+    _free(Switches[i].IO_Ports);
+    _free(Switches[i].IO_events);
+
+    if(Switches[i].feedback_len){
+      _free(Switches[i].FB_Ports);
+      _free(Switches[i].FB_events);      
+    }
   }
 
   loggerf(TRACE, "  Module MSSwitch");
@@ -95,9 +101,9 @@ int ModuleConfig::read(){
     return -1;
   }
 
-  char * header = (char *)_calloc(2, char);
+  char _header[2];
 
-  fread(header, 1, 1, fp);
+  fread(_header, 1, 1, fp);
 
   fseek(fp, 0, SEEK_END);
   long fsize = ftell(fp);
@@ -114,7 +120,7 @@ int ModuleConfig::read(){
 
   this->header = read_s_unit_conf(buf_ptr);
 
-  if (header[0] != MODULE_CONF_VERSION) {
+  if (_header[0] != MODULE_CONF_VERSION) {
     loggerf(WARNING, "Module %i not correct version", this->header.module);
     return -1;
   }
@@ -159,8 +165,6 @@ int ModuleConfig::read(){
   this->Layout = (char *)_calloc(this->Layout_length + 1, char);
   memcpy(this->Layout, *buf_ptr, this->Layout_length);
 
-  _free(header);
-
   this->parsed = true;
 
   return 1;
@@ -183,7 +187,13 @@ int ModuleConfig::calc_size(){
   //Switches
   for(int i = 0; i < this->header.Switches; i++){
     size += sizeof(struct s_switch_conf) + 1;
-    size += sizeof(struct s_IO_port_conf) * (this->Switches[i].IO & 0xf) + 1;
+    size += sizeof(struct s_IO_port_conf) * (Switches[i].IO_len) + 1;
+    size += sizeof(uint8_t) * (Switches[i].IO_len * 2) + 1; // Each IO has two states
+
+    if(Switches[i].feedback_len){
+      size += sizeof(struct s_IO_port_conf) * Switches[i].feedback_len + 1;
+      size += sizeof(uint8_t) * Switches[i].feedback_len * 2 + 1;
+    }
   }
 
   //MSSwitches
@@ -264,12 +274,31 @@ void ModuleConfig::write(){
 
     p += sizeof(struct s_switch_conf) + 1;
 
-    for(int j = 0; j < (this->Switches[i].IO & 0x0f); j++){
+    for(int j = 0; j < this->Switches[i].IO_len; j++){
       memcpy(p, &this->Switches[i].IO_Ports[j], sizeof(struct s_IO_port_conf));
       p += sizeof(struct s_IO_port_conf);
     }
 
     p += 1;
+
+    memcpy(p, this->Switches[i].IO_events, sizeof(uint8_t) * Switches[i].IO_len * 2);
+    p += Switches[i].IO_len * 2 * sizeof(uint8_t);
+
+    p += 1;
+
+    if(Switches[i].feedback_len){
+      for(int j = 0; j < Switches[i].feedback_len; j++){
+        memcpy(p, &Switches[i].FB_Ports[j], sizeof(struct s_IO_port_conf));
+        p += sizeof(struct s_IO_port_conf);
+      }
+
+      p += 1;
+
+      memcpy(p, this->Switches[i].FB_events, sizeof(uint8_t) * Switches[i].feedback_len * 2);
+      p += Switches[i].feedback_len * 2 * sizeof(uint8_t);
+
+      p += 1;
+    }
   }
 
   //Copy MMSwitches
@@ -421,10 +450,10 @@ void print_Switch(struct switch_conf Switch){
   print_link(&debugptr, Switch.Str);
   print_link(&debugptr, Switch.Div);
   debugptr += sprintf(debugptr, "%x\t%i %i",
-                Switch.IO,
+                Switch.IO_len,
                 Switch.speed_Str, Switch.speed_Div);
 
-  for(int j = 0; j < (Switch.IO & 0x0f); j++){
+  for(int j = 0; j < Switch.IO_len; j++){
     debugptr += sprintf(debugptr, "\t%i:%i", Switch.IO_Ports[j].Node, Switch.IO_Ports[j].Adr);
   }
 

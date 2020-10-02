@@ -38,6 +38,10 @@ void Logger::close(){
 
   enabled = stdout;
   fileout = false;
+
+  if(!file)
+    return;
+
   fclose(file);
 }
 uint16_t Logger::write(){
@@ -166,5 +170,5 @@ void Logger::hexdump(const char * file, const int line, const char * header, voi
       ptr += sprintf(ptr, "\n");
   }
 
-  f(DEBUG, file, line, (const char *)text);
+  f(INFO, file, line, (const char *)text);
 }

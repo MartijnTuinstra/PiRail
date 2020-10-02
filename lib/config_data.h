@@ -10,6 +10,8 @@
 
 #define TRAIN_CONF_PATH "configs/stock.bin"
 
+#define SWITCH_FEEDBACK_FLAG 0x80
+
 struct __attribute__((__packed__)) s_unit_conf {
   uint8_t module;
   uint8_t connections;
@@ -73,6 +75,7 @@ struct __attribute__((__packed__)) s_switch_conf {
   uint8_t IO;
   uint8_t speed_Str;
   uint8_t speed_Div;
+  uint8_t feedback_len;
 };
 
 struct switch_conf {
@@ -83,11 +86,17 @@ struct switch_conf {
   struct s_link_conf Str;
   struct s_link_conf Div;
 
-  uint8_t IO;        // 0xf0 type, 0x0f length
+  uint8_t IO_len:4;
+  uint8_t IO_type:4;
   uint8_t speed_Str;
   uint8_t speed_Div;
+  uint8_t feedback_len;
 
   struct s_IO_port_conf * IO_Ports;
+  uint8_t * IO_events;
+
+  struct s_IO_port_conf * FB_Ports;
+  uint8_t * FB_events;
 };
 
 

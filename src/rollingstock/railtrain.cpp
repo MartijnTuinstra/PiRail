@@ -8,7 +8,7 @@
 #include "logger.h"
 #include "scheduler/scheduler.h"
 #include "system.h"
-#include "algorithm.h"
+#include "algorithm/queue.h"
 
 #include "websocket/stc.h"
 #include "Z21_msg.h"
@@ -106,7 +106,7 @@ void RailTrain::initVirtualBlocks(){
       tB->train = this;
       tB->train->setBlock(tB);
     }
-    putAlgorQueue(tB, 0);
+    AlQueue.puttemp(tB);
 
     // loggerf(INFO, "  block %2i:%2i   %i  %i  %i", tB->module, tB->id, B->Alg.prev, offset, len);
 
@@ -121,7 +121,7 @@ void RailTrain::initVirtualBlocks(){
     tB->setVirtualDetection(0);
     if(tB->train && !tB->detectionblocked)
       tB->train->releaseBlock(tB);
-    putAlgorQueue(tB, 0);
+    AlQueue.puttemp(tB);
 
     // loggerf(INFO, "f block %2i:%2i", tB->module, tB->id);
   }
@@ -141,7 +141,7 @@ void RailTrain::setVirtualBlocks(){
       tB->train = this;
       tB->train->setBlock(tB);
     }
-    putAlgorQueue(tB, 0);
+    AlQueue.puttemp(tB);
 
     // loggerf(INFO, "  block %2i:%2i   %i  %i  %i", tB->module, tB->id, B->Alg.prev, offset, len);
 
@@ -157,7 +157,7 @@ void RailTrain::setVirtualBlocks(){
     if(tB->train && !tB->detectionblocked)
       tB->train->releaseBlock(tB);
 
-    putAlgorQueue(tB, 0);
+    AlQueue.puttemp(tB);
 
     if(B->Alg.prev > offset){
       tB = B->Alg.P[offset++];

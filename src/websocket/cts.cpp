@@ -29,7 +29,7 @@
 #include "train.h"
 #include "logger.h"
 #include "config.h"
-#include "algorithm.h"
+#include "algorithm/queue.h"
 
 #include "modules.h"
 #include "Z21.h"
@@ -191,7 +191,7 @@ websocket_cts_func websocket_cts[256] = {
 };
 
 void WS_cts_SetSwitch(struct s_opc_SetSwitch * data, Websocket::Client * client){
-  lock_Algor_process();
+  // lock_Algor_process(); // FIXME
   Unit * U = Units(data->module);
 
   if(data->mssw){
@@ -212,14 +212,14 @@ void WS_cts_SetSwitch(struct s_opc_SetSwitch * data, Websocket::Client * client)
       U->Sw[data->id]->setState(data->state, 1);
     }
   }
-  unlock_Algor_process();
+  // unlock_Algor_process(); // FIXME
 }
 
 void WS_cts_SetMultiSwitch(struct s_opc_SetMultiSwitch * data, Websocket::Client * client){
   loggerf(INFO, "Throw multiple switches\n");
-  lock_Algor_process();
+  // lock_Algor_process(); // FIXME
   throw_multiple_switches(data->nr, (char *)data->switches);
-  unlock_Algor_process();
+  // unlock_Algor_process(); // FIXME
 }
 
 void WS_cts_SetEmergencyStop(void * data, Websocket::Client * client){

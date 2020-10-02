@@ -4,7 +4,7 @@
 
 #include "submodule.h"
 
-#include "algorithm.h"
+#include "algorithm/component.h"
 #include "com.h"
 #include "sim.h"
 #include "Z21.h"
@@ -27,13 +27,13 @@ void Algor_start(){
   }
 
   SYS_set_state(&SYS->LC.state, Module_Init);
-  pthread_create(&SYS->LC.th, NULL, Algor_Run, NULL);
+  pthread_create(&SYS->LC.th, NULL, Algorithm::Run, NULL);
 }
 
 void Algor_stop(){
   SYS->TC.state = Module_STOP;
   SYS->LC.state = Module_STOP;
-  sem_post(&AlgorQueueNoEmpty);
+  // sem_post(&AlgorQueueNoEmpty);
 }
 
 void UART_start(){

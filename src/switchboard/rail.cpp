@@ -10,7 +10,9 @@
 #include "modules.h"
 #include "logger.h"
 #include "IO.h"
-#include "algorithm.h"
+
+#include "algorithm/core.h"
+#include "algorithm/queue.h"
 
 const char * rail_states_string[8] = {
   "BLOCKED",
@@ -388,7 +390,7 @@ void Block::reverse(){
     AB->P[i] = tmp;
   }
 
-  Algor_print_block_debug(AB->B);
+  Algorithm::print_block_debug(AB->B);
 }
 
 void Block::reserve(){
@@ -538,6 +540,26 @@ void Block::AlgorSearch(int debug){
       length += Alg.P[i]->length;
     }
   }
+}
+
+void Block::checkSwitchFeedback(bool value){
+  if(value){
+    switchWrongFeedback = true;
+  }
+  else{
+    for(uint8_t i = 0; i < switch_len; i++){
+      if(Sw[i]->feedbackWrongState)
+        return;
+    }
+
+    if(MSSw && MSSw->feedbackWrongState)
+      return;
+
+    switchWrongFeedback = false;
+  }
+
+  IOchanged = true;
+  AlQueue.put(this);
 }
 
 /*

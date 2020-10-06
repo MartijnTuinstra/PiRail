@@ -373,7 +373,7 @@ websocket.add_opcodes([
       opcode: 0x41,
       name: "LinkTrain",
       send: function(data){
-        return [data.fid, data.real_id, ((data.type == "E")?0x80:0) + ((data.msg_id >> 8) & 0x7F), data.msg_id & 0xFF];
+        return [data.fid, data.real_id, ((data.type == "T")?0x80:0) + ((data.msg_id >> 8) & 0x7F), data.msg_id & 0xFF];
       },
       recv: function(data){
         var follow_id = data[0];

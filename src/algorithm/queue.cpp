@@ -32,13 +32,13 @@ void AlgorQueue::put(Algor_Blocks * ABs){
   }
 }
 void AlgorQueue::puttemp(Algor_Blocks * ABs){
-  put(ABs->B);
+  puttemp(ABs->B);
 
   for(int i = 0; i < ABs->prev; i++){
-    put(ABs->P[i]);
+    puttemp(ABs->P[i]);
   }
   for(int i = 0; i < ABs->next; i++){
-    put(ABs->N[i]);
+    puttemp(ABs->N[i]);
   }
 }
 

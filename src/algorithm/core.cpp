@@ -6,6 +6,7 @@
 #include <time.h>
 
 #include "algorithm/core.h"
+#include "algorithm/component.h"
 #include "algorithm/queue.h"
 #include "algorithm/blockconnector.h"
 
@@ -433,6 +434,10 @@ void rail_state(Algor_Blocks * ABs, int debug){
   }
 
   if(B->blocked){
+    // Reset Reserved
+    B->reservedBy = 0;
+
+    // Set states
     enum Rail_states prev1state = DANGER;
     enum Rail_states prev2state = CAUTION;
     enum Rail_states prev3state = PROCEED;
@@ -791,8 +796,12 @@ void Connect_Rails(){
   msgID = WS_stc_ScanStatus(msgID, 0, maxConnectors);
 
   while(SYS->LC.state == Module_LC_Connecting && !SYS->stop && SYS->modules_linked == 0){
-  	continue;
+  	// continue;
     // sem_wait(&AlgorQueueNoEmpty); // FIXME
+    Block * B = AlQueue.getWait();
+    while(B != 0){
+      B = AlQueue.get();
+    }
     
     if(uint8_t * findResult = Algorithm::find_connectable(&connectors)){
       Algorithm::connect_connectors(&connectors, findResult);

@@ -47,6 +47,11 @@ uint16_t WS_stc_ScanStatus(uint16_t msgID, uint16_t x, uint16_t y){ // x connect
   if(msgID == (uint16_t)-1)
     msgID = WS_init_Message(WS_MESSAGE_SCANSTATUS);
 
+  if(x == y){
+    WS_clear_message(msgID, 1);
+    return -1;
+  }
+
 
   char data[6];
   data[0] = WSopc_NewMessage;

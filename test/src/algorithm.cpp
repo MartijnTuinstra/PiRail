@@ -1,3 +1,4 @@
+#include <time.h>
 #include "catch.hpp"
 
 #include "utils/mem.h"
@@ -273,7 +274,6 @@ TEST_CASE( "Train Following", "[Alg][Alg-2]"){
     Algorithm::process(U->B[4], _FORCE);
     U->B[3]->setDetection(0);
     Algorithm::process(U->B[3], _FORCE);
-    Algorithm::tick();
 
     // Train is 58cm long but moving, so an extra block is blocked.
     CHECK(T->blocks.size() == 3);
@@ -289,7 +289,6 @@ TEST_CASE( "Train Following", "[Alg][Alg-2]"){
     Algorithm::process(U->B[5], _FORCE);
     U->B[4]->setDetection(0);
     Algorithm::process(U->B[4], _FORCE);
-    Algorithm::tick();
 
     // Train is 58cm long but moving, so an extra block is blocked.
     CHECK(T->blocks.size() == 3);
@@ -347,7 +346,6 @@ TEST_CASE( "Train Following", "[Alg][Alg-2]"){
     Algorithm::process(U->B[2], _FORCE);
     U->B[1]->setDetection(0);
     Algorithm::process(U->B[1], _FORCE);
-    Algorithm::tick();
 
     // Train is 143cm long but moving, so an extra block is blocked.
     CHECK(T->blocks.size() == 4);
@@ -366,7 +364,6 @@ TEST_CASE( "Train Following", "[Alg][Alg-2]"){
     Algorithm::process(U->B[3], _FORCE);
     U->B[2]->setDetection(0);
     Algorithm::process(U->B[2], _FORCE);
-    Algorithm::tick();
 
     // Train is 143cm long but moving, so an extra block is blocked.
     CHECK(T->blocks.size() == 4);
@@ -420,7 +417,8 @@ TEST_CASE( "Algorithm Switch Setter", "[Alg][Alg-3]"){
   U->Sw[3]->setState(0);
   U->Sw[4]->setState(0);
   U->Sw[5]->setState(0);
-  Algorithm::tick();
+  if(AlQueue.queue->getItems())
+    Algorithm::tick();
 
   SECTION("I - Approaching S side"){
     U->B[0]->setDetection(1);
@@ -622,7 +620,11 @@ TEST_CASE( "Algorithm Switch Setter", "[Alg][Alg-3]"){
 
     U->B[21]->train->setSpeed(0);
 
-    REQUIRE(U->B[24]->state != RESERVED_SWITCH);
+    REQUIRE(U->B[24]->state == RESERVED_SWITCH); // Switch is allready reserved
+
+    U->B[24]->switchReserved = false;
+    U->B[24]->reservedBy = 0;
+    U->B[24]->setState(PROCEED);
 
     auto route = PathFinding::find(U->B[22], U->B[21]);
 
@@ -676,12 +678,31 @@ TEST_CASE( "Algorithm Switch Setter", "[Alg][Alg-3]"){
     CHECK(U->B[24]->reservedBy == U->B[22]->train);
   }
 
-  // SECTION("VI - Approaching S side with route"){}
+  SECTION("IX - Approaching S with reserved switches"){
+    logger.setlevel_stdout(INFO);
+    loggerf(WARNING, "TEST IX");
+    U->B[17]->reservedBy = (RailTrain *)1;
+    U->B[17]->switchReserved = 1;
+    U->B[17]->setState(RESERVED_SWITCH);
+
+    U->Sw[3]->setState(1);
+    Algorithm::tick();
+    
+    U->B[22]->setDetection(1);
+    Algorithm::process(U->B[22], _FORCE);
+
+    CHECK(U->Sw[3]->state == 0);
+    CHECK(U->Sw[4]->state == 0);
+    CHECK(U->Sw[5]->state == 0);
+
+    CHECK(U->B[24]->reservedBy == U->B[22]->train);
+  }
 }
 
-TEST_CASE("NewAlgorQueue", "[Alg][Alg-Q]"){
+TEST_CASE("Algor Queue", "[Alg][Alg-Q]"){
   char filenames[1][30] = {"./testconfigs/Alg-3.bin"};
   init_test(filenames, 1);
+  logger.setlevel_stdout(CRITICAL);
 
   Unit * U = switchboard::Units(1);
   REQUIRE(U);
@@ -694,6 +715,21 @@ TEST_CASE("NewAlgorQueue", "[Alg][Alg-Q]"){
   CHECK(AlQueue.queue->getItems() == 0);
   CHECK(AlQueue.get() == 0);
 
+  struct timespec start, end;
+
+  clock_gettime(CLOCK_REALTIME, &start);
+  AlQueue.getWait();
+  clock_gettime(CLOCK_REALTIME, &end);
+  CHECK( (end.tv_sec - start.tv_sec) >= 14);
+
+  AlQueue.put(U->B[0]);
+
+  clock_gettime(CLOCK_REALTIME, &start);
+  AlQueue.getWait();
+  clock_gettime(CLOCK_REALTIME, &end);
+  CHECK( (end.tv_sec - start.tv_sec) < 2);
+
+
   AlQueue.puttemp(U->B[0]);
 
   CHECK(AlQueue.queue->getItems() == 0);
@@ -702,5 +738,6 @@ TEST_CASE("NewAlgorQueue", "[Alg][Alg-Q]"){
   CHECK(AlQueue.tempQueue->getItems() == 1);
   AlQueue.cpytmp();
 
+  CHECK(AlQueue.queue->getItems() == 1);
   CHECK(AlQueue.get() == U->B[0]);
 }

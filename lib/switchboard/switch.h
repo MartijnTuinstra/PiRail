@@ -126,8 +126,8 @@ struct find {
   int allreadyCorrect;
 };
 
-struct find findPath(PathFinding::Route *, void *, struct rail_link, int);
-int setPath(PathFinding::Route *, void *, struct rail_link, int);
+struct find findPath(RailTrain *, PathFinding::Route *, void *, struct rail_link, int);
+int setPath(RailTrain *, PathFinding::Route *, void *, struct rail_link, int);
 
 int setWrong(PathFinding::Route *, void *, struct rail_link, int);
 

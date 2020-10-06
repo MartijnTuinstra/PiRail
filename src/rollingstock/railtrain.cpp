@@ -60,6 +60,7 @@ void RailTrain::reserveBlock(Block * rB){
 
   rB->reservedBy = this;
   rB->switchReserved = true;
+  rB->setState(RESERVED_SWITCH);
   reservedBlocks.push_back(rB);
 }
 

@@ -306,10 +306,10 @@ void WS_cts_LinkTrain(struct s_opc_LinkTrain * msg, Websocket::Client * client){
   // uint8_t tID = data[1]; //TrainID
   // uint16_t mID = ((data[2] & 0x1F) << 8)+data[3];
   char return_value = 0;
-  if(msg->type == 0)
-    loggerf(INFO, "Linking train %i with T-%s\n",msg->follow_id, trains[msg->real_id]->name);
-  else
+  if(msg->type == RAILTRAIN_ENGINE_TYPE)
     loggerf(INFO, "Linking train %i with E-%s\n",msg->follow_id, engines[msg->real_id]->name);
+  else
+    loggerf(INFO, "Linking train %i with T-%s\n",msg->follow_id, trains[msg->real_id]->name);
 
   if(train_link[msg->follow_id])
     return_value = train_link[msg->follow_id]->link(msg->real_id, msg->type);

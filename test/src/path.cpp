@@ -147,6 +147,9 @@ TEST_CASE( "Path Construction", "[PATH][PATH-1]" ) {
         CHECK(P[i] == P[j]);
       }
     }
+
+    CHECK(P[0]->Entrance == 0);
+    CHECK(P[0]->Exit == 0);
   }
 
   SECTION("Blocks with direction change"){

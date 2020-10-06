@@ -53,6 +53,9 @@ void * Run(void * args){
   SIM_Connect_Rail_links();
   WS_stc_Track_Layout(0);
 
+  if(SYS->LC.state == Module_Fail)
+    return 0;
+
   // Scan All Blocks
   InitProcess();
   
@@ -90,8 +93,15 @@ int InitFindModules(void){
     return 0;
   }
   COM_DevReset();
+  int i = 0;
   while(!SYS->UART.modules_found){
     usleep(1000);
+    i++;
+
+    if(i > 5000){
+      SYS_set_state(&SYS->LC.state, Module_Fail);
+      return 0;
+    }
   }
   SYS_set_state(&SYS->LC.state, Module_LC_Connecting);
 

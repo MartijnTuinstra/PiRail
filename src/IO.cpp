@@ -114,10 +114,7 @@ void IO_Port::setInput(uint8_t state){
 
   if(w_state.value != r_state.value){
     if(type == IO_Input_Block){
-      if(state == IO_event_High)
-        p.B->detectionblocked = 1;
-      else
-        p.B->detectionblocked = 0;
+      p.B->setDetection(state == IO_event_High);
 
       loggerf(INFO, "IO updated %02i:%02i:%02i\t%s", Node->U->module, Node->id, id, IO_event_string[1][w_state.value]);
 

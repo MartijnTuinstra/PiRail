@@ -58,8 +58,10 @@ inline void dynArray<T>::allocate(int diff){
     array = (T *)_calloc(size, T);
   }
   else{
+    uint16_t oldSize = size;
     size += diff;
     array = (T *)_realloc(array, size, T);
+    memset(&array[oldSize], 0, diff * sizeof(T *));
   }
 }
 

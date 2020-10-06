@@ -11,8 +11,8 @@ GCC_FLAGS = -D _DEFAULT_SOURCE
 GCC = g++ -std=c++14 -g3 $(GCC_INCLUDE) $(GCC_ERROR_FLAGS) $(GCC_LIBS) $(GCC_FLAGS)
 
 SWITCHBOARD_FILES = rail switch msswitch signal station
-SRC_FILES = path testpathfinding algorithm io
-TEST_FILES = main $(addprefix src/,$(SRC_FILES)) $(addprefix switchboard/,$(SWITCHBOARD_FILES))
+SRC_FILES = path pathfinding algorithm io
+TEST_FILES = main testhelpers $(addprefix src/,$(SRC_FILES)) $(addprefix switchboard/,$(SWITCHBOARD_FILES))
 
 .DEFAULT_GOAL := all
 
@@ -50,6 +50,6 @@ clean_test:
 
 clean_build:
 	@echo "Clear build"
-	@find bin -type f -name "*.o" -delete
-	@find bin -type f -name "*.so" -delete
-	@find bin -type f -name "*.d" -delete
+	@rm bin/src/*
+	@rm bin/switchboard/*
+	@rm bin/testhelpers.*

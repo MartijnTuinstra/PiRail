@@ -16,7 +16,8 @@ class Queue
     bool AddOnce(const T &Item);
 
     T    Get(void);
-    T    waitGet(int timeout=15);
+    T    waitGet(void);
+    T    waitGet(int timeout);
 
     inline int getItems(void);
     inline void clear(void);
@@ -99,17 +100,20 @@ T Queue<T>::Get(void){
 }
 
 template <class T>
+T Queue<T>::waitGet(void){
+  return waitGet(15);
+}
+
+template <class T>
 T Queue<T>::waitGet(int timeout){
-  if(Items <= 0)
-    return 0;
+  struct timespec t;
 
-  struct timespec t = {
-    .tv_sec = timeout,
-    .tv_nsec = 0
-  };
+  clock_gettime(CLOCK_REALTIME, &t);
+  t.tv_sec += timeout;
 
-  if(sem_timedwait(&semaphore, &t) < 0)
+  if(sem_timedwait(&semaphore, &t) < 0){
     return 0; // Failed to acquire semaphore
+  }
 
   return Acquire();
 }

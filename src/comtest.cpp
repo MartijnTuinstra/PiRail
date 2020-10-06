@@ -34,7 +34,7 @@ int main(int argc, char *argv[]){
   init_main();
   init_allocs();
 
-  logger.setfilename("log.txt");
+  logger.setfilename("uartlog.txt");
   logger.setlevel(DEBUG);
   logger.setlevel_stdout(NONE);
 
@@ -43,7 +43,6 @@ int main(int argc, char *argv[]){
 
   Z21 = new Z21_Client();
 
-/*
   pthread_create(&thread, NULL, UART, NULL);
 
   char cmd[300];
@@ -118,18 +117,7 @@ int main(int argc, char *argv[]){
 
       int M = atoi(cmds[1]);
 
-      if(!Units[M]){
-        char filename[30];
-        sprintf(filename, "configs/units/%d.bin", M);
-        auto configfile = new ModuleConfig(filename);
-        configfile->read();
-
-        new Unit(configfile);
-
-        delete configfile;
-      }
-
-      Units[M]->updateIO(0);
+      switchboard::Units(M)->updateIO(0);
     }
     else if(strcmp(cmds[0], "REQIN") == 0){
       if(cmds_len <= 1)
@@ -234,7 +222,7 @@ int main(int argc, char *argv[]){
   //   else
   //     printf("Not a command\n");
   }
-*/
+
   SYS_set_state(&SYS->UART.state, Module_STOP);
 
   switchboard::SwManager->clear();

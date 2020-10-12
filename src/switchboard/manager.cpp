@@ -33,7 +33,9 @@ Unit * Units(uint8_t unit){
   //   uint8_t unit_len;
 
 Manager::Manager(){}
-Manager::~Manager(){}
+Manager::~Manager(){
+  clear();
+}
 
 void Manager::addUnit(Unit * U){
   Units.insertAt(U, U->module);

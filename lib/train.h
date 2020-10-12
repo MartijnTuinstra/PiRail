@@ -32,10 +32,6 @@ struct engine_speed_steps;
 #define GRADUAL_FAST_SPEED 1
 #define GRADUAL_SLOW_SPEED 2
 
-#define TRAIN_MANUAL 0
-#define TRAIN_SEMI_AUTO 1
-#define TRAIN_FULL_AUTO 2
-
 #define TRAIN_FORWARD 0
 #define TRAIN_REVERSE 1
 
@@ -45,10 +41,10 @@ extern int train_P_cat_len;
 extern struct cat_conf * train_C_cat;
 extern int train_C_cat_len;
 
-int read_rolling_Configs();
-void write_rolling_Configs();
-int load_rolling_Configs(const char * filename);
-void unload_rolling_Configs();
+// int read_rolling_Configs();
+// void write_rolling_Configs();
+// int load_rolling_Configs(const char * filename);
+// void unload_rolling_Configs();
 
 // void unlink_train(int fid);
 #endif

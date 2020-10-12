@@ -40,34 +40,6 @@ int _find_free_index(void *** list, int * length){
   return _find_free_index(list, length);
 }
 
-uint8_t move_file(char * src, char * dest){
-  int ch;
-  FILE *source, *target;
-
-  source = fopen(src, "r");
-
-  if (source == NULL){
-    loggerf(ERROR, "Could not open source file (%s)", src);
-    return 0;
-  }
-
-  target = fopen(dest, "w");
-
-  if (target == NULL){
-    fclose(source);
-    loggerf(ERROR, "Could not create destination file (%s)", dest);
-    return 0;
-  }
-
-  while ((ch = fgetc(source)) != EOF)
-    fputc((char)ch, target);
-
-  fclose(source);
-  fclose(target);
-
-  return 1;
-}
-
 void system_init(struct s_systemState * S){
   S->stop = 0;
   S->Clients = 0;

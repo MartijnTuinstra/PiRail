@@ -204,8 +204,6 @@ bool Z21_Client::recv_packet(){
     uint16_t packet_size = tmp_buffer[0] + (tmp_buffer[1] << 8);
     uint8_t size = recv(packet_size);
 
-    log_hex("Z21 Recv buffer", buffer, packet_size);
-
     if(size == packet_size){
       return true;
     }
@@ -221,8 +219,6 @@ int Z21_Client::send(uint16_t length, uint8_t * data){
     loggerf(DEBUG, "Z21 not connected for sending\n");
     return -1;
   }
-
-  log_hex("Z21 Send buffer", (char *)data, length);
 
   pthread_mutex_lock(&send_mutex);
   int size = write(fd, data, length);

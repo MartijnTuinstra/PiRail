@@ -1,4 +1,5 @@
 #include "rollingstock/engine.h"
+#include "rollingstock/manager.h"
 #include "rollingstock/functions.h"
 #include "train.h"
 
@@ -7,70 +8,104 @@
 #include "system.h"
 
 
-Engine ** engines;
-int engines_len = 0;
-Engine * DCC_train[9999];
-
-Engine::Engine(char * name,int DCC,char * img, char * icon, char type, int length, int steps_len, struct engine_speed_steps * steps, uint8_t functions[28]){
-  loggerf(TRACE, "Create Engine %s", name);
-
-  //DCC cant be used twice
-  for(int i = 0;i<engines_len;i++){
-    if(engines[i] && engines[i]->DCC_ID == DCC){
-      loggerf(WARNING,"create_engine: found duplicate: %s",engines[i]->name);
-    }
-  }
+Engine::Engine(struct engines_conf conf){
+  loggerf(TRACE, "Create Engine %s", conf.name);
 
   memset(this, 0, sizeof(Engine));
 
-  this->name = (char *)_calloc(strlen(name), char);
-  strcpy(this->name, name);
-  this->img_path = (char *)_calloc(strlen(img), char);
-  strcpy(this->img_path, img);
-  this->icon_path = (char *)_calloc(strlen(icon), char);
-  strcpy(this->icon_path, icon);
+  setName(conf.name);
+  setImagePath(conf.img_path);
+  setIconPath(conf.icon_path);
 
-  this->DCC_ID = DCC;
-  DCC_train[DCC] = this;
-
-  this->length = length;
-  //TODO add to arguments
-  this->speed_step_type = ENGINE_128_FAHR_STUFEN;
-
-  this->type = type;
-
-  this->steps_len = steps_len;
-  this->steps = (struct engine_speed_steps *)_calloc(steps_len, struct engine_speed_steps);
-  memcpy(this->steps, steps, sizeof(struct engine_speed_steps) * steps_len);
-
-
-  // Copy each speed step
-  for(uint8_t i = 0; i < steps_len; i++){
-    if(this->max_speed < steps[i].speed){
-      this->max_speed = steps[i].speed;
-    }
+  //DCC cant be used twice
+  if(conf.DCC_ID >= 9999){
+    loggerf(CRITICAL, "DCC address (%i) not allowed", conf.DCC_ID);
+    return;
   }
+  if(RSManager->DCC[conf.DCC_ID])
+    loggerf(WARNING,"create_engine: found duplicate: %s, overwriting!", RSManager->DCC[conf.DCC_ID]->name);
+
+
+  DCC_ID = conf.DCC_ID;
+
+  RSManager->DCC[conf.DCC_ID] = this;
+
+  length = conf.length;
+  //TODO add to arguments
+  speed_step_type = ENGINE_128_FAHR_STUFEN;
+
+  type = conf.type;
+
+  setSpeedSteps(conf.config_steps, conf.speed_steps);
 
   // Copy each function
   for(uint8_t i = 0; i < 29; i++){
-    this->function[i].button = functions[i] >> 6;
-    this->function[i].type = functions[i] & 0x3F;
+    function[i].button = conf.functions[i] >> 6;
+    function[i].type = conf.functions[i] & 0x3F;
 
     // loggerf(INFO, "Engine %i - Function %i - type %i - %i", DCC, i, this->function[i].type, this->function[i].button);
   }
 
-  int index = find_free_index(engines, engines_len);
+  // int index = find_free_index(engines, engines_len);
 
-  engines[index] = this;
-  this->id = index;
+  // engines[index] = this;
+  // this->id = index;
+}
+Engine::Engine(uint16_t DCC, char * name){
+  setName(name);
+  DCC_ID = DCC;
+
+  if(RSManager->DCC[DCC])
+    loggerf(WARNING,"create_engine: found duplicate: %s, overwriting!", RSManager->DCC[DCC]->name);
+
+  RSManager->DCC[DCC] = this;
 }
 
 Engine::~Engine(){
-  loggerf(INFO, "Destructor Engine %s", this->name);
+  loggerf(TRACE, "Destructor Engine %s", this->name);
   _free(this->name);
   _free(this->img_path);
   _free(this->icon_path);
   _free(this->steps);
+}
+
+
+void Engine::setName(char * new_name){
+  if(name)
+    _free(name);
+
+  name = (char *)_calloc(strlen(new_name) + 10, char);
+  strcpy(name, new_name);
+}
+void Engine::setImagePath(char * newpath){
+  if(img_path)
+    _free(img_path);
+
+  img_path = (char *)_calloc(strlen(newpath) + 10, char);
+  strcpy(img_path, newpath);
+}
+void Engine::setIconPath(char * newpath){
+  if(icon_path)
+    _free(icon_path);
+
+  icon_path = (char *)_calloc(strlen(newpath) + 10, char);
+  strcpy(icon_path, newpath);}
+
+void Engine::setSpeedSteps(uint8_t nr_steps, struct engine_speed_steps * speed_steps){
+  if(steps)
+    _free(steps);
+
+  steps_len = nr_steps;
+  steps = (struct engine_speed_steps *)_calloc(nr_steps, struct engine_speed_steps);
+  memcpy(steps, speed_steps, nr_steps * sizeof(struct engine_speed_steps));
+
+  // Get Max speed from speedsteps
+  max_speed = 0;
+  for(uint8_t i = 0; i < steps_len; i++){
+    if(max_speed < steps[i].speed){
+      max_speed = steps[i].speed;
+    }
+  }
 }
 
 void Engine::setSpeed(uint16_t speed){

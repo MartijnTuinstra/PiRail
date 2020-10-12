@@ -188,7 +188,7 @@ int COM_Recv(struct fifobuffer * buf){
 
       buf->write = (buf->write + rx_length) % UART_BUFFER_SIZE;
 
-      loggerf(INFO, "%i/%i-(%i/%i) bytes read, %d available, %s", rx_length, size, buf->read, buf->write, (uint8_t)(((int16_t)buf->write - (int16_t)buf->read) % UART_BUFFER_SIZE), debug);
+      // loggerf(INFO, "%i/%i-(%i/%i) bytes read, %d available, %s", rx_length, size, buf->read, buf->write, (uint8_t)(((int16_t)buf->write - (int16_t)buf->read) % UART_BUFFER_SIZE), debug);
 
       if(rx_length < size)
         break;

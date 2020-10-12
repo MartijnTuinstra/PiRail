@@ -8,6 +8,7 @@
 #include "modules.h"
 
 #include "switchboard/manager.h"
+#include "rollingstock/manager.h"
 
 #include "scheduler/scheduler.h"
 
@@ -48,7 +49,8 @@ int main(int argc, char * argv[]){
   switchboard::SwManager->loadFiles();
 
   // load_module_Configs();
-  load_rolling_Configs(TRAIN_CONF_PATH);
+  // load_rolling_Configs(TRAIN_CONF_PATH);
+  RSManager->loadFile(TRAIN_CONF_PATH);
 
   switchboard::SwManager->print();
 
@@ -72,7 +74,8 @@ int main(int argc, char * argv[]){
 
   // unload_module_Configs();
   switchboard::SwManager->clear();
-  unload_rolling_Configs();
+  delete RSManager;
+  // unload_rolling_Configs();
 
   loggerf(INFO, "STOPPED");
   delete WSServer;

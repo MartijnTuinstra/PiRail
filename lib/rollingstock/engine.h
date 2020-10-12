@@ -2,6 +2,8 @@
 #define _INCLUDE_ROLLINGSTOCK_ENGINE_H
 
 #include <stdint.h>
+#include "config_data.h"
+
 #include "rollingstock/declares.h"
 #include "rollingstock/functions.h"
 
@@ -40,22 +42,21 @@ class Engine {
     char * img_path;
     char * icon_path;
 
-    Engine(char * name,int DCC,char * img, char * icon, char type, int length, int steps_len, struct engine_speed_steps * steps, uint8_t functions[28]);
+    Engine(struct engines_conf);
+    Engine(uint16_t, char * name);
     ~Engine();
+
+    void setName(char * name);
+    void setImagePath(char *);
+    void setIconPath(char *);
+
+    void setSpeedSteps(uint8_t, struct engine_speed_steps *);
+
+    void constructor(struct engines_conf);
 
     void setSpeed(uint16_t speed);
     void readSpeed();
 };
-
-extern Engine ** engines;
-extern int engines_len;
-extern Engine * DCC_train[9999];
-
-#define create_engine_from_conf(e) new Engine(e.name, e.DCC_ID, e.img_path, e.icon_path, e.type, e.length, e.config_steps, e.speed_steps, e.functions)
-
-
-// void engine_set_speed(Engine * E, uint16_t speed);
-// void engine_read_speed(Engine * E);
 
 
 #endif

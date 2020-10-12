@@ -6,13 +6,12 @@
 
 template <class T>
 class dynArray {
-  private:
+  public:
     T * array;
     uint8_t increaseSize = 30;
 
     void allocate(int);
 
-  public:
     uint16_t lastIndex = 0;
     uint16_t size = 0;
     uint16_t items = 0;
@@ -22,10 +21,13 @@ class dynArray {
     ~dynArray<T>();
 
     int  push_back(T&);
+    // int  push_back(T);
     void insertAt(T&, uint16_t);
 
     T operator[](int);
     T at(int);
+
+    void remove(T&);
 
     void print();
 
@@ -76,6 +78,17 @@ inline int dynArray<T>::push_back(T& value){
   return lastIndex++;
 }
 
+// template <class T>
+// inline int dynArray<T>::push_back(T value){
+//   if(lastIndex >= size)
+//     allocate(increaseSize);
+
+//   array[lastIndex] = value;
+//   items++;
+
+//   return lastIndex++;
+// }
+
 template <class T>
 inline void dynArray<T>::insertAt(T& value, uint16_t index){
   if(index >= size)
@@ -96,6 +109,16 @@ inline T dynArray<T>::operator[](int index){
 template <class T>
 inline T dynArray<T>::at(int index){
   return array[index];
+}
+
+template <class T>
+inline void dynArray<T>::remove(T& ptr){
+  for(int i = 0; i < size; i++){
+    if(array[i] == ptr){
+      array[i] = 0;
+      return;
+    }
+  }
 }
 
 template <class T>

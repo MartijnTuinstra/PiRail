@@ -40,58 +40,70 @@ int train_C_cat_len = 0;
 
 struct SchedulerEvent * railtraincontinue_event;
 
-int load_rolling_Configs(const char * filename){
-  loggerf(INFO, "Initializing cars/engines/trains");
+// int load_rolling_Configs(const char * filename){
+//   loggerf(INFO, "Initializing cars/engines/trains");
 
-  // Allocation Basic Space
-  trains = (Train **)_calloc(10, Train *);
-  trains_len = 10;
-  engines = (Engine **)_calloc(10, Engine *);
-  engines_len = 10;
-  cars = (Car **)_calloc(10, Car *);
-  cars_len = 10;
-  trains_comp = (struct train_composition **)_calloc(10, struct train_composition *);
-  trains_comp_len = 10;
-  train_link = (RailTrain **)_calloc(10,RailTrain *);
-  train_link_len = 10;
+//   // Allocation Basic Space
+//   trains = (Train **)_calloc(10, Train *);
+//   trains_len = 10;
+//   engines = (Engine **)_calloc(10, Engine *);
+//   engines_len = 10;
+//   cars = (Car **)_calloc(10, Car *);
+//   cars_len = 10;
+//   trains_comp = (struct train_composition **)_calloc(10, struct train_composition *);
+//   trains_comp_len = 10;
+//   train_link = (RailTrain **)_calloc(10,RailTrain *);
+//   train_link_len = 10;
   
-  railtraincontinue_event = scheduler->addEvent("RailTrain_continue", {2, 0});
-  railtraincontinue_event->function = &RailTrain_ContinueCheck;
-  scheduler->enableEvent(railtraincontinue_event);
+//   railtraincontinue_event = scheduler->addEvent("RailTrain_continue", {2, 0});
+//   railtraincontinue_event->function = &RailTrain_ContinueCheck;
+//   scheduler->enableEvent(railtraincontinue_event);
 
-  // read_rolling_Configs();
+//   // read_rolling_Configs();
 
-  auto config = RollingConfig(filename);
+//   auto config = RollingConfig(filename);
 
-  config.read();
+//   config.read();
 
-  train_P_cat = (struct cat_conf *)_calloc(config.header.P_Catagories, struct cat_conf);
-  train_P_cat_len = config.header.P_Catagories;
-  memcpy(train_P_cat, config.P_Cat, sizeof(struct cat_conf) * train_P_cat_len);
+//   train_P_cat = (struct cat_conf *)_calloc(config.header.P_Catagories, struct cat_conf);
+//   train_P_cat_len = config.header.P_Catagories;
+//   memcpy(train_P_cat, config.P_Cat, sizeof(struct cat_conf) * train_P_cat_len);
 
-  train_C_cat = (struct cat_conf *)_calloc(config.header.C_Catagories, struct cat_conf);
-  train_C_cat_len = config.header.C_Catagories;
-  memcpy(train_C_cat, config.C_Cat, sizeof(struct cat_conf) * train_C_cat_len);
+//   train_C_cat = (struct cat_conf *)_calloc(config.header.C_Catagories, struct cat_conf);
+//   train_C_cat_len = config.header.C_Catagories;
+//   memcpy(train_C_cat, config.C_Cat, sizeof(struct cat_conf) * train_C_cat_len);
 
-  loggerf(INFO, "Reading Engines");
-  for(int i = 0; i < config.header.Engines; i++){
-    create_engine_from_conf(config.Engines[i]);
-  }
+//   loggerf(INFO, "Reading Engines");
+//   for(int i = 0; i < config.header.Engines; i++){
+//     auto E = new Engine(config.Engines[i]);
+//     auto index = find_free_index(engines, engines_len);
+
+//     engines[index] = E;
+//     DCC_train[E->DCC_ID] = E;
+//   }
   
-  loggerf(INFO, "Reading Cars");
-  for(int i = 0; i < config.header.Cars; i++){
-    create_car_from_conf(config.Cars[i]);
-  }
+//   loggerf(INFO, "Reading Cars");
+//   for(int i = 0; i < config.header.Cars; i++){
+//     auto C = new Car(config.Cars[i]);
+//     int index = find_free_index(cars, cars_len);
+
+//     cars[index] = C;
+//   }
   
-  loggerf(INFO, "Reading Trains");
-  for(int i = 0; i < config.header.Trains; i++){
-    create_train_from_conf(config.Trains[i]);
-  }
+//   loggerf(INFO, "Reading Trains");
+//   for(int i = 0; i < config.header.Trains; i++){
+//     auto T = new Train(config.Trains[i]);
 
-  SYS->trains_loaded = 1;
+//     int index = find_free_index(trains, trains_len);
 
-  return 1;
-}
+//     trains[index] = T;
+//     T->id = index;
+//   }
+
+//   SYS->trains_loaded = 1;
+
+//   return 1;
+// }
 /*
 int read_rolling_Configs(){
   FILE * fp = fopen("configs/stock.bin", "rb");
@@ -164,7 +176,7 @@ int read_rolling_Configs(){
   return 1;
 }
 */
-
+/*
 void write_rolling_Configs(){
   auto config = RollingConfig(TRAIN_CONF_PATH);
 
@@ -187,7 +199,7 @@ void write_rolling_Configs(){
   }
 
   config.write();
-}
+}*/
 /*
   //Calculate size
   int size = 1; //header
@@ -374,6 +386,7 @@ void write_rolling_Configs(){
   free(data);
 }
 */
+/*
 void unload_rolling_Configs(){
   scheduler->removeEvent(railtraincontinue_event);
 
@@ -458,7 +471,7 @@ void unload_rolling_Configs(){
   if(SYS)
     SYS->trains_loaded = 0;
 }
-
+*/
 
 // Speed
 

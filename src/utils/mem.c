@@ -52,21 +52,23 @@ void * my_realloc(void * p, int type_size, int elements, const char * file, cons
   return p;
 }
 
-void * my_free(void * p, const char * file, const int line){
-  if(!p)
+void * my_free(void ** p, const char * file, const int line){
+  if(!*p)
     return 0;
   logger.f(MEMORY, file, line, "free \tpointer: %08x", p);
-  free(p);
+  free(*p);
 
   pthread_mutex_lock(&mem_lock);
   for(unsigned int i = 0; i < allocs; i++){
-    if(allocations[i].pointer == p){
+    if(allocations[i].pointer == *p){
       allocations[i].pointer = 0;
       free(allocations[i].location);
       break;
     }
   }
   pthread_mutex_unlock(&mem_lock);
+
+  *p = 0;
 
   return 0;
 }

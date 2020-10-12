@@ -6,114 +6,179 @@
 #include "system.h"
 
 
-Train ** trains;
-int trains_len = 0;
 struct train_composition ** trains_comp;
 int trains_comp_len = 0;
 
-Train::Train(char * name, int nr_stock, struct train_comp_ws * comps, uint8_t catagory, uint8_t save){
-  loggerf(TRACE, "Create Train %s", name);
+Train::Train(struct trains_conf conf){
+  loggerf(TRACE, "Create Train %s", conf.name);
   memset(this, 0, sizeof(Train));
 
-  this->name = (char *)_calloc(strlen(name), char);
-  strcpy(this->name, name);
+  engines = new dynArray<Engine *>(5);
 
-  this->nr_stock = nr_stock;
-  this->composition = (struct train_comp *)_calloc(nr_stock, struct train_comp);
+  setName(conf.name);
+  max_speed = 0xFFFF;
+  type = conf.category;
+  save = true;
 
-  this->max_speed = 0xFFFF;
-  this->length = 0;
-  this->type = catagory;
-  this->save = save;
-
-  this->engines = (Engine **)_calloc(1, Engine *);
-  this->nr_engines = 0;
-
-  this->detectables = 0;
-  this->splitdetectables = false;
-  bool testsplitdetectables = false;
-
-  for(int i = 0;i<nr_stock;i++){
-    this->composition[i].type = comps[i].type;
-    this->composition[i].id = comps[i].id;
-
-    if(comps[i].type == 0){
-      loggerf(DEBUG, "Add engine %i", comps[i].id);
-      Engine * E = ::engines[comps[i].id];
-      //Engine
-      if(comps[i].id >= engines_len || E == 0){
-        loggerf(ERROR, "Engine (%i) doesn't exist", comps[i].id);
-        continue;
-      }
-
-      this->length += E->length;
-      if(this->max_speed > E->max_speed && E->max_speed != 0){
-        this->max_speed = E->max_speed;
-      }
-
-      this->composition[i].p = E;
-
-      int index = find_free_index(this->engines, this->nr_engines);
-
-      this->engines[index] = E;
-
-      this->detectables += 1;
-      if(testsplitdetectables)
-        this->splitdetectables = true;
-
-      loggerf(TRACE, "Train engine index: %d", index);
-    }
-    else{
-      loggerf(DEBUG, "Add car %i", comps[i].id);
-      //Car
-      if(comps[i].id >= cars_len || cars[comps[i].id] == 0){
-        loggerf(ERROR, "Car (%i) doesn't exist", comps[i].id);
-        continue;
-      }
-      
-      this->length += cars[comps[i].id]->length;
-      if(this->max_speed > cars[comps[i].id]->max_speed && cars[comps[i].id]->max_speed != 0){
-        this->max_speed = cars[comps[i].id]->max_speed;
-      }
-
-      this->composition[i].p = cars[comps[i].id];
-
-      if(cars[comps[i].id]->detectable)
-        this->detectables += 1;
-      else
-        testsplitdetectables = true;
-    }
-  }
+  detectables = 0;
+  splitdetectables = false;
+  setComposition(conf.nr_stock, conf.composition);
 
   if(this->detectables < nr_stock)
     loggerf(INFO, "Train has cars that are not detectable"); // TODO
   if(this->splitdetectables)
     loggerf(INFO, "Train has undetectable cars in between two (multiple) engines"); // TODO
+}
+Train::Train(char * Name){
+  memset(this, 0, sizeof(Train));
 
-  int index = find_free_index(trains, trains_len);
+  engines = new dynArray<Engine *>(5);
+  setName(Name);
 
-  trains[index] = this;
-  this->id = index;
+  max_speed = 0;
+  type = 0;
+  save = false;
+
+  detectables = 0;
+  splitdetectables = false;
+}
+
+Train::Train(char * Name, int Stock, struct train_comp_ws * comps, uint8_t category, uint8_t Save){
+  loggerf(TRACE, "Create Train %s", Name);
+
+  memset(this, 0, sizeof(Train));
+
+  engines = new dynArray<Engine *>(5);
+
+  setName(Name);
+
+  max_speed = 0xFFFF;
+  length = 0;
+  type = category;
+  save = Save;
+
+  detectables = 0;
+  splitdetectables = false;
+
+  setComposition(nr_stock, comps);
+
+  if(this->detectables < nr_stock)
+    loggerf(INFO, "Train has cars that are not detectable"); // TODO
+  if(this->splitdetectables)
+    loggerf(INFO, "Train has undetectable cars in between two (multiple) engines"); // TODO
 }
 
 Train::~Train(){
+  loggerf(TRACE, "Destroy Train %s", name);
+  engines->empty();
+
+  delete engines;
+
   _free(this->name);
-  _free(this->engines);
   _free(this->composition);
 }
 
 
-void Train::setSpeed(uint16_t speed){
-  this->cur_speed = speed;
+void Train::setName(char * new_name){
+  if(name)
+    _free(name);
 
-  for(int i = 0; i < this->nr_engines; i++){
-    this->engines[i]->setSpeed(speed);
+  name = (char *)_calloc(strlen(new_name) + 10, char);
+  strcpy(name, new_name);
+}
+
+void Train::setComposition(int stock, struct train_comp_ws * comps){
+  if(composition)
+    _free(composition);
+
+  engines->empty();
+
+  nr_stock = stock;
+  composition = (struct train_comp *)_calloc(nr_stock, struct train_comp);
+  bool testsplitdetectables = false;
+
+  for(int i = 0;i<nr_stock;i++){
+    composition[i].type = comps[i].type;
+    composition[i].id = comps[i].id;
+
+    if(comps[i].type == 0){
+      loggerf(DEBUG, "Add engine %i", comps[i].id);
+      Engine * E = RSManager->getEngine(comps[i].id);
+
+      if(!E){
+        loggerf(ERROR, "Engine (%i) doesn't exist", comps[i].id);
+        continue;
+      }
+
+      length += E->length;
+      if(max_speed > E->max_speed && E->max_speed != 0){
+        max_speed = E->max_speed;
+      }
+
+      composition[i].p = E;
+
+      engines->push_back(E);
+
+      detectables += 1;
+      if(testsplitdetectables)
+        splitdetectables = true;
+
+      // loggerf(TRACE, "Train engine index: %d", index);
+    }
+    else{
+      loggerf(DEBUG, "Add car %i", comps[i].id);
+
+      Car * C = RSManager->getCar(comps[i].id);
+      //Car
+      if(!C){
+        loggerf(ERROR, "Car (%i) doesn't exist", comps[i].id);
+        continue;
+      }
+      
+      length += C->length;
+      if(max_speed > C->max_speed && C->max_speed != 0){
+        max_speed = C->max_speed;
+      }
+
+      composition[i].p = C;
+
+      if(C->detectable)
+        detectables += 1;
+      else
+        testsplitdetectables = true;
+    }
+  }
+}
+
+void Train::setSpeed(uint16_t speed){
+  cur_speed = speed;
+
+  for(int i = 0; i < engines->items; i++){
+    if((*engines)[i])
+      (*engines)[i]->setSpeed(speed);
   }
 }
 
 void Train::calcSpeed(){
-  for(int i = 0; i < this->nr_engines; i++){
-    this->engines[i]->setSpeed(this->cur_speed);
+  for(int i = 0; i < engines->items; i++){
+    if((*engines)[i])
+      (*engines)[i]->setSpeed(cur_speed);
   }
 }
 
+bool Train::enginesUsed(){
+  for(int  i = 0; i < engines->items; i++){
+    if((*engines)[i]->use){
+      return true;
+    }
+  }
+
+  return false;
+}
+
+void Train::setEnginesUsed(bool used, RailTrain * T){
+  for(int  i = 0; i < engines->items; i++){
+    (*engines)[i]->use = used;
+    (*engines)[i]->RT = T;
+  }
+}

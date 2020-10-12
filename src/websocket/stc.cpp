@@ -189,10 +189,10 @@ void WS_stc_UpdateTrain(RailTrain * T){
   return_msg.opcode = WSopc_UpdateTrain;
   struct s_opc_UpdateTrain * msg = &return_msg.data.opc_UpdateTrain;
 
-  msg->follow_id = T->link_id;
+  msg->follow_id = T->id;
 
   msg->dir = T->dir;
-  msg->control = T->control & 0x03;
+  msg->control = (((uint8_t)T->fullAuto) << 1) || (uint8_t)(T->manual ^ 1);
   msg->speed_high = (T->speed & 0x0F00) >> 8;
   msg->speed_low  = (T->speed & 0xFF);
 
@@ -213,9 +213,11 @@ void WS_stc_UpdateTrain(RailTrain * T){
 
   loggerf(DEBUG, "train Update_Train id: %i, d: %i, c: %i, sp: %x%02x", msg->follow_id, msg->dir, msg->control, msg->speed_high, msg->speed_low);
 
+  if(!WSServer)
+    return;
   for(uint8_t i = 0; i < WSServer->clients.size(); i++){
-    if((WSServer->clients[i]->subscribedTrains[0] == T->link_id) || 
-       (WSServer->clients[i]->subscribedTrains[1] == T->link_id)){
+    if((WSServer->clients[i]->subscribedTrains[0] == T->id) || 
+       (WSServer->clients[i]->subscribedTrains[1] == T->id)){
       WSServer->clients[i]->send((char *)&return_msg, sizeof(struct s_opc_UpdateTrain) + 1, WS_Flag_Trains);
     }
   }
@@ -260,50 +262,51 @@ void WS_stc_EnginesLib(Websocket::Client * client){
 
   data[len++] = WSopc_EnginesLibrary;
 
-  for(int i = 0;i<engines_len;i++){
+  for(int i = 0; i < RSManager->Engines.items;i++){
     if(buffer_size < (len + 100)){
       buffer_size += 1024;
       data = (char *)_realloc(data, buffer_size, char);
     }
-    if(!engines[i]){
+    Engine * E = RSManager->getEngine(i);
+    if(!E){
       continue;
     }
 
-    data[len++] = engines[i]->DCC_ID & 0xFF;
-    data[len++] = engines[i]->DCC_ID >> 8;
-    data[len++] = engines[i]->max_speed & 0xFF;
-    data[len++] = engines[i]->max_speed >> 8;
-    data[len++] = engines[i]->length & 0xFF;
-    data[len++] = engines[i]->length >> 8;
-    data[len++] = engines[i]->type;
+    data[len++] = E->DCC_ID & 0xFF;
+    data[len++] = E->DCC_ID >> 8;
+    data[len++] = E->max_speed & 0xFF;
+    data[len++] = E->max_speed >> 8;
+    data[len++] = E->length & 0xFF;
+    data[len++] = E->length >> 8;
+    data[len++] = E->type;
 
-    data[len++] = engines[i]->speed_step_type & 0x3;
+    data[len++] = E->speed_step_type & 0x3;
 
-    data[len++] = engines[i]->steps_len;
-    data[len++] = strlen(engines[i]->name);
-    data[len++] = strlen(engines[i]->img_path);
-    data[len++] = strlen(engines[i]->icon_path);
+    data[len++] = E->steps_len;
+    data[len++] = strlen(E->name);
+    data[len++] = strlen(E->img_path);
+    data[len++] = strlen(E->icon_path);
 
     for(uint8_t j = 0; j < 29; j++){
-      data[len++] = (engines[i]->function[j].button << 6) | engines[i]->function[j].type;
+      data[len++] = (E->function[j].button << 6) | E->function[j].type;
     }
 
-    int l = strlen(engines[i]->name);
-    memcpy(&data[len], engines[i]->name, l);
+    int l = strlen(E->name);
+    memcpy(&data[len], E->name, l);
     len += l;
 
-    l = strlen(engines[i]->img_path);
-    memcpy(&data[len], engines[i]->img_path, l);
+    l = strlen(E->img_path);
+    memcpy(&data[len], E->img_path, l);
     len += l;
 
-    l = strlen(engines[i]->icon_path);
-    memcpy(&data[len], engines[i]->icon_path, l);
+    l = strlen(E->icon_path);
+    memcpy(&data[len], E->icon_path, l);
     len += l;
 
-    for(int j = 0; j < engines[i]->steps_len; j++){
-      data[len++] = engines[i]->steps[j].speed & 0xFF;
-      data[len++] = engines[i]->steps[j].speed >> 8;
-      data[len++] = engines[i]->steps[j].step;
+    for(int j = 0; j < E->steps_len; j++){
+      data[len++] = E->steps[j].speed & 0xFF;
+      data[len++] = E->steps[j].speed >> 8;
+      data[len++] = E->steps[j].step;
     }
   }
   if(client)
@@ -324,30 +327,32 @@ void WS_stc_CarsLib(Websocket::Client * client){
 
   data[len++] = WSopc_CarsLibrary;
 
-  for(int i = 0;i<cars_len;i++){
+  for(int i = 0; i < RSManager->Cars.items; i++){
     if(buffer_size < (len + 100)){
       buffer_size += 1024;
       data = (char *)_realloc(data, buffer_size, char);
     }
-    if(cars[i]){
-      data[len++] = cars[i]->nr & 0xFF;
-      data[len++] = cars[i]->nr >> 8;
-      data[len++] = cars[i]->max_speed & 0xFF;
-      data[len++] = cars[i]->max_speed >> 8;
-      data[len++] = cars[i]->length & 0xFF;
-      data[len++] = cars[i]->length >> 8;
-      data[len++] = cars[i]->type;
-      data[len++] = strlen(cars[i]->name);
-      data[len++] = strlen(cars[i]->icon_path);
-
-      int l = strlen(cars[i]->name);
-      memcpy(&data[len], cars[i]->name, l);
-      len += l;
-
-      l = strlen(cars[i]->icon_path);
-      memcpy(&data[len], cars[i]->icon_path, l);
-      len += l;
+    Car * C = RSManager->getCar(i);
+    if(!C){
+      continue;
     }
+    data[len++] = C->nr & 0xFF;
+    data[len++] = C->nr >> 8;
+    data[len++] = C->max_speed & 0xFF;
+    data[len++] = C->max_speed >> 8;
+    data[len++] = C->length & 0xFF;
+    data[len++] = C->length >> 8;
+    data[len++] = C->type;
+    data[len++] = strlen(C->name);
+    data[len++] = strlen(C->icon_path);
+
+    int l = strlen(C->name);
+    memcpy(&data[len], C->name, l);
+    len += l;
+
+    l = strlen(C->icon_path);
+    memcpy(&data[len], C->icon_path, l);
+    len += l;
   }
   if(client)
     client->send(data, len, WS_Flag_Trains);
@@ -367,36 +372,36 @@ void WS_stc_TrainsLib(Websocket::Client * client){
 
   data[len++] = WSopc_TrainsLibrary;
 
-  for(int i = 0;i<trains_len;i++){
-    if(!trains[i]){
-      continue;
-    }
+  for(int i = 0; i < RSManager->Trains.items; i++){
     if(buffer_size < (len + 100)){
       buffer_size += 1024;
       data = (char *)_realloc(data, buffer_size, char);
     }
+    Train * T = RSManager->getTrain(i);
+    if(!T)
+      continue;
     
-    data[len++] = trains[i]->max_speed & 0xFF;
-    data[len++] = trains[i]->max_speed >> 8;
+    data[len++] = T->max_speed & 0xFF;
+    data[len++] = T->max_speed >> 8;
 
-    data[len++] = trains[i]->length & 0xFF;
-    data[len++] = trains[i]->length >> 8;
+    data[len++] = T->length & 0xFF;
+    data[len++] = T->length >> 8;
 
-    data[len] = trains[i]->type << 1;
-    data[len++] |= trains[i]->in_use;
+    data[len] = T->type << 1;
+    data[len++] |= T->in_use;
 
-    data[len++] = strlen(trains[i]->name);
+    data[len++] = strlen(T->name);
 
-    data[len++] = trains[i]->nr_stock;
+    data[len++] = T->nr_stock;
 
-    int l = strlen(trains[i]->name);
-    memcpy(&data[len], trains[i]->name, l);
+    int l = strlen(T->name);
+    memcpy(&data[len], T->name, l);
     len += l;
 
-    for(int c = 0; c<trains[i]->nr_stock; c++){
-      data[len++] = trains[i]->composition[c].type;
-      data[len++] = trains[i]->composition[c].id & 0xFF;
-      data[len++] = trains[i]->composition[c].id >> 8;
+    for(int c = 0; c<T->nr_stock; c++){
+      data[len++] = T->composition[c].type;
+      data[len++] = T->composition[c].id & 0xFF;
+      data[len++] = T->composition[c].id >> 8;
     }
   }
   if(client)
@@ -464,7 +469,7 @@ void WS_stc_NewTrain(RailTrain * T,char M,char B){
   data[0] = WSopc_NewMessage;
   data[1] = ((msg_ID >> 8) & 0x1F) + 0; //type = 0
   data[2] = (msg_ID & 0xFF);
-  data[3] = T->link_id;
+  data[3] = T->id;
   data[4] = M;
   data[5] = B;
   WSServer->send_all(data,6,WS_Flag_Messages);
@@ -482,7 +487,7 @@ void WS_stc_TrainSplit(RailTrain * T, char M1,char B1,char M2,char B2){
   data[0] = WSopc_NewMessage;
   data[1] = ((msg_ID >> 8) & 0x1F) + 0x20; //type = 1
   data[2] = (msg_ID & 0xFF);
-  data[3] = T->link_id;
+  data[3] = T->id;
   data[4] = M1;
   data[5] = B1;
   data[6] = M2;
@@ -802,11 +807,12 @@ void WS_stc_NewClient_track_Switch_Update(Websocket::Client * client){
   memset(buf,0,4096);
 
   loggerf(INFO, "Z21_GET_LOCO_INFO check");
-  for(int i = 1;i<trains_len;i++){
-    if(train_link[i]){
+  for(int i = 1; i < RSManager->RailTrains.size;i++){
+    RailTrain * T = RSManager->getRailTrain(i);
+    if(T){
       //TODO fix for RailTrain
-      //for(int j = 0; j < train_link[i]->nr_engines; j++){
-      //  Z21_get_engine(train_link[i]->engines[j]->DCC_ID);
+      //for(int j = 0; j < T->nr_engines; j++){
+      //  Z21_get_engine(T->engines[j]->DCC_ID);
       //}
     }
   }

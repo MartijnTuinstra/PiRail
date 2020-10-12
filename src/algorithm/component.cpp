@@ -117,6 +117,9 @@ int InitProcess(void){
     if(!U)
       continue;
 
+    if(!U->on_layout)
+      continue;
+
     for(int j = 0; j < U->block_len; j++){
       if(U->B[j]){
         process(U->B[j], _FORCE);
@@ -139,6 +142,7 @@ int InitProcess(void){
 
 void tick(void){
   Block * B = AlQueue.getWait();
+
   while(B != 0){
     loggerf(TRACE, "Process %i:%i, %x, %x", B->module, B->id, B->IOchanged + (B->statechanged << 1) + (B->algorchanged << 2), B->state);
     process(B, 0);

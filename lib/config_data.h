@@ -278,13 +278,13 @@ struct __attribute__((__packed__)) train_comp_ws {
 struct __attribute__((__packed__)) s_train_conf {
   uint8_t name_len;
   uint8_t nr_stock;
-  uint8_t catagory;
+  uint8_t category;
 };
 
 struct trains_conf {
   uint8_t name_len;
   uint8_t nr_stock;
-  uint8_t catagory;
+  uint8_t category;
   char * name;
   struct train_comp_ws * composition;
 };

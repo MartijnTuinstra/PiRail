@@ -6,38 +6,54 @@
 #include "system.h"
 
 
-Car ** cars;
-int cars_len = 0;
-
-Car::Car(char * name,int nr, char * icon, char type, uint16_t length, uint16_t speed, uint8_t flags){
-  loggerf(TRACE, "Create Car %s", name);
-
+Car::Car(char * Name){
   memset(this, 0, sizeof(Car));
 
-  this->name = (char *)_calloc(strlen(name), char);
-  strcpy(this->name, name);
-  this->icon_path = (char *)_calloc(strlen(icon), char);
-  strcpy(this->icon_path, icon);
+  loggerf(TRACE, "Create Car %s", Name);
 
-  this->nr = nr;
-  this->length = length;
-  this->max_speed = speed;
+  setName(Name);
+}
 
-  this->type = type;
+Car::Car(struct cars_conf data){
+  memset(this, 0, sizeof(Car));
 
-  if(flags & 0x01) // F_CAR_DETECTABLE
-    this->detectable = true;
-  else
-    this->detectable = false;
+  loggerf(TRACE, "Create Car %s", data.name);
 
-  int index = find_free_index(cars, cars_len);
+  setName(data.name);
+  setIconPath(data.icon_path);
 
-  cars[index] = this;
+  nr = data.nr;
+  length = data.length;
+  max_speed = data.max_speed;
 
-  loggerf(DEBUG, "Car \"%s\" created",name);
+  type = data.type;
+
+  readFlags(data.flags);
 }
 
 Car::~Car(){
-  _free(this->name);
-  _free(this->icon_path);
+  loggerf(TRACE, "Destroy Car %s", name);
+  _free(name);
+  _free(icon_path);
+}
+
+void Car::setName(char * Name){
+  if(name)
+    _free(name);
+
+  name = (char *)_calloc(strlen(Name), char);
+  strcpy(name, Name);
+}
+
+void Car::setIconPath(char * path){
+  if(icon_path)
+    _free(icon_path);
+
+  icon_path = (char *)_calloc(strlen(path) + 10, char);
+  strcpy(icon_path, path);
+}
+
+void Car::readFlags(uint8_t Flags){
+  // F_CAR_DETECTABLE
+  detectable = (Flags & 0x01) ? true : false;
 }

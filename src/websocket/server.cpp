@@ -229,20 +229,21 @@ void Server::newClientCallback(Client * client){
 
     //train_link, train_link_lenlink_id
     // Send all linked trains
-    for(uint8_t i = 0; i < train_link_len; i++){
-      if(!train_link[i])
+    for(uint8_t i = 0; i < RSManager->RailTrains.size; i++){
+      RailTrain * T = RSManager->RailTrains[i];
+      if(!T)
         continue;
 
       struct s_opc_LinkTrain msg;
       msg.follow_id = i;
-      if(train_link[i]->type){
-        loggerf(WARNING, "Sending railtrain T %i\t(%i) %s", i, train_link[i]->p.T->id, train_link[i]->p.T->name);
-        msg.real_id = train_link[i]->p.T->id;
+      if(T->type){
+        loggerf(WARNING, "Sending railtrain T %i\t(%i) %s", i, T->p.T->id, T->p.T->name);
+        msg.real_id = T->p.T->id;
         msg.type = 0;
       }
       else{
-        loggerf(WARNING, "Sending railtrain E %i\t(%i) %s", i, train_link[i]->p.E->id, train_link[i]->p.E->name);
-        msg.real_id = train_link[i]->p.E->id;
+        loggerf(WARNING, "Sending railtrain E %i\t(%i) %s", i, T->p.E->id, T->p.E->name);
+        msg.real_id = T->p.E->id;
         msg.type = 1;
       }
       msg.message_id_H = 0;

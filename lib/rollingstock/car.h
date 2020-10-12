@@ -2,12 +2,16 @@
 #define _INCLUDE_ROLLINGSTOCK_CAR_H
 
 #include <stdint.h>
+#include "config_data.h"
+
 #include "rollingstock/declares.h"
 #include "rollingstock/functions.h"
 
 class Car {
   public:
     uint16_t nr;
+    uint16_t id;
+
     uint8_t type;
     uint8_t control;
     uint8_t dir;
@@ -22,13 +26,13 @@ class Car {
     char * name;
     char * icon_path;
 
-  Car(char * name,int nr, char * icon, char type, uint16_t length, uint16_t speed, uint8_t flags);
+  Car(char *);
+  Car(struct cars_conf);
   ~Car();
+
+  void setName(char * name);
+  void setIconPath(char *);
+  void readFlags(uint8_t);
 };
-
-extern Car ** cars;
-extern int cars_len;
-
-#define create_car_from_conf(c) new Car(c.name, c.nr, c.icon_path, c.type, c.length, c.max_speed, c.flags)
 
 #endif

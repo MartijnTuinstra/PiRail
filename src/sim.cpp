@@ -189,7 +189,7 @@ void *TRAIN_SIMA(void * args){
 
   B->train->link(2, RAILTRAIN_TRAIN_TYPE);
   struct s_opc_LinkTrain msg = {
-    .follow_id=B->train->link_id,
+    .follow_id=B->train->id,
     .real_id=2,
     .message_id_H=0,
     .type=RAILTRAIN_ENGINE_TYPE,
@@ -199,7 +199,8 @@ void *TRAIN_SIMA(void * args){
 
   loggerf(INFO, "SIMTrain linked %s", B->train->p.T->name);
 
-  B->train->control = TRAIN_MANUAL;//TRAIN_SEMI_AUTO;
+  B->train->setControl(TRAIN_MANUAL);
+
   train.train_length = B->train->length;
 
   train.T = B->train;
@@ -292,7 +293,7 @@ void *TRAIN_SIMB(void * args){
       usleep(10000);
   }
 
-  B->train->control = TRAIN_SEMI_AUTO;
+  B->train->setControl(TRAIN_MANUAL);
 
   while(!B->train->p.p){
     usleep(10000);

@@ -1371,10 +1371,10 @@ void modify_Train(struct RollingConfig * config, char cmd){
       config->Trains[id].name_len = tmp;
     }
 
-    printf("Catagory  (%i) | ", config->Trains[id].catagory);
+    printf("Catagory  (%i) | ", config->Trains[id].category);
     fgets(_cmd, 20, stdin);
     if(sscanf(_cmd, "%i", &tmp) > 0)
-      config->Trains[id].catagory = tmp;
+      config->Trains[id].category = tmp;
 
     for(int i = 0; i < config->Trains[id].nr_stock; i++){
       printf(" - Step %i   (%02i, %04i) | ", i, config->Trains[id].composition[i].type, config->Trains[id].composition[i].id);

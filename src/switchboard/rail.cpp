@@ -174,8 +174,6 @@ Block * Block::_Next(int flags, int level){
   // loggerf(TRACE, "Next     : dir:%i/%x\t%i:%i => %i:%i:%i\t%i", this->dir, dir, this->module, this->id, next->module, next->id, next->type, level);
 
   if(!next->p.p){
-    if(next->type != RAIL_LINK_E && next->type != RAIL_LINK_C)
-      loggerf(ERROR, "NO POINTERS %i:%i", this->module, this->id);
     return 0;
   }
 

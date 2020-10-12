@@ -45,8 +45,8 @@ void Z21_Set_Loco_Drive_Engine(Engine * E){
 
 void Z21_Set_Loco_Drive_Train(Train * T){
   loggerf(TRACE, "Z21_Set_Loco_Drive_Train %s", T->name);
-  for(int e = 0; e < T->nr_engines; e++){
-    Z21_Set_Loco_Drive_Engine(T->engines[e]);
+  for(int e = 0; e < T->engines->items; e++){
+    Z21_Set_Loco_Drive_Engine(T->engines->operator[](e));
   }
 }
 
@@ -58,17 +58,14 @@ void Z21_LAN_X_LOCO_INFO(uint8_t length, char * data){
   uint8_t dir = (data[3] & 0x80) >> 7;
   uint8_t speed = (data[3] & 0x7F);
 
-  Engine * E = DCC_train[DCC_ID];
+  Engine * E = RSManager->getEngineDCC(DCC_ID);
 
   if(!E){
     loggerf(ERROR, "No train with DCC address %i\n", DCC_ID);
     return;
   }
 
-  loggerf(INFO, " - Engine %i", DCC_ID);
-  for(uint8_t i = 0; i < length; i++){
-    printf("%02x ", data[i]);
-  }
+  loggerf(INFO, " - Engine %i: speed(%i), dir(i)", DCC_ID, speed, dir);
   // loggerf(INFO, " -  %02x %02x %02x %02x", data[9], data[10], data[11], data[12]);
 
   //Functions ....
@@ -102,9 +99,10 @@ void Z21_LAN_X_LOCO_INFO(uint8_t length, char * data){
     if(!samedir && RT->type == RAILTRAIN_TRAIN_TYPE){
       Train * T = RT->p.T;
 
-      for(uint8_t i = 0; i < T->nr_engines; i++){
-        if(E != T->engines[i]){
-          T->engines[i]->dir = E->dir;
+      for(uint8_t i = 0; i < T->engines->items; i++){
+        Engine * tE = T->engines->operator[](i);
+        if(E != tE){
+          tE->dir = E->dir;
         }
       }
     }
@@ -120,9 +118,10 @@ void Z21_LAN_X_LOCO_INFO(uint8_t length, char * data){
     if((!samedir || !samespeed) && RT->type == RAILTRAIN_TRAIN_TYPE){
       Train * T = RT->p.T;
       // Set all other engines coupled to this train to new parameters
-      for(uint8_t i = 0; i < T->nr_engines; i++){
-        if(E != T->engines[i]){
-          Z21_Set_Loco_Drive_Engine(T->engines[i]);
+      for(uint8_t i = 0; i < T->engines->items; i++){
+        Engine * tE = T->engines->operator[](i);
+        if(E != tE){
+          Z21_Set_Loco_Drive_Engine(tE);
         }
       }
     }
@@ -139,9 +138,9 @@ void Z21_get_train(RailTrain * RT){
     Z21_get_loco_info(RT->p.E->DCC_ID);
   }
   else{
-    Train * T = RT->p.T;
-    for(uint8_t i = 0; i < T->nr_engines; i++){
-      Z21_get_loco_info(T->engines[i]->DCC_ID);
+    auto TrainEngines = RT->p.T->engines;
+    for(uint8_t i = 0; i < TrainEngines->items; i++){
+      Z21_get_loco_info((*TrainEngines)[i]->DCC_ID);
     }
   }
 }

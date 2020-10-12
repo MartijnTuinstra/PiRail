@@ -13,14 +13,12 @@
 #include "websocket/stc.h"
 #include "Z21_msg.h"
 
-RailTrain ** train_link;
-int train_link_len;
+RailTrain::RailTrain(Block * B): blocks(0, 0), reservedBlocks(0, 0){
+  id = RSManager->addRailTrain(this);
+  loggerf(INFO, "Create RailTrain %i", id);
 
-RailTrain::RailTrain(Block * B){
-  memset(this, 0, sizeof(RailTrain));
+  p.p = 0;
 
-  uint16_t id = find_free_index(train_link, train_link_len);
-  link_id = id;
   this->B = B;
   setBlock(B);
 
@@ -28,6 +26,7 @@ RailTrain::RailTrain(Block * B){
     B->path->trains.push_back(this);
 
   assigned = false;
+  setControl(TRAIN_MANUAL);
 
   char name[64];
   sprintf(name, "Railtrain_%i_SpeedEvent", id);
@@ -36,36 +35,48 @@ RailTrain::RailTrain(Block * B){
   speed_event->function = (void (*)(void *))train_speed_event_tick;
   speed_event->function_args = (void *)speed_event_data;
 
-  train_link[id] = this;
+  setSpeed(0);
 }
 
 RailTrain::~RailTrain(){
-  train_link[link_id] = 0;
-  _free(this->speed_event_data);
+  loggerf(TRACE, "Destroy RailTrain %i", id);
+  // train_link[id] = 0;
+  blocks.clear();
+  reservedBlocks.clear();
+
+  if(speed_event_data)
+    _free(speed_event_data);
 }
 
 void RailTrain::setBlock(Block * sB){
-  loggerf(INFO, "train %i: setBlock %2i:%2i %x", link_id, sB->module, sB->id, (unsigned int)sB);
+  loggerf(TRACE, "train %i: setBlock %2i:%2i %x", id, sB->module, sB->id, (unsigned int)sB);
   blocks.push_back(sB);
 }
 
 void RailTrain::releaseBlock(Block * rB){
-  loggerf(INFO, "train %i: releaseBlock %2i:%2i %x", link_id, rB->module, rB->id, (unsigned int)rB);
+  loggerf(TRACE, "train %i: releaseBlock %2i:%2i %x", id, rB->module, rB->id, (unsigned int)rB);
   rB->train = 0;
   blocks.erase(std::remove_if(blocks.begin(), blocks.end(), [rB](const auto & o) { return (o == rB); }), blocks.end());
 }
 
 void RailTrain::reserveBlock(Block * rB){
-  loggerf(INFO, "train %i: reserveBlock %2i:%2i", link_id, rB->module, rB->id);
+  loggerf(TRACE, "train %i: reserveBlock %2i:%2i", id, rB->module, rB->id);
 
   rB->reservedBy = this;
-  rB->switchReserved = true;
-  rB->setState(RESERVED_SWITCH);
+  if(rB->type == NOSTOP){
+    rB->switchReserved = true;
+    rB->setState(RESERVED_SWITCH);
+  }
+  else{
+    loggerf(INFO, "ALSO RESERVE PATH"); // FIXME
+    rB->reserved = true;
+    rB->setState(RESERVED);
+  }
   reservedBlocks.push_back(rB);
 }
 
 void RailTrain::dereserveBlock(Block * rB){
-  loggerf(INFO, "train %i: dereserveBlock %2i:%2i", link_id, rB->module, rB->id);
+  loggerf(TRACE, "train %i: dereserveBlock %2i:%2i", id, rB->module, rB->id);
   rB->reservedBy = 0;
   rB->switchReserved = false;
 
@@ -78,6 +89,8 @@ void RailTrain::dereserveBlock(Block * rB){
 void RailTrain::dereserveAll(){
 
   for(auto b: reservedBlocks){
+    if(!b)
+      continue;
     b->reservedBy = 0;
     b->switchReserved = false;
   }
@@ -102,7 +115,7 @@ void RailTrain::initVirtualBlocks(){
 
         loggerf(INFO, "Virtual Train intersects with empty train");
 
-        delete tB->train;
+        RSManager->removeRailTrain(tB->train);
       }
       tB->train = this;
       tB->train->setBlock(tB);
@@ -172,7 +185,7 @@ void RailTrain::setVirtualBlocks(){
 }
 
 void RailTrain::moveForward(Block * tB){
-  loggerf(WARNING, "MoveForward RT %i to block %2i:%2i", link_id, tB->module, tB->id);
+  loggerf(WARNING, "MoveForward RT %i to block %2i:%2i", id, tB->module, tB->id);
   setBlock(tB);
 
   if(B->Alg.next > 0 && B->Alg.N[0] == tB){
@@ -185,11 +198,15 @@ void RailTrain::moveForward(Block * tB){
 }
 
 void inline RailTrain::setSpeed(uint16_t _speed){
-  speed = _speed;
-
-  if(stopped && speed){
+  if(stopped && _speed){
     // Was stopped but starting to move
+    if(!ContinueCheck()){
+      loggerf(WARNING, "RT%i unsafe to start moving", id);
+      setSpeedZ21(0);
+    }
   }
+
+  speed = _speed;
 
   if(speed) setStopped(0);
   else setStopped(1);
@@ -200,6 +217,7 @@ void inline RailTrain::setSpeed(uint16_t _speed){
 }
 
 void RailTrain::setSpeedZ21(uint16_t _speed){
+  loggerf(INFO, "setRailTrain %i Speed -> %i", id, _speed);
   setSpeed(_speed);
 
   if(!assigned)
@@ -217,7 +235,7 @@ void RailTrain::setStopped(bool stop){
     dereserveAll();
 
   for(auto b: blocks){
-    if(b->station){
+    if(b && b->station){
       b->station->setStoppedTrain(stop);
     }
   }
@@ -229,12 +247,12 @@ void RailTrain::changeSpeed(uint16_t _target_speed, uint8_t _type){
     return;
   }
 
-  loggerf(DEBUG, "train_change_speed %i -> %i", link_id, _target_speed);
+  loggerf(DEBUG, "train_change_speed %i -> %i", id, _target_speed);
   //target_speed = target_speed;
 
   if(_type == IMMEDIATE_SPEED){
     changing_speed = RAILTRAIN_SPEED_T_DONE;
-    setSpeed(_target_speed);
+    setSpeedZ21(_target_speed);
     WS_stc_UpdateTrain(this);
   }
   else if(_type == GRADUAL_SLOW_SPEED){
@@ -264,13 +282,13 @@ int RailTrain::link(int tid, char type){
 
   // If it is only a engine -> make it a train
   if(type == RAILTRAIN_ENGINE_TYPE){
-    if(engines[tid]->use){
+    if(RSManager->getEngine(tid)->use){
       loggerf(ERROR, "Engine allready used");
       return 3;
     }
 
     // Create train from engine
-    Engine * E = engines[tid];
+    Engine * E = RSManager->getEngine(tid);
     this->type = RAILTRAIN_ENGINE_TYPE;
     this->p.E = E;
     this->max_speed = E->max_speed;
@@ -282,25 +300,21 @@ int RailTrain::link(int tid, char type){
     E->RT = this;
   }
   else{
-    for(int  i = 0; i < trains[tid]->nr_engines; i++){
-      if(trains[tid]->engines[i]->use){
-        loggerf(ERROR, "Engine of Train allready used");
-        return 3;
-      }
+    Train * T = RSManager->getTrain(tid);
+
+    if(T->enginesUsed()){
+      loggerf(ERROR, "Engine of Train allready used");
+      return 3;
     }
 
     // Crate Rail Train
-    Train * T = trains[tid];
     this->type = RAILTRAIN_TRAIN_TYPE;
     this->p.T = T;
     this->max_speed = T->max_speed;
     this->length = T->length;
 
-    //Lock all engines    
-    for(int i = 0; i < T->nr_engines; i++){
-      T->engines[i]->use = 1;
-      T->engines[i]->RT = this;
-    }
+    //Lock all engines
+    T->setEnginesUsed(true, this);
 
     virtualLength = false;
     if(T->detectables != T->nr_stock){
@@ -325,21 +339,21 @@ void RailTrain::unlink(){
   }
   else{
     Train * T = this->p.T;
-    for(int i = 0; i < T->nr_engines; i++){
-      T->engines[i]->use = 0;
-      T->engines[i]->RT = 0;
-    }
+    T->setEnginesUsed(false, 0);
   }
 
   this->assigned = false;
 }
 
 bool RailTrain::ContinueCheck(){
-  if(this->B->Alg.next > 0){
+  if(B->Alg.next > 0){
     //if(this->Route && Switch_Check_Path(this->B)){
     //  return true;
     //}
-    if(this->B->Alg.N[0]->state > DANGER){
+    if(B->Alg.N[0]->blocked && B->Alg.N[0]->train != this){
+      return false;
+    }
+    else if(B->Alg.N[0]->state > DANGER){
       return true;
     }
   }
@@ -350,14 +364,17 @@ void RailTrain_ContinueCheck(void * args){
   // Check if trains can accelerate when they are stationary.
 
   loggerf(TRACE, "RailTrain ContinueCheck");
-  for(uint8_t i = 0; i < train_link_len; i++){
-    RailTrain * T = train_link[i];
+  for(uint8_t i = 0; i < RSManager->RailTrains.size; i++){
+    RailTrain * T = RSManager->getRailTrain(i);
     if(!T)
+      continue;
+
+    if(T->manual)
       continue;
 
     if(T->p.p && T->speed == 0 && T->ContinueCheck()){
       loggerf(ERROR, "RailTrain ContinueCheck accelerating train %i", i);
-      T->changeSpeed(20, GRADUAL_FAST_SPEED);
+      T->changeSpeed(40, GRADUAL_FAST_SPEED);
       WS_stc_UpdateTrain(T);
     }
   }

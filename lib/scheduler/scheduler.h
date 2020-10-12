@@ -1,6 +1,7 @@
 #ifndef INCLUDE_SCHEDULER_H
 #define INCLUDE_SCHEDULER_H
 
+#include <pthread.h>
 #include <vector>
 #include "scheduler/event.h"
 

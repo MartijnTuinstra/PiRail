@@ -89,8 +89,6 @@ void sigint_func(int sig);
 
 int _find_free_index(void *** list, int * length);
 
-uint8_t move_file(char * src, char * dest);
-
 void system_init(struct s_systemState * S);
 void init_main();
 

@@ -36,7 +36,7 @@ void RollingConfig::addTrain(Train * T){
   strcpy(cT->name, T->name);
 
   cT->nr_stock = T->nr_stock;
-  cT->catagory = T->type;
+  cT->category = T->type;
 
   cT->composition = (struct train_comp_ws *)_calloc(T->nr_stock, struct train_comp_ws);
 
@@ -50,12 +50,12 @@ void RollingConfig::addEngine(Engine * E){
   if(!E)
     return;
 
-  if(!this->Engines)
-    this->Engines = (struct engines_conf *)_calloc(this->header.Engines + 1, struct engines_conf);
+  if(!Engines)
+    Engines = (struct engines_conf *)_calloc(header.Engines + 1, struct engines_conf);
   else
-    this->Engines = (struct engines_conf *)_realloc(this->Engines, this->header.Engines + 1, struct engines_conf);
+    Engines = (struct engines_conf *)_realloc(Engines, header.Engines + 1, struct engines_conf);
 
-  struct engines_conf * cE = &this->Engines[this->header.Engines++];
+  struct engines_conf * cE = &Engines[header.Engines++];
 
   cE->DCC_ID = E->DCC_ID;
   cE->length = E->length;

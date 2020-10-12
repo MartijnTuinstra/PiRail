@@ -2,8 +2,14 @@
 #define _INCLUDE_ROLLINGSTOCK_TRAIN_H
 
 #include <stdint.h>
+#include "utils/mem.h"
+#include "utils/logger.h"
+
 #include "switchboard/declares.h"
 #include "rollingstock/declares.h"
+#include "rollingstock/manager.h"
+
+#include "utils/dynArray.h"
 
 
 struct __attribute__((__packed__)) train_comp {
@@ -27,8 +33,7 @@ class Train {
     uint16_t id;
     char * name;
 
-    uint8_t nr_engines;
-    Engine ** engines;
+    dynArray<Engine *> * engines;
 
     uint8_t nr_stock;
     struct train_comp * composition; //One block memory for all nr_stocks
@@ -49,24 +54,19 @@ class Train {
     uint8_t detectables:7;
     uint8_t splitdetectables:1;
 
-    Block * B;
-
-    char timer;
-    int timer_id;
-
+    Train(struct trains_conf);
+    Train(char *);
     Train(char * name, int nr_stock, struct train_comp_ws * comps, uint8_t catagory, uint8_t save);
     ~Train();
     
+    void setName(char *);
+    void setComposition(int, struct train_comp_ws *);
+
     void setSpeed(uint16_t speed);
     void calcSpeed();
+
+    bool enginesUsed();
+    void setEnginesUsed(bool, RailTrain *);
 };
-
-extern Train ** trains;
-extern int trains_len;
-extern struct train_composition ** trains_comp;
-extern int trains_comp_len;
-
-
-#define create_train_from_conf(t) new Train(t.name, t.nr_stock, t.composition, t.catagory, 1)
 
 #endif

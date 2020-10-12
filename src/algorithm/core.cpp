@@ -120,10 +120,9 @@ void process(Block * B, int flags){
 
   //Train Control
   // Apply train algorithm only if there is a train on the block and is the front of the train
-  if(B->train){
+  if(B->train && B == B->train->B){
     if(B->Alg.N[0]){
-      if(!B->Alg.N[0]->train || B->Alg.N[0]->train != B->train)
-        train_control(&B->Alg, flags);
+      train_control(&B->Alg, flags);
     }
     else{
       // Stop train no next block!!
@@ -268,12 +267,7 @@ void print_block_debug(Block * B){
   }
 
   ptr += sprintf(ptr, " A%3i %2x%02i:%02i;", B->length, B->type, B->module, B->id);
-  if(B->train){
-    ptr += sprintf(ptr, "T");
-  }
-  else{
-    ptr += sprintf(ptr, " ");
-  }
+  ptr += sprintf(ptr, "%c", B->train ? 'T' : ' ');
   ptr += sprintf(ptr, "D%-2iS%x/%x", B->dir,B->state,B->reverse_state);
   if(B->detectionblocked)
     ptr += sprintf(ptr, "b");
@@ -337,7 +331,7 @@ void Switch_Checker(Algor_Blocks * ABs, int debug){
       break;
 
     struct rail_link * link = tB->NextLink(NEXT);
-    loggerf(INFO, "Switch_Checker scan block (%i,%i) - %i", tB->module, tB->id, link->type);
+    loggerf(DEBUG, "Switch_Checker scan block (%i,%i) - %i", tB->module, tB->id, link->type);
 
     if((i >  0 && link->type == RAIL_LINK_S) || (link->type >= RAIL_LINK_s && link->type <= RAIL_LINK_MB_inside)){
       SwitchSolver::solve(T, B, tB, *link, NEXT | SWITCH_CARE);
@@ -549,7 +543,7 @@ void train_following(Algor_Blocks * ABs, int debug){
     //  If blocks around are also not blocked
     if(prev > 0 && next > 0 && !BN[0]->blocked && !BP[0]->blocked){
       B->setState(UNKNOWN);
-      loggerf(WARNING, "LOST Train block %x", (unsigned int)B);
+      loggerf(WARNING, "%02i%02i LOST Train block %x", B->module, B->id, (unsigned int)B);
     }
     else{ // Release the block
       B->train->releaseBlock(B);
@@ -562,19 +556,19 @@ void train_following(Algor_Blocks * ABs, int debug){
 
   // If block has no train but is blocked
   if(B->blocked && B->train == 0){
-    char debugmsg[1000];
-    char * ptr = debugmsg;
-    ptr += sprintf(ptr, "Blocked Block without train");
-    if(prev > 0)
-      ptr += sprintf(ptr, "\nP: %02i:%02i %c%c%c %6x", BP[0]->module, BP[0]->id, BP[0]->blocked ? 'B':' ', BP[0]->detectionblocked ? 'D':' ', BP[0]->virtualblocked ? 'V':' ', BP[0]->train);
-    else
-      ptr += sprintf(ptr, "\n                   ");
-    if(next > 0)
-      ptr += sprintf(ptr, "\tN: %02i:%02i %c%c%c %6x", BN[0]->module, BN[0]->id, BN[0]->blocked ? 'B':' ', BN[0]->detectionblocked ? 'D':' ', BN[0]->virtualblocked ? 'V':' ', BN[0]->train);
-    else
-      ptr += sprintf(ptr, "\t                   ");
+    // char debugmsg[1000];
+    // char * ptr = debugmsg;
+    // ptr += sprintf(ptr, "Blocked Block without train");
+    // if(prev > 0)
+    //   ptr += sprintf(ptr, "\nP: %02i:%02i %c%c%c %6x", BP[0]->module, BP[0]->id, BP[0]->blocked ? 'B':' ', BP[0]->detectionblocked ? 'D':' ', BP[0]->virtualblocked ? 'V':' ', BP[0]->train);
+    // else
+    //   ptr += sprintf(ptr, "\n                   ");
+    // if(next > 0)
+    //   ptr += sprintf(ptr, "\tN: %02i:%02i %c%c%c %6x", BN[0]->module, BN[0]->id, BN[0]->blocked ? 'B':' ', BN[0]->detectionblocked ? 'D':' ', BN[0]->virtualblocked ? 'V':' ', BN[0]->train);
+    // else
+    //   ptr += sprintf(ptr, "\t                   ");
 
-    loggerf(INFO, "%s", debugmsg);
+    // loggerf(INFO, "%s", debugmsg);
     // Train moved forward
     if(prev > 0 && BP[0]->blocked && BP[0]->train){
       // Copy train id from previous block
@@ -590,7 +584,7 @@ void train_following(Algor_Blocks * ABs, int debug){
       }
       // if(train_link[B->train])
       //   train_link[B->train]->Block = B;
-      loggerf(INFO, "COPY_TRAIN from %02i:%02i to %02i:%02i", BP[0]->module, BP[0]->id, B->module, B->id);
+      loggerf(TRACE, "COPY_TRAIN from %02i:%02i to %02i:%02i", BP[0]->module, BP[0]->id, B->module, B->id);
     }
     // Train moved backwards
     else if(false){}
@@ -770,12 +764,12 @@ void train_control(Algor_Blocks * ABs, int debug){
       T->changeSpeed(CAUTION_SPEED, GRADUAL_FAST_SPEED);
     }
   }
-  else if(T->control != TRAIN_MANUAL && (T->target_speed > N[0]->max_speed || T->speed > N[0]->max_speed)){
-    loggerf(DEBUG, "%sNext block speed limit", Debug);
+  else if(!T->manual && (T->target_speed > N[0]->max_speed || T->speed > N[0]->max_speed)){
+    loggerf(INFO, "%sNext block speed limit", Debug);
     T->changeSpeed(N[0]->max_speed, GRADUAL_SLOW_SPEED);
   }
-  else if(T->control != TRAIN_MANUAL && N[0]->max_speed > T->speed && ABs->next > 1 && N[1]->max_speed >= N[0]->max_speed) {
-    loggerf(DEBUG, "%sTrain Speed Up", Debug);
+  else if(!T->manual && N[0]->max_speed > T->speed && ABs->next > 1 && N[1]->max_speed >= N[0]->max_speed) {
+    loggerf(INFO, "%sTrain Speed Up", Debug);
     if(N[0]->max_speed <= T->max_speed)
       T->changeSpeed(N[0]->max_speed, GRADUAL_FAST_SPEED);
     else if(T->speed != T->max_speed)

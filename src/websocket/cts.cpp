@@ -17,6 +17,7 @@
 #include "system.h"
 #include "utils/mem.h"
 #include "utils/logger.h"
+#include "utils/utils.h"
 
 #include "switchboard/manager.h"
 #include "switchboard/rail.h"
@@ -24,9 +25,10 @@
 #include "switchboard/switch.h"
 #include "switchboard/msswitch.h"
 
-#include "rollingstock/train.h"
-#include "rollingstock/engine.h"
-#include "rollingstock/car.h"
+#include "rollingstock/manager.h"
+// #include "rollingstock/train.h"
+// #include "rollingstock/engine.h"
+// #include "rollingstock/car.h"
 #include "train.h"
 #include "config.h"
 #include "algorithm/queue.h"
@@ -307,19 +309,19 @@ void WS_cts_LinkTrain(struct s_opc_LinkTrain * msg, Websocket::Client * client){
   // uint16_t mID = ((data[2] & 0x1F) << 8)+data[3];
   char return_value = 0;
   if(msg->type == RAILTRAIN_ENGINE_TYPE)
-    loggerf(INFO, "Linking train %i with E-%s\n",msg->follow_id, engines[msg->real_id]->name);
+    loggerf(INFO, "Linking train %i with E-%s\n",msg->follow_id, RSManager->Engines[msg->real_id]->name);
   else
-    loggerf(INFO, "Linking train %i with T-%s\n",msg->follow_id, trains[msg->real_id]->name);
+    loggerf(INFO, "Linking train %i with T-%s\n",msg->follow_id, RSManager->Trains[msg->real_id]->name);
 
-  if(train_link[msg->follow_id])
-    return_value = train_link[msg->follow_id]->link(msg->real_id, msg->type);
+  if(RSManager->RailTrains[msg->follow_id])
+    return_value = RSManager->RailTrains[msg->follow_id]->link(msg->real_id, msg->type);
 
   if(return_value == 1){
     WS_stc_LinkTrain(msg);
 
     WS_clear_message((msg->message_id_H << 8) + msg->message_id_L, 1);
 
-    Z21_get_train(train_link[msg->follow_id]);
+    Z21_get_train(RSManager->RailTrains[msg->follow_id]);
   }
   else{
     loggerf(WARNING, "Failed link_train()\n");
@@ -329,22 +331,22 @@ void WS_cts_LinkTrain(struct s_opc_LinkTrain * msg, Websocket::Client * client){
 
 void WS_cts_TrainControl(struct s_opc_TrainControl * m, Websocket::Client * client){
 
-  if(!train_link[m->follow_id]){
+  if(!RSManager->RailTrains[m->follow_id]){
     loggerf(WARNING, "Trying to set speed of undefined RailTrain");
     return;
   }
 
   loggerf(INFO, "WS_cts_TrainControl %i -> %i", m->follow_id, m->control);
 
-  RailTrain * T = train_link[m->follow_id];
+  RailTrain * T = RSManager->RailTrains[m->follow_id];
 
-  T->control = m->control;
+  T->setControl(m->control);
 }
 
 void WS_cts_SetTrainFunction(struct s_opc_SetTrainFunction * m, Websocket::Client * client){
   loggerf(INFO, "WS_cts_SetTrainFunction");
 
-  RailTrain * T = train_link[m->id];
+  RailTrain * T = RSManager->RailTrains[m->id];
 
   if(!T){
     loggerf(WARNING, "No Railtrain %i", m->id);
@@ -369,8 +371,9 @@ void WS_cts_SetTrainFunction(struct s_opc_SetTrainFunction * m, Websocket::Clien
 void WS_cts_SetTrainSpeed(struct s_opc_SetTrainSpeed * m, Websocket::Client * client){
   // uint16_t id = m.follow_id;
   // uint16_t speed = m.speed;
+  RailTrain * T = RSManager->RailTrains[m->follow_id];
 
-  if(!train_link[m->follow_id]){
+  if(!T){
     loggerf(WARNING, "Trying to set speed of undefined RailTrain");
     return;
   }
@@ -378,8 +381,6 @@ void WS_cts_SetTrainSpeed(struct s_opc_SetTrainSpeed * m, Websocket::Client * cl
   uint16_t speed = ((m->speed_high & 0x0F) << 8) + m->speed_low;
 
   loggerf(INFO, "WS_cts_SetTrainSpeed %i -> %i", m->follow_id, speed);
-
-  RailTrain * T = train_link[m->follow_id];
 
   T->changing_speed = RAILTRAIN_SPEED_T_DONE;
 
@@ -421,11 +422,11 @@ void WS_cts_TrainSubscribe(struct s_opc_SubscribeTrain * m, Websocket::Client * 
   client->subscribedTrains[0] = m->followA;
   client->subscribedTrains[1] = m->followB;
 
-  if(client->subscribedTrains[0] < 0xFF && train_link[client->subscribedTrains[0]]){
-    WS_stc_UpdateTrain(train_link[client->subscribedTrains[0]]);
+  if(client->subscribedTrains[0] < 0xFF && RSManager->RailTrains[client->subscribedTrains[0]]){
+    WS_stc_UpdateTrain(RSManager->RailTrains[client->subscribedTrains[0]]);
   }
-  if(client->subscribedTrains[1] < 0xFF && train_link[client->subscribedTrains[1]]){
-    WS_stc_UpdateTrain(train_link[client->subscribedTrains[1]]);
+  if(client->subscribedTrains[1] < 0xFF && RSManager->RailTrains[client->subscribedTrains[1]]){
+    WS_stc_UpdateTrain(RSManager->RailTrains[client->subscribedTrains[1]]);
   }
 
   loggerf(INFO, "WS_cts_TrainSubscribe client %i = %i, %i", client->fd, client->subscribedTrains[0], client->subscribedTrains[1]);
@@ -453,7 +454,10 @@ void Web_Train_Split(int i,char tID,char B[]){
 */
 
 void WS_cts_TrainRoute(struct s_opc_TrainRoute * data, Websocket::Client * client){
-  RailTrain * T = train_link[data->train_id];
+  RailTrain * T = RSManager->RailTrains[data->train_id];
+
+  if(!T)
+    return;
 
   Station * St = Units(data->module_id)->St[data->station_id];
 
@@ -461,7 +465,7 @@ void WS_cts_TrainRoute(struct s_opc_TrainRoute * data, Websocket::Client * clien
 }
 
 void WS_cts_DCCEngineSpeed(struct s_opc_DCCEngineSpeed * m, Websocket::Client * client){
-  Engine * E = engines[m->id];
+  Engine * E = RSManager->Engines[m->id];
 
   if(!E)
     return;
@@ -479,7 +483,7 @@ void WS_cts_DCCEngineSpeed(struct s_opc_DCCEngineSpeed * m, Websocket::Client * 
 void WS_cts_DCCEngineFunction(struct s_opc_DCCEngineFunction * m, Websocket::Client * client){
   loggerf(INFO, "WS_cts_DCCEngineFunction");
 
-  Engine * E = engines[m->id];
+  Engine * E = RSManager->Engines[m->id];
 
   if(!E){
     loggerf(WARNING, "No Engine %i", m->id);
@@ -516,54 +520,35 @@ void WS_cts_AddCartoLib(struct s_opc_AddNewCartolib * data, Websocket::Client * 
   rdata->opcode = WSopc_AddNewCartolib;
   rdata->data.opc_AddNewCartolib_res.nr = data->nr;
 
-  char * name = (char *)_calloc(data->name_len + 1, char);
-  char * filename = (char *)_calloc(data->name_len + 1, char);
-  char * icon = (char *)_calloc(data->name_len + 8 + 3 + 20, char); //Destination file
-  char * sicon = (char *)_calloc(40, char); //Source file
-
+  char name[50] = "";
   memcpy(name, &data->strings, data->name_len);
-  memcpy(filename, &data->strings, data->name_len);
-  for (char* current_pos = NULL; (current_pos = strchr(filename, ' ')) != NULL; *current_pos = '_');
-  for (char* current_pos = NULL; (current_pos = strchr(filename, '.')) != NULL; *current_pos = '-');
-    loggerf(WARNING, "Filename: %s", filename);
 
-  uint16_t icon_time = (data->timing / 60) * 100 + (data->timing % 60);
+  Car * C = RSManager->newCar(new Car(name));
+  C->nr = data->nr;
+  C->type = data->type;
+  C->length = data->length;
+  C->max_speed = data->max_speed;
+  C->readFlags(0); // FIXME
 
-  loggerf(ERROR, "%04i", icon_time);
+  char filename[60] = "";
+  sprintf(filename, "%i_%s", data->nr, name);
+  replaceCharinString(filename, ' ', '_');
+  replaceCharinString(filename, '.', '-');
+  loggerf(WARNING, "Filename: %s", filename);
 
-  if((data->filetype & 0b1) == 0){
-    sprintf(icon, "%i_%s.%s", data->nr, filename, "png");
-    sprintf(sicon, "%s.%04i.%s", "web/tmp_icon", icon_time, "png");
-  }
-  else{
-    sprintf(icon, "%i_%s.%s", data->nr, filename, "jpg");
-    sprintf(sicon, "%s.%04i.%s", "web/tmp_icon", icon_time, "jpg");
-  }
-
-
-  new Car(name, data->nr, icon, data->type, data->length, data->max_speed, 0); // FIXME
-
-  char * dicon = (char *)_calloc(strlen(icon)+10, char);
-
-  sprintf(dicon, "%s%s", "web/trains_img/", icon);
-
-  if(!move_file(sicon, dicon)){
+  C->setIconPath(filename);
+  if(!ctsTempFile((data->timing / 60) * 100 + (data->timing % 60), C->icon_path, false, (data->filetype & 0b1) == 0)){
     //Failed to move
     rdata->data.opc_AddNewCartolib_res.response = 0;
     client->send((char *)rdata, WSopc_AddNewCartolib_res_len, 0xff);
     return;
   }
 
-  write_rolling_Configs();
-
-  // Delete temp file
-  remove(sicon);
-
   rdata->data.opc_AddNewCartolib_res.response = 1;
   client->send((char *)rdata, WSopc_AddNewCartolib_res_len, 0xff);
 
-  _free(dicon);
-  _free(sicon);
+  RSManager->writeFile();
+  WS_stc_CarsLib(0);
 }
 
 void WS_cts_Edit_Car(struct s_opc_EditCarlib * data, Websocket::Client * client){
@@ -575,9 +560,11 @@ void WS_cts_Edit_Car(struct s_opc_EditCarlib * data, Websocket::Client * client)
 
   uint16_t id = data->id_l + (data->id_h << 8);
 
+  Car * C = RSManager->Cars[id];
+
   if(data->remove){
-    if(cars[id]){
-      delete cars[id];
+    if(C){
+      RSManager->removeCar(C);
 
       rdata->data.opc_AddNewCartolib_res.response = 1;
     }
@@ -589,13 +576,11 @@ void WS_cts_Edit_Car(struct s_opc_EditCarlib * data, Websocket::Client * client)
   }
 
   // Check if car exists
-  if(!cars[id]){
+  if(!C){
     rdata->data.opc_AddNewCartolib_res.response = 0;
     client->send((char *)rdata, WSopc_AddNewCartolib_res_len, 0xff);
     return;
   }
-
-  Car * C = cars[id];
 
   C->name = (char *)_realloc(C->name, data->data.name_len + 1, char);
   memcpy(C->name, &data->data.strings, data->data.name_len);
@@ -630,7 +615,7 @@ void WS_cts_Edit_Car(struct s_opc_EditCarlib * data, Websocket::Client * client)
     }
     dicon = (char *)_calloc(strlen(C->icon_path)+20, char);
     sprintf(dicon, "%s%s", "web/trains_img/", C->icon_path);
-    if(!move_file(sicon, dicon)){
+    if(!moveFile(sicon, dicon)){
       //Failed to move
       rdata->data.opc_AddNewCartolib_res.response = 0;
       client->send((char *)rdata, WSopc_AddNewCartolib_res_len, 0xff);
@@ -650,7 +635,7 @@ void WS_cts_Edit_Car(struct s_opc_EditCarlib * data, Websocket::Client * client)
     dicon = (char *)_calloc(strlen(C->icon_path)+20, char);
     sprintf(dicon, "%s%s", "web/trains_img/", C->icon_path);
 
-    if(!move_file(sicon, dicon)){
+    if(!moveFile(sicon, dicon)){
       //Failed to move
       rdata->data.opc_AddNewCartolib_res.response = 0;
       client->send((char *)rdata, WSopc_AddNewCartolib_res_len, 0xff);
@@ -667,7 +652,7 @@ void WS_cts_Edit_Car(struct s_opc_EditCarlib * data, Websocket::Client * client)
   _free(dicon);
   _free(sicon);
 
-  write_rolling_Configs();
+  RSManager->writeFile();
   WS_stc_CarsLib(0);
 }
 
@@ -677,92 +662,51 @@ void WS_cts_AddEnginetoLib(struct s_opc_AddNewEnginetolib * data, Websocket::Cli
 
   rdata->opcode = WSopc_AddNewEnginetolib;
 
-  if (DCC_train[data->DCC_ID]){
+  if (RSManager->DCC[data->DCC_ID]){
     loggerf(ERROR, "DCC %i allready in use", data->DCC_ID);
     rdata->data.opc_AddNewEnginetolib_res.response = 255;
     client->send((char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
     return;
   }
 
-  char * name = (char *)_calloc(data->name_len + 1, char);
-  char * steps = (char *)_calloc(data->steps, char);
-  char * img = (char *)_calloc(data->name_len + 8 + 3 + 20, char);  //Destination file
-  char * icon = (char *)_calloc(data->name_len + 8 + 3 + 20, char); //Destination file
-  char * simg = (char *)_calloc(40, char); //Source file
-  char * sicon = (char *)_calloc(40, char); //Source file
-  char * filetype = (char *)_calloc(4, char);
-
+  char name[100] = "";
   memcpy(name, &data->strings, data->name_len);
+
+  Engine * E = RSManager->newEngine(new Engine(data->DCC_ID, name));
+
+  struct engine_speed_steps * steps = (struct engine_speed_steps *)_calloc(data->steps, struct engine_speed_steps);
   memcpy(steps, &data->strings + data->name_len, data->steps * 3);
 
-  char * filename = (char *)_calloc(data->name_len +1, char);
-  memcpy(filename, &data->strings, data->name_len);
-  for (char* current_pos = NULL; (current_pos = strchr(filename, ' ')) != NULL; *current_pos = '_');
-  for (char* current_pos = NULL; (current_pos = strchr(filename, '.')) != NULL; *current_pos = '-');
-    loggerf(WARNING, "Filename: %s", filename);
+  E->setSpeedSteps(data->steps, steps);
 
-  uint16_t image_time = data->timing[0] + ((data->timing[1] & 0xf0) << 4);
-  image_time = (image_time / 60) * 100 + (image_time % 60);
-  uint16_t icon_time = (data->timing[1] & 0x0f) + (data->timing[2] << 4);
-  icon_time = (icon_time / 60) * 100 + (icon_time % 60);
+  char filename[100] = "";
 
-  loggerf(ERROR, "%04i - %04i", image_time, icon_time);
+  sprintf(filename, "%i_%s", E->DCC_ID, E->name);
+  replaceCharinString(filename, ' ', '_');
+  replaceCharinString(filename, '.', '-');
+  loggerf(WARNING, "Filename: %s", filename);
 
-  if((data->flags & 0b10) == 0){
-    sprintf(img, "%i_%s_im.%s", data->DCC_ID, filename, "png");
-    sprintf(simg, "%s.%04i.%s", "web/tmp_img", image_time, "png");
-  }
-  else{
-    sprintf(img, "%i_%s_im.%s", data->DCC_ID, filename, "jpg");
-    sprintf(simg, "%s.%04i.%s", "web/tmp_img", image_time, "jpg");
-  }
-
-  if((data->flags & 0b1) == 0){
-    sprintf(icon, "%i_%s_ic.%s", data->DCC_ID, filename, "png");
-    sprintf(sicon, "%s.%04i.%s", "web/tmp_icon", icon_time, "png");
-  }
-  else{
-    sprintf(icon, "%i_%s_ic.%s", data->DCC_ID, filename, "jpg");
-    sprintf(sicon, "%s.%04i.%s", "web/tmp_icon", icon_time, "jpg");
-  }
-
-  new Engine(name, data->DCC_ID, img, icon, data->type, data->length, data->steps, (struct engine_speed_steps *)steps, data->functions);
-
-  char * dimg = (char *)_calloc(strlen(img)+20, char);
-  char * dicon = (char *)_calloc(strlen(icon)+20, char);
-  sprintf(dimg, "%s%s", "web/trains_img/", img);
-  sprintf(dicon, "%s%s", "web/trains_img/", icon);
-
-  if(!move_file(simg, dimg)){
+  E->setImagePath(filename);
+  if(!ctsTempFile(data->timing[0] + ((data->timing[1] & 0xf0) << 4), E->img_path, true, (data->flags & 0b10) == 0)){
     //Failed to move
     rdata->data.opc_AddNewEnginetolib_res.response = 0;
     client->send((char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
     return;
   }
 
-  if(!move_file(sicon, dicon)){
+  E->setIconPath(filename);
+  if(!ctsTempFile((data->timing[1] & 0x0f) + (data->timing[2] << 4), E->icon_path, true, (data->flags & 0b1) == 0)){
     //Failed to move
     rdata->data.opc_AddNewEnginetolib_res.response = 0;
     client->send((char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
     return;
   }
-
-  write_rolling_Configs();
-
-  // Delete temp file
-  remove(sicon);
-  remove(simg);
 
   rdata->data.opc_AddNewEnginetolib_res.response = 1;
   client->send((char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
 
-  _free(dimg);
-  _free(dicon);
-  _free(simg);
-  _free(sicon);
-  _free(filetype);
-
   //Update clients Train Library
+  RSManager->writeFile();
   WS_stc_EnginesLib(0);
 }
 
@@ -772,22 +716,10 @@ void WS_cts_Edit_Engine(struct s_opc_EditEnginelib * msg, Websocket::Client * cl
   struct s_WS_Data * rdata = (struct s_WS_Data *)_calloc(1, struct s_WS_Data);
 
   uint16_t id = msg->id_l + (msg->id_h << 8);
-  Engine * E = engines[id];
+  Engine * E = RSManager->Engines[id];
 
   if(msg->remove){
-    // Remove Engine
-    // Remove images
-    remove(E->img_path);
-    remove(E->icon_path);
-    DCC_train[E->DCC_ID] = NULL;
-
-    delete E;
-
-    for(int i = id; i < (engines_len - 1); i++){
-      engines[i] = engines[i+1];
-    }
-
-    engines_len--;
+    RSManager->removeEngine(E);
 
     // Send succes response
     rdata->data.opc_AddNewEnginetolib_res.response = 1;
@@ -799,16 +731,14 @@ void WS_cts_Edit_Engine(struct s_opc_EditEnginelib * msg, Websocket::Client * cl
 
     rdata->opcode = WSopc_AddNewEnginetolib;
 
-    if (DCC_train[data->DCC_ID] && data->DCC_ID != E->DCC_ID){
+    if (RSManager->DCC[data->DCC_ID] && data->DCC_ID != E->DCC_ID){
       loggerf(ERROR, "DCC %i (%i) allready in use", data->DCC_ID, E->DCC_ID);
       rdata->data.opc_AddNewEnginetolib_res.response = 255;
       client->send((char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
       return;
     }
 
-    DCC_train[E->DCC_ID] = NULL;
-    E->DCC_ID = data->DCC_ID;
-    DCC_train[E->DCC_ID] = E;
+    RSManager->moveEngine(E, data->DCC_ID);
 
     // Copy functions
     memcpy(&E->function, data->functions, 29);
@@ -818,12 +748,6 @@ void WS_cts_Edit_Engine(struct s_opc_EditEnginelib * msg, Websocket::Client * cl
     memcpy(E->name, &data->strings, data->name_len);
     E->name[data->name_len] = 0;
 
-    char * filename = (char *)_calloc(data->name_len +1, char);
-    memcpy(filename, E->name, data->name_len);
-    for (char* current_pos = NULL; (current_pos = strchr(filename, ' ')) != NULL; *current_pos = '_');
-    for (char* current_pos = NULL; (current_pos = strchr(filename, '.')) != NULL; *current_pos = '-');
-      loggerf(WARNING, "Filename: %s", filename);
-
     // Copy speedsteps
     E->steps_len = data->steps;
     E->steps = (struct engine_speed_steps *)_realloc(E->steps, data->steps, struct engine_speed_steps);
@@ -832,84 +756,37 @@ void WS_cts_Edit_Engine(struct s_opc_EditEnginelib * msg, Websocket::Client * cl
     E->length = data->length;
     E->type = data->type;
 
-
     // Copy image/icon
-    char * simg = (char *)_calloc(40, char); //Source file
-    char * sicon = (char *)_calloc(40, char); //Source file
-    char * filetype = (char *)_calloc(4, char);
+    char filename[100] = "";
 
-    uint16_t image_time = data->timing[0] + ((data->timing[1] & 0xf0) << 4);
-    image_time = (image_time / 60) * 100 + (image_time % 60);
-    uint16_t icon_time = (data->timing[1] & 0x0f) + (data->timing[2] << 4);
-    icon_time = (icon_time / 60) * 100 + (icon_time % 60);
+    sprintf(filename, "%i_%s", E->DCC_ID, E->name);
+    replaceCharinString(filename, ' ', '_');
+    replaceCharinString(filename, '.', '-');
 
-    loggerf(INFO, "%02x%02x%02x", data->timing[0], data->timing[1], data->timing[2]);
-    loggerf(ERROR, "%04i - %04i", image_time, icon_time);
+    loggerf(WARNING, "Filename: %s", filename);
 
-    char * dimg = 0;
-    char * dicon = 0;
-
-    remove(E->img_path); //Remove original
-
-    E->img_path = (char *)_realloc(E->img_path, data->name_len + 8 + 3 + 20, char);  //Destination file
-    if((data->flags & 0b10) == 0){
-      sprintf(E->img_path, "%i_%s_im.%s", data->DCC_ID, filename, "png");
-      sprintf(simg, "%s.%04i.%s", "web/tmp_img", image_time, "png");
-    }
-    else{
-      sprintf(E->img_path, "%i_%s_im.%s", data->DCC_ID, filename, "jpg");
-      sprintf(simg, "%s.%04i.%s", "web/tmp_img", image_time, "jpg");
-    }
-
-    dimg = (char *)_calloc(strlen(E->img_path)+20, char);
-    sprintf(dimg, "%s%s", "web/trains_img/", E->img_path);
-    loggerf(INFO, "remove and move file %s -> %s", simg, dimg);
-    if(!move_file(simg, dimg)){
+    E->setImagePath(filename);
+    if(!ctsTempFile(data->timing[0] + ((data->timing[1] & 0xf0) << 4), E->img_path, true, (data->flags & 0b10) == 0)){
       //Failed to move
       rdata->data.opc_AddNewEnginetolib_res.response = 0;
       client->send((char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
       return;
     }
 
-    // Delete temp file
-    remove(simg);
-
-    remove(E->icon_path); //Remove original
-
-    E->icon_path = (char *)_realloc(E->icon_path, data->name_len + 8 + 3 + 20, char); //Destination file
-    if((data->flags & 0b1) == 0){
-      sprintf(E->icon_path, "%i_%s_ic.%s", data->DCC_ID, filename, "png");
-      sprintf(sicon, "%s.%04i.%s", "web/tmp_icon", icon_time, "png");
-    }
-    else{
-      sprintf(E->icon_path, "%i_%s_ic.%s", data->DCC_ID, filename, "jpg");
-      sprintf(sicon, "%s.%04i.%s", "web/tmp_icon", icon_time, "jpg");
-    }
-    dicon = (char *)_calloc(strlen(E->icon_path)+20, char);
-    sprintf(dicon, "%s%s", "web/trains_img/", E->icon_path);
-    loggerf(INFO, "remove and move file %s -> %s", sicon, dicon);
-    if(!move_file(sicon, dicon)){
+    E->setIconPath(filename);
+    if(!ctsTempFile((data->timing[1] & 0x0f) + (data->timing[2] << 4), E->icon_path, true, (data->flags & 0b1) == 0)){
       //Failed to move
       rdata->data.opc_AddNewEnginetolib_res.response = 0;
       client->send((char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
       return;
     }
-
-    // Delete temp file
-    remove(sicon);
 
     // Send succes response
     rdata->data.opc_AddNewEnginetolib_res.response = 1;
     client->send((char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
-
-    _free(dimg);
-    _free(dicon);
-    _free(simg);
-    _free(sicon);
-    _free(filetype);
   }
 
-  write_rolling_Configs();
+  RSManager->writeFile();
   WS_stc_EnginesLib(0);
 }
 
@@ -930,13 +807,12 @@ void WS_cts_AddTraintoLib(struct s_opc_AddNewTraintolib * data, Websocket::Clien
 
   new Train(name, data->nr_stock, (struct train_comp_ws *)comps, data->catagory, data->save);
 
-  write_rolling_Configs();
-
   // Send succes response
   rdata->data.opc_AddNewTraintolib_res.response = 1;
   client->send((char *)rdata, WSopc_AddNewTraintolib_res_len, 0xff);
 
   //Update clients Train Library
+  RSManager->writeFile();
   WS_stc_TrainsLib(0);
 }
 
@@ -947,9 +823,12 @@ void WS_cts_Edit_Train(struct s_opc_EditTrainlib * data, Websocket::Client * cli
   rdata->opcode = WSopc_AddNewTraintolib;
 
   uint16_t id = data->id_l + (data->id_h << 8);
+
+  Train * T = RSManager->getTrain(id);
+
   if(data->remove){
-    if(trains[id]){
-      delete trains[id];
+    if(T){
+      RSManager->removeTrain(T);
       rdata->data.opc_AddNewTraintolib_res.response = 1;
     }
     else
@@ -957,8 +836,6 @@ void WS_cts_Edit_Train(struct s_opc_EditTrainlib * data, Websocket::Client * cli
     client->send((char *)rdata, WSopc_AddNewTraintolib_res_len, 0xff);
     return;
   }
-
-  Train * T = trains[id];
 
   //Copy name
   T->name = (char *)_realloc(T->name, data->data.name_len + 1, char);
@@ -974,10 +851,10 @@ void WS_cts_Edit_Train(struct s_opc_EditTrainlib * data, Websocket::Client * cli
     T->composition[c].type = cdata[c].type;
     T->composition[c].id = cdata[c].id;
     if(cdata[c].type == 0){
-      T->composition[c].p = (void *)engines[T->composition[c].id];
+      T->composition[c].p = (void *)RSManager->Engines[T->composition[c].id];
     }
     else{
-      T->composition[c].p = (void *)cars[T->composition[c].id];
+      T->composition[c].p = (void *)RSManager->Cars[T->composition[c].id];
     }
   }
 
@@ -985,7 +862,7 @@ void WS_cts_Edit_Train(struct s_opc_EditTrainlib * data, Websocket::Client * cli
   rdata->data.opc_AddNewTraintolib_res.response = 1;
   client->send((char *)rdata, WSopc_AddNewTraintolib_res_len, 0xff);
 
-  write_rolling_Configs();
+  RSManager->writeFile();
   WS_stc_TrainsLib(0);
 }
 

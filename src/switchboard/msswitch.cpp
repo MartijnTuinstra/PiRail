@@ -164,14 +164,14 @@ Block * MSSwitch::Next_Block(enum link_types type, int flags, int level){
   }
   
   if(type == RAIL_LINK_MA){
-    return this->Detection->_Next(flags, level);
+    return this->Detection->Next_Block(flags, level);
     // next = &this->sideB[this->state];
     // level--;
   }else if(type == RAIL_LINK_MB_inside){
     next = &this->sideB[this->state];
   }
   else if(type == RAIL_LINK_MB){
-    return this->Detection->_Next(flags, level);
+    return this->Detection->Next_Block(flags, level);
     // next = &this->sideA[this->state];
     // level--;
   }else if(type == RAIL_LINK_MA_inside){
@@ -187,7 +187,7 @@ Block * MSSwitch::Next_Block(enum link_types type, int flags, int level){
   loggerf(TRACE, "Next     :        \t%i:%i => %i:%i:%i\t%i", this->module, this->id, next->module, next->id, next->type, level);
 
   if(next->type == RAIL_LINK_R){
-    return next->p.B->_Next(flags, level);
+    return next->p.B->Next_Block(flags, level);
   }
   else if(next->type == RAIL_LINK_S){
     return next->p.Sw->Next_Block(next->type, flags, level);
@@ -229,7 +229,7 @@ uint MSSwitch::NextList_Block(Block ** blocks, uint8_t block_counter, enum link_
   if(type == RAIL_LINK_MA){
     blocks[block_counter++] = this->Detection;
     next = &this->sideB[this->state];
-    // return this->Detection->_NextList(blocks, block_counter, flags, length);
+    // return this->Detection->Next_BlockList(blocks, block_counter, flags, length);
   }else if(type == RAIL_LINK_MB_inside){
     next = &this->sideB[this->state];
     flags |= NEXT_FIRST_TIME_SKIP;
@@ -240,7 +240,7 @@ uint MSSwitch::NextList_Block(Block ** blocks, uint8_t block_counter, enum link_
   else if(type == RAIL_LINK_MB){
     blocks[block_counter++] = this->Detection;
     next = &this->sideA[this->state];
-    // return this->Detection->_NextList(blocks, block_counter, flags, length);
+    // return this->Detection->Next_BlockList(blocks, block_counter, flags, length);
   }else if(type == RAIL_LINK_MA_inside){
     next = &this->sideA[this->state];
     flags |= NEXT_FIRST_TIME_SKIP;

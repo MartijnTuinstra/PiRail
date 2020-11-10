@@ -742,9 +742,9 @@ void train_control(Algor_Blocks * ABs, int debug){
   }
 
   if(T->B)
-    loggerf(DEBUG, "%i (%02i:%02i) -> %s (%02i:%02i)", T->link_id, T->B->module, T->B->id, rail_states_string[N[0]->state], N[0]->module, N[0]->id);
+    loggerf(DEBUG, "%i (%02i:%02i) -> %s (%02i:%02i)", T->id, T->B->module, T->B->id, rail_states_string[N[0]->state], N[0]->module, N[0]->id);
   else
-    loggerf(DEBUG, "%i (xx:xx) -> %s (%02i:%02i)", T->link_id, rail_states_string[N[0]->state], N[0]->module, N[0]->id);
+    loggerf(DEBUG, "%i (xx:xx) -> %s (%02i:%02i)", T->id, rail_states_string[N[0]->state], N[0]->module, N[0]->id);
 
   if(N[0]->blocked){
     loggerf(WARNING, "%sTrain Next block Blocked", Debug);
@@ -882,4 +882,4 @@ void save_setup(){
 }
 
 
-};
+}; // namespace Algorithm

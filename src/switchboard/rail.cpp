@@ -110,23 +110,19 @@ struct rail_link * Block::NextLink(int flags){
     next = &this->next;
   }
 
-  if(this->dir == 2){
-    dir = !dir;
-  }
-
   if(!next)
     loggerf(ERROR, "Empty next Link");
   return next;
 }
 
 
-Block * Block::_Next(int flags, int level){
+Block * Block::Next_Block(int flags, int level){
   loggerf(TRACE, "Next(%02i:%02i, %2x, %2x)", this->module, this->id, flags, level);
   // Find next (detection) block in direction dir. Could be used recurse for x-levels
   int dir = flags & 0x0F;
   // dir: 0 next, 1 prev
 
-  struct rail_link * next;
+  struct rail_link * next = 0;
 
   uint8_t pdir = (dir >> 1);
 
@@ -143,9 +139,14 @@ Block * Block::_Next(int flags, int level){
       dir ^= 0b1;
     }
     // prev -> next
-    // reverse(1) -> normal(2)
-    // normal(2) -> reverse(1)
-    else if((pdir == 1 && this->dir == 2) || (pdir == 2 && this->dir == 1)){
+    // reverse(1) -> normal(2)  change direction after next link
+    // normal(2) -> reverse(1)  change direction now
+    else if(pdir == 2 && this->dir == 1){
+      dir ^= 0b1;
+    }
+    else if(pdir == 1 && this->dir == 2){
+      next = this->NextLink(dir & 1);
+
       dir ^= 0b1;
     }
     // prev -> next
@@ -162,10 +163,10 @@ Block * Block::_Next(int flags, int level){
     flags |= NEXT_FIRST_TIME_SKIP;
   }
 
+  if(!next)
+    next = this->NextLink(dir & 1);
+
   // loggerf(TRACE, "dir: %i:%i-%x %x\t%i", this->module, this->id, dir, this->dir, pdir);
-  //NEXT == 0
-  //PREV == 1
-  next = this->NextLink(dir & 1);
 
   dir = (dir & 1) + (this->dir << 1);
 
@@ -178,7 +179,7 @@ Block * Block::_Next(int flags, int level){
   }
 
   if(next->type == RAIL_LINK_R){
-    return next->p.B->_Next(flags, level);
+    return next->p.B->Next_Block(flags, level);
   }
   else if(next->type == RAIL_LINK_S){
     return next->p.Sw->Next_Block(next->type, flags, level);
@@ -486,8 +487,8 @@ void Block::AlgorSearch(int debug){
 
   loggerf(TRACE, "Search blocks %02i:%02i", module, id);
 
-  next = _Next(0 | SWITCH_CARE, 1);
-  prev = _Next(1 | SWITCH_CARE | DIRECTION_CARE,1);
+  next = Next_Block(0 | SWITCH_CARE, 1);
+  prev = Next_Block(1 | SWITCH_CARE | DIRECTION_CARE,1);
 
   if(next){
     Alg.next = _NextList(Alg.N, 0, NEXT | SWITCH_CARE, 600);

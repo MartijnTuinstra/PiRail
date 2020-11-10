@@ -10,9 +10,10 @@ GCC_FLAGS = -D _DEFAULT_SOURCE
 
 GCC = g++ -std=c++14 -g3 $(GCC_INCLUDE) $(GCC_ERROR_FLAGS) $(GCC_LIBS) $(GCC_FLAGS)
 
+ROLLINGSTOCK_FILES = railtrain
 SWITCHBOARD_FILES = rail switch msswitch signal station
 SRC_FILES = path pathfinding algorithm io
-TEST_FILES = main testhelpers $(addprefix src/,$(SRC_FILES)) $(addprefix switchboard/,$(SWITCHBOARD_FILES))
+TEST_FILES = main testhelpers $(addprefix src/,$(SRC_FILES)) $(addprefix switchboard/,$(SWITCHBOARD_FILES)) $(addprefix rollingstock/,$(ROLLINGSTOCK_FILES))
 
 .DEFAULT_GOAL := all
 

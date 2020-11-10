@@ -34,9 +34,6 @@ TEST_CASE( "Station Stating", "[SB][SB-5][SB-5.1]" ) {
     U->B[i]->AlgorSearch(0);
   }
 
-  train_link = (RailTrain **)_calloc(20, sizeof(RailTrain *));
-  train_link_len = 20;
-
   /*
   // SECTION I
   //  --1.0->  --1.1->  --1.2->  --1.3->  --1.4->  --1.5->

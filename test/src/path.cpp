@@ -34,31 +34,39 @@ TEST_CASE( "Path Construction", "[PATH][PATH-1]" ) {
   pathlist_find();
 
   /*
+  // I
   //  1.0->  --1.1->  --1.2->
   //
+  // II
   //                    /Sw1:0
   //                   /
   //  1.3->  --1.4-> ---- --1.5->
   //                   \- --1.6->
   //
+  // III
   //              /MSSw1:0
   //  1.7->  -\  /
   //  1.8->  --1.9-> --1.10->
   //              \- --1.11->
   //
-  //
+  // IV
   //  1.12-> -1.13-> -1.14-> -1.15-> -1.16->
   //         [       Station       ]
   //
+  // V
   //  1.17-> -1.18-> <-1.19- <-1.20-
   //
-  //  1.21-> <-1.22-> <-1.23-
+  // VI
+  //  1.37-> 1.21-> <-\
+  //                   |1.22
+  //  <-1.38 <-1.23 <-/
   //
-  //
+  // VII
   //  1.24-> -1.25-> -1.26-> -1.27-> -1.28-> -1.29->
   //         [   Station   ] [   Station   ]
   //         [           Station           ]
   //
+  // VIII
   //                           Sw1:1\    /--End
   //                                 \  /
   //  1.30-> -1.31-> -1.32-> -1.33-> ---- -1.34-> -1.35-> -1.36->
@@ -68,7 +76,7 @@ TEST_CASE( "Path Construction", "[PATH][PATH-1]" ) {
   Path * P[10] = {0};
 
 
-  SECTION("Same direction blocks"){
+  SECTION("I - Same direction blocks"){
     P[0] = U->B[0]->path;
     CHECK(P[0] == U->B[1]->path);
     CHECK(P[0] == U->B[2]->path);
@@ -81,7 +89,7 @@ TEST_CASE( "Path Construction", "[PATH][PATH-1]" ) {
     CHECK(P[0]->prev == &U->B[0]->prev);
   }
 
-  SECTION("Blocks arround switch"){
+  SECTION("II - Blocks arround switch"){
     // Blocks surrounding the switch do not have the same path
     P[0] = U->B[3]->path;
     P[1] = U->B[4]->path;
@@ -97,7 +105,7 @@ TEST_CASE( "Path Construction", "[PATH][PATH-1]" ) {
     }
   }
 
-  SECTION("Blocks arround msswitch crossing"){
+  SECTION("III - Blocks arround msswitch crossing"){
     // Blocks surrounding the crossing do not have the same path
     P[0] = U->B[7]->path;
     P[1] = U->B[8]->path;
@@ -115,7 +123,7 @@ TEST_CASE( "Path Construction", "[PATH][PATH-1]" ) {
   }
 
 
-  SECTION("Paths and stations"){
+  SECTION("IV - Paths and stations"){
     P[0] = U->B[12]->path;
     P[1] = U->B[13]->path;
     P[2] = U->B[14]->path;
@@ -134,7 +142,7 @@ TEST_CASE( "Path Construction", "[PATH][PATH-1]" ) {
   }
 
 
-  SECTION("Blocks with sudden direction change"){
+  SECTION("V - Blocks with sudden direction change"){
     P[0] = U->B[17]->path;
     P[1] = U->B[18]->path;
     P[2] = U->B[19]->path;
@@ -148,22 +156,32 @@ TEST_CASE( "Path Construction", "[PATH][PATH-1]" ) {
       }
     }
 
-    CHECK(P[0]->Entrance == 0);
-    CHECK(P[0]->Exit == 0);
+    CHECK(P[0]->Entrance == U->B[17]);
+    CHECK(P[0]->Exit == U->B[20]);
+
+    CHECK(U->B[18] == U->B[17]->Next_Block(NEXT, 1));
+    CHECK(U->B[19] == U->B[18]->Next_Block(NEXT, 1));
+    CHECK(U->B[20] == U->B[19]->Next_Block(NEXT, 1));
+    CHECK(U->B[19] == U->B[20]->Next_Block(PREV, 1));
   }
 
-  SECTION("Blocks with direction change"){
-    P[0] = U->B[21]->path;
-    P[1] = U->B[22]->path;
-    P[2] = U->B[23]->path;
-    for(int i = 0; i < 3; i++){
-      for(int j = 0; j < 3; j++){
+  SECTION("VI - Blocks with direction change"){
+    P[0] = U->B[37]->path;
+    P[1] = U->B[21]->path;
+    P[2] = U->B[22]->path;
+    P[3] = U->B[23]->path;
+    P[4] = U->B[38]->path;
+    for(int i = 0; i < 5; i++){
+      for(int j = 0; j < 5; j++){
         if(i == j)
           continue;
 
         CHECK(P[i] == P[j]);
       }
     }
+
+    CHECK(U->B[23] == U->B[21]->Next_Block(NEXT, 2));
+    CHECK(U->B[21] == U->B[23]->Next_Block(PREV, 2));
   }
 
   SECTION("Station with substations"){
@@ -230,8 +248,8 @@ TEST_CASE( "Path Reverse", "[PATH][PATH-2]") {
   U->B[8]->setDetection(1);
   U->B[8]->train = new RailTrain(U->B[8]);
 
-  REQUIRE(train_link[0]->dir == 0);
-  REQUIRE(train_link[1]->dir == 0);
+  REQUIRE(RSManager->getRailTrain(0)->dir == 0);
+  REQUIRE(RSManager->getRailTrain(1)->dir == 0);
 
   CHECK(P->next == &U->B[10]->next);
   CHECK(P->prev == &U->B[0]->prev);
@@ -249,10 +267,10 @@ TEST_CASE( "Path Reverse", "[PATH][PATH-2]") {
   for(uint8_t i = 0; i < 11; i++)
     CHECK(U->B[i]->dir == 0b100);
 
-  CHECK(train_link[0]->dir == 1);
-  CHECK(train_link[1]->dir == 1);
+  CHECK(RSManager->getRailTrain(0)->dir == 1);
+  CHECK(RSManager->getRailTrain(1)->dir == 1);
 
-  train_link[0]->speed = 10;
+  RSManager->getRailTrain(0)->speed = 10;
 
   P->reverse();
 
@@ -261,8 +279,8 @@ TEST_CASE( "Path Reverse", "[PATH][PATH-2]") {
   for(uint8_t i = 0; i < 11; i++)
     CHECK(U->B[i]->dir == 0b100);
 
-  CHECK(train_link[0]->dir == 1);
-  CHECK(train_link[1]->dir == 1);
+  CHECK(RSManager->getRailTrain(0)->dir == 1);
+  CHECK(RSManager->getRailTrain(1)->dir == 1);
 }
 
 TEST_CASE( "Path Reserve", "[PATH][PATH-3]") {

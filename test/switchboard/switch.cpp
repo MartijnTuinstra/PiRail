@@ -50,31 +50,31 @@ TEST_CASE( "Switch Link", "[SB][SB-2][SB-2.1]" ) {
   }
 
   SECTION( "II - NextBlock Switch Approach" ) {
-    REQUIRE(U->B[1]->_Next(NEXT, 1) == U->B[2]);
+    REQUIRE(U->B[1]->Next_Block(NEXT, 1) == U->B[2]);
 
     U->Sw[0]->state = 1;
 
-    REQUIRE(U->B[1]->_Next(NEXT, 1) == U->B[3]);
+    REQUIRE(U->B[1]->Next_Block(NEXT, 1) == U->B[3]);
   }
 
   SECTION( "III - NextBlock Switch Straight" ) {
-    REQUIRE(U->B[2]->_Next(PREV, 1) == U->B[1]);
-    REQUIRE(U->B[2]->_Next(PREV | SWITCH_CARE, 1) == U->B[1]);
+    REQUIRE(U->B[2]->Next_Block(PREV, 1) == U->B[1]);
+    REQUIRE(U->B[2]->Next_Block(PREV | SWITCH_CARE, 1) == U->B[1]);
 
     U->Sw[0]->state = 1;
 
-    REQUIRE(U->B[2]->_Next(PREV, 1) == U->B[1]);
-    REQUIRE(U->B[2]->_Next(PREV | SWITCH_CARE, 1) == 0);
+    REQUIRE(U->B[2]->Next_Block(PREV, 1) == U->B[1]);
+    REQUIRE(U->B[2]->Next_Block(PREV | SWITCH_CARE, 1) == 0);
   }
 
   SECTION( "IV - NextBlock Switch Diverging" ) {
-    REQUIRE(U->B[3]->_Next(PREV, 1) == U->B[1]);
-    REQUIRE(U->B[3]->_Next(PREV | SWITCH_CARE, 1) == 0);
+    REQUIRE(U->B[3]->Next_Block(PREV, 1) == U->B[1]);
+    REQUIRE(U->B[3]->Next_Block(PREV | SWITCH_CARE, 1) == 0);
 
     U->Sw[0]->state = 1;
 
-    REQUIRE(U->B[3]->_Next(PREV, 1) == U->B[1]);
-    REQUIRE(U->B[3]->_Next(PREV | SWITCH_CARE, 1) == U->B[1]);
+    REQUIRE(U->B[3]->Next_Block(PREV, 1) == U->B[1]);
+    REQUIRE(U->B[3]->Next_Block(PREV | SWITCH_CARE, 1) == U->B[1]);
   }
 
   SECTION( "V - Search Check"){

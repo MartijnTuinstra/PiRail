@@ -37,7 +37,7 @@ TEST_CASE( "Block Link", "[SB][SB-1][SB-1.1]" ) {
   REQUIRE(U->B[1] != 0);
   REQUIRE(U->B[2] != 0);
 
-  SECTION( "Block link check"){
+  SECTION( "I - Block link check"){
     REQUIRE(U->B[1]->next.type == RAIL_LINK_R);
     REQUIRE(U->B[1]->next.p.B == U->B[2]);
 
@@ -45,39 +45,61 @@ TEST_CASE( "Block Link", "[SB][SB-1][SB-1.1]" ) {
     REQUIRE(U->B[1]->prev.p.B == U->B[0]);
   }
 
-  SECTION( "NextBlock Function" ) {
-    REQUIRE(U->B[1]->_Next(NEXT, 1) == U->B[2]);
-    REQUIRE(U->B[1]->_Next(PREV, 1) == U->B[0]);
+  SECTION( "II - NextBlock Function" ) {
+    REQUIRE(U->B[1]->Next_Block(NEXT, 1) == U->B[2]);
+    REQUIRE(U->B[1]->Next_Block(PREV, 1) == U->B[0]);
   }
 
-  SECTION( "NextBlock Function Reversed Block" ) {
+  SECTION( "III - NextBlock Function Reversed Block" ) {
     U->B[1]->dir ^= 0b100;
-    REQUIRE(U->B[1]->_Next(PREV, 1) == U->B[2]);
-    REQUIRE(U->B[1]->_Next(NEXT, 1) == U->B[0]);
+    REQUIRE(U->B[1]->Next_Block(NEXT, 1) == U->B[0]);
+    REQUIRE(U->B[1]->Next_Block(PREV, 1) == U->B[2]);
   }
 
-  SECTION( "NextBlock Function Reverser Block" ) {
+  SECTION( "IV - NextBlock Function Reverser Block" ) {
+    // Just the same as II
     U->B[1]->dir ^= 0b10;
-    REQUIRE(U->B[1]->_Next(NEXT, 1) == U->B[2]);
-    REQUIRE(U->B[1]->_Next(PREV, 1) == U->B[0]);
+    REQUIRE(U->B[1]->Next_Block(NEXT, 1) == U->B[2]);
+    REQUIRE(U->B[1]->Next_Block(PREV, 1) == U->B[0]);
   }
 
-  SECTION( "NextBlock Function Reversed Reverser Block" ) {
+  SECTION( "V - NextBlock Function Reversed Reverser Block" ) {
     U->B[1]->dir ^= 0b110;
-    REQUIRE(U->B[1]->_Next(PREV, 1) == U->B[2]);
-    REQUIRE(U->B[1]->_Next(NEXT, 1) == U->B[0]);
+    REQUIRE(U->B[1]->Next_Block(NEXT, 1) == U->B[0]);
+    REQUIRE(U->B[1]->Next_Block(PREV, 1) == U->B[2]);
   }
 
-  SECTION( "NextBlock Function counter direction Block" ) {
+  SECTION( "VI - NextBlock Function counter direction Block" ) {
     U->B[1]->dir ^= 0b1;
-    REQUIRE(U->B[1]->_Next(PREV, 1) == U->B[2]);
-    REQUIRE(U->B[1]->_Next(NEXT, 1) == U->B[0]);
+    REQUIRE(U->B[1]->Next_Block(NEXT, 1) == U->B[0]);
+    REQUIRE(U->B[1]->Next_Block(PREV, 1) == U->B[2]);
   }
 
-  SECTION( "NextBlock Function reversed counter direction Block" ) {
+  SECTION( "VII - NextBlock Function reversed counter direction Block" ) {
     U->B[1]->dir ^= 0b101;
-    REQUIRE(U->B[1]->_Next(NEXT, 1) == U->B[2]);
-    REQUIRE(U->B[1]->_Next(PREV, 1) == U->B[0]);
+    REQUIRE(U->B[1]->Next_Block(NEXT, 1) == U->B[2]);
+    REQUIRE(U->B[1]->Next_Block(PREV, 1) == U->B[0]);
+  }
+
+
+  SECTION("VIII - Double NextBlock"){
+    logger.setlevel_stdout(TRACE);
+    CHECK(U->B[0]->Next_Block(NEXT, 2) == U->B[2]);
+    CHECK(U->B[2]->Next_Block(PREV, 2) == U->B[0]);
+
+    U->B[1]->dir = 2;
+    U->B[2]->dir = 1;
+    U->B[2]->next.module = 1;
+    U->B[2]->next.id = 1;
+    U->B[2]->next.type = RAIL_LINK_R;
+    U->B[2]->next.p.p = U->B[1];
+    U->B[2]->prev.module = 0;
+    U->B[2]->prev.id = 0;
+    U->B[2]->prev.type = RAIL_LINK_E;
+    U->B[2]->prev.p.p = 0;
+
+    CHECK(U->B[0]->Next_Block(NEXT, 2) == U->B[2]);
+    CHECK(U->B[2]->Next_Block(PREV, 2) == U->B[0]);
   }
 }
 
@@ -325,9 +347,6 @@ TEST_CASE( "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" ) {
   for(uint8_t i = 0; i < U->block_len; i++){
     U->B[i]->AlgorSearch(0);
   }
-
-  train_link = (RailTrain **)_calloc(20, sizeof(RailTrain *));
-  train_link_len = 20;
 
   /*
   // SECTION I

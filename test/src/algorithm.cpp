@@ -90,7 +90,7 @@ TEST_CASE( "Connector Algorithm", "[Alg][Alg-1]"){
       //IF ALL JOINED
       //BREAK
     }
-    
+
     switchboard::Units(3)->B[1]->setDetection(0);
     switchboard::Units(4)->B[0]->setDetection(0);
 
@@ -373,6 +373,29 @@ TEST_CASE( "Train Following", "[Alg][Alg-2]"){
       CHECK(b->train == T);
     }
   }
+
+  SECTION("VI - Two trains approaching each other"){
+    U->B[2]->setDetection(1);
+    U->B[5]->setDetection(1);
+    Algorithm::process(U->B[2], _FORCE);
+    Algorithm::process(U->B[5], _FORCE);
+
+    CHECK(U->B[2]->train != nullptr);
+    CHECK(U->B[5]->train != nullptr);
+    CHECK(U->B[2]->train != U->B[5]->train);
+
+    U->B[3]->setDetection(1);
+    Algorithm::process(U->B[3], _FORCE);
+    U->B[2]->setDetection(1);
+    Algorithm::process(U->B[2], _FORCE);
+
+    U->B[4]->setDetection(1);
+    Algorithm::process(U->B[4], _FORCE);
+    U->B[3]->setDetection(1);
+    Algorithm::process(U->B[3], _FORCE);
+
+    CHECK(U->B[4]->train != U->B[5]->train);
+  }
 }
 
 TEST_CASE( "Algorithm Switch Setter", "[Alg][Alg-3]"){
@@ -381,10 +404,11 @@ TEST_CASE( "Algorithm Switch Setter", "[Alg][Alg-3]"){
 
   Unit * U = switchboard::Units(1);
   REQUIRE(U);
-  
+
   U->on_layout = true;
   U->link_all();
 
+  // logger.setlevel_stdout(DEBUG);
 
   /*           Sw0/--->
   // 1.0> 1.1> 1.2----> 1.3>
@@ -404,7 +428,7 @@ TEST_CASE( "Algorithm Switch Setter", "[Alg][Alg-3]"){
   //              Sw3/           |---St4---|                \       \Sw8
   // 1.22> 1.23> 1.24----------> 1.25> 1.26> ----1.29> ------1.30> ---1.31> 1.33>
   //                                                       MSSw0  \
-  //                                                               \-> 1.32>   
+  //                                                               \-> 1.32>
   */
 
   for(uint8_t i = 0; i < 9; i++){
@@ -424,12 +448,17 @@ TEST_CASE( "Algorithm Switch Setter", "[Alg][Alg-3]"){
     U->B[0]->setDetection(1);
     Algorithm::process(U->B[0], _FORCE);
 
+    CHECK(U->B[0]->train != nullptr);
+    CHECK(U->B[0]->train == RSManager->getRailTrain(0));
+
+    RSManager->getRailTrain(0)->setSpeed(10);
+    Algorithm::process(U->B[0], _FORCE);
+
     CHECK(U->Sw[0]->state == 0);
     CHECK(U->Sw[0]->Detection->switchReserved);
     CHECK(U->Sw[0]->Detection->reservedBy == U->B[0]->train);
 
-    U->Sw[0]->Detection->switchReserved = 0;
-    U->Sw[0]->Detection->reservedBy = 0;
+    U->B[0]->train->dereserveBlock(U->Sw[0]->Detection);
     U->Sw[0]->Detection->state = PROCEED;
 
     U->Sw[0]->setState(1); // Set Diverging
@@ -443,17 +472,19 @@ TEST_CASE( "Algorithm Switch Setter", "[Alg][Alg-3]"){
     CHECK(U->Sw[0]->state == 0);
     CHECK(U->Sw[0]->Detection->switchReserved);
     CHECK(U->Sw[0]->Detection->reservedBy == U->B[0]->train);
-
-    if(U->B[1]->train)
-      delete U->B[1]->train;
   }
 
   SECTION("II - Approaching s side"){
     U->B[4]->setDetection(1);
     Algorithm::process(U->B[4], _FORCE);
 
+    CHECK(U->B[4]->train != nullptr);
+    CHECK(U->B[4]->train == RSManager->getRailTrain(0));
+
+    RSManager->getRailTrain(0)->setSpeed(10);
+    Algorithm::process(U->B[4], _FORCE);
+
     CHECK(U->Sw[1]->state == 0);
-    CHECK(U->Sw[1]->Detection->switchReserved);
     CHECK(U->Sw[1]->Detection->reservedBy == U->B[4]->train);
 
     U->B[4]->train->dereserveBlock(U->Sw[1]->Detection);
@@ -468,9 +499,6 @@ TEST_CASE( "Algorithm Switch Setter", "[Alg][Alg-3]"){
     CHECK(U->Sw[1]->state == 0);
     CHECK(U->Sw[1]->Detection->switchReserved);
     CHECK(U->Sw[1]->Detection->reservedBy == U->B[4]->train);
-
-    if(U->B[4]->train)
-      delete U->B[4]->train;
   }
 
   SECTION("III - Approaching S side with station"){
@@ -479,36 +507,30 @@ TEST_CASE( "Algorithm Switch Setter", "[Alg][Alg-3]"){
     Algorithm::process(U->B[8], _FORCE);
     Algorithm::process(U->B[14], _FORCE);
 
-    U->St[1]->train->setSpeed(0);
+    CHECK(U->B[8]->train != nullptr);
+    CHECK(U->B[8]->train == RSManager->getRailTrain(0));
+    CHECK(U->B[14]->train == RSManager->getRailTrain(1));
 
-    CHECK(U->B[10]->state == DANGER);
-
-    CHECK(U->Sw[2]->state == 0);
-    CHECK(U->Sw[2]->Detection->switchReserved);
-    CHECK(U->Sw[2]->Detection->reservedBy == U->B[8]->train);
-
+    RSManager->getRailTrain(0)->setSpeed(10);
     Algorithm::process(U->B[8], _FORCE);
 
     CHECK(U->Sw[2]->state == 1);
     CHECK(U->Sw[2]->Detection->switchReserved);
     CHECK(U->Sw[2]->Detection->reservedBy == U->B[8]->train);
-
-    if(U->B[8]->train)
-      delete U->B[8]->train;
-    if(U->B[14]->train)
-      delete U->B[14]->train;
   }
 
   SECTION("IV - Approaching S side with station fully blocked"){
     U->B[8]->setDetection(1);
     U->B[12]->setDetection(1);
     U->B[14]->setDetection(1);
+    Algorithm::process(U->B[8], _FORCE);
     Algorithm::process(U->B[12], _FORCE);
     Algorithm::process(U->B[14], _FORCE);
 
-    U->St[0]->train->setSpeed(0);
-    U->St[1]->train->setSpeed(0);
+    CHECK(U->B[8]->train != nullptr);
+    CHECK(U->B[8]->train == RSManager->getRailTrain(0));
 
+    RSManager->getRailTrain(0)->setSpeed(10);
     Algorithm::process(U->B[8], _FORCE);
 
     CHECK(U->Sw[2]->state == 0);
@@ -516,18 +538,12 @@ TEST_CASE( "Algorithm Switch Setter", "[Alg][Alg-3]"){
 
     CHECK(!U->Sw[2]->Detection->switchReserved);
     CHECK(U->Sw[2]->Detection->switchWrongState);
-
-    if(U->B[2]->train)
-      delete U->B[2]->train;
-    if(U->B[8]->train)
-      delete U->B[8]->train;
-    if(U->B[12]->train)
-      delete U->B[12]->train;
   }
 
   SECTION("V - Approaching s side with station and switchblock"){
     U->B[15]->setDetection(1);
     U->B[19]->setDetection(1);
+    Algorithm::process(U->B[15], _FORCE);
     Algorithm::process(U->B[19], _FORCE);
 
     U->Sw[4]->setState(1);
@@ -539,18 +555,18 @@ TEST_CASE( "Algorithm Switch Setter", "[Alg][Alg-3]"){
     CHECK(U->B[19]->train == U->St[3]->train);
     U->B[19]->train->setSpeed(0);
 
+    CHECK(U->B[15]->train != nullptr);
+    CHECK(U->B[15]->train == RSManager->getRailTrain(0));
+
+    RSManager->getRailTrain(0)->setSpeed(10);
     Algorithm::process(U->B[15], _FORCE);
+
 
     CHECK(U->Sw[4]->state == 0);
     CHECK(U->Sw[5]->state == 1);
 
     CHECK(U->Sw[4]->Detection->switchReserved);
     CHECK(U->Sw[4]->Detection->reservedBy == U->B[15]->train);
-
-    if(U->B[15]->train)
-      delete U->B[15]->train;
-    if(U->B[19]->train)
-      delete U->B[19]->train;
   }
 
   SECTION("VI- Approaching S side with full station and switchblock"){
@@ -566,7 +582,7 @@ TEST_CASE( "Algorithm Switch Setter", "[Alg][Alg-3]"){
     U->B[19]->train->setSpeed(0);
     U->B[21]->train->setSpeed(0);
 
-    U->B[15]->train->dereserveBlock(U->Sw[4]->Detection); // Allow switch to change
+    // U->B[15]->train->dereserveBlock(U->Sw[4]->Detection); // Allow switch to change
 
     U->Sw[4]->setState(1, 0);
     Algorithm::tick();
@@ -574,26 +590,21 @@ TEST_CASE( "Algorithm Switch Setter", "[Alg][Alg-3]"){
     CHECK(U->Sw[4]->state == 1);
     CHECK(U->Sw[5]->state == 0);
 
+    CHECK(U->B[15]->train != nullptr);
+    CHECK(U->B[15]->train == RSManager->getRailTrain(0));
+
+    RSManager->getRailTrain(0)->setSpeed(10);
     Algorithm::process(U->B[15], _FORCE);
 
     CHECK(U->Sw[4]->state == 1);
     CHECK(U->Sw[5]->state == 0);
 
-    CHECK(!U->Sw[0]->Detection->switchReserved);
-
-    if(U->B[15]->train)
-      delete U->B[15]->train;
-    if(U->B[19]->train)
-      delete U->B[19]->train;
-    if(U->B[21]->train)
-      delete U->B[21]->train;
+    CHECK(!U->Sw[3]->Detection->switchReserved);
   }
 
   SECTION("VII - Approaching switch with route"){
     U->B[22]->setDetection(1);
     Algorithm::process(U->B[22], _FORCE);
-
-    CHECK(U->B[24]->reservedBy == U->B[22]->train);
 
     auto route = PathFinding::find(U->B[22], U->B[21]);
 
@@ -603,6 +614,10 @@ TEST_CASE( "Algorithm Switch Setter", "[Alg][Alg-3]"){
     U->B[22]->train->route = route;
     U->B[22]->train->onroute = true;
 
+    CHECK(U->B[22]->train != nullptr);
+    CHECK(U->B[22]->train == RSManager->getRailTrain(0));
+
+    RSManager->getRailTrain(0)->setSpeed(10);
     Algorithm::process(U->B[22], _FORCE);
 
     CHECK(U->Sw[3]->state == 1);
@@ -616,16 +631,6 @@ TEST_CASE( "Algorithm Switch Setter", "[Alg][Alg-3]"){
     Algorithm::process(U->B[22], _FORCE);
     Algorithm::process(U->B[21], _FORCE);
 
-    REQUIRE(U->B[21]->train);
-
-    U->B[21]->train->setSpeed(0);
-
-    REQUIRE(U->B[24]->state == RESERVED_SWITCH); // Switch is allready reserved
-
-    U->B[24]->switchReserved = false;
-    U->B[24]->reservedBy = 0;
-    U->B[24]->setState(PROCEED);
-
     auto route = PathFinding::find(U->B[22], U->B[21]);
 
     REQUIRE(route->found_forward);
@@ -634,6 +639,9 @@ TEST_CASE( "Algorithm Switch Setter", "[Alg][Alg-3]"){
     U->B[22]->train->route = route;
     U->B[22]->train->onroute = true;
 
+    CHECK(U->B[22]->train == RSManager->getRailTrain(0));
+
+    RSManager->getRailTrain(0)->setSpeed(10);
     Algorithm::process(U->B[22], _FORCE);
 
     CHECK(U->Sw[3]->state == 0);
@@ -650,24 +658,23 @@ TEST_CASE( "Algorithm Switch Setter", "[Alg][Alg-3]"){
     Algorithm::process(U->B[22], _FORCE);
     Algorithm::process(U->B[26], _FORCE);
 
+    REQUIRE(U->B[22]->train);
+    CHECK(U->B[22]->train == RSManager->getRailTrain(0));
     REQUIRE(U->B[26]->train);
+    CHECK(U->B[26]->train == RSManager->getRailTrain(1));
+
     auto route = PathFinding::find(U->B[22], U->B[33]);
-
-    U->B[26]->train->setSpeed(0);
-
-    CHECK(U->B[30]->reservedBy == 0);
-
 
     char debug[1000];
     route->print(debug);
     loggerf(INFO, "%s", debug);
 
     REQUIRE(route->found_forward);
-    REQUIRE(U->B[22]->train);
 
     U->B[22]->train->route = route;
     U->B[22]->train->onroute = true;
 
+    RSManager->getRailTrain(0)->setSpeed(10);
     Algorithm::process(U->B[22], _FORCE);
 
     CHECK(U->Sw[3]->state == 1);
@@ -687,8 +694,12 @@ TEST_CASE( "Algorithm Switch Setter", "[Alg][Alg-3]"){
 
     U->Sw[3]->setState(1);
     Algorithm::tick();
-    
+
     U->B[22]->setDetection(1);
+    Algorithm::process(U->B[22], _FORCE);
+
+    REQUIRE(U->B[22]->train);
+    U->B[22]->train->setSpeed(10);
     Algorithm::process(U->B[22], _FORCE);
 
     CHECK(U->Sw[3]->state == 0);

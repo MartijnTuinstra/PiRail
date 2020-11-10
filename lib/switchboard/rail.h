@@ -156,7 +156,7 @@ class Block {
     void addSwitch(Switch * Sw);
 
     struct rail_link * NextLink(int flags);
-    Block * _Next(int flags, int level);
+    Block * Next_Block(int flags, int level);
 
     uint8_t _NextList(Block ** blocks, uint8_t block_counter, int flags, int length);
 

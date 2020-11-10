@@ -208,8 +208,8 @@ void inline RailTrain::setSpeed(uint16_t _speed){
 
   speed = _speed;
 
-  if(speed) setStopped(0);
-  else setStopped(1);
+  if(speed) setStopped(false);
+  else setStopped(true);
 
   if(!p.p) return;
   else if(type == RAILTRAIN_ENGINE_TYPE) p.E->setSpeed(speed);
@@ -346,17 +346,32 @@ void RailTrain::unlink(){
 }
 
 bool RailTrain::ContinueCheck(){
+  loggerf(TRACE, "RailTrain %i: ContinueCheck", id);
   if(B->Alg.next > 0){
     //if(this->Route && Switch_Check_Path(this->B)){
     //  return true;
     //}
     if(B->Alg.N[0]->blocked && B->Alg.N[0]->train != this){
+      loggerf(TRACE, "RailTrain %i: ContinueCheck - false", id);
       return false;
     }
     else if(B->Alg.N[0]->state > DANGER){
+      loggerf(TRACE, "RailTrain %i: ContinueCheck - true", id);
       return true;
     }
   }
+  struct rail_link * next = B->NextLink(NEXT);
+
+  if(next->type != RAIL_LINK_E){
+    if(SwitchSolver::solve(this, B, B, *next, NEXT | SWITCH_CARE)){
+      AlQueue.put(B);
+
+      loggerf(TRACE, "RailTrain %i: ContinueCheck - true", id);
+      return true;
+    }
+  }
+
+  loggerf(TRACE, "RailTrain %i: ContinueCheck - false", id);
   return false;
 }
 

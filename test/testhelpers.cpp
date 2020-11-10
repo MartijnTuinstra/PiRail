@@ -4,16 +4,19 @@
 #include "system.h"
 
 #include "switchboard/manager.h"
+#include "rollingstock/manager.h"
 
 #include "train.h"
 #include "modules.h"
 #include "path.h"
 
 void init_test(char (* filenames)[30], int nr_files){
+  // logger.setlevel_stdout(MEMORY);
   init_main();
 
   switchboard::SwManager->clear();
-  unload_rolling_Configs();
+  
+  RSManager->clear();
   AlQueue.clear();
   pathlist.clear();
 
@@ -22,7 +25,9 @@ void init_test(char (* filenames)[30], int nr_files){
 
   switchboard::SwManager->loadFiles();
   
-  load_rolling_Configs("./testconfigs/stock.bin");
+  RSManager->loadFile("./testconfigs/stock.bin");
 
+  logger.setlevel_stdout(INFO);
+  loggerf(INFO, "Start Test");
   logger.setlevel_stdout(CRITICAL);
 }

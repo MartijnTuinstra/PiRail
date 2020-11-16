@@ -68,6 +68,7 @@ class RailTrain {
     bool onroute = 0;         // TRAIN_ONROUTE = true
     bool stopped = 1;         // 
     bool dir = 0;             // TRAIN_FORWARD / TRAIN_REVERSE
+    bool directionKnown = 0;  //  block direction is matched to the Z21 direction
 
     PathFinding::Route * route = 0;
 

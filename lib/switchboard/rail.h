@@ -31,19 +31,6 @@ class RailTrain;
 
 #include "switchboard/links.h"
 
-// typedef struct s_algor_block {
-//   union {
-//     Block * B;
-//     Block * SB[5];
-//   } p;
-//   uint8_t len; // 0 = one block, 1 or more is Switch Blocks
-
-//   RailTrain * train;
-
-//   uint8_t blocked;
-//   uint8_t reserved;
-// } Algor_Block;
-
 typedef struct algor_blocks {
   uint8_t prev;
   uint8_t prev3;
@@ -100,25 +87,40 @@ class Block {
     uint16_t uid;
     Unit * U;
 
-    //Input
-    IO_Port * In;
-
     enum Rail_types type;
     uint8_t dir;
-    IO_Port * dir_Out;
     int length;
-
-    struct rail_link next;
-    struct rail_link prev;
-
-    Station * station;
-
-    Path * path;
-
     uint16_t max_speed;
 
     enum Rail_states state;
     enum Rail_states reverse_state;
+
+    // -- IO --
+    //   Input
+    IO_Port * In;
+
+    //   Output Direction
+    IO_Port * dir_Out;
+
+    // -- Links --
+    struct rail_link next;
+    struct rail_link prev;
+
+    // -- Pointers --
+    Station * station;         // The station that
+    Path * path;               // The path this block is part off
+
+    RailTrain * train;         // The train that is in this block
+    RailTrain * expectedTrain; // The train that is expected to enter this block
+    RailTrain * reservedBy;    // The train that has reserved this block in a whole path 
+                               //  A block with switches can be SWITCH_RESERVED. 
+
+    std::vector<Signal *> * forward_signal;
+    std::vector<Signal *> * reverse_signal;
+
+    int switch_len;
+    Switch ** Sw;
+    MSSwitch * MSSw;
 
     uint8_t reserved:2;
     uint8_t switchReserved:2;
@@ -127,8 +129,6 @@ class Block {
     uint8_t virtualblocked:1;
     uint8_t detectionblocked:1;
 
-    RailTrain * train; //Follow id
-    RailTrain * reservedBy; // Block with switches can be SWITCH_RESERVED. this points to the train that has reserved the switches.
 
     uint8_t IOchanged:1;
     uint8_t statechanged:1;
@@ -136,16 +136,8 @@ class Block {
     uint8_t recalculate:1;
     uint8_t oneWay:1;
 
-    uint8_t switchWrongState:1; // Set block to DANGER/CAUTION if switch cannot be aligned properly
+    uint8_t switchWrongState:1;    // Set block to DANGER/CAUTION if switch cannot be aligned properly
     uint8_t switchWrongFeedback:1; // Set block to DANGER/CAUTION if switch is still moving
-
-    std::vector<Signal *> * forward_signal;
-    std::vector<Signal *> * reverse_signal;
-
-    int switch_len;
-    Switch ** Sw;
-
-    MSSwitch * MSSw;
 
     //Algorithm selected blocks
     Algor_Blocks Alg;

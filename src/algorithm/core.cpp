@@ -569,38 +569,64 @@ void train_following(Algor_Blocks * ABs, int debug){
     //   ptr += sprintf(ptr, "\t                   ");
 
     // loggerf(INFO, "%s", debugmsg);
-    // Train moved forward
-    if(prev > 0 && BP[0]->blocked && BP[0]->train){
-      // Copy train id from previous block
-      B->train = BP[0]->train;
+
+    if(B->reserved){
+      B->reserved--;
+      if(B->reserved == 0){
+        B->setState(PROCEED);
+        B->setReversedState(PROCEED);
+      }
+    }
+
+    if(B->expectedTrain){
+      loggerf(INFO, "Copy expectedTrain");
+
+      B->train = B->expectedTrain;
       B->train->moveForward(B);
 
-      if(B->reserved){
-        B->reserved--;
-        if(B->reserved == 0){
-          B->setState(PROCEED);
-          B->setReversedState(PROCEED);
-        }
+      if(next > 0)
+        BN[0]->expectedTrain = B->train;
+    }
+    // Train moved forward
+    else if(prev > 0 && BP[0]->blocked && BP[0]->train){
+      loggerf(INFO, "Copy train from previous block");
+      // Copy train id from previous block
+      B->train = BP[0]->train;
+      B->train->setBlock(B);
+
+      if(!B->train->stopped){
+        B->train->directionKnown = 1;
+        B->train->dir = 0;
+        B->train->B = B;
+
+        if(next > 0)
+          BN[0]->expectedTrain = B->train;
       }
       // if(train_link[B->train])
       //   train_link[B->train]->Block = B;
       loggerf(TRACE, "COPY_TRAIN from %02i:%02i to %02i:%02i", BP[0]->module, BP[0]->id, B->module, B->id);
     }
     // Train moved backwards
-    else if(false){}
+    else if(next > 0 && BN[0]->blocked && BN[0]->train){
+      loggerf(INFO, "Copy train from next block");
+      // Copy train id from next block
+      B->train = BN[0]->train;
+      B->train->setBlock(B);
+
+      if(!B->train->stopped){
+        B->train->directionKnown = 1;
+        B->train->dir = 1;
+        B->train->B = B;
+
+        if(prev > 0)
+          BP[0]->expectedTrain = B->train;
+      }
+    }
     else if( ((prev > 0 && !BP[0]->blocked) || prev == 0) && ((next > 0 && !BN[0]->blocked) || next == 0) ){
       //NEW TRAIN
       // find a new follow id
       // loggerf(ERROR, "FOLLOW ID INCREMENT, bTrain");
       B->train = new RailTrain(B);
-
-      if(B->reserved){
-        B->reserved--;
-        if(B->reserved == 0){
-          B->setState(PROCEED);
-          B->setReversedState(PROCEED);
-        }
-      }
 
       //Create a message for WebSocket
       WS_stc_NewTrain(B->train, B->module, B->id);

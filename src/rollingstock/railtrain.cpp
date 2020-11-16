@@ -57,6 +57,9 @@ void RailTrain::releaseBlock(Block * rB){
   loggerf(TRACE, "train %i: releaseBlock %2i:%2i %x", id, rB->module, rB->id, (unsigned int)rB);
   rB->train = 0;
   blocks.erase(std::remove_if(blocks.begin(), blocks.end(), [rB](const auto & o) { return (o == rB); }), blocks.end());
+
+  if(rB == B)
+    B = blocks[0];
 }
 
 void RailTrain::reserveBlock(Block * rB){

@@ -152,14 +152,13 @@ TEST_CASE( "Train Following", "[Alg][Alg-2]"){
     CHECK(U->B[0]->train != 0);
 
     RailTrain * T = U->B[0]->train;
+    CHECK(U->B[0] == T->B);
 
     // Step Forward
     U->B[1]->setDetection(1);
     Algorithm::process(U->B[1], _FORCE);
 
     CHECK(U->B[1]->train == T);
-    CHECK(U->B[1] == T->B);
-
     CHECK(T->blocks.size() == 2);
 
     // Release last block
@@ -178,13 +177,13 @@ TEST_CASE( "Train Following", "[Alg][Alg-2]"){
 
     REQUIRE(U->B[0]->train != 0);
     RailTrain * T = U->B[0]->train;
+    CHECK(U->B[0] == T->B);
 
     // Step Forward
     U->B[1]->setDetection(1);
     Algorithm::process(U->B[1], _FORCE);
 
     CHECK(U->B[1]->train == T);
-    CHECK(U->B[1] == T->B);
 
     // Link engine
     T->link(0, RAILTRAIN_ENGINE_TYPE);
@@ -199,6 +198,38 @@ TEST_CASE( "Train Following", "[Alg][Alg-2]"){
     CHECK(U->B[0]->train == 0);
   }
 
+  SECTION("IIb- Simple Engine Forward with"){
+    loggerf(CRITICAL, "IIb- Simple Engine Forward with");
+    CHECK(U->B[0]->train == 0);
+
+    U->B[1]->setDetection(1);
+    Algorithm::process(U->B[1], _FORCE);
+
+    REQUIRE(U->B[1]->train != 0);
+    RailTrain * T = U->B[1]->train;
+
+    // Link engine
+    T->link(0, RAILTRAIN_ENGINE_TYPE);
+
+    // Add extra detected block at wrong side
+    U->B[0]->setDetection(1);
+    Algorithm::process(U->B[0], _FORCE);
+
+    REQUIRE(U->B[0]->train == T);
+    CHECK(U->B[0]->train->dir == 0);
+    CHECK(U->B[0]->train->directionKnown == 0);
+
+    // Move Train
+    T->setSpeed(10);
+    U->B[2]->setDetection(1);
+    Algorithm::process(U->B[2], _FORCE);
+
+    CHECK(U->B[2]->train == T);
+    CHECK(U->B[2] == T->B);
+    
+    CHECK(T->directionKnown);
+  }
+
   SECTION("III - Full Detectable Train"){
     CHECK(U->B[0]->train == 0);
 
@@ -208,12 +239,16 @@ TEST_CASE( "Train Following", "[Alg][Alg-2]"){
     REQUIRE(U->B[0]->train != 0);
     RailTrain * T = U->B[0]->train;
 
+    T->setSpeed(10);
+
     // Step Forward
     U->B[1]->setDetection(1);
     Algorithm::process(U->B[1], _FORCE);
 
     CHECK(U->B[1]->train == T);
     CHECK(U->B[1] == T->B);
+    CHECK(T->blocks.size() == 2);
+
 
     // Step Forward
     U->B[2]->setDetection(1);
@@ -309,7 +344,7 @@ TEST_CASE( "Train Following", "[Alg][Alg-2]"){
     REQUIRE(U->B[3]->train != 0);
     RailTrain * T = U->B[3]->train;
 
-    SECTION("I - Second detectable after linking"){
+    SECTION("V - I - Second detectable after linking"){
       loggerf(ERROR, "I-");
       // Link engine
       T->link(2, RAILTRAIN_TRAIN_TYPE);
@@ -317,7 +352,7 @@ TEST_CASE( "Train Following", "[Alg][Alg-2]"){
       U->B[1]->setDetection(1);
       Algorithm::process(U->B[1], _FORCE);
     }
-    SECTION("II - Second detectable before linking"){
+    SECTION("V - II - Second detectable before linking"){
       loggerf(ERROR, "II-");
       U->B[1]->setDetection(1);
       Algorithm::process(U->B[1], _FORCE);

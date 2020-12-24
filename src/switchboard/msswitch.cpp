@@ -178,7 +178,7 @@ Block * MSSwitch::Next_Block(enum link_types type, int flags, int level){
     next = &this->sideA[this->state];
   }
 
-  if(!next->p.p){
+  if(!next || !next->p.p){
     if(next->type != RAIL_LINK_E)
       loggerf(ERROR, "NO POINTERS");
     return 0;

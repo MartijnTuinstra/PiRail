@@ -57,6 +57,8 @@ class Manager {
     Signal *   getSignal(uint16_t);
     Station *  getStation(uint16_t);
 
+    void linkAll();
+
     void print();
 
     void openDir(char *);
@@ -68,7 +70,6 @@ class Manager {
     void clear();
 };
 
-void linkAll();
 
 extern Manager * SwManager;
 }; //namespace

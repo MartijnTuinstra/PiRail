@@ -66,6 +66,7 @@ public:
   void print();
 
   void loadFile(char *);
+  void loadFile(const char *);
   void writeFile();
 
   void clear();

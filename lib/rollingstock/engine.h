@@ -56,6 +56,8 @@ class Engine {
 
     void setSpeed(uint16_t speed);
     void readSpeed();
+
+    void reverse();
 };
 
 

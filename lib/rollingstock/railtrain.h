@@ -17,6 +17,8 @@
 #define TRAIN_SEMI_AUTO 1
 #define TRAIN_FULL_AUTO 2
 
+#define REVERSE_NO_BLOCKS 1
+
 
 struct train_speed_timer {
   RailTrain * T;
@@ -49,7 +51,8 @@ class RailTrain {
 
     Block * B; // FrontBlock
     std::vector<Block *> blocks; // All blocks that are blocked by the train (detection and virtual)
-    std::vector<Block *> reservedBlocks; // All blocks with switches that are reserved by the train.
+    std::vector<Block *> reservedBlocks; // Only switch-blocks that are reserved by the train.
+    std::vector<Path *>  reservedPaths;  // All paths that are reserved by the train.
 
     uint8_t id = 0;
 
@@ -90,6 +93,10 @@ class RailTrain {
 
     void reserveBlock(Block *);
     void dereserveBlock(Block *);
+
+    void reservePath(Path *);
+    void dereservePath(Path * P);
+
     void dereserveAll();
 
     void initVirtualBlocks();
@@ -101,6 +108,9 @@ class RailTrain {
     void setSpeedZ21(uint16_t);
     void setStopped(bool);
     void changeSpeed(uint16_t target_speed, uint8_t type);
+
+    void reverse();
+    void reverse(uint8_t flags);
 
     int link(int tid, char type);
     void unlink();

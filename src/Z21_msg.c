@@ -1,7 +1,9 @@
 #include "utils/logger.h"
 #include "utils/mem.h"
 
-#include "train.h"
+#include "rollingstock/railtrain.h"
+#include "rollingstock/train.h"
+#include "rollingstock/engine.h"
 #include "websocket/stc.h"
 #include "Z21.h"
 #include "Z21_msg.h"
@@ -40,7 +42,8 @@ void Z21_Set_Loco_Drive_Engine(Engine * E){
   data[8] = ((E->dir & 1) << 7) | (E->speed & 0x7F);
   data[9] = data[4] ^ data[5] ^ data[6] ^ data[7] ^ data[8];
 
-  Z21->send(10, data);
+  if(Z21)
+    Z21->send(10, data);
 }
 
 void Z21_Set_Loco_Drive_Train(Train * T){
@@ -158,7 +161,8 @@ void Z21_get_loco_info(uint16_t DCC_id){
   data[7] = (DCC_id & 0xFF);
   data[8] = 0x13 ^ data[6] ^ data[7];
 
-  Z21->send(9, data);
+  if(Z21)
+    Z21->send(9, data);
 }
 
 void Z21_setLocoFunction(Engine * E, uint8_t function, uint8_t type){
@@ -181,7 +185,8 @@ void Z21_setLocoFunction(Engine * E, uint8_t function, uint8_t type){
   data[8] = ((type & 0x3) << 6) | (function & 0x3F);
   data[9] = 0x1C ^ data[6] ^ data[7] ^ data[8];
 
-  Z21->send(10, data);
+  if(Z21)
+    Z21->send(10, data);
 }
 
 void Z21_KeepAliveFunc(void * args){

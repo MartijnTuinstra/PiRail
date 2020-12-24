@@ -10,7 +10,7 @@ class Path {
     std::vector<Block *> Blocks;
 
     bool direction;
-    bool reserved = 0;
+    uint8_t reserved = 0;  // Number of reservations (0 = Free, n = n Trains reserved this Path)
 
     Block * Entrance;
     struct rail_link * prev; // Link to block before Entrance
@@ -34,8 +34,14 @@ class Path {
     void join(Path * P);
     void find();
 
-    void reserve();
-    void reverse();
+    void reserve(RailTrain *);
+    void reserve(RailTrain *, Block *);
+
+    void dereserve(RailTrain *);
+    void dereserve(RailTrain *, Block *);
+
+    int  reverse();
+    int  reverse(RailTrain *);
 
     void sprint(char * string);
     void print();

@@ -163,3 +163,7 @@ void Engine::readSpeed(){
 
   this->cur_speed = speed;
 }
+
+void Engine::reverse(){
+  dir ^= 1;
+}

@@ -12,6 +12,8 @@
 #include "switchboard/signals.h"
 #include "switchboard/station.h"
 
+#include "path.h"
+
 #include "utils/logger.h"
 #include "system.h"
 
@@ -70,6 +72,16 @@ Signal *   Manager::getSignal(uint16_t index){
 }
 Station *  Manager::getStation(uint16_t index){
   return uniqueStation.at(index);
+}
+
+void Manager::linkAll(){
+  for(uint16_t u = 0; u < Units.size; u++){
+    if(!Units[u])
+      continue;
+
+    Units[u]->link_all();
+  }
+  pathlist_find();
 }
 
 void Manager::openDir(char * path){

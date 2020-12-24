@@ -61,7 +61,8 @@ enum Rail_states {
   PROCEED,          // 4
   RESERVED,         // 5
   RESERVED_SWITCH,  // 6
-  UNKNOWN           // 7
+  GHOST,            // 7
+  UNKNOWN           // 8
 };
 
 extern const char * rail_states_string[8];

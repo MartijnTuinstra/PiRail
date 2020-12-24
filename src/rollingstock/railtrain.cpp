@@ -1,6 +1,7 @@
 #include <math.h>
 
 #include "switchboard/station.h"
+#include "switchboard/switchSolver.h"
 #include "rollingstock/railtrain.h"
 #include "train.h"
 
@@ -13,17 +14,17 @@
 #include "websocket/stc.h"
 #include "Z21_msg.h"
 
-RailTrain::RailTrain(Block * B): blocks(0, 0), reservedBlocks(0, 0){
+RailTrain::RailTrain(Block * _B): blocks(0, 0), reservedBlocks(0, 0){
   id = RSManager->addRailTrain(this);
   loggerf(INFO, "Create RailTrain %i", id);
 
   p.p = 0;
 
-  this->B = B;
-  setBlock(B);
+  this->B = 0;
+  setBlock(_B);
 
-  if(B->path)
-    B->path->trains.push_back(this);
+  if(_B->path)
+    _B->path->trains.push_back(this);
 
   assigned = false;
   setControl(TRAIN_MANUAL);
@@ -63,25 +64,53 @@ void RailTrain::releaseBlock(Block * rB){
 }
 
 void RailTrain::reserveBlock(Block * rB){
+  /* public
+  ** reserve a block and therefore maybe also a path
+  **
+  ** arguments:
+  **  rB: The block to be reserved
+  */
   loggerf(TRACE, "train %i: reserveBlock %2i:%2i", id, rB->module, rB->id);
 
   rB->reservedBy = this;
   if(rB->type == NOSTOP){
     rB->switchReserved = true;
+    rB->reserved++;
     rB->setState(RESERVED_SWITCH);
+    reservedBlocks.push_back(rB);
   }
   else{
-    loggerf(INFO, "ALSO RESERVE PATH"); // FIXME
-    rB->reserved = true;
-    rB->setState(RESERVED);
+    // Reserve path
+    rB->path->reserve(this, rB);
   }
-  reservedBlocks.push_back(rB);
+}
+
+void RailTrain::reservePath(Path * P){
+  /* public
+  ** add a path to the reserved path list.
+  **
+  ** arguments:
+  **  P: the path to add
+  */
+  loggerf(TRACE, "RailTrain::rservePath %x", (unsigned int)P);
+  reservedPaths.push_back(P);
+}
+
+void RailTrain::dereservePath(Path * P){
+  /* public
+  ** remove a path to the reserved path list.
+  **
+  ** arguments:
+  **  P: the path to add
+  */
+  loggerf(TRACE, "RailTrain::derservePath %x", (unsigned int)P);
+  reservedPaths.erase(std::remove_if(reservedPaths.begin(), reservedPaths.end(), [P](const auto & o) { return (o == P); }), reservedPaths.end());
 }
 
 void RailTrain::dereserveBlock(Block * rB){
   loggerf(TRACE, "train %i: dereserveBlock %2i:%2i", id, rB->module, rB->id);
-  rB->reservedBy = 0;
-  rB->switchReserved = false;
+
+  rB->dereserve();
 
   reservedBlocks.erase(std::remove_if(reservedBlocks.begin(),
                                       reservedBlocks.end(),
@@ -94,14 +123,28 @@ void RailTrain::dereserveAll(){
   for(auto b: reservedBlocks){
     if(!b)
       continue;
-    b->reservedBy = 0;
-    b->switchReserved = false;
+    b->dereserve();
   }
 
   reservedBlocks.clear();
+
+  for(auto p: reservedPaths){
+    if(!p)
+      continue;
+
+    if(p == B->path)
+      p->dereserve(this, B);
+    else
+      p->dereserve(this);
+  }
+
+  reservedPaths.clear();
 }
 
 void RailTrain::initVirtualBlocks(){
+  if(!directionKnown)
+    return;
+
   loggerf(TRACE, "initVirtualBlocks");
   Block * tB = B;
   uint8_t offset = 0;
@@ -145,6 +188,9 @@ void RailTrain::initVirtualBlocks(){
 }
 
 void RailTrain::setVirtualBlocks(){
+  if(!directionKnown)
+    return;
+
   loggerf(TRACE, "setVirtualBlocks");
   Block * tB = B->Alg.P[0];
   uint8_t offset = 1;
@@ -188,12 +234,13 @@ void RailTrain::setVirtualBlocks(){
 }
 
 void RailTrain::moveForward(Block * tB){
-  loggerf(WARNING, "MoveForward RT %i to block %2i:%2i", id, tB->module, tB->id);
+  loggerf(TRACE, "RailTrain %x moveForward %2i:%2i", (unsigned int)this, tB->module, tB->id);
   setBlock(tB);
 
+  loggerf(ERROR, "Updating front block %2i:%2i", tB->module, tB->id);
+  B = tB;
+
   if(B->Alg.next > 0 && B->Alg.N[0] == tB){
-    loggerf(ERROR, "Updating front block %2i:%2i", tB->module, tB->id);
-    B = tB;
 
     if(virtualLength)
       setVirtualBlocks();
@@ -201,11 +248,25 @@ void RailTrain::moveForward(Block * tB){
 }
 
 void inline RailTrain::setSpeed(uint16_t _speed){
+  /* public
+  ** set the speed of the train
+  **
+  ** arguments:
+  **  _speed: the new speed
+  */
+  loggerf(TRACE, "RailTrain %x setSpeed -> %i", (unsigned int)this, _speed);
+
   if(stopped && _speed){
     // Was stopped but starting to move
     if(!ContinueCheck()){
-      loggerf(WARNING, "RT%i unsafe to start moving", id);
-      setSpeedZ21(0);
+      if(!B){
+        loggerf(WARNING, "Maximum speed allowed");
+        _speed = (_speed < 25) ? _speed : 25;
+      }
+      else{
+        loggerf(WARNING, "RT%i unsafe to start moving", id);
+        setSpeedZ21(0);
+      }
     }
   }
 
@@ -220,7 +281,14 @@ void inline RailTrain::setSpeed(uint16_t _speed){
 }
 
 void RailTrain::setSpeedZ21(uint16_t _speed){
-  loggerf(INFO, "setRailTrain %i Speed -> %i", id, _speed);
+  /* public
+  ** set the speed of the train and pass it on to the Z21/Command unit
+  **
+  ** arguments:
+  **  _speed: the new speed
+  */
+  loggerf(TRACE, "RailTrain %x setSpeedZ21 -> %i", (unsigned int)this, _speed);
+
   setSpeed(_speed);
 
   if(!assigned)
@@ -232,6 +300,14 @@ void RailTrain::setSpeedZ21(uint16_t _speed){
 }
 
 void RailTrain::setStopped(bool stop){
+  /* public
+  **  adding procedures when train stops or starts moving.
+  **
+  ** arguments:
+  **  stop: true-stopping / false-moving
+  */
+  loggerf(TRACE, "RailTrain %x setStopped %i", (unsigned int)this, stop);
+
   stopped = stop;
 
   if(stop)
@@ -245,12 +321,14 @@ void RailTrain::setStopped(bool stop){
 }
 
 void RailTrain::changeSpeed(uint16_t _target_speed, uint8_t _type){
+  loggerf(TRACE, "RailTrain %x changeSpeed %i, %i", (unsigned int)this, _target_speed, _type);
+
+  loggerf(WARNING, "train_change_speed %i -> %i (%02x)", id, _target_speed, _type);
   if(!p.p){
     loggerf(ERROR, "No Train");
     return;
   }
 
-  loggerf(DEBUG, "train_change_speed %i -> %i", id, _target_speed);
   //target_speed = target_speed;
 
   if(_type == IMMEDIATE_SPEED){
@@ -263,6 +341,59 @@ void RailTrain::changeSpeed(uint16_t _target_speed, uint8_t _type){
   }
   else if(_type == GRADUAL_FAST_SPEED){
     train_speed_event_create(this, _target_speed, B->length);
+  }
+}
+
+void RailTrain::reverse(){reverse(0);}
+
+void RailTrain::reverse(uint8_t flags){
+  loggerf(TRACE, "RailTrain %x reverse %x", (unsigned int)this, flags);
+  setSpeed(0);
+
+  if(!(flags & REVERSE_NO_BLOCKS)){
+    // Reverse the blocks
+    std::vector<Block *> blockList; // List of with unique paths or blocks without paths
+    for(auto b: blocks){
+      bool inList = false;
+      for(auto bL: blockList){
+        if(b->path && bL->path && b->path == bL->path){
+          inList = true;
+          break;
+        }
+      }
+      if(!inList)
+        blockList.push_back(b);
+    }
+
+    for(auto b: blockList){
+      if(b->path)
+        b->path->reverse(this);
+      else
+        b->reverse();
+    }
+    // TODO FIXME
+  }
+
+  dir ^= 1;
+
+  // Figure out front of train
+  if(directionKnown){
+    for(auto b: blocks){
+      if(b->Alg.next && !b->Alg.N[0]->blocked){
+        B = b;
+        break;
+      }
+    }
+  }
+
+  if(!p.p) return;
+  else if(type == RAILTRAIN_ENGINE_TYPE){
+    p.E->reverse();
+    Z21_Set_Loco_Drive_Engine(p.E);
+  }
+  else{
+    p.T->reverse();
+    Z21_Set_Loco_Drive_Train(p.T);
   }
 }
 
@@ -349,17 +480,20 @@ void RailTrain::unlink(){
 }
 
 bool RailTrain::ContinueCheck(){
-  loggerf(TRACE, "RailTrain %i: ContinueCheck", id);
+  if(!B)
+    return false;
+
+  loggerf(WARNING, "RailTrain %i: ContinueCheck", id);
   if(B->Alg.next > 0){
     //if(this->Route && Switch_Check_Path(this->B)){
     //  return true;
     //}
     if(B->Alg.N[0]->blocked && B->Alg.N[0]->train != this){
-      loggerf(TRACE, "RailTrain %i: ContinueCheck - false", id);
+      loggerf(WARNING, "RailTrain %i: ContinueCheck - false", id);
       return false;
     }
     else if(B->Alg.N[0]->state > DANGER){
-      loggerf(TRACE, "RailTrain %i: ContinueCheck - true", id);
+      loggerf(WARNING, "RailTrain %i: ContinueCheck - true", id);
       return true;
     }
   }
@@ -369,12 +503,12 @@ bool RailTrain::ContinueCheck(){
     if(SwitchSolver::solve(this, B, B, *next, NEXT | SWITCH_CARE)){
       AlQueue.put(B);
 
-      loggerf(TRACE, "RailTrain %i: ContinueCheck - true", id);
+      loggerf(WARNING, "RailTrain %i: ContinueCheck - true", id);
       return true;
     }
   }
 
-  loggerf(TRACE, "RailTrain %i: ContinueCheck - false", id);
+  loggerf(WARNING, "RailTrain %i: ContinueCheck - false", id);
   return false;
 }
 

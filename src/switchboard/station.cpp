@@ -74,6 +74,12 @@ Station::~Station(){
 }
 
 void Station::occupy(RailTrain * T){
+  /*
+  **
+  */
+  loggerf(TRACE, "Station %x occupy RailTrain %x", (unsigned int)this, (unsigned int)T);
+
+
   if(parent)
     parent->occupiedChild = true;
 
@@ -83,6 +89,11 @@ void Station::occupy(RailTrain * T){
 }
 
 void Station::release(){
+  /*
+  **
+  */
+  loggerf(TRACE, "Station %x release", (unsigned int)this);
+
   for(uint8_t i = 0; i < blocks_len; i++){
     if(!blocks[i])
       break;
@@ -99,6 +110,11 @@ void Station::release(){
 }
 
 void Station::releaseParent(){
+  /*
+  **
+  */
+  loggerf(TRACE, "Station %x parent", (unsigned int)this);
+  
   for(auto st: childs){
     if(st->occupied){
       return;
@@ -109,6 +125,11 @@ void Station::releaseParent(){
 }
 
 void Station::setStoppedTrain(bool stop){
+  /*
+  **
+  */
+  loggerf(TRACE, "Station %x setStoppedTrain %i", (unsigned int)this, stop);
+  
   stoppedTrain = stop;
 
   if(!parent)

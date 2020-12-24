@@ -404,10 +404,15 @@ void Block::reserve(){
 }
 
 void Block::dereserve(){
+  loggerf(TRACE, "Block %2i:%2i dereserve", module, id);
   state = PROCEED;
   reverse_state = PROCEED;
 
-  reserved--;
+  if(reserved > 0)
+    reserved--;
+
+  reservedBy = 0;
+  switchReserved = false;
 
   statechanged = 1;
   U->block_state_changed = 1;

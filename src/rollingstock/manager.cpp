@@ -81,6 +81,10 @@ Manager::~Manager(){
 }
 
 void Manager::loadFile(char * f){
+  loadFile((const char *)f);
+}
+
+void Manager::loadFile(const char * f){
   if(filename)
     _free(filename);
 

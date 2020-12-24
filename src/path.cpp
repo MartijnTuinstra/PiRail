@@ -95,7 +95,7 @@ void Path::join(Path * P){
     if(this->next->p.B == P->end){
       char buffer[200];
       P->sprint(buffer);
-      loggerf(WARNING, buffer);
+      loggerf(TRACE, buffer);
       this->front = P->front;
       this->front_direction = P->front_direction;
       this->next = P->next;
@@ -125,7 +125,7 @@ void Path::join(Path * P){
     if(this->prev->p.B == P->front){
       char buffer[200];
       P->sprint(buffer);
-      loggerf(WARNING, buffer);
+      loggerf(TRACE, buffer);
       this->end = P->end;
       this->end_direction = P->end_direction;
       this->prev = P->prev;
@@ -157,7 +157,7 @@ void Path::join(Path * P){
     if(this->next->p.B == P->front){
       char buffer[200];
       P->sprint(buffer);
-      loggerf(WARNING, buffer);
+      loggerf(TRACE, buffer);
       this->front = P->end;
       this->front_direction = P->end_direction ^ 0b100;
       this->next = P->prev;
@@ -184,7 +184,7 @@ void Path::join(Path * P){
     else if(this->prev->p.B == P->end){
       char buffer[200];
       P->sprint(buffer);
-      loggerf(WARNING, buffer);
+      loggerf(TRACE, buffer);
       this->end = P->front;
       this->end_direction = P->front_direction ^ 0b100;
       this->prev = P->next;
@@ -212,7 +212,7 @@ void Path::join(Path * P){
 }
 
 void Path::find(){
-  loggerf(CRITICAL, "Path Find %02d:%02d", this->Blocks[0]->module, this->Blocks[0]->id);
+  loggerf(DEBUG, "Path Find %02d:%02d", this->Blocks[0]->module, this->Blocks[0]->id);
   uint8_t i = 0;
   Block * B = 0;
   uint8_t dir = 0;
@@ -229,20 +229,20 @@ void Path::find(){
     if(!B)
       break;
 
-    loggerf(CRITICAL, "Next Block %02d:%02d,  front %02d:%02d", B->module, B->id, this->front->module, this->front->id);
+    loggerf(TRACE, "Next Block %02d:%02d,  front %02d:%02d", B->module, B->id, this->front->module, this->front->id);
 
     struct rail_link * link = B->NextLink(NEXT);
 
-    loggerf(CRITICAL, "                 -> link %02d:%02d:%02x", link->module, link->id, link->type);
+    loggerf(TRACE, "                 -> link %02d:%02d:%02x", link->module, link->id, link->type);
 
     if(link->p.B == this->front){
-      loggerf(CRITICAL, "FLIP");
+      loggerf(TRACE, "FLIP");
       // dir ^= 0b1;
       B->reverse();
       link = B->NextLink(NEXT);
     }
 
-    loggerf(CRITICAL, "                 -> link %02d:%02d:%02x\n", link->module, link->id, link->type);
+    loggerf(TRACE, "                 -> link %02d:%02d:%02x\n", link->module, link->id, link->type);
 
     this->add(B, NEXT);
     this->next = link;
@@ -307,38 +307,131 @@ void Path::print(){
   printf("%s\n", buffer);
 }
 
-void Path::reverse(){
+int Path::reverse() { return reverse(0); }
+
+int Path::reverse(RailTrain * ReqT){
+  /* public
+  ** reverse the whole path iff all trains are stopped
+  ** also reverses all trains on the path except the Requested Train
+  **
+  ** arguments
+  **  ReqT: the train that has to be exempted
+  */
   loggerf(INFO, "Path::reverse");
 
-  for(RailTrain * T: this->trains){
+  for(RailTrain * T: trains){
     if(T->speed){
       loggerf(INFO, "Path has a train with speed");
-      return;
+      return 0;
     }
   }
 
-  this->direction ^= 1;
+  direction ^= 1;
 
-  for(Block * B: this->Blocks){
+  for(Block * B: Blocks){
     B->reverse();
   }
 
-  for(RailTrain * T: this->trains){
+  for(RailTrain * T: trains){
+    if(T == ReqT)
+      continue;
+
     loggerf(INFO, "Reverse Train");
-    T->dir ^= 1;
-    // T->setSpeedZ21(0);
+    T->reverse(REVERSE_NO_BLOCKS);
   }
 
   std::swap(next, prev);
   std::swap(Entrance, Exit);
+
+  return 1;
 }
 
-void Path::reserve(){
-  this->reserved = 1;
+void Path::reserve(RailTrain * T){
+  /* public
+  ** reserve the whole path by a specific Train
+  **
+  ** arguments:
+  **  T: the train that reserves the path
+  */
+  loggerf(TRACE, "Path %x reserve (%x)", (unsigned int)this, (unsigned int)T);
+  reserved++;
 
-  for(Block * B: this->Blocks){
+  for(Block * B: Blocks){
     B->reserve();
   }
+
+  trains.push_back(T);
+  T->reservePath(this);
+}
+
+void Path::reserve(RailTrain * T, Block * B){
+  /* public
+  ** reserve a part of the path by a specific Train
+  **   the block marks the beginning
+  **
+  ** arguments:
+  **  T: the train that reserves the path
+  **  B: the start block
+  */
+
+  if(B == Entrance){
+    reserve(T);
+    return;
+  }
+
+  reserved++;
+
+  while(B && B->path == this){
+    B->reserve();
+    B = B->Next_Block(NEXT | SWITCH_CARE, 1);
+  }
+
+  trains.push_back(T);
+  T->reservePath(this);
+}
+
+void Path::dereserve(RailTrain * T){
+  /* public
+  ** dereserve the whole path that is reserved by a specific Train
+  **
+  ** arguments:
+  **  T: the train that dereserves the path
+  */
+  loggerf(TRACE, "Path::dereserve %x (%i)", (unsigned int)T, T->id);
+  reserved--;
+
+  for(Block * B: Blocks){
+    B->dereserve();
+  }
+
+  trains.erase(std::remove_if(trains.begin(), trains.end(), [T](const auto & o) { return (o == T); }), trains.end());
+  T->dereservePath(this);
+}
+
+void Path::dereserve(RailTrain * T, Block * B){
+  /* public
+  ** dereserve a part of the path that is reserved by a specific Train
+  **  the block marks the beginning
+  **
+  ** arguments:
+  **  T: the train that dereserves the apth
+  **  B: the start block
+  */
+  loggerf(TRACE, "Path::dereserve %x (%i), %2i:%2i", (unsigned int)T, T->id, B->module, B->id);
+  if(B == Entrance){
+    reserve(T);
+    return;
+  }
+
+  reserved--;
+
+  while(B && B->path == this){
+    B->dereserve();
+    B = B->Next_Block(NEXT | SWITCH_CARE, 1);
+  }
+
+  trains.erase(std::remove_if(trains.begin(), trains.end(), [T](const auto & o) { return (o == T); }), trains.end());
+  T->dereservePath(this);
 }
 
 void pathlist_find(){

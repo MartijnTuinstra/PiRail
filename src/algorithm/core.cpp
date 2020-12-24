@@ -19,6 +19,7 @@
 #include "switchboard/rail.h"
 #include "switchboard/switch.h"
 #include "switchboard/msswitch.h"
+#include "switchboard/switchSolver.h"
 #include "switchboard/signals.h"
 #include "switchboard/station.h"
 #include "switchboard/blockconnector.h"
@@ -121,7 +122,8 @@ void process(Block * B, int flags){
   //Train Control
   // Apply train algorithm only if there is a train on the block and is the front of the train
   if(B->train && B == B->train->B){
-    if(B->Alg.N[0]){
+    loggerf(INFO, "This block is the front %02i:%02i", B->module, B->id);
+    if(B->Alg.next && B->Alg.N[0]){
       train_control(&B->Alg, flags);
     }
     else{
@@ -314,16 +316,18 @@ void Switch_Checker(Algor_Blocks * ABs, int debug){
   uint8_t next = ABs->next;
   //Block BNNN = *AllBlocks.BNNN;
 
-  if(!B->blocked || (B->train && B->train->stopped))
+  if(!B->blocked){
     return;
+  }
+  else if(B->train && B->train->stopped){
+    loggerf(DEBUG, "Train is stopped");
+    return;
+  }
 
   RailTrain * T = B->train;
   Block * tB;
 
-  for(uint8_t i = 0; i < 4; i++){
-    if(i > next)
-      break;
-
+  for(uint8_t i = 0; i <= next; i++){
     if(i == 0) tB = B;
     else tB = N[i-1];
 
@@ -338,71 +342,7 @@ void Switch_Checker(Algor_Blocks * ABs, int debug){
 
       return;
     }
-      // if(B->train && B->train->route == 1){
-        // struct pathinstruction temp;
-        // if(!Next_check_Switch_Route(tmp, *link, NEXT, B->train->instructions, &temp)){
-        //   if(set_switch_route(tmp, *link, NEXT | SWITCH_CARE, &temp)){
-        //     B->changed |= IO_Changed; // Recalculate
-        //     free_pathinstruction(&temp);
-        //     return;
-        //   }
-        //   else{
-        //     loggerf(WARNING, "Stop Train on Route");
-        //   }
-        // }
-        // else{
-        //   loggerf(INFO, "Path applied");
-        //   if(i == 0){
-        //     //clear instructions from train
-        //     remove_pathinstructions(*link, B->train->instructions);
-        //   }
-        // }
-        // free_pathinstructions(&temp);
-      // }
-      // else
-      // if (!Switch_Check_Path(tB, *link, NEXT | SWITCH_CARE)) {
-      //   loggerf(INFO, "Switch next path!! %02i:%02i", tB->module, tB->id);
-
-      //   if(Switch_Set_Path(tB, *link, NEXT | SWITCH_CARE)) {
-      //     loggerf(INFO, "Switch set path!! %02i:%02i", tB->module, tB->id);
-      //     tB->IOchanged = 1; // Recalculate
-      //     tB->algorchanged = 1; // Recalculate
-      //     Switch_Reserve_Path(tB, *link, NEXT | SWITCH_CARE);
-      //     return;
-      //   }
-      //   else{
-      //     loggerf(WARNING, "Failed switch set path");
-      //   }
-      // }
-      // else if(((link->type == RAIL_LINK_S  || link->type == RAIL_LINK_s ) &&   (link->p.Sw)->Detection &&   (link->p.Sw)->Detection->state != RESERVED_SWITCH) || 
-      //         ((link->type == RAIL_LINK_MA || link->type == RAIL_LINK_MB) && (link->p.MSSw)->Detection && (link->p.MSSw)->Detection->state != RESERVED_SWITCH)){
-      //   loggerf(WARNING, "reserve_switch_path");
-      //   Switch_Reserve_Path(tB, *link, NEXT | SWITCH_CARE);
-      // }
   }
-
-  // //Check Next 1
-  // if(B->blocked && (((BN.switches || BNN.switches) && BN.blocks > 0) || (BN.blocks == 0 || BNN.blocks == 0))){
-  //   Block * tmp;
-  //   for(int i = 0; i <= BN.blocks; i++){
-  //     if(i == 0){
-  //       tmp = B;
-  //     }
-  //     else{
-  //       tmp = BN.B[i - 1];
-  //     }
-
-  //     // loggerf(DEBUG, "checking block next link %i:%i", tmp->module, tmp->id);
-  //     if (tmp->type == SPECIAL) {
-  //       continue;
-  //     }
-  //     if (tmp->blocked){
-  //       continue;
-  //     }
-
-      
-  //   }
-  // }
 }
 
 
@@ -541,11 +481,11 @@ void train_following(Algor_Blocks * ABs, int debug){
   if(!B->blocked && B->train != 0){
     // Train is lost
     //  If blocks around are also not blocked
-    if(prev > 0 && next > 0 && !BN[0]->blocked && !BP[0]->blocked){
-      B->setState(UNKNOWN);
-      loggerf(WARNING, "%02i%02i LOST Train block %x", B->module, B->id, (unsigned int)B);
+    if(next > 0 && (BN[0]->expectedTrain == B->train || (!BN[0]->blocked && BN[0]->train == B->train))) {
+      B->setState(GHOST);
+      loggerf(WARNING, "%02i%02i LOST Train block %x -> GHOSTING", B->module, B->id, (unsigned int)B);
     }
-    else{ // Release the block
+    else if(B->state != GHOST){ // Release the block
       B->train->releaseBlock(B);
       B->train = 0;
 
@@ -582,6 +522,8 @@ void train_following(Algor_Blocks * ABs, int debug){
       loggerf(INFO, "Copy expectedTrain");
 
       B->train = B->expectedTrain;
+      B->expectedTrain = 0; // FIXME: is hot fix for SB-5.1
+                            //   keeps blocks from becomming ghosted when releasing after the unlinked train passed
       B->train->moveForward(B);
 
       if(next > 0)
@@ -590,17 +532,21 @@ void train_following(Algor_Blocks * ABs, int debug){
     // Train moved forward
     else if(prev > 0 && BP[0]->blocked && BP[0]->train){
       loggerf(INFO, "Copy train from previous block");
+      RailTrain * T;
       // Copy train id from previous block
-      B->train = BP[0]->train;
-      B->train->setBlock(B);
+      T = BP[0]->train;
+      T->setBlock(B);
+      B->train = T;
 
-      if(!B->train->stopped){
-        B->train->directionKnown = 1;
-        B->train->dir = 0;
-        B->train->B = B;
+      if(!T->stopped && !T->directionKnown){
+        T->directionKnown = true;
+        T->dir = 0;
+        T->B = B;
 
-        if(next > 0)
-          BN[0]->expectedTrain = B->train;
+        if(next > 0){
+          BN[0]->expectedTrain = T;
+          T->reserveBlock(BN[0]);
+        }
       }
       // if(train_link[B->train])
       //   train_link[B->train]->Block = B;
@@ -609,17 +555,28 @@ void train_following(Algor_Blocks * ABs, int debug){
     // Train moved backwards
     else if(next > 0 && BN[0]->blocked && BN[0]->train){
       loggerf(INFO, "Copy train from next block");
+      RailTrain * T;
       // Copy train id from next block
-      B->train = BN[0]->train;
-      B->train->setBlock(B);
+      T = BN[0]->train;
+      T->setBlock(B);
+      B->train = T;
 
-      if(!B->train->stopped){
-        B->train->directionKnown = 1;
-        B->train->dir = 1;
-        B->train->B = B;
+      if(!T->stopped && !T->directionKnown){
+        // Stop the train
+        T->setSpeed(0);
 
-        if(prev > 0)
-          BP[0]->expectedTrain = B->train;
+        T->directionKnown = true;
+        T->dir = 0; // Will be toggled when reversed
+        T->B = B;
+
+        if(prev > 0){
+          BP[0]->expectedTrain = T;
+          T->reserveBlock(BP[0]);
+        }
+
+        T->moveForward(B);
+
+        T->reverse(REVERSE_NO_BLOCKS);
       }
     }
     else if( ((prev > 0 && !BP[0]->blocked) || prev == 0) && ((next > 0 && !BN[0]->blocked) || next == 0) ){
@@ -777,7 +734,7 @@ void train_control(Algor_Blocks * ABs, int debug){
     T->changeSpeed(0, IMMEDIATE_SPEED);
   }
   else if(N[0]->state == DANGER){
-    loggerf(WARNING, "%sTrain Next block Blocked %02i:%02i", Debug, N[0]->module, N[0]->id);
+    loggerf(WARNING, "%sTrain Next block DANGER %02i:%02i", Debug, N[0]->module, N[0]->id);
     T->changeSpeed(0, GRADUAL_FAST_SPEED);
   }
   else if(N[0]->state == RESTRICTED){
@@ -888,7 +845,7 @@ void save_setup(){
     }
   }
 
-  char filename[40];
+  char filename[100];
   time_t t = time(NULL);
 
   struct tm tm = *localtime(&t);

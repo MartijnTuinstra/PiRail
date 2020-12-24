@@ -179,10 +179,10 @@ const char * IO_enum_type_string[9] = {
   "IO_Output_Blink",
   "IO_Output_Servo",
   "IO_Output_PWM",
+  "IO_Input",
   "IO_Input_Block",
   "IO_Input_Switch",
-  "IO_Input_MSSwitch",
-  "IO_Input"
+  "IO_Input_MSSwitch"
 };
 
 const char * IO_undefined_string[4] = {

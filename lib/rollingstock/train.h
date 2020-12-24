@@ -65,6 +65,8 @@ class Train {
     void setSpeed(uint16_t speed);
     void calcSpeed();
 
+    void reverse();
+
     bool enginesUsed();
     void setEnginesUsed(bool, RailTrain *);
 };

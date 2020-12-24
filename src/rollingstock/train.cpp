@@ -166,6 +166,13 @@ void Train::calcSpeed(){
   }
 }
 
+void Train::reverse(){
+  for(int i = 0; i < engines->items; i++){
+    if((*engines)[i])
+      (*engines)[i]->reverse();
+  }
+}
+
 bool Train::enginesUsed(){
   for(int  i = 0; i < engines->items; i++){
     if((*engines)[i]->use){

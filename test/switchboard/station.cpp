@@ -28,7 +28,7 @@ TEST_CASE( "Station Stating", "[SB][SB-5][SB-5.1]" ) {
   Unit * U = switchboard::Units(1);
   REQUIRE(U);
 
-  U->link_all();
+  switchboard::SwManager->linkAll();
 
   for(uint8_t i = 0; i < U->block_len; i++){
     U->B[i]->AlgorSearch(0);
@@ -144,6 +144,7 @@ TEST_CASE( "Station Stating", "[SB][SB-5][SB-5.1]" ) {
     U->B[33]->setDetection(1);
     Algorithm::process(U->B[33], _FORCE);
 
+    CHECK(U->St[1]->occupiedChild);
     CHECK(U->St[2]->occupied);
     CHECK(U->St[3]->occupied);
 
@@ -157,6 +158,7 @@ TEST_CASE( "Station Stating", "[SB][SB-5][SB-5.1]" ) {
 
     U->B[34]->setDetection(1);
     Algorithm::process(U->B[34], _FORCE);
+
     U->B[33]->setDetection(0);
     Algorithm::process(U->B[33], _FORCE);
 

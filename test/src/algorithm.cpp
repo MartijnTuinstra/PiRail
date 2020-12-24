@@ -137,7 +137,7 @@ TEST_CASE( "Train Following", "[Alg][Alg-2]"){
   REQUIRE(U);
 
   U->on_layout = true;
-  U->link_all();
+  switchboard::SwManager->linkAll();
 
   /*
   //  1.0> 1.1> 1.2> 1.3> 1.4> 1.5> 1.6> 1.7>
@@ -184,6 +184,7 @@ TEST_CASE( "Train Following", "[Alg][Alg-2]"){
     Algorithm::process(U->B[1], _FORCE);
 
     CHECK(U->B[1]->train == T);
+    CHECK(!T->directionKnown);
 
     // Link engine
     T->link(0, RAILTRAIN_ENGINE_TYPE);
@@ -198,8 +199,7 @@ TEST_CASE( "Train Following", "[Alg][Alg-2]"){
     CHECK(U->B[0]->train == 0);
   }
 
-  SECTION("IIb- Simple Engine Forward with"){
-    loggerf(CRITICAL, "IIb- Simple Engine Forward with");
+  SECTION("IIb- Simple Engine Forward with 'moving' train"){
     CHECK(U->B[0]->train == 0);
 
     U->B[1]->setDetection(1);
@@ -228,9 +228,10 @@ TEST_CASE( "Train Following", "[Alg][Alg-2]"){
     CHECK(U->B[2] == T->B);
     
     CHECK(T->directionKnown);
+    CHECK(U->B[3]->expectedTrain == T);
   }
 
-  SECTION("III - Full Detectable Train"){
+  SECTION("III - Full Detectable Train with moving"){
     CHECK(U->B[0]->train == 0);
 
     U->B[0]->setDetection(1);
@@ -286,6 +287,7 @@ TEST_CASE( "Train Following", "[Alg][Alg-2]"){
   }
 
   SECTION("IV - Partial Detectable Train"){
+    loggerf(CRITICAL, "IV - Partial Detectable Train");
     CHECK(U->B[3]->train == 0);
 
     U->B[3]->setDetection(1);
@@ -303,6 +305,7 @@ TEST_CASE( "Train Following", "[Alg][Alg-2]"){
       loggerf(ERROR, "Have block %2i:%2i", b->module, b->id);
       CHECK(((b != U->B[4] && b != U->B[1]) && (b == U->B[2] || b == U->B[3])));
     }
+    return;
 
     // Step Forward
     U->B[4]->setDetection(1);
@@ -441,7 +444,7 @@ TEST_CASE( "Algorithm Switch Setter", "[Alg][Alg-3]"){
   REQUIRE(U);
 
   U->on_layout = true;
-  U->link_all();
+  switchboard::SwManager->linkAll();
 
   // logger.setlevel_stdout(DEBUG);
 
@@ -721,7 +724,6 @@ TEST_CASE( "Algorithm Switch Setter", "[Alg][Alg-3]"){
   }
 
   SECTION("IX - Approaching S with reserved switches"){
-    logger.setlevel_stdout(INFO);
     loggerf(WARNING, "TEST IX");
     U->B[17]->reservedBy = (RailTrain *)1;
     U->B[17]->switchReserved = 1;
@@ -748,7 +750,6 @@ TEST_CASE( "Algorithm Switch Setter", "[Alg][Alg-3]"){
 TEST_CASE("Algor Queue", "[Alg][Alg-Q]"){
   char filenames[1][30] = {"./testconfigs/Alg-3.bin"};
   init_test(filenames, 1);
-  logger.setlevel_stdout(CRITICAL);
 
   Unit * U = switchboard::Units(1);
   REQUIRE(U);

@@ -26,7 +26,7 @@ TEST_CASE( "Switch Link", "[SB][SB-2][SB-2.1]" ) {
   Unit * U = switchboard::Units(1);
   REQUIRE(U);
 
-  U->link_all();
+  switchboard::SwManager->linkAll();
 
   /*
   //                      /- --1.3->

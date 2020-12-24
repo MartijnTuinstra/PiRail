@@ -27,7 +27,7 @@ TEST_CASE( "Block Link", "[SB][SB-1][SB-1.1]" ) {
   Unit * U = switchboard::Units(1);
   REQUIRE(U);
 
-  U->link_all();
+  switchboard::SwManager->linkAll();
 
   /*
   //  1.0->  --1.1->  --1.2->
@@ -83,7 +83,6 @@ TEST_CASE( "Block Link", "[SB][SB-1][SB-1.1]" ) {
 
 
   SECTION("VIII - Double NextBlock"){
-    logger.setlevel_stdout(TRACE);
     CHECK(U->B[0]->Next_Block(NEXT, 2) == U->B[2]);
     CHECK(U->B[2]->Next_Block(PREV, 2) == U->B[0]);
 
@@ -110,7 +109,7 @@ TEST_CASE( "Block Algorithm Search", "[SB][SB-1][SB-1.2]" ) {
   Unit * U = switchboard::Units(1);
   REQUIRE(U);
 
-  U->link_all();
+  switchboard::SwManager->linkAll();
   
 
   /*
@@ -342,7 +341,7 @@ TEST_CASE( "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" ) {
   Unit * U = switchboard::Units(1);
   REQUIRE(U);
 
-  U->link_all();
+  switchboard::SwManager->linkAll();
 
   for(uint8_t i = 0; i < U->block_len; i++){
     U->B[i]->AlgorSearch(0);

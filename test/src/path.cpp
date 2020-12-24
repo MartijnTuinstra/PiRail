@@ -21,7 +21,6 @@
 void init_test(char (* filenames)[30], int nr_files);
 
 TEST_CASE( "Path Construction", "[PATH][PATH-1]" ) {
-  loggerf(CRITICAL, "PATH-1 TEST");
   char filenames[2][30] = {"./testconfigs/PATH-1.bin"};
   init_test(filenames, 1);
 
@@ -234,10 +233,7 @@ TEST_CASE( "Path Reverse", "[PATH][PATH-2]") {
   Unit * U = switchboard::Units(1);
   REQUIRE(U);
 
-  U->on_layout = true;
-  U->link_all();
-
-  pathlist_find();
+  switchboard::SwManager->linkAll();
 
   REQUIRE(U->B[0]->path == U->B[10]->path);
   Path * P = U->B[0]->path;
@@ -291,17 +287,17 @@ TEST_CASE( "Path Reserve", "[PATH][PATH-3]") {
   Unit * U = switchboard::Units(1);
   REQUIRE(U);
 
-  U->on_layout = true;
-  U->link_all();
-
-  pathlist_find();
+  switchboard::SwManager->linkAll();
 
   REQUIRE(U->B[0]->path == U->B[10]->path);
   Path * P = U->B[0]->path;
 
-  P->reserve();
+  auto T = new RailTrain(U->B[0]);
+
+  P->reserve(T);
 
   CHECK(P->reserved == 1);
+  CHECK(P->trains[0] == T);
 
   for(uint8_t i = 0; i < 11; i++)
     CHECK(U->B[i]->reserved == 1);

@@ -85,8 +85,6 @@ class MSSwitch {
     uint8_t pref_len;
     struct switch_preference * preferences;
 
-    // Switch(uint8_t module, struct s_switch_conf config);
-    MSSwitch(uint8_t module, struct ms_switch_conf conf);//(struct s_msswitch_connect connect, uint8_t type, uint8_t block_id, uint8_t output_len, struct s_IO_port_conf * output_pins, uint16_t * output_states);
     MSSwitch(uint8_t, struct configStruct_MSSwitch *);
     ~MSSwitch();
 

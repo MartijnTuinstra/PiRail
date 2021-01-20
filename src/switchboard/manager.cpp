@@ -102,7 +102,7 @@ void Manager::openDir(char * path){
 }
 
 void Manager::addFile(char * filename){
-  loggerf(INFO, "Adding %s", filename);
+  loggerf(CRITICAL, "Adding %s", filename);
   String * str = new String((const char *)filename);
   filenames.push_back(str);
 }
@@ -125,7 +125,7 @@ void Manager::loadFiles(){
 }
 
 void Manager::openFile(char * filename){
-  auto mc = new newModuleConfig(filename);
+  auto mc = new ModuleConfig(filename);
   Configs.push_back(mc);
 
   mc->read();

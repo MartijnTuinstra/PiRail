@@ -21,38 +21,6 @@ const char * station_types_string[5] = {
   "STATION_CARGO_YARD" 
 };
 
-Station::Station(int module, int id, struct station_conf conf){
-  memset(this, 0, sizeof(Station));
-
-  this->module = module;
-  this->id = id;
-  U = Units(module);
-
-  uid = SwManager->addStation(this);
-
-  this->type = (enum Station_types)conf.type;
-
-  this->name = (char *)_calloc(conf.name_len + 1, char);
-  strncpy(this->name, conf.name, conf.name_len);
-
-  U->insertStation(this);
-
-  if(conf.parent != 0xFFFF && U->St[conf.parent]){
-    this->parent = U->St[conf.parent];
-    U->St[conf.parent]->childs.push_back(this);
-  }
-  else if(conf.parent != 0xFFFF)
-    loggerf(WARNING, "Failed to link station '%s' to parent %d", this->name, conf.parent);
-
-  this->blocks_len = conf.nr_blocks;
-  this->blocks = (Block **)_calloc(this->blocks_len, Block *);
-
-  for(int i = 0; i < conf.nr_blocks; i++){
-    this->blocks[i] = U->B[conf.blocks[i]];
-    U->B[conf.blocks[i]]->station = this;
-  }
-}
-
 Station::Station(int _module, int _id, struct configStruct_Station * conf){
   memset(this, 0, sizeof(Station));
 

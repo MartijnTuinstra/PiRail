@@ -9,7 +9,6 @@
 
 #include "switchboard/declares.h"
 #include "path.h"
-#include "config_data.h"
 
 #include "config/LayoutStructure.h"
 
@@ -146,7 +145,6 @@ class Block {
     //Algorithm selected blocks
     Algor_Blocks Alg;
 
-    Block(uint8_t module, struct s_block_conf block);  // Constructor
     Block(uint8_t, struct configStruct_Block *);
     ~Block(); // Destructor
 

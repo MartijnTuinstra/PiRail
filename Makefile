@@ -15,7 +15,7 @@ GCC = g++ -std=c++14 -g3 $(GCC_INCLUDE) $(GCC_ERROR_FLAGS) $(GCC_LIBS) $(GCC_FLA
 
 
 
-FILES_CONFIG = $(addprefix config/,ModuleConfig newModuleConfig RollingConfig configReader LayoutStructure RollingStructure)
+FILES_CONFIG = $(addprefix config/,ModuleConfig RollingConfig configReader LayoutStructure RollingStructure)
 FILES_SWITCHBOARD = $(addprefix switchboard/,blockconnector links rail switch msswitch unit station signals manager)
 FILES_WEBSOCKET = $(addprefix websocket/,server client stc cts message)
 FILES_ROLLING = $(addprefix rollingstock/,manager train engine car railtrain)

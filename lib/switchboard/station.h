@@ -49,8 +49,6 @@ class Station {
     Station * parent;
     std::vector<Station *> childs;
 
-    // Station(int module, int id, char * name, char name_len, enum Station_types type, int len, uint8_t * blocks);
-    Station(int module, int id, struct station_conf conf);
     Station(int mdoule, int id, struct configStruct_Station *);
     ~Station();
 

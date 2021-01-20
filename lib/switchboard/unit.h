@@ -3,7 +3,6 @@
 
 #include "switchboard/declares.h"
 #include "config/ModuleConfig.h"
-#include "config/newModuleConfig.h"
 #include "IO.h"
 
 struct unit_connector {
@@ -56,7 +55,6 @@ class Unit {
 
     Unit(uint16_t M, uint8_t Nodes, char points);
     Unit(ModuleConfig * Config);
-    Unit(newModuleConfig * Config);
     ~Unit();
 
     void insertBlock(Block * B);

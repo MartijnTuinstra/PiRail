@@ -8,7 +8,14 @@
 #include "modules.h"
 
 #include "switchboard/manager.h"
+#include "switchboard/unit.h"
+#include "switchboard/rail.h"
+#include "switchboard/switch.h"
+#include "switchboard/signals.h"
+#include "switchboard/station.h"
 #include "rollingstock/manager.h"
+
+#include "config/LayoutStructure.h"
 
 #include "scheduler/scheduler.h"
 

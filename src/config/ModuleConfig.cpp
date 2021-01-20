@@ -1,90 +1,284 @@
+
 #include <stdio.h>
+#include "config/LayoutStructure.h"
+#include "config/configReader.h"
 
 #include "utils/logger.h"
 #include "utils/mem.h"
 #include "config.h"
 #include "config/ModuleConfig.h"
 
-ModuleConfig::ModuleConfig(char * filename){
+
+// void hexdump(void * data, int length){
+//   printf("HEXDUMP (%x) %i:\n", (unsigned int)data, length);
+//   char text[2000];
+//   char * ptr = text;
+
+//   for(int i = 0; i < length; i++){
+//     ptr += sprintf(ptr, "%02x ", ((uint8_t *)data)[i]);
+//     if((i % 16) == 15)
+//       ptr += sprintf(ptr, "\n");
+//   }
+
+//   // f(INFO, file, line, (const char *)text);
+//   printf("%s", text);
+// }
+
+
+ModuleConfig::ModuleConfig(char * _filename){
   memset(this, 0, sizeof(ModuleConfig));
 
-  strcpy(this->filename, filename);
-  this->parsed = false;
+  strcpy(filename, _filename);
+  parsed = false;
 }
+
+// ModuleConfig::ModuleConfig(char * _filename, ModuleConfig * oC){
+//   memset(this, 0, sizeof(ModuleConfig));
+
+//   strcpy(filename, _filename);
+//   parsed = true;
+
+//   header = (struct configStruct_Unit *)_calloc(1, struct configStruct_Unit);
+//   header->Module     = oC->header.module;
+//   header->Connections = oC->header.connections;
+//   header->IO_Nodes   = oC->header.IO_Nodes;
+//   header->Blocks     = oC->header.Blocks;
+//   header->Switches   = oC->header.Switches;
+//   header->MSSwitches = oC->header.MSSwitches;
+//   header->Signals    = oC->header.Signals;
+//   header->Stations   = oC->header.Stations;
+
+//   loggerf(DEBUG, "Module convert %d, %d, %d, %d, %d, %d", header->IO_Nodes, header->Blocks, header->Switches, header->MSSwitches, header->Signals, header->Stations);
+
+//   Nodes      = (struct configStruct_Node *)_calloc(header->IO_Nodes, struct configStruct_Node);
+//   Blocks     = (struct configStruct_Block *)_calloc(header->Blocks, struct configStruct_Block);
+//   Switches   = (struct configStruct_Switch *)_calloc(header->Switches, struct configStruct_Switch);
+//   MSSwitches = (struct configStruct_MSSwitch *)_calloc(header->MSSwitches, struct configStruct_MSSwitch);
+//   Signals    = (struct configStruct_Signal *)_calloc(header->Signals, struct configStruct_Signal);
+//   Stations   = (struct configStruct_Station *)_calloc(header->Stations, struct configStruct_Station);
+  
+//   for(int i = 0; i < header->IO_Nodes; i++){
+//     // Config_read_Node(fileVersion, &Nodes[i], buf_ptr);
+//     Nodes[i].Node = oC->Nodes[i].Node;
+//     Nodes[i].size = oC->Nodes[i].size;
+
+//     Nodes[i].data = (uint8_t *)_calloc(Nodes[i].size, uint8_t);
+//     memcpy(Nodes[i].data, oC->Nodes[i].data, Nodes[i].size * sizeof(uint8_t));
+//   }
+
+//   for(int i = 0; i < header->Blocks; i++){
+//     // Config_read_Block(fileVersion, &Blocks[i], buf_ptr);
+//     Blocks[i].id     = oC->Blocks[i].id;
+//     Blocks[i].type   = oC->Blocks[i].type;
+//     Blocks[i].next.module   = oC->Blocks[i].next.module;
+//     Blocks[i].next.id       = oC->Blocks[i].next.id;
+//     Blocks[i].next.type     = oC->Blocks[i].next.type;
+//     Blocks[i].prev.module   = oC->Blocks[i].prev.module;
+//     Blocks[i].prev.id       = oC->Blocks[i].prev.id;
+//     Blocks[i].prev.type     = oC->Blocks[i].prev.type;
+//     Blocks[i].IO_In.Node    = oC->Blocks[i].IO_In.Node;
+//     Blocks[i].IO_In.Port    = oC->Blocks[i].IO_In.Adr;
+//     Blocks[i].IO_Out.Node   = oC->Blocks[i].IO_Out.Node;
+//     Blocks[i].IO_Out.Port   = oC->Blocks[i].IO_Out.Adr;
+//     Blocks[i].speed  = oC->Blocks[i].speed;
+//     Blocks[i].length = oC->Blocks[i].length;
+//     Blocks[i].fl     = oC->Blocks[i].fl;
+//   }
+
+//   for(int i = 0; i < header->Switches; i++){
+//     // Config_read_Switch(fileVersion, &Switches[i], buf_ptr);
+//     Switches[i].id        = oC->Switches[i].id;
+//     Switches[i].det_block = oC->Switches[i].det_block;
+
+//     Switches[i].App.module   = oC->Switches[i].App.module;
+//     Switches[i].App.id       = oC->Switches[i].App.id;
+//     Switches[i].App.type     = oC->Switches[i].App.type;
+//     Switches[i].Str.module   = oC->Switches[i].Str.module;
+//     Switches[i].Str.id       = oC->Switches[i].Str.id;
+//     Switches[i].Str.type     = oC->Switches[i].Str.type;
+//     Switches[i].Div.module   = oC->Switches[i].Div.module;
+//     Switches[i].Div.id       = oC->Switches[i].Div.id;
+//     Switches[i].Div.type     = oC->Switches[i].Div.type;
+
+//     Switches[i].IO_length    = oC->Switches[i].IO_len;
+//     Switches[i].IO_type      = oC->Switches[i].IO_type;
+
+//     Switches[i].speed_Str    = oC->Switches[i].speed_Str;
+//     Switches[i].speed_Div    = oC->Switches[i].speed_Div;
+//     Switches[i].feedback_len = oC->Switches[i].feedback_len;
+
+//     Switches[i].IO_Ports = (struct configStruct_IOport *)_calloc(Switches[i].IO_length, struct configStruct_IOport);
+//     for(unsigned int j = 0; j < Switches[i].IO_length; j++){
+//       Switches[i].IO_Ports[j].Node    = oC->Switches[i].IO_Ports[j].Node;
+//       Switches[i].IO_Ports[j].Port    = oC->Switches[i].IO_Ports[j].Adr;
+//     }
+
+//     Switches[i].IO_Event = (uint8_t *)_calloc(Switches[i].IO_length * 2, uint8_t);
+//     memcpy(Switches[i].IO_Event, oC->Switches[i].IO_events, Switches[i].IO_length * 2 * sizeof(uint8_t));
+
+//     Switches[i].FB_Ports = (configStruct_IOport *)_calloc(Switches[i].feedback_len, struct configStruct_IOport);
+//     for(unsigned int j = 0; j < Switches[i].feedback_len; j++){
+//       Switches[i].FB_Ports[j].Node    = oC->Switches[i].FB_Ports[j].Node;
+//       Switches[i].FB_Ports[j].Port    = oC->Switches[i].FB_Ports[j].Adr;
+//     }
+
+//     Switches[i].FB_Event = (uint8_t *)_calloc(Switches[i].feedback_len * 2, uint8_t);
+//     memcpy(Switches[i].FB_Event, oC->Switches[i].FB_events, Switches[i].feedback_len * 2 * sizeof(uint8_t));
+//   }
+
+//   for(int i = 0; i < header->MSSwitches; i++){
+//     MSSwitches[i].id        = oC->MSSwitches[i].id;
+//     MSSwitches[i].det_block = oC->MSSwitches[i].det_block;
+//     MSSwitches[i].type      = oC->MSSwitches[i].type;
+//     MSSwitches[i].nr_states = oC->MSSwitches[i].nr_states;
+//     MSSwitches[i].IO        = oC->MSSwitches[i].IO;
+
+//     MSSwitches[i].states = (struct configStruct_MSSwitchState *)_calloc(MSSwitches[i].nr_states, struct configStruct_MSSwitchState);
+//     for(unsigned int j = 0; j < MSSwitches[i].nr_states; j++){
+        
+//         MSSwitches[i].states[j].sideA.module = oC->MSSwitches[i].states[j].sideA.module;
+//         MSSwitches[i].states[j].sideA.id     = oC->MSSwitches[i].states[j].sideA.id;
+//         MSSwitches[i].states[j].sideA.type   = oC->MSSwitches[i].states[j].sideA.type;
+//         MSSwitches[i].states[j].sideB.module = oC->MSSwitches[i].states[j].sideB.module;
+//         MSSwitches[i].states[j].sideB.id     = oC->MSSwitches[i].states[j].sideB.id;
+//         MSSwitches[i].states[j].sideB.type   = oC->MSSwitches[i].states[j].sideB.type;
+
+//         MSSwitches[i].states[j].speed           = oC->MSSwitches[i].states[j].speed;
+//         MSSwitches[i].states[j].dir             = oC->MSSwitches[i].states[j].dir;
+//         MSSwitches[i].states[j].output_sequence = oC->MSSwitches[i].states[j].output_sequence;
+//     }
+
+//     MSSwitches[i].IO_Ports = (struct configStruct_IOport *)_calloc(MSSwitches[i].IO, struct configStruct_IOport);
+//     for(unsigned int j = 0; j < MSSwitches[i].IO; j++){
+//         MSSwitches[i].IO_Ports[j].Node = oC->MSSwitches[i].IO_Ports[j].Node;
+//         MSSwitches[i].IO_Ports[j].Port = oC->MSSwitches[i].IO_Ports[j].Adr;
+//     }
+//   }
+
+//   for(int i = 0; i < header->Signals; i++){
+//     Signals[i].direction  = oC->Signals[i].direction;
+//     Signals[i].id         = oC->Signals[i].id;
+//     Signals[i].block.module = oC->Signals[i].Block.module;
+//     Signals[i].block.id     = oC->Signals[i].Block.id;
+//     Signals[i].block.type   = oC->Signals[i].Block.type;
+//     Signals[i].output_len = oC->Signals[i].output_len;
+//     Signals[i].Switch_len = oC->Signals[i].Switch_len;
+
+//     Signals[i].output = (struct configStruct_IOport *)_calloc(Signals[i].output_len, struct configStruct_IOport);
+//     for(uint8_t j = 0; j < Signals[i].output_len; j++){
+//         Signals[i].output[j].Node = oC->Signals[i].output[j].Node;
+//         Signals[i].output[j].Port = oC->Signals[i].output[j].Adr;
+//     }
+
+//     Signals[i].stating = (struct configStruct_SignalEvent *)_calloc(Signals[i].output_len, struct configStruct_SignalEvent);
+//     for(uint8_t j = 0; j < Signals[i].output_len; j++){
+//       memcpy(Signals[i].stating[j].event, oC->Signals[i].stating[j].event, 8 * sizeof(uint8_t));
+//     }
+
+//     Signals[i].Switches = (struct configStruct_SignalDependentSwitch *)_calloc(Signals[i].Switch_len, struct configStruct_SignalDependentSwitch);
+//     for(uint8_t j = 0; j < Signals[i].Switch_len; j++){
+//       Signals[i].Switches[j].type  = oC->Signals[i].Switches[j].type;
+//       Signals[i].Switches[j].Sw    = oC->Signals[i].Switches[j].Sw;
+//       Signals[i].Switches[j].state = oC->Signals[i].Switches[j].state;
+//     }
+//   }
+
+//   for(int i = 0; i < header->Stations; i++){
+//     Stations[i].type      = oC->Stations[i].type;
+//     Stations[i].nr_blocks = oC->Stations[i].nr_blocks;
+//     Stations[i].name_len  = oC->Stations[i].name_len;
+//     Stations[i].reserved  = oC->Stations[i].reserved;
+//     Stations[i].parent    = oC->Stations[i].parent;
+
+//     Stations[i].blocks = (uint8_t *)_calloc(Stations[i].nr_blocks, uint8_t);
+//     memcpy(Stations[i].blocks, oC->Stations[i].blocks, Stations[i].nr_blocks * 1 * sizeof(uint8_t));
+
+//     Stations[i].name = (char *)_calloc(Stations[i].name_len, char);
+//     memcpy(Stations[i].name, oC->Stations[i].name, Stations[i].name_len * 1 * sizeof(char));
+//   }
+
+//   //Layout
+//   Layout = (struct configStruct_WebLayout *)_calloc(1, struct configStruct_WebLayout);
+
+//   Layout->LayoutLength = oC->Layout_length;
+
+//   Layout->Layout = (char *)_calloc(Layout->LayoutLength + 1, char);
+//   memcpy(Layout->Layout, oC->Layout, Layout->LayoutLength);
+//   // Config_read_WebLayout(fileVersion, &Layout, buf_ptr);
+
+// }
 
 ModuleConfig::~ModuleConfig(){
   loggerf(DEBUG, "Destructor ModuleConfig %s", this->filename);
 
-  for(int i = 0; i < this->header.IO_Nodes; i++){
-    _free(this->Nodes[i].data);
+  for(int i = 0; i < header->IO_Nodes; i++){
+    _free(Nodes[i].data);
   }
 
   loggerf(TRACE, "  Module Block");
 
   
-  for(int i = 0; i < this->header.Blocks; i++){}
+  for(int i = 0; i < header->Blocks; i++){}
 
   loggerf(TRACE, "  Module Switch");
 
-  for(int i = 0; i < this->header.Switches; i++){
+  for(int i = 0; i < header->Switches; i++){
     _free(Switches[i].IO_Ports);
-    _free(Switches[i].IO_events);
+    _free(Switches[i].IO_Event);
 
-    if(Switches[i].feedback_len){
-      _free(Switches[i].FB_Ports);
-      _free(Switches[i].FB_events);      
-    }
+    _free(Switches[i].FB_Ports);
+    _free(Switches[i].FB_Event);
   }
 
   loggerf(TRACE, "  Module MSSwitch");
 
-  for(int i = 0; i < this->header.MSSwitches; i++){
-    _free(this->MSSwitches[i].states);
-    _free(this->MSSwitches[i].IO_Ports);
+  for(int i = 0; i < header->MSSwitches; i++){
+    _free(MSSwitches[i].states);
+    _free(MSSwitches[i].IO_Ports);
   }
 
   loggerf(TRACE, "  Module Signals");
   
-  for(int i = 0; i < this->header.Signals; i++){
-    if(this->Signals[i].stating)
-      _free(this->Signals[i].stating);
-    if(this->Signals[i].output)
-      _free(this->Signals[i].output);
+  for(int i = 0; i < header->Signals; i++){
+    _free(Signals[i].stating);
+    _free(Signals[i].output);
+    _free(Signals[i].Switches);
   }
 
   loggerf(TRACE, "  Module Stations");
 
-  for(int i = 0; i < this->header.Stations; i++){
-    _free(this->Stations[i].name);
-    _free(this->Stations[i].blocks);
+  for(int i = 0; i < header->Stations; i++){
+    _free(Stations[i].name);
+    _free(Stations[i].blocks);
   }
 
-  _free(this->Nodes);
-  _free(this->Blocks);
-  _free(this->Switches);
-  _free(this->MSSwitches);
-  _free(this->Stations);
-  _free(this->Signals);
-  _free(this->Layout);
+  _free(Nodes);
+  _free(Blocks);
+  _free(Switches);
+  _free(MSSwitches);
+  _free(Stations);
+  _free(Signals);
+  _free(Layout);
   _free(buffer);
 }
 
 void ModuleConfig::newModule(uint8_t file, uint8_t connections){
-  this->header.module = file;
-  this->header.connections = connections;
-  this->header.IO_Nodes = 0;
-  this->header.Blocks = 0;
-  this->header.Switches = 0;
-  this->header.MSSwitches = 0;
-  this->header.Signals = 0;
-  this->header.Stations = 0;
+  header = (struct configStruct_Unit *)_calloc(1, struct configStruct_Unit);
+  header->Module = file;
+  header->Connections = connections;
+  header->IO_Nodes = 0;
+  header->Blocks = 0;
+  header->Switches = 0;
+  header->MSSwitches = 0;
+  header->Signals = 0;
+  header->Stations = 0;
 
-  this->Nodes = 0;
-  this->Blocks = 0;
-  this->Switches = 0;
-  this->MSSwitches = 0;
-  this->Signals = 0;
-  this->Stations = 0;
+  Nodes = 0;
+  Blocks = 0;
+  Switches = 0;
+  MSSwitches = 0;
+  Signals = 0;
+  Stations = 0;
 }
 
 int ModuleConfig::read(){
@@ -101,10 +295,6 @@ int ModuleConfig::read(){
     return -1;
   }
 
-  char _header[2];
-
-  fread(_header, 1, 1, fp);
-
   fseek(fp, 0, SEEK_END);
   long fsize = ftell(fp);
   fseek(fp, 0, SEEK_SET);
@@ -116,118 +306,102 @@ int ModuleConfig::read(){
   uint8_t * base_buf_ptr = (uint8_t *)&buffer[0];
   uint8_t ** buf_ptr = &base_buf_ptr;
 
-  *buf_ptr += 1;
+  uint8_t fileVersion;
+  Config_read_uint8_t_uint8_t(&fileVersion, buf_ptr);
 
-  this->header = read_s_unit_conf(buf_ptr);
-
-  if (_header[0] != MODULE_CONF_VERSION) {
-    loggerf(WARNING, "Module %i not correct version", this->header.module);
+  if (fileVersion > CONFIG_LAYOUTSTRUCTURE_LU_MAX_VERSION) {
+    loggerf(WARNING, "Module Config not correct version (%s)", filename);
     return -1;
   }
 
-  loggerf(DEBUG, "Module start reading %d, %d, %d, %d, %d, %d", this->header.IO_Nodes, this->header.Blocks, this->header.Switches, this->header.MSSwitches, this->header.Signals, this->header.Stations);
+  header = (struct configStruct_Unit *)_calloc(1, struct configStruct_Unit);
 
-  this->Nodes = (struct node_conf *)_calloc(this->header.IO_Nodes, struct node_conf);
-  this->Blocks = (struct s_block_conf *)_calloc(this->header.Blocks, struct s_block_conf);
-  this->Switches = (struct switch_conf *)_calloc(this->header.Switches, struct switch_conf);
-  this->MSSwitches = (struct ms_switch_conf *)_calloc(this->header.MSSwitches, struct ms_switch_conf);
-  this->Signals = (struct signal_conf *)_calloc(this->header.Signals, struct signal_conf);
-  this->Stations = (struct station_conf *)_calloc(this->header.Stations, struct station_conf);
+  Config_read_Unit(fileVersion, header, buf_ptr);
+
+  loggerf(DEBUG, "Module start reading %d, %d, %d, %d, %d, %d", header->IO_Nodes, header->Blocks, header->Switches, header->MSSwitches, header->Signals, header->Stations);
+
+  Nodes      = (struct configStruct_Node *)_calloc(header->IO_Nodes, struct configStruct_Node);
+  Blocks     = (struct configStruct_Block *)_calloc(header->Blocks, struct configStruct_Block);
+  Switches   = (struct configStruct_Switch *)_calloc(header->Switches, struct configStruct_Switch);
+  MSSwitches = (struct configStruct_MSSwitch *)_calloc(header->MSSwitches, struct configStruct_MSSwitch);
+  Signals    = (struct configStruct_Signal *)_calloc(header->Signals, struct configStruct_Signal);
+  Stations   = (struct configStruct_Station *)_calloc(header->Stations, struct configStruct_Station);
   
-  for(int i = 0; i < this->header.IO_Nodes; i++){
-    this->Nodes[i]  = read_s_node_conf(buf_ptr);
+  for(int i = 0; i < header->IO_Nodes; i++){
+    Config_read_Node(fileVersion, &Nodes[i], buf_ptr);
   }
 
-  for(int i = 0; i < this->header.Blocks; i++){
-    this->Blocks[i]  = read_s_block_conf(buf_ptr);
+  for(int i = 0; i < header->Blocks; i++){
+    Config_read_Block(fileVersion, &Blocks[i], buf_ptr);
   }
 
-  for(int i = 0; i < this->header.Switches; i++){
-    this->Switches[i]  = read_s_switch_conf(buf_ptr);
+  for(int i = 0; i < header->Switches; i++){
+    Config_read_Switch(fileVersion, &Switches[i], buf_ptr);
   }
 
-  for(int i = 0; i < this->header.MSSwitches; i++){
-    this->MSSwitches[i]  = read_s_ms_switch_conf(buf_ptr);
+  for(int i = 0; i < header->MSSwitches; i++){
+    Config_read_MSSwitch(fileVersion, &MSSwitches[i], buf_ptr);
   }
 
-  for(int i = 0; i < this->header.Signals; i++){
-    this->Signals[i]  = read_s_signal_conf(buf_ptr);
+  for(int i = 0; i < header->Signals; i++){
+    Config_read_Signal(fileVersion, &Signals[i], buf_ptr);
   }
 
-  for(int i = 0; i < this->header.Stations; i++){
-    this->Stations[i]  = read_s_station_conf(buf_ptr);
+  for(int i = 0; i < header->Stations; i++){
+    Config_read_Station(fileVersion, &Stations[i], buf_ptr);
   }
 
   //Layout
-  memcpy(&this->Layout_length, *buf_ptr, sizeof(uint16_t));
-  *buf_ptr += sizeof(uint16_t) + 1;
+  Layout = (struct configStruct_WebLayout *)_calloc(1, struct configStruct_WebLayout);
+  Config_read_WebLayout(fileVersion, Layout, buf_ptr);
 
-  this->Layout = (char *)_calloc(this->Layout_length + 1, char);
-  memcpy(this->Layout, *buf_ptr, this->Layout_length);
-
-  this->parsed = true;
+  parsed = true;
 
   return 1;
 }
 
 int ModuleConfig::calc_size(){
-  int size = 1; //header
-  size += sizeof(struct s_unit_conf) + 1;
+  int size = 1 + Config_write_size_Unit(header); //header
 
   //Nodes
-  size += (sizeof(struct s_node_conf) + 2) * this->header.IO_Nodes;
-  for(int i = 0; i < this->header.IO_Nodes; i++){
-    size += (this->Nodes[i].size + 1) / 2;
+  for(int i = 0; i < header->IO_Nodes; i++){
+    size += Config_write_size_Node(&Nodes[i]);
   }
 
-
   //Blocks
-  size += (sizeof(struct s_block_conf) + 1) * this->header.Blocks;
+  size += Config_write_size_Block(Blocks) * header->Blocks;
 
   //Switches
-  for(int i = 0; i < this->header.Switches; i++){
-    size += sizeof(struct s_switch_conf) + 1;
-    size += sizeof(struct s_IO_port_conf) * (Switches[i].IO_len) + 1;
-    size += sizeof(uint8_t) * (Switches[i].IO_len * 2) + 1; // Each IO has two states
-
-    if(Switches[i].feedback_len){
-      size += sizeof(struct s_IO_port_conf) * Switches[i].feedback_len + 1;
-      size += sizeof(uint8_t) * Switches[i].feedback_len * 2 + 1;
-    }
+  for(int i = 0; i < header->Switches; i++){
+    size += Config_write_size_Switch(&Switches[i]);
   }
 
   //MSSwitches
-  for(int i = 0; i < this->header.MSSwitches; i++){
-    size += sizeof(struct s_ms_switch_conf) + 1;
-    size += sizeof(struct s_ms_switch_state_conf) * this->MSSwitches[i].nr_states + 1;
-    size += 2 * this->MSSwitches[i].IO + 1;
+  for(int i = 0; i < header->MSSwitches; i++){
+    size += Config_write_size_MSSwitch(&MSSwitches[i]);
   }
 
 
   //Signals
-  for(int i = 0; i <  this->header.Signals; i++){
-    size += sizeof(struct s_signal_conf) + 1;
-    size += this->Signals[i].output_len * sizeof(struct s_IO_port_conf) + 1;
-    size += this->Signals[i].output_len * sizeof(struct s_IO_signal_event_conf) + 1;
-    size += this->Signals[i].Switch_len * sizeof(struct s_Signal_DependentSwitch) + 1;
+  for(int i = 0; i <  header->Signals; i++){
+    size += Config_write_size_Signal(&Signals[i]);
   }
 
   //Stations
-  for(int i = 0; i <  this->header.Stations; i++){
-    size += sizeof(struct s_station_conf) + 1;
-    size += this->Stations[i].name_len + 1;
-    size += this->Stations[i].nr_blocks + 1;
+  for(int i = 0; i <  header->Stations; i++){
+    size += Config_write_size_Station(&Stations[i]);
   }
 
   //Layout
-
-  size += 3 + this->Layout_length+3;
+  size += Config_write_size_WebLayout(Layout);
 
   return size;
 }
 
 void ModuleConfig::dump(){
   FILE * fp = fopen(filename, "wb");
+
+  log_hex("SAVE DUMP: ", buffer, buffer_len - 10);
 
   fwrite(buffer, buffer_len - 10, 1, fp);
 
@@ -236,125 +410,54 @@ void ModuleConfig::dump(){
 
 void ModuleConfig::write(){
   loggerf(DEBUG, "write_module_from_conf");
-  int size = this->calc_size();
+  int size = calc_size();
 
   loggerf(INFO, "Writing %i bytes", size);
 
   char * data = (char *)_calloc(size + 50, char);
+  uint8_t * p = (uint8_t *)data;
 
-  data[0] = MODULE_CONF_VERSION;
+  {
+    uint8_t tmp = CONFIG_LAYOUTSTRUCTURE_LU_MAX_VERSION;
+    Config_write_uint8_t(&tmp, &p);
+  }
 
-  char * p = &data[1];
   //Copy header
-  memcpy(p, &this->header, sizeof(struct s_unit_conf));
-
-  p += sizeof(struct s_unit_conf) + 1;
+  // memcpy(p, &this->header, sizeof(struct s_unit_conf));
+  Config_write_Unit(header, &p);
 
   //Copy Nodes
-  for(int i = 0; i < this->header.IO_Nodes; i++){
-    memcpy(p, &this->Nodes[i], sizeof(struct s_node_conf));
-
-    p += sizeof(struct s_node_conf) + 1;
-    memcpy(p, this->Nodes[i].data, (this->Nodes[i].size+1)/2);
-    p += (this->Nodes[i].size+1)/2 + 1;
+  for(int i = 0; i < header->IO_Nodes; i++){
+    Config_write_Node(&Nodes[i], &p);
   }
 
   //Copy blocks
-  for(int i = 0; i < this->header.Blocks; i++){
-    memcpy(p, &this->Blocks[i], sizeof(struct s_block_conf));
-
-    p += sizeof(struct s_block_conf) + 1;
+  for(int i = 0; i < header->Blocks; i++){
+    Config_write_Block(&Blocks[i], &p);
   }
 
   //Copy Switches
-  for(int i = 0; i < this->header.Switches; i++){
-    memcpy(p, &this->Switches[i], sizeof(struct s_switch_conf));
-
-    p += sizeof(struct s_switch_conf) + 1;
-
-    for(int j = 0; j < this->Switches[i].IO_len; j++){
-      memcpy(p, &this->Switches[i].IO_Ports[j], sizeof(struct s_IO_port_conf));
-      p += sizeof(struct s_IO_port_conf);
-    }
-
-    p += 1;
-
-    memcpy(p, this->Switches[i].IO_events, sizeof(uint8_t) * Switches[i].IO_len * 2);
-    p += Switches[i].IO_len * 2 * sizeof(uint8_t);
-
-    p += 1;
-
-    if(Switches[i].feedback_len){
-      for(int j = 0; j < Switches[i].feedback_len; j++){
-        memcpy(p, &Switches[i].FB_Ports[j], sizeof(struct s_IO_port_conf));
-        p += sizeof(struct s_IO_port_conf);
-      }
-
-      p += 1;
-
-      memcpy(p, this->Switches[i].FB_events, sizeof(uint8_t) * Switches[i].feedback_len * 2);
-      p += Switches[i].feedback_len * 2 * sizeof(uint8_t);
-
-      p += 1;
-    }
+  for(int i = 0; i < header->Switches; i++){
+    Config_write_Switch(&Switches[i], &p);
   }
 
   //Copy MMSwitches
-  for(int i = 0; i < this->header.MSSwitches; i++){
-    memcpy(p, &this->MSSwitches[i], sizeof(struct s_ms_switch_conf));
-
-    p += sizeof(struct s_ms_switch_conf) + 1;
-
-    for(int j = 0; j < this->MSSwitches[i].nr_states; j++){
-      memcpy(p, &this->MSSwitches[i].states[j], sizeof(struct s_ms_switch_state_conf));
-      p += sizeof(struct s_ms_switch_state_conf);
-    }
-
-    p += 1;
-
-    for(int j = 0; j < this->MSSwitches[i].IO; j++){
-      memcpy(p, &this->MSSwitches[i].IO_Ports[j], sizeof(struct s_IO_port_conf));
-      p += sizeof(struct s_IO_port_conf);
-    }
-
-    p += 1;
+  for(int i = 0; i < header->MSSwitches; i++){
+    Config_write_MSSwitch(&MSSwitches[i], &p);
   }
 
   //Copy Signals
-  for(int i = 0; i < this->header.Signals; i++){
-    memcpy(p, &this->Signals[i], sizeof(struct s_signal_conf));
-
-    p += sizeof(struct s_signal_conf) + 1;
-
-    memcpy(p, this->Signals[i].output, this->Signals[i].output_len * sizeof(struct s_IO_port_conf));
-    p += this->Signals[i].output_len * sizeof(struct s_IO_port_conf) + 1;
-
-    memcpy(p, this->Signals[i].stating, this->Signals[i].output_len * sizeof(struct s_IO_signal_event_conf));
-    p += this->Signals[i].output_len * sizeof(struct s_IO_signal_event_conf) + 1;
-
-    memcpy(p, this->Signals[i].Switches, this->Signals[i].Switch_len * sizeof(struct s_Signal_DependentSwitch));
-    p += this->Signals[i].Switch_len * sizeof(struct s_Signal_DependentSwitch) + 1;
+  for(int i = 0; i < header->Signals; i++){
+    Config_write_Signal(&Signals[i], &p);
   }
 
   //Copy Stations
-  for(int i = 0; i < this->header.Stations; i++){
-    memcpy(p, &this->Stations[i], sizeof(struct s_station_conf));
-
-    p += sizeof(struct s_station_conf) + 1;
-
-    memcpy(p, this->Stations[i].blocks, this->Stations[i].nr_blocks);
-    p += this->Stations[i].nr_blocks + 1;
-
-    memcpy(p, this->Stations[i].name, this->Stations[i].name_len);
-    p += this->Stations[i].name_len + 1;
+  for(int i = 0; i < header->Stations; i++){
+    Config_write_Station(&Stations[i], &p);
   }
 
   //Copy Layout
-  memcpy(p, &this->Layout_length, sizeof(uint16_t));
-  p += sizeof(uint16_t) + 1;
-
-  memcpy(p, this->Layout, this->Layout_length);
-  p += this->Layout_length + 1;
+  Config_write_WebLayout(Layout, &p);
 
   //Print output
   // print_hex(data, size);
@@ -369,7 +472,7 @@ void ModuleConfig::write(){
 }
 
 
-void print_link(char ** debug, struct s_link_conf link){
+void print_link(char ** debug, struct configStruct_RailLink link){
   const char * typestring[7] = {
     "R", "S", "s", "MA", "MB", "MAi", "MBi"
   };
@@ -390,7 +493,7 @@ void print_link(char ** debug, struct s_link_conf link){
   }
 }
 
-void print_Node(struct node_conf node){
+void print_Node(struct configStruct_Node node){
   char debug[300];
   char * debugptr = debug;
   const char hexset[17] = "0123456789ABCDEF";
@@ -408,7 +511,7 @@ void print_Node(struct node_conf node){
   printf("%s", debug);
 }
 
-void print_Block(struct s_block_conf block){
+void print_Block(struct configStruct_Block block){
   const char * rail_types_string[5] = {
     "MAIN",
     "STATION",
@@ -431,13 +534,13 @@ void print_Block(struct s_block_conf block){
                 block.length,
                 block.fl & 0x1,
                 (block.fl & 0x8) >> 3,
-                block.IO_In.Node, block.IO_In.Adr,
-                block.IO_Out.Node, block.IO_Out.Adr);
+                block.IO_In.Node, block.IO_In.Port,
+                block.IO_Out.Node, block.IO_Out.Port);
 
   printf( "%s\n", debug);
 }
 
-void print_Switch(struct switch_conf Switch){
+void print_Switch(struct configStruct_Switch Switch){
   char debug[300];
   char * debugptr = debug;
 
@@ -448,17 +551,17 @@ void print_Switch(struct switch_conf Switch){
   print_link(&debugptr, Switch.Str);
   print_link(&debugptr, Switch.Div);
   debugptr += sprintf(debugptr, "%x\t%i %i",
-                Switch.IO_len,
+                Switch.IO_length,
                 Switch.speed_Str, Switch.speed_Div);
 
-  for(int j = 0; j < Switch.IO_len; j++){
-    debugptr += sprintf(debugptr, "\t%i:%i", Switch.IO_Ports[j].Node, Switch.IO_Ports[j].Adr);
+  for(int j = 0; j < Switch.IO_length; j++){
+    debugptr += sprintf(debugptr, "\t%i:%i", Switch.IO_Ports[j].Node, Switch.IO_Ports[j].Port);
   }
 
   printf( "%s\n", debug);
 }
 
-void print_MSSwitch(struct ms_switch_conf Switch){
+void print_MSSwitch(struct configStruct_MSSwitch Switch){
   char debug[1000];
   char * debugptr = debug;
 
@@ -471,10 +574,10 @@ void print_MSSwitch(struct ms_switch_conf Switch){
                 Switch.IO);
   
   if(Switch.IO)
-    debugptr += sprintf(debugptr, "%2i:%2i", Switch.IO_Ports[0].Node, Switch.IO_Ports[0].Adr);
+    debugptr += sprintf(debugptr, "%2i:%2i", Switch.IO_Ports[0].Node, Switch.IO_Ports[0].Port);
 
   for(int i = 1; i < Switch.IO; i++){
-    debugptr += sprintf(debugptr, ", %2i:%2i", Switch.IO_Ports[i].Node, Switch.IO_Ports[i].Adr);
+    debugptr += sprintf(debugptr, ", %2i:%2i", Switch.IO_Ports[i].Node, Switch.IO_Ports[i].Port);
   }
   debugptr += sprintf(debugptr, "]\t%i - %s\n", Switch.type, typestring[Switch.type]);
 
@@ -488,16 +591,16 @@ void print_MSSwitch(struct ms_switch_conf Switch){
   printf( "%s", debug);
 }
 
-void print_Signals(struct signal_conf signal){
+void print_Signals(struct configStruct_Signal signal){
   char debug[400];
   char * debugptr = debug;
 
   debugptr += sprintf(debugptr, "%i\t", signal.id);
-  print_link(&debugptr, signal.Block);
+  print_link(&debugptr, signal.block);
   debugptr += sprintf(debugptr, "%i", signal.output_len);
 
   for(int i = 0;i < signal.output_len; i++){
-    debugptr += sprintf(debugptr, "\n\t\t\t%02i:%02i - ", signal.output[i].Node, signal.output[i].Adr);
+    debugptr += sprintf(debugptr, "\n\t\t\t%02i:%02i - ", signal.output[i].Node, signal.output[i].Port);
     for(int j = 0; j < 8; j++){
       debugptr += sprintf(debugptr, "%i ", signal.stating[i].event[j]);
     }
@@ -506,7 +609,7 @@ void print_Signals(struct signal_conf signal){
   printf("%s\n", debug);
 }
 
-void print_Stations(struct station_conf stations){
+void print_Stations(struct configStruct_Station stations){
   char debug[250];
   char * debugptr = debug;
 
@@ -525,11 +628,10 @@ void print_Stations(struct station_conf stations){
   printf( "%s\n", debug);
 }
 
-void print_Layout(struct ModuleConfig * config){
-  printf("Length: %i\n", config->Layout_length);
+void print_Layout(struct configStruct_WebLayout * config){
+  printf("Length: %i\n", config->LayoutLength);
   printf("Data:\n%s\n\n", config->Layout);
 }
-
 
 void ModuleConfig::print(char ** cmds, uint8_t cmd_len){
   uint16_t mask = 0;
@@ -544,6 +646,7 @@ void ModuleConfig::print(char ** cmds, uint8_t cmd_len){
     cmds = &cmds[1];
     cmd_len -= 1;
   }
+
 
   for(uint8_t i = 0; i < cmd_len;){
     if(strcmp(cmds[i], "-h") == 0){
@@ -580,8 +683,11 @@ void ModuleConfig::print(char ** cmds, uint8_t cmd_len){
     else if(strcmp(cmds[i], "-t") == 0){
       mask |= 128;
     }
+    else if(strcmp(cmds[i], "-L") == 0){
+      mask |= 256;
+    }
     else if(strcmp(cmds[i], "-A") == 0){
-      mask |= 255;
+      mask |= 0x1FF;
     }
     i++;
   }
@@ -602,62 +708,67 @@ void ModuleConfig::print(char ** cmds, uint8_t cmd_len){
 
   printf("\n");
   if(mask & 1){
-    printf( "Modules:     %i\n", this->header.module);
-    printf( "Connections: %i\n", this->header.connections);
-    printf( "IO_Nodes:    %i\n", this->header.IO_Nodes);
-    printf( "Blocks:      %i\n", this->header.Blocks);
-    printf( "Switches:    %i\n", this->header.Switches);
-    printf( "MSSwitches:  %i\n", this->header.MSSwitches);
-    printf( "Signals:     %i\n", this->header.Signals);
-    printf( "Stations:    %i\n", this->header.Stations);
+    printf( "Modules:     %i\n", header->Module);
+    printf( "Connections: %i\n", header->Connections);
+    printf( "IO_Nodes:    %i\n", header->IO_Nodes);
+    printf( "Blocks:      %i\n", header->Blocks);
+    printf( "Switches:    %i\n", header->Switches);
+    printf( "MSSwitches:  %i\n", header->MSSwitches);
+    printf( "Signals:     %i\n", header->Signals);
+    printf( "Stations:    %i\n", header->Stations);
   }
   
   if(mask & 2){
     printf( "IO Nodes\n");
     printf( "id\tSize\n");
-    for(int i = 0; i < this->header.IO_Nodes; i++){
-      print_Node(this->Nodes[i]);
+    for(int i = 0; i < header->IO_Nodes; i++){
+      print_Node(Nodes[i]);
     }
   }
 
   if(mask & 8){
     printf( "Block\n");
     printf( "id\ttype\t\tNext    \tPrev    \tMax_sp\tdir\tlen\tOneWay\tOut en\tIO_in\tIO_out\n");
-    for(int i = 0; i < this->header.Blocks; i++){
-      print_Block(this->Blocks[i]);
+    for(int i = 0; i < header->Blocks; i++){
+      print_Block(Blocks[i]);
     }
   }
   
   if(mask & 16){
     printf( "Switch\n");
     printf( "id\tblock\tApp       \tStr       \tDiv       \tIO\tSpeed\n");
-    for(int i = 0; i < this->header.Switches; i++){
-      print_Switch(this->Switches[i]);
+    for(int i = 0; i < header->Switches; i++){
+      print_Switch(Switches[i]);
     }
   }
 
   if(mask & 32){
     printf( "MSSwitch\n");
     printf( "id\tblock\tstates\tIO\tSideA     \tSideB     \tSpeed\tSequence\t...\n");
-    for(int i = 0; i < this->header.MSSwitches; i++){
-      print_MSSwitch(this->MSSwitches[i]);
+    for(int i = 0; i < header->MSSwitches; i++){
+      print_MSSwitch(MSSwitches[i]);
     }
   }
 
   if(mask & 64){
     printf( "Signals\n");
     printf( "id\tBlockID\t\tOutput Length\tOutput states\n");
-    for(int i = 0; i < this->header.Signals; i++){
-      print_Signals(this->Signals[i]);
+    for(int i = 0; i < header->Signals; i++){
+      print_Signals(Signals[i]);
     }
   }
 
   if(mask & 128){
     printf( "Station\n");
     printf( "id\tparent\ttype\tName\t\tblocks\n");
-    for(int i = 0; i < this->header.Stations; i++){
+    for(int i = 0; i < header->Stations; i++){
       printf("%i\t", i);
-      print_Stations(this->Stations[i]);
+      print_Stations(Stations[i]);
     }
+  }
+
+  if(mask & 256){
+    printf( "Layout\n");
+    print_Layout(Layout);
   }
 }

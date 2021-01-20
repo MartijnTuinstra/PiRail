@@ -99,10 +99,7 @@ class Switch {
     uint8_t pref_len;
     struct switch_preference * preferences;
 
-    // Switch(uint8_t module, struct s_switch_conf config);
-    Switch(uint8_t Module, struct switch_conf s);
     Switch(uint8_t, struct configStruct_Switch *);
-    // Switch(struct s_switch_connect connect, uint8_t block_id, uint8_t output_len, Node_adr * output_pins, uint8_t * output_states);
     ~Switch();
 
     void exportConfig(struct configStruct_Switch *);

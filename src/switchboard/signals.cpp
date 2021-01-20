@@ -2,8 +2,6 @@
 #include "utils/mem.h"
 #include "utils/logger.h"
 
-// #include "modules.h"
-#include "config_data.h"
 #include "config/LayoutStructure.h"
 
 #include "switchboard/manager.h"
@@ -14,88 +12,7 @@
 
 using namespace switchboard;
 
-Signal::Signal(uint8_t module, struct signal_conf conf){ //, uint8_t blockId, uint16_t signalId, bool side, char output_len, struct s_IO_port_conf * output, struct s_IO_signal_event_conf * stating){
-  // #define create_signal_from_conf(module, data) new Signal(module, data.blockId, data.id, data.side, data.output_len, data.output, data.stating)
-  memset(this, 0, sizeof(Signal));
-
-  // this->B = U_B(module, conf.blockId);
-  this->block_link.module = conf.Block.module;
-  this->block_link.id = conf.Block.id;
-  this->block_link.type = (enum link_types)conf.Block.type;
-
-  this->direction = conf.direction;
-
-  this->module = module;
-  this->id = conf.id;
-
-  uid = SwManager->addSignal(this);
-  U = Units(module);
-
-  if(this->block_link.type == RAIL_LINK_R){
-    this->B = (Block *)rail_link_pointer(this->block_link);
-
-    if(!this->B){
-      loggerf(ERROR, "Failed to retrieve block (%2i:%2i) connected to signal %2i:%2i", block_link.module, block_link.id, module, id);
-      return;
-    }
-
-    this->state = this->B->addSignal(this);
-  }
-  else if(this->block_link.type != RAIL_LINK_C){
-    loggerf(WARNING, "Failed to create Signal, invalid block link.");
-    return;
-  }
-
-  this->output_len = conf.output_len;
-  
-  this->output = (IO_Port **)_calloc(this->output_len, IO_Port *);
-  this->output_stating = (struct s_signal_stating *)_calloc(this->output_len, struct s_signal_stating);
-
-  for(int i = 0; i < this->output_len; i++){
-    if(!U->IO(conf.output[i])){
-      loggerf(WARNING, "IO outside range (Port %02i:%02i:%02i)", module, conf.output[i].Node, conf.output[i].Adr);
-      continue;
-    }
-
-    this->output[i] = U->linkIO(conf.output[i], this, IO_Output);
-
-    for(int j = 0; j <= UNKNOWN; j++){
-      this->output_stating[i].state[j].value = conf.stating[i].event[j];
-    }
-  }
-
-  for(uint8_t i = 0; i < conf.Switch_len; i++){
-    void * p = 0;
-    if(conf.Switches[i].type){
-      // MSSwitch
-      U->MSSw[conf.Switches[i].Sw]->addSignal(this);
-      p = U->MSSw[conf.Switches[i].Sw];
-    }
-    else{
-      // Switch
-      U->Sw[conf.Switches[i].Sw]->addSignal(this);
-      p = U->Sw[conf.Switches[i].Sw];
-    }
-
-    struct SignalSwitchLink * link = (struct SignalSwitchLink *)_calloc(1, struct SignalSwitchLink);
-    link->MSSw = conf.Switches[i].type;
-    link->p.p = p;
-    link->state = conf.Switches[i].state;
-
-    this->Switches.push_back(link);
-  }
-
-  this->switchUpdate();
-
-  U->insertSignal(this);
-  
-  loggerf(DEBUG, "Create signal %02i:%02i, %s, block %08x", this->module, this->id, this->direction ? "Forward" : "Reverse", this->B);
-
-  set(UNKNOWN);
-}
-
-Signal::Signal(uint8_t _module, struct configStruct_Signal * conf){ //, uint8_t blockId, uint16_t signalId, bool side, char output_len, struct s_IO_port_conf * output, struct s_IO_signal_event_conf * stating){
-  // #define create_signal_from_conf(module, data) new Signal(module, data.blockId, data.id, data.side, data.output_len, data.output, data.stating)
+Signal::Signal(uint8_t _module, struct configStruct_Signal * conf){
   memset(this, 0, sizeof(Signal));
 
   // this->B = U_B(module, conf.blockId);

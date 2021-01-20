@@ -5,7 +5,6 @@
 #include <stdint.h>
 
 #include "switchboard/declares.h"
-#include "config_data.h"
 
 
 typedef struct s_node_adr {

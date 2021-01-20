@@ -3,6 +3,8 @@
 #include "utils/logger.h"
 #include "com.h"
 
+#include "config/LayoutStructure.h"
+
 #include "switchboard/manager.h"
 #include "switchboard/rail.h"
 #include "switchboard/switch.h"
@@ -85,6 +87,84 @@ Unit::Unit(ModuleConfig * Config){
   this->Layout = (char *)_calloc(Config->Layout_length, char);
   memcpy(this->Layout, Config->Layout, Config->Layout_length);
 }
+
+Unit::Unit(newModuleConfig * Config){
+  memset(this, 0, sizeof(Unit));
+
+  this->module = Config->header->Module;
+
+  loggerf(CRITICAL, "Loading Unit %i", module);
+
+  switchboard::SwManager->addUnit(this);
+
+  this->connections_len = Config->header->Connections;
+  if(this->connections_len > 5){
+    loggerf(ERROR, "To many connection for module %i", this->module);
+    this->connections_len = 5;
+  }
+
+  memset(this->connection, 0, sizeof(struct unit_connector));
+  // this->connection = (Unit **)_calloc(Config->header->connections, Unit *);
+
+  this->IO_Nodes = Config->header->IO_Nodes;
+  this->block_len = Config->header->Blocks;
+  this->switch_len = Config->header->Switches;
+  this->msswitch_len = Config->header->MSSwitches;
+  this->signal_len = Config->header->Signals;
+  this->station_len = Config->header->Stations;
+
+  this->Node = (IO_Node **)_calloc(this->IO_Nodes, IO_Node*);
+  this->B = (Block **)_calloc(this->block_len, Block*);
+  this->Sw = (Switch **)_calloc(this->switch_len, Switch*);
+  this->MSSw = (MSSwitch **)_calloc(this->switch_len, MSSwitch*);
+  this->Sig = (Signal **)_calloc(this->signal_len, Signal*);
+  this->St = (Station **)_calloc(this->station_len, Station*);
+
+  loggerf(DEBUG, "  Module nodes");
+
+  for(int i = 0; i < Config->header->IO_Nodes; i++){
+    new IO_Node(this, &Config->Nodes[i]);
+  }
+
+  loggerf(DEBUG, "  Module Block");
+
+  
+  for(int i = 0; i < Config->header->Blocks; i++){
+    new Block(this->module, &Config->Blocks[i]);
+  }
+
+  loggerf(DEBUG, "  Module Switch");
+
+  for(int i = 0; i < Config->header->Switches; i++){
+    new Switch(this->module, &Config->Switches[i]);
+  }
+
+  loggerf(DEBUG, "  Module MSSwitch");
+
+  for(int i = 0; i < Config->header->MSSwitches; i++){
+    new MSSwitch(this->module, &Config->MSSwitches[i]);
+  }
+
+  loggerf(DEBUG, "  Module Signals");
+  
+  for(int i = 0; i < Config->header->Signals; i++){
+    new Signal(this->module, &Config->Signals[i]);
+  }
+
+  loggerf(DEBUG, "  Module Stations");
+
+  for(int i = 0; i < Config->header->Stations; i++){
+    new Station(this->module, i, &Config->Stations[i]);
+  }
+
+  loggerf(DEBUG, "  Module Layout");
+
+  //Layout
+  this->Layout_length = Config->Layout->LayoutLength;
+  this->Layout = (char *)_calloc(Config->Layout->LayoutLength, char);
+  memcpy(this->Layout, Config->Layout, Config->Layout->LayoutLength);
+}
+
 
 Unit::Unit(uint16_t M, uint8_t Nodes, char points){
   memset(this, 0, sizeof(Unit));
@@ -267,14 +347,63 @@ void Unit::insertSignal(Signal * Sig){
   this->Sig[Sig->id] = Sig;
 }
 
+
+Block * Unit::registerDetection(Switch * Sw, uint16_t blockID){
+  // Add msswitch to detection block 
+  if(block_len > blockID && B[blockID]){
+    B[blockID]->addSwitch(Sw);
+    return B[blockID];
+  }
+  
+  loggerf(WARNING, "SWITCH %i:%i has no detection block %i", Sw->module, Sw->id, blockID);
+
+  return 0;
+}
+
+Block * Unit::registerDetection(MSSwitch * MSSw, uint16_t blockID){
+  // Add msswitch to detection block 
+  if(block_len > blockID && B[blockID]){
+
+    if(B[blockID]->MSSw)
+      loggerf(WARNING, "Block %02i:%02i has duplicate msswitch, overwritting ...", B[blockID]->module, B[blockID]->id);
+
+    B[blockID]->MSSw = MSSw;
+    return B[blockID];
+  }
+
+  loggerf(WARNING, "MSSWITCH %i:%i has no detection block %i", MSSw->module, MSSw->id, blockID);
+
+  return 0;
+}
+
+
+
+
 IO_Port * Unit::linkIO(Node_adr adr, void * pntr, enum e_IO_type type){
-  this->Node[adr.Node]->io[adr.io]->link(pntr, type);
-  return this->Node[adr.Node]->io[adr.io];
+  if (adr.Node >= IO_Nodes){
+    loggerf(WARNING, "Failed to link IO %02i:%02i", adr.Node, adr.io);
+    return 0;
+  }
+  Node[adr.Node]->io[adr.io]->link(pntr, type);
+  return Node[adr.Node]->io[adr.io];
 }
 
 IO_Port * Unit::linkIO(struct s_IO_port_conf adr, void * pntr, enum e_IO_type type){
-  this->Node[adr.Node]->io[adr.Adr]->link(pntr, type);
-  return this->Node[adr.Node]->io[adr.Adr];
+  if (adr.Node >= IO_Nodes){
+    loggerf(WARNING, "Failed to link IO %02i:%02i", adr.Node, adr.Adr);
+    return 0;
+  }
+  Node[adr.Node]->io[adr.Adr]->link(pntr, type);
+  return Node[adr.Node]->io[adr.Adr];
+}
+
+IO_Port * Unit::linkIO(struct configStruct_IOport adr, void * pntr, enum e_IO_type type){
+  if (adr.Node >= IO_Nodes){
+    loggerf(WARNING, "Failed to link IO %02i:%02i", adr.Node, adr.Port);
+    return 0;
+  }
+  Node[adr.Node]->io[adr.Port]->link(pntr, type);
+  return Node[adr.Node]->io[adr.Port];
 }
 
 IO_Port * Unit::IO(Node_adr adr){
@@ -288,6 +417,11 @@ IO_Port * Unit::IO(Node_adr adr){
 
 IO_Port * Unit::IO(struct s_IO_port_conf adr){
   Node_adr newadr = {adr.Node, adr.Adr};
+  return this->IO(newadr);
+}
+
+IO_Port * Unit::IO(struct configStruct_IOport adr){
+  Node_adr newadr = {adr.Node, adr.Port};
   return this->IO(newadr);
 }
 

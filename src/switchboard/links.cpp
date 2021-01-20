@@ -6,6 +6,14 @@
 #include "switchboard/switch.h"
 #include "switchboard/msswitch.h"
 
+#include "config/LayoutStructure.h"
+
+
+void railLinkExport(struct configStruct_RailLink * cfg, struct rail_link link){
+  cfg->module = link.module;
+  cfg->id = link.id;
+  cfg->type = link.type;
+}
 
 void * rail_link_pointer(struct rail_link link){
   Unit * U = switchboard::Units(link.module);

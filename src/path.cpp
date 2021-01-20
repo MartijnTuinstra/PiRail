@@ -212,7 +212,7 @@ void Path::join(Path * P){
 }
 
 void Path::find(){
-  loggerf(CRITICAL, "Path Find %02d:%02d", this->Blocks[0]->module, this->Blocks[0]->id);
+  loggerf(DEBUG, "Path Find %02d:%02d", this->Blocks[0]->module, this->Blocks[0]->id);
   uint8_t i = 0;
   Block * B = 0;
   uint8_t dir = 0;
@@ -229,20 +229,20 @@ void Path::find(){
     if(!B)
       break;
 
-    loggerf(CRITICAL, "Next Block %02d:%02d,  front %02d:%02d", B->module, B->id, this->front->module, this->front->id);
+    loggerf(DEBUG, "Next Block %02d:%02d,  front %02d:%02d", B->module, B->id, this->front->module, this->front->id);
 
     struct rail_link * link = B->NextLink(NEXT);
 
-    loggerf(CRITICAL, "                 -> link %02d:%02d:%02x", link->module, link->id, link->type);
+    loggerf(DEBUG, "                 -> link %02d:%02d:%02x", link->module, link->id, link->type);
 
     if(link->p.B == this->front){
-      loggerf(CRITICAL, "FLIP");
+      loggerf(DEBUG, "FLIP");
       // dir ^= 0b1;
       B->reverse();
       link = B->NextLink(NEXT);
     }
 
-    loggerf(CRITICAL, "                 -> link %02d:%02d:%02x\n", link->module, link->id, link->type);
+    loggerf(DEBUG, "                 -> link %02d:%02d:%02x\n", link->module, link->id, link->type);
 
     this->add(B, NEXT);
     this->next = link;

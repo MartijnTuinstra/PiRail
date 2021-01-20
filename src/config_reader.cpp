@@ -7,6 +7,7 @@
 #include "switchboard/rail.h"
 
 #include "config/ModuleConfig.h"
+#include "config/newModuleConfig.h"
 #include "config/RollingConfig.h"
 
 const char * rail_states_string[8] = {
@@ -1485,6 +1486,20 @@ void modify_Catagory(struct RollingConfig * config, char type, char cmd){
   }
 }
 
+int edit_newModule(char * filename, bool update){
+  auto config = newModuleConfig(filename);
+
+  config.read();
+
+  if(!config.parsed){
+    loggerf(ERROR, "Failed to open file");
+    loggerf(INFO,  "Creating New File?");
+    return -1;
+  }
+
+  config.print(0, 0);
+}
+
 int edit_module(char * filename, bool update){
   auto config = ModuleConfig(filename);
 
@@ -1513,10 +1528,18 @@ int edit_module(char * filename, bool update){
     config.dump();
     config.filename[len] = 0;
     config.write();
+
+    printf("Saving to new format");
+    char newFilename[50] = "";
+    strcpy(newFilename, config.filename);
+    strcpy(&newFilename[strlen(newFilename)], "_new");
+
+    auto newConfig = newModuleConfig(newFilename, &config);
+    newConfig.write();
     return -1;
   }
 
-  config.print();
+  config.print(0, 0);
 
   char cmd[300];
   char ** cmds = (char **)_calloc(20, char *);
@@ -1599,6 +1622,16 @@ int edit_module(char * filename, bool update){
     }
     else if(strcmp(cmds[0], "s") == 0){
       config.write();
+    }
+    else if(strcmp(cmds[0], "w") == 0){
+      // Write to new format.
+      printf("Saving to new format");
+      char newFilename[50] = "";
+      strcpy(newFilename, config.filename);
+      strcpy(&newFilename[strlen(newFilename)], "_new");
+
+      auto newConfig = newModuleConfig(newFilename, &config);
+      newConfig.write();
     }
     else if(strcmp(cmds[0], "p") == 0){
       config.print(cmds, cmds_len);
@@ -1742,12 +1775,15 @@ int main(int argc, char ** argv){
   logger.setlevel(MEMORY);
   logger.setlevel_stdout(INFO);
 
-  bool moduleediting;
-  bool rollingediting;
-  bool filename_arg;
-  bool update;
+  int editing = 0;
+  bool filename_arg = false;
+  bool update = false;
   char filename[100] = {0};
   std::vector<char *> extrafiles;
+
+  #define MODULE_EDITING 1
+  #define ROLLING_EDITING 2
+  #define NEWMODULE_EDITING 4
 
   for(int i = 1; i < argc; i++){
     if(!argv[i])
@@ -1757,14 +1793,12 @@ int main(int argc, char ** argv){
 
     if(strcmp(argv[i], "--update") == 0)
       update = true;
-    else if(strcmp(argv[i], "--module") == 0){
-      if(rollingediting == false)
-        moduleediting = true;
-    }
-    else if(strcmp(argv[i], "--rollingediting") == 0){
-      if(moduleediting == false)
-        rollingediting = true;
-    }
+    else if(strcmp(argv[i], "--module") == 0 && !editing)
+        editing = MODULE_EDITING;
+    else if(strcmp(argv[i], "--newmodule") == 0 && !editing)
+        editing = NEWMODULE_EDITING;
+    else if(strcmp(argv[i], "--rollingediting") && !editing)
+        editing = ROLLING_EDITING;
     else if(strcmp(argv[i], "--verbose") == 0 || strcmp(argv[i], "-v") == 0){
       logger.setlevel_stdout(DEBUG);
     }
@@ -1773,23 +1807,29 @@ int main(int argc, char ** argv){
         filename_arg = true;
         strcpy(filename, argv[i]);
       }
-      else{
+      else if(argv[i][0] != '-'){
         char * str = (char *)_calloc(strlen(argv[i])+5, char);
         printf("%x  %d", (unsigned int)str, strlen(argv[i]));
         strcpy(str, argv[i]);
         extrafiles.push_back(str);
       }
+      else{
+        loggerf(WARNING, "Invalid argument: %s\n", argv[i]);
+      }
     }
   }
 
-  printf("moduleediting %i\nrollingediting %i\nfilename_arg %i %s\nupdate %i\n", moduleediting, rollingediting, filename_arg, filename, update);
+  printf("editing %i\nfilename_arg %i %s\nupdate %i\n", editing, filename_arg, filename, update);
 
   restart:
 
-  if(moduleediting && filename_arg){
+  if(editing == MODULE_EDITING && filename_arg){
     edit_module(filename, update);
   }
-  else if(rollingediting){
+  else if(editing == NEWMODULE_EDITING && filename_arg){
+    edit_newModule(filename, update);
+  }
+  else if(editing == ROLLING_EDITING){
     if(filename_arg)
       edit_rolling_stock(filename, update);
     else

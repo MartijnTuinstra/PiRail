@@ -46,6 +46,9 @@ TEST_CASE( "Signal 1", "[SB][SB-4][SB-4.1]" ) {
   //      |  -'
   */
 
+  // The signal shall show the state of the protected block.
+  //  - when no path is available it must show danger.
+
   REQUIRE(U->B[1]->forward_signal != 0);
   REQUIRE(U->B[1]->reverse_signal != 0);
 
@@ -70,7 +73,7 @@ TEST_CASE( "Signal 1", "[SB][SB-4][SB-4.1]" ) {
   }
 
   SECTION( "II - Signal On Switch State Check"){
-    U->B[5]->setState(CAUTION);
+    U->B[5]->setState(CAUTION); // FIXME
 
     CHECK(U->Sig[2]->state == CAUTION);
     CHECK(U->Sig[3]->state == CAUTION);
@@ -108,6 +111,9 @@ TEST_CASE( "Signal 2", "[SB][SB-4][SB-4.2]" ) {
   //          |  -2.2-> --'
   //     C1-2
   */
+
+  // Signals could be placed on different modules. 
+  // The protected block is assigned after the modules are connected.
 
   U1->on_layout = 1;
   U2->on_layout = 1;

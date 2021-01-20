@@ -21,7 +21,6 @@
 void init_test(char (* filenames)[30], int nr_files);
 
 TEST_CASE( "Path Construction", "[PATH][PATH-1]" ) {
-  loggerf(CRITICAL, "PATH-1 TEST");
   char filenames[2][30] = {"./testconfigs/PATH-1.bin"};
   init_test(filenames, 1);
 

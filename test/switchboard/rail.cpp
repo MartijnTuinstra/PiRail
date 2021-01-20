@@ -83,7 +83,6 @@ TEST_CASE( "Block Link", "[SB][SB-1][SB-1.1]" ) {
 
 
   SECTION("VIII - Double NextBlock"){
-    logger.setlevel_stdout(TRACE);
     CHECK(U->B[0]->Next_Block(NEXT, 2) == U->B[2]);
     CHECK(U->B[2]->Next_Block(PREV, 2) == U->B[0]);
 

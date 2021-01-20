@@ -64,14 +64,14 @@ MSSwitch::MSSwitch(uint8_t module, struct ms_switch_conf conf){
   this->state_direction = connect.dir;
 
   this->state_len = connect.states;
-  this->type = type;
+  this->type = conf.type;
 
   this->IO_len = conf.IO;
   this->IO = (IO_Port **)_calloc(this->IO_len, IO_Port *);
 
   U = Units(this->module);
 
-  for(int i = 0; i < this->IO_len; i++){
+  for(int i = 0; i < IO_len; i++){
     if(!U->IO(conf.IO_Ports[i]))
       continue;
 
@@ -79,7 +79,7 @@ MSSwitch::MSSwitch(uint8_t module, struct ms_switch_conf conf){
   }
 
   loggerf(ERROR, "TODO: implement outputstates");
-  // this->IO_states = (uint16_t *)_calloc(this->IO_len, uint16_t);
+  // IO_states = (uint16_t *)_calloc(IO_len, uint16_t);
   // memcpy(this->IO_states, conf.IO_Ports, this->IO_len * sizeof(uint16_t));
 
   U->insertMSSwitch(this);
@@ -98,14 +98,121 @@ MSSwitch::MSSwitch(uint8_t module, struct ms_switch_conf conf){
   }
 }
 
+
+MSSwitch::MSSwitch(uint8_t _module, struct configStruct_MSSwitch * conf){
+
+  loggerf(INFO, "Create MSSw %i:%i", _module, conf->id);
+  memset(this, 0, sizeof(MSSwitch));
+
+  module = _module;
+  id = conf->id;
+
+  uid = SwManager->addMSSwitch(this);
+
+  sideA = (struct rail_link *)_calloc(conf->nr_states, struct rail_link);
+  sideB = (struct rail_link *)_calloc(conf->nr_states, struct rail_link);
+  stateMaxSpeed = (uint16_t *)_calloc(conf->nr_states, uint16_t);
+  state_direction = (uint8_t *)_calloc(conf->nr_states, uint8_t);
+  IO_states = (union u_IO_event **)_calloc(conf->nr_states, union u_IO_event *);
+
+  for(uint8_t i = 0; i < conf->nr_states; i++){
+    sideA[i].module = conf->states[i].sideA.module;
+    sideA[i].id = conf->states[i].sideA.id;
+    sideA[i].type = (enum link_types)conf->states[i].sideA.type;
+    
+    sideB[i].module = conf->states[i].sideB.module;
+    sideB[i].id = conf->states[i].sideB.id;
+    sideB[i].type = (enum link_types)conf->states[i].sideB.type;
+
+    stateMaxSpeed[i]   = conf->states[i].speed;
+    state_direction[i] = conf->states[i].dir;
+
+    IO_states[i] = (union u_IO_event *)_calloc(conf->IO, union u_IO_event);
+    for(uint8_t j = 0; j < conf->IO; j++){
+      if((conf->states[i].output_sequence >> j) & 0b1)
+        IO_states[i][j].output = IO_event_High;
+      else
+        IO_states[i][j].output = IO_event_Low;
+    }
+  }
+
+  maxSpeed = stateMaxSpeed[defaultState];
+
+  state_len = conf->nr_states;
+  type = conf->type;
+
+  IO_len = conf->IO;
+  IO = (IO_Port **)_calloc(IO_len, IO_Port *);
+
+  U = Units(module);
+
+  for(int i = 0; i < IO_len; i++){
+    if(!U->IO(conf->IO_Ports[i]))
+      continue;
+
+    IO[i] = U->linkIO(conf->IO_Ports[i], this, IO_Output);
+  }
+
+  U->insertMSSwitch(this);
+
+  Detection = U->registerDetection(this, conf->det_block);
+}
+
 MSSwitch::~MSSwitch(){
-  _free(this->sideA);
-  _free(this->sideB);
-  _free(this->state_direction);
-  _free(this->IO);
-  _free(this->IO_states);
-  // _free(this->links);
-  // _free(this->preferences);
+  _free(sideA);
+  _free(sideB);
+  _free(stateMaxSpeed);
+  _free(state_direction);
+  _free(IO_states);
+  _free(IO);
+}
+
+void MSSwitch::exportConfig(struct configStruct_MSSwitch * obj){
+  // uint8_t id;
+  // uint8_t det_block;
+  // uint8_t type;
+  // uint8_t nr_states;
+  // uint8_t IO;
+  // struct configStruct_MSSwitchState * states;
+  // struct configStruct_IOport * IO_Ports;
+
+  // struct configStruct_RailLink sideA;
+  // struct configStruct_RailLink sideB;
+  // uint16_t speed;
+  // uint8_t dir;
+  // uint8_t output_sequence;
+
+  obj->id = id;
+  obj->det_block = Detection->id;
+  obj->type = type;
+
+  if (IO){
+    obj->IO = IO_len;
+    obj->IO_Ports = (struct configStruct_IOport *)_calloc(IO_len, struct configStruct_IOport);
+    for(uint8_t i = 0; i < IO_len; i++){
+      if (IO[i])
+        IO[i]->exportConfig(&obj->IO_Ports[i]);
+    }
+  }
+
+  if (sideA && sideB){
+    obj->nr_states = state_len;
+
+    obj->states = (struct configStruct_MSSwitchState *)_calloc(IO_len, struct configStruct_MSSwitchState);
+    for(uint8_t i = 0; i < IO_len; i++){
+      railLinkExport(&obj->states[i].sideA, sideA[i]);
+      railLinkExport(&obj->states[i].sideB, sideB[i]);
+
+      obj->states[i].speed = stateMaxSpeed[i];
+      obj->states[i].dir   = state_direction[i];
+
+      obj->states[i].output_sequence = 0;
+      for(int8_t j = IO_len - 1; j >= 0; j--){
+        obj->states[i].output_sequence <<= 1;
+        obj->states[i].output_sequence |= (IO_states[i][j].output == IO_event_High) ? 1 : 0;
+      }
+    }
+  }
 }
 
 void MSSwitch::addSignal(Signal * Sig){

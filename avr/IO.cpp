@@ -81,7 +81,7 @@ inline void IO::in(uint8_t pin){
 	return (void)pin;
 	#else
 	*_portModeRegister(list[pin]/8) &= ~(1 << (list[pin] % 8));
-	readMask[list[pin]/8] |= (1 << (list[pin] % 8));
+	readMask[pin/8] |= (1 << (pin % 8));
 	#endif
 }
 
@@ -91,7 +91,8 @@ inline uint8_t IO::read(uint8_t pin){
 	#else
 	uint8_t pinmask = (1 << (list[pin] % 8));
 	uint8_t port = list[pin]/8;
-	return (*(volatile uint16_t *)pinlist[port] & pinmask);
+	return ((*_portInputRegister(port)) & pinmask) != 0;
+	// return (*(volatile uint16_t *)pinlist[port] & pinmask) != 0;
 	#endif
 }
 
@@ -110,7 +111,7 @@ inline uint8_t IO::read(uint8_t pin){
 #define LATCH_IN_ENABLE   LATCH_IN_PORT &= ~(1 << LATCH_IN_PIN)
 #define LATCH_IN_DISABLE  LATCH_IN_PORT |=  (1 << LATCH_IN_PIN)
 #define IN_LOAD           LOAD_IN_PORT &= ~(1 << LOAD_IN_PIN); \
-                          _delay_ms(50); \
+                          _delay_us(50); \
                           LOAD_IN_PORT |=  (1 << LOAD_IN_PIN)
 
 #endif
@@ -154,6 +155,10 @@ void IO::init(){
 
 	_set_high(PORT(B), PB2); //SS
 
+	#else
+
+	#warning CPU not supported
+
 	#endif
 
 	// enable SPI at fsck/128
@@ -169,7 +174,7 @@ void IO::init(){
 
 	writeOutput();
 
-	#else // not defined IO_SPI
+	#endif // IO_SPI
 
 	uart.transmit("IO INIT\n", 8);
 
@@ -180,13 +185,20 @@ void IO::init(){
 		defaultState.value = (portconfig & 0x0F00) >> 8;
 		enum e_IO_type type = (enum e_IO_type)(portconfig >> 12);
 
+		#ifndef IO_SPI
 		uart.transmit(list[i] / 8, HEX, 2);
 		uart.transmit('\t');
 		uart.transmit(1 << (list[i] % 8), HEX, 2);
 		uart.transmit('\t');
+		#else
+		uart.transmit(i, HEX, 2);
+		uart.transmit('\t');
+		#endif
 		uart.transmit((uint8_t)type, HEX, 2);
 		uart.transmit('\t');
 		uart.transmit(defaultState.value, HEX, 2);
+		uart.transmit('\t');
+		uart.transmit(portconfig, HEX, 4);
 		uart.transmit('\n');
 
 		typelist[i] = (enum e_IO_type)type;
@@ -194,23 +206,36 @@ void IO::init(){
 		if(type == IO_Undefined)
 			in(i);
 		else if(type <= IO_Output_PWM){
+			#ifdef IO_SPI
+			out(i - 48);
+			set(i - 48, defaultState);
+			#else
 			out(i);
 			set(i, defaultState);
+			#endif
 		}
 		else{ // IO_Input_*
 			if(portconfig & 0x0080)
 				set_mask(i, invertedMask);
 
 			in(i);
-			set(i, defaultState);
+			// set(i, defaultState);
+			if(defaultState.output == IO_event_High)
+				high(i);
+			else
+				low(i);
 		}
 	}
 
-	for(uint8_t i = 0; i < MAX_PORTS; i++){
-		uart.transmit(readMask[i], HEX, 2);
-	}
-
-	#endif
+	// uart.transmit("ReadMask: ", 10);
+	// for(uint8_t i = 0; i < MAX_PORTS; i++){
+	// 	uart.transmit(readMask[i], HEX, 2);
+	// }
+	// uart.transmit("\ninvertedMask: ", 15);
+	// for(uint8_t i = 0; i < MAX_PORTS; i++){
+	// 	uart.transmit(invertedMask[i], HEX, 2);
+	// }
+	// uart.transmit('\n');
 
 	//Init blink timer
 	blink1_period = calculateTimer(eeprom_read_word(&EE_Mem.settings.blink1));
@@ -239,31 +264,45 @@ void IO::init(){
 }
 
 void IO::blink1(){
+	uart.transmit("BLINK1\n", 7);
 	for(int i = 0; i < MAX_PORTS; i++){
 		#ifdef IO_SPI
-		writeData[i] = writeData[i] ^ blink1Mask[i];
+		writeData[i] ^= blink1Mask[i];
 		#else
 		*_portOutputRegister(i) ^= blink1Mask[i];
 		#endif
 	}
+      #ifdef IO_SPI
+      uart.transmit('-');
+      for(uint8_t i = 0; i < MAX_PORTS; i++)
+        uart.transmit(io.writeData[i], HEX, 2);
+      uart.transmit('\n');
+      #endif
 
-	#ifdef IO_SPI
-	writeOutput();
-	#endif
+	// #ifdef IO_SPI
+	// writeOutput();
+	// #endif
 }
 
 void IO::blink2(){
+	uart.transmit("BLINK2\n", 7);
 	for(int i = 0; i < MAX_PORTS; i++){
 		#ifdef IO_SPI
-		writeData[i] = writeData[i] ^ blink2Mask[i];
+		writeData[i] ^= blink2Mask[i];
 		#else
 		*_portOutputRegister(i) ^= blink2Mask[i];
 		#endif
 	}
+      #ifdef IO_SPI
+      uart.transmit('-');
+      for(uint8_t i = 0; i < MAX_PORTS; i++)
+        uart.transmit(io.writeData[i], HEX, 2);
+      uart.transmit('\n');
+      #endif
 
-	#ifdef IO_SPI
-	writeOutput();
-	#endif
+	// #ifdef IO_SPI
+	// writeOutput();
+	// #endif
 }
 
 
@@ -276,9 +315,9 @@ void IO::pulse_high(){
 		#endif
 	}
 
-	#ifdef IO_SPI
-	writeOutput();
-	#endif
+	// #ifdef IO_SPI
+	// writeOutput();
+	// #endif
 
 	//Set pulse period into timer
 	// cli();
@@ -307,9 +346,9 @@ void IO::pulse_low(){
 		pulseMask[i] = 0;
 	}
 
-	#ifdef IO_SPI
-	writeOutput();
-	#endif
+	// #ifdef IO_SPI
+	// writeOutput();
+	// #endif
 }
 
 void IO::servo_low(){
@@ -333,19 +372,11 @@ void IO::servo_high(uint8_t * mask){
 }
 
 void IO::set_mask(uint8_t pin, uint8_t * mask){
-	#ifdef IO_SPI
 	mask[pin/8] |= (1 << (pin % 8));
-	#else
-	mask[list[pin]/8] |= (1 << (list[pin] % 8));
-	#endif
 }
 
 void IO::unset_mask(uint8_t pin, uint8_t * mask){
-	#ifdef IO_SPI
 	mask[pin/8] &= ~(1 << (pin % 8));
-	#else
-	mask[list[pin]/8] &= ~(1 << (list[pin] % 8));
-	#endif
 }
 
 uint16_t IO::calculateTimer(uint16_t mseconds){
@@ -368,6 +399,25 @@ void IO::writeOutput(){
 	LATCH_OUT_DISABLE;
 }
 
+void IO::readwrite(){
+	IN_LOAD;
+	_delay_us(10);
+	LATCH_IN_ENABLE;
+	LATCH_OUT_ENABLE;
+
+	for(int i = 0; i < MAX_PORTS; i++){
+		/* Start transmission */
+		SPDR = writeData[i];
+		/* Wait for transmission complete */
+		while(!(SPSR & (1<<SPIF)));
+		/* Read transmission*/
+		readData[i] = SPDR ^ invertedMask[i];
+	}
+
+	LATCH_OUT_DISABLE;
+	LATCH_IN_DISABLE;
+}
+
 void IO::readInput(){
 	IN_LOAD;
 	_delay_us(10);
@@ -381,10 +431,8 @@ void IO::readInput(){
 		while(!(SPSR & (1<<SPIF)));
 
 		readData[i] = SPDR ^ invertedMask[i]; 
-		// printHex(readData[i]);
 	}
 
-	// uart.transmit('\n');
 	LATCH_IN_DISABLE;
 }
 
@@ -392,7 +440,13 @@ void IO::readInput(){
 
 void IO::readInput(){
 	for(uint8_t i = 0; i < MAX_PORTS; i++){
-		readData[i] = ((*(volatile uint16_t *)pinlist[i]) & readMask[i]) ^ invertedMask[i];
+		readData[i] = 0;
+	}
+	for(uint8_t i = 0; i < MAX_PINS; i++){
+		readData[i/8] |= (read(i) << (i % 8));
+	}
+	for(uint8_t i = 0; i < (MAX_PINS + 7)/8; i++){
+		readData[i] = (readData[i] ^ invertedMask[i]) & readMask[i];
 	}
 }
 
@@ -406,7 +460,7 @@ void IO::copyInput(){
 
 
 void IO::set(uint8_t pin, union u_IO_event func){
-	enum e_IO_type type = typelist[pin];
+	enum e_IO_type type = typelist[pin + 48];
 
 	uart.transmit("SetIO ", 6);
 	uart.transmit(pin, HEX, 2);

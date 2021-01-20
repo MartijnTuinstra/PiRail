@@ -7,6 +7,8 @@
 
 #include "rollingstock/railtrain.h"
 
+#include "config/LayoutStructure.h"
+
 enum Station_types {
   STATION_PERSON,
   STATION_CARGO,
@@ -16,6 +18,8 @@ enum Station_types {
 };
 
 extern const char * station_types_string[5];
+
+struct configStruct_Station;
 
 class Station {
   public:
@@ -47,7 +51,10 @@ class Station {
 
     // Station(int module, int id, char * name, char name_len, enum Station_types type, int len, uint8_t * blocks);
     Station(int module, int id, struct station_conf conf);
+    Station(int mdoule, int id, struct configStruct_Station *);
     ~Station();
+
+    void exportConfig(struct configStruct_Station *);
 
     void occupy(RailTrain * T);
     void release();

@@ -4,6 +4,9 @@
 #include "utils/mem.h"
 #include "config.h"
 #include "config/RollingConfig.h"
+
+#include "config/RollingStructure.h"
+
 #include "rollingstock/train.h"
 #include "rollingstock/engine.h"
 #include "rollingstock/car.h"

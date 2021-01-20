@@ -3,6 +3,7 @@
 
 #include "switchboard/declares.h"
 #include "config/ModuleConfig.h"
+#include "config/newModuleConfig.h"
 #include "IO.h"
 
 struct unit_connector {
@@ -55,6 +56,7 @@ class Unit {
 
     Unit(uint16_t M, uint8_t Nodes, char points);
     Unit(ModuleConfig * Config);
+    Unit(newModuleConfig * Config);
     ~Unit();
 
     void insertBlock(Block * B);
@@ -63,10 +65,15 @@ class Unit {
     void insertStation(Station * St);
     void insertSignal(Signal * Sig);
 
+    Block * registerDetection(Switch *, uint16_t);
+    Block * registerDetection(MSSwitch *, uint16_t);
+
     IO_Port * linkIO(Node_adr adr, void * pntr, enum e_IO_type type);
     IO_Port * linkIO(struct s_IO_port_conf adr, void * pntr, enum e_IO_type type);
+    IO_Port * linkIO(struct configStruct_IOport adr, void * pntr, enum e_IO_type type);
     IO_Port * IO(Node_adr adr);
     IO_Port * IO(struct s_IO_port_conf adr);
+    IO_Port * IO(struct configStruct_IOport);
 
     void updateIO(int uart_filestream);
 

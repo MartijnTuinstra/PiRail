@@ -160,7 +160,7 @@ void Logger::f(enum logging_levels level, const char * file, const int line, con
 }
 
 void Logger::hexdump(const char * file, const int line, const char * header, void * data, int length){
-  char text[1000];
+  char text[8000];
   char * ptr = text;
 
   ptr += sprintf(ptr, "%s\n", header);

@@ -3,7 +3,7 @@ SRC=src
 LIB=../lib
 
 GCC_DEPFLAGS = -MT $@ -MMD -MP -MF $(DEPDIR)/$*.d
-GCC_INCLUDE = -I $(LIB) -I .
+GCC_INCLUDE = -I $(LIB) -I ../generated/lib -I .
 GCC_ERROR_FLAGS = -Werror=unused-variable -Wno-packed-bitfield-compat -Wno-unused-parameter -Wall
 GCC_LIBS = -lpthread -lssl -lcrypto -lm
 GCC_FLAGS = -D _DEFAULT_SOURCE
@@ -12,8 +12,8 @@ GCC = g++ -std=c++14 -g3 $(GCC_INCLUDE) $(GCC_ERROR_FLAGS) $(GCC_LIBS) $(GCC_FLA
 
 ROLLINGSTOCK_FILES = railtrain
 SWITCHBOARD_FILES = rail switch msswitch signal station
-SRC_FILES = path pathfinding algorithm io
-TEST_FILES = main testhelpers $(addprefix src/,$(SRC_FILES)) $(addprefix switchboard/,$(SWITCHBOARD_FILES)) $(addprefix rollingstock/,$(ROLLINGSTOCK_FILES))
+SRC_FILES = path pathfinding algorithm io configReader
+TEST_FILES = main testhelpers $(addprefix src/,$(SRC_FILES)) $(addprefix switchboard/,$(SWITCHBOARD_FILES)) # $(addprefix rollingstock/,$(ROLLINGSTOCK_FILES))
 
 .DEFAULT_GOAL := all
 

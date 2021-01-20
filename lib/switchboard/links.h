@@ -30,6 +30,10 @@ struct rail_link {
   } p;
 };
 
+struct configStruct_RailLink;
+
+void railLinkExport(struct configStruct_RailLink * cfg, struct rail_link link);
+
 void * rail_link_pointer(struct rail_link link);
 void link_all_blocks(Unit * U);
 void link_all_switches(Unit * U);

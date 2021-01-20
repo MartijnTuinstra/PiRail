@@ -7,7 +7,7 @@
 #include "utils/mem.h"
 #include "utils/dynArray.h"
 
-#include "config/ModuleConfig.h"
+#include "config/newModuleConfig.h"
 #include "switchboard/declares.h"
 
 namespace switchboard {
@@ -39,7 +39,7 @@ class Manager {
     ::dynArray<Station *>  uniqueStation;
 
     ::dynArray<String *>  filenames = dynArray<String *>(5);
-    ::dynArray<ModuleConfig *> Configs;
+    ::dynArray<newModuleConfig *> Configs;
 
     Manager();
     ~Manager();

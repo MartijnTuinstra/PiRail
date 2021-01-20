@@ -5,6 +5,8 @@
 #include "switchboard/msswitch.h"
 #include "switchboard/signals.h"
 
+#include "config/LayoutStructure.h"
+
 #include "system.h"
 #include "utils/mem.h"
 #include "utils/logger.h"
@@ -70,6 +72,51 @@ Block::Block(uint8_t _module, struct s_block_conf block){
   U->insertBlock(this);
 }
 
+Block::Block(uint8_t _module, struct configStruct_Block * block){
+  loggerf(DEBUG, "Block Constructor %02i:%02i", _module, block->id);
+  memset(this, 0, sizeof(Block));
+  module = _module;
+  id = block->id;
+  this->type = (enum Rail_types)block->type;
+
+  uid = switchboard::SwManager->addBlock(this);
+
+  this->next.module = block->next.module;
+  this->next.id = block->next.id;
+  this->next.type = (enum link_types)block->next.type;
+  this->prev.module = block->prev.module;
+  this->prev.id = block->prev.id;
+  this->prev.type = (enum link_types)block->prev.type;
+
+  this->max_speed = block->speed;
+  this->dir = (block->fl & 0x6) >> 1;
+  this->length = block->length;
+  this->oneWay = block->fl & 0x1;
+
+  this->Alg.B = this;
+
+  this->IOchanged = 1;
+  this->algorchanged = 1;
+
+  this->state = PROCEED;
+  this->reverse_state = PROCEED;
+
+  this->forward_signal = new std::vector<Signal *>();
+  this->reverse_signal = new std::vector<Signal *>();
+
+  U = switchboard::Units(module);
+
+  if(U->IO(block->IO_In))
+    this->In = U->linkIO(block->IO_In, this, IO_Input_Block);
+
+  if(block->fl & 0x8 && U->IO(block->IO_Out)){
+    this->dir_Out = U->linkIO(block->IO_Out, this, IO_Output);
+  }
+
+  // Insert block into Unit
+  U->insertBlock(this);
+}
+
 Block::~Block(){
   loggerf(MEMORY, "Block %i:%i Destructor\n", module, id);
   if(this->Sw)
@@ -79,6 +126,26 @@ Block::~Block(){
   delete this->reverse_signal;
 
   this->Sw = 0;
+}
+
+void Block::exportConfig(struct configStruct_Block * cfg){
+  cfg->id = id;
+  cfg->type = type;
+  railLinkExport(&cfg->next, next);
+  railLinkExport(&cfg->prev, prev);
+
+  cfg->fl = 0;
+
+  if (In)
+    In->exportConfig(&cfg->IO_In);
+  if (dir_Out){
+    dir_Out->exportConfig(&cfg->IO_Out);
+    cfg->fl |= 0x8;
+  }
+
+  cfg->speed = max_speed;
+  cfg->length = length;
+  cfg->fl |= oneWay | ((dir & 0x3) << 1);
 }
 
 void Block::addSwitch(Switch * Sw){

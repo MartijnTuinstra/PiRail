@@ -5,25 +5,27 @@ SHARED_LIB=shared/lib
 #ARGS=-std=c99 -lpthread -lssl -lcrypto -lwiringPi -lm -g3 $(INCLUDE) -Werror=unused-variable -Wno-packed-bitfield-compat -Wno-unused-parameter -D _DEFAULT_SOURCE
 # GCC_ARGS=-std=c99 -lpthread -lssl -lcrypto -lm -g3 -Werror=unused-variable -Wno-packed-bitfield-compat -Wno-unused-parameter -D _DEFAULT_SOURCE
 
-GCC_DEPFLAGS = -MT $@ -MMD -MP -MF $(DEPDIR)/$*.d
-GCC_INCLUDE = -I $(LIB) -I $(SHARED_LIB)
+GCC_DEPFLAGS = -MT $@ -MMD -MF $(DEPDIR)/$*.d
+GCC_INCLUDE = -I $(LIB) -I generated/$(LIB) -I $(SHARED_LIB)
 GCC_ERROR_FLAGS = -Werror=unused-variable -Wno-packed-bitfield-compat -Wno-unused-parameter -Wall
 GCC_LIBS = -pthread -lssl -lcrypto -lm
 GCC_FLAGS = -D _DEFAULT_SOURCE -D _POSIX_C_SOURCE=600
 
 GCC = g++ -std=c++14 -g3 $(GCC_INCLUDE) $(GCC_ERROR_FLAGS) $(GCC_LIBS) $(GCC_FLAGS)
 
-FILES_CONFIG = $(addprefix config/,ModuleConfig RollingConfig)
+
+
+FILES_CONFIG = $(addprefix config/,ModuleConfig newModuleConfig RollingConfig configReader LayoutStructure RollingStructure)
 FILES_SWITCHBOARD = $(addprefix switchboard/,blockconnector links rail switch msswitch unit station signals manager)
 FILES_WEBSOCKET = $(addprefix websocket/,server client stc cts message)
-FILES_ROLLING = $(addprefix rollingstock/,train engine car railtrain)
-FILES_UTILS = $(addprefix utils/,logger mem encryption)
+FILES_ROLLING = $(addprefix rollingstock/,manager train engine car railtrain)
+FILES_UTILS = $(addprefix utils/,logger mem encryption utils)
 FILES_ALGORITHM = $(addprefix algorithm/,core component queue blockconnector)
 
 BAAN_FILES = baan system modules config IO \
              Z21 Z21_msg train submodule com sim path pathfinding scheduler/scheduler \
              $(FILES_ROLLING) $(FILES_WEBSOCKET) $(FILES_SWITCHBOARD) \
-             $(FILES_CONFIG) $(FILES_ALGORITHM) $(FILES_UTILS)
+             $(FILES_CONFIG)  $(FILES_ALGORITHM) $(FILES_UTILS)
 
 #BAAN_FILES += websocket websocket_cts websocket_stc websocket_control
 
@@ -53,11 +55,19 @@ $(BIN)/shared/%.o: shared/src/%.cpp
 	@$(GCC) -c shared/src/$*.cpp -MP -MMD -MT '$@ $(BIN)/shared/$*.d' -o $(BIN)/shared/$*.o
 	@$(GCC) -shared -o shared/src/$*.cpp -o $(BIN)/shared/$*.so
 
+$(BIN)/%.o: generated/$(SRC)/%.c
+	@echo '(  GCC  ) -$@'
+	@$(GCC) -c generated/$(SRC)/$*.c -MP -MMD -MT '$@ $(BIN)/$*.d' -o $(BIN)/$*.o
+	@$(GCC) -shared -o $(SRC)/$*.c -o $(BIN)/$*.so
 $(BIN)/%.o: $(SRC)/%.c
 	@echo '(  GCC  ) -$@'
 	@$(GCC) -c $(SRC)/$*.c -MP -MMD -MT '$@ $(BIN)/$*.d' -o $(BIN)/$*.o
 	@$(GCC) -shared -o $(SRC)/$*.c -o $(BIN)/$*.so
 
+$(BIN)/%.o: generated/$(SRC)/%.cpp
+	@echo '(  G++  ) -$@'
+	@$(GCC) -c generated/$(SRC)/$*.cpp -MP -MMD -MT '$@ $(BIN)/$*.d' -o $(BIN)/$*.o
+	@$(GCC) -shared -o $(SRC)/$*.cpp -o $(BIN)/$*.so
 $(BIN)/%.o: $(SRC)/%.cpp
 	@echo '(  G++  ) -$@'
 	@$(GCC) -c $(SRC)/$*.cpp -MP -MMD -MT '$@ $(BIN)/$*.d' -o $(BIN)/$*.o
@@ -71,6 +81,16 @@ update_configs: update_modules_config update_rolling_config
 
 %.bin_bu_MKFL: %.bin
 	cp $^ $@
+
+generated/lib/config/LayoutStructure.h: generated/LayoutStructures.py generated/layoutGenerator.py
+	@echo '(  PY   ) -$@'
+	python3 -m generated.LayoutStructures
+
+generated/lib/config/RollingStructure.h: generated/RollingStructures.py generated/layoutGenerator.py
+	@echo '(  PY   ) -$@'
+	python3 -m generated.RollingStructures
+
+generateConfigStructures: generated/lib/config/LayoutStructure.h generated/src/config/LayoutStructure.cpp generated/lib/config/RollingStructure.h generated/src/config/RollingStructure.cpp
 
 update_modules_config: $(addprefix configs/units/,$(addsuffix .bin_bu_MKFL,$(BAAN_CONFIGS))) $(addprefix test/testconfigs/,$(addsuffix .bin_bu_MKFL,$(TEST_CONFIGS)))
 	./config_reader --update --module $^
@@ -90,15 +110,15 @@ test: all
 avr:
 	@+$(MAKE) -C avr all --no-print-directory
 
-baan: $(addprefix $(BIN)/,$(addsuffix .o, $(BAAN_FILES))) $(addprefix $(BIN)/shared/,$(addsuffix .o, $(SHARED_OBJ_FILES)))
+baan: generated/lib/config/LayoutStructure.h generated/lib/config/RollingStructure.h $(addprefix $(BIN)/,$(addsuffix .o, $(BAAN_FILES))) $(addprefix $(BIN)/shared/,$(addsuffix .o, $(SHARED_OBJ_FILES)))
 	@echo '( GCCLD ) $@'
 	@echo $^
-	@$(GCC) -o $@ $^ -D CB_NON_AVR
-	@$(GCC) -shared -o $@.so $^ -D CB_NON_AVR
+	@$(GCC) -o $@ $(addprefix $(BIN)/,$(addsuffix .o, $(BAAN_FILES))) $(addprefix $(BIN)/shared/,$(addsuffix .o, $(SHARED_OBJ_FILES))) -D CB_NON_AVR
+	@$(GCC) -shared -o $@.so $(addprefix $(BIN)/,$(addsuffix .o, $(BAAN_FILES))) $(addprefix $(BIN)/shared/,$(addsuffix .o, $(SHARED_OBJ_FILES))) -D CB_NON_AVR
 
-config_reader: $(addprefix $(BIN)/,$(addsuffix .o, $(CONFIG_READER_FILES)))
+config_reader: generateConfigStructures $(addprefix $(BIN)/,$(addsuffix .o, $(CONFIG_READER_FILES)))
 	@echo '( GCCLD ) $@'
-	@$(GCC) -o $@ $^
+	@$(GCC) -o $@ $(addprefix $(BIN)/,$(addsuffix .o, $(CONFIG_READER_FILES)))
 
 comtest: $(addprefix $(BIN)/,$(addsuffix .o, $(COMTEST_FILES))) $(addprefix $(BIN)/shared/,$(addsuffix .o, $(SHARED_OBJ_FILES)))
 	@echo '( GCCLD ) $@'
@@ -117,5 +137,7 @@ clean:
 	@find bin -type f -name "*.o" -delete
 	@find bin -type f -name "*.so" -delete
 	@find bin -type f -name "*.d" -delete
+
+	@find generated/lib generated/src -type f -delete
 
 cleanall: cleanavr clean

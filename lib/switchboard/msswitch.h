@@ -13,6 +13,8 @@
 #include "switchboard/switch.h"
 #include "IO.h"
 
+#include "config/LayoutStructure.h"
+
 
 #define U_MSSw(U, A) Units(U)->MSSw[A]
 
@@ -61,17 +63,19 @@ class MSSwitch {
 
     uint8_t IO_len;
     IO_Port ** IO;
-    uint16_t * IO_states;
 
     std::vector<Signal *> Signals;
 
-    struct rail_link * sideA;
-    struct rail_link * sideB;
-    uint8_t * state_direction;
+    uint8_t state_len;      // Total number of states
+    uint8_t defaultState;  // Default state
+    uint8_t state;          // Current state
+    uint16_t maxSpeed;      // Current maximum Speed
 
-    uint8_t state_len;
-    uint8_t default_state;
-    uint8_t state;
+    struct rail_link * sideA;      // Rail Link for each state
+    struct rail_link * sideB;      // Rail Link for each state
+    uint8_t * state_direction;     // Direction for each state
+    union u_IO_event ** IO_states; // [State][IO_Port]
+    uint16_t * stateMaxSpeed;      // Maximum Speed for each state
 
     Block * Detection;
 
@@ -83,7 +87,10 @@ class MSSwitch {
 
     // Switch(uint8_t module, struct s_switch_conf config);
     MSSwitch(uint8_t module, struct ms_switch_conf conf);//(struct s_msswitch_connect connect, uint8_t type, uint8_t block_id, uint8_t output_len, struct s_IO_port_conf * output_pins, uint16_t * output_states);
+    MSSwitch(uint8_t, struct configStruct_MSSwitch *);
     ~MSSwitch();
+
+    void exportConfig(struct configStruct_MSSwitch *);
 
     void addSignal(Signal * Sig);
 

@@ -229,8 +229,6 @@ int ModuleConfig::calc_size(){
 void ModuleConfig::dump(){
   FILE * fp = fopen(filename, "wb");
 
-  log_hex("SAVE DUMP: ", buffer, buffer_len - 10);
-
   fwrite(buffer, buffer_len - 10, 1, fp);
 
   fclose(fp);
@@ -496,7 +494,7 @@ void print_Signals(struct signal_conf signal){
 
   debugptr += sprintf(debugptr, "%i\t", signal.id);
   print_link(&debugptr, signal.Block);
-  debugptr += sprintf(debugptr, "\t%i", signal.output_len);
+  debugptr += sprintf(debugptr, "%i", signal.output_len);
 
   for(int i = 0;i < signal.output_len; i++){
     debugptr += sprintf(debugptr, "\n\t\t\t%02i:%02i - ", signal.output[i].Node, signal.output[i].Adr);
@@ -534,13 +532,18 @@ void print_Layout(struct ModuleConfig * config){
 
 
 void ModuleConfig::print(char ** cmds, uint8_t cmd_len){
-  if(!cmds)
-    return;
-  
-  cmds = &cmds[1];
-  cmd_len -= 1;
-
   uint16_t mask = 0;
+
+  if(cmds == 0){
+    if(cmd_len)
+      return;
+    
+    mask = 0x1FF;
+  }
+  else{
+    cmds = &cmds[1];
+    cmd_len -= 1;
+  }
 
   for(uint8_t i = 0; i < cmd_len;){
     if(strcmp(cmds[i], "-h") == 0){
@@ -643,7 +646,7 @@ void ModuleConfig::print(char ** cmds, uint8_t cmd_len){
 
   if(mask & 64){
     printf( "Signals\n");
-    printf( "id\tBlockID\tOutput Length\t\tOutput states\n");
+    printf( "id\tBlockID\t\tOutput Length\tOutput states\n");
     for(int i = 0; i < this->header.Signals; i++){
       print_Signals(this->Signals[i]);
     }

@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-// #include "modules.h"
 #include "switchboard/declares.h"
 #include "config_data.h"
 
@@ -65,6 +64,9 @@ union u_IO_event {
 
 class IO_Node;
 
+struct configStruct_IOport;
+struct configStruct_Node;
+
 class IO_Port {
   public:
     uint8_t id;
@@ -82,6 +84,8 @@ class IO_Port {
     IO_Node * Node;
 
     IO_Port(IO_Node * Node, uint8_t id, enum e_IO_type type);
+
+    void exportConfig(struct configStruct_IOport *);
 
     void link(void * pntr, enum e_IO_type type);
 
@@ -101,6 +105,7 @@ class IO_Node {
     bool updated;
 
     IO_Node(Unit * U, struct node_conf conf);
+    IO_Node(Unit * U, struct configStruct_Node * conf);
     ~IO_Node();
 
     inline void update();

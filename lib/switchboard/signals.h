@@ -7,6 +7,8 @@
 #include "switchboard/msswitch.h"
 #include "config.h"
 
+#include "config/LayoutStructure.h"
+
 /**///Signal passing speed
 //Flashing Red speed
 #define RED_F_SPEED 20
@@ -51,7 +53,10 @@ class Signal {
     std::vector<struct SignalSwitchLink *> Switches;
 
     Signal(uint8_t module, struct signal_conf conf);
+    Signal(uint8_t, struct configStruct_Signal *);
     ~Signal();
+
+    void exportConfig(struct configStruct_Signal *);
 
     void check();
     void set(enum Rail_states state);

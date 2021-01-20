@@ -4,6 +4,8 @@
 #include "switchboard/signals.h"
 #include "switchboard/station.h"
 
+#include "config/LayoutStructure.h"
+
 #include "utils/mem.h"
 #include "utils/logger.h"
 #include "IO.h"
@@ -38,6 +40,9 @@ Switch::Switch(uint8_t Module, struct switch_conf s){
   str = connect.str;
   app = connect.app;
 
+  maxSpeed[0] = s.speed_Str;
+  maxSpeed[1] = s.speed_Div;
+
   U = Units(connect.module);
   U->insertSwitch(this);
 
@@ -49,9 +54,6 @@ Switch::Switch(uint8_t Module, struct switch_conf s){
 
   // ============== IO ==============
   for(int i = 0; i < this->IO_len; i++){
-    if(!U->IO(s.IO_Ports[i]))
-      continue;
-
     this->IO[i] = U->linkIO(s.IO_Ports[i], this, IO_Output);
   }
 
@@ -73,9 +75,6 @@ Switch::Switch(uint8_t Module, struct switch_conf s){
     feedback = (IO_Port **)_calloc(feedback_len, IO_Port *);
 
     for(int i = 0; i < feedback_len; i++){
-      if(!U->IO(s.FB_Ports[i]))
-        continue;
-
       this->feedback[i] = U->linkIO(s.FB_Ports[i], this, IO_Input_Switch);
     }
 
@@ -92,49 +91,97 @@ Switch::Switch(uint8_t Module, struct switch_conf s){
   }
 
   // =========== Detection ============
+  Detection = U->registerDetection(this, s.det_block);
+}
 
-  if(U->block_len > s.det_block && U->B[s.det_block]){
-    this->Detection = U->B[s.det_block];
+Switch::Switch(uint8_t Module, struct configStruct_Switch * s){
+  // struct switch_conf s = read_s_switch_conf(buf_ptr);
+  struct s_switch_connect connect;
+
+  connect.module = Module;
+  connect.id = s->id;
+  connect.app.module = s->App.module; connect.app.id = s->App.id; connect.app.type = (enum link_types)s->App.type;
+  connect.str.module = s->Str.module; connect.str.id = s->Str.id; connect.str.type = (enum link_types)s->Str.type;
+  connect.div.module = s->Div.module; connect.div.id = s->Div.id; connect.div.type = (enum link_types)s->Div.type;
+
+  // new Switch(connect, s->det_block, s->IO & 0x0f, Adrs, States);
+  loggerf(MEMORY, "Create Sw %i:%i", connect.module, connect.id);
+  // Switch * Z = (Switch *)_calloc(1, Switch);
+  memset(this, 0, sizeof(Switch));
+
+  module = connect.module;
+  id = connect.id;
+  uid = SwManager->addSwitch(this);
+
+  div = connect.div;
+  str = connect.str;
+  app = connect.app;
+
+  maxSpeed[0] = s->speed_Str;
+  maxSpeed[1] = s->speed_Div;
+
+  U = Units(connect.module);
+  U->insertSwitch(this);
+
+  IO_len = s->IO_length;
+  IO = (IO_Port **)_calloc(IO_len, IO_Port *);
+
+  feedback_len = s->feedback_len;
+
+
+  // ============== IO ==============
+  for(int i = 0; i < this->IO_len; i++){
+    this->IO[i] = U->linkIO(s->IO_Ports[i], this, IO_Output);
+  }
+
+  // IO Stating
+  auto arrayIO = (union u_IO_event *)_calloc(2 * IO_len + 10, union u_IO_event);
+
+  IO_events[0] = &arrayIO[0];
+  IO_events[1] = &arrayIO[IO_len];
+
+  for(uint8_t i = 0; i < (IO_len * 2); i++){
+    IO_events[i % 2][i / 2].value = s->IO_Event[i];
+    loggerf(INFO, "SWITCH IO event: %i:%i -> %i", i%2, i/2, IO_events[i % 2][i / 2].value);
+  }
+
+  // ============== Feedback ==============
+  feedback_en = (s->feedback_len > 0);
+
+  if(!feedback_en)
+    feedback = 0;
+  else {
+    feedback = (IO_Port **)_calloc(feedback_len, IO_Port *);
+
+    for(int i = 0; i < feedback_len; i++){
+      if(!U->IO(s->FB_Ports[i]))
+        continue;
+
+      this->feedback[i] = U->linkIO(s->FB_Ports[i], this, IO_Input_Switch);
+    }
+
+    // Feedback IO Stating
+    auto arrayFB = (union u_IO_event *)_calloc(2 * feedback_len + 10, union u_IO_event);
+
+    feedback_events[0] = &arrayFB[0];
+    feedback_events[1] = &arrayFB[feedback_len];
+
+    for(uint8_t i = 0; i < (feedback_len * 2); i++){
+      feedback_events[i % 2][i / 2].value = s->FB_Event[i];
+      loggerf(INFO, "SWITCH IO event: %i:%i -> %i", i%2, i/2, feedback_events[i % 2][i / 2].value);
+    }
+  }
+
+  // =========== Detection ============
+
+  if(U->block_len > s->det_block && U->B[s->det_block]){
+    this->Detection = U->B[s->det_block];
     this->Detection->addSwitch(this);
   }
   else{
-    loggerf(WARNING, "SWITCH %i:%i has no detection block %i", connect.module, connect.id, s.det_block);
+    loggerf(WARNING, "SWITCH %i:%i has no detection block %i", connect.module, connect.id, s->det_block);
   }
 }
-
-// Switch::Switch(struct s_switch_connect connect, uint8_t block_id, uint8_t output_len, Node_adr * output_pins, uint8_t * output_states){
-//   loggerf(MEMORY, "Create Sw %i:%i", connect.module, connect.id);
-//   // Switch * Z = (Switch *)_calloc(1, Switch);
-//   memset(this, 0, sizeof(Switch));
-
-//   this->module = connect.module;
-//   this->id = connect.id;
-
-//   this->div = connect.div;
-//   this->str = connect.str;
-//   this->app = connect.app;
-
-//   this->IO = (IO_Port **)_calloc(output_len, IO_Port *);
-
-//   for(int i = 0; i < output_len; i++){
-//     Init_IO(Units[connect.module], output_pins[i], this);
-
-//     this->IO[i] = Units[connect.module]->Node[output_pins[i].Node].io[output_pins[i].io];
-//   }
-
-//   this->IO_len = output_len;
-//   this->IO_states = output_states;
-
-//   Units[this->module]->insertSwitch(this);
-
-//   if(Units[this->module]->block_len > block_id && U_B(this->module, block_id)){
-//     this->Detection = U_B(this->module, block_id);
-//     this->Detection->addSwitch(this);
-//   }
-//   else{
-//     loggerf(WARNING, "SWITCH %i:%i has no detection block %i", connect.module, connect.id, block_id);
-//   }
-// }
 
 Switch::~Switch(){
   loggerf(MEMORY, "Switch %i:%i Destructor", module, id);
@@ -150,6 +197,50 @@ Switch::~Switch(){
 
   _free(coupled);
   _free(preferences);
+}
+
+void Switch::exportConfig(struct configStruct_Switch * cfg){
+  if (!this)
+    return;
+
+  cfg->id = id;
+  cfg->det_block = Detection->id;
+
+  railLinkExport(&cfg->App, app);
+  railLinkExport(&cfg->Div, div);
+  railLinkExport(&cfg->Str, str);
+
+  cfg->IO_length = IO_len;
+  cfg->IO_type = 0;
+  cfg->speed_Str = maxSpeed[0];
+  cfg->speed_Div = maxSpeed[1];
+  cfg->feedback_len = feedback_len;
+
+
+  if (IO){
+    cfg->IO_Ports = (struct configStruct_IOport *)_calloc(IO_len, struct configStruct_IOport);
+    cfg->IO_Event = (uint8_t *)_calloc(IO_len * 2, uint8_t);
+    for(uint8_t i = 0; i < IO_len; i++){
+      if (IO[i])
+        IO[i]->exportConfig(&cfg->IO_Ports[i]);
+
+      cfg->IO_Event[i * 2]     = IO_events[i][0].value;
+      cfg->IO_Event[i * 2 + 1] = IO_events[i][1].value;
+    }
+  }
+
+  if (feedback){
+    cfg->FB_Ports = (struct configStruct_IOport *)_calloc(IO_len, struct configStruct_IOport);
+    cfg->FB_Event = (uint8_t *)_calloc(IO_len, uint8_t);
+
+    for(uint8_t i = 0; i < feedback_len; i++){
+      if (feedback[i])
+        feedback[i]->exportConfig(&cfg->FB_Ports[i]);
+
+      cfg->FB_Event[i * 2]     = feedback_events[i][0].value;
+      cfg->FB_Event[i * 2 + 1] = feedback_events[i][1].value;
+    }
+  }
 }
 
 void Switch::addSignal(Signal * Sig){

@@ -2,6 +2,8 @@
 #include "utils/logger.h"
 #include "system.h"
 
+#include "config/LayoutStructure.h"
+
 #include "switchboard/manager.h"
 #include "switchboard/station.h"
 #include "switchboard/unit.h"
@@ -21,15 +23,6 @@ const char * station_types_string[5] = {
 
 Station::Station(int module, int id, struct station_conf conf){
   memset(this, 0, sizeof(Station));
-
-  /*
-  uint8_t type;
-  uint8_t nr_blocks;
-  uint8_t name_len;
-  uint16_t parent;
-  uint8_t * blocks;
-  char * name;
-  */
 
   this->module = module;
   this->id = id;
@@ -60,17 +53,67 @@ Station::Station(int module, int id, struct station_conf conf){
   }
 }
 
+Station::Station(int _module, int _id, struct configStruct_Station * conf){
+  memset(this, 0, sizeof(Station));
+
+  module = _module;
+  id = _id;
+  U = Units(module);
+
+  uid = SwManager->addStation(this);
+
+  type = (enum Station_types)conf->type;
+
+  name = (char *)_calloc(conf->name_len + 1, char);
+  strncpy(name, conf->name, conf->name_len);
+
+  U->insertStation(this);
+
+  if(conf->parent != 0xFFFF && U->St[conf->parent]){
+    parent = U->St[conf->parent];
+    U->St[conf->parent]->childs.push_back(this);
+  }
+  else if(conf->parent != 0xFFFF)
+    loggerf(WARNING, "Failed to link station '%s' to parent %d", name, conf->parent);
+
+  blocks_len = conf->nr_blocks;
+  blocks = (Block **)_calloc(blocks_len, Block *);
+
+  for(int i = 0; i < conf->nr_blocks; i++){
+    blocks[i] = U->B[conf->blocks[i]];
+    U->B[conf->blocks[i]]->station = this;
+  }
+}
+
 Station::~Station(){
-  if(this->switch_link){
-    for(int k = 0; k <= this->switches_len; k++){
-      if(this->switch_link[k])
-        _free(this->switch_link[k]);
+  if(switch_link){
+    for(int k = 0; k <= switches_len; k++){
+      if(switch_link[k])
+        _free(switch_link[k]);
     }
-    _free(this->switch_link);
+    _free(switch_link);
   }
 
-  _free(this->name);
-  _free(this->blocks);
+  _free(name);
+  _free(blocks);
+}
+
+void Station::exportConfig(struct configStruct_Station * cfg){
+  cfg->type = type;
+  cfg->nr_blocks = blocks_len;
+  cfg->name_len = strlen(name) + 1;
+  // cfg->reserved;
+  if (parent)
+    cfg->parent = parent->id;
+  else
+    cfg->parent = 0xFFFF;
+
+  cfg->blocks = (uint8_t *)_calloc(blocks_len, uint8_t);
+  for(uint8_t i = 0; i < blocks_len; i++){
+    cfg->blocks[i] = (uint8_t)blocks[i]->id; // FIXME
+  }
+  cfg->name = (char *)_calloc(strlen(name) + 1, char);
+  strcpy(cfg->name, name);
 }
 
 void Station::occupy(RailTrain * T){

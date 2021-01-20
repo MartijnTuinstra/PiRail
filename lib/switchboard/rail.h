@@ -11,6 +11,8 @@
 #include "path.h"
 #include "config_data.h"
 
+#include "config/LayoutStructure.h"
+
 #define NEXT 0
 #define PREV 1
 
@@ -74,6 +76,8 @@ struct block_connect {
   struct rail_link next;
   struct rail_link prev;
 };
+
+struct configStruct_Block;
 
 class Block {
   public:
@@ -143,7 +147,10 @@ class Block {
     Algor_Blocks Alg;
 
     Block(uint8_t module, struct s_block_conf block);  // Constructor
+    Block(uint8_t, struct configStruct_Block *);
     ~Block(); // Destructor
+
+    void exportConfig(struct configStruct_Block *);
 
     void addSwitch(Switch * Sw);
 

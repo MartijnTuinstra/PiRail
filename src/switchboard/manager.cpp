@@ -125,7 +125,7 @@ void Manager::loadFiles(){
 }
 
 void Manager::openFile(char * filename){
-  auto mc = new ModuleConfig(filename);
+  auto mc = new newModuleConfig(filename);
   Configs.push_back(mc);
 
   mc->read();

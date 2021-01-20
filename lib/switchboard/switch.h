@@ -8,11 +8,12 @@
 #include <unistd.h>
 #include <string.h>
 
-#include "config/ModuleConfig.h"
 #include "switch.h"
 #include "switchboard/rail.h"
 #include "IO.h"
 #include "pathfinding.h"
+
+#include "config/LayoutStructure.h"
 
 #define U_Sw(U, A) Units(U)->Sw[A]
 
@@ -51,6 +52,7 @@ struct s_switch_connect {
   struct rail_link div;
 };
 
+struct configStruct_Switch;
 
 class Switch {
   public:
@@ -87,6 +89,8 @@ class Switch {
     uint8_t state;
     uint8_t default_state;
 
+    uint16_t maxSpeed[2] = {0, 0};
+
     Block * Detection;
 
     uint8_t links_len;
@@ -97,8 +101,11 @@ class Switch {
 
     // Switch(uint8_t module, struct s_switch_conf config);
     Switch(uint8_t Module, struct switch_conf s);
+    Switch(uint8_t, struct configStruct_Switch *);
     // Switch(struct s_switch_connect connect, uint8_t block_id, uint8_t output_len, Node_adr * output_pins, uint8_t * output_states);
     ~Switch();
+
+    void exportConfig(struct configStruct_Switch *);
 
     void addSignal(Signal * Sig);
 

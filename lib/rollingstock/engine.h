@@ -2,16 +2,22 @@
 #define _INCLUDE_ROLLINGSTOCK_ENGINE_H
 
 #include <stdint.h>
-#include "config_data.h"
 
 #include "rollingstock/declares.h"
 #include "rollingstock/functions.h"
+
+#include "config/RollingStructure.h"
 
 
 #define ENGINE_14_FAHR_STUFEN 0
 #define ENGINE_28_FAHR_STUFEN 1
 #define ENGINE_128_FAHR_STUFEN 2
 
+
+struct EngineSpeedSteps {
+  uint16_t speed;
+  uint8_t step;
+};
 
 class Engine {
   public:
@@ -33,7 +39,7 @@ class Engine {
     uint16_t cur_speed; // Real Speed
 
     uint8_t steps_len;
-    struct engine_speed_steps * steps;
+    struct EngineSpeedSteps * steps;
 
     struct train_funcs function[29];
 
@@ -42,7 +48,7 @@ class Engine {
     char * img_path;
     char * icon_path;
 
-    Engine(struct engines_conf);
+    Engine(struct configStruct_Engine);
     Engine(uint16_t, char * name);
     ~Engine();
 
@@ -50,9 +56,9 @@ class Engine {
     void setImagePath(char *);
     void setIconPath(char *);
 
-    void setSpeedSteps(uint8_t, struct engine_speed_steps *);
+    void setSpeedSteps(uint8_t, struct EngineSpeedSteps *);
 
-    void constructor(struct engines_conf);
+    void constructor(struct configStruct_Engine);
 
     void setSpeed(uint16_t speed);
     void readSpeed();

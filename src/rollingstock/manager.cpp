@@ -108,28 +108,28 @@ void Manager::loadFile(char * f){
   config.read();
 
   loggerf(INFO, "Reading Catagories");
-  for(int i = 0; i < config.header.P_Catagories; i++)
+  for(int i = 0; i < config.header->PersonCatagories; i++)
     PassengerCatagories.push_back(config.P_Cat[i]);
 
-  for(int i = 0; i < config.header.C_Catagories; i++)
+  for(int i = 0; i < config.header->CargoCatagories; i++)
     CargoCatagories.push_back(config.C_Cat[i]);
 
 
   loggerf(INFO, "Reading Engines");
-  for(int i = 0; i < config.header.Engines; i++){
+  for(int i = 0; i < config.header->Engines; i++){
     newEngine(new Engine(config.Engines[i]));
   }
 
   
   loggerf(INFO, "Reading Cars");
-  for(int i = 0; i < config.header.Cars; i++){
+  for(int i = 0; i < config.header->Cars; i++){
     newCar(new Car(config.Cars[i]));
     // create_car_from_conf(config.Cars[i]);
   }
 
   
   loggerf(INFO, "Reading Trains");
-  for(int i = 0; i < config.header.Trains; i++){
+  for(int i = 0; i < config.header->Trains; i++){
     newTrain(new Train(config.Trains[i]));
   }
 
@@ -207,13 +207,13 @@ void Manager::moveEngine(Engine * E, uint16_t DCCid){
 void Manager::writeFile(){
   auto config = RollingConfig(filename);
 
-  config.header.P_Catagories = PassengerCatagories.items;
-  config.P_Cat = (struct cat_conf *)_calloc(config.header.P_Catagories, struct cat_conf);
-  memcpy(config.P_Cat, PassengerCatagories.array, config.header.P_Catagories * sizeof(struct cat_conf));
+  config.header->PersonCatagories = PassengerCatagories.items;
+  config.P_Cat = (struct configStruct_Category *)_calloc(config.header->PersonCatagories, struct configStruct_Category);
+  memcpy(config.P_Cat, PassengerCatagories.array, config.header->PersonCatagories * sizeof(struct configStruct_Category));
 
-  config.header.C_Catagories = CargoCatagories.items;
-  config.C_Cat = (struct cat_conf *)_calloc(config.header.C_Catagories, struct cat_conf);
-  memcpy(config.C_Cat, CargoCatagories.array, config.header.C_Catagories * sizeof(struct cat_conf));
+  config.header->CargoCatagories = CargoCatagories.items;
+  config.C_Cat = (struct configStruct_Category *)_calloc(config.header->CargoCatagories, struct configStruct_Category);
+  memcpy(config.C_Cat, CargoCatagories.array, config.header->CargoCatagories * sizeof(struct configStruct_Category));
 
   for(uint8_t i = 0; i < Trains.size; i++){
     if(!Trains[i])

@@ -11,6 +11,8 @@
 
 #include "utils/dynArray.h"
 
+#include "config/RollingStructure.h"
+
 
 struct __attribute__((__packed__)) train_comp {
   uint8_t type; //engine or car
@@ -54,13 +56,13 @@ class Train {
     uint8_t detectables:7;
     uint8_t splitdetectables:1;
 
-    Train(struct trains_conf);
+    Train(struct configStruct_Train);
     Train(char *);
-    Train(char * name, int nr_stock, struct train_comp_ws * comps, uint8_t catagory, uint8_t save);
+    Train(char * name, int nr_stock, struct configStruct_TrainComp * comps, uint8_t catagory, uint8_t save);
     ~Train();
     
     void setName(char *);
-    void setComposition(int, struct train_comp_ws *);
+    void setComposition(int, struct configStruct_TrainComp *);
 
     void setSpeed(uint16_t speed);
     void calcSpeed();

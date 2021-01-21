@@ -5,7 +5,6 @@
 #include "switchboard/rail.h"
 #include "switchboard/switch.h"
 #include "switchboard/msswitch.h"
-#include "config.h"
 
 #include "config/LayoutStructure.h"
 

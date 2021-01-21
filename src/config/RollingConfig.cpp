@@ -2,37 +2,127 @@
 
 #include "utils/logger.h"
 #include "utils/mem.h"
-#include "config.h"
 #include "config/RollingConfig.h"
 
 #include "config/RollingStructure.h"
+#include "config/configReader.h"
 
 #include "rollingstock/train.h"
 #include "rollingstock/engine.h"
 #include "rollingstock/car.h"
 
-RollingConfig::RollingConfig(char * filename){
+RollingConfig::RollingConfig(char * _filename){
   memset(this, 0, sizeof(RollingConfig));
-  strcpy(this->filename, filename);
-  this->parsed = false;
+  strcpy(filename, _filename);
+  parsed = false;
 }
 
-RollingConfig::RollingConfig(const char * filename){
+RollingConfig::RollingConfig(const char * _filename){
   memset(this, 0, sizeof(RollingConfig));
-  strcpy(this->filename, filename);
-  this->parsed = false;
+  strcpy(filename, _filename);
+  parsed = false;
 }
+
+// RollingConfig::RollingConfig(char * _filename, RollingConfig * oC){
+//   memset(this, 0, sizeof(RollingConfig));
+  
+//   strcpy(filename, _filename);
+//   parsed = true;
+
+//   header = (struct configStruct_TrainHeader *)_calloc(1, struct configStruct_TrainHeader);
+
+//   header->PersonCatagories = oC->header.P_Catagories;
+//   header->CargoCatagories  = oC->header.C_Catagories;
+//   header->Trains           = oC->header.Trains;
+//   header->Engines          = oC->header.Engines;
+//   header->Cars             = oC->header.Cars;
+
+//   P_Cat = (struct configStruct_Category *)_calloc(header->PersonCatagories, struct configStruct_Category);
+//   C_Cat = (struct configStruct_Category *)_calloc(header->CargoCatagories, struct configStruct_Category);
+
+//   Trains  = (struct configStruct_Train  *)_calloc(header->Trains, struct configStruct_Train);
+//   Engines = (struct configStruct_Engine *)_calloc(header->Trains, struct configStruct_Engine);
+//   Cars    = (struct configStruct_Car    *)_calloc(header->Trains, struct configStruct_Car);
+
+//   for(uint16_t i = 0; i < header->PersonCatagories; i++){
+//     P_Cat[i].name_len = oC->P_Cat[i].name_len;
+//     P_Cat[i].name = (char *)_calloc(P_Cat[i].name_len, char);
+//     strcpy(P_Cat[i].name, oC->P_Cat[i].name);
+//   }
+//   for(uint16_t i = 0; i < header->CargoCatagories;  i++){
+//     C_Cat[i].name_len = oC->C_Cat[i].name_len;
+//     C_Cat[i].name = (char *)_calloc(C_Cat[i].name_len, char);
+//     strcpy(C_Cat[i].name, oC->C_Cat[i].name);
+//   }
+
+//   for(uint16_t i = 0; i < header->Cars; i++){
+//     Cars[i].nr            = oC->Cars[i].nr;
+//     Cars[i].max_speed     = oC->Cars[i].max_speed;
+//     Cars[i].length        = oC->Cars[i].length;
+//     Cars[i].flags         = oC->Cars[i].flags;
+//     Cars[i].type          = oC->Cars[i].type;
+//     Cars[i].name_len      = oC->Cars[i].name_len;
+//     Cars[i].icon_path_len = oC->Cars[i].icon_path_len;
+
+//     memcpy(Cars[i].functions, oC->Cars[i].functions, sizeof(uint8_t));
+
+//     Cars[i].name = (char *)_calloc(Cars[i].name_len, char);
+//     Cars[i].icon_path = (char *)_calloc(Cars[i].icon_path_len, char);
+
+//     strcpy(Cars[i].name, oC->Cars[i].name);
+//     strcpy(Cars[i].icon_path, oC->Cars[i].icon_path);
+//   }
+
+//   for(uint16_t i = 0; i < header->Engines; i++){
+//     Engines[i].DCC_ID = oC->Engines[i].DCC_ID;
+//     Engines[i].length = oC->Engines[i].length;
+//     Engines[i].type   = oC->Engines[i].type;
+
+//     Engines[i].config_steps  = oC->Engines[i].config_steps;
+//     Engines[i].name_len      = oC->Engines[i].name_len;
+//     Engines[i].img_path_len  = oC->Engines[i].img_path_len;
+//     Engines[i].icon_path_len = oC->Engines[i].icon_path_len;
+
+//     memcpy(Engines[i].functions, oC->Engines[i].functions, sizeof(uint8_t));
+
+//     Engines[i].name = (char *)_calloc(Engines[i].name_len, char);
+//     Engines[i].img_path = (char *)_calloc(Engines[i].img_path_len, char);
+//     Engines[i].icon_path = (char *)_calloc(Engines[i].icon_path_len, char);
+//     Engines[i].speed_steps = (struct configStruct_EngineSpeedSteps *)_calloc(Engines[i].config_steps, struct configStruct_EngineSpeedSteps);
+
+//     strcpy(Engines[i].name, oC->Engines[i].name);
+//     strcpy(Engines[i].img_path, oC->Engines[i].img_path);
+//     strcpy(Engines[i].icon_path, oC->Engines[i].icon_path);
+
+//     memcpy(Engines[i].speed_steps, oC->Engines[i].speed_steps, Engines[i].config_steps * sizeof(struct configStruct_EngineSpeedSteps));
+//   }
+
+//   for(uint16_t i = 0; i < header->Trains; i++){
+//     Trains[i].name_len = oC->Trains[i].name_len;
+//     Trains[i].nr_stock = oC->Trains[i].nr_stock;
+//     Trains[i].category = oC->Trains[i].category;
+
+//     Trains[i].name = (char *)_calloc(Trains[i].name_len, char);
+//     strcpy(Trains[i].name, oC->Trains[i].name);
+
+//     Trains[i].composition = (struct configStruct_TrainComp *)_calloc(Trains[i].nr_stock, struct configStruct_TrainComp);
+//     for(uint16_t j = 0; j < Trains[i].nr_stock; j++){
+//       Trains[i].composition[j].type = oC->Trains[i].composition[j].type;
+//       Trains[i].composition[j].id   = oC->Trains[i].composition[j].id;
+//     }
+//   }
+// }
 
 void RollingConfig::addTrain(Train * T){
   if(!T)
     return;
 
-  if(!this->Trains)
-    this->Trains = (struct trains_conf *)_calloc(this->header.Trains + 1, struct trains_conf);
+  if(!Trains)
+    Trains = (struct configStruct_Train *)_calloc(header->Trains + 1, struct configStruct_Train);
   else
-    this->Trains = (struct trains_conf *)_realloc(this->Trains, this->header.Trains + 1, struct trains_conf);
+    Trains = (struct configStruct_Train *)_realloc(Trains, header->Trains + 1, struct configStruct_Train);
 
-  struct trains_conf * cT = &this->Trains[this->header.Trains++];
+  struct configStruct_Train * cT = &Trains[header->Trains++];
 
   cT->name_len = strlen(T->name);
   cT->name = (char *)_calloc(cT->name_len, char);
@@ -41,7 +131,7 @@ void RollingConfig::addTrain(Train * T){
   cT->nr_stock = T->nr_stock;
   cT->category = T->type;
 
-  cT->composition = (struct train_comp_ws *)_calloc(T->nr_stock, struct train_comp_ws);
+  cT->composition = (struct configStruct_TrainComp *)_calloc(T->nr_stock, struct configStruct_TrainComp);
 
   for(int i = 0; i < T->nr_stock; i++){
     cT->composition[i].type = T->composition[i].type;
@@ -54,11 +144,11 @@ void RollingConfig::addEngine(Engine * E){
     return;
 
   if(!Engines)
-    Engines = (struct engines_conf *)_calloc(header.Engines + 1, struct engines_conf);
+    Engines = (struct configStruct_Engine *)_calloc(header->Engines + 1, struct configStruct_Engine);
   else
-    Engines = (struct engines_conf *)_realloc(Engines, header.Engines + 1, struct engines_conf);
+    Engines = (struct configStruct_Engine *)_realloc(Engines, header->Engines + 1, struct configStruct_Engine);
 
-  struct engines_conf * cE = &Engines[header.Engines++];
+  struct configStruct_Engine * cE = &Engines[header->Engines++];
 
   cE->DCC_ID = E->DCC_ID;
   cE->length = E->length;
@@ -78,20 +168,19 @@ void RollingConfig::addEngine(Engine * E){
   cE->icon_path = (char *)_calloc(strlen(E->icon_path), char);
   strcpy(cE->icon_path, E->icon_path);
 
-  cE->speed_steps = (struct engine_speed_steps *)_calloc(E->steps_len, sizeof(struct engine_speed_steps));
-  memcpy(cE->speed_steps, E->steps, sizeof(struct engine_speed_steps) * E->steps_len);
+  cE->speed_steps = (struct configStruct_EngineSpeedSteps *)_calloc(E->steps_len, sizeof(struct configStruct_EngineSpeedSteps));
+  memcpy(cE->speed_steps, E->steps, sizeof(struct configStruct_EngineSpeedSteps) * E->steps_len);
 }
 void RollingConfig::addCar(Car * C){
   if(!C)
     return;
 
-  if(!this->Cars)
-    this->Cars = (struct cars_conf *)_calloc(this->header.Cars + 1, struct cars_conf);
+  if(!Cars)
+    Cars = (struct configStruct_Car *)_calloc(header->Cars + 1, struct configStruct_Car);
   else
-    this->Cars = (struct cars_conf *)_realloc(this->Cars, this->header.Cars + 1, struct cars_conf);
+    Cars = (struct configStruct_Car *)_realloc(Cars, header->Cars + 1, struct configStruct_Car);
 
-  struct cars_conf * cC = &this->Cars[this->header.Cars++];
-
+  struct configStruct_Car * cC = &Cars[header->Cars++];
 
   cC->nr = C->nr;
   cC->max_speed = C->max_speed;
@@ -110,32 +199,41 @@ void RollingConfig::addCar(Car * C){
 }
 
 RollingConfig::~RollingConfig(){
-  _free(this->P_Cat);
-  _free(this->C_Cat);
+  // _free(P_Cat);
+  // _free(C_Cat);
 
-  for(uint8_t i = 0; i < this->header.Engines; i++){
-    _free(this->Engines[i].name);
-    _free(this->Engines[i].img_path);
-    _free(this->Engines[i].icon_path);
-    _free(this->Engines[i].speed_steps);
-  }
-  _free(this->Engines);
+  // for(uint8_t i = 0; i < header->Engines; i++){
+  //   _free(Engines[i].name);
+  //   _free(Engines[i].img_path);
+  //   _free(Engines[i].icon_path);
+  //   _free(Engines[i].speed_steps);
+  // }
+  // _free(Engines);
 
-  for(uint8_t i = 0; i < this->header.Cars; i++){
-    _free(this->Cars[i].name);
-    _free(this->Cars[i].icon_path);
-  }
-  _free(this->Cars);
+  // for(uint8_t i = 0; i < header->Cars; i++){
+  //   _free(Cars[i].name);
+  //   _free(Cars[i].icon_path);
+  // }
+  // _free(Cars);
 
-  for(uint8_t i = 0; i < this->header.Trains; i++){
-    _free(this->Trains[i].name);
-    _free(this->Trains[i].composition);
-  }
-  _free(this->Trains);
+  // for(uint8_t i = 0; i < header->Trains; i++){
+  //   _free(Trains[i].name);
+  //   _free(Trains[i].composition);
+  // }
+  // _free(Trains);
+
+  _free(header);
+  _free(buffer);
 }
 
 
 int RollingConfig::read(){
+  if(parsed){
+    loggerf(WARNING, "Allready parsed, aborting!");
+    return -1;
+  }
+
+  loggerf(INFO, "Reading Rolling Stock configuration from %s", filename);
   FILE * fp = fopen(filename, "rb");
 
   if(!fp){
@@ -143,192 +241,137 @@ int RollingConfig::read(){
     return -1;
   }
 
-  char * header = (char *)_calloc(2, char);
-
-  fread(header, 1, 1, fp);
-
   fseek(fp, 0, SEEK_END);
   long fsize = ftell(fp);
   fseek(fp, 0, SEEK_SET);
 
-  char * buffer = (char *)_calloc(fsize, char);
-  char * buffer_start = &buffer[0];
+  buffer_len = fsize + 10;
+  buffer = (char *)_calloc(buffer_len, char);
   fread(buffer, fsize, 1, fp);
 
-  uint8_t ** buf_ptr = (uint8_t **)&buffer;
+  uint8_t * base_buf_ptr = (uint8_t *)&buffer[0];
+  uint8_t ** buf_ptr = &base_buf_ptr;
 
-  *buf_ptr += 1;
+  uint8_t fileVersion;
+  Config_read_uint8_t_uint8_t(&fileVersion, buf_ptr);
 
-  this->header = read_s_train_header_conf(buf_ptr);
-
-  if (header[0] != TRAIN_CONF_VERSION) {
-    loggerf(ERROR, "Not correct version");
+  if (fileVersion > CONFIG_ROLLINGSTRUCTURE_LU_MAX_VERSION) {
+    loggerf(WARNING, "Rolling Config not correct version (%s)", filename);
     return -1;
-    // this->header.IO_Nodes = 0;
-    // loggerf(WARNING, "Please re-save to update", this->header.module);
   }
 
-  this->P_Cat = (struct cat_conf *)_calloc(this->header.P_Catagories, struct cat_conf);
-  this->C_Cat = (struct cat_conf *)_calloc(this->header.C_Catagories, struct cat_conf);
-  this->Engines = (struct engines_conf *)_calloc(this->header.Engines, struct engines_conf);
-  this->Cars = (struct cars_conf *)_calloc(this->header.Cars, struct cars_conf);
-  this->Trains = (struct trains_conf *)_calloc(this->header.Trains, struct trains_conf);
+  header = (struct configStruct_TrainHeader *)_calloc(1, struct configStruct_TrainHeader);
+
+  Config_read_TrainHeader(fileVerion, header, buf_ptr);
+
+  loggerf(WARNING, "RollingConfig: %i %i %i %i %i  (%x - %x)", header->PersonCatagories, header->CargoCatagories, header->Engines, header->Cars, header->Trains, base_buf_ptr, *buf_ptr);
+
+  P_Cat   = (struct configStruct_Category *)_calloc(header->PersonCatagories, struct configStruct_Category);
+  C_Cat   = (struct configStruct_Category *)_calloc(header->CargoCatagories, struct configStruct_Category);
+  Engines = (struct configStruct_Engine *)_calloc(header->Engines, struct configStruct_Engine);
+  Cars    = (struct configStruct_Car *)_calloc(header->Cars, struct configStruct_Car);
+  Trains  = (struct configStruct_Train *)_calloc(header->Trains, struct configStruct_Train);
   
-  for(int i = 0; i < this->header.P_Catagories; i++){
-    this->P_Cat[i]  = read_cat_conf(buf_ptr);
+  for(int i = 0; i < header->PersonCatagories; i++){
+    Config_read_Category(fileVersion, &P_Cat[i], buf_ptr);
   }
   
-  for(int i = 0; i < this->header.C_Catagories; i++){
-    this->C_Cat[i]  = read_cat_conf(buf_ptr);
+  for(int i = 0; i < header->CargoCatagories; i++){
+    Config_read_Category(fileVersion, &C_Cat[i], buf_ptr);
   }
   
-  for(int i = 0; i < this->header.Engines; i++){
-    this->Engines[i]  = read_engines_conf(buf_ptr);
+  for(int i = 0; i < header->Engines; i++){
+    Config_read_Engine(fileVersion, &Engines[i], buf_ptr);
   }
   
-  for(int i = 0; i < this->header.Cars; i++){
-    this->Cars[i]  = read_cars_conf(buf_ptr);
+  for(int i = 0; i < header->Cars; i++){
+    Config_read_Car(fileVersion, &Cars[i], buf_ptr);
   }
   
-  for(int i = 0; i < this->header.Trains; i++){
-    this->Trains[i]  = read_trains_conf(buf_ptr);
+  for(int i = 0; i < header->Trains; i++){
+    Config_read_Train(fileVersion, &Trains[i], buf_ptr);
   }
 
-  _free(header);
-  _free(buffer_start);
-
-  this->parsed = true;
+  parsed = true;
 
   return 1;
 }
 
 int RollingConfig::calc_size(){
-  int size = 1; //header
-  size += sizeof(struct s_train_header_conf) + 1;
-  int subsize = 0;
+  int size = 1 + Config_write_size_TrainHeader(header);
 
   //Catagories
-  for(int i = 0; i < this->header.P_Catagories; i++){
-    size += sizeof(struct s_cat_conf) + 1;
-    size += this->P_Cat[i].name_len + 1;
+  for(int i = 0; i < header->PersonCatagories; i++){
+    size += Config_write_size_Category(&P_Cat[i]);
   }
-  for(int i = 0; i < this->header.C_Catagories; i++){
-    size += sizeof(struct s_cat_conf) + 1;
-    size += this->C_Cat[i].name_len + 1;
+  for(int i = 0; i < header->CargoCatagories; i++){
+    size += Config_write_size_Category(&C_Cat[i]);
   }
 
   //Engines
-  for(int i = 0; i < this->header.Engines; i++){
-    subsize = sizeof(struct s_engine_conf) + 1;
-    subsize += this->Engines[i].name_len + this->Engines[i].img_path_len + 2;
-    subsize += this->Engines[i].icon_path_len + 1;
-    subsize += this->Engines[i].config_steps * sizeof(struct engine_speed_steps) + 1;
-
-    size += subsize;
+  for(int i = 0; i < header->Engines; i++){
+    size += Config_write_size_Engine(&Engines[i]);
   }
-
-  loggerf(INFO, "Size Engines: %i", size);
 
   //Cars
-  for(int i = 0; i < this->header.Cars; i++){
-    subsize = sizeof(struct s_car_conf) + this->Cars[i].name_len + 2;
-    subsize += this->Cars[i].icon_path_len + 2;
-
-    size += subsize;
+  for(int i = 0; i < header->Cars; i++){
+    size += Config_write_size_Car(&Cars[i]);
   }
-
-  loggerf(INFO, "Size Cars: %i", size);
 
   //Trains
-  for(int i = 0; i < this->header.Trains; i++){
-    subsize = sizeof(struct s_train_conf) + 1;
-    subsize += this->Trains[i].name_len + 1;
-    subsize += sizeof(struct train_comp_ws) * this->Trains[i].nr_stock + 1;
-
-    size += subsize;
+  for(int i = 0; i < header->Trains; i++){
+    size += Config_write_size_Train(&Trains[i]);
   }
-
-  loggerf(INFO, "Size Trains: %i", size);
 
   return size;
 }
 
+void RollingConfig::dump(){
+  FILE * fp = fopen(filename, "wb");
+
+  fwrite(buffer, buffer_len - 10, 1, fp);
+
+  fclose(fp);
+}
+
 void RollingConfig::write(){
-  loggerf(DEBUG, "write_train_from_conf");
-  int size = this->calc_size();
+  int size = calc_size();
 
-  loggerf(INFO, "Writing %i bytes", size);
+  loggerf(WARNING, "write_train_from_conf (%i bytes)", size);
 
-  char * data = (char *)_calloc(size, char);
+  char * data = (char *)_calloc(size + 50, char);
+  uint8_t * p = (uint8_t *)data;
 
-  data[0] = TRAIN_CONF_VERSION;
+  {
+    uint8_t tmp = CONFIG_ROLLINGSTRUCTURE_LU_MAX_VERSION;
+    Config_write_uint8_t(&tmp, &p);
+  }
 
-  char * p = &data[1];
   //Copy header
-  memcpy(p, &this->header, sizeof(struct s_train_header_conf));
-
-  p += sizeof(struct s_train_header_conf) + 1;
+  Config_write_TrainHeader(header, &p);
 
   //Copy Catagories
-  for(int i = 0; i < this->header.P_Catagories; i++){
-    memcpy(p, &this->P_Cat[i], sizeof(struct s_cat_conf));
-    p += sizeof(struct s_cat_conf) + 1;
-
-    memcpy(p, this->P_Cat[i].name, this->P_Cat[i].name_len);
-    p += this->P_Cat[i].name_len + 1;
+  for(int i = 0; i < header->PersonCatagories; i++){
+    Config_write_Category(&P_Cat[i], &p);
   }
-  for(int i = 0; i < this->header.C_Catagories; i++){
-    memcpy(p, &this->C_Cat[i], sizeof(struct s_cat_conf));
-    p += sizeof(struct s_cat_conf) + 1;
-
-    memcpy(p, this->C_Cat[i].name, this->C_Cat[i].name_len);
-    p += this->C_Cat[i].name_len + 1;
+  for(int i = 0; i < header->CargoCatagories; i++){
+    Config_write_Category(&C_Cat[i], &p);
   }
 
   //Copy Engine
-  for(int i = 0; i < this->header.Engines; i++){
-    memcpy(p, &this->Engines[i], sizeof(struct s_engine_conf));
-    p += sizeof(struct s_engine_conf) + 1;
-
-    memcpy(p, this->Engines[i].name, this->Engines[i].name_len);
-    p += this->Engines[i].name_len + 1;
-
-    memcpy(p, this->Engines[i].img_path, this->Engines[i].img_path_len);
-    p += this->Engines[i].img_path_len + 1;
-
-    memcpy(p, this->Engines[i].icon_path, this->Engines[i].icon_path_len);
-    p += this->Engines[i].icon_path_len + 1;
-
-    memcpy(p, this->Engines[i].speed_steps, this->Engines[i].config_steps * sizeof(struct engine_speed_steps));
-    p += this->Engines[i].config_steps * sizeof(struct engine_speed_steps) + 1;
+  for(int i = 0; i < header->Engines; i++){
+    Config_write_Engine(&Engines[i], &p);
   }
 
   //Copy Cars
-  for(int i = 0; i < this->header.Cars; i++){
-    memcpy(p, &this->Cars[i], sizeof(struct s_car_conf));
-    p += sizeof(struct s_car_conf) + 1;
-
-    memcpy(p, this->Cars[i].name, this->Cars[i].name_len);
-    p += this->Cars[i].name_len + 1;
-
-    memcpy(p, this->Cars[i].icon_path, this->Cars[i].icon_path_len);
-    p += this->Cars[i].icon_path_len + 1;
+  for(int i = 0; i < header->Cars; i++){
+    Config_write_Car(&Cars[i], &p);
   }
 
   //Copy trains
-  for(int i =0; i < this->header.Trains; i++){
-    memcpy(p, &this->Trains[i], sizeof(struct s_train_conf));
-    p += sizeof(struct s_train_conf) + 1;
-
-    memcpy(p, this->Trains[i].name, this->Trains[i].name_len);
-    p += this->Trains[i].name_len + 1;
-
-    memcpy(p, this->Trains[i].composition, sizeof(struct train_comp_ws) * this->Trains[i].nr_stock);
-    p += sizeof(struct train_comp_ws) * this->Trains[i].nr_stock + 1;
+  for(int i =0; i < header->Trains; i++){
+    Config_write_Train(&Trains[i], &p);
   }
-
-  //Print output
-  // print_hex(data, size);
 
   FILE * fp = fopen(filename, "wb");
 
@@ -340,7 +383,7 @@ void RollingConfig::write(){
 }
 
 
-void print_Cars(struct cars_conf car){
+void print_Cars(struct configStruct_Car car){
   char debug[200];
 
   sprintf(debug, "%i\t%x\t%x\t%i\t%i\t%-20s\t%-20s",
@@ -355,7 +398,7 @@ void print_Cars(struct cars_conf car){
   printf( "%s\n", debug);
 }
 
-void print_Engines(struct engines_conf engine){
+void print_Engines(struct configStruct_Engine engine){
   char debug[200];
 
   sprintf(debug, "%i\t%x\t%x\t%i\t%-20s\t%-20s\t%-20s",
@@ -370,7 +413,7 @@ void print_Engines(struct engines_conf engine){
   printf( "%s\n", debug);
 }
 
-void print_Trains(struct trains_conf train){
+void print_Trains(struct configStruct_Train train){
   char debug[220];
   char * debugptr = debug;
 
@@ -385,19 +428,19 @@ void print_Trains(struct trains_conf train){
   printf( "%s\n", debug);
 }
 
-void print_Catagories(struct RollingConfig * config){
-  uint8_t max_cats = config->header.P_Catagories;
-  if (config->header.C_Catagories > max_cats)
-    max_cats = config->header.C_Catagories;
+void print_Catagories(RollingConfig * config){
+  uint8_t max_cats = config->header->PersonCatagories;
+  if (config->header->CargoCatagories > max_cats)
+    max_cats = config->header->CargoCatagories;
 
   printf("\tPerson\t\t\t\tCargo\n");
   for(int i = 0; i < max_cats; i++){
-    if(i < config->header.P_Catagories)
+    if(i < config->header->PersonCatagories)
       printf("%3i\t%-20s\t", i, config->P_Cat[i].name);
     else
       printf("   \t                                        ");
 
-    if(i < config->header.C_Catagories)
+    if(i < config->header->CargoCatagories)
       printf("%3i\t%-20s\n", i + 0x80, config->C_Cat[i].name);
     else
       printf("\n");
@@ -405,9 +448,22 @@ void print_Catagories(struct RollingConfig * config){
 }
 
 void RollingConfig::print(char ** cmds, uint8_t cmd_len){
-  printf( "Cars:    %i\n", this->header.Cars);
-  printf( "Engines: %i\n", this->header.Engines);
-  printf( "Trains:  %i\n", this->header.Trains);
+  uint16_t mask = 0;
+
+  if(cmds == 0){
+    if(cmd_len)
+      return;
+    
+    mask = 0x1FF;
+  }
+  else{
+    cmds = &cmds[1];
+    cmd_len -= 1;
+  }
+
+  printf( "Cars:    %i\n", this->header->Cars);
+  printf( "Engines: %i\n", this->header->Engines);
+  printf( "Trains:  %i\n", this->header->Trains);
 
   printf("\nCatagories\n");
   print_Catagories(this);
@@ -415,21 +471,21 @@ void RollingConfig::print(char ** cmds, uint8_t cmd_len){
 
   printf( "Cars\n");
   printf( "id\tNr\tType\tFlags\tSpeed\tLength\tName\t\t\tIcon_path\n");
-  for(int i = 0; i < this->header.Cars; i++){
+  for(int i = 0; i < this->header->Cars; i++){
     printf("%i\t", i);
     print_Cars(this->Cars[i]);
   }
   
   printf( "Engines\n");
   printf( "id\tDCC\tSteps\tType\tLength\tName\t\t\tImg_path\t\tIcon_path\n");
-  for(int i = 0; i < this->header.Engines; i++){
+  for(int i = 0; i < this->header->Engines; i++){
     printf("%i\t", i);
     print_Engines(this->Engines[i]);
   }
 
   printf( "Trains\n");
   printf( "id\tName\t\t\tRolling Stock\t...\n");
-  for(int i = 0; i < this->header.Trains; i++){
+  for(int i = 0; i < this->header->Trains; i++){
     printf("%i\t", i);
     print_Trains(this->Trains[i]);
   }

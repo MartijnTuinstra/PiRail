@@ -5,8 +5,8 @@
 
 #include "utils/logger.h"
 #include "utils/mem.h"
-#include "config.h"
 #include "config/ModuleConfig.h"
+#include "switchboard/links.h"
 
 
 // void hexdump(void * data, int length){
@@ -401,18 +401,15 @@ int ModuleConfig::calc_size(){
 void ModuleConfig::dump(){
   FILE * fp = fopen(filename, "wb");
 
-  log_hex("SAVE DUMP: ", buffer, buffer_len - 10);
-
   fwrite(buffer, buffer_len - 10, 1, fp);
 
   fclose(fp);
 }
 
 void ModuleConfig::write(){
-  loggerf(DEBUG, "write_module_from_conf");
   int size = calc_size();
 
-  loggerf(INFO, "Writing %i bytes", size);
+  loggerf(DEBUG, "write_module_from_conf (%i bytes)", size);
 
   char * data = (char *)_calloc(size + 50, char);
   uint8_t * p = (uint8_t *)data;
@@ -462,7 +459,7 @@ void ModuleConfig::write(){
   //Print output
   // print_hex(data, size);
 
-  FILE * fp = fopen(this->filename, "wb");
+  FILE * fp = fopen(filename, "wb");
 
   fwrite(data, size, 1, fp);
 

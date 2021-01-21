@@ -9,6 +9,7 @@
 
 #include "utils/mem.h"
 
+#include "config/RollingStructure.h"
 #include "scheduler/scheduler.h"
 #include "utils/dynArray.h"
 
@@ -16,8 +17,8 @@ namespace RollingStock {
 
 class Manager {
 public:
-  ::dynArray<struct cat_conf> PassengerCatagories;
-  ::dynArray<struct cat_conf> CargoCatagories;
+  ::dynArray<struct configStruct_Category> PassengerCatagories;
+  ::dynArray<struct configStruct_Category> CargoCatagories;
 
   ::dynArray<Car *>       Cars;
   ::dynArray<Engine *>    Engines;

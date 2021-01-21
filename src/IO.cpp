@@ -15,32 +15,6 @@
 
 using namespace switchboard;
 
-IO_Node::IO_Node(Unit * U, struct node_conf conf){
-  loggerf(DEBUG, "  Node %02i (0-%3i)", conf.Node, conf.size);
-  memset(this, 0 , sizeof(IO_Node));
-
-  this->id = conf.Node;
-  this->io_ports = conf.size;
-  
-  this->io = (IO_Port **)_calloc(conf.size, IO_Port*);
-  // this->io = new IO_Port[conf.size];
-
-  // loggerf(CRITICAL, "TODO IMPLEMENT node data"); // TODO: What is this?
-
-  for(int i = 0; i < conf.size; i++){
-    this->io[i] = new IO_Port(this, i, (enum e_IO_type)((conf.data[i/2] >> (4 * (i % 2))) & 0xF));
-    // this->io[i]->type = (enum e_IO_type);
-  }
-
-  if(U->IO_Nodes <= conf.Node){
-    U->Node = (IO_Node **)_realloc(U->Node, U->IO_Nodes + 1, IO_Node *);
-  }
-
-
-  this->U = U;
-  U->Node[this->id] = this;
-}
-
 IO_Node::IO_Node(Unit * U, struct configStruct_Node * conf){
   loggerf(DEBUG, "  Node %02i (0-%3i)", conf->Node, conf->size);
   memset(this, 0 , sizeof(IO_Node));

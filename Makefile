@@ -15,24 +15,24 @@ GCC = g++ -std=c++14 -g3 $(GCC_INCLUDE) $(GCC_ERROR_FLAGS) $(GCC_LIBS) $(GCC_FLA
 
 
 
-FILES_CONFIG = $(addprefix config/,ModuleConfig RollingConfig configReader LayoutStructure RollingStructure)
+FILES_CONFIG = $(addprefix config/,LayoutStructure RollingStructure ModuleConfig RollingConfig configReader)
 FILES_SWITCHBOARD = $(addprefix switchboard/,blockconnector links rail switch msswitch unit station signals manager)
 FILES_WEBSOCKET = $(addprefix websocket/,server client stc cts message)
 FILES_ROLLING = $(addprefix rollingstock/,manager train engine car railtrain)
 FILES_UTILS = $(addprefix utils/,logger mem encryption utils)
 FILES_ALGORITHM = $(addprefix algorithm/,core component queue blockconnector)
 
-BAAN_FILES = baan system modules config IO \
-             Z21 Z21_msg train submodule com sim path pathfinding scheduler/scheduler \
-             $(FILES_ROLLING) $(FILES_WEBSOCKET) $(FILES_SWITCHBOARD) \
-             $(FILES_CONFIG)  $(FILES_ALGORITHM) $(FILES_UTILS)
+BAAN_FILES = $(FILES_CONFIG) $(FILES_ROLLING) $(FILES_WEBSOCKET) \
+             $(FILES_SWITCHBOARD) $(FILES_ALGORITHM) $(FILES_UTILS) \
+             baan system modules IO \
+             Z21 Z21_msg train submodule com sim path pathfinding scheduler/scheduler
 
 #BAAN_FILES += websocket websocket_cts websocket_stc websocket_control
 
 COMTEST_FILES = comtest system modules config IO Z21 Z21_msg train submodule com sim path pathfinding scheduler/scheduler
 COMTEST_FILES += $(FILES_ROLLING) $(FILES_WEBSOCKET) $(FILES_SWITCHBOARD) $(FILES_CONFIG) $(FILES_ALGORITHM) $(FILES_UTILS)
 
-CONFIG_READER_FILES = config_reader config $(FILES_CONFIG) $(FILES_UTILS)
+CONFIG_READER_FILES = config_reader $(FILES_CONFIG) $(FILES_UTILS)
 
 BAAN_CONFIGS = 1 2 3 4 10 20 21 22 23 25 26
 TEST_CONFIGS = PATH-1 PATH-2 IO-1 IO-3 SB-1.1 SB-1.2 SB-1.3 SB-2.1 SB-3.1 SB-4.1 SB-4.2-1 SB-4.2-2 Alg-1-1 Alg-1-2 Alg-1-3 Alg-1-4 Alg-2 Alg-3 PF-1
@@ -82,11 +82,11 @@ update_configs: update_modules_config update_rolling_config
 %.bin_bu_MKFL: %.bin
 	cp $^ $@
 
-generated/lib/config/LayoutStructure.h: generated/LayoutStructures.py generated/layoutGenerator.py
+generated/src/config/LayoutStructure.cpp generated/lib/config/LayoutStructure.h: generated/LayoutStructures.py generated/layoutGenerator.py
 	@echo '(  PY   ) -$@'
 	python3 -m generated.LayoutStructures
 
-generated/lib/config/RollingStructure.h: generated/RollingStructures.py generated/layoutGenerator.py
+generated/src/config/RollingStructure.cpp generated/lib/config/RollingStructure.h: generated/RollingStructures.py generated/layoutGenerator.py
 	@echo '(  PY   ) -$@'
 	python3 -m generated.RollingStructures
 
@@ -110,15 +110,15 @@ test: all
 avr:
 	@+$(MAKE) -C avr all --no-print-directory
 
-baan: generated/lib/config/LayoutStructure.h generated/lib/config/RollingStructure.h $(addprefix $(BIN)/,$(addsuffix .o, $(BAAN_FILES))) $(addprefix $(BIN)/shared/,$(addsuffix .o, $(SHARED_OBJ_FILES)))
+baan: $(addprefix $(BIN)/,$(addsuffix .o, $(BAAN_FILES))) $(addprefix $(BIN)/shared/,$(addsuffix .o, $(SHARED_OBJ_FILES)))
 	@echo '( GCCLD ) $@'
 	@echo $^
-	@$(GCC) -o $@ $(addprefix $(BIN)/,$(addsuffix .o, $(BAAN_FILES))) $(addprefix $(BIN)/shared/,$(addsuffix .o, $(SHARED_OBJ_FILES))) -D CB_NON_AVR
+	@$(GCC) -o $@ $^ -D CB_NON_AVR
 	@$(GCC) -shared -o $@.so $(addprefix $(BIN)/,$(addsuffix .o, $(BAAN_FILES))) $(addprefix $(BIN)/shared/,$(addsuffix .o, $(SHARED_OBJ_FILES))) -D CB_NON_AVR
 
-config_reader: generateConfigStructures $(addprefix $(BIN)/,$(addsuffix .o, $(CONFIG_READER_FILES)))
+config_reader: $(addprefix $(BIN)/,$(addsuffix .o, $(CONFIG_READER_FILES)))
 	@echo '( GCCLD ) $@'
-	@$(GCC) -o $@ $(addprefix $(BIN)/,$(addsuffix .o, $(CONFIG_READER_FILES)))
+	@$(GCC) -o $@ $^
 
 comtest: $(addprefix $(BIN)/,$(addsuffix .o, $(COMTEST_FILES))) $(addprefix $(BIN)/shared/,$(addsuffix .o, $(SHARED_OBJ_FILES)))
 	@echo '( GCCLD ) $@'

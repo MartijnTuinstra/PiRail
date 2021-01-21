@@ -103,7 +103,6 @@ class IO_Node {
 
     bool updated;
 
-    IO_Node(Unit * U, struct node_conf conf);
     IO_Node(Unit * U, struct configStruct_Node * conf);
     ~IO_Node();
 

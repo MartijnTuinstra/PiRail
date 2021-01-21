@@ -1,10 +1,14 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <vector>
+
 #include "utils/logger.h"
 #include "utils/mem.h"
 #include "config.h"
-#include "switchboard/rail.h"
+
+#include "config/LayoutStructure.h"
+#include "config/RollingStructure.h"
 
 #include "config/ModuleConfig.h"
 #include "config/RollingConfig.h"
@@ -995,19 +999,19 @@ void modify_Car(struct RollingConfig * config, char cmd){
     printf("Editing Car %i\n", id);
   }
   else if(cmd == 'a'){
-    printf("Car ID: (%i)\n", config->header.Cars);
+    printf("Car ID: (%i)\n", config->header->Cars);
     fgets(_cmd, 80, stdin); // Clear stdin
 
-    if(config->header.Cars == 0){
+    if(config->header->Cars == 0){
       printf("Calloc");
-      config->Cars = (struct cars_conf *)_calloc(1, struct cars_conf);
+      config->Cars = (struct configStruct_Car *)_calloc(1, struct configStruct_Car);
     }
     else{
       printf("Realloc");
-      config->Cars = (struct cars_conf *)_realloc(config->Cars, config->header.Cars+1, struct cars_conf);
+      config->Cars = (struct configStruct_Car *)_realloc(config->Cars, config->header->Cars+1, struct configStruct_Car);
     }
-    memset(&config->Cars[config->header.Cars], 0, sizeof(struct cars_conf));
-    id = config->header.Cars++;
+    memset(&config->Cars[config->header->Cars], 0, sizeof(struct configStruct_Car));
+    id = config->header->Cars++;
 
     //Set child pointers
     config->Cars[id].name_len = 1;
@@ -1022,12 +1026,12 @@ void modify_Car(struct RollingConfig * config, char cmd){
     if(sscanf(_cmd, "%i", &id) < 1)
       return;
 
-    if(id == (config->header.Cars - 1) && id >= 0){
-      _free(config->Cars[config->header.Cars - 1].name);
-      _free(config->Cars[config->header.Cars - 1].icon_path);
+    if(id == (config->header->Cars - 1) && id >= 0){
+      _free(config->Cars[config->header->Cars - 1].name);
+      _free(config->Cars[config->header->Cars - 1].icon_path);
 
-      memset(&config->Cars[config->header.Cars - 1], 0, sizeof(struct cars_conf));
-      config->Cars = (struct cars_conf *)_realloc(config->Cars, --config->header.Cars, struct cars_conf);
+      memset(&config->Cars[config->header->Cars - 1], 0, sizeof(struct configStruct_Car));
+      config->Cars = (struct configStruct_Car *)_realloc(config->Cars, --config->header->Cars, struct configStruct_Car);
     }
     else{
       printf("Only last block can be removed\n");
@@ -1129,19 +1133,19 @@ void modify_Engine(struct RollingConfig * config, char ** cmds, uint8_t cmd_len)
     }
   }
   else if(mode == 'a'){
-    printf("Engine ID: (%i)\n", config->header.Engines);
+    printf("Engine ID: (%i)\n", config->header->Engines);
 
-    if(config->header.Engines == 0){
+    if(config->header->Engines == 0){
       printf("Calloc");
-      config->Engines = (struct engines_conf *)_calloc(1, struct engines_conf);
+      config->Engines = (struct configStruct_Engine *)_calloc(1, struct configStruct_Engine);
     }
     else{
       printf("Realloc");
-      config->Engines = (struct engines_conf *)_realloc(config->Engines, config->header.Engines+1, struct engines_conf);
+      config->Engines = (struct configStruct_Engine *)_realloc(config->Engines, config->header->Engines+1, struct configStruct_Engine);
     }
-    memset(&config->Engines[config->header.Engines], 0, sizeof(struct engines_conf));
-    // config->Engines[config->header.Engines].id = config->header.Engines;
-    id = config->header.Engines++;
+    memset(&config->Engines[config->header->Engines], 0, sizeof(struct configStruct_Engine));
+    // config->Engines[config->header->Engines].id = config->header->Engines;
+    id = config->header->Engines++;
 
     //Set child pointers
     config->Engines[id].name_len = 1;
@@ -1151,7 +1155,7 @@ void modify_Engine(struct RollingConfig * config, char ** cmds, uint8_t cmd_len)
     config->Engines[id].icon_path_len = 1;
     config->Engines[id].icon_path = (char *)_calloc(1, char);
     config->Engines[id].config_steps = 1;
-    config->Engines[id].speed_steps = (struct engine_speed_steps *)_calloc(1, struct engine_speed_steps);
+    config->Engines[id].speed_steps = (struct configStruct_EngineSpeedSteps *)_calloc(1, struct configStruct_EngineSpeedSteps);
   }
   else if(mode == 'r'){
     if(cmd_len > 2){
@@ -1163,14 +1167,14 @@ void modify_Engine(struct RollingConfig * config, char ** cmds, uint8_t cmd_len)
       return;
     }
 
-    if(id == (config->header.Engines - 1) && id >= 0){
-      _free(config->Engines[config->header.Engines - 1].name);
-      _free(config->Engines[config->header.Engines - 1].img_path);
-      _free(config->Engines[config->header.Engines - 1].icon_path);
-      _free(config->Engines[config->header.Engines - 1].speed_steps);
+    if(id == (config->header->Engines - 1) && id >= 0){
+      _free(config->Engines[config->header->Engines - 1].name);
+      _free(config->Engines[config->header->Engines - 1].img_path);
+      _free(config->Engines[config->header->Engines - 1].icon_path);
+      _free(config->Engines[config->header->Engines - 1].speed_steps);
 
-      memset(&config->Engines[config->header.Engines - 1], 0, sizeof(struct engines_conf));
-      config->Engines = (struct engines_conf *)_realloc(config->Engines, --config->header.Engines, struct engines_conf);
+      memset(&config->Engines[config->header->Engines - 1], 0, sizeof(struct configStruct_Engine));
+      config->Engines = (struct configStruct_Engine *)_realloc(config->Engines, --config->header->Engines, struct configStruct_Engine);
     }
     else{
       printf("Only last engine can be removed\n");
@@ -1208,7 +1212,7 @@ void modify_Engine(struct RollingConfig * config, char ** cmds, uint8_t cmd_len)
     fgets(_cmd, 80, stdin);
     if(sscanf(_cmd, "%i", &tmp) > 0){
       config->Engines[id].config_steps = tmp;
-      _realloc(config->Engines[id].speed_steps, tmp, sizeof(struct engine_speed_steps));
+      _realloc(config->Engines[id].speed_steps, tmp, sizeof(struct configStruct_EngineSpeedSteps));
     }
 
     for(int i = 0; i < config->Engines[id].config_steps; i++){
@@ -1314,25 +1318,25 @@ void modify_Train(struct RollingConfig * config, char cmd){
     printf("Editing Train %i\n", id);
   }
   else if(cmd == 'a'){
-    printf("Train ID: (%i)\n", config->header.Trains);
+    printf("Train ID: (%i)\n", config->header->Trains);
     fgets(_cmd, 20, stdin); // Clear stdin
 
-    if(config->header.Trains == 0){
+    if(config->header->Trains == 0){
       printf("Calloc");
-      config->Trains = (struct trains_conf *)_calloc(1, struct trains_conf);
+      config->Trains = (struct configStruct_Train *)_calloc(1, struct configStruct_Train);
     }
     else{
       printf("Realloc");
-      config->Trains = (struct trains_conf *)_realloc(config->Trains, config->header.Trains+1, struct trains_conf);
+      config->Trains = (struct configStruct_Train *)_realloc(config->Trains, config->header->Trains+1, struct configStruct_Train);
     }
-    memset(&config->Trains[config->header.Trains], 0, sizeof(struct trains_conf));
-    id = config->header.Trains++;
+    memset(&config->Trains[config->header->Trains], 0, sizeof(struct configStruct_Train));
+    id = config->header->Trains++;
 
     //Set child pointers
     config->Trains[id].name_len = 1;
     config->Trains[id].name = (char *)_calloc(1, char);
     config->Trains[id].nr_stock = 1;
-    config->Trains[id].composition = (struct train_comp_ws *)_calloc(1, struct train_comp_ws);
+    config->Trains[id].composition = (struct configStruct_TrainComp *)_calloc(1, struct configStruct_TrainComp);
   }
   else if(cmd == 'r'){
     printf("Remove Train ID: ");
@@ -1341,11 +1345,11 @@ void modify_Train(struct RollingConfig * config, char cmd){
     if(sscanf(_cmd, "%i", &id) < 1)
       return;
 
-    if(id == (config->header.Trains - 1) && id >= 0){
-      _free(config->Trains[config->header.Trains - 1].name);
+    if(id == (config->header->Trains - 1) && id >= 0){
+      _free(config->Trains[config->header->Trains - 1].name);
 
-      memset(&config->Engines[config->header.Trains - 1], 0, sizeof(struct trains_conf));
-      config->Trains = (struct trains_conf *)_realloc(config->Trains, --config->header.Trains, struct trains_conf);
+      memset(&config->Engines[config->header->Trains - 1], 0, sizeof(struct configStruct_Train));
+      config->Trains = (struct configStruct_Train *)_realloc(config->Trains, --config->header->Trains, struct configStruct_Train);
     }
     else{
       printf("Only last engine can be removed\n");
@@ -1358,7 +1362,7 @@ void modify_Train(struct RollingConfig * config, char cmd){
     fgets(_cmd, 20, stdin);
     if(sscanf(_cmd, "%i", &tmp) > 0){
       config->Trains[id].nr_stock = tmp;
-      config->Trains[id].composition = (struct train_comp_ws *)_realloc(config->Trains[id].composition, tmp, struct train_comp_ws);
+      config->Trains[id].composition = (struct configStruct_TrainComp *)_realloc(config->Trains[id].composition, tmp, struct configStruct_TrainComp);
     }
 
     printf("Name      (%s) | ", config->Trains[id].name);
@@ -1410,13 +1414,13 @@ void modify_Catagory(struct RollingConfig * config, char type, char cmd){
   int tmp;//, tmp2;
 
   uint8_t * _header;
-  struct cat_conf ** _cat;
+  struct configStruct_Category ** _cat;
   if(type == 'P'){
-    _header = &config->header.P_Catagories;
+    _header = &config->header->PersonCatagories;
     _cat = &config->P_Cat;
   }
   else{
-    _header = &config->header.C_Catagories;
+    _header = &config->header->CargoCatagories;
     _cat = &config->C_Cat;
   }
 
@@ -1440,13 +1444,13 @@ void modify_Catagory(struct RollingConfig * config, char type, char cmd){
 
     if(*_header == 0){
       printf("Calloc");
-      *_cat = (struct cat_conf *)_calloc(1, struct cat_conf);
+      *_cat = (struct configStruct_Category *)_calloc(1, struct configStruct_Category);
     }
     else{
       printf("Realloc");
-      *_cat = (struct cat_conf *)_realloc(*_cat, (*_header)+1, struct cat_conf);
+      *_cat = (struct configStruct_Category *)_realloc(*_cat, (*_header)+1, struct configStruct_Category);
     }
-    memset(&(*_cat)[*_header], 0, sizeof(struct cat_conf));
+    memset(&(*_cat)[*_header], 0, sizeof(struct configStruct_Category));
     id = *_header;
     *_header += 1;
 
@@ -1464,8 +1468,8 @@ void modify_Catagory(struct RollingConfig * config, char type, char cmd){
     if(id == (*_header - 1) && id >= 0){
       _free((*_cat)[*_header - 1].name);
 
-      memset(&(*_cat)[*_header - 1], 0, sizeof(struct cat_conf));
-      *_cat = (struct cat_conf *)_realloc(*_cat, --(*_header), struct cat_conf);
+      memset(&(*_cat)[*_header - 1], 0, sizeof(struct configStruct_Category));
+      *_cat = (struct configStruct_Category *)_realloc(*_cat, --(*_header), struct configStruct_Category);
     }
     else{
       printf("Only last engine can be removed\n");
@@ -1649,6 +1653,7 @@ int edit_module(char * filename, bool update){
 }
 
 int edit_rolling_stock(char * filename, bool update){
+  loggerf(WARNING, "edit_rolling_stock %s", filename);
   auto config = RollingConfig(filename);
 
   config.read();
@@ -1664,7 +1669,7 @@ int edit_rolling_stock(char * filename, bool update){
     return -1;
   }
 
-  config.print();
+  config.print(0, 0);
 
   char cmd[300];
   char ** cmds = (char **)_calloc(20, char *);
@@ -1760,24 +1765,25 @@ int main(int argc, char ** argv){
       update = true;
     else if(strcmp(argv[i], "--module") == 0 && !editing)
         editing = MODULE_EDITING;
-    else if(strcmp(argv[i], "--rollingediting") && !editing)
-        editing = ROLLING_EDITING;
+    else if(strcmp(argv[i], "--rolling") == 0 && !editing)
+      editing = ROLLING_EDITING;
     else if(strcmp(argv[i], "--verbose") == 0 || strcmp(argv[i], "-v") == 0){
       logger.setlevel_stdout(DEBUG);
     }
     else{ // filename
-      if(!filename_arg){
+      printf("file arg: %s\n", argv[i]);
+      if(argv[i][0] == '-'){
+        loggerf(WARNING, "Invalid argument: %s\n", argv[i]);
+      }
+      else if(!filename_arg){
         filename_arg = true;
         strcpy(filename, argv[i]);
       }
-      else if(argv[i][0] != '-'){
+      else{
         char * str = (char *)_calloc(strlen(argv[i])+5, char);
         printf("%x  %d", (unsigned int)str, strlen(argv[i]));
         strcpy(str, argv[i]);
         extrafiles.push_back(str);
-      }
-      else{
-        loggerf(WARNING, "Invalid argument: %s\n", argv[i]);
       }
     }
   }

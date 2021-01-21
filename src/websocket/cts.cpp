@@ -26,11 +26,10 @@
 #include "switchboard/msswitch.h"
 
 #include "rollingstock/manager.h"
-// #include "rollingstock/train.h"
-// #include "rollingstock/engine.h"
-// #include "rollingstock/car.h"
+#include "rollingstock/train.h"
+#include "rollingstock/engine.h"
+#include "rollingstock/car.h"
 #include "train.h"
-#include "config.h"
 #include "algorithm/queue.h"
 
 #include "modules.h"
@@ -674,7 +673,7 @@ void WS_cts_AddEnginetoLib(struct s_opc_AddNewEnginetolib * data, Websocket::Cli
 
   Engine * E = RSManager->newEngine(new Engine(data->DCC_ID, name));
 
-  struct engine_speed_steps * steps = (struct engine_speed_steps *)_calloc(data->steps, struct engine_speed_steps);
+  struct EngineSpeedSteps * steps = (struct EngineSpeedSteps *)_calloc(data->steps, struct EngineSpeedSteps);
   memcpy(steps, &data->strings + data->name_len, data->steps * 3);
 
   E->setSpeedSteps(data->steps, steps);
@@ -750,7 +749,7 @@ void WS_cts_Edit_Engine(struct s_opc_EditEnginelib * msg, Websocket::Client * cl
 
     // Copy speedsteps
     E->steps_len = data->steps;
-    E->steps = (struct engine_speed_steps *)_realloc(E->steps, data->steps, struct engine_speed_steps);
+    E->steps = (struct EngineSpeedSteps *)_realloc(E->steps, data->steps, struct EngineSpeedSteps);
     memcpy(E->steps, &data->strings + data->name_len, data->steps * 3);
 
     E->length = data->length;
@@ -805,7 +804,7 @@ void WS_cts_AddTraintoLib(struct s_opc_AddNewTraintolib * data, Websocket::Clien
   // Copy configuration
   memcpy(comps, &data->strings + data->name_len, data->nr_stock*3);
 
-  new Train(name, data->nr_stock, (struct train_comp_ws *)comps, data->catagory, data->save);
+  new Train(name, data->nr_stock, (struct configStruct_TrainComp *)comps, data->catagory, data->save);
 
   // Send succes response
   rdata->data.opc_AddNewTraintolib_res.response = 1;

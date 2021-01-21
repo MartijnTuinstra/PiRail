@@ -23,7 +23,6 @@
 #include "switchboard/switch.h"
 #include "switchboard/msswitch.h"
 #include "train.h"
-#include "config.h"
 
 #include "modules.h"
 #include "Z21.h"

@@ -3,7 +3,7 @@ from .layoutGenerator import *
 versionLookup = [[0,0,0,0,0,0,0]]
 CFL = ConfigFileLayout("RollingStructure", versionLookup, includePath="config/", sourcePath="generated/src/config/", headerPath="generated/lib/config/")
 
-TrainHeaderConfig = CFL.addStructure("TrainHeader",
+CFL.addStructure("TrainHeader",
   [
     StF(0,"PersonCatagories", FT.U8),
     StF(1,"CargoCatagories",  FT.U8),
@@ -14,7 +14,7 @@ TrainHeaderConfig = CFL.addStructure("TrainHeader",
   [[FF(FT.U8, 0), FF(FT.U8, 1), FF(FT.U8, 2), FF(FT.U8, 3), FF(FT.U8, 4)]]
 )
 
-SpeedStepConfig = CFL.addStructure("speed_steps",
+SpeedStepConfig = CFL.addStructure("EngineSpeedSteps",
   [
     StF(0,"speed", FT.U16),
     StF(1,"step",  FT.U8)
@@ -22,10 +22,10 @@ SpeedStepConfig = CFL.addStructure("speed_steps",
   [[FF(FT.U16, 0), FF(FT.U8, 1)]]
 )
 
-EngineConfig = CFL.addStructure("Engines",
+CFL.addStructure("Engine",
   [
     StF(0,"DCC_ID", FT.U16),
-    StF(1,"lenght", FT.U16),
+    StF(1,"length", FT.U16),
     StF(2,"type",   FT.U8),
     StF(3,"config_steps", FT.U8),
     StF(4,"name_len",     FT.U8),
@@ -43,11 +43,11 @@ EngineConfig = CFL.addStructure("Engines",
                    FF(FT.LIST | FT.NESTED, 11, lengthField=3, nested=SpeedStepConfig, version=0)]]
 )
 
-CarConfig = CFL.addStructure("Cars",
+CFL.addStructure("Car",
   [
     StF(0,"nr",        FT.U16),
     StF(1,"max_speed", FT.U16),
-    StF(2,"lenght",    FT.U16),
+    StF(2,"length",    FT.U16),
     StF(3,"flags",     FT.U8),
     StF(4,"type",      FT.U8),
     StF(5,"name_len",  FT.U8),
@@ -69,19 +69,20 @@ TrainCompConfig = CFL.addStructure("TrainComp",
   [[FF(FT.U8, 0), FF(FT.U16, 1)]]
 )
 
-TrainConfig = CFL.addStructure("Train",
+CFL.addStructure("Train",
   [
     StF(0,"name_len", FT.U8),
     StF(1,"nr_stock", FT.U8),
     StF(2,"category", FT.U8),
 
-    StF(3,"name",      FT.LIST, nested=FT.CHAR),
-    StF(4,"icon_path", FT.LIST, nested=FT.CHAR),
+    StF(3,"name",        FT.LIST, nested=FT.CHAR),
+    StF(4,"composition", FT.LIST, nested=TrainCompConfig),
   ],
-  [[FF(FT.U8, 0), FF(FT.U8, 1), FF(FT.U8, 2), FF(FT.LIST | FT.CHAR, 3, lengthField=0), FF(FT.LIST | FT.CHAR, 4, lengthField=1)]]
+  [[FF(FT.U8, 0), FF(FT.U8, 1), FF(FT.U8, 2), FF(FT.LIST | FT.CHAR, 3, lengthField=0),
+                  FF(FT.LIST | FT.NESTED, 4, lengthField=1, nested=TrainCompConfig, version=0)]]
 )
 
-CategoryConfig = CFL.addStructure("Category",
+CFL.addStructure("Category",
   [
     StF(0,"name_len", FT.U8),
 

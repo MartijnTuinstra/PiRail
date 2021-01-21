@@ -14,7 +14,7 @@ Car::Car(char * Name){
   setName(Name);
 }
 
-Car::Car(struct cars_conf data){
+Car::Car(struct configStruct_Car data){
   memset(this, 0, sizeof(Car));
 
   loggerf(TRACE, "Create Car %s", data.name);

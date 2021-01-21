@@ -8,7 +8,7 @@
 #include "system.h"
 
 
-Engine::Engine(struct engines_conf conf){
+Engine::Engine(struct configStruct_Engine conf){
   loggerf(TRACE, "Create Engine %s", conf.name);
 
   memset(this, 0, sizeof(Engine));
@@ -36,7 +36,7 @@ Engine::Engine(struct engines_conf conf){
 
   type = conf.type;
 
-  setSpeedSteps(conf.config_steps, conf.speed_steps);
+  setSpeedSteps(conf.config_steps, (struct EngineSpeedSteps *)conf.speed_steps);
 
   // Copy each function
   for(uint8_t i = 0; i < 29; i++){
@@ -91,13 +91,13 @@ void Engine::setIconPath(char * newpath){
   icon_path = (char *)_calloc(strlen(newpath) + 10, char);
   strcpy(icon_path, newpath);}
 
-void Engine::setSpeedSteps(uint8_t nr_steps, struct engine_speed_steps * speed_steps){
+void Engine::setSpeedSteps(uint8_t nr_steps, struct EngineSpeedSteps * speed_steps){
   if(steps)
     _free(steps);
 
   steps_len = nr_steps;
-  steps = (struct engine_speed_steps *)_calloc(nr_steps, struct engine_speed_steps);
-  memcpy(steps, speed_steps, nr_steps * sizeof(struct engine_speed_steps));
+  steps = (struct EngineSpeedSteps *)_calloc(nr_steps, struct EngineSpeedSteps);
+  memcpy(steps, speed_steps, nr_steps * sizeof(struct EngineSpeedSteps));
 
   // Get Max speed from speedsteps
   max_speed = 0;
@@ -110,8 +110,8 @@ void Engine::setSpeedSteps(uint8_t nr_steps, struct engine_speed_steps * speed_s
 
 void Engine::setSpeed(uint16_t speed){
   // Convert from scale speed to z21 steps
-  struct engine_speed_steps left;
-  struct engine_speed_steps right;
+  struct EngineSpeedSteps left;
+  struct EngineSpeedSteps right;
 
   this->cur_speed = speed;
 
@@ -138,10 +138,10 @@ void Engine::setSpeed(uint16_t speed){
 
 void Engine::readSpeed(){
   // Convert from z21 steps to scale speed
-  struct engine_speed_steps * left;
-  struct engine_speed_steps * right;
+  struct EngineSpeedSteps * left;
+  struct EngineSpeedSteps * right;
 
-  struct engine_speed_steps temp;
+  struct EngineSpeedSteps temp;
   temp.step = 0;
   temp.speed = 0;
 

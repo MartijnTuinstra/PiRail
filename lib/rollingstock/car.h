@@ -2,10 +2,11 @@
 #define _INCLUDE_ROLLINGSTOCK_CAR_H
 
 #include <stdint.h>
-#include "config_data.h"
 
 #include "rollingstock/declares.h"
 #include "rollingstock/functions.h"
+
+#include "config/RollingStructure.h"
 
 class Car {
   public:
@@ -27,7 +28,7 @@ class Car {
     char * icon_path;
 
   Car(char *);
-  Car(struct cars_conf);
+  Car(struct configStruct_Car);
   ~Car();
 
   void setName(char * name);

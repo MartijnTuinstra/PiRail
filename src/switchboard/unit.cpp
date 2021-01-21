@@ -313,15 +313,6 @@ IO_Port * Unit::linkIO(Node_adr adr, void * pntr, enum e_IO_type type){
   return Node[adr.Node]->io[adr.io];
 }
 
-IO_Port * Unit::linkIO(struct s_IO_port_conf adr, void * pntr, enum e_IO_type type){
-  if (adr.Node >= IO_Nodes){
-    loggerf(WARNING, "Failed to link IO %02i:%02i", adr.Node, adr.Adr);
-    return 0;
-  }
-  Node[adr.Node]->io[adr.Adr]->link(pntr, type);
-  return Node[adr.Node]->io[adr.Adr];
-}
-
 IO_Port * Unit::linkIO(struct configStruct_IOport adr, void * pntr, enum e_IO_type type){
   if (adr.Node >= IO_Nodes){
     loggerf(WARNING, "Failed to link IO %02i:%02i", adr.Node, adr.Port);
@@ -338,11 +329,6 @@ IO_Port * Unit::IO(Node_adr adr){
     return 0;
 
   return this->Node[adr.Node]->io[adr.io];
-}
-
-IO_Port * Unit::IO(struct s_IO_port_conf adr){
-  Node_adr newadr = {adr.Node, adr.Adr};
-  return this->IO(newadr);
 }
 
 IO_Port * Unit::IO(struct configStruct_IOport adr){

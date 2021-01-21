@@ -9,7 +9,7 @@
 struct train_composition ** trains_comp;
 int trains_comp_len = 0;
 
-Train::Train(struct trains_conf conf){
+Train::Train(struct configStruct_Train conf){
   loggerf(TRACE, "Create Train %s", conf.name);
   memset(this, 0, sizeof(Train));
 
@@ -43,7 +43,7 @@ Train::Train(char * Name){
   splitdetectables = false;
 }
 
-Train::Train(char * Name, int Stock, struct train_comp_ws * comps, uint8_t category, uint8_t Save){
+Train::Train(char * Name, int Stock, struct configStruct_TrainComp * comps, uint8_t category, uint8_t Save){
   loggerf(TRACE, "Create Train %s", Name);
 
   memset(this, 0, sizeof(Train));
@@ -87,7 +87,7 @@ void Train::setName(char * new_name){
   strcpy(name, new_name);
 }
 
-void Train::setComposition(int stock, struct train_comp_ws * comps){
+void Train::setComposition(int stock, struct configStruct_TrainComp * comps){
   if(composition)
     _free(composition);
 

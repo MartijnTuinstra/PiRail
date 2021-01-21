@@ -240,7 +240,7 @@ class Structure:
 		functionList += ",\n    ".join([f"&Config_read_{self.name}_{i}" for i in range(0, len(self.fS))])
 		functionList += "\n};\n"
 		functionHList = "extern " + functionHList + ";\n"
-		functionHList += (f"#define Config_read_{self.name}(version, header, buffer) Config_read_{self.name}_list[Config_LayoutStructureLU" +
+		functionHList += (f"#define Config_read_{self.name}(version, header, buffer) Config_read_{self.name}_list[Config_{self.filename}LU" +
 		                  f"[fileVersion][CONFIG_{self.filename.upper()}_LU_{self.name.upper()}]](header, buffer);\n")
 
 		structure = self.generateCstruct();

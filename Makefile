@@ -20,7 +20,7 @@ FILES_SWITCHBOARD = $(addprefix switchboard/,blockconnector links rail switch ms
 FILES_WEBSOCKET = $(addprefix websocket/,server client stc cts message)
 FILES_ROLLING = $(addprefix rollingstock/,manager train engine car railtrain)
 FILES_UTILS = $(addprefix utils/,logger mem encryption utils)
-FILES_ALGORITHM = $(addprefix algorithm/,core component queue blockconnector)
+FILES_ALGORITHM = $(addprefix algorithm/,core component queue blockconnector traincontrol)
 
 BAAN_FILES = $(FILES_CONFIG) $(FILES_ROLLING) $(FILES_WEBSOCKET) \
              $(FILES_SWITCHBOARD) $(FILES_ALGORITHM) $(FILES_UTILS) \

@@ -1,3 +1,6 @@
+#include <time.h>
+#include <stdlib.h>
+
 #include "system.h"
 #include "utils/mem.h"
 #include "utils/logger.h"
@@ -6,6 +9,8 @@
 #include "websocket/server.h"
 #include "switchboard/manager.h"
 #include "rollingstock/manager.h"
+
+#include "algorithm/traincontrol.h"
 
 #include "pathfinding.h"
 #include "Z21.h"
@@ -16,7 +21,10 @@ struct s_systemState * SYS;
 
 char * UART_Serial_Port = 0;
 
+
 int main(int argc, char * argv[]){
+  srand(time(NULL));
+
   init_main();
   logger.setfilename("log.txt");
   logger.setlevel(DEBUG);
@@ -43,6 +51,10 @@ int main(int argc, char * argv[]){
     loggerf(CRITICAL, "Failed to load Scheduler");
     return 0;
   }
+
+  auto TC = TrainControl();
+
+  TC.start(4);
 
   switchboard::SwManager->openDir(ModuleConfigBasePath);
   switchboard::SwManager->loadFiles();

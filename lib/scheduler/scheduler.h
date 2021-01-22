@@ -5,6 +5,8 @@
 #include <vector>
 #include "scheduler/event.h"
 
+bool operator <(const struct timespec lhs, const struct timespec rhs);
+
 class Scheduler{
     private:
         uint8_t _stop_ = 0;

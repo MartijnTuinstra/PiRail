@@ -1,6 +1,7 @@
 #ifndef INCLUDE_CONFIG_MODULECONFIG_H
 #define INCLUDE_CONFIG_MODULECONFIG_H
 
+#define ModuleConfigBasePath "./configs/units/"
 
 struct configStruct_Unit;
 struct configStruct_Node;
@@ -25,9 +26,6 @@ class ModuleConfig {
     struct configStruct_Signal * Signals;
 
     struct configStruct_WebLayout * Layout;
-
-    // uint16_t Layout_length;
-    // char * Layout;
 
     char * buffer;
     uint32_t buffer_len;

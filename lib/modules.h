@@ -6,14 +6,5 @@
 #include "switchboard/unit.h"
 #include "config/ModuleConfig.h"
 
-#define ModuleConfigBasePath "./configs/units/"
-
-#define Unit_Blocks_changed 0x1
-#define Unit_Switch_changed 0x2
-#define Unit_MSSwitch_changed 0x4
-#define Unit_Signal_changed 0x8
-
-void load_module_Configs();
-void unload_module_Configs();
 
 #endif

@@ -24,12 +24,12 @@ FILES_ALGORITHM = $(addprefix algorithm/,core component queue blockconnector)
 
 BAAN_FILES = $(FILES_CONFIG) $(FILES_ROLLING) $(FILES_WEBSOCKET) \
              $(FILES_SWITCHBOARD) $(FILES_ALGORITHM) $(FILES_UTILS) \
-             baan system modules IO \
+             baan system IO \
              Z21 Z21_msg train submodule com sim path pathfinding scheduler/scheduler
 
 #BAAN_FILES += websocket websocket_cts websocket_stc websocket_control
 
-COMTEST_FILES = comtest system modules config IO Z21 Z21_msg train submodule com sim path pathfinding scheduler/scheduler
+COMTEST_FILES = comtest system IO Z21 Z21_msg train submodule com sim path pathfinding scheduler/scheduler
 COMTEST_FILES += $(FILES_ROLLING) $(FILES_WEBSOCKET) $(FILES_SWITCHBOARD) $(FILES_CONFIG) $(FILES_ALGORITHM) $(FILES_UTILS)
 
 CONFIG_READER_FILES = config_reader $(FILES_CONFIG) $(FILES_UTILS)

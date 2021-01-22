@@ -26,8 +26,6 @@
 #include "utils/logger.h"
 #include "utils/mem.h"
 
-#include "modules.h"
-
 #include "submodule.h"
 #include "websocket/stc.h"
 

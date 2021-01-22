@@ -12,7 +12,7 @@
 #include "utils/mem.h"
 #include "utils/logger.h"
 
-#include "config.h"
+// #include "config.h"
 #include "websocket/stc.h"
 #include "scheduler/scheduler.h"
 // #include "submodule.h"

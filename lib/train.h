@@ -4,8 +4,6 @@
 #include <signal.h>
 #include <pthread.h>
 #include "switchboard/rail.h"
-// #include "route.h"
-#include "config_data.h"
 #include "scheduler/event.h"
 
 #include "rollingstock/functions.h"
@@ -13,6 +11,8 @@
 #include "rollingstock/engine.h"
 #include "rollingstock/train.h"
 #include "rollingstock/railtrain.h"
+
+#include "config/RollingStructure.h"
 
 
 #define TRAIN_COMPS_CONF "./configs/train_comp.conf"
@@ -36,15 +36,9 @@ struct engine_speed_steps;
 #define TRAIN_REVERSE 1
 
 
-extern struct cat_conf * train_P_cat;
+extern struct configStruct_Category * train_P_cat;
 extern int train_P_cat_len;
-extern struct cat_conf * train_C_cat;
+extern struct configStruct_Category * train_C_cat;
 extern int train_C_cat_len;
 
-// int read_rolling_Configs();
-// void write_rolling_Configs();
-// int load_rolling_Configs(const char * filename);
-// void unload_rolling_Configs();
-
-// void unlink_train(int fid);
 #endif

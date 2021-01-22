@@ -5,6 +5,11 @@
 #include "config/ModuleConfig.h"
 #include "IO.h"
 
+#define Unit_Blocks_changed 0x1
+#define Unit_Switch_changed 0x2
+#define Unit_MSSwitch_changed 0x4
+#define Unit_Signal_changed 0x8
+
 struct unit_connector {
   uint8_t unit;
   uint8_t connector; //remote connector

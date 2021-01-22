@@ -7,7 +7,6 @@
 #include "utils/mem.h"
 #include "utils/logger.h"
 #include "websocket/stc.h"
-#include "modules.h"
 
 using namespace switchboard;
 

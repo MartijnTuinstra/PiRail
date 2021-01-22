@@ -12,7 +12,6 @@
 #include "switchboard/unit.h"
 
 #include "train.h"
-#include "modules.h"
 
 #include "algorithm/core.h"
 #include "algorithm/component.h"

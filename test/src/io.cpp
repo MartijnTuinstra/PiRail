@@ -15,7 +15,6 @@
 
 #include "IO.h"
 #include "train.h"
-#include "modules.h"
 
 void init_test(char (* filenames)[30], int nr_files);
 

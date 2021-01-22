@@ -8,7 +8,6 @@
 #include "system.h"
 
 #include "switchboard/manager.h"
-#include "modules.h"
 
 #include "RNet_msg.h"
 

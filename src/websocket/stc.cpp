@@ -18,13 +18,13 @@
 #include "utils/logger.h"
 
 #include "switchboard/manager.h"
+#include "switchboard/unit.h"
 #include "switchboard/rail.h"
 #include "switchboard/station.h"
 #include "switchboard/switch.h"
 #include "switchboard/msswitch.h"
 #include "train.h"
 
-#include "modules.h"
 #include "Z21.h"
 
 #include "submodule.h"

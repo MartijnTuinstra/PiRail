@@ -2,28 +2,15 @@
 #include "utils/mem.h"
 #include "utils/logger.h"
 
-// #include "rail.h"
-// #include "switch.h"
-#include "train.h"
-#include "modules.h"
-
+#include "scheduler/scheduler.h"
+#include "websocket/server.h"
 #include "switchboard/manager.h"
-#include "switchboard/unit.h"
-#include "switchboard/rail.h"
-#include "switchboard/switch.h"
-#include "switchboard/signals.h"
-#include "switchboard/station.h"
 #include "rollingstock/manager.h"
 
-#include "config/LayoutStructure.h"
-
-#include "scheduler/scheduler.h"
-
-#include "websocket/server.h"
-
 #include "pathfinding.h"
-// #include "train_sim.h"
 #include "Z21.h"
+
+#define TRAIN_CONF_PATH "configs/stock.bin"
 
 struct s_systemState * SYS;
 
@@ -52,11 +39,17 @@ int main(int argc, char * argv[]){
   signal(SIGPIPE, SIG_IGN);
   srand(time(NULL));
   
+  if(!scheduler){
+    loggerf(CRITICAL, "Failed to load Scheduler");
+    return 0;
+  }
+
   switchboard::SwManager->openDir(ModuleConfigBasePath);
   switchboard::SwManager->loadFiles();
 
   // load_module_Configs();
   // load_rolling_Configs(TRAIN_CONF_PATH);
+  RSManager->initScheduler();
   RSManager->loadFile(TRAIN_CONF_PATH);
 
   switchboard::SwManager->print();

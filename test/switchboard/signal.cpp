@@ -16,7 +16,6 @@
 #include "algorithm/blockconnector.h"
 #include "sim.h"
 #include "train.h"
-#include "modules.h"
 
 #include "rollingstock/railtrain.h"
 

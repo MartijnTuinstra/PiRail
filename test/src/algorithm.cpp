@@ -16,7 +16,6 @@
 
 #include "rollingstock/railtrain.h"
 
-#include "modules.h"
 #include "train.h"
 
 #include "algorithm/queue.h"

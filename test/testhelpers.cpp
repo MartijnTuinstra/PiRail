@@ -7,7 +7,6 @@
 #include "rollingstock/manager.h"
 
 #include "train.h"
-#include "modules.h"
 #include "path.h"
 
 void init_test(char (* filenames)[30], int nr_files){

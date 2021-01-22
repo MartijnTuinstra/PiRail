@@ -28,7 +28,6 @@ class RollingConfig {
 
     RollingConfig(const char * filename);
     RollingConfig(char * filename);
-    // RollingConfig(char * filename, RollingConfig *);
     ~RollingConfig();
 
     void addTrain(Train * T);

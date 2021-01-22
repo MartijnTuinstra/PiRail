@@ -33,6 +33,8 @@ public:
   Manager();
   ~Manager();
 
+  void initScheduler();
+
   Car *       newCar(Car *);
   Engine *    newEngine(Engine *);
   Train *     newTrain(Train *);

@@ -6,4 +6,6 @@ class Engine;
 class Train;
 class RailTrain;
 
+#define F_CAR_DETECTABLE 0x01
+
 #endif

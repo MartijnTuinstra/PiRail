@@ -12,10 +12,12 @@ RollingStock::Manager * RSManager = new RollingStock::Manager();
 namespace RollingStock {
 
 Manager::Manager(){
+  memset(DCC, 0, 10000 * sizeof(Engine *));
+}
+
+void Manager::initScheduler(){
   continue_event = scheduler->addEvent("RailTrain_continue", {2, 0});
   continue_event->function = &RailTrain_ContinueCheck;
-
-  memset(DCC, 0, 10000 * sizeof(Engine *));
 }
 
 void Manager::clear(){

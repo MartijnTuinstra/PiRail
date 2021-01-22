@@ -20,6 +20,7 @@
 #include "utils/utils.h"
 
 #include "switchboard/manager.h"
+#include "switchboard/unit.h"
 #include "switchboard/rail.h"
 #include "switchboard/station.h"
 #include "switchboard/switch.h"
@@ -32,7 +33,6 @@
 #include "train.h"
 #include "algorithm/queue.h"
 
-#include "modules.h"
 #include "Z21.h"
 #include "Z21_msg.h"
 
@@ -845,7 +845,7 @@ void WS_cts_Edit_Train(struct s_opc_EditTrainlib * data, Websocket::Client * cli
   T->composition = (struct train_comp *)_realloc(T->composition, data->data.nr_stock, struct train_comp);
   T->nr_stock = data->data.nr_stock;
 
-  struct train_comp_ws * cdata = (struct train_comp_ws *)((char *)&data->data.strings + data->data.name_len);
+  struct train_comp * cdata = (struct train_comp *)((char *)&data->data.strings + data->data.name_len);
   for(int c = 0; c<T->nr_stock; c++){
     T->composition[c].type = cdata[c].type;
     T->composition[c].id = cdata[c].id;

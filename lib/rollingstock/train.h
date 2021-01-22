@@ -27,8 +27,6 @@ struct train_composition {
   struct train_comp * composition;
 };
 
-struct train_comp_ws;
-
 
 class Train {
   public:

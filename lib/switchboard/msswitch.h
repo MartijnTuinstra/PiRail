@@ -9,6 +9,7 @@
 #include <string.h>
 
 #include "switch.h"
+#include "switchboard/unit.h"
 #include "switchboard/rail.h"
 #include "switchboard/switch.h"
 #include "IO.h"

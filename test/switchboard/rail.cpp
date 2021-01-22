@@ -15,7 +15,6 @@
 // #include "algorithm/component.h"
 
 #include "train.h"
-#include "modules.h"
 #include "rollingstock/railtrain.h"
 
 void init_test(char (* filenames)[30], int nr_files);

@@ -5,13 +5,16 @@
 
 #include "utils/logger.h"
 #include "utils/mem.h"
-#include "config.h"
+
+#include "switchboard/links.h"
 
 #include "config/LayoutStructure.h"
 #include "config/RollingStructure.h"
 
 #include "config/ModuleConfig.h"
 #include "config/RollingConfig.h"
+
+#define TRAIN_CONF_PATH "configs/stock.bin"
 
 const char * rail_states_string[8] = {
   "BLOCKED",

@@ -24,6 +24,9 @@ void init_test(char (* filenames)[30], int nr_files){
 
   switchboard::SwManager->loadFiles();
   
+  if(!RSManager->continue_event)
+    RSManager->initScheduler();
+
   RSManager->loadFile("./testconfigs/stock.bin");
 
   logger.setlevel_stdout(INFO);

@@ -54,7 +54,7 @@ class RailTrain {
     uint8_t id = 0;
 
     uint16_t speed = 0;        // Real speed
-    uint16_t max_speed = 0;    // Real max speed
+    uint16_t MaxSpeed = 0;    // Real max speed
 
     // Variables for changing speed along one block
     uint16_t target_speed = 0;

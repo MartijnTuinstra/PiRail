@@ -31,44 +31,46 @@ Block::Block(uint8_t _module, struct configStruct_Block * block){
   memset(this, 0, sizeof(Block));
   module = _module;
   id = block->id;
-  this->type = (enum Rail_types)block->type;
+  type = (enum Rail_types)block->type;
 
   uid = switchboard::SwManager->addBlock(this);
 
-  this->next.module = block->next.module;
-  this->next.id = block->next.id;
-  this->next.type = (enum link_types)block->next.type;
-  this->prev.module = block->prev.module;
-  this->prev.id = block->prev.id;
-  this->prev.type = (enum link_types)block->prev.type;
+  next.module = block->next.module;
+  next.id = block->next.id;
+  next.type = (enum link_types)block->next.type;
+  prev.module = block->prev.module;
+  prev.id = block->prev.id;
+  prev.type = (enum link_types)block->prev.type;
 
-  this->max_speed = block->speed;
-  this->dir = (block->fl & 0x6) >> 1;
-  this->length = block->length;
-  this->oneWay = block->fl & 0x1;
+  BlockMaxSpeed = block->speed;
+  dir = (block->fl & 0x6) >> 1;
+  length = block->length;
+  oneWay = block->fl & 0x1;
 
-  this->Alg.B = this;
+  Alg.B = this;
 
-  this->IOchanged = 1;
-  this->algorchanged = 1;
+  IOchanged = 1;
+  algorchanged = 1;
 
-  this->state = PROCEED;
-  this->reverse_state = PROCEED;
+  state = PROCEED;
+  reverse_state = PROCEED;
 
-  this->forward_signal = new std::vector<Signal *>();
-  this->reverse_signal = new std::vector<Signal *>();
+  forward_signal = new std::vector<Signal *>();
+  reverse_signal = new std::vector<Signal *>();
 
   U = switchboard::Units(module);
 
   if(U->IO(block->IO_In))
-    this->In = U->linkIO(block->IO_In, this, IO_Input_Block);
+    In = U->linkIO(block->IO_In, this, IO_Input_Block);
 
   if(block->fl & 0x8 && U->IO(block->IO_Out)){
-    this->dir_Out = U->linkIO(block->IO_Out, this, IO_Output);
+    dir_Out = U->linkIO(block->IO_Out, this, IO_Output);
   }
 
   // Insert block into Unit
   U->insertBlock(this);
+
+  checkMaxSpeed();
 }
 
 Block::~Block(){
@@ -97,7 +99,7 @@ void Block::exportConfig(struct configStruct_Block * cfg){
     cfg->fl |= 0x8;
   }
 
-  cfg->speed = max_speed;
+  cfg->speed = BlockMaxSpeed;
   cfg->length = length;
   cfg->fl |= oneWay | ((dir & 0x3) << 1);
 }
@@ -243,7 +245,7 @@ Block * Block::Next_Block(int flags, int level){
   return 0;
 }
 
-uint8_t Block::_NextList(Block ** blocks, uint8_t block_counter, int flags, int length){
+uint8_t Block::_NextList(Block * Origin, Block ** blocks, uint8_t block_counter, int flags, int length){
   loggerf(TRACE, "NextList(%02i:%02i, %i, %i)", this->module, this->id, block_counter, length);
   // Find next (detection) block in direction dir. Could be used recurse for x-levels
   int dir = flags & 0x0F;
@@ -280,7 +282,6 @@ uint8_t Block::_NextList(Block ** blocks, uint8_t block_counter, int flags, int 
       if(flags & DIRECTION_CARE)
         return block_counter;
     }
-
     
     blocks[block_counter++] = this;
   }
@@ -310,22 +311,23 @@ uint8_t Block::_NextList(Block ** blocks, uint8_t block_counter, int flags, int 
   }
 
   if(next->type == RAIL_LINK_R){
-    return next->p.B->_NextList(blocks, block_counter, flags, length);
+    flags |= OUTSIDE_STARTBLOCK;
+    return next->p.B->_NextList(Origin, blocks, block_counter, flags, length);
   }
   else if(next->type == RAIL_LINK_S){
-    return next->p.Sw->NextList_Block(blocks, block_counter, next->type, flags, length);
+    return next->p.Sw->NextList_Block(Origin, blocks, block_counter, next->type, flags, length);
   }
   else if(next->type == RAIL_LINK_s && next->p.Sw->approachable(this, flags)){
-    return next->p.Sw->NextList_Block(blocks, block_counter, next->type, flags, length);
+    return next->p.Sw->NextList_Block(Origin, blocks, block_counter, next->type, flags, length);
   }
   else if(next->type == RAIL_LINK_MA && next->p.MSSw->approachableA(this, flags)){
-    return next->p.MSSw->NextList_Block(blocks, block_counter, next->type, flags, length);
+    return next->p.MSSw->NextList_Block(Origin, blocks, block_counter, next->type, flags, length);
   }
   else if(next->type == RAIL_LINK_MB && next->p.MSSw->approachableB(this, flags)){
-    return next->p.MSSw->NextList_Block(blocks, block_counter, next->type, flags, length);
+    return next->p.MSSw->NextList_Block(Origin, blocks, block_counter, next->type, flags, length);
   }
   else if(next->type == RAIL_LINK_MA_inside || next->type == RAIL_LINK_MB_inside){
-    return next->p.MSSw->NextList_Block(blocks, block_counter, next->type, flags, length);
+    return next->p.MSSw->NextList_Block(Origin, blocks, block_counter, next->type, flags, length);
   }
   else if(next->type == RAIL_LINK_TT){
     if(next->p.MSSw->approachableA(this, flags)){
@@ -344,7 +346,7 @@ uint8_t Block::_NextList(Block ** blocks, uint8_t block_counter, int flags, int 
         flags ^= 0b1;
       }
     }
-    return next->p.MSSw->NextList_Block(blocks, block_counter, next->type, flags, length);
+    return next->p.MSSw->NextList_Block(Origin, blocks, block_counter, next->type, flags, length);
   }
   //   // if(Next_check_Switch(this, *next, flags)){
   //     // if(level <= 0 && (next->p.MSSw)->Detection != B){
@@ -496,6 +498,8 @@ void Block::AlgorClear(){
   Alg.next1 = 0;
   Alg.next2 = 0;
   Alg.next3 = 0;
+
+  MaxSpeed = BlockMaxSpeed;
 }
 #define ALGORLENGTH 100
 
@@ -512,7 +516,7 @@ void Block::AlgorSearch(int debug){
   prev = Next_Block(1 | SWITCH_CARE | DIRECTION_CARE,1);
 
   if(next){
-    Alg.next = _NextList(Alg.N, 0, NEXT | SWITCH_CARE, 600);
+    Alg.next = _NextList(this, Alg.N, 0, NEXT | SWITCH_CARE, 600);
 
     Alg.next1 = Alg.next;
     Alg.next2 = Alg.next;
@@ -537,7 +541,7 @@ void Block::AlgorSearch(int debug){
     }
   }
   if(prev){
-    Alg.prev = _NextList(Alg.P, 0, PREV | SWITCH_CARE | DIRECTION_CARE, 600);
+    Alg.prev = _NextList(this, Alg.P, 0, PREV | SWITCH_CARE | DIRECTION_CARE, 600);
 
     Alg.prev1 = Alg.prev;
     Alg.prev2 = Alg.prev;

@@ -273,6 +273,10 @@ void ModuleConfig::newModule(uint8_t file, uint8_t connections){
   header->Signals = 0;
   header->Stations = 0;
 
+  Layout = (struct configStruct_WebLayout *)_calloc(1, struct configStruct_WebLayout);
+  Layout->LayoutLength = 0;
+  // Layout->Layout = (char *)_calloc(Layout->LayoutLength + 1, char);
+
   Nodes = 0;
   Blocks = 0;
   Switches = 0;

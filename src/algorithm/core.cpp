@@ -789,16 +789,16 @@ void train_control(Algor_Blocks * ABs, int debug){
       T->changeSpeed(CAUTION_SPEED, GRADUAL_FAST_SPEED);
     }
   }
-  else if(!T->manual && (T->target_speed > N[0]->max_speed || T->speed > N[0]->max_speed)){
+  else if(!T->manual && (T->target_speed > N[0]->MaxSpeed || T->speed > N[0]->MaxSpeed)){
     loggerf(INFO, "%sNext block speed limit", Debug);
-    T->changeSpeed(N[0]->max_speed, GRADUAL_SLOW_SPEED);
+    T->changeSpeed(N[0]->MaxSpeed, GRADUAL_SLOW_SPEED);
   }
-  else if(!T->manual && N[0]->max_speed > T->speed && ABs->next > 1 && N[1]->max_speed >= N[0]->max_speed) {
+  else if(!T->manual && N[0]->MaxSpeed > T->speed && ABs->next > 1 && N[1]->MaxSpeed >= N[0]->MaxSpeed) {
     loggerf(INFO, "%sTrain Speed Up", Debug);
-    if(N[0]->max_speed <= T->max_speed)
-      T->changeSpeed(N[0]->max_speed, GRADUAL_FAST_SPEED);
-    else if(T->speed != T->max_speed)
-      T->changeSpeed(T->max_speed, GRADUAL_FAST_SPEED);
+    if(N[0]->MaxSpeed <= T->MaxSpeed)
+      T->changeSpeed(N[0]->MaxSpeed, GRADUAL_FAST_SPEED);
+    else if(T->speed != T->MaxSpeed)
+      T->changeSpeed(T->MaxSpeed, GRADUAL_FAST_SPEED);
   }
 }
 

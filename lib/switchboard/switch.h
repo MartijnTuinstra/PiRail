@@ -90,7 +90,7 @@ class Switch {
     uint8_t state;
     uint8_t default_state;
 
-    uint16_t maxSpeed[2] = {0, 0};
+    uint16_t MaxSpeed[2] = {0, 0};
 
     Block * Detection;
 
@@ -109,11 +109,11 @@ class Switch {
 
     bool approachable(void * p, int flags);
     Block * Next_Block(enum link_types type, int flags, int level);
-    uint NextList_Block(Block ** blocks, uint8_t block_counter, enum link_types type, int flags, int length);
+    uint NextList_Block(Block * Origin, Block ** blocks, uint8_t block_counter, enum link_types type, int flags, int length);
 
     void setState(uint8_t _state);
-    void setState(uint8_t state, uint8_t lock);
-    void updateState(uint8_t state);
+    void setState(uint8_t _state, uint8_t lock);
+    void updateState(uint8_t _state);
 
     void updateFeedback();
 };

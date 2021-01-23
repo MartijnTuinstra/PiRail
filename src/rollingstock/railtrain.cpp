@@ -294,7 +294,7 @@ int RailTrain::link(int tid, char type){
     Engine * E = RSManager->getEngine(tid);
     this->type = RAILTRAIN_ENGINE_TYPE;
     this->p.E = E;
-    this->max_speed = E->max_speed;
+    this->MaxSpeed = E->max_speed;
     this->length = E->length;
     virtualLength = false;
 
@@ -313,7 +313,7 @@ int RailTrain::link(int tid, char type){
     // Crate Rail Train
     this->type = RAILTRAIN_TRAIN_TYPE;
     this->p.T = T;
-    this->max_speed = T->max_speed;
+    this->MaxSpeed = T->max_speed;
     this->length = T->length;
 
     //Lock all engines

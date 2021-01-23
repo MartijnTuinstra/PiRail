@@ -39,8 +39,8 @@ Switch::Switch(uint8_t Module, struct configStruct_Switch * s){
   str = connect.str;
   app = connect.app;
 
-  maxSpeed[0] = s->speed_Str;
-  maxSpeed[1] = s->speed_Div;
+  MaxSpeed[0] = s->speed_Str;
+  MaxSpeed[1] = s->speed_Div;
 
   U = Units(connect.module);
   U->insertSwitch(this);
@@ -95,14 +95,7 @@ Switch::Switch(uint8_t Module, struct configStruct_Switch * s){
   }
 
   // =========== Detection ============
-
-  if(U->block_len > s->det_block && U->B[s->det_block]){
-    this->Detection = U->B[s->det_block];
-    this->Detection->addSwitch(this);
-  }
-  else{
-    loggerf(WARNING, "SWITCH %i:%i has no detection block %i", connect.module, connect.id, s->det_block);
-  }
+  Detection = U->registerDetection(this, s->det_block);
 }
 
 Switch::~Switch(){
@@ -134,8 +127,8 @@ void Switch::exportConfig(struct configStruct_Switch * cfg){
 
   cfg->IO_length = IO_len;
   cfg->IO_type = 0;
-  cfg->speed_Str = maxSpeed[0];
-  cfg->speed_Div = maxSpeed[1];
+  cfg->speed_Str = MaxSpeed[0];
+  cfg->speed_Div = MaxSpeed[1];
   cfg->feedback_len = feedback_len;
 
 
@@ -246,7 +239,7 @@ Block * Switch::Next_Block(enum link_types type, int flags, int level){
   return 0;
 }
 
-uint Switch::NextList_Block(Block ** blocks, uint8_t block_counter, enum link_types type, int flags, int length){
+uint Switch::NextList_Block(Block * Origin, Block ** blocks, uint8_t block_counter, enum link_types type, int flags, int length){
   loggerf(TRACE, "Switch::NextList_Block(%02i:%02i, %i, %2x)", this->module, this->id, block_counter, flags);
   struct rail_link * next;
 
@@ -262,6 +255,14 @@ uint Switch::NextList_Block(Block ** blocks, uint8_t block_counter, enum link_ty
     }
   }
 
+
+  if(Detection == Origin){
+    uint16_t speed = MaxSpeed[state];
+    if (speed != 0 && Origin->MaxSpeed > speed)
+      Origin->MaxSpeed = speed;
+  }
+
+
   // printf("N%cL%i\t",next.type,level);
 
   if(next->type == RAIL_LINK_E || next->type == RAIL_LINK_C){
@@ -274,19 +275,20 @@ uint Switch::NextList_Block(Block ** blocks, uint8_t block_counter, enum link_ty
   }
 
   if(next->type == RAIL_LINK_R){
-    return next->p.B->_NextList(blocks, block_counter, flags, length);
+    return next->p.B->_NextList(Origin, blocks, block_counter, flags, length);
   }
   else if(next->type == RAIL_LINK_S){
-    return next->p.Sw->NextList_Block(blocks, block_counter, next->type, flags, length);
+    return next->p.Sw->NextList_Block(Origin, blocks, block_counter, next->type, flags, length);
   }
   else if(next->type == RAIL_LINK_s && next->p.Sw->approachable(this, flags)){
-    return next->p.Sw->NextList_Block(blocks, block_counter, next->type, flags, length);
+
+    return next->p.Sw->NextList_Block(Origin, blocks, block_counter, next->type, flags, length);
   }
   else if(next->type == RAIL_LINK_MA && next->p.MSSw->approachableA(this, flags)){
-    return next->p.MSSw->NextList_Block(blocks, block_counter, next->type, flags, length);
+    return next->p.MSSw->NextList_Block(Origin, blocks, block_counter, next->type, flags, length);
   }
   else if(next->type == RAIL_LINK_MB && next->p.MSSw->approachableB(this, flags)){
-    return next->p.MSSw->NextList_Block(blocks, block_counter, next->type, flags, length);
+    return next->p.MSSw->NextList_Block(Origin, blocks, block_counter, next->type, flags, length);
   }
   else if(next->type == RAIL_LINK_TT){
     if(next->p.MSSw->approachableA(this, flags)){
@@ -305,7 +307,7 @@ uint Switch::NextList_Block(Block ** blocks, uint8_t block_counter, enum link_ty
         flags ^= 0b10;
       }
     }
-    return next->p.MSSw->NextList_Block(blocks, block_counter, next->type, flags, length);
+    return next->p.MSSw->NextList_Block(Origin, blocks, block_counter, next->type, flags, length);
   }
   // else if(next->type == RAIL_LINK_E){
   //   return 0;

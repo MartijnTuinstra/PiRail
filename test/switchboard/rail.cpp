@@ -12,7 +12,7 @@
 #include "switchboard/unit.h"
 
 #include "algorithm/core.h"
-// #include "algorithm/component.h"
+#include "algorithm/component.h"
 
 #include "train.h"
 #include "rollingstock/railtrain.h"
@@ -597,4 +597,94 @@ TEST_CASE( "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" ) {
     CHECK(U->B[41]->Alg.P[3]->state == RESTRICTED);
     CHECK(U->B[41]->Alg.P[4]->state == CAUTION);
   }
+}
+
+TEST_CASE("Block Max Speed", "[SB][SB-1][SB-1.4]") {
+    char filenames[1][30] = {"./testconfigs/SB-1.4.bin"};
+  init_test(filenames, 1);
+
+  Unit * U = switchboard::Units(1);
+  REQUIRE(U);
+
+  U->link_all();
+
+  for(uint8_t i = 0; i < U->block_len; i++){
+    U->B[i]->AlgorSearch(0);
+  }
+
+  /*
+  //                 Sw0
+  //  --1.0->  --1.1-------->  --1.2->
+  //                  \______  --1.3->
+  //             Sw1   \_____  --1.4->
+  //
+  // --1.5--> ---\ Sw2
+  // --1.6--> -----1.7-----> --1.8-->
+  //                Sw3 \--> --1.9-->
+  //
+  // --1.10--> ---\      MSSw0
+  // --1.11--> -----1.12-----> --1.13-->
+  //                      \--> --1.14-->
+  //
+  */
+
+  // Block must have the most restrictive speed restriction.
+  //   - If no restriction is set (MaxSpeed = 0) ignore.
+
+  CHECK(U->B[0]->BlockMaxSpeed == 100);
+  CHECK(U->B[0]->MaxSpeed == U->B[0]->BlockMaxSpeed);
+
+  CHECK(U->B[1]->BlockMaxSpeed == 100);
+  CHECK(U->Sw[0]->MaxSpeed[0] == 0);
+  CHECK(U->Sw[0]->MaxSpeed[1] == 99);
+  CHECK(U->Sw[1]->MaxSpeed[0] == 0);
+  CHECK(U->Sw[1]->MaxSpeed[1] == 98);
+  CHECK(U->B[1]->MaxSpeed == U->B[1]->BlockMaxSpeed);
+
+  U->Sw[0]->setState(1);
+  Algorithm::tick();
+
+  CHECK(U->B[1]->MaxSpeed == U->Sw[0]->MaxSpeed[1]);
+
+  U->Sw[1]->setState(1);
+  Algorithm::tick();
+
+  CHECK(U->B[1]->MaxSpeed == U->Sw[1]->MaxSpeed[1]);
+
+  U->Sw[0]->setState(0);
+  Algorithm::tick();
+
+  CHECK(U->B[1]->MaxSpeed == U->B[1]->BlockMaxSpeed);
+
+  CHECK(U->B[7]->BlockMaxSpeed == 100);
+  CHECK(U->Sw[2]->MaxSpeed[0] == 0);
+  CHECK(U->Sw[2]->MaxSpeed[1] == 97);
+  CHECK(U->Sw[3]->MaxSpeed[0] == 0);
+  CHECK(U->Sw[3]->MaxSpeed[1] == 96);
+  CHECK(U->B[7]->MaxSpeed == U->B[7]->BlockMaxSpeed);
+
+  U->Sw[2]->setState(1);
+  Algorithm::tick();
+
+  CHECK(U->B[7]->MaxSpeed == U->Sw[2]->MaxSpeed[1]);
+
+  U->Sw[3]->setState(1);
+  Algorithm::tick();
+
+  CHECK(U->B[7]->MaxSpeed == U->Sw[3]->MaxSpeed[1]);
+
+  U->Sw[2]->setState(0);
+  Algorithm::tick();
+
+  CHECK(U->B[7]->MaxSpeed == U->Sw[3]->MaxSpeed[1]);
+
+  CHECK(U->B[12]->BlockMaxSpeed == 100);
+  CHECK(U->MSSw[0]->stateMaxSpeed[0] == 91);
+  CHECK(U->MSSw[0]->stateMaxSpeed[1] == 92);
+  CHECK(U->B[12]->MaxSpeed == U->MSSw[0]->stateMaxSpeed[0]);
+
+  U->MSSw[0]->setState(1);
+  Algorithm::tick();
+
+  CHECK(U->B[12]->MaxSpeed == U->MSSw[0]->stateMaxSpeed[1]);
 }

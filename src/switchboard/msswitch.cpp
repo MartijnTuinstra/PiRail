@@ -239,7 +239,7 @@ Block * MSSwitch::Next_Block(enum link_types type, int flags, int level){
   return 0;
 }
 
-uint MSSwitch::NextList_Block(Block ** blocks, uint8_t block_counter, enum link_types type, int flags, int length){
+uint MSSwitch::NextList_Block(Block * Origin, Block ** blocks, uint8_t block_counter, enum link_types type, int flags, int length){
   loggerf(TRACE, "MSSwitch::NextList_Block(%02i:%02i, %i, %2x)", this->module, this->id, block_counter, flags);
   struct rail_link * next;
 
@@ -251,7 +251,7 @@ uint MSSwitch::NextList_Block(Block ** blocks, uint8_t block_counter, enum link_
   if(type == RAIL_LINK_MA){
     blocks[block_counter++] = this->Detection;
     next = &this->sideB[this->state];
-    // return this->Detection->Next_BlockList(blocks, block_counter, flags, length);
+    // return this->Detection->Next_BlockList(Origin, blocks, block_counter, flags, length);
   }else if(type == RAIL_LINK_MB_inside){
     next = &this->sideB[this->state];
     flags |= NEXT_FIRST_TIME_SKIP;
@@ -262,13 +262,19 @@ uint MSSwitch::NextList_Block(Block ** blocks, uint8_t block_counter, enum link_
   else if(type == RAIL_LINK_MB){
     blocks[block_counter++] = this->Detection;
     next = &this->sideA[this->state];
-    // return this->Detection->Next_BlockList(blocks, block_counter, flags, length);
+    // return this->Detection->Next_BlockList(Origin, blocks, block_counter, flags, length);
   }else if(type == RAIL_LINK_MA_inside){
     next = &this->sideA[this->state];
     flags |= NEXT_FIRST_TIME_SKIP;
 
     uint8_t dir = (flags & 1) + (this->Detection->dir << 1);
     flags = (flags & 0xF0) + (dir & 0x0F);
+  }
+
+  if(Detection == Origin){
+    uint16_t speed = stateMaxSpeed[state];
+    if (speed != 0 && Origin->MaxSpeed > speed)
+      Origin->MaxSpeed = speed;
   }
 
   if(!next->p.p){
@@ -283,22 +289,23 @@ uint MSSwitch::NextList_Block(Block ** blocks, uint8_t block_counter, enum link_
   loggerf(TRACE, "Next     :        \t%i:%i => %i:%i:%i\t%i", this->module, this->id, next->module, next->id, next->type, block_counter);
 
   if(next->type == RAIL_LINK_R){
-    return next->p.B->_NextList(blocks, block_counter, flags, length);
+    flags |= OUTSIDE_STARTBLOCK;
+    return next->p.B->_NextList(Origin, blocks, block_counter, flags, length);
   }
   else if(next->type == RAIL_LINK_S){
-    return next->p.Sw->NextList_Block(blocks, block_counter, next->type, flags, length);
+    return next->p.Sw->NextList_Block(Origin, blocks, block_counter, next->type, flags, length);
   }
   else if(next->type == RAIL_LINK_s && next->p.Sw->approachable(this, flags)){
-    return next->p.Sw->NextList_Block(blocks, block_counter, next->type, flags, length);
+    return next->p.Sw->NextList_Block(Origin, blocks, block_counter, next->type, flags, length);
   }
   else if(next->type == RAIL_LINK_MA && next->p.MSSw->approachableA(this, flags)){
-    return next->p.MSSw->NextList_Block(blocks, block_counter, next->type, flags, length);
+    return next->p.MSSw->NextList_Block(Origin, blocks, block_counter, next->type, flags, length);
   }
   else if(next->type == RAIL_LINK_MB && next->p.MSSw->approachableB(this, flags)){
-    return next->p.MSSw->NextList_Block(blocks, block_counter, next->type, flags, length);
+    return next->p.MSSw->NextList_Block(Origin, blocks, block_counter, next->type, flags, length);
   }
   else if(next->type == RAIL_LINK_MA_inside || next->type == RAIL_LINK_MB_inside){
-    return next->p.MSSw->NextList_Block(blocks, block_counter, next->type, flags, length);
+    return next->p.MSSw->NextList_Block(Origin, blocks, block_counter, next->type, flags, length);
   }
   else if(next->type == RAIL_LINK_TT){
     if(next->p.MSSw->approachableA(this, flags)){
@@ -317,13 +324,17 @@ uint MSSwitch::NextList_Block(Block ** blocks, uint8_t block_counter, enum link_
         flags ^= 0b10;
       }
     }
-    return next->p.MSSw->NextList_Block(blocks, block_counter, next->type, flags, length);
+    return next->p.MSSw->NextList_Block(Origin, blocks, block_counter, next->type, flags, length);
   }
   // else if(next->type == RAIL_LINK_E){
   //   return 0;
   // }
 
   return block_counter;
+}
+
+void MSSwitch::setState(uint8_t _state){
+  setState(_state, 1);
 }
 
 void MSSwitch::setState(uint8_t _state, uint8_t lock){
@@ -348,14 +359,14 @@ void MSSwitch::setState(uint8_t _state, uint8_t lock){
   AlQueue.cpytmp();
 }
 
-void MSSwitch::updateState(uint8_t state){
-  if (this->state_direction[this->state] != this->state_direction[state])
-    this->Detection->dir ^= 0b100;
+void MSSwitch::updateState(uint8_t _state){
+  if (state_direction[state] != state_direction[state])
+    Detection->dir ^= 0b100;
 
-  this->state = state;
-  this->updatedState = true;
+  state = _state;
+  updatedState = true;
 
-  for(auto Sig: this->Signals){
+  for(auto Sig: Signals){
     Sig->switchUpdate();
   }
 

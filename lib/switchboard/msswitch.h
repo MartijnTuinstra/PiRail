@@ -98,10 +98,11 @@ class MSSwitch {
     bool approachableA(void * p, int flags);
     bool approachableB(void * p, int flags);
     Block * Next_Block(enum link_types type, int flags, int level);
-    uint NextList_Block(Block ** blocks, uint8_t block_counter, enum link_types type, int flags, int length);
+    uint NextList_Block(Block * Origin, Block ** blocks, uint8_t block_counter, enum link_types type, int flags, int length);
 
-    void setState(uint8_t state, uint8_t lock);
-    void updateState(uint8_t state);
+    void setState(uint8_t _state);
+    void setState(uint8_t _state, uint8_t lock);
+    void updateState(uint8_t _state);
 };
 
 #endif

@@ -424,6 +424,18 @@ void modify_Switch(struct ModuleConfig * config, char cmd){
       Sw->Div.type = tmp2;
     }
 
+    printf("Switch Div Speed (%3i)  | ", Sw->speed_Div);
+    fgets(_cmd, 20, stdin);
+    if(sscanf(_cmd, "%i", &tmp) > 0){
+      Sw->speed_Div = tmp;
+    }
+
+    printf("Switch Str Speed (%3i)  | ", Sw->speed_Str);
+    fgets(_cmd, 20, stdin);
+    if(sscanf(_cmd, "%i", &tmp) > 0){
+      Sw->speed_Str = tmp;
+    }
+
     printf("Switch IO_Ports  (%2i)       | ", Sw->IO_length);
     fgets(_cmd, 20, stdin);
     if(sscanf(_cmd, "%i", &tmp) > 0){

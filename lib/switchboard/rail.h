@@ -15,8 +15,8 @@
 #define NEXT 0
 #define PREV 1
 
-#define SWITCH_CARE 0x80
-#define DIRECTION_CARE 0x40
+#define SWITCH_CARE          0x80
+#define DIRECTION_CARE       0x40
 #define NEXT_FIRST_TIME_SKIP 0x20
 
 // IO.h
@@ -93,7 +93,9 @@ class Block {
     enum Rail_types type;
     uint8_t dir;
     int length;
-    uint16_t max_speed;
+
+    uint16_t BlockMaxSpeed; // Maximum allow speed in this block (if no speed restrictions)
+    uint16_t MaxSpeed;      // Current Maximum Speed
 
     enum Rail_states state;
     enum Rail_states reverse_state;
@@ -155,7 +157,7 @@ class Block {
     struct rail_link * NextLink(int flags);
     Block * Next_Block(int flags, int level);
 
-    uint8_t _NextList(Block ** blocks, uint8_t block_counter, int flags, int length);
+    uint8_t _NextList(Block * Origin, Block ** blocks, uint8_t block_counter, int flags, int length);
 
     void reverse();
 

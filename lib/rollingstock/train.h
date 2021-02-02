@@ -52,7 +52,7 @@ class Train {
     uint8_t save:1;
 
     uint8_t detectables:7;
-    uint8_t splitdetectables:1;
+    uint8_t virtualDetection:1;
 
     Train(struct configStruct_Train);
     Train(char *);

@@ -138,11 +138,19 @@ TEST_CASE( "Train Following", "[Alg][Alg-2]"){
   U->on_layout = true;
   U->link_all();
 
+  pathlist_find();
+
   /*
   //  1.0> 1.1> 1.2> 1.3> 1.4> 1.5> 1.6> 1.7>
   */
 
+  for(uint8_t i = 0; i < 8; i++){
+    Algorithm::process(U->B[i], _FORCE);
+  }
+
+  logger.setlevel_stdout(INFO);
   SECTION("I - No linked train"){
+    loggerf(CRITICAL, "SECTION I");
     CHECK(U->B[0]->train == 0);
 
     U->B[0]->setDetection(1);
@@ -166,9 +174,27 @@ TEST_CASE( "Train Following", "[Alg][Alg-2]"){
 
     CHECK(U->B[0]->train == 0);
     CHECK(T->blocks.size() == 1);
+
+    // Step backwards
+    U->B[0]->setDetection(1);
+    Algorithm::process(U->B[0], _FORCE);
+
+    CHECK(U->B[0]->train == T);
+    CHECK(T->blocks.size() == 2);
+
+    // Release second block
+    U->B[1]->setDetection(0);
+    Algorithm::process(U->B[1], _FORCE);
+
+    CHECK(U->B[1]->train == 0);
+    CHECK(T->blocks.size() == 1);
   }
 
   SECTION("II - Simple Engine Forward"){
+    loggerf(CRITICAL, "SECTION II");
+    // Link an Engine after one block is detected
+    //  No speed is set, so no direction is known
+
     CHECK(U->B[0]->train == 0);
 
     U->B[0]->setDetection(1);
@@ -195,10 +221,22 @@ TEST_CASE( "Train Following", "[Alg][Alg-2]"){
     Algorithm::process(U->B[0], _FORCE);
 
     CHECK(U->B[0]->train == 0);
+
+    U->B[2]->setDetection(1);
+    Algorithm::process(U->B[2], _FORCE);
+
+    CHECK(U->B[2]->train == T);
+
+    U->B[1]->setDetection(0);
+    Algorithm::process(U->B[1], _FORCE);
+
+    CHECK(U->B[1]->train == 0);
   }
 
-  SECTION("IIb- Simple Engine Forward with"){
-    loggerf(CRITICAL, "IIb- Simple Engine Forward with");
+  SECTION("IIb- Simple Engine Forward"){
+    loggerf(CRITICAL, "SECTION IIb");
+    // Link an Engine after the second block is detected
+    //  Speed is set, so a direction is must be known
     CHECK(U->B[0]->train == 0);
 
     U->B[1]->setDetection(1);
@@ -230,6 +268,7 @@ TEST_CASE( "Train Following", "[Alg][Alg-2]"){
   }
 
   SECTION("III - Full Detectable Train"){
+    loggerf(CRITICAL, "SECTION III");
     CHECK(U->B[0]->train == 0);
 
     U->B[0]->setDetection(1);
@@ -238,6 +277,7 @@ TEST_CASE( "Train Following", "[Alg][Alg-2]"){
     REQUIRE(U->B[0]->train != 0);
     RailTrain * T = U->B[0]->train;
 
+    T->link(1, RAILTRAIN_TRAIN_TYPE);
     T->setSpeed(10);
 
     // Step Forward
@@ -247,7 +287,6 @@ TEST_CASE( "Train Following", "[Alg][Alg-2]"){
     CHECK(U->B[1]->train == T);
     CHECK(U->B[1] == T->B);
     CHECK(T->blocks.size() == 2);
-
 
     // Step Forward
     U->B[2]->setDetection(1);
@@ -260,9 +299,6 @@ TEST_CASE( "Train Following", "[Alg][Alg-2]"){
     Algorithm::process(U->B[3], _FORCE);
 
     CHECK(U->B[3]->train == T);
-
-    // Link engine
-    T->link(0, RAILTRAIN_TRAIN_TYPE);
 
     CHECK(T->blocks.size() == 4);
     for(auto b: T->blocks){
@@ -285,6 +321,7 @@ TEST_CASE( "Train Following", "[Alg][Alg-2]"){
   }
 
   SECTION("IV - Partial Detectable Train"){
+    loggerf(CRITICAL, "SECTION IV");
     CHECK(U->B[3]->train == 0);
 
     U->B[3]->setDetection(1);
@@ -294,24 +331,33 @@ TEST_CASE( "Train Following", "[Alg][Alg-2]"){
     RailTrain * T = U->B[3]->train;
 
     // Link engine
-    T->link(1, RAILTRAIN_TRAIN_TYPE);
+    T->link(0, RAILTRAIN_TRAIN_TYPE);
 
-    // Train is 58cm long so two blocks should be blocked.
-    CHECK(T->blocks.size() == 2);
+    // Train direction is unknown
+    CHECK(!U->B[2]->virtualBlocked);
+    CHECK(!U->B[1]->virtualBlocked);
+
+    // Move train to next block
+    T->setSpeed(20);
+    U->B[4]->setDetection(1);
+    Algorithm::process(U->B[4], _FORCE);
+
+    REQUIRE(T->directionKnown);
+
+    // Train is 58cm long so three blocks should be blocked.
+    CHECK(U->B[4] == T->B);
+    CHECK(T->blocks.size() == 3);
     for(auto b: T->blocks){
       loggerf(ERROR, "Have block %2i:%2i", b->module, b->id);
-      CHECK(((b != U->B[4] && b != U->B[1]) && (b == U->B[2] || b == U->B[3])));
+      CHECK(((b != U->B[5] && b != U->B[1]) && (b == U->B[2] || b == U->B[3] || b == U->B[4])));
     }
 
     // Step Forward
-    U->B[4]->setDetection(1);
-    Algorithm::process(U->B[4], _FORCE);
     U->B[3]->setDetection(0);
     Algorithm::process(U->B[3], _FORCE);
 
     // Train is 58cm long but moving, so an extra block is blocked.
     CHECK(T->blocks.size() == 3);
-    CHECK(U->B[4] == T->B);
     for(auto b: T->blocks){
       loggerf(ERROR, "Have block %2i:%2i", b->module, b->id);
       CHECK(((b != U->B[5] && b != U->B[1]) && (b == U->B[2] || b == U->B[3] || b == U->B[4])));
@@ -325,8 +371,8 @@ TEST_CASE( "Train Following", "[Alg][Alg-2]"){
     Algorithm::process(U->B[4], _FORCE);
 
     // Train is 58cm long but moving, so an extra block is blocked.
-    CHECK(T->blocks.size() == 3);
     CHECK(U->B[5] == T->B);
+    CHECK(T->blocks.size() == 3);
     for(auto b: T->blocks){
       loggerf(ERROR, "Have block %2i:%2i", b->module, b->id);
       CHECK(((b != U->B[6] && b != U->B[2]) && (b == U->B[3] || b == U->B[4] || b == U->B[5])));
@@ -334,7 +380,9 @@ TEST_CASE( "Train Following", "[Alg][Alg-2]"){
     }
   }
 
+  
   SECTION("V - Train with split detectables"){
+    loggerf(CRITICAL, "SECTION V");
     CHECK(U->B[3]->train == 0);
 
     U->B[3]->setDetection(1);
@@ -343,71 +391,242 @@ TEST_CASE( "Train Following", "[Alg][Alg-2]"){
     REQUIRE(U->B[3]->train != 0);
     RailTrain * T = U->B[3]->train;
 
-    SECTION("V - I - Second detectable after linking"){
-      loggerf(ERROR, "I-");
-      // Link engine
-      T->link(2, RAILTRAIN_TRAIN_TYPE);
+    U->B[0]->setDetection(1);
+    Algorithm::process(U->B[0], _FORCE);
+    REQUIRE(U->B[0]->train != 0);
 
-      U->B[1]->setDetection(1);
-      Algorithm::process(U->B[1], _FORCE);
-    }
-    SECTION("V - II - Second detectable before linking"){
-      loggerf(ERROR, "II-");
-      U->B[1]->setDetection(1);
-      Algorithm::process(U->B[1], _FORCE);
+    RailTrain * tmp_RT[1] = {U->B[0]->train};
 
-      CHECK(U->B[1]->train != T);
+    // Link engine
+    T->link(2, RAILTRAIN_TRAIN_TYPE, 1, (RailTrain **)&tmp_RT);
 
-      // Link engine
-      T->link(2, RAILTRAIN_TRAIN_TYPE);
-
-      CHECK(U->B[1]->train == T);
-    }
+    CHECK(U->B[0]->train == T);
+    // }
 
     // Train is 143cm long so three blocks should be blocked.
-    CHECK(T->blocks.size() == 3);
+    CHECK(T->blocks.size() == 2);
     for(auto b: T->blocks){
-      CHECK(((b != U->B[4] && b != U->B[0]) && (b == U->B[1] || b == U->B[2] || b == U->B[3])));
+      CHECK(((b != U->B[4] && b != U->B[1] && b != U->B[2]) && (b == U->B[0] || b == U->B[3])));
       CHECK(b->train == T);
     }
+
+    T->setSpeed(10);
 
     // Step Forward
     U->B[4]->setDetection(1);
     Algorithm::process(U->B[4], _FORCE);
-    U->B[3]->setDetection(0);
-    Algorithm::process(U->B[3], _FORCE);
-    U->B[2]->setDetection(1);
-    Algorithm::process(U->B[2], _FORCE);
-    U->B[1]->setDetection(0);
+
+    CHECK(U->B[4]->blocked);
+    CHECK(U->B[3]->blocked);
+    CHECK(U->B[2]->blocked);
+    CHECK(U->B[1]->blocked);
+    CHECK(U->B[0]->blocked);
+
+    CHECK(U->B[5]->expectedTrain == T);
+    CHECK(U->B[1]->expectedTrain == T);
+
+    loggerf(WARNING, "U-B[1] blocked");
+
+    U->B[1]->setDetection(1);
     Algorithm::process(U->B[1], _FORCE);
 
-    // Train is 143cm long but moving, so an extra block is blocked.
-    CHECK(T->blocks.size() == 4);
-    CHECK(U->B[4] == T->B);
-    for(auto b: T->blocks){
-      CHECK(((b != U->B[5] && b != U->B[0]) && (b == U->B[1] || b == U->B[2] || b == U->B[3] || b == U->B[4])));
-      CHECK(b->train == T);
-    }
+    CHECK(U->B[4]->blocked);
+    CHECK(U->B[3]->blocked);
+    CHECK(U->B[2]->blocked);
+    CHECK(U->B[1]->blocked);
+    CHECK(U->B[0]->blocked);
+
+    CHECK(U->B[5]->expectedTrain == T);
+    CHECK(U->B[2]->expectedTrain == T);
+
+    loggerf(WARNING, "U-B[3] un-blocked");
+
+    U->B[3]->setDetection(0);
+    Algorithm::process(U->B[3], _FORCE);
+
+    CHECK(U->B[4]->blocked);
+    CHECK(U->B[3]->blocked);
+    CHECK(U->B[2]->blocked);
+    CHECK(U->B[1]->blocked);
+    CHECK(U->B[0]->blocked);
+
+    CHECK(U->B[5]->expectedTrain == T);
+    CHECK(U->B[2]->expectedTrain == T);
+
+    loggerf(WARNING, "U-B[0] un-blocked");
+    
+    U->B[0]->setDetection(0);
+    Algorithm::process(U->B[1], _FORCE);
+
+    CHECK(U->B[4]->blocked);
+    CHECK(U->B[3]->blocked);
+    CHECK(U->B[2]->blocked);
+    CHECK(U->B[1]->blocked);
+    CHECK(!U->B[0]->blocked);
+
+    CHECK(U->B[5]->expectedTrain == T);
+    CHECK(U->B[2]->expectedTrain == T);
+  }
+
+
+  SECTION("VI - Reversing Full Detectable Train"){
+    loggerf(CRITICAL, "SECTION VI");
+    CHECK(U->B[4]->train == 0);
+
+    U->B[3]->setDetection(1);
+    Algorithm::process(U->B[3], _FORCE);
+    U->B[4]->setDetection(1);
+    Algorithm::process(U->B[4], _FORCE);
+
+    REQUIRE(U->B[3]->train != 0);
+    REQUIRE(U->B[4]->train != 0);
+    RailTrain * T = U->B[4]->train;
+
+    T->link(1, RAILTRAIN_TRAIN_TYPE);
+    T->setSpeed(10);
 
     // Step Forward
     U->B[5]->setDetection(1);
     Algorithm::process(U->B[5], _FORCE);
-    U->B[4]->setDetection(0);
-    Algorithm::process(U->B[4], _FORCE);
-    U->B[3]->setDetection(1);
-    Algorithm::process(U->B[3], _FORCE);
-    U->B[2]->setDetection(0);
+
+    CHECK(U->B[5]->train == T);
+    CHECK(U->B[5] == T->B);
+    CHECK(T->blocks.size() == 3);
+
+    T->setSpeed(0);
+    T->reverseZ21();
+
+    CHECK(T->B == U->B[3]);
+
+    CHECK(U->B[2]->expectedTrain == T);
+    CHECK(U->B[6]->expectedTrain == 0);
+
+    for(uint8_t i = 0; i < 8; i++){
+      CHECK(U->B[i]->dir == 0b100);
+    }
+
+    T->setSpeed(10);
+
+    U->B[5]->setDetection(0);
+    Algorithm::process(U->B[5], _FORCE);
+
+    CHECK(U->B[5]->train == nullptr);
+
+    U->B[2]->setDetection(1);
     Algorithm::process(U->B[2], _FORCE);
 
-    // Train is 143cm long but moving, so an extra block is blocked.
-    CHECK(T->blocks.size() == 4);
-    CHECK(U->B[5] == T->B);
-    for(auto b: T->blocks){
-      CHECK(((b != U->B[6] && b != U->B[1]) && (b == U->B[2] || b == U->B[3] || b == U->B[4] || b == U->B[5])));
-      CHECK(b->train == T);
-    }
+    CHECK(U->B[2]->train == T);
+    CHECK(U->B[1]->expectedTrain == T);
   }
 
+  SECTION("VII - Reversing partial detectable"){
+    loggerf(CRITICAL, "SECTION VII");
+    CHECK(U->B[4]->train == 0);
+
+    U->B[4]->setDetection(1);
+    Algorithm::process(U->B[4], _FORCE);
+
+    REQUIRE(U->B[4]->train != 0);
+    RailTrain * T = U->B[4]->train;
+
+    T->link(0, RAILTRAIN_TRAIN_TYPE);
+    T->setSpeed(10);
+
+    // Step Forward
+    U->B[5]->setDetection(1);
+    Algorithm::process(U->B[5], _FORCE);
+
+    CHECK(U->B[5]->train == T);
+    CHECK(U->B[5] == T->B);
+    CHECK(T->blocks.size() == 3);
+
+    CHECK(U->B[3]->virtualBlocked);
+    CHECK(U->B[3]->expectedTrain == 0);
+
+    T->setSpeed(0);
+    T->reverseZ21();
+
+    CHECK(U->B[3]->virtualBlocked);
+
+    CHECK(U->B[3]->expectedTrain == T);
+    CHECK(U->B[6]->expectedTrain == 0);
+
+    for(uint8_t i = 0; i < 8; i++){
+      CHECK(U->B[i]->dir == 0b100);
+    }
+
+    T->setSpeed(10);
+
+    U->B[5]->setDetection(0);
+    Algorithm::process(U->B[5], _FORCE);
+
+    CHECK(U->B[5]->train == nullptr);
+
+    U->B[3]->setDetection(1);
+    Algorithm::process(U->B[3], _FORCE);
+
+    CHECK(U->B[3]->train == T);
+    CHECK(U->B[2]->expectedTrain == T);
+  }
+
+  SECTION("VIII - Reversing Split detectables"){
+    loggerf(CRITICAL, "SECTION VIII");
+    CHECK(U->B[5]->train == 0);
+
+    U->B[5]->setDetection(1);
+    Algorithm::process(U->B[5], _FORCE);
+
+    REQUIRE(U->B[5]->train != 0);
+    RailTrain * T = U->B[5]->train;
+
+    U->B[2]->setDetection(1);
+    Algorithm::process(U->B[2], _FORCE);
+    REQUIRE(U->B[2]->train != 0);
+
+    RailTrain * tmp_RT[1] = {U->B[2]->train};
+
+    // Link engine
+    T->link(2, RAILTRAIN_TRAIN_TYPE, 1, (RailTrain **)&tmp_RT);
+    CHECK(U->B[2]->train == T);
+
+    T->setSpeed(10);
+
+    // Step Forward
+    U->B[6]->setDetection(1);
+    Algorithm::process(U->B[6], _FORCE);
+
+    CHECK(T->B == U->B[6]);
+    CHECK(U->B[1]->expectedTrain == 0);
+    CHECK(U->B[3]->expectedTrain == T);
+    CHECK(U->B[4]->expectedTrain == 0);
+    CHECK(U->B[7]->expectedTrain == T);
+
+    T->setSpeed(0);
+    T->reverseZ21();
+
+    CHECK(T->B == U->B[2]);
+
+    CHECK(U->B[1]->expectedTrain == T);
+    CHECK(U->B[3]->expectedTrain == 0);
+    CHECK(U->B[4]->expectedTrain == T);
+    CHECK(U->B[7]->expectedTrain == 0);
+
+    for(uint8_t i = 0; i < 8; i++){
+      CHECK(U->B[i]->dir == 0b100);
+    }
+
+    T->setSpeed(10);
+
+    U->B[6]->setDetection(1);
+    Algorithm::process(U->B[6], _FORCE);
+
+    U->B[1]->setDetection(1);
+    Algorithm::process(U->B[1], _FORCE);
+
+    CHECK(U->B[1]->train == T);
+    CHECK(U->B[0]->expectedTrain == T);
+  }
+  /*
   SECTION("VI - Two trains approaching each other"){
     U->B[2]->setDetection(1);
     U->B[5]->setDetection(1);
@@ -430,6 +649,7 @@ TEST_CASE( "Train Following", "[Alg][Alg-2]"){
 
     CHECK(U->B[4]->train != U->B[5]->train);
   }
+  */
 }
 
 TEST_CASE( "Algorithm Switch Setter", "[Alg][Alg-3]"){

@@ -15,9 +15,13 @@
 
 RailTrain::RailTrain(Block * B): blocks(0, 0), reservedBlocks(0, 0){
   id = RSManager->addRailTrain(this);
+  loggerf(CRITICAL, "Create RailTrain %i %x", id, this);
   loggerf(INFO, "Create RailTrain %i", id);
 
   p.p = 0;
+
+  Detectables = 0;
+  DetectedBlocks = 0;
 
   this->B = B;
   setBlock(B);
@@ -39,17 +43,21 @@ RailTrain::RailTrain(Block * B): blocks(0, 0), reservedBlocks(0, 0){
 }
 
 RailTrain::~RailTrain(){
-  loggerf(TRACE, "Destroy RailTrain %i", id);
+  loggerf(WARNING, "Destroy RailTrain %i %x %i", id, this, Detectables);
   // train_link[id] = 0;
   blocks.clear();
-  reservedBlocks.clear();
+  dereserveAll();
 
   if(speed_event_data)
     _free(speed_event_data);
+
+  if(DetectedBlocks)
+    _free(DetectedBlocks);
 }
 
 void RailTrain::setBlock(Block * sB){
   loggerf(TRACE, "train %i: setBlock %2i:%2i %x", id, sB->module, sB->id, (unsigned int)sB);
+  sB->train = this;
   blocks.push_back(sB);
 }
 
@@ -136,7 +144,7 @@ void RailTrain::initVirtualBlocks(){
 
   if(B->Alg.prev > offset){
     tB->setVirtualDetection(0);
-    if(tB->train && !tB->detectionblocked)
+    if(tB->train && !tB->detectionBlocked)
       tB->train->releaseBlock(tB);
     AlQueue.puttemp(tB);
 
@@ -145,7 +153,11 @@ void RailTrain::initVirtualBlocks(){
 }
 
 void RailTrain::setVirtualBlocks(){
-  loggerf(TRACE, "setVirtualBlocks");
+  loggerf(INFO, "setVirtualBlocks");
+
+  if(!directionKnown)
+    return;
+
   Block * tB = B->Alg.P[0];
   uint8_t offset = 1;
   int16_t len = length / 10;
@@ -160,7 +172,7 @@ void RailTrain::setVirtualBlocks(){
     }
     AlQueue.puttemp(tB);
 
-    // loggerf(INFO, "  block %2i:%2i   %i  %i  %i", tB->module, tB->id, B->Alg.prev, offset, len);
+    loggerf(INFO, "  block %2i:%2i   %i  %i  %i", tB->module, tB->id, B->Alg.prev, offset, len);
 
     if(B->Alg.prev > offset){
       tB = B->Alg.P[offset++];
@@ -171,7 +183,7 @@ void RailTrain::setVirtualBlocks(){
 
   while(B->Alg.prev >= offset){
     tB->setVirtualDetection(0);
-    if(tB->train && !tB->detectionblocked)
+    if(tB->train && !tB->detectionBlocked)
       tB->train->releaseBlock(tB);
 
     AlQueue.puttemp(tB);
@@ -187,16 +199,111 @@ void RailTrain::setVirtualBlocks(){
   }
 }
 
+void RailTrain::initMoveForward(Block * tB){
+  // First time a RailTrain moved when not stopped
+  loggerf(WARNING, "initMoveForward RT %i to block %02i:%02i (%i)", id, tB->module, tB->id, length);
+  directionKnown = 1;
+
+  setBlock(tB);
+
+  uint16_t blockLength = length + tB->length;
+  Block * listBlock = tB;
+
+  // Find front of train
+  while(blockLength > 0 && listBlock){
+    blockLength -= listBlock->length;
+
+    if(listBlock->train == this){
+      B = listBlock; // Update front
+    }
+
+    listBlock = listBlock->Next_Block(dir == 1 ? PREV : NEXT, 1);
+  }
+
+  loggerf(WARNING, "Front of train %02i:%02i", B->module, B->id);
+
+  // Fill buffer
+  listBlock = B;
+  blockLength = length + B->length;
+  uint8_t i = 0;
+  uint8_t DetectableCounter = 0;
+  bool expecting = true;
+  while((blockLength > 0 || listBlock->train == this) && listBlock){
+    blockLength -= listBlock->length;
+
+    if(listBlock->train == this){
+
+      if(expecting){
+        expecting = false;
+        Block * tmp_Block = listBlock->Next_Block(dir == 1 ? PREV : NEXT, 1);
+
+        if(tmp_Block){
+          tmp_Block->expectedTrain = this;
+        }
+      }
+
+      loggerf(INFO, "RT_BFIFO %02i:%02i %i %i < %i", listBlock->module, listBlock->id, listBlock->detectionBlocked, DetectableCounter, Detectables);
+
+      if(listBlock->detectionBlocked){
+        struct RailTrainBlocksFifo * DB = &DetectedBlocks[DetectableCounter];
+        loggerf(WARNING, "     ->[%i]", i);
+        DB->B[i++] = listBlock;
+        DB->Front++;
+
+        for(int8_t j = i - 1; j > 0; j--)
+          std::swap(DB->B[j], DB->B[j-1]);
+
+      }
+    }
+    else if(!expecting){
+      if(DetectableCounter + 1 < Detectables){
+        DetectableCounter++;
+        i = 0;
+      }
+      expecting = true;
+    }
+
+    listBlock = listBlock->Next_Block(dir == 1 ? NEXT : PREV, 1);
+  }
+
+  for(uint8_t i = 0; i < Detectables; i++)
+    loggerf(WARNING, "RT %i - %i Blocks in FiFo buffer %i", id, DetectedBlocks[i].Front - DetectedBlocks[i].End, i);
+
+  if(virtualLength)
+    setVirtualBlocks();
+  
+}
+
 void RailTrain::moveForward(Block * tB){
   loggerf(WARNING, "MoveForward RT %i to block %2i:%2i", id, tB->module, tB->id);
   setBlock(tB);
 
-  if(B->Alg.next > 0 && B->Alg.N[0] == tB){
-    loggerf(ERROR, "Updating front block %2i:%2i", tB->module, tB->id);
-    B = tB;
+  for(uint8_t i = 0; i < Detectables; i++){
+    struct RailTrainBlocksFifo * DB = &DetectedBlocks[i];
+    Block * _B = DB->B[(DB->Front + RAILTRAIN_FIFO_SIZE - 1) % RAILTRAIN_FIFO_SIZE];
 
-    if(virtualLength)
-      setVirtualBlocks();
+    if(_B->Alg.next > 0 && _B->Alg.N[0] == tB){
+      Block * nextBlock = _B->Next_Block(NEXT, 2);
+
+      loggerf(WARNING, "Expecting %02i:%02i", nextBlock->module, nextBlock->id);
+
+      if(nextBlock)
+        nextBlock->expectedTrain = this;
+
+      if(i == 0){
+        B = tB;
+
+        if(virtualLength)
+          setVirtualBlocks();
+      }
+
+      loggerf(WARNING, "Adding block to FIFO %i [%i]", i, DB->Front);
+
+      DB->B[DB->Front] = tB;
+      DB->Front++;
+
+      break;
+    }
   }
 }
 
@@ -266,6 +373,102 @@ void RailTrain::changeSpeed(uint16_t _target_speed, uint8_t _type){
   }
 }
 
+void RailTrain::reverse(){
+
+}
+
+void RailTrain::reverseZ21(){
+  // Remove expectedTrain
+  for(uint8_t i = 0; i < Detectables; i++){
+    auto DB = &DetectedBlocks[i];
+    Block * nextBlock = DB->B[DB->Front - 1]->Next_Block(NEXT, 1);
+
+    loggerf(INFO, "Disregarding expectedTrain %02i:%02i", nextBlock->module, nextBlock->id);
+
+    if(nextBlock->expectedTrain == this)
+      nextBlock->expectedTrain = 0;
+
+  }
+
+
+  // Reverse DetectedBlocks
+  uint8_t leftIndex  = 0;
+  uint8_t rightIndex = Detectables - 1;
+  while(leftIndex < rightIndex)
+  {
+    /* Copy value from original array to reverse array */
+    struct RailTrainBlocksFifo temp;
+    memcpy(&temp, &DetectedBlocks[leftIndex], sizeof(struct RailTrainBlocksFifo));
+    memcpy(&DetectedBlocks[leftIndex], &DetectedBlocks[rightIndex], sizeof(struct RailTrainBlocksFifo));
+    memcpy(&DetectedBlocks[rightIndex], &temp, sizeof(struct RailTrainBlocksFifo));
+    
+    leftIndex++;
+    rightIndex--;
+  }
+
+  // Reverse each block in the DetectedBlocks
+  for(uint8_t i = 0; i < Detectables; i++){
+    auto DB = &DetectedBlocks[i];
+
+    leftIndex  = DB->End;
+    rightIndex = DB->Front - 1;
+    while(leftIndex < rightIndex)
+    {
+      /* Copy value from original array to reverse array */
+      Block * tmp_Block = DB->B[leftIndex];
+      DB->B[leftIndex]  = DB->B[rightIndex];
+      DB->B[rightIndex] = tmp_Block;
+      
+      leftIndex++;
+      rightIndex--;
+    }
+  }
+
+  // Reverse all paths and blocks that the train is occupying
+  auto paths = std::vector<Path *>();
+  auto switchBlocks = std::vector<Block *>();
+
+  for(auto b: blocks){
+    bool path = true;
+
+    if(b->type == NOSTOP){
+      switchBlocks.push_back(b);
+      continue;
+    }
+
+    //else
+
+    for(auto p: paths){
+      if(p == b->path)
+        path = false;
+    }
+
+    if(path && b->path)
+      paths.push_back(b->path);
+  }
+
+  for(auto b: switchBlocks)
+    b->reverse();
+
+  for(auto p: paths)
+    p->reverse();
+
+
+  // Add expectedTrain
+  for(uint8_t i = 0; i < Detectables; i++){
+    auto DB = &DetectedBlocks[i];
+    Block * nextBlock = DB->B[DB->Front - 1]->Next_Block(NEXT, 1);
+
+    loggerf(INFO, "Setting expectedTrain %02i:%02i", nextBlock->module, nextBlock->id);
+
+    if(nextBlock->expectedTrain == 0)
+      nextBlock->expectedTrain = this;
+
+  }
+
+  B = DetectedBlocks[0].B[DetectedBlocks[0].Front - 1];
+}
+
 
 void RailTrain::setRoute(Block * dest){
   // struct pathfindingstep path = pathfinding(T->B, dest);
@@ -283,6 +486,8 @@ int RailTrain::link(int tid, char type){
   //  tID = id of train or engine
   //  type = bool train or engine
 
+  char * name;
+
   // If it is only a engine -> make it a train
   if(type == RAILTRAIN_ENGINE_TYPE){
     if(RSManager->getEngine(tid)->use){
@@ -292,11 +497,15 @@ int RailTrain::link(int tid, char type){
 
     // Create train from engine
     Engine * E = RSManager->getEngine(tid);
-    this->type = RAILTRAIN_ENGINE_TYPE;
-    this->p.E = E;
-    this->MaxSpeed = E->max_speed;
-    this->length = E->length;
+    type = RAILTRAIN_ENGINE_TYPE;
+    p.E = E;
+    MaxSpeed = E->max_speed;
+    length = E->length;
     virtualLength = false;
+
+    name = E->name;
+
+    Detectables = 1;
 
     //Lock engines
     E->use = 1;
@@ -311,24 +520,49 @@ int RailTrain::link(int tid, char type){
     }
 
     // Crate Rail Train
-    this->type = RAILTRAIN_TRAIN_TYPE;
-    this->p.T = T;
-    this->MaxSpeed = T->max_speed;
-    this->length = T->length;
+    type = RAILTRAIN_TRAIN_TYPE;
+    p.T = T;
+    MaxSpeed = T->max_speed;
+    length = T->length;
+
+    name = T->name;
+
+    Detectables = T->detectables;
 
     //Lock all engines
     T->setEnginesUsed(true, this);
 
-    virtualLength = false;
-    if(T->detectables != T->nr_stock){
-      virtualLength = true;
-      initVirtualBlocks();
-    }
+    virtualLength = T->virtualDetection;
   }
+
+  DetectedBlocks = (RailTrainBlocksFifo *)_calloc(Detectables, RailTrainBlocksFifo);
 
   assigned = true;
 
-  loggerf(INFO, "RailTrain linked train/engine, length: %i", length);
+  loggerf(INFO, "RailTrain linked train/engine, %s, length: %i", name, length);
+
+  return 1;
+}
+
+int RailTrain::link(int tid, char type, uint8_t nrT, RailTrain ** T){  
+  // Link train or engine to RailTrain class.
+  //
+  //  tID = id of train or engine
+  //  type = bool train or engine
+  //  nrT  = Number of seperate railtrain detectables
+  //    T  =  seperate railtrain detectables
+
+  if(!link(tid, type)){
+    return 0;
+  }
+
+  for(uint8_t i = 0; i < nrT; i++){
+    for(auto b: T[i]->blocks){
+      setBlock(b);
+    }
+
+    RSManager->removeRailTrain(T[i]);
+  }
 
   return 1;
 }
@@ -346,6 +580,9 @@ void RailTrain::unlink(){
   }
 
   this->assigned = false;
+
+  _free(DetectedBlocks);
+  Detectables = 0;
 }
 
 bool RailTrain::ContinueCheck(){

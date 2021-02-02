@@ -26,14 +26,17 @@ class Engine {
     
     uint8_t type;
     uint8_t control;
-    uint8_t dir;
     uint8_t halt;
 
     bool use;
     Train * train;
     RailTrain * RT;
 
-    char speed; // Z21 Speed
+    bool dirZ21; // Z21 Direction
+    bool dir;    // Disired Direction for the Z21
+
+    char speedZ21; // Z21 Speed
+    char speed;    // Disired Speed for the Z21
     char speed_step_type;
     uint16_t max_speed; // Real Speed
     uint16_t cur_speed; // Real Speed
@@ -62,6 +65,10 @@ class Engine {
 
     void setSpeed(uint16_t speed);
     void readSpeed();
+
+    void setFunctions(char * functions, uint8_t length);
+    
+    void Z21set(char _speed, bool _dir);
 };
 
 

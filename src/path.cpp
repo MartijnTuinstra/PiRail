@@ -310,23 +310,23 @@ void Path::print(){
 void Path::reverse(){
   loggerf(INFO, "Path::reverse");
 
-  for(RailTrain * T: this->trains){
+  for(RailTrain * T: trains){
     if(T->speed){
-      loggerf(INFO, "Path has a train with speed");
+      loggerf(INFO, "Path has a moving train");
       return;
     }
   }
 
-  this->direction ^= 1;
+  direction ^= 1;
 
-  for(Block * B: this->Blocks){
+  for(Block * B: Blocks){
     B->reverse();
   }
 
-  for(RailTrain * T: this->trains){
+  for(RailTrain * T: trains){
     loggerf(INFO, "Reverse Train");
-    T->dir ^= 1;
-    // T->setSpeedZ21(0);
+    T->reverse();
+    T->setSpeedZ21(0);
   }
 
   std::swap(next, prev);

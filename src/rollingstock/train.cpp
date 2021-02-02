@@ -20,13 +20,9 @@ Train::Train(struct configStruct_Train conf){
   type = conf.category;
   save = true;
 
-  detectables = 0;
-  splitdetectables = false;
   setComposition(conf.nr_stock, conf.composition);
 
-  if(this->detectables < nr_stock)
-    loggerf(INFO, "Train has cars that are not detectable"); // TODO
-  if(this->splitdetectables)
+  if(this->detectables > 1)
     loggerf(INFO, "Train has undetectable cars in between two (multiple) engines"); // TODO
 }
 Train::Train(char * Name){
@@ -38,9 +34,6 @@ Train::Train(char * Name){
   max_speed = 0;
   type = 0;
   save = false;
-
-  detectables = 0;
-  splitdetectables = false;
 }
 
 Train::Train(char * Name, int Stock, struct configStruct_TrainComp * comps, uint8_t category, uint8_t Save){
@@ -57,14 +50,9 @@ Train::Train(char * Name, int Stock, struct configStruct_TrainComp * comps, uint
   type = category;
   save = Save;
 
-  detectables = 0;
-  splitdetectables = false;
-
   setComposition(nr_stock, comps);
 
-  if(this->detectables < nr_stock)
-    loggerf(INFO, "Train has cars that are not detectable"); // TODO
-  if(this->splitdetectables)
+  if(this->detectables > 1)
     loggerf(INFO, "Train has undetectable cars in between two (multiple) engines"); // TODO
 }
 
@@ -95,7 +83,7 @@ void Train::setComposition(int stock, struct configStruct_TrainComp * comps){
 
   nr_stock = stock;
   composition = (struct train_comp *)_calloc(nr_stock, struct train_comp);
-  bool testsplitdetectables = false;
+  bool splitdetectables = true;
 
   for(int i = 0;i<nr_stock;i++){
     composition[i].type = comps[i].type;
@@ -119,9 +107,10 @@ void Train::setComposition(int stock, struct configStruct_TrainComp * comps){
 
       engines->push_back(E);
 
-      detectables += 1;
-      if(testsplitdetectables)
-        splitdetectables = true;
+      if(splitdetectables){
+        splitdetectables = false;
+        detectables++;
+      }
 
       // loggerf(TRACE, "Train engine index: %d", index);
     }
@@ -142,10 +131,10 @@ void Train::setComposition(int stock, struct configStruct_TrainComp * comps){
 
       composition[i].p = C;
 
-      if(C->detectable)
-        detectables += 1;
-      else
-        testsplitdetectables = true;
+      if(!C->detectable){
+        splitdetectables = true;
+        virtualDetection = true;
+      }
     }
   }
 }

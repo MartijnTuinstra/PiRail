@@ -5,6 +5,8 @@
 #include "switchboard/msswitch.h"
 #include "switchboard/signals.h"
 
+#include "rollingstock/railtrain.h"
+
 #include "config/LayoutStructure.h"
 
 #include "system.h"
@@ -69,8 +71,6 @@ Block::Block(uint8_t _module, struct configStruct_Block * block){
 
   // Insert block into Unit
   U->insertBlock(this);
-
-  checkMaxSpeed();
 }
 
 Block::~Block(){
@@ -311,7 +311,6 @@ uint8_t Block::_NextList(Block * Origin, Block ** blocks, uint8_t block_counter,
   }
 
   if(next->type == RAIL_LINK_R){
-    flags |= OUTSIDE_STARTBLOCK;
     return next->p.B->_NextList(Origin, blocks, block_counter, flags, length);
   }
   else if(next->type == RAIL_LINK_S){
@@ -461,14 +460,18 @@ void Block::setReversedState(enum Rail_states state){
 }
 
 void Block::setDetection(bool d){
-  detectionblocked = d;
-  blocked = (detectionblocked || virtualblocked);
+  if(virtualBlocked && d && !detectionBlocked && train){
+    train->moveForward(this);
+  }
+
+  detectionBlocked = d;
+  blocked = (detectionBlocked || virtualBlocked);
   IOchanged = 1;
 }
 
 void Block::setVirtualDetection(bool d){
-  virtualblocked = d;
-  blocked = (detectionblocked || virtualblocked);
+  virtualBlocked = d;
+  blocked = (detectionBlocked || virtualBlocked);
   IOchanged = 1;
 }
 

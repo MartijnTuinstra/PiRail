@@ -17,6 +17,8 @@
 #define TRAIN_SEMI_AUTO 1
 #define TRAIN_FULL_AUTO 2
 
+#define RAILTRAIN_FIFO_SIZE 64 // Blocks
+
 
 struct train_speed_timer {
   RailTrain * T;
@@ -37,6 +39,11 @@ struct TrainSpeedEventData {
   struct timespec starttime;
 };
 
+struct RailTrainBlocksFifo {
+  Block * B[RAILTRAIN_FIFO_SIZE];
+  uint8_t Front = 0;
+  uint8_t End = 0;
+};
 
 class RailTrain {
   public:
@@ -80,6 +87,9 @@ class RailTrain {
 
     uint8_t category = 0;
 
+    uint8_t Detectables;
+    struct RailTrainBlocksFifo * DetectedBlocks;
+
     // struct pathinstruction * instructions;
 
     RailTrain(Block * B);
@@ -95,6 +105,7 @@ class RailTrain {
     void initVirtualBlocks();
     void setVirtualBlocks();
 
+    void initMoveForward(Block * B);
     void moveForward(Block * B);
 
     void setSpeed(uint16_t _speed);
@@ -102,7 +113,11 @@ class RailTrain {
     void setStopped(bool);
     void changeSpeed(uint16_t target_speed, uint8_t type);
 
+    void reverse();    // Reverse all
+    void reverseZ21(); // Reverse simple
+
     int link(int tid, char type);
+    int link(int tid, char type, uint8_t, RailTrain **);
     void unlink();
 
     void setRoute(Block * dest);

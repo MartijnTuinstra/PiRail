@@ -8,12 +8,16 @@
 
 void Z21_Set_EmergencyStop(){
   uint8_t tmp[7] = {0x07,0,0x40,0,0x21,0x80,0xA1};
-  Z21->send(7, tmp);
+
+  if(Z21)
+    Z21->send(7, tmp);
 }
 
 void Z21_Release_EmergencyStop(){
   uint8_t tmp[7] = {0x07,0,0x40,0,0x21,0x81,0xA0};
-  Z21->send(7, tmp);
+
+  if(Z21)
+    Z21->send(7, tmp);
 }
 
 void Z21_Set_Loco_Drive_Engine(Engine * E){
@@ -40,7 +44,8 @@ void Z21_Set_Loco_Drive_Engine(Engine * E){
   data[8] = ((E->dir & 1) << 7) | (E->speed & 0x7F);
   data[9] = data[4] ^ data[5] ^ data[6] ^ data[7] ^ data[8];
 
-  Z21->send(10, data);
+  if(Z21)
+    Z21->send(10, data);
 }
 
 void Z21_Set_Loco_Drive_Train(Train * T){
@@ -55,8 +60,8 @@ void Z21_LAN_X_LOCO_INFO(uint8_t length, char * data){
   uint16_t DCC_ID = ((data[0] & 0x3F) << 8) + data[1];
   // uint8_t xbusRegeler = (data[2] & 0x8) >> 3;
   // uint8_t stufen = (data[2] & 0x7);
-  uint8_t dir = (data[3] & 0x80) >> 7;
-  uint8_t speed = (data[3] & 0x7F);
+  bool dir = (data[3] & 0x80) ? true : false;
+  char speed = (data[3] & 0x7F);
 
   Engine * E = RSManager->getEngineDCC(DCC_ID);
 
@@ -68,69 +73,8 @@ void Z21_LAN_X_LOCO_INFO(uint8_t length, char * data){
   loggerf(INFO, " - Engine %i: speed(%i), dir(i)", DCC_ID, speed, dir);
   // loggerf(INFO, " -  %02x %02x %02x %02x", data[9], data[10], data[11], data[12]);
 
-  //Functions ....
-  E->function[0].state = (data[4] >> 4) & 0x1;
-  E->function[1].state = data[4] & 0x1;
-  E->function[2].state = (data[4] >> 1) & 0x1;
-  E->function[3].state = (data[4] >> 2) & 0x1;
-  E->function[4].state = (data[4] >> 3) & 0x1;
-
-  for(uint8_t i = 0; i < 3; i++){
-    if ((i + 4) > length) {
-      break;
-    }
-
-    for(uint8_t j = 0; j < 8; j++){
-      E->function[i * 8 + j + 5].state = (data[5 + i] >> j) & 0x1;
-    }
-  }
-
-  bool samespeed = (speed == E->speed);
-  bool samedir = (dir == E->dir);
-
-  E->speed = speed;
-  E->dir = dir;
-
-  E->readSpeed();
-
-  if(E->use){
-    RailTrain * RT = E->RT;
-
-    if(!samedir && RT->type == RAILTRAIN_TRAIN_TYPE){
-      Train * T = RT->p.T;
-
-      for(uint8_t i = 0; i < T->engines->items; i++){
-        Engine * tE = T->engines->operator[](i);
-        if(E != tE){
-          tE->dir = E->dir;
-        }
-      }
-    }
-
-    if(!samespeed){
-      RT->speed = E->cur_speed;
-
-      RT->changing_speed = RAILTRAIN_SPEED_T_DONE;
-
-      RT->setSpeed(RT->speed);
-    }
-
-    if((!samedir || !samespeed) && RT->type == RAILTRAIN_TRAIN_TYPE){
-      Train * T = RT->p.T;
-      // Set all other engines coupled to this train to new parameters
-      for(uint8_t i = 0; i < T->engines->items; i++){
-        Engine * tE = T->engines->operator[](i);
-        if(E != tE){
-          Z21_Set_Loco_Drive_Engine(tE);
-        }
-      }
-    }
-
-    WS_stc_UpdateTrain(RT);
-  }
-  else{
-    WS_stc_DCCEngineUpdate(E);
-  }
+  E->setFunctions(&data[4], length - 4);
+  E->Z21set(speed, dir);
 }
 
 void Z21_get_train(RailTrain * RT){
@@ -158,7 +102,8 @@ void Z21_get_loco_info(uint16_t DCC_id){
   data[7] = (DCC_id & 0xFF);
   data[8] = 0x13 ^ data[6] ^ data[7];
 
-  Z21->send(9, data);
+  if(Z21)
+    Z21->send(9, data);
 }
 
 void Z21_setLocoFunction(Engine * E, uint8_t function, uint8_t type){
@@ -181,9 +126,11 @@ void Z21_setLocoFunction(Engine * E, uint8_t function, uint8_t type){
   data[8] = ((type & 0x3) << 6) | (function & 0x3F);
   data[9] = 0x1C ^ data[6] ^ data[7] ^ data[8];
 
-  Z21->send(10, data);
+  if(Z21)
+    Z21->send(10, data);
 }
 
 void Z21_KeepAliveFunc(void * args){
-  Z21_GET_SERIAL;
+  if(Z21)
+    Z21_GET_SERIAL;
 }

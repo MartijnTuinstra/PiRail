@@ -3,6 +3,9 @@
 #include "rollingstock/functions.h"
 #include "train.h"
 
+#include "Z21_msg.h"
+#include "websocket/stc.h"
+
 #include "utils/mem.h"
 #include "utils/logger.h"
 #include "system.h"
@@ -162,4 +165,70 @@ void Engine::readSpeed(){
   uint8_t speed = ratio * ((float)(right->speed - left->speed)) + left->speed;
 
   this->cur_speed = speed;
+}
+
+void Engine::setFunctions(char * funcs, uint8_t length){
+  //Functions ....
+  function[0].state = (funcs[0] >> 4) & 0x1;
+  function[1].state =  funcs[0]       & 0x1;
+  function[2].state = (funcs[0] >> 1) & 0x1;
+  function[3].state = (funcs[0] >> 2) & 0x1;
+  function[4].state = (funcs[0] >> 3) & 0x1;
+
+  for(uint8_t i = 0; i < 3; i++){
+    if (i > length)
+      break;
+
+    for(uint8_t j = 0; j < 8; j++){
+      function[i * 8 + j + 5].state = (funcs[1 + i] >> j) & 0x1;
+    }
+  }
+}
+
+void Engine::Z21set(char _speed, bool _dir){
+  bool samespeed = (_speed == speed);
+  bool samedir =   (_dir == dir);
+
+  speed = speed;
+  dir = dir;
+
+  readSpeed();
+
+  if(use){
+    if(!samedir && RT->type == RAILTRAIN_TRAIN_TYPE){
+      //->Z21set()
+      Train * T = RT->p.T;
+
+      for(uint8_t i = 0; i < T->engines->items; i++){
+        Engine * tE = T->engines->operator[](i);
+        if(this != tE){
+          tE->dir = dir;
+        }
+      }
+    }
+
+    if(!samespeed){
+      RT->speed = cur_speed;
+
+      RT->changing_speed = RAILTRAIN_SPEED_T_DONE;
+
+      RT->setSpeed(RT->speed);
+    }
+
+    if((!samedir || !samespeed) && RT->type == RAILTRAIN_TRAIN_TYPE){
+      Train * T = RT->p.T;
+      // Set all other engines coupled to this train to new parameters
+      for(uint8_t i = 0; i < T->engines->items; i++){
+        Engine * tE = T->engines->operator[](i);
+        if(this != tE){
+          Z21_Set_Loco_Drive_Engine(tE);
+        }
+      }
+    }
+
+    WS_stc_UpdateTrain(RT);
+  }
+  else{
+    WS_stc_DCCEngineUpdate(this);
+  }
 }

@@ -25,6 +25,15 @@ char * UART_Serial_Port = 0;
 int main(int argc, char * argv[]){
   srand(time(NULL));
 
+  uint8_t i = 16;
+  for(uint8_t j = 0; j < 32; j++)
+    printf("%i\n", (i + j + 30) % 30);
+
+  for(uint8_t j = 0; j < 32; j++)
+    printf("%i\n", (uint8_t)(i - j + 30) % 30);
+
+  return 1;
+
   init_main();
   logger.setfilename("log.txt");
   logger.setlevel(DEBUG);

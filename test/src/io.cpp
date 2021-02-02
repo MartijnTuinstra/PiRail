@@ -103,7 +103,7 @@ TEST_CASE( "IO and Switchboard object", "[IO][IO-3]"){
   SECTION("I - Blocks"){
     U->B[0]->In->setInput(IO_event_High);
 
-    CHECK(U->B[0]->detectionblocked);
+    CHECK(U->B[0]->detectionBlocked);
   }
 
   SECTION("II - Switches"){

@@ -255,7 +255,7 @@ void print_block_debug(Block * B){
 
     if(ABs->P[i]){
       char state = blockstates[ABs->P[i]->state];
-      if(ABs->P[i]->virtualblocked && !ABs->P[i]->detectionblocked)
+      if(ABs->P[i]->virtualBlocked && !ABs->P[i]->detectionBlocked)
         state = 'V';
 
       ptr += sprintf(ptr, "%02i:%02i%c%c", ABs->P[i]->module, ABs->P[i]->id, state,
@@ -268,9 +268,9 @@ void print_block_debug(Block * B){
   ptr += sprintf(ptr, " A%3i %2x%02i:%02i;", B->length, B->type, B->module, B->id);
   ptr += sprintf(ptr, "%c", B->train ? 'T' : ' ');
   ptr += sprintf(ptr, "D%-2iS%x/%x", B->dir,B->state,B->reverse_state);
-  if(B->detectionblocked)
+  if(B->detectionBlocked)
     ptr += sprintf(ptr, "b");
-  else if(B->virtualblocked)
+  else if(B->virtualBlocked)
     ptr += sprintf(ptr, "v");
   else
     ptr += sprintf(ptr, " ");
@@ -290,7 +290,7 @@ void print_block_debug(Block * B){
 
     if(ABs->N[i]){
       char state = blockstates[ABs->N[i]->state];
-      if(ABs->N[i]->virtualblocked && !ABs->N[i]->detectionblocked)
+      if(ABs->N[i]->virtualBlocked && !ABs->N[i]->detectionBlocked)
         state = 'V';
 
       ptr += sprintf(ptr, "%02i:%02i%c ", ABs->N[i]->module, ABs->N[i]->id, state);
@@ -559,11 +559,11 @@ void train_following(Algor_Blocks * ABs, int debug){
     // char * ptr = debugmsg;
     // ptr += sprintf(ptr, "Blocked Block without train");
     // if(prev > 0)
-    //   ptr += sprintf(ptr, "\nP: %02i:%02i %c%c%c %6x", BP[0]->module, BP[0]->id, BP[0]->blocked ? 'B':' ', BP[0]->detectionblocked ? 'D':' ', BP[0]->virtualblocked ? 'V':' ', BP[0]->train);
+    //   ptr += sprintf(ptr, "\nP: %02i:%02i %c%c%c %6x", BP[0]->module, BP[0]->id, BP[0]->blocked ? 'B':' ', BP[0]->detectionBlocked ? 'D':' ', BP[0]->virtualBlocked ? 'V':' ', BP[0]->train);
     // else
     //   ptr += sprintf(ptr, "\n                   ");
     // if(next > 0)
-    //   ptr += sprintf(ptr, "\tN: %02i:%02i %c%c%c %6x", BN[0]->module, BN[0]->id, BN[0]->blocked ? 'B':' ', BN[0]->detectionblocked ? 'D':' ', BN[0]->virtualblocked ? 'V':' ', BN[0]->train);
+    //   ptr += sprintf(ptr, "\tN: %02i:%02i %c%c%c %6x", BN[0]->module, BN[0]->id, BN[0]->blocked ? 'B':' ', BN[0]->detectionBlocked ? 'D':' ', BN[0]->virtualBlocked ? 'V':' ', BN[0]->train);
     // else
     //   ptr += sprintf(ptr, "\t                   ");
 
@@ -590,16 +590,14 @@ void train_following(Algor_Blocks * ABs, int debug){
     else if(prev > 0 && BP[0]->blocked && BP[0]->train){
       loggerf(INFO, "Copy train from previous block");
       // Copy train id from previous block
-      B->train = BP[0]->train;
-      B->train->setBlock(B);
+      RailTrain * T = BP[0]->train;
 
-      if(!B->train->stopped){
-        B->train->directionKnown = 1;
-        B->train->dir = 0;
-        B->train->B = B;
+      if(T->stopped)
+        T->setBlock(B);
+      else{
+        T->dir = 0;
 
-        if(next > 0)
-          BN[0]->expectedTrain = B->train;
+        T->initMoveForward(B);
       }
       // if(train_link[B->train])
       //   train_link[B->train]->Block = B;
@@ -609,16 +607,15 @@ void train_following(Algor_Blocks * ABs, int debug){
     else if(next > 0 && BN[0]->blocked && BN[0]->train){
       loggerf(INFO, "Copy train from next block");
       // Copy train id from next block
-      B->train = BN[0]->train;
-      B->train->setBlock(B);
+      RailTrain * T = BN[0]->train;
 
-      if(!B->train->stopped){
-        B->train->directionKnown = 1;
-        B->train->dir = 1;
-        B->train->B = B;
+      if(T->stopped)
+        T->setBlock(B);
+      else{
+        T->dir = 1;
 
-        if(prev > 0)
-          BP[0]->expectedTrain = B->train;
+        T->initMoveForward(B);
+        T->reverseZ21(); // Set Train in right direction
       }
     }
     else if( ((prev > 0 && !BP[0]->blocked) || prev == 0) && ((next > 0 && !BN[0]->blocked) || next == 0) ){

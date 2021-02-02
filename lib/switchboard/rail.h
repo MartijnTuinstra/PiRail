@@ -131,8 +131,8 @@ class Block {
     uint8_t switchReserved:2;
 
     uint8_t blocked:1;
-    uint8_t virtualblocked:1;
-    uint8_t detectionblocked:1;
+    uint8_t virtualBlocked:1;
+    uint8_t detectionBlocked:1;
 
 
     uint8_t IOchanged:1;

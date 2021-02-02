@@ -289,7 +289,6 @@ uint MSSwitch::NextList_Block(Block * Origin, Block ** blocks, uint8_t block_cou
   loggerf(TRACE, "Next     :        \t%i:%i => %i:%i:%i\t%i", this->module, this->id, next->module, next->id, next->type, block_counter);
 
   if(next->type == RAIL_LINK_R){
-    flags |= OUTSIDE_STARTBLOCK;
     return next->p.B->_NextList(Origin, blocks, block_counter, flags, length);
   }
   else if(next->type == RAIL_LINK_S){

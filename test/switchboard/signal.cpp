@@ -20,10 +20,18 @@
 #include "rollingstock/railtrain.h"
 
 void init_test(char (* filenames)[30], int nr_files);
+class TestsFixture {
+public:
+  TestsFixture();
+  void loadSwitchboard(char (* filenames)[30], int nr_files);
+  void loadStock();
+  ~TestsFixture();
+};
 
-TEST_CASE( "Signal 1", "[SB][SB-4][SB-4.1]" ) {
+TEST_CASE_METHOD(TestsFixture, "Signal 1", "[SB][SB-4][SB-4.1]" ) {
   char filenames[1][30] = {"./testconfigs/SB-4.1.bin"};
-  init_test(filenames, 1);
+  loadSwitchboard(filenames, 1);
+  loadStock();
 
   Unit * U = switchboard::Units(1);
   REQUIRE(U);
@@ -89,9 +97,11 @@ TEST_CASE( "Signal 1", "[SB][SB-4][SB-4.1]" ) {
   }
 }
 
-TEST_CASE( "Signal 2", "[SB][SB-4][SB-4.2]" ) {
+TEST_CASE_METHOD(TestsFixture, "Signal 2", "[SB][SB-4][SB-4.2]" ) {
+
   char filenames[2][30] = {"./testconfigs/SB-4.2-1.bin", "./testconfigs/SB-4.2-2.bin"};
-  init_test(filenames, 2);
+  loadSwitchboard(filenames, 2);
+  loadStock();
 
   Unit * U1 = switchboard::Units(1);
   Unit * U2 = switchboard::Units(2);

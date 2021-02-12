@@ -18,6 +18,13 @@ bool operator <(const struct timespec lhs, const struct timespec rhs)
         return lhs.tv_sec < rhs.tv_sec;
 }
 
+Scheduler::~Scheduler(){
+    for(auto e: events)
+        _free(e);
+
+    events.empty();
+}
+
 void Scheduler::start(){
     pthread_create(&id, NULL, &thread, this); 
 }
@@ -212,4 +219,4 @@ void Scheduler::print_events(){
     }
 }
 
-Scheduler * scheduler = new Scheduler();
+Scheduler * scheduler;

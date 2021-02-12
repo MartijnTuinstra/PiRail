@@ -76,6 +76,7 @@ class RailTrain {
     bool stopped = 1;         // 
     bool dir = 0;             // TRAIN_FORWARD / TRAIN_REVERSE
     bool directionKnown = 0;  //  block direction is matched to the Z21 direction
+    bool reverseDirection = 0;  // Train is reversed with respect to the front block
 
     PathFinding::Route * route = 0;
 
@@ -114,6 +115,8 @@ class RailTrain {
     void changeSpeed(uint16_t target_speed, uint8_t type);
 
     void reverse();    // Reverse all
+    void reverseFromPath(Path * P);
+    void reverseBlocks();
     void reverseZ21(); // Reverse simple
 
     int link(int tid, char type);

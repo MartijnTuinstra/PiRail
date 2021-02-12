@@ -30,7 +30,6 @@ void train_following(Algor_Blocks * ABs, int debug);
 void train_control(Algor_Blocks * ABs, int debug);
 
 void Connect_Rails();
-void save_setup();
 
 // void procces_accessoire();
 

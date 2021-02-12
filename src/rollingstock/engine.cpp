@@ -45,6 +45,7 @@ Engine::Engine(struct configStruct_Engine conf){
   for(uint8_t i = 0; i < 29; i++){
     function[i].button = conf.functions[i] >> 6;
     function[i].type = conf.functions[i] & 0x3F;
+    function[i].state = 0;
 
     // loggerf(INFO, "Engine %i - Function %i - type %i - %i", DCC, i, this->function[i].type, this->function[i].button);
   }
@@ -78,7 +79,7 @@ void Engine::setName(char * new_name){
     _free(name);
 
   name = (char *)_calloc(strlen(new_name) + 10, char);
-  strcpy(name, new_name);
+  strncpy(name, new_name, strlen(new_name) + 1);
 }
 void Engine::setImagePath(char * newpath){
   if(img_path)

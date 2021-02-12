@@ -17,8 +17,10 @@ namespace RollingStock {
 
 class Manager {
 public:
-  ::dynArray<struct configStruct_Category> PassengerCatagories;
-  ::dynArray<struct configStruct_Category> CargoCatagories;
+  struct configStruct_Category * PassengerCatagories;
+  uint16_t PassengerCatagories_length;
+  struct configStruct_Category * CargoCatagories;
+  uint16_t CargoCatagories_length;
 
   ::dynArray<Car *>       Cars;
   ::dynArray<Engine *>    Engines;
@@ -27,8 +29,8 @@ public:
 
   Engine * DCC[10000];
 
-  char * filename;
-  struct SchedulerEvent * continue_event;
+  char filename[100] = "";
+  struct SchedulerEvent * continue_event = 0;
 
   Manager();
   ~Manager();

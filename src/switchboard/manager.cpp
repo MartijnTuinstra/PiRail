@@ -32,7 +32,7 @@ Unit * Units(uint8_t unit){
   //   Unit * Units;
   //   uint8_t unit_len;
 
-Manager::Manager(){}
+Manager::Manager(): filenames(5) {}
 Manager::~Manager(){
   clear();
 }
@@ -167,6 +167,6 @@ void Manager::print(){
   uniqueStation.print();
 }
 
-Manager * SwManager = new Manager();
+Manager * SwManager;
   
 };

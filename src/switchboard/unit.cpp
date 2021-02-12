@@ -22,13 +22,13 @@ Unit::Unit(ModuleConfig * Config){
 
   switchboard::SwManager->addUnit(this);
 
-  this->connections_len = Config->header->Connections;
-  if(this->connections_len > 5){
+  connections_len = Config->header->Connections;
+  if(connections_len > 5){
     loggerf(ERROR, "To many connection for module %i", this->module);
-    this->connections_len = 5;
+    connections_len = 5;
   }
 
-  memset(this->connection, 0, sizeof(struct unit_connector));
+  memset(connection, 0, sizeof(struct unit_connector));
   // this->connection = (Unit **)_calloc(Config->header->connections, Unit *);
 
   this->IO_Nodes = Config->header->IO_Nodes;
@@ -38,10 +38,12 @@ Unit::Unit(ModuleConfig * Config){
   this->signal_len = Config->header->Signals;
   this->station_len = Config->header->Stations;
 
+  loggerf(INFO, "INIT Unit %i - %d, %d, %d, %d, %d, %d", Config->header->Module, Config->header->IO_Nodes, Config->header->Blocks, Config->header->Switches, Config->header->MSSwitches, Config->header->Signals, Config->header->Stations);
+
   this->Node = (IO_Node **)_calloc(this->IO_Nodes, IO_Node*);
   this->B = (Block **)_calloc(this->block_len, Block*);
   this->Sw = (Switch **)_calloc(this->switch_len, Switch*);
-  this->MSSw = (MSSwitch **)_calloc(this->switch_len, MSSwitch*);
+  this->MSSw = (MSSwitch **)_calloc(this->msswitch_len, MSSwitch*);
   this->Sig = (Signal **)_calloc(this->signal_len, Signal*);
   this->St = (Station **)_calloc(this->station_len, Station*);
 
@@ -85,9 +87,9 @@ Unit::Unit(ModuleConfig * Config){
   loggerf(DEBUG, "  Module Layout");
 
   //Layout
-  this->Layout_length = Config->Layout->LayoutLength;
-  this->Layout = (char *)_calloc(Config->Layout->LayoutLength, char);
-  memcpy(this->Layout, Config->Layout, Config->Layout->LayoutLength);
+  Layout_length = Config->Layout->LayoutLength;
+  Layout = (char *)_calloc(Config->Layout->LayoutLength, char);
+  memcpy(Layout, Config->Layout->Layout, Config->Layout->LayoutLength);
 }
 
 
@@ -395,9 +397,11 @@ void Unit::link_all(){
   link_all_switches(this);
   link_all_msswitches(this);
 
-  for(int i = 0; i < this->station_len; i++){
-    if(this->St[i]->blocks && this->St[i]->blocks[0] && !this->St[i]->blocks[0]->path)
-      new Path(this->St[i]->blocks[0]);
+  for(int i = 0; i < station_len; i++){
+    if(St[i]->blocks_len > 0 && St[i]->blocks)
+      if(St[i]->blocks[0])
+        if(!St[i]->blocks[0]->path)
+          new Path(St[i]->blocks[0]);
   }
 }
 

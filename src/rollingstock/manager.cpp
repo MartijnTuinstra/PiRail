@@ -7,7 +7,7 @@
 
 #include "system.h"
 
-RollingStock::Manager * RSManager = new RollingStock::Manager();
+RollingStock::Manager * RSManager;
 
 namespace RollingStock {
 
@@ -23,14 +23,23 @@ void Manager::initScheduler(){
 void Manager::clear(){
   memset(RSManager->DCC, 0, 10000 * sizeof(Engine *));
 
+  for(uint8_t i = 0; i < PassengerCatagories_length; i++)
+    _free(PassengerCatagories[i].name);
+  for(uint8_t i = 0; i < CargoCatagories_length; i++)
+    _free(CargoCatagories[i].name);
+
+  _free(PassengerCatagories);//.clear();
+  PassengerCatagories_length = 0;
+  _free(CargoCatagories);//.clear();
+  CargoCatagories_length = 0;
+
+  RailTrains.clear();
+  Trains.clear();
   Cars.clear();
   Engines.clear();
-  Trains.clear();
-  RailTrains.clear();
 }
 
 Manager::~Manager(){
-  _free(filename);
   scheduler->removeEvent(continue_event);
 
   log("Clearing trains memory",INFO);
@@ -48,89 +57,48 @@ Manager::~Manager(){
   //   trains_comp = (train_composition **)_free(trains_comp);
   // }
 
-  // if(train_link){
-  //   for(int i = 0; i < train_link_len; i++){
-  //     if(!train_link[i])
-  //       continue;
-
-  //     scheduler->removeEvent(train_link[i]->speed_event);
-
-  //     _free(train_link[i]);
-  //     train_link[i] = 0;
-  //   }
-
-  //   train_link = (RailTrain **)_free(train_link);
-  // }
-
-  // if(train_P_cat){
-  //   for(int i = 0; i < train_P_cat_len; i++){
-  //     _free(train_P_cat[i].name);
-  //   }
-  //   train_P_cat = (cat_conf *)_free(train_P_cat);
-  // }
-
-
-  // if(train_C_cat){
-  //   for(int i = 0; i < train_C_cat_len; i++){
-  //     _free(train_C_cat[i].name);
-  //   }
-  //   train_C_cat = (cat_conf *)_free(train_C_cat);
-  // }
-
-
   if(SYS)
     SYS->trains_loaded = 0;
 }
 
 void Manager::loadFile(char * f){
-  if(filename)
-    _free(filename);
-
-  filename = (char *)_calloc(strlen(f), char);
-  strcpy(filename, f);
+  strncpy(filename, f, 99);
 
   // Allocation Basic Space
-  // trains = (Train **)_calloc(10, Train *);
-  // trains_len = 10;
-  // engines = (Engine **)_calloc(10, Engine *);
-  // engines_len = 10;
-  // cars = (Car **)_calloc(10, Car *);
-  // cars_len = 10;
   // trains_comp = (struct train_composition **)_calloc(10, struct train_composition *);
   // trains_comp_len = 10;
-  // train_link = (RailTrain **)_calloc(10,RailTrain *);
-  // train_link_len = 10;
   
   scheduler->enableEvent(continue_event);
-
-  // read_rolling_Configs();
 
   auto config = RollingConfig(filename);
 
   config.read();
 
-  loggerf(INFO, "Reading Catagories");
-  for(int i = 0; i < config.header->PersonCatagories; i++)
-    PassengerCatagories.push_back(config.P_Cat[i]);
 
-  for(int i = 0; i < config.header->CargoCatagories; i++)
-    CargoCatagories.push_back(config.C_Cat[i]);
+  loggerf(INFO, "Initialize Catagories");
+  PassengerCatagories = (struct configStruct_Category *)_calloc(config.header->PersonCatagories, struct configStruct_Category);
+  PassengerCatagories_length = config.header->PersonCatagories;
+  CargoCatagories     = (struct configStruct_Category *)_calloc(config.header->CargoCatagories, struct configStruct_Category);
+  CargoCatagories_length = config.header->CargoCatagories;
+
+  memcpy(PassengerCatagories, config.P_Cat, sizeof(struct configStruct_Category) * config.header->PersonCatagories);
+  memcpy(CargoCatagories,     config.C_Cat, sizeof(struct configStruct_Category) * config.header->PersonCatagories);
 
 
-  loggerf(INFO, "Reading Engines");
+  loggerf(INFO, "Initialize Engines");
   for(int i = 0; i < config.header->Engines; i++){
     newEngine(new Engine(config.Engines[i]));
   }
 
   
-  loggerf(INFO, "Reading Cars");
+  loggerf(INFO, "Initialize Cars");
   for(int i = 0; i < config.header->Cars; i++){
     newCar(new Car(config.Cars[i]));
     // create_car_from_conf(config.Cars[i]);
   }
 
   
-  loggerf(INFO, "Reading Trains");
+  loggerf(INFO, "Initialize Trains");
   for(int i = 0; i < config.header->Trains; i++){
     newTrain(new Train(config.Trains[i]));
   }
@@ -209,13 +177,13 @@ void Manager::moveEngine(Engine * E, uint16_t DCCid){
 void Manager::writeFile(){
   auto config = RollingConfig(filename);
 
-  config.header->PersonCatagories = PassengerCatagories.items;
+  config.header->PersonCatagories = PassengerCatagories_length;
   config.P_Cat = (struct configStruct_Category *)_calloc(config.header->PersonCatagories, struct configStruct_Category);
-  memcpy(config.P_Cat, PassengerCatagories.array, config.header->PersonCatagories * sizeof(struct configStruct_Category));
+  memcpy(config.P_Cat, PassengerCatagories, config.header->PersonCatagories * sizeof(struct configStruct_Category));
 
-  config.header->CargoCatagories = CargoCatagories.items;
+  config.header->CargoCatagories = CargoCatagories_length;
   config.C_Cat = (struct configStruct_Category *)_calloc(config.header->CargoCatagories, struct configStruct_Category);
-  memcpy(config.C_Cat, CargoCatagories.array, config.header->CargoCatagories * sizeof(struct configStruct_Category));
+  memcpy(config.C_Cat, CargoCatagories, config.header->CargoCatagories * sizeof(struct configStruct_Category));
 
   for(uint8_t i = 0; i < Trains.size; i++){
     if(!Trains[i])

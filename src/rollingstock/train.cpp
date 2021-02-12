@@ -62,8 +62,11 @@ Train::~Train(){
 
   delete engines;
 
-  _free(this->name);
-  _free(this->composition);
+  if(name)
+    _free(name);
+
+  if(composition)
+    _free(composition);
 }
 
 
@@ -71,8 +74,9 @@ void Train::setName(char * new_name){
   if(name)
     _free(name);
 
-  name = (char *)_calloc(strlen(new_name) + 10, char);
-  strcpy(name, new_name);
+  uint16_t len = strlen(new_name) + 1;
+  name = (char *)_calloc(len + 5, char);
+  memcpy(name, new_name, len);
 }
 
 void Train::setComposition(int stock, struct configStruct_TrainComp * comps){

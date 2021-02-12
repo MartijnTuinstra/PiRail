@@ -17,9 +17,18 @@
 
 void init_test(char (* filenames)[30], int nr_files);
 
-TEST_CASE( "MSSwitch Link", "[SB][SB-3][SB-3.1]" ) {
+class TestsFixture {
+public:
+  TestsFixture();
+  void loadSwitchboard(char (* filenames)[30], int nr_files);
+  void loadStock();
+  ~TestsFixture();
+};
+
+TEST_CASE_METHOD(TestsFixture, "MSSwitch Link", "[SB][SB-3][SB-3.1]" ) {
   char filenames[1][30] = {"./testconfigs/SB-3.1.bin"};
-  init_test(filenames, 1);
+  loadSwitchboard(filenames, 1);
+  loadStock();
 
   Unit * U = switchboard::Units(1);
   REQUIRE(U);
@@ -31,6 +40,8 @@ TEST_CASE( "MSSwitch Link", "[SB][SB-3][SB-3.1]" ) {
   //  1.1->  --1.2-> --1.3->
   //              \- --1.4->
   */
+
+  REQUIRE(U->msswitch_len > 0);
 
   REQUIRE(U->B[0] != 0);
   REQUIRE(U->B[1] != 0);

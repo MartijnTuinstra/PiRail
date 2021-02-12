@@ -597,9 +597,10 @@ void WS_stc_SwitchesUpdate(Websocket::Client * client){
 
     for(int i = 0; i < SwManager->Units.size; i++){
       Unit * U = Units(i);
-      if(!U || !U->on_layout)// || !U->switch_state_changed)
+      if(!U || !U->on_layout || !U->switch_state_changed)
         continue;
-      // U->switch_state_changed = 0;
+
+      U->switch_state_changed = 0;
 
       for(int j = 0;j<U->switch_len;j++){
         Switch * S = U->Sw[j];
@@ -842,16 +843,18 @@ void WS_stc_reset_switches(Websocket::Client * client){
 }
 
 void WS_stc_Track_LayoutDataOnly(int unit, Websocket::Client * client){
-  loggerf(DEBUG, "WS_Track_LayoutDataOnly");
+  loggerf(DEBUG, "WS_Track_LayoutDataOnly %i", unit);
 
   Unit * U = Units(unit);
+
+  if(!U)
+    return;
 
   char * data = (char *)_calloc(U->Layout_length + 20, char);
 
   data[0] = WSopc_TrackLayoutOnlyRawData;
   data[1] = unit;
   memcpy(&data[2], U->Layout, U->Layout_length);
-
 
   if(client){
     client->send(data, U->Layout_length+2, WS_Flag_Track);

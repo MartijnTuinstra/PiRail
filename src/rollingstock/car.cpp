@@ -41,7 +41,7 @@ void Car::setName(char * Name){
   if(name)
     _free(name);
 
-  name = (char *)_calloc(strlen(Name), char);
+  name = (char *)_calloc(strlen(Name) + 5, char);
   strcpy(name, Name);
 }
 

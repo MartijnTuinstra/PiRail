@@ -49,32 +49,7 @@ void change_Block(Block * B, enum Rail_states state){
   }
 }
 
-struct engine_sim {
-  uint16_t offset;
-  uint16_t length;
-};
-
-struct train_sim {
-  char sim;
-
-  RailTrain * T;
-  uint16_t train_length;
-
-  uint8_t dir;
-  float posFront;
-  float posRear;
-
-  Block * Front;
-  Block ** B;
-
-  struct engine_sim * engines;
-  uint8_t engines_len;
-
-  uint8_t blocks;
-};
-
 void train_sim_tick(struct train_sim * t){
-  // loggerf(INFO, "train_sim_tick speed %i\t%f\t%f", t->T->speed,t->posFront, t->posRear);
 
   if(t->posFront <= 0 && t->blocks < 10){
     // Add block
@@ -167,8 +142,8 @@ void *TRAIN_SIMA(void * args){
   };
   train.B[0] = B;
 
-  while(!B->Alg.N[0] || !B->Alg.P[0]){}
-  while(B->Alg.N[0]->blocked || B->blocked || B->Alg.P[0]->blocked){} // Wait for space
+  while(!B->Alg.N[0] || !B->Alg.P[0]){usleep(10000);}
+  while(B->Alg.N[0]->blocked || B->blocked || B->Alg.P[0]->blocked){usleep(10000);} // Wait for space
 
   // B->train = new RailTrain(B);
 
@@ -181,22 +156,22 @@ void *TRAIN_SIMA(void * args){
   // usleep(100000);
 
   while(!B->train){
-      usleep(10000);
+    usleep(10000);
   }
 
   // B->train = new RailTrain(B);
 
-  B->train->link(2, RAILTRAIN_TRAIN_TYPE);
+  B->train->link(0, RAILTRAIN_ENGINE_TYPE);
   struct s_opc_LinkTrain msg = {
     .follow_id=B->train->id,
-    .real_id=2,
+    .real_id=0,
     .message_id_H=0,
     .type=RAILTRAIN_ENGINE_TYPE,
     .message_id_L=0
   };
   WS_stc_LinkTrain(&msg);
 
-  loggerf(INFO, "SIMTrain linked %s", B->train->p.T->name);
+  loggerf(INFO, "SIMTrain linked %s", B->train->p.E->name);
 
   B->train->setControl(TRAIN_MANUAL);
 

@@ -19,10 +19,18 @@
 #include "rollingstock/railtrain.h"
 
 void init_test(char (* filenames)[30], int nr_files);
+class TestsFixture {
+public:
+  TestsFixture();
+  void loadSwitchboard(char (* filenames)[30], int nr_files);
+  void loadStock();
+  ~TestsFixture();
+};
 
-TEST_CASE( "Station Stating", "[SB][SB-5][SB-5.1]" ) {
+TEST_CASE_METHOD(TestsFixture, "Station Stating", "[SB][SB-5][SB-5.1]" ) {
   char filenames[1][30] = {"./testconfigs/SB-1.3.bin"};
-  init_test(filenames, 1);
+  loadSwitchboard(filenames, 1);
+  loadStock();
 
   Unit * U = switchboard::Units(1);
   REQUIRE(U);
@@ -86,6 +94,7 @@ TEST_CASE( "Station Stating", "[SB][SB-5][SB-5.1]" ) {
     Algorithm::process(U->B[28], _FORCE);
     Algorithm::print_block_debug(U->B[28]);
 
+    U->B[28]->train->link(0, RAILTRAIN_ENGINE_TYPE);
     U->B[28]->train->setSpeed(0);
 
     CHECK(U->St[0]->occupied);
@@ -123,6 +132,7 @@ TEST_CASE( "Station Stating", "[SB][SB-5][SB-5.1]" ) {
     Algorithm::process(U->B[32], _FORCE);
     Algorithm::print_block_debug(U->B[32]);
 
+    U->B[32]->train->link(0, RAILTRAIN_ENGINE_TYPE);
     U->B[32]->train->setSpeed(0);
 
     CHECK(U->St[2]->occupied);

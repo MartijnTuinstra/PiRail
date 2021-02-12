@@ -112,13 +112,14 @@ class Block {
     struct rail_link prev;
 
     // -- Pointers --
-    Station * station;         // The station that
-    Path * path;               // The path this block is part off
+    Station * station = 0;     // The station that
+    Path * path = 0;           // The path this block is part off
 
     RailTrain * train;         // The train that is in this block
-    RailTrain * expectedTrain; // The train that is expected to enter this block
-    RailTrain * reservedBy;    // The train that has reserved this block in a whole path 
-                               //  A block with switches can be SWITCH_RESERVED. 
+    RailTrain * expectedTrain; // The train that is expected to be in this block
+
+    std::vector<RailTrain *> reservedBy;    // The train that has reserved this block in a whole path 
+                                            //  A block with switches can be SWITCH_RESERVED. 
 
     std::vector<Signal *> * forward_signal;
     std::vector<Signal *> * reverse_signal;
@@ -127,12 +128,12 @@ class Block {
     Switch ** Sw;
     MSSwitch * MSSw;
 
-    uint8_t reserved:2;
-    uint8_t switchReserved:2;
+    bool reserved;       // If the block is reserved
+    bool switchReserved; // If the block and switches are reserved
 
-    uint8_t blocked:1;
-    uint8_t virtualBlocked:1;
-    uint8_t detectionBlocked:1;
+    bool blocked;           // If either virtual or detection blocked
+    bool virtualBlocked;    // if virtual blocked
+    bool detectionBlocked;  // if blocked by detection
 
 
     uint8_t IOchanged:1;
@@ -161,8 +162,9 @@ class Block {
 
     void reverse();
 
-    void reserve();
-    void dereserve();
+    void reserve(RailTrain *);
+    void dereserve(RailTrain *);
+    bool isReservedBy(RailTrain *);
 
     void setState(enum Rail_states state);
     void setReversedState(enum Rail_states state);

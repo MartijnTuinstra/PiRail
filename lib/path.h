@@ -9,8 +9,8 @@ class Path {
   public:
     std::vector<Block *> Blocks;
 
-    bool direction;
-    bool reserved = 0;
+    bool direction = false;
+    bool reserved  = false;
 
     Block * Entrance;
     struct rail_link * prev; // Link to block before Entrance
@@ -25,6 +25,7 @@ class Path {
     bool end_direction;
 
     std::vector<RailTrain *> trains;
+    std::vector<RailTrain *> reservedTrains;
 
     Path(Block * B);
     ~Path();
@@ -34,8 +35,16 @@ class Path {
     void join(Path * P);
     void find();
 
-    void reserve();
+    void reserve(RailTrain *);
+    void dereserve(RailTrain *);
+    void trainAtEnd(RailTrain *);
+
+    void reg(RailTrain *);    // When the train enters the path
+    void unreg(RailTrain *);  // When the train leaves the path
+
     void reverse();
+    void reverse(RailTrain *);
+    bool reversable();
 
     void sprint(char * string);
     void print();

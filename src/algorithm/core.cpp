@@ -78,9 +78,8 @@ void process(Block * B, int flags){
     B->AlgorClear();
   }
 
-
   // if(flags & _DEBUG){
-    print_block_debug(B);
+  //   print_block_debug(B);
   // }
 
   //Follow the train arround the layout
@@ -427,9 +426,6 @@ void rail_state(Algor_Blocks * ABs, int debug){
   }
 
   if(B->blocked){
-    // Reset Reserved
-    B->reservedBy = 0;
-
     // Set states
     enum Rail_states prev1state = DANGER;
     enum Rail_states prev2state = CAUTION;
@@ -569,12 +565,8 @@ void train_following(Algor_Blocks * ABs, int debug){
 
     // loggerf(INFO, "%s", debugmsg);
 
-    if(B->reserved){
-      B->reserved--;
-      if(B->reserved == 0){
-        B->setState(PROCEED);
-        B->setReversedState(PROCEED);
-      }
+    if(B->reserved || B->switchReserved){
+      B->dereserve(B->reservedBy[0]);
     }
 
     if(B->expectedTrain){
@@ -858,49 +850,10 @@ void Connect_Rails(){
     usleep(100);
   }
 
-  save_setup();
+  auto s = BlockConnectorSetup();
+  s.save();
 
   SYS->modules_linked = 1;
-}
-
-void save_setup(){
-  char data[1024];
-  char * dataptr = data;
-
-  for(uint8_t i = 0; i < SwManager->Units.size; i++){
-    Unit * U = Units(i);
-    if(!U)
-      continue;
-
-    dataptr[0] = i;
-    dataptr[1] = U->connections_len;
-    dataptr += 2;
-
-    for(uint8_t j = 0; j < U->connections_len; j++){
-      dataptr[0] = U->connection[j].unit;
-      dataptr[1] = U->connection[j].connector;
-      dataptr[1] = U->connection[j].crossover;
-      dataptr += 3;
-    }
-  }
-
-  char filename[40];
-  time_t t = time(NULL);
-
-  struct tm tm = *localtime(&t);
-  sprintf(filename, "configs/setup-%04d%02d%02d-%02d%02d%02d.bin", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
-
-
-  FILE * fp = fopen(filename, "wb");
-
-  if(!fp){
-    loggerf(ERROR, "Failed to open file for setup saving");
-    return;
-  }
-
-  fwrite(data, (int)dataptr - (int)data, 1, fp);
-
-  fclose(fp);
 }
 
 

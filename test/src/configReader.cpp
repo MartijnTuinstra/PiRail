@@ -14,44 +14,44 @@ TEST_CASE("ConfigReader Same Version", "[CR]"){
 	struct configStruct_Switch Switch0 = {19, 20, {21,22,255}, {23,24,255}, {25,26,255}, 0, 14, 255, 10, 0, 0, 0, 0, 0};
 
 	struct configStruct_MSSwitchState MSSwitch0States_[2] = {{{31,32,255}, {33,34,255}, 100, 35, 1}, {{36,37,255}, {38,39,255}, 100, 40, 2}};
-	struct configStruct_MSSwitchState * MSSwitch0States = (struct configStruct_MSSwitchState *)_calloc(2, struct configStruct_MSSwitchState);
+	struct configStruct_MSSwitchState * MSSwitch0States = (struct configStruct_MSSwitchState *)calloc(2, sizeof(struct configStruct_MSSwitchState));
 	memcpy(MSSwitch0States, MSSwitch0States_, 2 * sizeof(struct configStruct_MSSwitchState));
 
 	struct configStruct_MSSwitch MSSwitch0 = {28, 29, 30, 2, 0, MSSwitch0States, 0};
 
 	char StationName_[16] = "TestStation";
-	char * StationName = (char *)_calloc(16, char);
+	char * StationName = (char *)calloc(16, sizeof(char));
 	strcpy(StationName, StationName_);
 
 	uint8_t StationBlocks_[1] = {0};
-	uint8_t * StationBlocks = (uint8_t *)_calloc(1, uint8_t);
+	uint8_t * StationBlocks = (uint8_t *)calloc(1, sizeof(uint8_t));
 	memcpy(StationBlocks, StationBlocks_, 1);
 
 	struct configStruct_Station Station0 = {41, 1, 12, 42, (2^16)-1, StationBlocks, StationName};
 
 	struct configStruct_SignalDependentSwitch SwitchDependency_[1] = {43, 44, 45};
-	struct configStruct_SignalDependentSwitch * SwitchDependency = (struct configStruct_SignalDependentSwitch *)_calloc(1, configStruct_SignalDependentSwitch);
+	struct configStruct_SignalDependentSwitch * SwitchDependency = (struct configStruct_SignalDependentSwitch *)calloc(1, sizeof(struct configStruct_SignalDependentSwitch));
 	memcpy(SwitchDependency, SwitchDependency_, 1);
 	struct configStruct_SignalEvent SignalEvent_[1] = {{{50,51,52,53,54,55,56,57}}};
-	struct configStruct_SignalEvent * SignalEvent = (struct configStruct_SignalEvent *)_calloc(1, configStruct_SignalEvent);
+	struct configStruct_SignalEvent * SignalEvent = (struct configStruct_SignalEvent *)calloc(1, sizeof(struct configStruct_SignalEvent));
 	memcpy(SignalEvent, SignalEvent_, 1);
 	struct configStruct_IOport SignalIO_[1] = {{46, 47}};
-	struct configStruct_IOport * SignalIO = (struct configStruct_IOport *)_calloc(1, configStruct_IOport);
+	struct configStruct_IOport * SignalIO = (struct configStruct_IOport *)calloc(1, sizeof(struct configStruct_IOport));
 	memcpy(SignalIO, SignalIO_, 1);
 
 	struct configStruct_Signal Signal0 = {48, 49, {50, 51, 52}, 1, 1, SignalIO, SignalEvent, SwitchDependency};
 
-	uint8_t * buffer = (uint8_t *)_calloc(2048, 1);
-	uint8_t * start = buffer;
+	uint8_t * buffer = (uint8_t *)calloc(2048, sizeof(char));
+	uint8_t * buf_ptr = &buffer[0];
 
-	Config_write_Unit(&Unit, &buffer);
-	Config_write_Block(&Block0, &buffer);
-	Config_write_Switch(&Switch0, &buffer);
-	Config_write_MSSwitch(&MSSwitch0, &buffer);
-	Config_write_Station(&Station0, &buffer);
-	Config_write_Signal(&Signal0, &buffer);
+	Config_write_Unit(&Unit, &buf_ptr);
+	Config_write_Block(&Block0, &buf_ptr);
+	Config_write_Switch(&Switch0, &buf_ptr);
+	Config_write_MSSwitch(&MSSwitch0, &buf_ptr);
+	Config_write_Station(&Station0, &buf_ptr);
+	Config_write_Signal(&Signal0, &buf_ptr);
 
-	printf("%i bytes to be written\n", (unsigned int)(buffer - start));
+	printf("%i bytes to be written\n", (unsigned int)(buffer - buf_ptr));
 
 	struct configStruct_Unit ReadUnit;
 	struct configStruct_Block Block0Read;
@@ -60,14 +60,14 @@ TEST_CASE("ConfigReader Same Version", "[CR]"){
 	struct configStruct_Station Station0Read;
 	struct configStruct_Signal Signal0Read;
 
-	buffer = start;
+	buf_ptr = &buffer[0];
 
-	Config_read_Unit_1(&ReadUnit, &buffer);
-	Config_read_Block_1(&Block0Read, &buffer);
-	Config_read_Switch_0(&Switch0Read, &buffer);
-	Config_read_MSSwitch_0(&MSSwitch0Read, &buffer);
-	Config_read_Station_0(&Station0Read, &buffer);
-	Config_read_Signal_0(&Signal0Read, &buffer);
+	Config_read_Unit_1(&ReadUnit, &buf_ptr);
+	Config_read_Block_1(&Block0Read, &buf_ptr);
+	Config_read_Switch_0(&Switch0Read, &buf_ptr);
+	Config_read_MSSwitch_0(&MSSwitch0Read, &buf_ptr);
+	Config_read_Station_0(&Station0Read, &buf_ptr);
+	Config_read_Signal_0(&Signal0Read, &buf_ptr);
 
 	// Unit
 	CHECK(ReadUnit.Module == Unit.Module);
@@ -183,6 +183,29 @@ TEST_CASE("ConfigReader Same Version", "[CR]"){
 	CHECK(Signal0Read.Switches[0].type == Signal0.Switches[0].type);
 	CHECK(Signal0Read.Switches[0].Sw == Signal0.Switches[0].Sw);
 	CHECK(Signal0Read.Switches[0].state == Signal0.Switches[0].state);
+
+	free(MSSwitch0States);
+	free(MSSwitch0Read.states);
+	free(MSSwitch0Read.IO_Ports);
+
+	free(StationName);
+	free(StationBlocks);
+	free(Station0Read.name);
+	free(Station0Read.blocks);
+
+	free(SwitchDependency);
+	free(SignalEvent);
+	free(SignalIO);
+	free(Switch0Read.IO_Ports);
+	free(Switch0Read.IO_Event);;
+	free(Switch0Read.FB_Ports);
+	free(Switch0Read.FB_Event);
+
+	free(Signal0Read.output);
+	free(Signal0Read.stating);
+	free(Signal0Read.Switches);
+
+	free(buffer);
 }
 
 TEST_CASE("ConfigReader oldVersion", "[CR]"){
@@ -190,14 +213,15 @@ TEST_CASE("ConfigReader oldVersion", "[CR]"){
 		0x10, 0x20, 0x01, 0x10, 0x01, 0xFF, 0x02, 0x02, 0x20, 0xFF, 0xFF, 0x10, 0x01, 0x00
 	};
 
-	uint8_t * buffer = (uint8_t *)_calloc(25, uint8_t);
+	uint8_t * buffer = (uint8_t *)calloc(25, sizeof(uint8_t));
+	uint8_t * buf_ptr = &buffer[0];
 	memcpy(buffer, buffer2, 14);
 
 	uint8_t fileVersion = 0;
 
 	struct configStruct_Block Block0Read;
 	printf("Read Block\n");
-	Config_read_Block(0, &Block0Read, &buffer);	
+	Config_read_Block(fileVersion, &Block0Read, &buf_ptr);
 
 	CHECK(Block0Read.id == 0x10);
 	CHECK(Block0Read.type == 0x20);
@@ -210,4 +234,6 @@ TEST_CASE("ConfigReader oldVersion", "[CR]"){
 	CHECK(Block0Read.speed == 0xFF);
 	CHECK(Block0Read.length == 0x0110);
 	CHECK(Block0Read.fl == 0x00);
+
+	free(buffer);
 }

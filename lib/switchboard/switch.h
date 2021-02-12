@@ -134,7 +134,7 @@ struct find {
 struct find findPath(RailTrain *, PathFinding::Route *, void *, struct rail_link, int);
 int setPath(RailTrain *, PathFinding::Route *, void *, struct rail_link, int);
 
-int setWrong(PathFinding::Route *, void *, struct rail_link, int);
+void setWrong(PathFinding::Route *, void *, struct rail_link, int);
 
 void dereservePath(RailTrain * T, PathFinding::Route * r, void * p, struct rail_link link, int flags);
 int reservePath(RailTrain *, PathFinding::Route *, void *, struct rail_link, int);

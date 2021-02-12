@@ -414,25 +414,49 @@ void Block::reverse(){
   Algorithm::print_block_debug(AB->B);
 }
 
-void Block::reserve(){
-  if(state >= PROCEED)
-    state = RESERVED;
-  reverse_state = DANGER;
+void Block::reserve(RailTrain * T){
 
-  reserved++;
+  if(!(switchReserved || reserved)){
+    if(type == NOSTOP){
+      switchReserved = true;
+      setState(RESERVED_SWITCH);
+    }
+    else{
+      loggerf(INFO, "ALSO RESERVE PATH"); // FIXME
+      reserved = true;
+      setState(RESERVED);
+    }
 
-  statechanged = 1;
-  U->block_state_changed = 1;
+    setReversedState(DANGER);
+  }
+
+  reservedBy.push_back(T);
 }
 
-void Block::dereserve(){
-  state = PROCEED;
-  reverse_state = PROCEED;
+void Block::dereserve(RailTrain * T){
 
-  reserved--;
+  reservedBy.erase(std::remove_if(reservedBy.begin(),
+                                  reservedBy.end(),
+                                  [T](const auto & o) { return (o == T); }),
+                                  reservedBy.end()
+                                 );
 
-  statechanged = 1;
-  U->block_state_changed = 1;
+  if(reservedBy.size() == 0){
+    setState(PROCEED);
+    setReversedState(PROCEED);
+
+    reserved = false;
+    switchReserved = false;
+  }
+}
+
+bool Block::isReservedBy(RailTrain * T){
+  for(auto t: reservedBy){
+    if(t == T)
+      return true;
+  }
+
+  return false;
 }
 
 void Block::setState(enum Rail_states state){
@@ -489,7 +513,7 @@ enum Rail_states Block::addSignal(Signal * Sig){
 
 
 void Block::AlgorClear(){
-  loggerf(INFO, "Block %02i:%02i AlgorClear", module, id);
+  loggerf(TRACE, "Block %02i:%02i AlgorClear", module, id);
   memset(Alg.P, 0, 10*sizeof(void *));
   memset(Alg.N, 0, 10*sizeof(void *));
   Alg.prev  = 0;
@@ -698,61 +722,61 @@ int dircmp(Block *A, Block *B){
 }
 
 
-void Reserve_To_Next_Switch(Block * B){
-  loggerf(WARNING, "Block_Reverse_To_Next_Switch %02i:%02i", B->module, B->id);
-  Block * Next_Block = 0;
-  Block * Prev_Block = 0;
+// void Reserve_To_Next_Switch(Block * B){
+//   loggerf(WARNING, "Block_Reverse_To_Next_Switch %02i:%02i", B->module, B->id);
+//   Block * Next_Block = 0;
+//   Block * Prev_Block = 0;
 
-  if(B->Alg.next > 0 && B->Alg.N[0])
-    Next_Block = B->Alg.N[0];
+//   if(B->Alg.next > 0 && B->Alg.N[0])
+//     Next_Block = B->Alg.N[0];
 
-  while(1){
-    if(!Next_Block){
-      break;
-    }
-    loggerf(INFO, "Reserve NSw %02i:%02i", Next_Block->module, Next_Block->id);
-    Next_Block->reserve();
-    // Block_reserve(Next_Block);
+//   while(1){
+//     if(!Next_Block){
+//       break;
+//     }
+//     loggerf(INFO, "Reserve NSw %02i:%02i", Next_Block->module, Next_Block->id);
+//     Next_Block->reserve();
+//     // Block_reserve(Next_Block);
 
-    if(Next_Block->Alg.next > 0 && Next_Block->Alg.N[0]){
-      if(Next_Block->Alg.N[0] == Prev_Block){
-        Next_Block = 0;
-      }
-      else{
-        Prev_Block = Next_Block;
-        Next_Block = Next_Block->Alg.N[0];
-        if(Next_Block->switch_len || Next_Block->MSSw)
-          Next_Block = 0;
-      }
-    }
-    else
-      Next_Block = 0;
+//     if(Next_Block->Alg.next > 0 && Next_Block->Alg.N[0]){
+//       if(Next_Block->Alg.N[0] == Prev_Block){
+//         Next_Block = 0;
+//       }
+//       else{
+//         Prev_Block = Next_Block;
+//         Next_Block = Next_Block->Alg.N[0];
+//         if(Next_Block->switch_len || Next_Block->MSSw)
+//           Next_Block = 0;
+//       }
+//     }
+//     else
+//       Next_Block = 0;
 
-    usleep(100000);
-  }
-}
+//     usleep(100000);
+//   }
+// }
 
-int Block_Reverse_To_Next_Switch(Block * B){
-  loggerf(WARNING, "Block_Reverse_To_Next_Switch %02i:%02i", B->module, B->id);
-  Block * Next_Block = 0;
+// int Block_Reverse_To_Next_Switch(Block * B){
+//   loggerf(WARNING, "Block_Reverse_To_Next_Switch %02i:%02i", B->module, B->id);
+//   Block * Next_Block = 0;
 
-  if(B->Alg.next > 0 && B->Alg.N[0])
-    Next_Block = B->Alg.N[0];
+//   if(B->Alg.next > 0 && B->Alg.N[0])
+//     Next_Block = B->Alg.N[0];
 
-  while(1){
-    if(!Next_Block){
-      break;
-    }
-    loggerf(INFO, "Block reverse NSw %02i:%02i", Next_Block->module, Next_Block->id);
-    Next_Block->reverse();
-    Next_Block->reserve();
-    // Block_Reverse(&Next_Block->Alg);
-    // Block_reserve(Next_Block);
+//   while(1){
+//     if(!Next_Block){
+//       break;
+//     }
+//     loggerf(INFO, "Block reverse NSw %02i:%02i", Next_Block->module, Next_Block->id);
+//     Next_Block->reverse();
+//     Next_Block->reserve();
+//     // Block_Reverse(&Next_Block->Alg);
+//     // Block_reserve(Next_Block);
 
-    if(Next_Block->Alg.next > 0 && Next_Block->Alg.N[0])
-      Next_Block = Next_Block->Alg.N[0];
-    else
-      Next_Block = 0;
-  }
-  return 0;
-}
+//     if(Next_Block->Alg.next > 0 && Next_Block->Alg.N[0])
+//       Next_Block = Next_Block->Alg.N[0];
+//     else
+//       Next_Block = 0;
+//   }
+//   return 0;
+// }

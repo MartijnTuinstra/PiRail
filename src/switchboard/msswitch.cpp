@@ -78,6 +78,10 @@ MSSwitch::~MSSwitch(){
   _free(sideB);
   _free(stateMaxSpeed);
   _free(state_direction);
+
+  for(uint8_t i = 0; i < state_len; i++){
+    _free(IO_states[i]);
+  }
   _free(IO_states);
   _free(IO);
 }

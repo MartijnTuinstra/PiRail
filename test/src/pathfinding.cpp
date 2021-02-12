@@ -21,9 +21,18 @@
 
 void init_test(char (* filenames)[30], int nr_files);
 
-TEST_CASE( "Path Finding", "[PF][PF-1]"){
+class TestsFixture {
+public:
+  TestsFixture();
+  void loadSwitchboard(char (* filenames)[30], int nr_files);
+  void loadStock();
+  ~TestsFixture();
+};
+
+TEST_CASE_METHOD(TestsFixture, "Path Finding", "[PF][PF-1]"){
   char filenames[1][30] = {"./testconfigs/PF-1.bin"};
-  init_test(filenames, 1);
+  loadSwitchboard(filenames, 1);
+  loadStock();
 
   Unit * U = switchboard::Units(1);
   REQUIRE(U);
@@ -58,7 +67,7 @@ TEST_CASE( "Path Finding", "[PF][PF-1]"){
     CHECK(route->found_forward);
     CHECK(!route->found_reverse);
 
-    // delete route;
+    delete route;
   }
 
   SECTION("II - Find Simple Switch S side"){
@@ -69,7 +78,7 @@ TEST_CASE( "Path Finding", "[PF][PF-1]"){
 
     CHECK(route->Sw_S[U->Sw[1]->uid]);
 
-    // delete route;
+    delete route;
   }
 
   SECTION("III - Find Simple Switch s side"){
@@ -81,7 +90,7 @@ TEST_CASE( "Path Finding", "[PF][PF-1]"){
 
     CHECK(route->Sw_s[U->Sw[0]->uid]);
 
-    // delete route;
+    delete route;
   }
 
   SECTION("IV - Find Circle"){
@@ -97,7 +106,7 @@ TEST_CASE( "Path Finding", "[PF][PF-1]"){
     REQUIRE(route->Sw_s[U->Sw[2]->uid]);
     CHECK(route->Sw_s[U->Sw[2]->uid]->nrOptions == 1);
 
-    // delete route;
+    delete route;
   }
 
   SECTION("IV - Find Circle with OneWay"){
@@ -114,7 +123,7 @@ TEST_CASE( "Path Finding", "[PF][PF-1]"){
     REQUIRE(route->Sw_s[U->Sw[2]->uid]);
     CHECK(route->Sw_s[U->Sw[2]->uid]->nrOptions == 1);
 
-    // delete route;
+    delete route;
   }
 
   SECTION("V - MSSwitch"){
@@ -141,10 +150,10 @@ TEST_CASE( "Path Finding", "[PF][PF-1]"){
     // REQUIRE(route->Sw_s[U->Sw[2]->uid]);
     // CHECK(route->Sw_s[U->Sw[2]->uid]->nrOptions == 1);
 
-    // delete route1;
-    // delete route2;
-    // delete route3;
+    delete route1;
+    delete route2;
+    delete route3;
   }
 
-  logger.setlevel_stdout(NONE);
+  // logger.setlevel_stdout(NONE);
 }

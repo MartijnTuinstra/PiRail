@@ -258,8 +258,12 @@ ModuleConfig::~ModuleConfig(){
   _free(MSSwitches);
   _free(Stations);
   _free(Signals);
-  _free(Layout);
   _free(buffer);
+
+  _free(Layout->Layout);
+  _free(Layout);
+
+  _free(header);
 }
 
 void ModuleConfig::newModule(uint8_t file, uint8_t connections){
@@ -322,7 +326,7 @@ int ModuleConfig::read(){
 
   Config_read_Unit(fileVersion, header, buf_ptr);
 
-  loggerf(DEBUG, "Module start reading %d, %d, %d, %d, %d, %d", header->IO_Nodes, header->Blocks, header->Switches, header->MSSwitches, header->Signals, header->Stations);
+  loggerf(INFO, "Module %i start reading %d, %d, %d, %d, %d, %d", header->Module, header->IO_Nodes, header->Blocks, header->Switches, header->MSSwitches, header->Signals, header->Stations);
 
   Nodes      = (struct configStruct_Node *)_calloc(header->IO_Nodes, struct configStruct_Node);
   Blocks     = (struct configStruct_Block *)_calloc(header->Blocks, struct configStruct_Block);
@@ -360,6 +364,9 @@ int ModuleConfig::read(){
   Config_read_WebLayout(fileVersion, Layout, buf_ptr);
 
   parsed = true;
+  
+  _free(buffer);
+  fclose(fp);
 
   return 1;
 }

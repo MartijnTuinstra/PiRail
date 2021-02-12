@@ -1,23 +1,17 @@
 #ifndef _INCLUDE_UTILS_QUEUE
 #define _INCLUDE_UTILS_QUEUE
 
-#include <thread>
-#include <mutex>
-#include <semaphore.h>
-
 template <class T>
-class Queue
+class FiFo
 {
   public:
-    Queue(int MaxSize);
-    ~Queue(void);
+    FiFo(int MaxSize);
+    ~FiFo(void);
 
     bool Add(const T &Item);
     bool AddOnce(const T &Item);
 
     T    Get(void);
-    T    waitGet(void);
-    T    waitGet(int timeout);
 
     inline int getItems(void);
     inline void clear(void);
@@ -27,26 +21,24 @@ class Queue
     T    Acquire(void);
 
   protected:
-    std::mutex mutex;
-    sem_t semaphore;
-
-    T *Data;
+    T * Array;
     const int MAX;
-    int Beginning = 0, End = 0;
+    int Beginning, End;
 
-    int Items = 0;
+    int Items;
 };
 
 template <class T>
-Queue<T>::Queue(int MaxSize): MAX(MaxSize) {
+Queue<T>::Queue(int MaxSize): MAX(MaxSize){
   Data = new T[MAX + 1];
-  sem_init(&semaphore, 0, 0);
+  Beginning = 0;
+  End = 0;
+  Items = 0;
 }
 
 template <class T>
 Queue<T>::~Queue(){
-  delete [] Data;
-  sem_destroy(&semaphore);
+  delete Data;
 }
 
 template <class T>

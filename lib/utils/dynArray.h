@@ -143,7 +143,6 @@ void dynArray<T>::empty(){
   size = 0;
   lastIndex = 0;
   items = 0;
-  allocate(increaseSize);
 }
 
 #endif

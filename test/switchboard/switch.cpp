@@ -17,10 +17,18 @@
 #include "algorithm/component.h"
 
 void init_test(char (* filenames)[30], int nr_files);
+class TestsFixture {
+public:
+  TestsFixture();
+  void loadSwitchboard(char (* filenames)[30], int nr_files);
+  void loadStock();
+  ~TestsFixture();
+};
 
-TEST_CASE( "Switch Link", "[SB][SB-2][SB-2.1]" ) {
+TEST_CASE_METHOD(TestsFixture, "Switch Link", "[SB][SB-2][SB-2.1]" ) {
   char filenames[1][30] = {"./testconfigs/SB-2.1.bin"};
-  init_test(filenames, 1);
+  loadSwitchboard(filenames, 1);
+  loadStock();
 
   Unit * U = switchboard::Units(1);
   REQUIRE(U);
@@ -81,27 +89,27 @@ TEST_CASE( "Switch Link", "[SB][SB-2][SB-2.1]" ) {
       Algorithm::process(U->B[i], _FORCE);
     }
 
-    REQUIRE(U->B[0]->Alg.next == 2);
-    REQUIRE(U->B[0]->Alg.N[0] == U->B[1]);
-    REQUIRE(U->B[0]->Alg.N[1] == U->B[2]);
+    CHECK(U->B[0]->Alg.next == 2);
+    CHECK(U->B[0]->Alg.N[0] == U->B[1]);
+    CHECK(U->B[0]->Alg.N[1] == U->B[2]);
 
     U->Sw[0]->setState(1);
-    REQUIRE(U->Sw[0]->state == 1);
+    CHECK(U->Sw[0]->state == 1);
 
     // Algor cleared
-    REQUIRE(U->B[0]->Alg.N[0] == 0);
-    REQUIRE(U->B[2]->Alg.P[0] == 0);
+    CHECK(U->B[0]->Alg.N[0] == 0);
+    CHECK(U->B[2]->Alg.P[0] == 0);
 
     Algorithm::tick();
 
-    REQUIRE(U->B[0]->Alg.next == 2);
-    REQUIRE(U->B[0]->Alg.N[0] == U->B[1]);
-    REQUIRE(U->B[0]->Alg.N[1] == U->B[3]);
+    CHECK(U->B[0]->Alg.next == 2);
+    CHECK(U->B[0]->Alg.N[0] == U->B[1]);
+    CHECK(U->B[0]->Alg.N[1] == U->B[3]);
 
     U->Sw[0]->setState(1);
 
     // Algor not cleared, no new state
-    REQUIRE(U->B[0]->Alg.N[0] != 0);
-    REQUIRE(U->B[3]->Alg.P[0] != 0);
+    CHECK(U->B[0]->Alg.N[0] != 0);
+    CHECK(U->B[3]->Alg.P[0] != 0);
   }
 }

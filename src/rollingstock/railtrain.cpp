@@ -44,6 +44,8 @@ RailTrain::RailTrain(Block * B): blocks(0, 0), reservedBlocks(0, 0){
 
 RailTrain::~RailTrain(){
   loggerf(WARNING, "Destroy RailTrain %i %x %i", id, this, Detectables);
+
+  scheduler->removeEvent(speed_event);
   // train_link[id] = 0;
   blocks.clear();
   dereserveAll();
@@ -53,6 +55,11 @@ RailTrain::~RailTrain(){
 
   if(DetectedBlocks)
     _free(DetectedBlocks);
+
+  if(route){
+    delete route;
+    route = 0;
+  }
 }
 
 void RailTrain::setBlock(Block * sB){
@@ -73,23 +80,13 @@ void RailTrain::releaseBlock(Block * rB){
 void RailTrain::reserveBlock(Block * rB){
   loggerf(TRACE, "train %i: reserveBlock %2i:%2i", id, rB->module, rB->id);
 
-  rB->reservedBy = this;
-  if(rB->type == NOSTOP){
-    rB->switchReserved = true;
-    rB->setState(RESERVED_SWITCH);
-  }
-  else{
-    loggerf(INFO, "ALSO RESERVE PATH"); // FIXME
-    rB->reserved = true;
-    rB->setState(RESERVED);
-  }
+  rB->reserve(this);
   reservedBlocks.push_back(rB);
 }
 
 void RailTrain::dereserveBlock(Block * rB){
   loggerf(TRACE, "train %i: dereserveBlock %2i:%2i", id, rB->module, rB->id);
-  rB->reservedBy = 0;
-  rB->switchReserved = false;
+  rB->dereserve(this);
 
   reservedBlocks.erase(std::remove_if(reservedBlocks.begin(),
                                       reservedBlocks.end(),
@@ -102,8 +99,7 @@ void RailTrain::dereserveAll(){
   for(auto b: reservedBlocks){
     if(!b)
       continue;
-    b->reservedBy = 0;
-    b->switchReserved = false;
+    b->dereserve(this);
   }
 
   reservedBlocks.clear();
@@ -206,7 +202,7 @@ void RailTrain::initMoveForward(Block * tB){
 
   setBlock(tB);
 
-  uint16_t blockLength = length + tB->length;
+  int32_t blockLength = length + tB->length;
   Block * listBlock = tB;
 
   // Find front of train
@@ -228,7 +224,7 @@ void RailTrain::initMoveForward(Block * tB){
   uint8_t i = 0;
   uint8_t DetectableCounter = 0;
   bool expecting = true;
-  while((blockLength > 0 || listBlock->train == this) && listBlock){
+  while(listBlock && (blockLength > 0 || listBlock->train == this)){
     blockLength -= listBlock->length;
 
     if(listBlock->train == this){
@@ -242,7 +238,7 @@ void RailTrain::initMoveForward(Block * tB){
         }
       }
 
-      loggerf(INFO, "RT_BFIFO %02i:%02i %i %i < %i", listBlock->module, listBlock->id, listBlock->detectionBlocked, DetectableCounter, Detectables);
+      loggerf(INFO, "RT_BFIFO %02i:%02i %i %i < %i... %i", listBlock->module, listBlock->id, listBlock->detectionBlocked, DetectableCounter, Detectables, blockLength);
 
       if(listBlock->detectionBlocked){
         struct RailTrainBlocksFifo * DB = &DetectedBlocks[DetectableCounter];
@@ -285,10 +281,11 @@ void RailTrain::moveForward(Block * tB){
     if(_B->Alg.next > 0 && _B->Alg.N[0] == tB){
       Block * nextBlock = _B->Next_Block(NEXT, 2);
 
-      loggerf(WARNING, "Expecting %02i:%02i", nextBlock->module, nextBlock->id);
+      if(nextBlock){
+        loggerf(WARNING, "Expecting %02i:%02i", nextBlock->module, nextBlock->id);
 
-      if(nextBlock)
         nextBlock->expectedTrain = this;
+      }
 
       if(i == 0){
         B = tB;
@@ -357,13 +354,15 @@ void RailTrain::changeSpeed(uint16_t _target_speed, uint8_t _type){
     return;
   }
 
-  loggerf(DEBUG, "train_change_speed %i -> %i", id, _target_speed);
+  loggerf(DEBUG, "ailTrain::changeSpeed %i     -> %i km/h", id, _target_speed);
   //target_speed = target_speed;
 
   if(_type == IMMEDIATE_SPEED){
     changing_speed = RAILTRAIN_SPEED_T_DONE;
     setSpeedZ21(_target_speed);
-    WS_stc_UpdateTrain(this);
+
+    if(assigned)
+      WS_stc_UpdateTrain(this);
   }
   else if(_type == GRADUAL_SLOW_SPEED){
     train_speed_event_create(this, _target_speed, B->length*2);
@@ -374,22 +373,82 @@ void RailTrain::changeSpeed(uint16_t _target_speed, uint8_t _type){
 }
 
 void RailTrain::reverse(){
+  if(!assigned || !directionKnown)
+    return;
 
+  if(speed != 0){
+    setSpeed(0);
+    return;
+  }
+
+  if(reverseDirection){
+    reverseBlocks();
+    return;
+  }
+
+  std::vector<Path *> paths;
+  for(auto b: blocks){
+    if(b->type == NOSTOP || !b->path)
+      continue;
+
+    bool pathFound = false;
+    for(auto p: paths){
+      if(p == b->path)
+        pathFound = true;
+    }
+
+    if(!pathFound)
+      paths.push_back(b->path);
+  }
+
+  bool reversed = false;
+  for(auto p: paths){
+    if(reversed){
+      p->reverse(this);
+    }
+    else{
+      p->reverse();
+      reversed = true;
+    }
+  }
 }
 
-void RailTrain::reverseZ21(){
+void RailTrain::reverseFromPath(Path * P){
+  bool otherPath = false;
+
+  for(auto b: blocks){
+    if(b->type == NOSTOP)
+      b->reverse();
+
+    else if(b->path && b->path != P)
+      otherPath = true;
+  }
+
+  P->dereserve(this);
+
+  if(otherPath){
+    reverseDirection = true;
+  }
+
+  reverseBlocks();
+}
+
+void RailTrain::reverseBlocks(){
+  if(!assigned || !directionKnown)
+    return;
+
   // Remove expectedTrain
   for(uint8_t i = 0; i < Detectables; i++){
     auto DB = &DetectedBlocks[i];
-    Block * nextBlock = DB->B[DB->Front - 1]->Next_Block(NEXT, 1);
+    Block * _B = DB->B[(DB->Front + RAILTRAIN_FIFO_SIZE - 1) % RAILTRAIN_FIFO_SIZE];
+    Block * nextBlock = _B->Next_Block(PREV, 1);
 
-    loggerf(INFO, "Disregarding expectedTrain %02i:%02i", nextBlock->module, nextBlock->id);
+    loggerf(INFO, "Disregarding expectedTrain %02i -> %02i:%02i", _B->id, nextBlock->module, nextBlock->id);
 
     if(nextBlock->expectedTrain == this)
       nextBlock->expectedTrain = 0;
 
   }
-
 
   // Reverse DetectedBlocks
   uint8_t leftIndex  = 0;
@@ -424,54 +483,54 @@ void RailTrain::reverseZ21(){
     }
   }
 
-  // Reverse all paths and blocks that the train is occupying
-  auto paths = std::vector<Path *>();
+  // Reverse all blocks that the train is occupying
+  //  Paths are allready reversed.
   auto switchBlocks = std::vector<Block *>();
 
   for(auto b: blocks){
-    bool path = true;
-
     if(b->type == NOSTOP){
       switchBlocks.push_back(b);
-      continue;
     }
-
-    //else
-
-    for(auto p: paths){
-      if(p == b->path)
-        path = false;
-    }
-
-    if(path && b->path)
-      paths.push_back(b->path);
   }
 
   for(auto b: switchBlocks)
     b->reverse();
 
-  for(auto p: paths)
-    p->reverse();
-
 
   // Add expectedTrain
-  for(uint8_t i = 0; i < Detectables; i++){
-    auto DB = &DetectedBlocks[i];
-    Block * nextBlock = DB->B[DB->Front - 1]->Next_Block(NEXT, 1);
+  if(!reverseDirection){
+    for(uint8_t i = 0; i < Detectables; i++){
+      auto DB = &DetectedBlocks[i];
+      Block * nextBlock = DB->B[(DB->Front + RAILTRAIN_FIFO_SIZE - 1) % RAILTRAIN_FIFO_SIZE]->Next_Block(NEXT, 1);
 
-    loggerf(INFO, "Setting expectedTrain %02i:%02i", nextBlock->module, nextBlock->id);
+      loggerf(INFO, "Setting expectedTrain %02i:%02i", nextBlock->module, nextBlock->id);
 
-    if(nextBlock->expectedTrain == 0)
-      nextBlock->expectedTrain = this;
+      if(nextBlock->expectedTrain == 0)
+        nextBlock->expectedTrain = this;
 
+    }
   }
 
   B = DetectedBlocks[0].B[DetectedBlocks[0].Front - 1];
+  dir ^= 1;
+
+  setSpeed(0);
+}
+
+void RailTrain::reverseZ21(){
+  
 }
 
 
 void RailTrain::setRoute(Block * dest){
   // struct pathfindingstep path = pathfinding(T->B, dest);
+
+  route = PathFinding::find(B, dest);
+
+  if(route)
+    onroute = 1;
+  else
+    onroute = 0;
 
   // if(path.found){
   //   T->route = 1;
@@ -480,7 +539,7 @@ void RailTrain::setRoute(Block * dest){
 }
 
 
-int RailTrain::link(int tid, char type){  
+int RailTrain::link(int tid, char _type){  
   // Link train or engine to RailTrain class.
   //
   //  tID = id of train or engine
@@ -489,7 +548,7 @@ int RailTrain::link(int tid, char type){
   char * name;
 
   // If it is only a engine -> make it a train
-  if(type == RAILTRAIN_ENGINE_TYPE){
+  if(_type == RAILTRAIN_ENGINE_TYPE){
     if(RSManager->getEngine(tid)->use){
       loggerf(ERROR, "Engine allready used");
       return 3;
@@ -497,7 +556,7 @@ int RailTrain::link(int tid, char type){
 
     // Create train from engine
     Engine * E = RSManager->getEngine(tid);
-    type = RAILTRAIN_ENGINE_TYPE;
+    type = _type;
     p.E = E;
     MaxSpeed = E->max_speed;
     length = E->length;
@@ -508,7 +567,7 @@ int RailTrain::link(int tid, char type){
     Detectables = 1;
 
     //Lock engines
-    E->use = 1;
+    E->use = true;
     E->RT = this;
   }
   else{
@@ -520,7 +579,7 @@ int RailTrain::link(int tid, char type){
     }
 
     // Crate Rail Train
-    type = RAILTRAIN_TRAIN_TYPE;
+    type = _type;
     p.T = T;
     MaxSpeed = T->max_speed;
     length = T->length;
@@ -559,6 +618,10 @@ int RailTrain::link(int tid, char type, uint8_t nrT, RailTrain ** T){
   for(uint8_t i = 0; i < nrT; i++){
     for(auto b: T[i]->blocks){
       setBlock(b);
+      if(b->path){
+        b->path->dereserve(T[i]);
+        b->path->unreg(T[i]);
+      }
     }
 
     RSManager->removeRailTrain(T[i]);

@@ -38,7 +38,7 @@ class Manager {
     ::dynArray<Signal *>   uniqueSignal;
     ::dynArray<Station *>  uniqueStation;
 
-    ::dynArray<String *>  filenames = dynArray<String *>(5);
+    ::dynArray<String *>  filenames;
     ::dynArray<ModuleConfig *> Configs;
 
     Manager();

@@ -11,9 +11,13 @@ struct allocations {
 	void * pointer;
 };
 
+extern struct allocations * allocations;
+
 extern unsigned int allocs;
 
 void init_allocs();
+void destroy_allocs();
+
 void * my_calloc(int elements, int size, const char * file, const int line);
 void * my_realloc(void * p, int type_size, int elements, const char * file, const int line);
 void * my_free(void ** p, const char * file, const int line);

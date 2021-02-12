@@ -19,9 +19,18 @@
 
 void init_test(char (* filenames)[30], int nr_files);
 
-TEST_CASE( "Block Link", "[SB][SB-1][SB-1.1]" ) {
+class TestsFixture {
+public:
+  TestsFixture();
+  void loadSwitchboard(char (* filenames)[30], int nr_files);
+  void loadStock();
+  ~TestsFixture();
+};
+
+TEST_CASE_METHOD(TestsFixture, "Block Link", "[SB][SB-1][SB-1.1]" ) {
   char filenames[1][30] = {"./testconfigs/SB-1.1.bin"};
-  init_test(filenames, 1);
+  loadSwitchboard(filenames, 1);
+  loadStock();
 
   Unit * U = switchboard::Units(1);
   REQUIRE(U);
@@ -101,9 +110,12 @@ TEST_CASE( "Block Link", "[SB][SB-1][SB-1.1]" ) {
   }
 }
 
-TEST_CASE( "Block Algorithm Search", "[SB][SB-1][SB-1.2]" ) {
+TEST_CASE_METHOD(TestsFixture, "Block Algorithm Search", "[SB][SB-1][SB-1.2]" ) {
   char filenames[1][30] = {"./testconfigs/SB-1.2.bin"};
-  init_test(filenames, 1);
+  loadSwitchboard(filenames, 1);
+  loadStock();
+
+  // logger.setlevel_stdout(INFO);
 
   Unit * U = switchboard::Units(1);
   REQUIRE(U);
@@ -333,9 +345,10 @@ TEST_CASE( "Block Algorithm Search", "[SB][SB-1][SB-1.2]" ) {
   }
 }
 
-TEST_CASE( "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" ) {
+TEST_CASE_METHOD(TestsFixture, "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" ) {
   char filenames[1][30] = {"./testconfigs/SB-1.3.bin"};
-  init_test(filenames, 1);
+  loadSwitchboard(filenames, 1);
+  loadStock();
 
   Unit * U = switchboard::Units(1);
   REQUIRE(U);
@@ -599,9 +612,10 @@ TEST_CASE( "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" ) {
   }
 }
 
-TEST_CASE("Block Max Speed", "[SB][SB-1][SB-1.4]") {
-    char filenames[1][30] = {"./testconfigs/SB-1.4.bin"};
-  init_test(filenames, 1);
+TEST_CASE_METHOD(TestsFixture, "Block Max Speed", "[SB][SB-1][SB-1.4]") {
+  char filenames[1][30] = {"./testconfigs/SB-1.4.bin"};
+  loadSwitchboard(filenames, 1);
+  loadStock();
 
   Unit * U = switchboard::Units(1);
   REQUIRE(U);

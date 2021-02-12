@@ -44,7 +44,7 @@ class Engine {
     uint8_t steps_len;
     struct EngineSpeedSteps * steps;
 
-    struct train_funcs function[29];
+    struct train_funcs function[29] = {{0, 0, 0}};
 
     uint16_t length;    //in mm   
     char * name;

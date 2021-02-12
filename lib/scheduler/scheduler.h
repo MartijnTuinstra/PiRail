@@ -22,6 +22,7 @@ class Scheduler{
 
         void removeEvent(uint16_t index);
     public:
+        ~Scheduler();
         void start();
         void stop();
         void update();

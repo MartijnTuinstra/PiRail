@@ -61,6 +61,11 @@ void init_main(){
   init_allocs();
 }
 
+void destroy_main(){
+  _free(SYS);
+  destroy_allocs();
+}
+
 const char * e_SYS_Module_State_string[8] = {
   "Module_STOP",
   "Module_Init_Parent",

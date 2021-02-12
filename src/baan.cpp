@@ -23,16 +23,11 @@ char * UART_Serial_Port = 0;
 
 
 int main(int argc, char * argv[]){
+  scheduler = new Scheduler();
+  RSManager = new RollingStock::Manager();
+  switchboard::SwManager = new switchboard::Manager();
+
   srand(time(NULL));
-
-  uint8_t i = 16;
-  for(uint8_t j = 0; j < 32; j++)
-    printf("%i\n", (i + j + 30) % 30);
-
-  for(uint8_t j = 0; j < 32; j++)
-    printf("%i\n", (uint8_t)(i - j + 30) % 30);
-
-  return 1;
 
   init_main();
   logger.setfilename("log.txt");
@@ -92,11 +87,10 @@ int main(int argc, char * argv[]){
   SYS->stop = 1;
 
   scheduler->stop();
-
-  // unload_module_Configs();
-  switchboard::SwManager->clear();
+  
+  delete switchboard::SwManager;
   delete RSManager;
-  // unload_rolling_Configs();
+  delete scheduler;
 
   loggerf(INFO, "STOPPED");
   delete WSServer;

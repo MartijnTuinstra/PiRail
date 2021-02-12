@@ -91,6 +91,7 @@ int _find_free_index(void *** list, int * length);
 
 void system_init(struct s_systemState * S);
 void init_main();
+void destroy_main();
 
 #define mutex_lock(mutex, name) loggerf(TRACE, "  Lock mutex %s", name);\
                                 pthread_mutex_lock(mutex);

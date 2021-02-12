@@ -13,7 +13,7 @@
 std::vector<Path *> pathlist;
 
 Path::Path(Block * B){
-  loggerf(TRACE, "NEW PATH %02i:%02i    %x", B->module, B->id, (unsigned int)this);
+  loggerf(DEBUG, "NEW PATH %02i:%02i    %x", B->module, B->id, (unsigned int)this);
 
   if(B->path)
     loggerf(CRITICAL, "Block has allready a path");
@@ -39,9 +39,14 @@ Path::Path(Block * B){
 }
 
 Path::~Path(){
-  char buffer[100];
+  char buffer[400];
   sprint(buffer);
-  loggerf(DEBUG, "Path destroyed %s", buffer);
+
+  Blocks.clear();
+  trains.clear();
+  reservedTrains.clear();
+
+  loggerf(DEBUG, "Path destroyed %x %s", (unsigned int)this, buffer);
 }
 
 void Path::updateEntranceExit(){
@@ -288,11 +293,10 @@ void Path::find(){
 
 void Path::sprint(char * string){
   char buffer[200];
-  char * bufferptr = buffer;
+  char * bufferptr = &buffer[0];
   for(auto b: this->Blocks){
     bufferptr += sprintf(bufferptr, "%02d:%02d ", b->module, b->id);
   }
-  bufferptr = string;
 
   string += sprintf(string, "%2i:%2i ---%02d->> %2i:%2i\n", Entrance->module, Entrance->id, Blocks.size(), Exit->module, Exit->id);
 
@@ -307,15 +311,26 @@ void Path::print(){
   printf("%s\n", buffer);
 }
 
-void Path::reverse(){
-  loggerf(INFO, "Path::reverse");
-
+bool Path::reversable(){
   for(RailTrain * T: trains){
     if(T->speed){
       loggerf(INFO, "Path has a moving train");
-      return;
+      return false;
     }
   }
+
+  return true;
+}
+
+void Path::reverse(){
+  return reverse((RailTrain *)0);
+}
+
+void Path::reverse(RailTrain * RT){
+  loggerf(INFO, "Path::reverse");
+
+  if(!reversable())
+    return;
 
   direction ^= 1;
 
@@ -324,21 +339,62 @@ void Path::reverse(){
   }
 
   for(RailTrain * T: trains){
+    if(RT == T)
+      continue;
+
     loggerf(INFO, "Reverse Train");
-    T->reverse();
-    T->setSpeedZ21(0);
+    T->reverseFromPath(this);
   }
 
   std::swap(next, prev);
   std::swap(Entrance, Exit);
 }
 
-void Path::reserve(){
-  this->reserved = 1;
+void Path::reserve(RailTrain * T){
+  reserved = true;
+  reservedTrains.push_back(T);
 
-  for(Block * B: this->Blocks){
-    B->reserve();
+  for(auto B: Blocks){
+    T->reserveBlock(B);
   }
+}
+
+void Path::dereserve(RailTrain * RT){
+  reservedTrains.erase(std::remove_if(reservedTrains.begin(),
+                                     reservedTrains.end(),
+                                     [RT](const auto & o) { return (o == RT); }),
+                                     reservedTrains.end()
+                                    );
+
+  for(auto B: Blocks){
+    RT->dereserveBlock(B);
+  }
+
+  if(reservedTrains.size() == 0)
+    reserved = false;
+}
+void Path::trainAtEnd(RailTrain * RT){
+  reservedTrains.erase(std::remove_if(reservedTrains.begin(),
+                                     reservedTrains.end(),
+                                     [RT](const auto & o) { return (o == RT); }),
+                                     reservedTrains.end()
+                                    );
+
+  if(reservedTrains.size() == 0)
+    reserved = false;
+}
+
+
+
+void Path::reg(RailTrain * RT){
+  trains.push_back(RT);
+}
+void Path::unreg(RailTrain * RT){
+  trains.erase(std::remove_if(trains.begin(),
+                              trains.end(),
+                             [RT](const auto & o) { return (o == RT); }),
+                             trains.end()
+                            );
 }
 
 void pathlist_find(){

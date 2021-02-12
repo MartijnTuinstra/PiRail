@@ -12,26 +12,29 @@ struct allocations * allocations;
 pthread_mutex_t mem_lock;
 
 void init_allocs(){
-  allocations = (struct allocations *)_calloc(2048, struct allocations);
+  allocations = (struct allocations *)calloc(2048, sizeof(struct allocations));
   allocs = 2048;
+}
+
+void destroy_allocs(){
+  free(allocations);
 }
 
 void * my_calloc(int elements, int size, const char * file, const int line){
   void * p = calloc(elements, size);
   logger.f(MEMORY, file, line, "calloc \tsize: %i \tpointer: %08x", elements * size, p);
-/*
-  pthread_mutex_lock(&mem_lock);
-  for(unsigned int i = 0; i < allocs; i++){
-    if(!allocations[i].pointer){
-      allocations[i].pointer = p;
-      allocations[i].location = (char *)calloc(30, sizeof(char));
-      sprintf(allocations[i].location, "%s:%i", file, line);
-      break;
-    }
-  }
-  pthread_mutex_unlock(&mem_lock);
 
-  */
+  // pthread_mutex_lock(&mem_lock);
+  // for(unsigned int i = 0; i < allocs; i++){
+  //   if(!allocations[i].pointer){
+  //     allocations[i].pointer = p;
+  //     allocations[i].location = (char *)calloc(30, sizeof(char));
+  //     sprintf(allocations[i].location, "%s:%i", file, line);
+  //     break;
+  //   }
+  // }
+  // pthread_mutex_unlock(&mem_lock);
+
   return p;
 }
 
@@ -82,5 +85,5 @@ void print_allocs(){
     }
   }
 
-  free(allocations);
+  destroy_allocs();
 }

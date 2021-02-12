@@ -199,28 +199,37 @@ void RollingConfig::addCar(Car * C){
 }
 
 RollingConfig::~RollingConfig(){
-  // _free(P_Cat);
-  // _free(C_Cat);
+  loggerf(DEBUG, "RollingConfig Destroy");
 
-  // for(uint8_t i = 0; i < header->Engines; i++){
-  //   _free(Engines[i].name);
-  //   _free(Engines[i].img_path);
-  //   _free(Engines[i].icon_path);
-  //   _free(Engines[i].speed_steps);
+  // for(uint8_t i = 0; i < header->PersonCatagories; i++){
+  //   _free(P_Cat->name);
   // }
-  // _free(Engines);
+  // for(uint8_t i = 0; i < header->CargoCatagories; i++){
+  //   _free(C_Cat->name);
+  // }
 
-  // for(uint8_t i = 0; i < header->Cars; i++){
-  //   _free(Cars[i].name);
-  //   _free(Cars[i].icon_path);
-  // }
-  // _free(Cars);
+  _free(P_Cat);
+  _free(C_Cat);
 
-  // for(uint8_t i = 0; i < header->Trains; i++){
-  //   _free(Trains[i].name);
-  //   _free(Trains[i].composition);
-  // }
-  // _free(Trains);
+  for(uint8_t i = 0; i < header->Engines; i++){
+    _free(Engines[i].name);
+    _free(Engines[i].img_path);
+    _free(Engines[i].icon_path);
+    _free(Engines[i].speed_steps);
+  }
+  _free(Engines);
+
+  for(uint8_t i = 0; i < header->Cars; i++){
+    _free(Cars[i].name);
+    _free(Cars[i].icon_path);
+  }
+  _free(Cars);
+
+  for(uint8_t i = 0; i < header->Trains; i++){
+    _free(Trains[i].name);
+    _free(Trains[i].composition);
+  }
+  _free(Trains);
 
   _free(header);
   _free(buffer);

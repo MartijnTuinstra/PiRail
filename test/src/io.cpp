@@ -18,9 +18,18 @@
 
 void init_test(char (* filenames)[30], int nr_files);
 
-TEST_CASE( "IO  Creation and linking", "[IO][IO-1]" ) {
+class TestsFixture {
+public:
+  TestsFixture();
+  void loadSwitchboard(char (* filenames)[30], int nr_files);
+  void loadStock();
+  ~TestsFixture();
+};
+
+TEST_CASE_METHOD(TestsFixture, "IO  Creation and linking", "[IO][IO-1]" ) {
   char filenames[1][30] = {"./testconfigs/IO-1.bin"};
-  init_test(filenames, 1);
+  loadSwitchboard(filenames, 1);
+  loadStock();
 
   Unit * U = switchboard::Units(1);
   REQUIRE(U);
@@ -68,9 +77,10 @@ TEST_CASE( "IO  Creation and linking", "[IO][IO-1]" ) {
   }
 }
 
-TEST_CASE( "IO Output", "[IO][IO-2]"){
+TEST_CASE_METHOD(TestsFixture, "IO Output", "[IO][IO-2]"){
   char filenames[1][30] = {"./testconfigs/IO-1.bin"};
-  init_test(filenames, 1);
+  loadSwitchboard(filenames, 1);
+  loadStock();
 
   Unit * U = switchboard::Units(1);
   REQUIRE(U);
@@ -90,9 +100,10 @@ TEST_CASE( "IO Output", "[IO][IO-2]"){
   REQUIRE(U->Node[0]->io[22]->r_state.value == IO_event_High);
 }
 
-TEST_CASE( "IO and Switchboard object", "[IO][IO-3]"){
+TEST_CASE_METHOD(TestsFixture, "IO and Switchboard object", "[IO][IO-3]"){
   char filenames[1][30] = {"./testconfigs/IO-3.bin"};
-  init_test(filenames, 1);
+  loadSwitchboard(filenames, 1);
+  loadStock();
 
   Unit * U = switchboard::Units(1);
   REQUIRE(U);
@@ -107,7 +118,7 @@ TEST_CASE( "IO and Switchboard object", "[IO][IO-3]"){
   }
 
   SECTION("II - Switches"){
-    logger.setlevel_stdout(INFO);
+    // logger.setlevel_stdout(INFO);
     loggerf(ERROR, "Setting Sw 0 to state 1");
     // Solonoid operated switch
     U->Sw[0]->setState(1);

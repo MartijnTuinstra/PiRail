@@ -14,14 +14,25 @@
 
 #include "rollingstock/railtrain.h"
 
+#include "algorithm/core.h"
+
 #include "train.h"
 #include "path.h"
 
 void init_test(char (* filenames)[30], int nr_files);
 
-TEST_CASE( "Path Construction", "[PATH][PATH-1]" ) {
+class TestsFixture {
+public:
+  TestsFixture();
+  void loadSwitchboard(char (* filenames)[30], int nr_files);
+  void loadStock();
+  ~TestsFixture();
+};
+
+TEST_CASE_METHOD(TestsFixture, "Path Construction", "[PATH][PATH-1]" ) {
   char filenames[2][30] = {"./testconfigs/PATH-1.bin"};
-  init_test(filenames, 1);
+  loadSwitchboard(filenames, 1);
+  loadStock();
 
   Unit * U = switchboard::Units(1);
   REQUIRE(U);
@@ -224,10 +235,11 @@ TEST_CASE( "Path Construction", "[PATH][PATH-1]" ) {
   }
 }
 
-TEST_CASE( "Path Reverse", "[PATH][PATH-2]") {
+TEST_CASE_METHOD(TestsFixture, "Path Reverse", "[PATH][PATH-2]") {
   loggerf(CRITICAL, "PATH-2 TEST");
   char filenames[1][30] = {"./testconfigs/PATH-2.bin"};
-  init_test(filenames, 1);
+  loadSwitchboard(filenames, 1);
+  loadStock();
 
   Unit * U = switchboard::Units(1);
   REQUIRE(U);
@@ -240,51 +252,114 @@ TEST_CASE( "Path Reverse", "[PATH][PATH-2]") {
   REQUIRE(U->B[0]->path == U->B[10]->path);
   Path * P = U->B[0]->path;
 
-  U->B[2]->setDetection(1);
-  U->B[2]->train = new RailTrain(U->B[2]);
+  SECTION("I - Only reversing the path"){
 
-  U->B[8]->setDetection(1);
-  U->B[8]->train = new RailTrain(U->B[8]);
+    CHECK(P->next == &U->B[10]->next);
+    CHECK(P->prev == &U->B[0]->prev);
 
-  REQUIRE(RSManager->getRailTrain(0)->dir == 0);
-  REQUIRE(RSManager->getRailTrain(1)->dir == 0);
+    P->reverse();
 
-  CHECK(P->next == &U->B[10]->next);
-  CHECK(P->prev == &U->B[0]->prev);
+    CHECK(P->Entrance == U->B[10]);
+    CHECK(P->Exit == U->B[0]);
 
-  P->reverse();
+    CHECK(P->next == &U->B[0]->prev);
+    CHECK(P->prev == &U->B[10]->next);
 
-  CHECK(P->Entrance == U->B[10]);
-  CHECK(P->Exit == U->B[0]);
+    CHECK(P->direction == 1);
 
-  CHECK(P->next == &U->B[0]->prev);
-  CHECK(P->prev == &U->B[10]->next);
+    for(uint8_t i = 0; i < 11; i++)
+      CHECK(U->B[i]->dir == 0b100);
 
-  CHECK(P->direction == 1);
+    P->reverse();
 
-  for(uint8_t i = 0; i < 11; i++)
-    CHECK(U->B[i]->dir == 0b100);
+    CHECK(P->Entrance == U->B[0]);
+    CHECK(P->Exit == U->B[10]);
 
-  CHECK(RSManager->getRailTrain(0)->dir == 1);
-  CHECK(RSManager->getRailTrain(1)->dir == 1);
+    CHECK(P->next == &U->B[10]->next);
+    CHECK(P->prev == &U->B[0]->prev);
 
-  RSManager->getRailTrain(0)->speed = 10;
+    CHECK(P->direction == 0);
 
-  P->reverse();
+    for(uint8_t i = 0; i < 11; i++)
+      CHECK(U->B[i]->dir == 0b000);
+  }
 
-  CHECK(P->direction == 1);
+  SECTION("II - One Train on the path"){
+    U->B[4]->setDetection(1);
+    Algorithm::process(U->B[4], _FORCE);
 
-  for(uint8_t i = 0; i < 11; i++)
-    CHECK(U->B[i]->dir == 0b100);
+    REQUIRE(U->B[4]->train);
 
-  CHECK(RSManager->getRailTrain(0)->dir == 1);
-  CHECK(RSManager->getRailTrain(1)->dir == 1);
+    U->B[4]->train->link(0, RAILTRAIN_ENGINE_TYPE);
+    U->B[4]->train->setSpeed(10);
+
+    U->B[5]->setDetection(1);
+    Algorithm::process(U->B[5], _FORCE);
+
+    REQUIRE(U->B[4]->train->assigned);
+    REQUIRE(U->B[4]->train->directionKnown);
+
+    // logger.setlevel_stdout(TRACE);
+
+    // Train is moving so no reversing
+    P->reverse();
+
+    CHECK(P->direction == 0);
+
+    U->B[4]->train->setSpeed(0);
+
+    // Train is stopped so should be reversed
+    P->reverse();
+
+    CHECK(P->direction == 1);
+
+    U->B[4]->train->setSpeed(0);
+
+    CHECK(U->B[4]->train->dir == 1);
+
+  }
+
+  SECTION("III - More trains"){
+    U->B[1]->setDetection(1);
+    Algorithm::process(U->B[1], _FORCE);
+
+    U->B[8]->setDetection(1);
+    Algorithm::process(U->B[8], _FORCE);
+
+    REQUIRE(U->B[1]->train);
+    REQUIRE(U->B[8]->train);
+
+    U->B[1]->train->setSpeed(10);
+    U->B[1]->train->link(0, RAILTRAIN_ENGINE_TYPE);
+    U->B[8]->train->setSpeed(10);
+    U->B[8]->train->link(1, RAILTRAIN_ENGINE_TYPE);
+
+    U->B[2]->setDetection(1);
+    Algorithm::process(U->B[2], _FORCE);
+    U->B[9]->setDetection(1);
+    Algorithm::process(U->B[9], _FORCE);
+
+    // Trains are mvoing
+    P->reverse();
+    CHECK(P->direction == 0);
+
+    U->B[1]->train->setSpeed(0);
+
+    P->reverse();
+    CHECK(P->direction == 0);
+
+    U->B[9]->train->setSpeed(0);
+
+    P->reverse();
+    CHECK(P->direction == 1);
+  }
 }
 
-TEST_CASE( "Path Reserve", "[PATH][PATH-3]") {
+TEST_CASE_METHOD(TestsFixture, "Path Reserve", "[PATH][PATH-3]") {
   loggerf(CRITICAL, "PATH-3 TEST");
   char filenames[1][30] = {"./testconfigs/PATH-2.bin"};
-  init_test(filenames, 1);
+  loadSwitchboard(filenames, 1);
+  loadStock();
   
   Unit * U = switchboard::Units(1);
   REQUIRE(U);
@@ -297,10 +372,12 @@ TEST_CASE( "Path Reserve", "[PATH][PATH-3]") {
   REQUIRE(U->B[0]->path == U->B[10]->path);
   Path * P = U->B[0]->path;
 
-  P->reserve();
+  RailTrain * RT = new RailTrain(U->B[0]);
 
-  CHECK(P->reserved == 1);
+  P->reserve(RT);
+
+  CHECK(P->reserved);
 
   for(uint8_t i = 0; i < 11; i++)
-    CHECK(U->B[i]->reserved == 1);
+    CHECK(U->B[i]->reserved);
 }

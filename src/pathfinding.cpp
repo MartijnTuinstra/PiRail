@@ -59,12 +59,12 @@ struct step findStep(struct control c){
     .next = 0
   };
 
-  char t[6][4] = {"B  ", "SwS", "Sws", "MA ", "MB "};
+  // char t[6][4] = {"B  ", "SwS", "Sws", "MA ", "MB "};
 
-  if(c.link->type <= RAIL_LINK_MB)
-    loggerf(INFO, "PF::findStep \t %s %02i:%02i  %x", t[c.link->type], c.link->module, c.link->id, (unsigned int)c.link->p.p);
-  else if(c.link->type == RAIL_LINK_E)
-    loggerf(INFO, "PF::findStep \t E", c.link->module, c.link->id);
+  // if(c.link->type <= RAIL_LINK_MB)
+  //   loggerf(INFO, "PF::findStep \t %s %02i:%02i  %x", t[c.link->type], c.link->module, c.link->id, (unsigned int)c.link->p.p);
+  // else if(c.link->type == RAIL_LINK_E)
+  //   loggerf(INFO, "PF::findStep \t E", c.link->module, c.link->id);
 
   if(c.prev == c.start){
     loggerf(WARNING, "Returned back to start");
@@ -82,7 +82,7 @@ struct step findStep(struct control c){
     if(!c.prev)
       c.prev = c.start;
 
-    loggerf(INFO, "%02i:%02i %i %i\n", c.prev->module, c.prev->id, c.prev->dir, c.dir);
+    // loggerf(INFO, "%02i:%02i %i %i\n", c.prev->module, c.prev->id, c.prev->dir, c.dir);
 
     if(!dircmp(c.prev, B)){
       c.dir ^= PREV;
@@ -134,10 +134,10 @@ struct step findStep(struct control c){
     // Check solution for each side
     struct step str, div;
     c.link = &Sw->str;
-    loggerf(INFO, " SwS %2i:%2i Str", Sw->module, Sw->id);
+    // loggerf(INFO, " SwS %2i:%2i Str", Sw->module, Sw->id);
     str = findStep(c);
     c.link = &Sw->div;
-    loggerf(INFO, " SwS %2i:%2i Div", Sw->module, Sw->id);
+    // loggerf(INFO, " SwS %2i:%2i Div", Sw->module, Sw->id);
     div = findStep(c);
 
     loggerf(INFO, " SwS %2i:%2i Result %i|%i", Sw->module, Sw->id, str.found, div.found);
@@ -185,7 +185,7 @@ struct step findStep(struct control c){
     c.prevPtr = Sw;
 
     c.link = &Sw->app;
-    loggerf(INFO, " Sws %2i:%2i App", Sw->module, Sw->id);
+    // loggerf(INFO, " Sws %2i:%2i App", Sw->module, Sw->id);
     struct step app = findStep(c);
 
     instr->type = RAIL_LINK_s;
@@ -217,7 +217,7 @@ struct step findStep(struct control c){
     else
       instr = c.MSSw_B[Sw->uid];
 
-    loggerf(INFO, "MSSw %2i:%2i -> instr %x", Sw->module, Sw->id, (unsigned int)instr);
+    // loggerf(INFO, "MSSw %2i:%2i -> instr %x", Sw->module, Sw->id, (unsigned int)instr);
 
     // If switch allready has an instruction
     if(instr){
@@ -279,7 +279,7 @@ struct step findStep(struct control c){
         opposite = &Sw->sideB[i];
       }
     
-      loggerf(INFO, " MSSw%c %2i:%2i state %i", tmpLink->type == RAIL_LINK_MA ? 'A':'B', Sw->module, Sw->id, i);
+      // loggerf(INFO, " MSSw%c %2i:%2i state %i", tmpLink->type == RAIL_LINK_MA ? 'A':'B', Sw->module, Sw->id, i);
 
       steps[i] = findStep(c);
 
@@ -363,7 +363,7 @@ void findStepSolveMSSw(MSSwitch * Sw, struct instruction * instr, struct step * 
     instr->nrOptions++;
   
     //  Shifting all entries after position
-    for (int j = instr->nrOptions; j >= pos; j--) {
+    for (int j = instr->nrOptions; j > pos; j--) {
       instr->options[j] = instr->options[j - 1];
       instr->next[j] = instr->next[j - 1];
       instr->length[j] = instr->length[j - 1];
@@ -373,6 +373,8 @@ void findStepSolveMSSw(MSSwitch * Sw, struct instruction * instr, struct step * 
     instr->next[pos] = steps[i].next;
     instr->length[pos] = steps[i].length;
   }
+
+  _free(steps);
 }
 
 Route::Route(struct control c, struct step forward, struct step reverse){
@@ -388,21 +390,44 @@ Route::Route(struct control c, struct step forward, struct step reverse){
 
 Route::~Route(){
   for(uint16_t i = 0; i < SwManager->uniqueSwitch.size; i++){
-    if(Sw_S[i])
-      _free(Sw_S);
+    if(Sw_S[i]){
+      _free(Sw_S[i]->options);
+      _free(Sw_S[i]->next);
+      _free(Sw_S[i]->length);
+      _free(Sw_S[i]->possible);
 
-    if(Sw_s[i])
-      _free(Sw_s);
+      _free(Sw_S[i]);
+    }
+
+    if(Sw_s[i]){
+      _free(Sw_s[i]->options);
+      _free(Sw_s[i]->next);
+      _free(Sw_s[i]->length);
+
+      _free(Sw_s[i]);
+    }
   }
   _free(Sw_S);
   _free(Sw_s);
 
   for(uint16_t i = 0; i < SwManager->uniqueMSSwitch.size; i++){
-    if(MSSw_A[i])
-      _free(MSSw_A);
+    if(MSSw_A[i]){
+      _free(MSSw_A[i]->options);
+      _free(MSSw_A[i]->next);
+      _free(MSSw_A[i]->length);
+      _free(MSSw_A[i]->possible);
 
-    if(MSSw_B[i])
-      _free(MSSw_B);
+      _free(MSSw_A[i]);
+    }
+
+    if(MSSw_B[i]){
+      _free(MSSw_B[i]->options);
+      _free(MSSw_B[i]->next);
+      _free(MSSw_B[i]->length);
+      _free(MSSw_B[i]->possible);
+
+      _free(MSSw_B[i]);
+    }
   }
   _free(MSSw_A);
   _free(MSSw_B);

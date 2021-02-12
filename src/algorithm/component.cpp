@@ -122,7 +122,11 @@ int InitProcess(void){
 
     for(int j = 0; j < U->block_len; j++){
       if(U->B[j]){
+        if(i == 10 && j == 5)
+          logger.setlevel_stdout(TRACE);
         process(U->B[j], _FORCE);
+        if(i == 10 && j == 5)
+          logger.setlevel_stdout(INFO);
       }
     }
     for(int j = 0; j < U->switch_len; j++){

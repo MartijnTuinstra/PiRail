@@ -214,7 +214,19 @@ void connect_connectors(BlockConnectors * Connectors, uint8_t * blockedConnector
   _free(blockedConnectors);
 }
 
-int load_setup(char * filename, BlockConnectors * Connectors){
+BlockConnectorSetup::BlockConnectorSetup(){
+  time_t t = time(NULL);
+
+  struct tm tm = *localtime(&t);
+  sprintf(filename, "configs/setup-%04d%02d%02d-%02d%02d%02d.bin", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+}
+
+BlockConnectorSetup::BlockConnectorSetup(const char * _filename){
+  strncpy(filename, _filename, 60);
+}
+
+int BlockConnectorSetup::load(BlockConnectors * Connectors){
+  loggerf(INFO, "Load setup %s", filename);
   FILE * fp = fopen(filename, "rb");
 
   if(!fp){
@@ -226,32 +238,31 @@ int load_setup(char * filename, BlockConnectors * Connectors){
   long fsize = ftell(fp);
   fseek(fp, 0, SEEK_SET);
 
-  char * buffer = (char *)_calloc(fsize + 10, char);
-  char * buffer_ptr = buffer;
+  uint8_t * buffer = (uint8_t *)_calloc(fsize + 10, uint8_t);
+  uint8_t * buffer_ptr = &buffer[0];
   fread(buffer, fsize, 1, fp);
+
+  struct configStruct_ConnectorSetup setup;
 
   // uint8_t ** buf_ptr = (uint8_t **)&buffer;
 
+  loggerf(INFO, " (%i - %i) < %i", buffer_ptr, buffer, fsize);
   for(uint8_t i = 0; (buffer_ptr - buffer) < fsize; i++){
-    uint8_t unit = buffer_ptr[0];
 
-    Unit * U = Units(unit);
+    Config_read_ConnectorSetup(0, &setup, &buffer_ptr);
+
+    Unit * U = Units(setup.unit);
     if(!U){
-      loggerf(ERROR, "Unknown Unit (%i) in setup!! Aborting!!", unit);
+      loggerf(ERROR, "Unknown Unit (%i) in setup!! Aborting!!", setup.unit);
       return -2;
     }
 
-    uint8_t connections = buffer_ptr[1];
-    buffer_ptr += 2;
-
-    for(uint8_t j = 0; j < connections; j++){
-      uint8_t newunit = buffer_ptr[j * 3];
-      uint8_t newconnector = buffer_ptr[j * 3 + 1];
-      bool crossover = buffer_ptr[j * 3 + 2];
+    for(uint8_t j = 0; j < setup.connections; j++){
+      struct configStruct_Connector connector = setup.connectors[j];
 
       if(U->connection[j].unit){
-        if(!(U->connection[j].unit == newunit && U->connection[j].connector == newconnector))
-          loggerf(ERROR, "connection allready occupied");
+        if(!(U->connection[j].unit == connector.unit && U->connection[j].connector == connector.connector))
+          loggerf(WARNING, "connection allready occupied");
         continue;
       }
 
@@ -259,26 +270,30 @@ int load_setup(char * filename, BlockConnectors * Connectors){
       BlockConnector * B = 0;
       uint16_t idA = 0, idB = 0;
 
+      loggerf(INFO, "load BlockConnector search A-%02i:%02i\tB-%02i:%02i", setup.unit, j+1, connector.unit, connector.connector);
+
       for(uint8_t k = 0; k < Connectors->size(); k++){ //auto Connector: Connectors){
         BlockConnector * C = Connectors->operator[](k);
 
-        if(C->unit == unit && C->connector == j + 1){
+        loggerf(INFO, "  searching %02i:%02i", C->unit, C->connector);
+
+        if(C->unit == setup.unit && C->connector == j + 1){
           idA = k;
           A = C;
         }
 
-        if(C->unit == newunit && C->connector == newconnector){
+        if(C->unit == connector.unit && C->connector == connector.connector){
           idB = k;
           B = C;
         }
       }
 
       if(!A || !B){
-        loggerf(ERROR, "Cloud not find Connectors");
-        return -2;
+        loggerf(ERROR, "Cloud not find Connectors %c%c", !A ? 'A' : ' ', !B ? 'B' : ' ');
+        return -3;
       }
 
-      A->connect(B, crossover);
+      A->connect(B, connector.crossover);
 
       delete A;
       delete B;
@@ -293,8 +308,53 @@ int load_setup(char * filename, BlockConnectors * Connectors){
       }
     }
 
-    buffer_ptr += 3 * connections;
+    _free(setup.connectors);
   }
+
+  fclose(fp);
+  _free(buffer);
+
+  return 1;
+}
+
+int BlockConnectorSetup::save(){
+  uint8_t data[1024];
+  uint8_t * dataptr = &data[0];
+
+  for(uint8_t i = 0; i < SwManager->Units.size; i++){
+    Unit * U = Units(i);
+    if(!U)
+      continue;
+    loggerf(INFO, "Save setup unit %i, %x %x, %i", i, data, dataptr, (int)dataptr - (int)data);
+
+    struct configStruct_ConnectorSetup setup;
+
+    setup.unit = i;
+    setup.connections = U->connections_len;
+
+    setup.connectors = (struct configStruct_Connector *)_calloc(U->connections_len, struct configStruct_Connector);
+
+    for(uint8_t j = 0; j < U->connections_len; j++){
+      loggerf(INFO, "Saving connection %i %i %i", U->connection[j].unit, U->connection[j].connector, U->connection[j].crossover);
+      setup.connectors[j].unit = U->connection[j].unit;
+      setup.connectors[j].connector = U->connection[j].connector;
+      setup.connectors[j].crossover = U->connection[j].crossover;
+    }
+
+    Config_write_ConnectorSetup(&setup, &dataptr);
+    _free(setup.connectors);
+  }
+
+  FILE * fp = fopen(filename, "wb");
+
+  if(!fp){
+    loggerf(ERROR, "Failed to open file for setup saving");
+    return -1;
+  }
+
+  fwrite(data, (int)dataptr - (int)data, 1, fp);
+
+  fclose(fp);
 
   return 1;
 }

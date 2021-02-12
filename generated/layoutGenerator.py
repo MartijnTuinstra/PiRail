@@ -102,7 +102,11 @@ class Structure:
 				elif hasattr(f, "lengthField"):
 					len_field = self.pS[f.lengthField].name
 
-					s += f"\n    obj->{self.pS[f.id].name} = ({FieldType} *)_calloc(obj->{len_field} * {sizeMultiply}, {FieldType});\n"
+					extraSize = 0
+					if hasattr( self.pS[f.id], "nested") and self.pS[f.id].nested == FT.CHAR:
+						extraSize = 1
+
+					s += f"\n    obj->{self.pS[f.id].name} = ({FieldType} *)_calloc(obj->{len_field} * {sizeMultiply} + {extraSize}, {FieldType});\n"
 					s += f"    memcpy(obj->{self.pS[f.id].name}, *buffer, obj->{len_field} * {sizeMultiply} * sizeof({FieldType}));\n"
 					s += f"    *buffer += sizeof({FieldType}) * {sizeMultiply} * obj->{len_field};\n"
 					
@@ -240,8 +244,8 @@ class Structure:
 		functionList += ",\n    ".join([f"&Config_read_{self.name}_{i}" for i in range(0, len(self.fS))])
 		functionList += "\n};\n"
 		functionHList = "extern " + functionHList + ";\n"
-		functionHList += (f"#define Config_read_{self.name}(version, header, buffer) Config_read_{self.name}_list[Config_{self.filename}LU" +
-		                  f"[fileVersion][CONFIG_{self.filename.upper()}_LU_{self.name.upper()}]](header, buffer);\n")
+		functionHList += (f"#define Config_read_{self.name}(_V, _H, _B) Config_read_{self.name}_list[Config_{self.filename}LU" +
+		                  f"[_V][CONFIG_{self.filename.upper()}_LU_{self.name.upper()}]](_H, _B);\n")
 
 		structure = self.generateCstruct();
 

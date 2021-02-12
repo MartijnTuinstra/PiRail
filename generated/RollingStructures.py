@@ -1,17 +1,20 @@
 from .layoutGenerator import *
 
-versionLookup = [[0,0,0,0,0,0,0]]
+versionLookup = [[0,0,0,0,0,0,0],
+                 [1,0,0,0,0,0,0]]
+
 CFL = ConfigFileLayout("RollingStructure", versionLookup, includePath="config/", sourcePath="generated/src/config/", headerPath="generated/lib/config/")
 
 CFL.addStructure("TrainHeader",
   [
     StF(0,"PersonCatagories", FT.U8),
     StF(1,"CargoCatagories",  FT.U8),
-    StF(2,"Engines",          FT.U8),
-    StF(3,"Cars",             FT.U8),
-    StF(4,"Trains",           FT.U8)
+    StF(2,"Engines",          FT.U16),
+    StF(3,"Cars",             FT.U16),
+    StF(4,"Trains",           FT.U16)
   ],
-  [[FF(FT.U8, 0), FF(FT.U8, 1), FF(FT.U8, 2), FF(FT.U8, 3), FF(FT.U8, 4)]]
+  [[FF(FT.U8, 0), FF(FT.U8, 1), FF(FT.U8,  2), FF(FT.U8,  3), FF(FT.U8,  4)],
+   [FF(FT.U8, 0), FF(FT.U8, 1), FF(FT.U16, 2), FF(FT.U16, 3), FF(FT.U16, 4)]]
 )
 
 SpeedStepConfig = CFL.addStructure("EngineSpeedSteps",

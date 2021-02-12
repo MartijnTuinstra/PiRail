@@ -9,7 +9,17 @@ BlockConnectors find_connectors();
 uint8_t * find_connectable(BlockConnectors * Connectors);
 void connect_connectors(BlockConnectors * Connectors, uint8_t * blockedConnectors);
 
-int load_setup(char * filename, BlockConnectors * Connectors);
+class BlockConnectorSetup {
+public:
+  char filename[61];
+
+  BlockConnectorSetup();
+  BlockConnectorSetup(const char * filename);
+
+  int save();
+  int load(BlockConnectors * Connectors);
+};
+
 
 }; // namespace
 

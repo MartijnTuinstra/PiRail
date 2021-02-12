@@ -262,9 +262,9 @@ int RollingConfig::read(){
 
   header = (struct configStruct_TrainHeader *)_calloc(1, struct configStruct_TrainHeader);
 
-  Config_read_TrainHeader(fileVerion, header, buf_ptr);
+  Config_read_TrainHeader(fileVersion, header, buf_ptr);
 
-  loggerf(WARNING, "RollingConfig: %i %i %i %i %i  (%x - %x)", header->PersonCatagories, header->CargoCatagories, header->Engines, header->Cars, header->Trains, base_buf_ptr, *buf_ptr);
+  loggerf(INFO, "RollingConfig: %i %i %i %i %i  (%x - %x)", header->PersonCatagories, header->CargoCatagories, header->Engines, header->Cars, header->Trains, base_buf_ptr, *buf_ptr);
 
   P_Cat   = (struct configStruct_Category *)_calloc(header->PersonCatagories, struct configStruct_Category);
   C_Cat   = (struct configStruct_Category *)_calloc(header->CargoCatagories, struct configStruct_Category);
@@ -293,6 +293,9 @@ int RollingConfig::read(){
   }
 
   parsed = true;
+
+  _free(buffer);
+  fclose(fp);
 
   return 1;
 }

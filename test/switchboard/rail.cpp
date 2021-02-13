@@ -360,11 +360,8 @@ TEST_CASE_METHOD(TestsFixture, "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" )
   }
 
   /*
-  // SECTION I
-  //  --1.0->  --1.1->  --1.2->  --1.3->  --1.4->  --1.5->
-  //
-  // SECTION II
-  //  --1.6->  --1.7->  --1.8->  1.9>  --1.10->  --1.11->
+  // SECTION I                                             SECTION II
+  //  --1.0->  --1.1->  --1.2->  --1.3->  --1.4->  --1.5-> --1.6->  --1.7->  --1.8->  1.9>  --1.10->  --1.11->
   //
   // SECTION III
   //  <-1.12- <-1.13- -1.14-> -1.15-> 
@@ -378,7 +375,7 @@ TEST_CASE_METHOD(TestsFixture, "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" )
   //              Sw0\--> |end
   //
   // SECTION VI
-  //              /MSSw1:0
+  //               /MSSw1:0
   //  1.20->  -\  /
   //  1.21->  --1.22-> --1.23->
   //                \- --1.24->
@@ -427,49 +424,55 @@ TEST_CASE_METHOD(TestsFixture, "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" )
     CHECK(U->B[10]->Alg.P[3]->state == PROCEED);
   }
 
-  // SECTION("III - Blocks change direction"){
-  //   U->B[15]->AlgorSearch(0);
-  //   Algorithm::print_block_debug(U->B[15]);
+  SECTION("IIb - End of line"){
+    Algorithm::process(U->B[11], _FORCE);
+    CHECK(U->B[11]->state == CAUTION);
+  }
 
-  //   REQUIRE(U->B[15]->Alg.next == 0);
-  //   REQUIRE(U->B[15]->Alg.prev == 1);
+  /*
+  SECTION("III - Blocks change direction"){
+    U->B[15]->AlgorSearch(0);
+    Algorithm::print_block_debug(U->B[15]);
 
-  //   CHECK(U->B[15]->Alg.P[0] == U->B[14]);
+    REQUIRE(U->B[15]->Alg.next == 0);
+    REQUIRE(U->B[15]->Alg.prev == 1);
 
-  //   CHECK(U->B[15]->Alg.prev1 == 1);
+    CHECK(U->B[15]->Alg.P[0] == U->B[14]);
 
-  //   U->B[13]->reverse();
-  //   U->B[12]->reverse();
-  //   U->B[15]->AlgorSearch(0);
-  //   Algorithm::print_block_debug(U->B[15]);
+    CHECK(U->B[15]->Alg.prev1 == 1);
 
-  //   REQUIRE(U->B[15]->Alg.next == 0);
-  //   REQUIRE(U->B[15]->Alg.prev == 3);
+    U->B[13]->reverse();
+    U->B[12]->reverse();
+    U->B[15]->AlgorSearch(0);
+    Algorithm::print_block_debug(U->B[15]);
 
-  //   CHECK(U->B[15]->Alg.P[0] == U->B[14]);
-  //   CHECK(U->B[15]->Alg.P[1] == U->B[13]);
-  //   CHECK(U->B[15]->Alg.P[2] == U->B[12]);
+    REQUIRE(U->B[15]->Alg.next == 0);
+    REQUIRE(U->B[15]->Alg.prev == 3);
 
-  //   CHECK(U->B[15]->Alg.prev1 == 1);
-  //   CHECK(U->B[15]->Alg.prev2 == 2);
-  // }
+    CHECK(U->B[15]->Alg.P[0] == U->B[14]);
+    CHECK(U->B[15]->Alg.P[1] == U->B[13]);
+    CHECK(U->B[15]->Alg.P[2] == U->B[12]);
 
-  // SECTION("III - Blocks change direction"){
-  //   U->B[47]->AlgorSearch(0);
-  //   Algorithm::print_block_debug(U->B[47]);
+    CHECK(U->B[15]->Alg.prev1 == 1);
+    CHECK(U->B[15]->Alg.prev2 == 2);
+  }
 
-  //   REQUIRE(U->B[47]->Alg.next == 0);
-  //   REQUIRE(U->B[47]->Alg.prev == 4);
+  SECTION("IV - Blocks change direction"){
+    U->B[47]->AlgorSearch(0);
+    Algorithm::print_block_debug(U->B[47]);
 
-  //   CHECK(U->B[47]->Alg.P[0] == U->B[46]);
-  //   CHECK(U->B[47]->Alg.P[1] == U->B[45]);
-  //   CHECK(U->B[47]->Alg.P[2] == U->B[44]);
-  //   CHECK(U->B[47]->Alg.P[3] == U->B[43]);
+    REQUIRE(U->B[47]->Alg.next == 0);
+    REQUIRE(U->B[47]->Alg.prev == 4);
 
-  //   CHECK(U->B[47]->Alg.prev1 == 1);
-  //   CHECK(U->B[47]->Alg.prev2 == 2);
-  //   CHECK(U->B[47]->Alg.prev3 == 3);
-  // }
+    CHECK(U->B[47]->Alg.P[0] == U->B[46]);
+    CHECK(U->B[47]->Alg.P[1] == U->B[45]);
+    CHECK(U->B[47]->Alg.P[2] == U->B[44]);
+    CHECK(U->B[47]->Alg.P[3] == U->B[43]);
+
+    CHECK(U->B[47]->Alg.prev1 == 1);
+    CHECK(U->B[47]->Alg.prev2 == 2);
+    CHECK(U->B[47]->Alg.prev3 == 3);
+  } */
 
   SECTION("V - Blocks and switch"){
     U->B[19]->setDetection(1);
@@ -530,34 +533,70 @@ TEST_CASE_METHOD(TestsFixture, "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" )
     CHECK(U->B[16]->state == CAUTION);
   }
 
-  // SECTION("VI - Blocks and msswitch"){
-  //   U->B[20]->AlgorSearch(0);
-  //   U->B[21]->AlgorSearch(0);
-  //   U->B[23]->AlgorSearch(0);
-  //   U->B[24]->AlgorSearch(0);
-  //   Algorithm::print_block_debug(U->B[20]);
-  //   Algorithm::print_block_debug(U->B[21]);
-  //   Algorithm::print_block_debug(U->B[23]);
-  //   Algorithm::print_block_debug(U->B[24]);
+  SECTION("VI - Blocks and msswitch"){
+    logger.setlevel_stdout(DEBUG);
 
-  //   REQUIRE(U->B[21]->Alg.next == 2);
-  //   REQUIRE(U->B[21]->Alg.prev == 0);
+    U->B[23]->setDetection(1);
 
-  //   REQUIRE(U->B[20]->Alg.next == 0);
-  //   REQUIRE(U->B[20]->Alg.prev == 0);
+    Algorithm::process(U->B[23], _FORCE);
 
-  //   CHECK(U->B[21]->Alg.N[0] == U->B[22]);
-  //   CHECK(U->B[21]->Alg.N[1] == U->B[23]);
+    CHECK(U->B[23]->Alg.P[0]->state == DANGER);
+    CHECK(U->B[23]->Alg.P[1]->state == DANGER);
+    // CHECK(U->B[19]->Alg.P[2]->state == CAUTION);
 
-  //   REQUIRE(U->B[23]->Alg.next == 0);
-  //   REQUIRE(U->B[23]->Alg.prev == 2);
+    loggerf(DEBUG, "set MSSw[0]");
 
-  //   REQUIRE(U->B[24]->Alg.next == 0);
-  //   REQUIRE(U->B[24]->Alg.prev == 0);
+    U->MSSw[0]->setState(1);
+    Algorithm::process(U->B[22], _FORCE);
 
-  //   CHECK(U->B[23]->Alg.P[0] == U->B[22]);
-  //   CHECK(U->B[23]->Alg.P[1] == U->B[21]);
-  // }
+    REQUIRE(U->B[22]->Alg.prev == 1);
+
+    CHECK(U->B[22]->state == PROCEED);
+
+    U->MSSw[0]->state = 0; // Force update of all blocks
+    U->MSSw[0]->setState(1);
+
+    Algorithm::process(U->B[20], _FORCE);
+    Algorithm::process(U->B[21], _FORCE);
+    Algorithm::process(U->B[22], _FORCE);
+    Algorithm::process(U->B[23], _FORCE);
+    Algorithm::process(U->B[24], _FORCE);
+
+    CHECK(U->B[20]->state == PROCEED);
+    CHECK(U->B[21]->state == CAUTION);
+    CHECK(U->B[22]->state == PROCEED);
+    CHECK(U->B[24]->state == CAUTION);
+
+    // U->Sw[0]->feedback[0]->setInput(IO_event_High); // Set feedback right TODO
+
+    // Algorithm::process(U->B[17], _FORCE);
+
+    // CHECK(!U->B[17]->switchWrongFeedback);
+    // CHECK(U->B[17]->state == DANGER);  // No blocks after, so still danger
+    // CHECK(U->B[16]->state == CAUTION);
+
+    // U->B[19]->setDetection(0);
+
+    // U->Sw[0]->setState(0);
+    // U->Sw[0]->feedback[0]->setInput(IO_event_Low); // Set feedback right
+
+    // Algorithm::process(U->B[16], _FORCE);
+    // Algorithm::process(U->B[17], _FORCE);
+    // Algorithm::process(U->B[18], _FORCE);
+    // Algorithm::process(U->B[19], _FORCE);
+
+    // CHECK(!U->B[17]->switchWrongFeedback);
+
+    // CHECK(U->B[17]->state == PROCEED);
+
+    // U->Sw[0]->Detection->switchWrongState = true;
+
+    // Algorithm::process(U->B[17], _FORCE);
+
+    // CHECK(U->B[17]->switchWrongState);
+    // CHECK(U->B[17]->state == DANGER);
+    // CHECK(U->B[16]->state == CAUTION);
+  }
 
   SECTION("VII - Blocks and station"){
     U->B[28]->setDetection(1);

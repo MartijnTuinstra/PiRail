@@ -58,6 +58,11 @@ TEST_CASE_METHOD(TestsFixture, "Path Finding", "[PF][PF-1]"){
   //           1.48> -----1.49> 1.50> 1.51> 1.52----------> 1.53>  
   //                     Sw5                  Sw6
   //
+  //                     ---->
+  //     1.54> 1.55--->  1.56>
+  //                \-> <1.57
+  //                    <----
+  //
   //
   */
 
@@ -153,6 +158,22 @@ TEST_CASE_METHOD(TestsFixture, "Path Finding", "[PF][PF-1]"){
     delete route1;
     delete route2;
     delete route3;
+  }
+
+  SECTION("VI - One Way"){
+    REQUIRE(U->B[56]->oneWay);
+    REQUIRE(U->B[57]->oneWay);
+
+    auto route1 = PathFinding::find(U->B[54], U->B[56]);
+    auto route2 = PathFinding::find(U->B[54], U->B[57]);
+
+    CHECK( route1->found_forward);
+    CHECK(!route1->found_reverse);
+    CHECK(!route2->found_forward);
+    CHECK(!route2->found_reverse);
+
+    delete route1;
+    delete route2;
   }
 
   // logger.setlevel_stdout(NONE);

@@ -183,6 +183,8 @@ class Block {
 
 
 int dircmp(Block *A, Block *B);
+int dircmp(uint8_t A, uint8_t B);
+
 void Reserve_To_Next_Switch(Block * B);
 int Block_Reverse_To_Next_Switch(Block * B);
 

@@ -368,7 +368,7 @@ void Block::reverse(){
   Algor_Blocks * AB = &this->Alg;
   if(!AB)
     return;
-  loggerf(WARNING, "Block_Reverse %02i:%02i", AB->B->module, AB->B->id);
+  loggerf(INFO, "Block_Reverse %02i:%02i", AB->B->module, AB->B->id);
 
   //_ALGOR_BLOCK_APPLY(_ABl, _A, _B, _C) if(_ABl->len == 0){_A}else{_B;for(uint8_t i = 0; i < _ABl->len; i++){_C}}
   int tmp_state;
@@ -707,13 +707,17 @@ void Block::AlgorSearchMSSwitch(int debug){
 
 
 int dircmp(Block *A, Block *B){
-  if((A->dir == 2 && (B->dir == 1 || B->dir == 0)) || ((A->dir == 1 || A->dir == 0) && B->dir == 2)){
+  return dircmp(A->dir, B->dir);
+}
+
+int dircmp(uint8_t A, uint8_t B){
+  if((A == 2 && (B == 1 || B == 0)) || ((A == 1 || A == 0) && B == 2)){
     return 1;
-  }else if(A->dir == B->dir){
+  }else if(A == B){
     return 1;
-  }else if(((A->dir == 0 || A->dir == 2) && B->dir == 0b101) || (A->dir == 1 && B->dir == 0b100)){
+  }else if(((A == 0 || A == 2) && B == 0b101) || (A == 1 && B == 0b100)){
     return 1;
-  }else if(((B->dir == 0 || B->dir == 2) && A->dir == 0b101) || (B->dir == 1 && A->dir == 0b100)){
+  }else if(((B == 0 || B == 2) && A == 0b101) || (B == 1 && A == 0b100)){
     return 1;
   }
   else{

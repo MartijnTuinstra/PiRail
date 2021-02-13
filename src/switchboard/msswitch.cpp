@@ -16,7 +16,7 @@ using namespace switchboard;
 
 MSSwitch::MSSwitch(uint8_t _module, struct configStruct_MSSwitch * conf){
 
-  loggerf(INFO, "Create MSSw %i:%i", _module, conf->id);
+  loggerf(TRACE, "Create MSSw %i:%i", _module, conf->id);
   memset(this, 0, sizeof(MSSwitch));
 
   module = _module;

@@ -273,7 +273,7 @@ int RollingConfig::read(){
 
   Config_read_TrainHeader(fileVersion, header, buf_ptr);
 
-  loggerf(INFO, "RollingConfig: %i %i %i %i %i  (%x - %x)", header->PersonCatagories, header->CargoCatagories, header->Engines, header->Cars, header->Trains, base_buf_ptr, *buf_ptr);
+  loggerf(INFO, "RollingConfig: %i %i %i %i %i", header->PersonCatagories, header->CargoCatagories, header->Engines, header->Cars, header->Trains);
 
   P_Cat   = (struct configStruct_Category *)_calloc(header->PersonCatagories, struct configStruct_Category);
   C_Cat   = (struct configStruct_Category *)_calloc(header->CargoCatagories, struct configStruct_Category);

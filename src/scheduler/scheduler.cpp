@@ -170,7 +170,7 @@ void Scheduler::removeEvent(struct SchedulerEvent * event){
         loggerf(DEBUG, "Removed Scheduler Event %x", (unsigned int)event);
     }
     else
-        loggerf(WARNING, "No Scheduler Event %x", (unsigned int)event);
+        loggerf(WARNING, "No Scheduler Event %x  %i/%i", (unsigned int)event, index, events.size());
 }
 
 // Public

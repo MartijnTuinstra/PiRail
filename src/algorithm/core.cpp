@@ -336,71 +336,7 @@ void Switch_Checker(Algor_Blocks * ABs, int debug){
 
       return;
     }
-      // if(B->train && B->train->route == 1){
-        // struct pathinstruction temp;
-        // if(!Next_check_Switch_Route(tmp, *link, NEXT, B->train->instructions, &temp)){
-        //   if(set_switch_route(tmp, *link, NEXT | SWITCH_CARE, &temp)){
-        //     B->changed |= IO_Changed; // Recalculate
-        //     free_pathinstruction(&temp);
-        //     return;
-        //   }
-        //   else{
-        //     loggerf(WARNING, "Stop Train on Route");
-        //   }
-        // }
-        // else{
-        //   loggerf(INFO, "Path applied");
-        //   if(i == 0){
-        //     //clear instructions from train
-        //     remove_pathinstructions(*link, B->train->instructions);
-        //   }
-        // }
-        // free_pathinstructions(&temp);
-      // }
-      // else
-      // if (!Switch_Check_Path(tB, *link, NEXT | SWITCH_CARE)) {
-      //   loggerf(INFO, "Switch next path!! %02i:%02i", tB->module, tB->id);
-
-      //   if(Switch_Set_Path(tB, *link, NEXT | SWITCH_CARE)) {
-      //     loggerf(INFO, "Switch set path!! %02i:%02i", tB->module, tB->id);
-      //     tB->IOchanged = 1; // Recalculate
-      //     tB->algorchanged = 1; // Recalculate
-      //     Switch_Reserve_Path(tB, *link, NEXT | SWITCH_CARE);
-      //     return;
-      //   }
-      //   else{
-      //     loggerf(WARNING, "Failed switch set path");
-      //   }
-      // }
-      // else if(((link->type == RAIL_LINK_S  || link->type == RAIL_LINK_s ) &&   (link->p.Sw)->Detection &&   (link->p.Sw)->Detection->state != RESERVED_SWITCH) || 
-      //         ((link->type == RAIL_LINK_MA || link->type == RAIL_LINK_MB) && (link->p.MSSw)->Detection && (link->p.MSSw)->Detection->state != RESERVED_SWITCH)){
-      //   loggerf(WARNING, "reserve_switch_path");
-      //   Switch_Reserve_Path(tB, *link, NEXT | SWITCH_CARE);
-      // }
   }
-
-  // //Check Next 1
-  // if(B->blocked && (((BN.switches || BNN.switches) && BN.blocks > 0) || (BN.blocks == 0 || BNN.blocks == 0))){
-  //   Block * tmp;
-  //   for(int i = 0; i <= BN.blocks; i++){
-  //     if(i == 0){
-  //       tmp = B;
-  //     }
-  //     else{
-  //       tmp = BN.B[i - 1];
-  //     }
-
-  //     // loggerf(DEBUG, "checking block next link %i:%i", tmp->module, tmp->id);
-  //     if (tmp->type == SPECIAL) {
-  //       continue;
-  //     }
-  //     if (tmp->blocked){
-  //       continue;
-  //     }
-
-      
-  //   }
-  // }
 }
 
 
@@ -612,14 +548,10 @@ void train_following(Algor_Blocks * ABs, int debug){
     }
     else if( ((prev > 0 && !BP[0]->blocked) || prev == 0) && ((next > 0 && !BN[0]->blocked) || next == 0) ){
       //NEW TRAIN
-      // find a new follow id
-      // loggerf(ERROR, "FOLLOW ID INCREMENT, bTrain");
       B->train = new RailTrain(B);
 
       //Create a message for WebSocket
       WS_stc_NewTrain(B->train, B->module, B->id);
-
-      loggerf(INFO, "NEW_TRAIN %x", (unsigned int)B->train);
     }
   }
 

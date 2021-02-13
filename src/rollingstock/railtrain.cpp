@@ -15,8 +15,7 @@
 
 RailTrain::RailTrain(Block * B): blocks(0, 0), reservedBlocks(0, 0){
   id = RSManager->addRailTrain(this);
-  loggerf(CRITICAL, "Create RailTrain %i %x", id, this);
-  loggerf(INFO, "Create RailTrain %i", id);
+  loggerf(INFO, "Create RailTrain %i %x", id, this);
 
   p.p = 0;
 
@@ -43,7 +42,7 @@ RailTrain::RailTrain(Block * B): blocks(0, 0), reservedBlocks(0, 0){
 }
 
 RailTrain::~RailTrain(){
-  loggerf(WARNING, "Destroy RailTrain %i %x %i", id, this, Detectables);
+  loggerf(TRACE, "Destroy RailTrain %i %x %i", id, this, Detectables);
 
   scheduler->removeEvent(speed_event);
   // train_link[id] = 0;
@@ -197,7 +196,7 @@ void RailTrain::setVirtualBlocks(){
 
 void RailTrain::initMoveForward(Block * tB){
   // First time a RailTrain moved when not stopped
-  loggerf(WARNING, "initMoveForward RT %i to block %02i:%02i (%i)", id, tB->module, tB->id, length);
+  loggerf(INFO, "initMoveForward RT %i to block %02i:%02i (%i)", id, tB->module, tB->id, length);
   directionKnown = 1;
 
   setBlock(tB);
@@ -215,8 +214,6 @@ void RailTrain::initMoveForward(Block * tB){
 
     listBlock = listBlock->Next_Block(dir == 1 ? PREV : NEXT, 1);
   }
-
-  loggerf(WARNING, "Front of train %02i:%02i", B->module, B->id);
 
   // Fill buffer
   listBlock = B;
@@ -238,11 +235,8 @@ void RailTrain::initMoveForward(Block * tB){
         }
       }
 
-      loggerf(INFO, "RT_BFIFO %02i:%02i %i %i < %i... %i", listBlock->module, listBlock->id, listBlock->detectionBlocked, DetectableCounter, Detectables, blockLength);
-
       if(listBlock->detectionBlocked){
         struct RailTrainBlocksFifo * DB = &DetectedBlocks[DetectableCounter];
-        loggerf(WARNING, "     ->[%i]", i);
         DB->B[i++] = listBlock;
         DB->Front++;
 
@@ -262,16 +256,13 @@ void RailTrain::initMoveForward(Block * tB){
     listBlock = listBlock->Next_Block(dir == 1 ? NEXT : PREV, 1);
   }
 
-  for(uint8_t i = 0; i < Detectables; i++)
-    loggerf(WARNING, "RT %i - %i Blocks in FiFo buffer %i", id, DetectedBlocks[i].Front - DetectedBlocks[i].End, i);
-
   if(virtualLength)
     setVirtualBlocks();
   
 }
 
 void RailTrain::moveForward(Block * tB){
-  loggerf(WARNING, "MoveForward RT %i to block %2i:%2i", id, tB->module, tB->id);
+  loggerf(INFO, "MoveForward RT %i to block %2i:%2i", id, tB->module, tB->id);
   setBlock(tB);
 
   for(uint8_t i = 0; i < Detectables; i++){
@@ -282,8 +273,6 @@ void RailTrain::moveForward(Block * tB){
       Block * nextBlock = _B->Next_Block(NEXT, 2);
 
       if(nextBlock){
-        loggerf(WARNING, "Expecting %02i:%02i", nextBlock->module, nextBlock->id);
-
         nextBlock->expectedTrain = this;
       }
 
@@ -294,8 +283,6 @@ void RailTrain::moveForward(Block * tB){
           setVirtualBlocks();
       }
 
-      loggerf(WARNING, "Adding block to FIFO %i [%i]", i, DB->Front);
-
       DB->B[DB->Front] = tB;
       DB->Front++;
 
@@ -305,8 +292,9 @@ void RailTrain::moveForward(Block * tB){
 }
 
 void inline RailTrain::setSpeed(uint16_t _speed){
-  if(stopped && _speed){
+  if(stopped && _speed && directionKnown){
     // Was stopped but starting to move
+    loggerf(WARNING, "Railtrain setSpeed ContinueCheck");
     if(!ContinueCheck()){
       loggerf(WARNING, "RT%i unsafe to start moving", id);
       setSpeedZ21(0);
@@ -349,8 +337,8 @@ void RailTrain::setStopped(bool stop){
 }
 
 void RailTrain::changeSpeed(uint16_t _target_speed, uint8_t _type){
-  if(!p.p){
-    loggerf(ERROR, "No Train");
+  if(!assigned){
+    loggerf(ERROR, "No Linked Train/Engine");
     return;
   }
 
@@ -649,7 +637,7 @@ void RailTrain::unlink(){
 }
 
 bool RailTrain::ContinueCheck(){
-  loggerf(TRACE, "RailTrain %i: ContinueCheck", id);
+  loggerf(DEBUG, "RailTrain %i: ContinueCheck %02i:%02i", id, B->module, B->id);
   if(B->Alg.next > 0){
     //if(this->Route && Switch_Check_Path(this->B)){
     //  return true;
@@ -664,6 +652,8 @@ bool RailTrain::ContinueCheck(){
     }
   }
   struct rail_link * next = B->NextLink(NEXT);
+
+  loggerf(DEBUG, "next type %i", next->type);
 
   if(next->type != RAIL_LINK_E){
     if(SwitchSolver::solve(this, B, B, *next, NEXT | SWITCH_CARE)){
@@ -690,6 +680,7 @@ void RailTrain_ContinueCheck(void * args){
     if(T->manual)
       continue;
 
+    loggerf(WARNING, "RailTrain ContinueCheck %i", i);
     if(T->p.p && T->speed == 0 && T->ContinueCheck()){
       loggerf(ERROR, "RailTrain ContinueCheck accelerating train %i", i);
       T->changeSpeed(40, GRADUAL_FAST_SPEED);

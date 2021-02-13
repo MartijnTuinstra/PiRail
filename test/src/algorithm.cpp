@@ -485,11 +485,9 @@ TEST_CASE_METHOD(TestsFixture, "Train Following", "[Alg][Alg-2]"){
     CHECK(U->B[2]->expectedTrain == T);
   }
 
-  // logger.setlevel_stdout(INFO);
 
   SECTION("VI - Reversing Full Detectable Train"){
     loggerf(CRITICAL, "SECTION VI");
-    CHECK(U->B[4]->train == 0);
 
     U->B[3]->setDetection(1);
     Algorithm::process(U->B[3], _FORCE);
@@ -498,6 +496,7 @@ TEST_CASE_METHOD(TestsFixture, "Train Following", "[Alg][Alg-2]"){
 
     REQUIRE(U->B[3]->train != 0);
     REQUIRE(U->B[4]->train != 0);
+    REQUIRE(U->B[4]->train == U->B[3]->train);
     RailTrain * T = U->B[4]->train;
 
     T->link(1, RAILTRAIN_TRAIN_TYPE);
@@ -710,7 +709,7 @@ TEST_CASE_METHOD(TestsFixture, "Algorithm Switch Setter", "[Alg][Alg-3]"){
   //                             |---St5---|
   */
 
-  for(uint8_t i = 0; i < 9; i++){
+  for(uint8_t i = 0; i < 39; i++){
     Algorithm::process(U->B[i], _FORCE);
   }
 
@@ -931,7 +930,6 @@ TEST_CASE_METHOD(TestsFixture, "Algorithm Switch Setter", "[Alg][Alg-3]"){
   }
 
   SECTION("IX - Approaching switch with route applying detour"){
-    loggerf(WARNING, "TEST IX");
     U->B[22]->setDetection(1);
     U->B[26]->setDetection(1);
     Algorithm::process(U->B[22], _FORCE);
@@ -965,7 +963,6 @@ TEST_CASE_METHOD(TestsFixture, "Algorithm Switch Setter", "[Alg][Alg-3]"){
   }
 
   SECTION("X - Approaching S with reserved switches"){
-    loggerf(CRITICAL, "SECTION X");
     RailTrain * tmpRT = new RailTrain(U->B[17]);
     U->B[17]->reserve(tmpRT);
 
@@ -987,9 +984,11 @@ TEST_CASE_METHOD(TestsFixture, "Algorithm Switch Setter", "[Alg][Alg-3]"){
   }
 
   SECTION("XI - Reversed Station path"){
-    loggerf(CRITICAL, "SECTION XI");
+    Algorithm::print_block_debug(U->B[37]);
     REQUIRE(U->B[36]->path != U->B[37]->path);
-    // logger.setlevel_stdout(INFO);
+    REQUIRE(U->B[37]->path->Entrance != U->B[37]);
+
+    CHECK(U->B[37]->path->direction == 1);
 
     U->B[22]->setDetection(1);
     Algorithm::process(U->B[22], _FORCE);
@@ -1008,13 +1007,13 @@ TEST_CASE_METHOD(TestsFixture, "Algorithm Switch Setter", "[Alg][Alg-3]"){
     CHECK(U->B[36]->isReservedBy(U->B[22]->train));
     CHECK(U->B[37]->isReservedBy(U->B[22]->train));
 
-    CHECK(U->B[37]->path->direction == 1);
+    CHECK(U->B[37]->path->direction == 0);
   }
 
-  SECTION("XI - Reserved reversed Station path"){
-    loggerf(CRITICAL, "SECTION XI");
-
+  SECTION("XII - Reserved reversed Station path"){
     REQUIRE(U->B[36]->path != U->B[37]->path);
+    REQUIRE(U->B[37]->path->Entrance != U->B[37]);
+
     RailTrain * tmpRT = new RailTrain(U->B[37]);
     U->B[37]->path->reserve(tmpRT);
 
@@ -1086,198 +1085,133 @@ TEST_CASE_METHOD(TestsFixture,"Algor Queue", "[Alg][Alg-Q]"){
   CHECK(AlQueue.get() == U->B[0]);
 }
 
-// TEST_CASE_METHOD(TestsFixture,"Train Route Following", "[Alg][Alg-R]"){
-//   char filenames[4][30] = {"./testconfigs/Alg-R-1.bin",
-//                            "./testconfigs/Alg-R-2.bin",
-//                            "./testconfigs/Alg-R-3.bin",
-//                            "./testconfigs/Alg-R-4.bin"};
-//   loadSwitchboard(filenames, 4);
-//   loadStock();
-//   logger.setlevel_stdout(DEBUG);
+TEST_CASE_METHOD(TestsFixture, "Train Route Following", "[Alg][Alg-R]"){
+  char filenames[4][30] = {"./testconfigs/Alg-R-1.bin",
+                           "./testconfigs/Alg-R-2.bin",
+                           "./testconfigs/Alg-R-3.bin",
+                           "./testconfigs/Alg-R-4.bin"};
+  loadSwitchboard(filenames, 4);
+  loadStock();
 
-//   Unit * U[5] = {0, switchboard::Units(1),switchboard::Units(2),switchboard::Units(3),switchboard::Units(4)};
+  logger.setlevel_stdout(INFO);
 
-//   for(uint8_t i = 1; i <= 4; i++){
-//     REQUIRE(U[i]);
-//     U[i]->on_layout = true;
-//   }
+  Unit * U[5] = {0, switchboard::Units(1),switchboard::Units(2),switchboard::Units(3),switchboard::Units(4)};
 
-//   auto connectors = Algorithm::find_connectors();
+  for(uint8_t i = 1; i <= 4; i++){
+    REQUIRE(U[i]);
+    U[i]->on_layout = true;
+  }
 
-//   for(auto c: connectors){
-//     loggerf(WARNING, " %i:%i", c->unit, c->connector);
-//     for(auto b: c->B){
-//       if(!b)
-//         continue;
-//       loggerf(WARNING, "  %02i:%02i", b->id, b->module);
-//     }
-//   }
+  auto connectors = Algorithm::find_connectors();
+  auto setup = Algorithm::BlockConnectorSetup("./testconfigs/Alg-R-Setup.bin");
   
+  int ret = setup.load(&connectors);
+  REQUIRE(ret > 0);
+  REQUIRE(connectors.size() == 0);
+
+  for(uint8_t i = 1; i <= 4; i++){
+    U[i]->link_all();
+  }
+  for(uint8_t i = 1; i <= 4; i++){
+    for(uint8_t j = 0; j < U[i]->block_len; j++){
+      if(U[i]->B[j]){
+        U[i]->B[j]->setDetection(0);
+        AlQueue.put(U[i]->B[j]);
+      }
+    }
+  }
+
+  pathlist_find();
+
+  Algorithm::tick();
+
+  Block *B = U[1]->B[3];
+
+  struct train_sim train = {
+    .sim = 'A',
+    .train_length = 0,
+    .posFront = 0.0,
+    .posRear = 124.0,
+    .Front = 0,
+    .B = (Block **)_calloc(10, Block *),
+    .blocks = 1,
+  };
+  train.B[0] = B;
+
+  change_Block(B, BLOCKED);
+  AlQueue.cpytmp();
   
-//   auto setup = Algorithm::BlockConnectorSetup("./testconfigs/Alg-R-Setup.bin");
-  
-//   int ret = setup.load(&connectors);
-//   REQUIRE(ret > 0);
-//   REQUIRE(connectors.size() == 0);
-//   /*
+  Algorithm::tick();
 
+  B->train->link(0, RAILTRAIN_ENGINE_TYPE);
+  B->train->setControl(TRAIN_MANUAL);
 
-//   loggerf(INFO, "Have %i connectors", connectors.size());
-
-//   uint8_t x = 0;
-//   bool modules_linked = false;
-
-//   logger.setlevel_stdout(DEBUG);
-//   while(modules_linked == false){
-//     if(uint8_t * findResult = Algorithm::find_connectable(&connectors)){
-//       Algorithm::connect_connectors(&connectors, findResult);
-//     }
-
-//     if(connectors.size() == 0)
-//       break;
-
-//     if(x == 1){
-//       U[1]->B[0]->setDetection(1);
-//       U[2]->B[1]->setDetection(1);
-//     }else if(x == 2){
-//       U[1]->B[0]->setDetection(0);
-//       U[2]->B[1]->setDetection(0);
-//       U[3]->B[3]->setDetection(1);
-//       U[2]->B[0]->setDetection(1);
-//     }else if(x == 3){
-//       U[3]->B[3]->setDetection(0);
-//       U[2]->B[0]->setDetection(0);
-//       U[3]->B[0]->setDetection(1);
-//       U[4]->B[1]->setDetection(1);
-//     }else if(x == 4){
-//       U[3]->B[0]->setDetection(0);
-//       U[4]->B[1]->setDetection(0);
-//       U[4]->B[0]->setDetection(1);
-//       U[1]->B[5]->setDetection(1);
-//     }
-//     else if(x > 4){
-//       U[4]->B[0]->setDetection(0);
-//       U[1]->B[5]->setDetection(0);
-
-//       modules_linked = true;
-//     }
-
-//     x++;
-//     //IF ALL JOINED
-//     //BREAK
-//   }
-
-//   for(uint8_t i = 1; i <= 4; i++)
-//     U[i]->link_all();
-
-//   REQUIRE(connectors.size() == 0);
-//   /**/
-  
-//   // setup.save();
-
-//   for(uint8_t i = 1; i <= 4; i++){
-//     U[i]->link_all();
-//   }
-//   for(uint8_t i = 1; i <= 4; i++){
-//     for(uint8_t j = 0; j < U[i]->block_len; j++){
-//       if(U[i]->B[j]){
-//         U[i]->B[j]->setDetection(0);
-//         AlQueue.put(U[i]->B[j]);
-//       }
-//     }
-//   }
-
-//   pathlist_find();
-
-//   Algorithm::tick();
-
-//   Block *B = U[1]->B[3];
-
-//   struct train_sim train = {
-//     .sim = 'A',
-//     .train_length = 0,
-//     .posFront = 0.0,
-//     .posRear = 124.0,
-//     .Front = 0,
-//     .B = (Block **)_calloc(10, Block *),
-//     .blocks = 1,
-//   };
-//   train.B[0] = B;
-
-//   change_Block(B, BLOCKED);
-//   AlQueue.cpytmp();
-  
-//   Algorithm::tick();
-
-//   B->train->link(0, RAILTRAIN_ENGINE_TYPE);
-//   B->train->setControl(TRAIN_MANUAL);
-
-//   train.train_length = B->train->length;
-//   train.T = B->train;
-//   train.T->changeSpeed(100, IMMEDIATE_SPEED);
+  train.train_length = B->train->length;
+  train.T = B->train;
+  train.T->changeSpeed(100, IMMEDIATE_SPEED);
  
-//   AlQueue.put(B);
-//   Algorithm::tick();
+  AlQueue.put(B);
+  Algorithm::tick();
 
-//   train.train_length = train.T->p.E->length / 10;
+  train.train_length = train.T->p.E->length / 10;
 
-//   train.engines_len = 1;
-//   train.engines = (struct engine_sim *)_calloc(1, struct engine_sim);
-//   train.engines[0].offset = 0;
-//   train.engines[0].length = train.T->p.E->length;
+  train.engines_len = 1;
+  train.engines = (struct engine_sim *)_calloc(1, struct engine_sim);
+  train.engines[0].offset = 0;
+  train.engines[0].length = train.T->p.E->length;
 
-//   train.posFront = train.B[0]->length - (train.engines[0].length / 10);
-//   train.posRear = train.B[0]->length;
+  train.posFront = train.B[0]->length - (train.engines[0].length / 10);
+  train.posRear = train.B[0]->length;
 
-//   int32_t maxIterations = 10000;
+  int32_t maxIterations = 10000;
 
-//   // SECTION("I - Just a circle"){
-//   //   while(!U[1]->B[5]->blocked && maxIterations){
-//   //     train_sim_tick(&train);
-//   //     if(AlQueue.queue->getItems() > 0)
-//   //       Algorithm::tick();
-//   //     maxIterations--;
-//   //   }
+  SECTION("I - Just a circle"){
+    while(!U[1]->B[5]->blocked && maxIterations){
+      train_sim_tick(&train);
+      if(AlQueue.queue->getItems() > 0)
+        Algorithm::tick();
+      maxIterations--;
+    }
 
-//   //   CHECK(!U[1]->B[3]->blocked);
-//   //   CHECK(!U[1]->B[4]->blocked);
-//   //   CHECK(U[1]->B[5]->blocked);
+    CHECK(!U[1]->B[3]->blocked);
+    CHECK(!U[1]->B[4]->blocked);
+    CHECK(U[1]->B[5]->blocked);
 
-//   //   maxIterations = 10000;
+    maxIterations = 10000;
 
-//   //   while(!U[1]->B[3]->blocked && maxIterations){
-//   //     train_sim_tick(&train);
-//   //     if(AlQueue.queue->getItems() > 0)
-//   //       Algorithm::tick();
-//   //     maxIterations--;
-//   //   }
+    while(!U[1]->B[3]->blocked && maxIterations){
+      train_sim_tick(&train);
+      if(AlQueue.queue->getItems() > 0)
+        Algorithm::tick();
+      maxIterations--;
+    }
 
-//   //   CHECK(U[1]->B[3]->blocked);
-//   // }
+    CHECK(U[1]->B[3]->blocked);
+  }
 
-//   SECTION("II - A route"){
-//     train.T->setRoute(U[1]->B[8]);
+  SECTION("II - A route"){
+    train.T->setRoute(U[1]->B[8]);
 
-//     while(!U[3]->B[2]->blocked && maxIterations > 0){
-//       train_sim_tick(&train);
-//       if(AlQueue.queue->getItems() > 0)
-//         Algorithm::tick();
-//       maxIterations--;
-//     }
+    while(!U[3]->B[2]->blocked && maxIterations > 0){
+      train_sim_tick(&train);
+      if(AlQueue.queue->getItems() > 0)
+        Algorithm::tick();
+      maxIterations--;
+    }
 
-//     CHECK(U[3]->B[2]->blocked);
-//     CHECK(maxIterations > 0);
+    CHECK(U[3]->B[2]->blocked);
+    CHECK(maxIterations > 0);
 
-//     maxIterations = 20000;
+    maxIterations = 20000;
 
-//     while(!U[1]->B[8]->blocked && maxIterations > 0){
-//       train_sim_tick(&train);
-//       if(AlQueue.queue->getItems() > 0)
-//         Algorithm::tick();
-//       maxIterations--;
-//     }
+    while(!U[1]->B[8]->blocked && maxIterations > 0){
+      train_sim_tick(&train);
+      if(AlQueue.queue->getItems() > 0)
+        Algorithm::tick();
+      maxIterations--;
+    }
 
-//     CHECK(U[1]->B[8]->blocked);
-//     CHECK(maxIterations > 0);
-//   }
-// }
+    CHECK(U[1]->B[8]->blocked);
+    CHECK(maxIterations > 0);
+  }
+}

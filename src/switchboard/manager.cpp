@@ -102,7 +102,7 @@ void Manager::openDir(char * path){
 }
 
 void Manager::addFile(char * filename){
-  loggerf(CRITICAL, "Adding %s", filename);
+  loggerf(TRACE, "Adding %s", filename);
   String * str = new String((const char *)filename);
   filenames.push_back(str);
 }

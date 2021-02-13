@@ -462,7 +462,7 @@ void WS_stc_NewTrain(RailTrain * T,char M,char B){
   //M,B:  module nr and block nr
   uint16_t msg_ID = WS_init_Message(0);
 
-  loggerf(INFO, "WS_NewTrain");
+  loggerf(TRACE, "WS_stc_NewTrain %i", T->id);
 
   char data[6];
   data[0] = WSopc_NewMessage;
@@ -957,7 +957,7 @@ void WS_add_Message(uint16_t ID, char length, char * data){
   memcpy(MessageList[ID].data, data, length);
   MessageList[ID].data_length = length;
 
-  loggerf(INFO, "create_message %x", ID);
+  loggerf(DEBUG, "create_message %x", ID);
 }
 
 void WS_send_open_Messages(Websocket::Client * client){

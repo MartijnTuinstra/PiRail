@@ -23,7 +23,7 @@ Train::Train(struct configStruct_Train conf){
   setComposition(conf.nr_stock, conf.composition);
 
   if(this->detectables > 1)
-    loggerf(INFO, "Train has undetectable cars in between two (multiple) engines"); // TODO
+    loggerf(DEBUG, "Train has undetectable cars in between two (multiple) engines"); // TODO
 }
 Train::Train(char * Name){
   memset(this, 0, sizeof(Train));

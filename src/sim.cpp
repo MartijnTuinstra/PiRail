@@ -40,10 +40,10 @@ extern pthread_mutex_t mutex_lockA;
 #define JOIN_SIM_INTERVAL 1000
 
 void change_Block(Block * B, enum Rail_states state){
-  if(state != B->state){
+  if((state != BLOCKED && B->detectionBlocked) || (state == BLOCKED && !B->detectionBlocked)){
     B->setDetection(state == BLOCKED);
 
-    loggerf(WARNING, "SIM set block %2i:%2i %i%i%i - %s>%s", B->module, B->id, B->blocked, B->detectionBlocked, B->virtualBlocked, rail_states_string[B->state], rail_states_string[state]);
+    loggerf(DEBUG, "SIM set block %2i:%2i %i%i%i - %s>%s", B->module, B->id, B->blocked, B->detectionBlocked, B->virtualBlocked, rail_states_string[B->state], rail_states_string[state]);
 
     AlQueue.puttemp(B);
   }

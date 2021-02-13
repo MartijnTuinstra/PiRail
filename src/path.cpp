@@ -100,7 +100,7 @@ void Path::join(Path * P){
     if(this->next->p.B == P->end){
       char buffer[200];
       P->sprint(buffer);
-      loggerf(WARNING, buffer);
+      loggerf(DEBUG, buffer);
       this->front = P->front;
       this->front_direction = P->front_direction;
       this->next = P->next;
@@ -130,7 +130,7 @@ void Path::join(Path * P){
     if(this->prev->p.B == P->front){
       char buffer[200];
       P->sprint(buffer);
-      loggerf(WARNING, buffer);
+      loggerf(DEBUG, buffer);
       this->end = P->end;
       this->end_direction = P->end_direction;
       this->prev = P->prev;
@@ -162,7 +162,7 @@ void Path::join(Path * P){
     if(this->next->p.B == P->front){
       char buffer[200];
       P->sprint(buffer);
-      loggerf(WARNING, buffer);
+      loggerf(DEBUG, buffer);
       this->front = P->end;
       this->front_direction = P->end_direction ^ 0b100;
       this->next = P->prev;
@@ -189,7 +189,7 @@ void Path::join(Path * P){
     else if(this->prev->p.B == P->end){
       char buffer[200];
       P->sprint(buffer);
-      loggerf(WARNING, buffer);
+      loggerf(DEBUG, buffer);
       this->end = P->front;
       this->end_direction = P->front_direction ^ 0b100;
       this->prev = P->next;

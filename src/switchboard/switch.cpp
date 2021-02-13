@@ -27,7 +27,7 @@ Switch::Switch(uint8_t Module, struct configStruct_Switch * s){
   connect.div.module = s->Div.module; connect.div.id = s->Div.id; connect.div.type = (enum link_types)s->Div.type;
 
   // new Switch(connect, s->det_block, s->IO & 0x0f, Adrs, States);
-  loggerf(MEMORY, "Create Sw %i:%i", connect.module, connect.id);
+  loggerf(TRACE, "Create Sw %i:%i", connect.module, connect.id);
   // Switch * Z = (Switch *)_calloc(1, Switch);
   memset(this, 0, sizeof(Switch));
 
@@ -315,7 +315,7 @@ uint Switch::NextList_Block(Block * Origin, Block ** blocks, uint8_t block_count
 }
 
 void Switch::setState(uint8_t _state){
-  loggerf(INFO, "Switch setState(%i->%i)", state, _state);
+  loggerf(DEBUG, "Switch setState(%i->%i)", state, _state);
   setState(_state, 1);
 }
 
@@ -328,7 +328,7 @@ void Switch::setState(uint8_t _state, uint8_t lock){
   }
 
   if(_state == state){
-    loggerf(INFO, "Switch allready in position");
+    loggerf(TRACE, "Switch allready in position");
     return;
   }
 
@@ -457,10 +457,10 @@ int solve(RailTrain * T, Block * B, Block * tB, struct rail_link link, int flags
     r = T->route;
   }
 
-  loggerf(DEBUG, "SwitchSolver::solve -> findPath");
+  loggerf(DEBUG, "SwitchSolver::solve -> findPath %x", (unsigned int)r);
   f = findPath(T, r, tB, link, flags);
 
-  loggerf(DEBUG, "SwitchSolver::solve (%i, %i)", f.possible, f.allreadyCorrect);
+  loggerf(TRACE, "SwitchSolver::solve (%i, %i)", f.possible, f.allreadyCorrect);
 
   if(r){
     char debug[1000];
@@ -487,6 +487,7 @@ int solve(RailTrain * T, Block * B, Block * tB, struct rail_link link, int flags
     setWrong(r, tB, link, flags);
   }
   else{
+    flags = tB->dir;
     reservePath(T, r, tB, link, flags);
   }
 
@@ -789,10 +790,12 @@ void setWrong(PathFinding::Route * r, void * p, struct rail_link link, int flags
     // Go to next switch
     Switch * Sw = link.p.Sw;
 
-    if(Sw->state == 0)
-      setWrong(r, Sw, Sw->str, flags);
-    else
-      setWrong(r, Sw, Sw->div, flags);
+    // if(Sw->state == 0)
+    //   setWrong(r, Sw, Sw->str, flags);
+    // else
+    //   setWrong(r, Sw, Sw->div, flags);
+
+    Sw->Detection->switchWrongState = true;
   }
   else if(link.type == RAIL_LINK_s){
     // Check if switch is in correct state
@@ -804,7 +807,7 @@ void setWrong(PathFinding::Route * r, void * p, struct rail_link link, int flags
 
     setWrong(r, Sw, Sw->app, flags);
   }
-  // else if(link.type == RAIL_LINK_MA){
+  // else if(link.type == RAIL_LINK_MA){ // FIXME
   //   loggerf(ERROR, "IMPLEMENT");
   //   MSSwitch * N = link.p.MSSw;
   //   if(N->sideB[N->state].p.p == p){
@@ -957,6 +960,7 @@ int reservePath(RailTrain * T, PathFinding::Route * r, void * p, struct rail_lin
     loggerf(TRACE, "check B %i", B->id);
     if(B->type != NOSTOP){
       if(!B->reserved){
+        loggerf(DEBUG, "Path Entrance: %02i:%02i", B->path->Entrance->module, B->path->Entrance->id);
         if(B->path->Entrance != B)
           B->path->reverse();
 
@@ -964,6 +968,11 @@ int reservePath(RailTrain * T, PathFinding::Route * r, void * p, struct rail_lin
       }
       return 1; // Train can stop on the block, so a possible path
     }
+
+    if(!dircmp(B->dir, flags)){
+      B->reverse();
+    }
+    flags = B->dir; 
 
     if(B->next.p.p == p)
       return reservePath(T, r, B, B->prev, flags);

@@ -69,15 +69,17 @@ public:
 };
 
 TestsFixture::TestsFixture(){
+  printf("====================================================================================================\n");
+  auto TestName = Catch::getResultCapture().getCurrentTestName();
+  printf("---%*s%*s---\n",47+TestName.length()/2,TestName.c_str(),47-TestName.length()/2,"");
+
   logger.setlevel_stdout(WARNING);
-  loggerf(CRITICAL, "FIXTURE Setup");
   scheduler = new Scheduler();
   RSManager = new RollingStock::Manager();
   switchboard::SwManager = new switchboard::Manager();
 
   // logger.setlevel_stdout(WARNING);
   init_main();
-  loggerf(CRITICAL, "Setup Test %s", Catch::getResultCapture().getCurrentTestName().c_str());
 }
 void TestsFixture::loadSwitchboard(char (* filenames)[30], int nr_files){
   for(int i = 0; i < nr_files; i++)
@@ -91,7 +93,8 @@ void TestsFixture::loadStock(){
   RSManager->loadFile("./testconfigs/stock.bin");
 }
 TestsFixture::~TestsFixture(){
-  loggerf(CRITICAL, "FIXTURE Teardown");
+  logger.setlevel_stdout(WARNING);
+
   for(auto p: pathlist)
     delete p;
 
@@ -102,16 +105,10 @@ TestsFixture::~TestsFixture(){
   RSManager->clear();
   switchboard::SwManager->clear();
 
-  scheduler->removeEvent(RSManager->continue_event);
-
-  loggerf(CRITICAL, "Destroyed Test %s", Catch::getResultCapture().getCurrentTestName().c_str());
-
   delete RSManager;
   delete switchboard::SwManager;
   delete scheduler;
 
   destroy_main();
-
-  loggerf(CRITICAL, "FIXTURE Torn down");
 }
 

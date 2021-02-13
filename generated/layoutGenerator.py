@@ -68,9 +68,13 @@ class Structure:
 
 		fI = 0
 
+		openFields = [self.pS[i].id for i in range(0, len(self.pS))]
+
 		while fI < len(self.fS[version]):
 			f   = self.fS[version][fI]
 			fI += 1
+
+			openFields.remove(f.id)
 
 			if not isinstance(f, FF):
 				print("No a File Field ", f)
@@ -137,6 +141,13 @@ class Structure:
 			else:
 				s += f"    Config_read_{f.type.toTypeC()}_{self.pS[f.id].type.toTypeC()}(&obj->{self.pS[f.id].name}, buffer);\n"
 			# lengthField
+
+		s += "\n";
+
+		for of in openFields:
+			f = self.pS[of]
+			if(hasattr(f, "default")):
+				s += f"    obj->{f.name} = {f.default};\n"
 
 		s += "}\n"
 

@@ -34,8 +34,7 @@ Engine::Engine(struct configStruct_Engine conf){
   RSManager->DCC[conf.DCC_ID] = this;
 
   length = conf.length;
-  //TODO add to arguments
-  speed_step_type = ENGINE_128_FAHR_STUFEN;
+  speed_step_type = conf.Z21_SpeedSteps;
 
   type = conf.type;
 

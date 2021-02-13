@@ -37,7 +37,7 @@ class Engine {
 
     char speedZ21; // Z21 Speed
     char speed;    // Disired Speed for the Z21
-    char speed_step_type;
+    char speed_step_type; // Z21 FAHR_STUFEN 14/28/128
     uint16_t max_speed; // Real Speed
     uint16_t cur_speed; // Real Speed
 

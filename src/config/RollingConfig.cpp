@@ -154,6 +154,7 @@ void RollingConfig::addEngine(Engine * E){
   cE->length = E->length;
   cE->type = E->type;
   cE->config_steps = E->steps_len;
+  cE->Z21_SpeedSteps = E->speed_step_type;
   cE->name_len = strlen(E->name);
   cE->img_path_len = strlen(E->img_path);
   cE->icon_path_len = strlen(E->icon_path);

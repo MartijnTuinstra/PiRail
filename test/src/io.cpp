@@ -118,15 +118,24 @@ TEST_CASE_METHOD(TestsFixture, "IO and Switchboard object", "[IO][IO-3]"){
   }
 
   SECTION("II - Switches"){
-    // logger.setlevel_stdout(INFO);
-    loggerf(ERROR, "Setting Sw 0 to state 1");
     // Solonoid operated switch
+
+    CHECK(U->Sw[0]->IO[0]->w_state.output == IO_event_Low);
+    CHECK(U->Sw[0]->IO[1]->w_state.output == IO_event_Low);
+
     U->Sw[0]->setState(1);
 
     CHECK(U->Sw[0]->IO[0]->w_state.output == IO_event_Low);
     CHECK(U->Sw[0]->IO[1]->w_state.output == IO_event_Pulse);
 
+    U->Sw[0]->setState(0);
+
+    CHECK(U->Sw[0]->IO[0]->w_state.output == IO_event_Pulse);
+    CHECK(U->Sw[0]->IO[1]->w_state.output == IO_event_Low);
+
     // Constant signal operated switch
+    CHECK(U->Sw[1]->IO[0]->w_state.output == IO_event_Low); 
+
     U->Sw[1]->setState(1);
 
     CHECK(U->Sw[1]->IO[0]->w_state.output == IO_event_High); 
@@ -143,13 +152,40 @@ TEST_CASE_METHOD(TestsFixture, "IO and Switchboard object", "[IO][IO-3]"){
     CHECK(!U->B[0]->switchWrongFeedback);
   }
 
-  // SECTION("III - MSSwitches"){
+  SECTION("III - MSSwitches"){
+    U->MSSw[0]->setState(0);
 
-  // }
+    CHECK(U->MSSw[0]->IO[0]->w_state.output == IO_event_High);
+    CHECK(U->MSSw[0]->IO[1]->w_state.output == IO_event_Low);
 
-  // SECTION("IV - Signals"){
+    U->MSSw[0]->setState(1);
 
-  // }
+    CHECK(U->MSSw[0]->IO[0]->w_state.output == IO_event_Low);
+    CHECK(U->MSSw[0]->IO[1]->w_state.output == IO_event_High);
+  }
+
+  SECTION("IV - Signals"){
+    U->Sig[0]->set(DANGER);
+    U->Sig[0]->setIO();
+
+    CHECK(U->Node[0]->io[10]->w_state.output == IO_event_High);
+    CHECK(U->Node[0]->io[11]->w_state.output == IO_event_Low);
+    CHECK(U->Node[0]->io[12]->w_state.output == IO_event_Low);
+
+    U->Sig[0]->set(CAUTION);
+    U->Sig[0]->setIO();
+
+    CHECK(U->Node[0]->io[10]->w_state.output == IO_event_Low);
+    CHECK(U->Node[0]->io[11]->w_state.output == IO_event_High);
+    CHECK(U->Node[0]->io[12]->w_state.output == IO_event_Low);
+
+    U->Sig[0]->set(PROCEED);
+    U->Sig[0]->setIO();
+
+    CHECK(U->Node[0]->io[10]->w_state.output == IO_event_Low);
+    CHECK(U->Node[0]->io[11]->w_state.output == IO_event_Low);
+    CHECK(U->Node[0]->io[12]->w_state.output == IO_event_High);
+  }
 
   // SECTION("V - Stations"){
 

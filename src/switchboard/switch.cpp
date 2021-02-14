@@ -789,12 +789,6 @@ void setWrong(PathFinding::Route * r, void * p, struct rail_link link, int flags
   if(link.type == RAIL_LINK_S){
     // Go to next switch
     Switch * Sw = link.p.Sw;
-
-    // if(Sw->state == 0)
-    //   setWrong(r, Sw, Sw->str, flags);
-    // else
-    //   setWrong(r, Sw, Sw->div, flags);
-
     Sw->Detection->switchWrongState = true;
   }
   else if(link.type == RAIL_LINK_s){
@@ -807,21 +801,11 @@ void setWrong(PathFinding::Route * r, void * p, struct rail_link link, int flags
 
     setWrong(r, Sw, Sw->app, flags);
   }
-  // else if(link.type == RAIL_LINK_MA){ // FIXME
-  //   loggerf(ERROR, "IMPLEMENT");
-  //   MSSwitch * N = link.p.MSSw;
-  //   if(N->sideB[N->state].p.p == p){
-  //     return 1;
-  //   }
-  // }
-  // else if(link.type == RAIL_LINK_MB){
-  //   loggerf(ERROR, "IMPLEMENT");
-  //   MSSwitch * N = link.p.MSSw;
-  //   if(N->sideA[N->state].p.p == p){
-  //     return 1;
-  //   }
-  // }
-
+  else if(link.type == RAIL_LINK_MA ||
+          link.type == RAIL_LINK_MB   ){
+    MSSwitch * Sw = link.p.MSSw;
+    Sw->Detection->switchWrongState = true;
+  }
   else if (link.type == RAIL_LINK_R){
     Block * B = link.p.B;
     B->switchWrongState = true;

@@ -369,6 +369,21 @@ void MSSwitch::updateState(uint8_t _state){
   state = _state;
   updatedState = true;
 
+
+  // Update IO
+  for(uint8_t i = 0; i < IO_len; i++){
+    if(!IO[i])
+      continue;
+
+    IO[i]->setOutput(IO_states[state][i]);
+  }
+
+  if(feedback_en){
+    feedbackWrongState = true;
+    Detection->checkSwitchFeedback(true);
+  }
+
+  // Update linked Signals
   for(auto Sig: Signals){
     Sig->switchUpdate();
   }

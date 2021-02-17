@@ -174,6 +174,8 @@ class Block {
 
     enum Rail_states addSignal(Signal * Sig);
 
+    uint16_t getSpeed();
+
     void AlgorClear();
     void AlgorSearch(int debug);
     void AlgorSearchMSSwitch(int debug);

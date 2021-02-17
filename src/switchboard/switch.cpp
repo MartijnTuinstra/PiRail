@@ -460,7 +460,7 @@ int solve(RailTrain * T, Block * B, Block * tB, struct rail_link link, int flags
   loggerf(DEBUG, "SwitchSolver::solve -> findPath %x", (unsigned int)r);
   f = findPath(T, r, tB, link, flags);
 
-  loggerf(TRACE, "SwitchSolver::solve (%i, %i)", f.possible, f.allreadyCorrect);
+  loggerf(DEBUG, "SwitchSolver::solve (%i, %i)", f.possible, f.allreadyCorrect);
 
   if(r){
     char debug[1000];
@@ -522,7 +522,7 @@ struct find findPath(RailTrain * T, PathFinding::Route * r, void * p, struct rai
       str = findPath(T, r, Sw, Sw->str, flags);
       div = findPath(T, r, Sw, Sw->div, flags);
 
-      loggerf(INFO, "SwitchFindPath: str: (%i, %i), div: (%i, %i)", str.possible, str.allreadyCorrect, div.possible, div.allreadyCorrect);
+      loggerf(INFO, "SwitchFindPath: %02i:%02i str: (%i, %i), div: (%i, %i)", Sw->module, Sw->id, str.possible, str.allreadyCorrect, div.possible, div.allreadyCorrect);
 
       f.possible = (str.possible | div.possible);
 
@@ -609,11 +609,8 @@ struct find findPath(RailTrain * T, PathFinding::Route * r, void * p, struct rai
 
     // Train can stop on the block, so a solution
     else if(B->type != NOSTOP){
-      f.possible = 0;
-      f.allreadyCorrect = 0;
-
       if(B->isReservedBy(T)){
-        if(B->reservedBy.size() > 1 && B->path->Entrance == B){
+        if(B->path->Entrance == B){
           f.possible = 1;
           f.allreadyCorrect = 1;
         }
@@ -790,6 +787,7 @@ void setWrong(PathFinding::Route * r, void * p, struct rail_link link, int flags
     // Go to next switch
     Switch * Sw = link.p.Sw;
     Sw->Detection->switchWrongState = true;
+    Algorithm::rail_state(&Sw->Detection->Alg, 0);
   }
   else if(link.type == RAIL_LINK_s){
     // Check if switch is in correct state
@@ -805,10 +803,12 @@ void setWrong(PathFinding::Route * r, void * p, struct rail_link link, int flags
           link.type == RAIL_LINK_MB   ){
     MSSwitch * Sw = link.p.MSSw;
     Sw->Detection->switchWrongState = true;
+    Algorithm::rail_state(&Sw->Detection->Alg, 0);
   }
   else if (link.type == RAIL_LINK_R){
     Block * B = link.p.B;
     B->switchWrongState = true;
+    Algorithm::rail_state(&B->Alg, 0);
   }
 
   return;

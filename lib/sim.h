@@ -3,6 +3,8 @@
 
 #include "switchboard/rail.h"
 
+#define TRAINSIM_INTERVAL_US 50000
+#define TRAINSIM_INTERVAL_SEC 0.05
 
 struct engine_sim {
   uint16_t offset;

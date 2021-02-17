@@ -30,6 +30,8 @@ struct TrainSpeedEventData {
   RailTrain * T;
 
   uint16_t startSpeed;
+  float displacement;
+  float startDisplacement;
   float acceleration;
   float time;
   uint16_t steps;
@@ -55,13 +57,13 @@ class RailTrain {
     char type = 0;
 
     Block * B; // FrontBlock
-    std::vector<Block *> blocks; // All blocks that are blocked by the train (detection and virtual)
+    std::vector<Block *> blocks;         // All blocks that are blocked by the train (detection and virtual)
     std::vector<Block *> reservedBlocks; // All blocks with switches that are reserved by the train.
 
     uint8_t id = 0;
 
     uint16_t speed = 0;        // Real speed
-    uint16_t MaxSpeed = 0;    // Real max speed
+    uint16_t MaxSpeed = 0;     // Real max speed
 
     // Variables for changing speed along one block
     uint16_t target_speed = 0;
@@ -70,6 +72,10 @@ class RailTrain {
     struct TrainSpeedEventData * speed_event_data = 0;
 
     uint8_t changing_speed:3;  // RAILTRAIN_SPEED_T_(INIT / CHANGING / UPDATE / DONE / FAIL)
+    uint8_t speedReason:3;     // RAILTRAIN_SPEED_R_(NONE / SIGNAL / MAXSPEED / ROUTE)
+    uint8_t speedCheck:1;      // Bool if train just stepped forward
+    Block * speedBlock;
+
     bool manual = 1;   // TRAIN_MANUAL
     bool fullAuto = 0; // TRAIN_FULL_AUTO
     bool onroute = 0;         // TRAIN_ONROUTE = true
@@ -112,7 +118,7 @@ class RailTrain {
     void setSpeed(uint16_t _speed);
     void setSpeedZ21(uint16_t);
     void setStopped(bool);
-    void changeSpeed(uint16_t target_speed, uint8_t type);
+    void changeSpeed(uint16_t, uint16_t);
 
     void reverse();    // Reverse all
     void reverseFromPath(Path * P);

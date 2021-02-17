@@ -279,6 +279,8 @@ void RailTrain::moveForward(Block * tB){
       if(i == 0){
         B = tB;
 
+        speedCheck = true;
+
         if(virtualLength)
           setVirtualBlocks();
       }
@@ -336,28 +338,30 @@ void RailTrain::setStopped(bool stop){
   }
 }
 
-void RailTrain::changeSpeed(uint16_t _target_speed, uint8_t _type){
+void RailTrain::changeSpeed(uint16_t _target_speed, uint16_t _length){
   if(!assigned){
     loggerf(ERROR, "No Linked Train/Engine");
+    return;
+  }
+
+  if(_target_speed == speed){
+    if(changing_speed == RAILTRAIN_SPEED_T_DONE)
+      speedReason = RAILTRAIN_SPEED_R_NONE;
     return;
   }
 
   loggerf(DEBUG, "ailTrain::changeSpeed %i     -> %i km/h", id, _target_speed);
   //target_speed = target_speed;
 
-  if(_type == IMMEDIATE_SPEED){
+  if(_length == 0){
     changing_speed = RAILTRAIN_SPEED_T_DONE;
     setSpeedZ21(_target_speed);
 
     if(assigned)
       WS_stc_UpdateTrain(this);
   }
-  else if(_type == GRADUAL_SLOW_SPEED){
-    train_speed_event_create(this, _target_speed, B->length*2);
-  }
-  else if(_type == GRADUAL_FAST_SPEED){
-    train_speed_event_create(this, _target_speed, B->length);
-  }
+  else
+    train_speed_event_create(this, _target_speed, _length);
 }
 
 void RailTrain::reverse(){
@@ -535,6 +539,9 @@ int RailTrain::link(int tid, char _type){
 
   char * name;
 
+  if(assigned)
+    return 4;
+
   // If it is only a engine -> make it a train
   if(_type == RAILTRAIN_ENGINE_TYPE){
     if(RSManager->getEngine(tid)->use){
@@ -599,8 +606,15 @@ int RailTrain::link(int tid, char type, uint8_t nrT, RailTrain ** T){
   //  nrT  = Number of seperate railtrain detectables
   //    T  =  seperate railtrain detectables
 
-  if(!link(tid, type)){
-    return 0;
+  for(uint8_t i = 0; i < nrT; i++){
+    if(T[i]->assigned)
+      return 3;
+  }
+
+  int ret = link(tid, type);
+
+  if(ret != 1){
+    return ret;
   }
 
   for(uint8_t i = 0; i < nrT; i++){
@@ -683,7 +697,7 @@ void RailTrain_ContinueCheck(void * args){
     loggerf(WARNING, "RailTrain ContinueCheck %i", i);
     if(T->p.p && T->speed == 0 && T->ContinueCheck()){
       loggerf(ERROR, "RailTrain ContinueCheck accelerating train %i", i);
-      T->changeSpeed(40, GRADUAL_FAST_SPEED);
+      T->changeSpeed(40, 50);
       WS_stc_UpdateTrain(T);
     }
   }
@@ -698,12 +712,19 @@ void train_speed_event_create(RailTrain * T, uint16_t targetSpeed, uint16_t dist
   }
 
   T->target_speed = targetSpeed;
+
+  if(T->target_distance != distance){
+    T->speed_event_data->startDisplacement = 0.0;
+    T->speed_event_data->displacement = 0.0;
+  }
   T->target_distance = distance;
 
   if (T->changing_speed == RAILTRAIN_SPEED_T_INIT ||
       T->changing_speed == RAILTRAIN_SPEED_T_DONE){
 
     T->changing_speed = RAILTRAIN_SPEED_T_CHANGING;
+
+    train_speed_event_init(T);
   }
   else if(T->changing_speed == RAILTRAIN_SPEED_T_CHANGING){
     T->changing_speed = RAILTRAIN_SPEED_T_UPDATE;
@@ -711,48 +732,48 @@ void train_speed_event_create(RailTrain * T, uint16_t targetSpeed, uint16_t dist
   else{
     return;
   }
-
-  train_speed_event_init(T);
 }
 
 void train_speed_event_calc(struct TrainSpeedEventData * data){
   // v = v0 + at;
-  // x = v0*t + 0.5at^2;
-  // a = 0.5/x * (v^2 - v0^2);
-  // t = sqrt((x - v0) / (0.5a))
+  // x = x0 + v0*t + 0.5at^2;
+  // a = (v - v0)/t
+  // t = 2x/(2v0+(v-v0))
+  // a = x/(v0*t + 0.5t^2);
+  // t = sqrt(2*(x - v0) / (a))
   float start_speed = data->T->speed * 1.0;
 
-  loggerf(DEBUG, "train_speed_timer_calc %i %i %f", data->T->target_distance, data->T->target_speed, start_speed);
+  float real_distance = 160.0 * 0.00001 * (data->T->target_distance - 5) - data->displacement; // km
+  data->startDisplacement = data->displacement;
 
-  float real_distance = 160.0 * 0.00001 * (data->T->target_distance - 5); // km
-  data->acceleration = (1 / (2 * real_distance));
-  data->acceleration *= (data->T->target_speed - start_speed) * (data->T->target_speed + start_speed);
-  // data->acceleration == km/h/h
+  loggerf(INFO, "train_speed_timer_calc %icm %ikm/h %fkm/h %fkm", data->T->target_distance, data->T->target_speed, start_speed, real_distance);
 
-  loggerf(TRACE, "Train_speed_timer_run (data->acceleration at %f km/h^2)", data->acceleration);
-  if (data->acceleration > 64800.0){ // 5 m/s^2
-    loggerf(DEBUG, "data->acceleration to large, reduced to 5.0m/s^2)");
-    data->acceleration = 64800.0;
-  }
-  else if (data->acceleration < -129600.0){
-    loggerf(DEBUG, "Deccell to large, reduced to 10.0m/s^2)");
-    data->acceleration = -129600.0;
-  }
-
-  if (data->acceleration == 0 || data->acceleration == 0.0){
-    loggerf(DEBUG, "No speed difference");
-    data->T->changing_speed = RAILTRAIN_SPEED_T_DONE;
-    return;
-  }
-
-  data->time = sqrt(2 * (data->acceleration) * real_distance + data->T->speed * data->T->speed) - data->T->speed;
-  data->time /= data->acceleration;
-  data->time *= 3600; // convert to seconds
+  data->time = 3600 * 2 * real_distance / (2 * start_speed + (data->T->target_speed - start_speed)); // seconds
 
   if(data->time < 0.0){
     data->time *= -1.0;
   }
+  data->acceleration = (data->T->target_speed - start_speed) / data->time; // km/h/s
+
+  loggerf(INFO, "                         %fs %fkm/h/s", data->time, data->acceleration);
+
+  loggerf(TRACE, "Train_speed_timer_run (data->acceleration at %f km/h/s)", data->acceleration);
+  if (data->acceleration > 64800.0){ // 5 m/s^2
+    loggerf(WARNING, "data->acceleration to large, reduced to 5.0m/s^2)");
+    data->acceleration = 64800.0;
+  }
+  else if (data->acceleration < -129600.0){
+    loggerf(WARNING, "Deccell to large, reduced to 10.0m/s^2)");
+    data->acceleration = -129600.0;
+  }
+
+  if (data->acceleration == 0 || data->acceleration == 0.0){
+    loggerf(WARNING, "No speed difference");
+    data->T->changing_speed = RAILTRAIN_SPEED_T_DONE;
+    return;
+  }
   
+  data->stepCounter = 0;
   data->steps = (uint16_t)(data->time / 0.5);
   data->stepTime = ((data->time / data->steps) * 1000000L); // convert to usec
 
@@ -760,16 +781,18 @@ void train_speed_event_calc(struct TrainSpeedEventData * data){
 }
 
 void train_speed_event_init(RailTrain * T){
-  loggerf(TRACE, "train_speed_event_init (%i -> %ikm/h, %icm)\n", T->speed, T->target_speed, T->target_distance);
+  loggerf(INFO, "train_speed_event_init (%i -> %ikm/h, %icm)\n", T->speed, T->target_speed, T->target_distance);
 
   T->speed_event_data->T = T;
+  T->speed_event_data->displacement = 0.0;
 
   train_speed_event_calc(T->speed_event_data);
+
+  loggerf(INFO, "train_speed_event      (a: %fkm/h/s, t: %fs, steps: %i)\n", T->speed_event_data->acceleration, T->speed_event_data->time, T->speed_event_data->steps);
 
   T->speed_event->interval.tv_sec = T->speed_event_data->stepTime / 1000000L;
   T->speed_event->interval.tv_nsec = (T->speed_event_data->stepTime % 1000000UL) * 1000;
   scheduler->enableEvent(T->speed_event);
-  T->speed_event_data->stepCounter = 0;
 
   if(T->changing_speed == RAILTRAIN_SPEED_T_DONE)
     return;
@@ -778,24 +801,36 @@ void train_speed_event_init(RailTrain * T){
 void train_speed_event_tick(struct TrainSpeedEventData * data){
   data->stepCounter++;
 
-  loggerf(TRACE, "train_speed_event_tick %i a:%f, s:(%i/%i), t:%i", data->T->speed, data->acceleration, data->stepCounter, data->steps, data->stepTime);
+  loggerf(INFO, "train_speed_event_tick %i a:%f, s:(%i/%i), t:%i", data->T->speed, data->acceleration, data->stepCounter, data->steps, data->stepTime);
 
   RailTrain * T = data->T;
 
-  if(T->changing_speed == RAILTRAIN_SPEED_T_DONE){
-    scheduler->disableEvent(T->speed_event);
-    return;
+  float t = (data->stepTime * data->stepCounter) / 1000000.0; // seconds
+
+  switch(T->changing_speed){
+    case RAILTRAIN_SPEED_T_DONE:
+      scheduler->disableEvent(T->speed_event);
+      return;
+    case RAILTRAIN_SPEED_T_UPDATE:
+      // data->displacement = data->startDisplacement + data->startSpeed * (t / 3600) + 0.5 * data->acceleration * (t / 3600) * t; // (km/h) * s + (km/h/s) * s * s
+      train_speed_event_calc(data);
+      T->changing_speed = RAILTRAIN_SPEED_T_CHANGING;
+      break;
   }
 
-  T->speed = (data->startSpeed + data->acceleration * ((data->stepTime * data->stepCounter) / 1000000.0 / 3600.0)) + 0.01; // hours
+  T->speed = (data->startSpeed + data->acceleration * t) + 0.01; 
+  data->displacement = data->startDisplacement + data->startSpeed * (t / 3600) + 0.5 * data->acceleration * (t / 3600) * t; // (km/h) * h + (km/h/s) * h * s
+
+  if (data->stepCounter >= data->steps || (T->speedReason == RAILTRAIN_SPEED_R_SIGNAL && T->speedBlock->getSpeed() != T->target_speed)){
+    T->changing_speed = RAILTRAIN_SPEED_T_DONE;
+    scheduler->disableEvent(T->speed_event);
+
+    T->speed = T->target_speed;
+    T->speedReason = RAILTRAIN_SPEED_R_NONE;
+  }
 
   T->setSpeedZ21(T->speed);
   WS_stc_UpdateTrain(T);
-
-  if (data->stepCounter >= data->steps){
-    T->changing_speed = RAILTRAIN_SPEED_T_DONE;
-    scheduler->disableEvent(T->speed_event);
-  }
 
   return;
 }

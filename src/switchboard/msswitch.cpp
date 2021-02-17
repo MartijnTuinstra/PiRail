@@ -369,7 +369,6 @@ void MSSwitch::updateState(uint8_t _state){
   state = _state;
   updatedState = true;
 
-
   // Update IO
   for(uint8_t i = 0; i < IO_len; i++){
     if(!IO[i])

@@ -27,6 +27,7 @@
 #include "pathfinding.h"
 
 void init_test(char (* filenames)[30], int nr_files);
+void train_testSim_tick(struct train_sim * t, int32_t * i);
 
 class TestsFixture {
 public:
@@ -797,6 +798,28 @@ TEST_CASE_METHOD(TestsFixture, "Algorithm Switch Setter", "[Alg][Alg-3]"){
     CHECK(U->Sw[2]->Detection->isReservedBy(U->B[8]->train));
   }
 
+  SECTION("IIIb - Approaching S side with station"){
+    U->B[8]->setDetection(1);
+    Algorithm::process(U->B[8], _FORCE);
+    
+    CHECK(U->B[8]->train == RSManager->getRailTrain(0));
+
+    RSManager->getRailTrain(0)->setSpeed(10);
+    Algorithm::process(U->B[8], _FORCE);
+    
+    CHECK(U->Sw[2]->state == 0);
+    CHECK(U->Sw[2]->Detection->switchReserved);
+    CHECK(U->Sw[2]->Detection->isReservedBy(U->B[8]->train));
+
+    U->B[14]->setDetection(1);
+    Algorithm::process(U->B[14], _FORCE);
+
+    CHECK(U->B[14]->train == RSManager->getRailTrain(1));
+
+    Algorithm::process(U->B[8], _FORCE);
+    CHECK(U->Sw[2]->state == 1);
+  }
+
   SECTION("IV - Approaching S side with station fully blocked"){
     U->B[8]->setDetection(1);
     U->B[12]->setDetection(1);
@@ -1085,6 +1108,221 @@ TEST_CASE_METHOD(TestsFixture,"Algor Queue", "[Alg][Alg-Q]"){
   CHECK(AlQueue.get() == U->B[0]);
 }
 
+TEST_CASE_METHOD(TestsFixture, "Train Speed Control", "[Alg][Alg-Sp]"){
+  char filenames[1][30] = {"./testconfigs/Alg-Sp.bin"};
+  loadSwitchboard(filenames, 1);
+  loadStock();
+
+  logger.setlevel_stdout(INFO);
+
+  Unit * U = switchboard::Units(1);
+
+  REQUIRE(U);
+
+  
+  U->link_all();
+  
+  for(uint8_t j = 0; j < U->block_len; j++){
+    if(U->B[j]){
+      U->B[j]->setDetection(0);
+      AlQueue.put(U->B[j]);
+    }
+  }
+
+  pathlist_find();
+
+  Algorithm::tick();
+
+  Block *B = U->B[0];
+
+  struct train_sim train = {
+    .sim = 'A',
+    .train_length = 0,
+    .posFront = 0.0,
+    .posRear = U->B[0]->length * 1.0,
+    .Front = 0,
+    .B = (Block **)_calloc(10, Block *),
+    .blocks = 1,
+  };
+  train.B[0] = B;
+
+  change_Block(B, BLOCKED);
+  AlQueue.cpytmp();
+  
+  Algorithm::tick();
+
+  B->train->link(0, RAILTRAIN_ENGINE_TYPE);
+  B->train->setControl(TRAIN_SEMI_AUTO);
+
+  train.train_length = B->train->length;
+  train.T = B->train;
+  train.T->changeSpeed(180, 0);
+ 
+  AlQueue.put(B);
+  Algorithm::tick();
+
+  train.train_length = train.T->p.E->length / 10;
+
+  train.engines_len = 1;
+  train.engines = (struct engine_sim *)_calloc(1, struct engine_sim);
+  train.engines[0].offset = 0;
+  train.engines[0].length = train.T->p.E->length;
+
+  train.posFront = train.B[0]->length - (train.engines[0].length / 10);
+  train.posRear = train.B[0]->length;
+
+  int32_t maxIterations = 5000;
+
+  SECTION("I - CAUTION"){
+    U->B[8]->state = CAUTION;
+    
+    maxIterations = 2000;
+
+    while(!U->B[5]->blocked && maxIterations > 0){
+      train_testSim_tick(&train, &maxIterations);
+    }
+
+    REQUIRE(U->B[5]->blocked);
+    CHECK(train.T->changing_speed == RAILTRAIN_SPEED_T_CHANGING);
+    CHECK(train.T->target_speed == CAUTION_SPEED);
+    CHECK(train.T->target_distance == 300);
+    CHECK(train.T->speedReason == RAILTRAIN_SPEED_R_SIGNAL);
+
+    while(!U->B[6]->blocked && maxIterations > 0){
+      train_testSim_tick(&train, &maxIterations);
+    }
+
+    REQUIRE(U->B[6]->blocked);
+    CHECK(train.T->changing_speed == RAILTRAIN_SPEED_T_UPDATE);
+    CHECK(train.T->target_speed == CAUTION_SPEED);
+    CHECK(train.T->target_distance == 200);
+    CHECK(train.T->speedReason == RAILTRAIN_SPEED_R_SIGNAL);
+
+    while(!U->B[7]->blocked && maxIterations > 0){
+      train_testSim_tick(&train, &maxIterations);
+    }
+
+    REQUIRE(U->B[7]->blocked);
+    CHECK(train.T->changing_speed == RAILTRAIN_SPEED_T_UPDATE);
+    CHECK(train.T->target_speed == CAUTION_SPEED);
+    CHECK(train.T->target_distance == 100);
+    CHECK(train.T->speedReason == RAILTRAIN_SPEED_R_SIGNAL);
+  }
+
+  SECTION("II - DANGER"){
+    for(uint8_t i = 0; i < 8; i++)
+      U->B[i]->state = CAUTION;
+    U->B[8]->state = DANGER;
+    
+    maxIterations = 2000;
+
+    while(!U->B[6]->blocked && maxIterations > 0){
+      train_testSim_tick(&train, &maxIterations);
+    }
+
+    REQUIRE(U->B[6]->blocked);
+    CHECK(train.T->changing_speed == RAILTRAIN_SPEED_T_DONE);
+    CHECK(train.T->speedReason == RAILTRAIN_SPEED_R_NONE);
+
+    while(!U->B[7]->blocked && maxIterations > 0){
+      train_testSim_tick(&train, &maxIterations);
+    }
+
+    REQUIRE(U->B[7]->blocked);
+    CHECK(train.T->changing_speed == RAILTRAIN_SPEED_T_CHANGING);
+    CHECK(train.T->target_speed == 0);
+    CHECK(train.T->target_distance == 100);
+    CHECK(train.T->speedReason == RAILTRAIN_SPEED_R_SIGNAL);
+  }
+  
+  SECTION("III - Speed"){
+    maxIterations = 2000;
+
+    while(!U->B[5]->blocked && maxIterations > 0){
+      train_testSim_tick(&train, &maxIterations);
+    }
+
+    REQUIRE(U->B[5]->blocked);
+    CHECK(train.T->changing_speed == RAILTRAIN_SPEED_T_CHANGING);
+    CHECK(train.T->target_speed == 100);
+    CHECK(train.T->target_distance == 300);
+    CHECK(train.T->speedReason == RAILTRAIN_SPEED_R_MAXSPEED);
+
+    while(!U->B[6]->blocked && maxIterations > 0){
+      train_testSim_tick(&train, &maxIterations);
+    }
+
+    REQUIRE(U->B[6]->blocked);
+    CHECK(train.T->changing_speed == RAILTRAIN_SPEED_T_UPDATE);
+    CHECK(train.T->target_speed == 100);
+    CHECK(train.T->target_distance == 200);
+    CHECK(train.T->speedReason == RAILTRAIN_SPEED_R_MAXSPEED);
+
+    while(!U->B[7]->blocked && maxIterations > 0){
+      train_testSim_tick(&train, &maxIterations);
+    }
+
+    REQUIRE(U->B[7]->blocked);
+    CHECK(train.T->changing_speed == RAILTRAIN_SPEED_T_UPDATE);
+    CHECK(train.T->target_speed == 100);
+    CHECK(train.T->target_distance == 100);
+    CHECK(train.T->speedReason == RAILTRAIN_SPEED_R_MAXSPEED);
+  }
+  
+  SECTION("IV - CAUTION changing to PROCEED"){
+    U->B[8]->state = CAUTION;
+    U->B[9]->state = CAUTION;
+    U->B[10]->state = CAUTION;
+    
+    maxIterations = 2000;
+
+    while(!U->B[5]->blocked && maxIterations > 0){
+      train_testSim_tick(&train, &maxIterations);
+    }
+
+    REQUIRE(U->B[5]->blocked);
+    CHECK(train.T->changing_speed == RAILTRAIN_SPEED_T_CHANGING);
+    CHECK(train.T->target_speed == CAUTION_SPEED);
+    CHECK(train.T->target_distance == 300);
+    CHECK(train.T->speedReason == RAILTRAIN_SPEED_R_SIGNAL);
+    CHECK(train.T->speed == 180);
+
+    while(train.T->speed_event_data->stepCounter != 4 && maxIterations > 0){
+      train_testSim_tick(&train, &maxIterations);
+    }
+
+    CHECK(train.T->speed < 180);
+    U->B[8]->state = PROCEED;
+    
+    while(train.T->speed_event_data->stepCounter != 5 && maxIterations > 0){
+      train_testSim_tick(&train, &maxIterations);
+    }
+
+    CHECK(train.T->changing_speed == RAILTRAIN_SPEED_T_DONE);
+    CHECK(train.T->speedReason == RAILTRAIN_SPEED_R_NONE);
+
+    while(!U->B[6]->blocked && maxIterations > 0){
+      train_testSim_tick(&train, &maxIterations);
+    }
+
+    REQUIRE(U->B[6]->blocked);
+    CHECK(train.T->changing_speed == RAILTRAIN_SPEED_T_CHANGING);
+    CHECK(train.T->target_speed == CAUTION_SPEED);
+    CHECK(train.T->target_distance == 200);
+    CHECK(train.T->speedReason == RAILTRAIN_SPEED_R_SIGNAL);
+
+    while(!U->B[7]->blocked && maxIterations > 0){
+      train_testSim_tick(&train, &maxIterations);
+    }
+
+    REQUIRE(U->B[7]->blocked);
+    CHECK(train.T->changing_speed == RAILTRAIN_SPEED_T_UPDATE);
+    CHECK(train.T->target_speed == CAUTION_SPEED);
+    CHECK(train.T->target_distance == 100);
+    CHECK(train.T->speedReason == RAILTRAIN_SPEED_R_SIGNAL);
+  }
+}
+
 TEST_CASE_METHOD(TestsFixture, "Train Route Following", "[Alg][Alg-R]"){
   char filenames[4][30] = {"./testconfigs/Alg-R-1.bin",
                            "./testconfigs/Alg-R-2.bin",
@@ -1148,7 +1386,7 @@ TEST_CASE_METHOD(TestsFixture, "Train Route Following", "[Alg][Alg-R]"){
 
   train.train_length = B->train->length;
   train.T = B->train;
-  train.T->changeSpeed(100, IMMEDIATE_SPEED);
+  train.T->changeSpeed(100, 0);
  
   AlQueue.put(B);
   Algorithm::tick();
@@ -1163,7 +1401,7 @@ TEST_CASE_METHOD(TestsFixture, "Train Route Following", "[Alg][Alg-R]"){
   train.posFront = train.B[0]->length - (train.engines[0].length / 10);
   train.posRear = train.B[0]->length;
 
-  int32_t maxIterations = 10000;
+  int32_t maxIterations = 5000;
 
   SECTION("I - Just a circle"){
     while(!U[1]->B[5]->blocked && maxIterations){
@@ -1177,7 +1415,7 @@ TEST_CASE_METHOD(TestsFixture, "Train Route Following", "[Alg][Alg-R]"){
     CHECK(!U[1]->B[4]->blocked);
     CHECK(U[1]->B[5]->blocked);
 
-    maxIterations = 10000;
+    maxIterations = 5000;
 
     while(!U[1]->B[3]->blocked && maxIterations){
       train_sim_tick(&train);
@@ -1202,16 +1440,44 @@ TEST_CASE_METHOD(TestsFixture, "Train Route Following", "[Alg][Alg-R]"){
     CHECK(U[3]->B[2]->blocked);
     CHECK(maxIterations > 0);
 
-    maxIterations = 20000;
+    maxIterations = 5000;
 
-    while(!U[1]->B[8]->blocked && maxIterations > 0){
+    // Train should stop on destination
+    while(maxIterations > 0){
+      train_testSim_tick(&train, &maxIterations);
+    }
+
+    CHECK(U[1]->B[8]->blocked);
+    CHECK(maxIterations > 0);
+  }
+
+  SECTION("III - A blocked route"){
+    // Run the scheduler to change speed of train dynamically
+    //   or include it in the iterration loop since sim time does not equal real time.
+
+    U[1]->B[8]->setDetection(1);
+    Algorithm::process(U[1]->B[8], _FORCE);
+
+    train.T->setRoute(U[1]->B[8]); // Set train destination
+
+    while(!U[3]->B[2]->blocked && maxIterations > 0){
       train_sim_tick(&train);
       if(AlQueue.queue->getItems() > 0)
         Algorithm::tick();
       maxIterations--;
     }
 
-    CHECK(U[1]->B[8]->blocked);
+    CHECK(U[3]->B[2]->blocked);
     CHECK(maxIterations > 0);
+
+    maxIterations = 2000;
+
+    while(maxIterations > 0){
+      train_testSim_tick(&train, &maxIterations);
+    }
+
+    CHECK(maxIterations == 0);
+    CHECK(!U[1]->B[9]->blocked);
+    CHECK(train.T->B == U[4]->B[0]);
   }
 }

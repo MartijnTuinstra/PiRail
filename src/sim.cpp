@@ -34,16 +34,16 @@ extern pthread_mutex_t mutex_lockA;
 #define TRAIN_B_LEN   5 //cm
 #define TRAIN_B_SPEED 5 //cm/s
 
-#define TRAINSIM_INTERVAL_US 50000
-#define TRAINSIM_INTERVAL_SEC 0.05
-
 #define JOIN_SIM_INTERVAL 1000
 
 void change_Block(Block * B, enum Rail_states state){
   if((state != BLOCKED && B->detectionBlocked) || (state == BLOCKED && !B->detectionBlocked)){
     B->setDetection(state == BLOCKED);
 
-    loggerf(DEBUG, "SIM set block %2i:%2i %i%i%i - %s>%s", B->module, B->id, B->blocked, B->detectionBlocked, B->virtualBlocked, rail_states_string[B->state], rail_states_string[state]);
+    if(state == BLOCKED)
+      loggerf(INFO, "SIM set block %2i:%2i %i%i%i", B->module, B->id, B->blocked, B->detectionBlocked, B->virtualBlocked);
+    else
+      loggerf(INFO, "SIM unset block %2i:%2i %i%i%i", B->module, B->id, B->blocked, B->detectionBlocked, B->virtualBlocked);
 
     AlQueue.puttemp(B);
   }
@@ -77,13 +77,16 @@ void train_sim_tick(struct train_sim * t){
   }
 
   // Advance train (km/h -> cm/s) / scale * tick interval (in sec)
-  float distance = (t->T->speed / 3.6) * 100.0 / 160.0 * TRAINSIM_INTERVAL_SEC;
+  float distance = ((t->T->speed / 3.6) * 100.0 / 160.0) * TRAINSIM_INTERVAL_SEC;
   t->posFront -= distance;
   t->posRear  -= distance;
 
   uint16_t blockoffset = 0;
 
   uint8_t stockid = 0;
+
+  char debug[100] = " ";
+  char * p = &debug[0];
 
   for(uint8_t i = 0; i < t->blocks; i++){
     bool blocktheblock = false;
@@ -109,14 +112,17 @@ void train_sim_tick(struct train_sim * t){
         break; // Detectable is not in this block but maybe in the next.
     }
 
-    if(blocktheblock){
-      change_Block(t->B[i], BLOCKED);
-    }
-    else
-      change_Block(t->B[i], PROCEED);
+    if(blocktheblock && !t->B[i]->detectionBlocked)
+        t->B[i]->setDetection(1);
+    else if(!blocktheblock && t->B[i]->detectionBlocked)
+        t->B[i]->setDetection(0);
+    AlQueue.puttemp(t->B[i]);
+
+    p += sprintf(p, "%02i:%02i%c ", t->B[i]->module, t->B[i]->id, blocktheblock ? 'B' : ' ');
 
     blockoffset += t->B[i]->length;
   }
+  // loggerf(INFO, "SIM blocks (%i): %s", t->blocks, debug);
 
   AlQueue.cpytmp();
 }
@@ -179,7 +185,7 @@ void *TRAIN_SIMA(void * args){
 
   train.T = B->train;
 
-  train.T->changeSpeed(50, IMMEDIATE_SPEED);
+  train.T->changeSpeed(50, 0);
  
   AlQueue.put(B);
 

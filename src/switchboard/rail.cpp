@@ -422,7 +422,7 @@ void Block::reserve(RailTrain * T){
       setState(RESERVED_SWITCH);
     }
     else{
-      loggerf(INFO, "ALSO RESERVE PATH"); // FIXME
+      // loggerf(INFO, "ALSO RESERVE PATH"); // FIXME
       reserved = true;
       setState(RESERVED);
     }
@@ -467,7 +467,7 @@ void Block::setState(enum Rail_states state){
     this->forward_signal->operator[](i)->set(state);
   }
 
-  this->statechanged = 1;
+  statechanged = 1;
   U->block_state_changed |= 1;
 }
 
@@ -479,7 +479,7 @@ void Block::setReversedState(enum Rail_states state){
     this->reverse_signal->operator[](i)->set(state);
   }
 
-  this->statechanged = 1;
+  statechanged = 1;
   U->block_state_changed |= 1;
 }
 
@@ -510,7 +510,28 @@ enum Rail_states Block::addSignal(Signal * Sig){
   }
 }
 
+uint16_t Block::getSpeed(){
+  uint16_t speed = MaxSpeed;
 
+  switch(state){
+    case DANGER:
+      speed = 0;
+      break;
+    case RESTRICTED:
+      speed = 15;
+      break;
+    case CAUTION:
+      speed = CAUTION_SPEED;
+      break;
+    default:
+      speed = BlockMaxSpeed;
+  }
+
+  if(speed > MaxSpeed)
+    speed = MaxSpeed;
+
+  return speed;
+}
 
 void Block::AlgorClear(){
   loggerf(TRACE, "Block %02i:%02i AlgorClear", module, id);

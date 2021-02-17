@@ -127,9 +127,9 @@ void Server::loop(){
       if(errno == EAGAIN || errno == ETIMEDOUT){
         continue;
       }
-      else if(errno == EINTR){
-        break;
-      }
+      // else if(errno == EINTR){
+      //   break;
+      // }
       else{
         loggerf(WARNING, "Failed to connect with client %i", errno);
         continue;

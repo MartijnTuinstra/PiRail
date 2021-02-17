@@ -17,5 +17,7 @@ test/libbaan.so
 test/maintest
 test/bin/*
 test/testresults/*
+generated/src/*
+generated/lib/*
 comtest
 uartlog.txt

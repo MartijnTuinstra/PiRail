@@ -662,6 +662,8 @@ void train_following(Algor_Blocks * ABs, int debug){
 
 }
 
+#define SpeedToDistance_A(s, a) 0.173625 * (s * s) / (2 * -a)
+
 void train_control(Algor_Blocks * ABs, int debug){
   char Debug[100];
   sprintf(Debug, "Algor_train_control %2i:%2i\n", ABs->B->module, ABs->B->id);
@@ -678,17 +680,10 @@ void train_control(Algor_Blocks * ABs, int debug){
     return;
   T->speedCheck = false;
 
-  uint16_t targetSpeed = 0xFFFF;
-  uint16_t targetDistance = 0xFFFF;
-  uint8_t reason = 0;
-  Block * speedBlock = 0;
-
   if(ABs->next == 0){
     // Stop train no next block!!
     loggerf(INFO, "EMEG BRAKE, end of line");
-    targetSpeed = 0;
-    targetDistance = 0;
-    T->changeSpeed(targetSpeed, targetDistance);
+    T->changeSpeed(0, 0);
     return;
   }
 
@@ -697,79 +692,69 @@ void train_control(Algor_Blocks * ABs, int debug){
   else
     loggerf(DEBUG, "%i (xx:xx) -> %s (%02i:%02i)", T->id, rail_states_string[N[0]->state], N[0]->module, N[0]->id);
 
-  float maxDistance = 100;
-  if(T->speed > 60)
-    maxDistance = 0.173625 * ((T->speed * T->speed) / (2 * 10));  // Max Deceleration of 10km/h/s = 2.78m/s^2.. km2/h2 / km-1h-1s-1
+  float maxDistance = SpeedToDistance_A(T->MaxSpeed, -10);  // Max Deceleration of 10km/h/s = 2.78m/s^2.. km2/h2 / km-1h-1s-1
   uint8_t i = 0;
-  uint16_t length = B->length;;
+  uint16_t length = B->length;
   loggerf(INFO, "checking %fcm", maxDistance);
 
-  while(ABs->next > i && maxDistance > 0){
+  struct {
     uint16_t speed;
+    uint16_t length;
+    uint8_t reason;
+  } speeds[10] = {{0,0,0}};
 
-    loggerf(INFO, "  speedchecking %02i:%02i %s", N[i]->module, N[i]->id, rail_states_string[N[i]->state]);
+  // Deceleration
+  while(ABs->next > i && length - N[i]->length < maxDistance){
+    loggerf(INFO, "  speedchecking %02i:%02i %s %f", N[i]->module, N[i]->id, rail_states_string[N[i]->state], maxDistance);
 
     if(N[i]->blocked){
-      targetSpeed = 0;
-      targetDistance = length - N[i]->length;
+      speeds[i].speed = 0;
+      speeds[i].length = length - N[i]->length;
+      speeds[i].reason = RAILTRAIN_SPEED_R_SIGNAL;
       break;
     }
-    else if(N[i]->state < PROCEED){
-      speed = N[i]->getSpeed();
-      reason = RAILTRAIN_SPEED_R_SIGNAL;
-    }
     else{
-      speed = N[i]->getSpeed();
-      reason = RAILTRAIN_SPEED_R_MAXSPEED;
+      speeds[i].speed = N[i]->getSpeed();
+      speeds[i].length = length;
+
+      if(N[i]->state < PROCEED)
+        speeds[i].reason = RAILTRAIN_SPEED_R_SIGNAL;
+      else
+        speeds[i].reason = RAILTRAIN_SPEED_R_MAXSPEED;
     }
 
-    if(speed < targetSpeed){
-      targetSpeed = speed;
-      targetDistance = length;
-      T->speedReason = reason;
-      speedBlock = N[i];
-    }
-
-    maxDistance -= N[i]->length;
     length += N[i]->length;
     i++;
   }
 
-  // if(N[0]->blocked){
-  //   loggerf(WARNING, "%sTrain Next block Blocked", Debug);
-  //   targetSpeed = 0;
-  //   targetDistance = 0;
-  // }
-  // else if(ABs->next > 1 && N[1]->state < N[0]->state){
-  //   if(N[1]->blocked){
-  //     loggerf(WARNING, "%sTrain Next2 block Blocked", Debug);
-  //     targetSpeed = 0;
-  //     targetDistance = T->B->length;
-  //   }
-  //   else if(N[1]->state < PROCEED){
-  //     loggerf(WARNING, "%sTrain Next2 block Restricted %02i:%02i", Debug, N[1]->module, N[1]->id);
-  //     targetSpeed = T->B->getSpeed();
-  //     targetDistance = T->B->length + N[0]->length;
-  //   }
-  // }
-  // else if(N[0]->state < PROCEED){
-  loggerf(WARNING, "%sTrain @%icm -> %ikm/h", Debug, targetDistance, targetSpeed);
-  //   targetSpeed = T->B->getSpeed();
-  //   targetDistance = T->B->length;
-  // }
-  // else if(!T->manual && (T->target_speed > N[0]->MaxSpeed || T->speed > N[0]->MaxSpeed)){
-  //   loggerf(INFO, "%sNext block speed limit", Debug);
-  //   T->changeSpeed(N[0]->MaxSpeed, T->B->length);
-  // }
-  // else if(!T->manual && N[0]->MaxSpeed > T->speed && ABs->next > 1 && N[1]->MaxSpeed >= N[0]->MaxSpeed) {
-  //   loggerf(INFO, "%sTrain Speed Up", Debug);
-  //   if(N[0]->MaxSpeed <= T->MaxSpeed)
-  //     T->changeSpeed(N[0]->MaxSpeed, T->B->length);
-  //   else if(T->speed != T->MaxSpeed)
-  //     T->changeSpeed(T->MaxSpeed, T->B->length);
-  T->changeSpeed(targetSpeed, targetDistance);
+  uint16_t speed      = T->speed;
+  uint16_t distance   = 0;
+  uint8_t  reason     = RAILTRAIN_SPEED_R_NONE;
+  Block *  speedBlock = 0;
+
+  for(int8_t j = i - 1; j >= 0; j--){
+    uint16_t minLength = 0;
+    if(j > 0)
+      minLength = speeds[j].length - N[j - 1]->length - 10;
+
+    float relativeDistance = 0.173625 * ( (speeds[j].speed * speeds[j].speed) - (T->speed * T->speed) ) / (2 * -10);
+
+    loggerf(INFO, "                  %i<%f<%i %i %i", minLength, relativeDistance, speeds[j].length, speeds[j].reason, speeds[j].speed);
+
+    if(speeds[j].speed <= speed && minLength < relativeDistance && relativeDistance < speeds[j].length){
+      loggerf(WARNING, " %i", speeds[j].speed);
+      speed = speeds[j].speed;
+      distance = speeds[j].length;
+      reason = speeds[j].reason;
+      if(reason == RAILTRAIN_SPEED_R_SIGNAL)
+        speedBlock = N[j];
+    }
+  }
+
+  loggerf(WARNING, "%sTrain %ikm/h@%icm", Debug, speed, distance);
+  T->speedReason = reason;
   T->speedBlock = speedBlock;
-  // }
+  T->changeSpeed(speed, distance);
 }
 
 

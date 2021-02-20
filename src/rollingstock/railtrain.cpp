@@ -344,6 +344,9 @@ void RailTrain::changeSpeed(uint16_t _target_speed, uint16_t _length){
     return;
   }
 
+  if(_target_speed > MaxSpeed)
+    _target_speed = MaxSpeed;
+
   if(_target_speed == speed){
     if(changing_speed == RAILTRAIN_SPEED_T_DONE)
       speedReason = RAILTRAIN_SPEED_R_NONE;
@@ -824,8 +827,14 @@ void train_speed_event_tick(struct TrainSpeedEventData * data){
   if (data->stepCounter >= data->steps || (T->speedReason == RAILTRAIN_SPEED_R_SIGNAL && T->speedBlock->getSpeed() != T->target_speed)){
     T->changing_speed = RAILTRAIN_SPEED_T_DONE;
     scheduler->disableEvent(T->speed_event);
+    
+    if(T->speedReason == RAILTRAIN_SPEED_R_SIGNAL && T->speedBlock->getSpeed() != T->target_speed){
+      T->speedReason = RAILTRAIN_SPEED_R_NONE;
+      return;
+    }
 
     T->speed = T->target_speed;
+
     T->speedReason = RAILTRAIN_SPEED_R_NONE;
   }
 

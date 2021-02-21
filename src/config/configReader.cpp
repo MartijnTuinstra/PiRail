@@ -5,7 +5,7 @@ void Config_read_uint8_t_uint8_t(uint8_t * put, uint8_t ** get){
 	printf("r u8u8   %8x: %i\n", (unsigned int)*get, *get[0]);
 	#endif
 	*put = (*get)[0];
-	*get += 1;
+	*get += sizeof(uint8_t);
 }
 
 void Config_read_uint8_t_uint16_t(uint16_t * put, uint8_t ** get){
@@ -21,6 +21,15 @@ void Config_read_uint16_t_uint16_t(uint16_t * put, uint8_t ** get){
 	printf("r u16u16 %8x: %i\n", (unsigned int)*get, ((uint16_t *)*get)[0]);
 	#endif
 	*put = ((uint16_t *)*get)[0];
+	*get += sizeof(uint16_t);
+}
+
+void Config_read_uint16_t_uint8_t(uint8_t * put, uint8_t ** get){
+	#ifdef DEBUG
+	printf("r u16u8 %8x: %i\n", (unsigned int)*get, ((uint16_t *)*get)[0]);
+	#endif
+	uint16_t tmp = ((uint16_t *)*get)[0];
+	*put = tmp & 0xFF;
 	*get += sizeof(uint16_t);
 }
 

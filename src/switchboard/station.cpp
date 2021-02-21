@@ -37,11 +37,11 @@ Station::Station(int _module, int _id, struct configStruct_Station * conf){
 
   U->insertStation(this);
 
-  if(conf->parent != 0xFFFF && U->St[conf->parent]){
+  if(conf->parent != 0xFF && U->St[conf->parent]){
     parent = U->St[conf->parent];
     U->St[conf->parent]->childs.push_back(this);
   }
-  else if(conf->parent != 0xFFFF)
+  else if(conf->parent != 0xFF)
     loggerf(WARNING, "Failed to link station '%s' to parent %d", name, conf->parent);
 
   blocks_len = conf->nr_blocks;
@@ -74,7 +74,7 @@ void Station::exportConfig(struct configStruct_Station * cfg){
   if (parent)
     cfg->parent = parent->id;
   else
-    cfg->parent = 0xFFFF;
+    cfg->parent = 0xFF;
 
   cfg->blocks = (uint8_t *)_calloc(blocks_len, uint8_t);
   for(uint8_t i = 0; i < blocks_len; i++){

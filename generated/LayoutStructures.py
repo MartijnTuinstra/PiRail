@@ -2,7 +2,8 @@ from .layoutGenerator import *
 
 versionLookup = [[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0], 
                  [0,0,0,1,0,0,0,0,0,0,0,0,0,0,0], # UnitConfig Update
-                 [0,0,0,1,1,0,0,0,0,0,0,0,0,0,0]  # BlockConfig Update
+                 [0,0,0,1,1,0,0,0,0,0,0,0,0,0,0], # BlockConfig Update
+                 [0,0,0,1,1,0,0,0,1,0,0,0,0,0,0]  # StationConfig Update
                 ]
 
 CFL = ConfigFileLayout("LayoutStructure", versionLookup, includePath="config/", sourcePath="generated/src/config/", headerPath="generated/lib/config/")
@@ -139,12 +140,14 @@ StationConfig = CFL.addStructure("Station",
 		StF(1,"nr_blocks", FT.U8),
 		StF(2,"name_len",  FT.U8),
 		StF(3,"reserved",  FT.U8),
-		StF(4,"parent",    FT.U16),
+		StF(4,"parent",    FT.U8),
 
 		StF(5,"blocks",    FT.LIST, nested=FT.U8),
 		StF(6,"name",      FT.LIST, nested=FT.CHAR)
 	],
 	[[FF(FT.U8, 0), FF(FT.U8, 1), FF(FT.U8, 2), FF(FT.U8, 3), FF(FT.U16, 4),
+	  FF(FT.LIST | FT.U8, 5, lengthField=1), FF(FT.LIST | FT.CHAR, 6, lengthField=2)],
+	 [FF(FT.U8, 0), FF(FT.U8, 1), FF(FT.U8, 2), FF(FT.U8, 3), FF(FT.U8, 4),
 	  FF(FT.LIST | FT.U8, 5, lengthField=1), FF(FT.LIST | FT.CHAR, 6, lengthField=2)
 	]]
 )

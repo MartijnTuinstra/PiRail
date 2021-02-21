@@ -78,8 +78,7 @@ packedstruct s_opc_UpdateTrain {
 // 0x46
 packedstruct s_opc_TrainRoute {
   uint8_t train_id;
-  uint8_t station_id;
-  uint8_t module_id;
+  uint16_t station_id;
 };
 
 // 0x4A

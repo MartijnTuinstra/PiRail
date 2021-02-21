@@ -897,11 +897,22 @@ void WS_stc_StationLib(Websocket::Client * client){
     (*length)++;
     d[0] = St->module;
     d[1] = St->id;
-    d[2] = St->type;
-    d[3] = strlen(St->name);
-    memcpy(&d[4], St->name, d[3]);
+    d[2] = St->uid;
 
-    d += d[3] + 4;
+    if(St->parent){
+      d[3] = St->parent->uid >> 8;
+      d[4] = St->parent->uid & 0xFF;
+    }
+    else{
+      d[3] = 0xFF;
+      d[4] = 0xFF;
+    }
+
+    d[5] = St->type;
+    d[6] = strlen(St->name);
+    memcpy(&d[7], St->name, d[6]);
+
+    d += d[6] + 7;
   }
 
   if(client){

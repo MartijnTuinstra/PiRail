@@ -453,12 +453,18 @@ void Web_Train_Split(int i,char tID,char B[]){
 */
 
 void WS_cts_TrainRoute(struct s_opc_TrainRoute * data, Websocket::Client * client){
+  loggerf(WARNING, "WS_cts_TrainRoute Train %i to Station %i", data->train_id, data->station_id);
   RailTrain * T = RSManager->RailTrains[data->train_id];
 
   if(!T)
     return;
 
-  Station * St = Units(data->module_id)->St[data->station_id];
+  auto St = switchboard::SwManager->getStation(data->station_id);
+  
+  if(!St){
+    loggerf(WARNING, "Failed to get station");
+    return;
+  }
 
   T->setRoute(St->blocks[0]);
 }

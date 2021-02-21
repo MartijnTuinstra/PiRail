@@ -483,8 +483,8 @@ websocket.add_opcodes([
         var msg = [];
 
         msg[0] = data.train_id;
-        msg[1] = data.station_id;
-        msg[2] = data.station_module;
+        msg[1] = data.station_id & 0xFF;
+        msg[2] = data.station_id >> 8;
 
         return msg;
       },
@@ -1380,15 +1380,26 @@ websocket.add_opcodes([
         for(var j = 0; j < nr; j++){
           st = {module: data[i++],
                 id: data[i++],
+                uid: data[i++],
+                parentUID: (data[i++] << 8) + data[i++],
                 type: data[i++],
                 name_len: data[i++],
-                name: ""};
+                name: "",
+                childs: []
+          };
           st.name = String.fromCharCode.apply(null, data.slice(i, i+st.name_len));
 
           i += st.name_len;
 
           stations[j] = st;
           modules[st.module].stations[st.id] = st;
+        }
+
+        for(var j = 0; j < nr; j++){
+          if(stations[j].parentUID != 0xFFFF){
+            stations[j].parent = stations[stations[j].parentUID];
+            stations[j].parent.childs.push(stations[j]);
+          }
         }
       }
     },

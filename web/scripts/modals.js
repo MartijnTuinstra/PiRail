@@ -827,28 +827,61 @@ var Modals = {
            {link: ".train-box.box2 button.set-route", args: {box: 2}}],
       open_cb: function(data, ref){
         // $('.modal-body', ref).append("<div style='width:100%; overflow:hidden; max-height: 600px'><div style='width:125%;position: relative; overflow: overlay;'><div class='cont' style='width:80%;'><ul class='list-unstyled'></ul></div></div></div>");
-        $('.modal-body', ref).append("<div style='display: hidden' class='tid'>"+Train_Control.train[data.box].t.railtrainid+"</div>");
-        // $('.modal-body > div').css("max-height", "calc("+(window.innerHeight*0.8-71)+"px - 3em)");
+        $('.modal-body', ref).append("<div style='display: none' class='tid'>"+Train_Control.train[data.box].t.railtrainid+"</div>");
+        // $('.modal-body').css("padding", "0px");
         // $('.modal-body > div > div').css("max-height", "calc("+(window.innerHeight*0.8-71)+"px - 3em)");
         // for(var i = 0; i<Train.cars.length; i++){
         //  var t = Train.cars[i];
 
         var text = "";
-        $.each(stations, function(id){
-          text += '<li class="message media" station="'+id+'">'+this.module+':'+this.id+'&nbsp;&nbsp;&nbsp;'+this.name+'</li>';
+        // $.each(stations, function(id){
+        //   text += '<tr station="'+id+'"><td>'+this.module+':'+this.id+'</td><td style="text-align: right">'+modules[this.module].name+'</td><td>'+this.name+'</td><td>10cm</td></tr>';
+        // });
+        // '<table class="table table-hover">\
+        //           <thead>\
+        //             <tr><th scope="col">Block #</th>\
+        //               <th scope="col" style="text-align: center" colspan="2">Station Name</th>\
+        //               <th scope="col">Station Length</th>\
+        //         </tr></thead><tbody></tbody></table>',
+        
+        $.each(modules, function(id){
+          if(!this.visible || Object.keys(this.stations).length == 0)
+            return;// continue
+
+          text += '<div style="border-top: 1px solid lightgray; border-bottom: 1px solid lightgray;padding-bottom: 2px" class="row"><div class="col-2">' + this.name+'</div><div class="col-10 row">';
+          mstations = [];
+          var m = this;
+          $.each(this.stations, function(id){
+            // text += '<tr station="'+id+'"><td>'+this.module+':'+this.id+'</td><td style="text-align: right">'+modules[this.module].name+'</td><td>'+this.name+'</td><td>10cm</td></tr>';
+            if(this.parentUID != 0xFFFF)
+              return; // continue
+
+            text += '<div class="col"><div>'+this.name+'</div>';
+
+            text += '<button class="set-route btn btn-xs btn-outline-primary" station="'+this.uid+'">'+this.name+'</button>';
+
+            if(this.childs.length > 0){
+              for(var i = 0; i < this.childs.length; i++){
+                text += '<button class="set-route btn btn-xs btn-outline-primary" station="'+this.childs[i].uid+'">'+this.childs[i].name+'</button>';
+              }
+            }
+
+            text += "</div>";
+          });
+          text += '</div></div>';
         });
 
         $('.modal-body', ref).append(text);
 
-        $('.modal-body li.media', ref).on("click", function(){
+        $('.modal-body button', ref).on("click", function(){
           var st = stations[$(this).attr("station")];
-
           var tid = $('.tid', $(this).closest('.modal-body')).text();
 
-          var data = {train_id: tid, station_id: st.id, station_module: st.module}
+          var data = {train_id: tid, station_id: st.uid};
 
           websocket.cts_TrainAddRoute(data);
 
+          Modals.hide();
         });
 
         //  var text = '<li class="message media">'+

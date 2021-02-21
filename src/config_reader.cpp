@@ -897,13 +897,14 @@ void modify_Station(struct ModuleConfig * config, char cmd){
       config->Stations[id].parent = tmp;
 
     printf("Station Name (%s)\n\t\t\t | ", config->Stations[id].name);
-    fgets(_cmd, 20, stdin);
-    if(sscanf(_cmd, "%s", _cmd) > 0){
-      tmp = strlen(_cmd);
-      config->Stations[id].name = (char *)_realloc(config->Stations[id].name, tmp, char);
-      memcpy(config->Stations[id].name, _cmd, tmp);
-      config->Stations[id].name[tmp] = 0;
-      config->Stations[id].name_len = tmp;
+    char _name[41] = "";
+    fgets(_name, 40, stdin);
+    if(strlen(_name) > 1){
+      uint8_t _name_len = strlen(_name) - 1; // trailing newline
+      config->Stations[id].name = (char *)_realloc(config->Stations[id].name, _name_len, char);
+      memcpy(config->Stations[id].name, _name, _name_len);
+      config->Stations[id].name[_name_len] = 0;
+      config->Stations[id].name_len = _name_len;
     }
 
     printf("Station blocks nr (%2i)   | ", config->Stations[id].nr_blocks);

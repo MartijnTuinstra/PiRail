@@ -18,6 +18,19 @@ bool operator <(const struct timespec lhs, const struct timespec rhs)
         return lhs.tv_sec < rhs.tv_sec;
 }
 
+struct timespec operator -(const struct timespec lhs, const struct timespec rhs)
+{
+    struct timespec r = {
+        .tv_sec  = lhs.tv_sec  - rhs.tv_sec,
+        .tv_nsec = lhs.tv_nsec - rhs.tv_nsec
+    };
+    if (r.tv_nsec < 0){
+        r.tv_sec -= 1;
+        r.tv_nsec += 1E9;
+    }
+    return r;
+}
+
 Scheduler::~Scheduler(){
     for(auto e: events)
         _free(e);
@@ -39,6 +52,10 @@ void Scheduler::update(){
     interrupt();
 }
 
+void Scheduler::updateClock(){
+    clock_gettime(CLOCK_REALTIME, &scheduler_wait);
+}
+
 void Scheduler::interrupt(){
     pthread_cond_signal(&condition);
 }
@@ -47,10 +64,10 @@ void * Scheduler::thread(void * args){
     Scheduler * context = (Scheduler *)args;
 
     while( context->_stop_ == 0 ){
-        clock_gettime(CLOCK_REALTIME, &context->scheduler_wait);
+        context->updateClock();
 
         for(auto &e: context->events){
-            if(e->next_interval < context->scheduler_wait){
+            if(context->hasPassed(e)){
                 if(!e->disabled && e->function)
                     e->function(e->function_args);
                 context->updateEvent(e);
@@ -79,6 +96,10 @@ void * Scheduler::thread(void * args){
     printf("Scheduler done\n");
 
     return NULL;
+}
+
+bool Scheduler::hasPassed(struct SchedulerEvent * event){
+    return (event->next_interval < scheduler_wait);
 }
 
 void Scheduler::enableEvent(struct SchedulerEvent * event){

@@ -37,6 +37,7 @@ struct TrainSpeedEventData {
   uint16_t steps;
   uint16_t stepCounter;
   uint32_t stepTime;
+  struct timespec updateTime;
 
   struct timespec starttime;
 };

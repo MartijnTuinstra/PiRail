@@ -731,6 +731,7 @@ void train_speed_event_create(RailTrain * T, uint16_t targetSpeed, uint16_t dist
   }
   else if(T->changing_speed == RAILTRAIN_SPEED_T_CHANGING){
     T->changing_speed = RAILTRAIN_SPEED_T_UPDATE;
+    clock_gettime(CLOCK_REALTIME, &T->speed_event_data->updateTime);
   }
   else{
     return;
@@ -793,9 +794,12 @@ void train_speed_event_init(RailTrain * T){
 
   loggerf(INFO, "train_speed_event      (a: %fkm/h/s, t: %fs, steps: %i)\n", T->speed_event_data->acceleration, T->speed_event_data->time, T->speed_event_data->steps);
 
-  T->speed_event->interval.tv_sec = T->speed_event_data->stepTime / 1000000L;
-  T->speed_event->interval.tv_nsec = (T->speed_event_data->stepTime % 1000000UL) * 1000;
+  T->speed_event->interval.tv_sec = T->speed_event_data->stepTime / 2000000L;
+  T->speed_event->interval.tv_nsec = (T->speed_event_data->stepTime % 2000000UL) * 500;
   scheduler->enableEvent(T->speed_event);
+
+  T->speed_event->interval.tv_sec *= 2;
+  T->speed_event->interval.tv_nsec *= 2;
 
   if(T->changing_speed == RAILTRAIN_SPEED_T_DONE)
     return;
@@ -810,19 +814,12 @@ void train_speed_event_tick(struct TrainSpeedEventData * data){
 
   float t = (data->stepTime * data->stepCounter) / 1000000.0; // seconds
 
-  switch(T->changing_speed){
-    case RAILTRAIN_SPEED_T_DONE:
-      scheduler->disableEvent(T->speed_event);
-      return;
-    case RAILTRAIN_SPEED_T_UPDATE:
-      // data->displacement = data->startDisplacement + data->startSpeed * (t / 3600) + 0.5 * data->acceleration * (t / 3600) * t; // (km/h) * s + (km/h/s) * s * s
-      train_speed_event_calc(data);
-      T->changing_speed = RAILTRAIN_SPEED_T_CHANGING;
-      break;
+  if(T->changing_speed == RAILTRAIN_SPEED_T_DONE){
+    scheduler->disableEvent(T->speed_event);
+    return;
   }
 
   T->speed = (data->startSpeed + data->acceleration * t) + 0.01; 
-  data->displacement = data->startDisplacement + data->startSpeed * (t / 3600) + 0.5 * data->acceleration * (t / 3600) * t; // (km/h) * h + (km/h/s) * h * s
 
   if (data->stepCounter >= data->steps || (T->speedReason == RAILTRAIN_SPEED_R_SIGNAL && T->speedBlock->getSpeed() != T->target_speed)){
     T->changing_speed = RAILTRAIN_SPEED_T_DONE;
@@ -840,6 +837,21 @@ void train_speed_event_tick(struct TrainSpeedEventData * data){
 
   T->setSpeedZ21(T->speed);
   WS_stc_UpdateTrain(T);
+
+  if(T->changing_speed == RAILTRAIN_SPEED_T_UPDATE){
+    // auto diff = T->speed_event->next_interval - data->updateTime;
+    struct timespec now;
+    clock_gettime(CLOCK_REALTIME, &now);
+    auto diff = now - data->updateTime;
+    t = diff.tv_sec + diff.tv_nsec/1.0E9;
+    data->displacement = T->speed * (t / 3600); // (km/h) * h
+    loggerf(WARNING, "%fs later -> %km", t, data->displacement);
+    train_speed_event_calc(data);
+    T->changing_speed = RAILTRAIN_SPEED_T_CHANGING;
+    return;
+  }
+  
+  data->displacement = data->startDisplacement + data->startSpeed * (t / 3600) + 0.5 * data->acceleration * (t / 3600) * t; // (km/h) * h + (km/h/s) * h * s
 
   return;
 }

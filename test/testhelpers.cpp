@@ -114,16 +114,11 @@ TestsFixture::~TestsFixture(){
 }
 
 void train_testSim_tick(struct train_sim * t, int32_t * i){
+  usleep(TRAINSIM_INTERVAL_US);
+
   train_sim_tick(t);
   if(AlQueue.queue->getItems() > 0)
     Algorithm::tick();
-  *i -= 1;
 
-  if(t->T->changing_speed == RAILTRAIN_SPEED_T_CHANGING || t->T->changing_speed == RAILTRAIN_SPEED_T_UPDATE){
-    t->T->speed_event->interval.tv_nsec -= (TRAINSIM_INTERVAL_US * 1000);
-    if(t->T->speed_event->interval.tv_nsec < 0){
-      t->T->speed_event->interval.tv_nsec += (t->T->speed_event_data->stepTime % 1000000UL) * 1000;
-      train_speed_event_tick(t->T->speed_event_data);
-    }
-  }
+  i[0] -= 1;
 }

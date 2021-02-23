@@ -6,6 +6,7 @@
 #include "scheduler/event.h"
 
 bool operator <(const struct timespec lhs, const struct timespec rhs);
+struct timespec operator -(const struct timespec lhs, const struct timespec rhs);
 
 class Scheduler{
     private:
@@ -26,9 +27,12 @@ class Scheduler{
         void start();
         void stop();
         void update();
+        void updateClock();
 
         void enableEvent(struct SchedulerEvent * event);
         void disableEvent(struct SchedulerEvent * event);
+
+        bool hasPassed(struct SchedulerEvent * event);
 
         struct SchedulerEvent * addEvent(const char * name, struct timespec interval);
         struct SchedulerEvent * addEvent(struct SchedulerEvent event);

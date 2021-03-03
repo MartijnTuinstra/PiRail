@@ -378,7 +378,7 @@ websocket.add_opcodes([
       recv: function(data){
         var follow_id = data[0];
         var train_id = data[1];
-        var type = (data[2] & 0x80);
+        var type = (data[2] & 0x80) >> 7;
 
         var msg_id = ((data[2] & 0x7F) << 8) + data[3];
 

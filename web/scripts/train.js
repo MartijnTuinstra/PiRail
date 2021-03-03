@@ -371,7 +371,7 @@ var Train_Control = {
       Modals.hide();
     }
 
-    if(data.type == 0){
+    if(data.type == 1){
       Train.trains[data.tid].ontrack = 1;
       Train.trains[data.tid].railtrainid = data.fid;
 

@@ -419,12 +419,14 @@ void Block::reserve(RailTrain * T){
   if(!(switchReserved || reserved)){
     if(type == NOSTOP){
       switchReserved = true;
-      setState(RESERVED_SWITCH);
+      if(!blocked)
+        setState(RESERVED_SWITCH);
     }
     else{
       // loggerf(INFO, "ALSO RESERVE PATH"); // FIXME
       reserved = true;
-      setState(RESERVED);
+      if(!blocked)
+        setState(RESERVED);
     }
 
     setReversedState(DANGER);
@@ -442,8 +444,10 @@ void Block::dereserve(RailTrain * T){
                                  );
 
   if(reservedBy.size() == 0){
-    setState(PROCEED);
-    setReversedState(PROCEED);
+    if(!blocked){
+      setState(PROCEED);
+      setReversedState(PROCEED);
+    }
 
     reserved = false;
     switchReserved = false;

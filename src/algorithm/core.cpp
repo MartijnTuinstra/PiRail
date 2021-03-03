@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <time.h>
+#include <math.h>
 
 #include "algorithm/core.h"
 #include "algorithm/component.h"
@@ -681,41 +682,61 @@ void train_control(Algor_Blocks * ABs, int debug){
   T->speedCheck = false;
 
   if(ABs->next == 0){
-    // Stop train no next block!!
-    loggerf(INFO, "EMEG BRAKE, end of line");
-    T->changeSpeed(0, 0);
+    T->changeSpeed(0, B->length);
     return;
   }
 
-  if(T->B)
-    loggerf(DEBUG, "%i (%02i:%02i) -> %s (%02i:%02i)", T->id, T->B->module, T->B->id, rail_states_string[N[0]->state], N[0]->module, N[0]->id);
-  else
-    loggerf(DEBUG, "%i (xx:xx) -> %s (%02i:%02i)", T->id, rail_states_string[N[0]->state], N[0]->module, N[0]->id);
+  // if(T->B)
+  //   loggerf(DEBUG, "%i (%02i:%02i) -> %s (%02i:%02i)", T->id, T->B->module, T->B->id, rail_states_string[N[0]->state], N[0]->module, N[0]->id);
+  // else
+  //   loggerf(DEBUG, "%i (xx:xx) -> %s (%02i:%02i)", T->id, rail_states_string[N[0]->state], N[0]->module, N[0]->id);
 
-  float maxDistance = SpeedToDistance_A(T->MaxSpeed, -10);  // Max Deceleration of 10km/h/s = 2.78m/s^2.. km2/h2 / km-1h-1s-1
+  // Calculate the speed that is obtainable in the current block
+  uint16_t AcceleratedSpeed = sqrt((20/0.173625) * B->length + T->speed * T->speed);
+  { // Speed cannot exceed maximum speed of the train
+  uint16_t tmpSpeed = T->checkMaxSpeed();
+  if(AcceleratedSpeed > tmpSpeed)
+    AcceleratedSpeed = tmpSpeed;
+  }
+  bool accelerate = true;
+  
+  if(T->manual)
+    accelerate = false;
+
+  // Calculate the distances needed to make a full stop
+  uint16_t maxDistance          = SpeedToDistance_A(AcceleratedSpeed, -10);  // Max Deceleration of 10km/h/s = 2.78m/s^2.. km2/h2 / km-1h-1s-1
+  uint16_t extraBrakingDistance = maxDistance - SpeedToDistance_A(T->speed, -10);
+
+  // Counter and distance for loop
   uint8_t i = 0;
   uint16_t length = B->length;
-  loggerf(INFO, "checking %fcm", maxDistance);
 
+  // Array of brake points
   struct {
     uint16_t speed;
-    uint16_t length;
+    int16_t BrakingDistance;
+    int16_t BrakingOffset;
     uint8_t reason;
-  } speeds[10] = {{0,0,0}};
+  } speeds[10] = {{0,0,0,0}};
 
-  // Deceleration
-  while(ABs->next > i && length - N[i]->length < maxDistance){
-    loggerf(INFO, "  speedchecking %02i:%02i %s %f", N[i]->module, N[i]->id, rail_states_string[N[i]->state], maxDistance);
+  memset(speeds, 0, 10 * (sizeof(uint16_t)*3 + sizeof(uint8_t)) );
 
+  // Fill in all brake points
+  //  TODO: add brake point for route
+  while(ABs->next > i){
     if(N[i]->blocked){
       speeds[i].speed = 0;
-      speeds[i].length = length - N[i]->length;
+      speeds[i].BrakingDistance = length - N[i]->length;
+      speeds[i].BrakingOffset = 0;
       speeds[i].reason = RAILTRAIN_SPEED_R_SIGNAL;
+      accelerate = false;
       break;
     }
     else{
-      speeds[i].speed = N[i]->getSpeed();
-      speeds[i].length = length;
+      uint16_t BlockSpeed = N[i]->getSpeed();
+      speeds[i].speed = BlockSpeed;
+      speeds[i].BrakingDistance = 0.173625 * ( (BlockSpeed * BlockSpeed) - (T->speed * T->speed) ) / (2 * -10);
+      speeds[i].BrakingOffset = length - speeds[i].BrakingDistance;
 
       if(N[i]->state < PROCEED)
         speeds[i].reason = RAILTRAIN_SPEED_R_SIGNAL;
@@ -723,35 +744,45 @@ void train_control(Algor_Blocks * ABs, int debug){
         speeds[i].reason = RAILTRAIN_SPEED_R_MAXSPEED;
     }
 
+    if(length > maxDistance){
+      i++;
+      break;
+    }
+
     length += N[i]->length;
     i++;
   }
 
-  uint16_t speed      = T->speed;
-  uint16_t distance   = 0;
-  uint8_t  reason     = RAILTRAIN_SPEED_R_NONE;
-  Block *  speedBlock = 0;
+  // Parameters for acceleration/deceleration:
+  uint16_t speed      = T->speed; // Target speed
+  uint16_t distance   = 0;        // Target distance
+  uint8_t  reason     = RAILTRAIN_SPEED_R_NONE; // Why decelerate
+  Block *  speedBlock = 0;       // If braking for a Signal, put the block in here
 
+  // For each brake point check if it must brake now or if it could be done later.
   for(int8_t j = i - 1; j >= 0; j--){
-    uint16_t minLength = 0;
-    if(j > 0)
-      minLength = speeds[j].length - N[j - 1]->length - 10;
-
-    float relativeDistance = 0.173625 * ( (speeds[j].speed * speeds[j].speed) - (T->speed * T->speed) ) / (2 * -10);
-
-    loggerf(INFO, "                  %i<%f<%i %i %i", minLength, relativeDistance, speeds[j].length, speeds[j].reason, speeds[j].speed);
-
-    if(speeds[j].speed <= speed && minLength < relativeDistance && relativeDistance < speeds[j].length){
-      loggerf(WARNING, " %i", speeds[j].speed);
+    if(speeds[j].BrakingOffset < (B->length + 10) && speeds[j].speed < speed){
+      accelerate = false;
       speed = speeds[j].speed;
-      distance = speeds[j].length;
+      distance = speeds[j].BrakingDistance + speeds[j].BrakingOffset;
       reason = speeds[j].reason;
       if(reason == RAILTRAIN_SPEED_R_SIGNAL)
         speedBlock = N[j];
     }
+    else if(accelerate){
+      if(speeds[j].BrakingOffset - extraBrakingDistance < (B->length + 10))
+        accelerate = false;
+    }
   }
 
-  loggerf(WARNING, "%sTrain %ikm/h@%icm", Debug, speed, distance);
+  // If no deceleration is necessary and acceleration is allowed
+  if(accelerate){
+    speed = AcceleratedSpeed;
+    distance = B->length;
+    reason = RAILTRAIN_SPEED_R_MAXSPEED;
+  }
+
+  loggerf(WARNING, "Train %ikm/h@%icm", Debug, speed, distance);
   T->speedReason = reason;
   T->speedBlock = speedBlock;
   T->changeSpeed(speed, distance);

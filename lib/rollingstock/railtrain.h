@@ -133,6 +133,7 @@ class RailTrain {
     void setRoute(Block * dest);
 
     bool ContinueCheck();
+    uint16_t checkMaxSpeed();
 
     inline void setControl(uint8_t control){
       if(control == TRAIN_MANUAL){

@@ -685,6 +685,17 @@ bool RailTrain::ContinueCheck(){
   return false;
 }
 
+uint16_t RailTrain::checkMaxSpeed(){
+  uint16_t ms = MaxSpeed;
+
+  for(auto b: blocks){
+    if(b->BlockMaxSpeed < ms)
+      ms = b->BlockMaxSpeed;
+  }
+
+  return ms;
+}
+
 void RailTrain_ContinueCheck(void * args){
   // Check if trains can accelerate when they are stationary.
 

@@ -118,12 +118,6 @@ void process(Block * B, int flags){
   //Apply block stating
   rail_state(&B->Alg, flags);
 
-  //Train Control
-  // Apply train algorithm only if there is a train on the block and is the front of the train
-  if(B->train && B == B->train->B){
-    train_control(&B->Alg, flags);
-  }
-
   if(flags & _LOCK){
     loggerf(WARNING, "UNLOCK");
     // unlock_Algor_process(); // FIXME
@@ -675,10 +669,6 @@ void train_control(RailTrain * T){
   if(!T->assigned)
     return;
 
-  if(!T->speedCheck)
-    return;
-  T->speedCheck = false;
-
   if(B->Alg.next == 0){
     T->changeSpeed(0, B->length);
     return;
@@ -752,20 +742,17 @@ void train_control(RailTrain * T){
   }
 
   // Parameters for acceleration/deceleration:
-  uint16_t speed      = T->speed; // Target speed
-  uint16_t distance   = 0;        // Target distance
-  uint8_t  reason     = RAILTRAIN_SPEED_R_NONE; // Why decelerate
-  Block *  speedBlock = 0;       // If braking for a Signal, put the block in here
+  struct TrainSpeedEventRequest Request = {.targetSpeed = T->speed, .distance = 0, .reason = 0, .ptr = 0};
 
   // For each brake point check if it must brake now or if it could be done later.
   for(int8_t j = i - 1; j >= 0; j--){
-    if(speeds[j].BrakingOffset < (B->length + 10) && speeds[j].speed < speed){
+    if(speeds[j].BrakingOffset < (B->length + 10) && speeds[j].speed < Request.targetSpeed){
       accelerate = false;
-      speed = speeds[j].speed;
-      distance = speeds[j].BrakingDistance + speeds[j].BrakingOffset;
-      reason = speeds[j].reason;
-      if(reason == RAILTRAIN_SPEED_R_SIGNAL)
-        speedBlock = N[j];
+      Request.targetSpeed = speeds[j].speed;
+      Request.distance = speeds[j].BrakingDistance + speeds[j].BrakingOffset;
+      Request.reason = speeds[j].reason;
+      if(Request.reason == RAILTRAIN_SPEED_R_SIGNAL)
+        Request.ptr = (void *)N[j];
     }
     else if(accelerate){
       if(speeds[j].BrakingOffset - extraBrakingDistance < (B->length + 10))
@@ -775,15 +762,13 @@ void train_control(RailTrain * T){
 
   // If no deceleration is necessary and acceleration is allowed
   if(accelerate){
-    speed = AcceleratedSpeed;
-    distance = B->length;
-    reason = RAILTRAIN_SPEED_R_MAXSPEED;
+    Request.targetSpeed = AcceleratedSpeed;
+    Request.distance = B->length;
+    Request.reason = RAILTRAIN_SPEED_R_MAXSPEED;
   }
 
-  loggerf(WARNING, "Train %ikm/h@%icm", speed, distance);
-  T->speedReason = reason;
-  T->speedBlock = speedBlock;
-  T->changeSpeed(speed, distance);
+  loggerf(WARNING, "Train %ikm/h@%icm", Request.targetSpeed, Request.distance);
+  T->changeSpeed(Request);
 }
 
 

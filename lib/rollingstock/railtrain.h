@@ -26,19 +26,34 @@ struct train_speed_timer {
   uint16_t length;
 };
 
+struct TrainSpeedEventRequest {
+  uint16_t targetSpeed;
+  uint16_t distance;
+  uint8_t reason;
+  void * ptr;
+};
+
 struct TrainSpeedEventData {
   RailTrain * T;
 
-  uint16_t startSpeed;
-  float displacement;
-  float startDisplacement;
+  uint8_t reason;     // RAILTRAIN_SPEED_R_(NONE / SIGNAL / MAXSPEED / ROUTE)
+  Block * signalBlock;       //  If reason is Signal, the block that has a different state
+  
+  uint16_t target_speed = 0;     // Speed that should be reached at target_distance
+  uint16_t target_distance = 0;
+
+  uint16_t startSpeed;       // The speed the train was going before the SpeedEvent
+  float displacement;        // The displacement the train traveled from the start of the SpeedEvent
+  float startDisplacement;   // The displacement the train traveld before the SpeedEvent
+
   float acceleration;
+
   float time;
   uint16_t steps;
   uint16_t stepCounter;
   uint32_t stepTime;
-  struct timespec updateTime;
 
+  struct timespec updateTime;
   struct timespec starttime;
 };
 
@@ -67,15 +82,9 @@ class RailTrain {
     uint16_t MaxSpeed = 0;     // Real max speed
 
     // Variables for changing speed along one block
-    uint16_t target_speed = 0;
-    uint16_t target_distance = 0;
     struct SchedulerEvent * speed_event = 0;
     struct TrainSpeedEventData * speed_event_data = 0;
-
-    uint8_t changing_speed:3;  // RAILTRAIN_SPEED_T_(INIT / CHANGING / UPDATE / DONE / FAIL)
-    uint8_t speedReason:3;     // RAILTRAIN_SPEED_R_(NONE / SIGNAL / MAXSPEED / ROUTE)
-    uint8_t speedCheck:1;      // Bool if train just stepped forward
-    Block * speedBlock;
+    uint8_t changing_speed;  // RAILTRAIN_SPEED_T_(INIT / CHANGING / UPDATE / DONE / FAIL)
 
     bool manual = 1;   // TRAIN_MANUAL
     bool fullAuto = 0; // TRAIN_FULL_AUTO
@@ -119,7 +128,9 @@ class RailTrain {
     void setSpeed(uint16_t _speed);
     void setSpeedZ21(uint16_t);
     void setStopped(bool);
+
     void changeSpeed(uint16_t, uint16_t);
+    void changeSpeed(struct TrainSpeedEventRequest);
 
     void reverse();    // Reverse all
     void reverseFromPath(Path * P);
@@ -154,7 +165,7 @@ class RailTrain {
 
 void RailTrain_ContinueCheck(void * args);
 
-void train_speed_event_create(RailTrain * T, uint16_t targetSpeed, uint16_t distance);
+void train_speed_event_create(RailTrain *, struct TrainSpeedEventRequest);
 void train_speed_event_calc(struct TrainSpeedEventData * data);
 void train_speed_event_init(RailTrain * T);
 void train_speed_event_tick(struct TrainSpeedEventData * data);

@@ -62,12 +62,12 @@ TEST_CASE("ConfigReader Same Version", "[CR]"){
 
 	buf_ptr = &buffer[0];
 
-	Config_read_Unit_1(&ReadUnit, &buf_ptr);
-	Config_read_Block_1(&Block0Read, &buf_ptr);
-	Config_read_Switch_0(&Switch0Read, &buf_ptr);
-	Config_read_MSSwitch_0(&MSSwitch0Read, &buf_ptr);
-	Config_read_Station_0(&Station0Read, &buf_ptr);
-	Config_read_Signal_0(&Signal0Read, &buf_ptr);
+	Config_read_Unit(CONFIG_LAYOUTSTRUCTURE_LU_MAX_VERSION, &ReadUnit, &buf_ptr);
+	Config_read_Block(CONFIG_LAYOUTSTRUCTURE_LU_MAX_VERSION, &Block0Read, &buf_ptr);
+	Config_read_Switch(CONFIG_LAYOUTSTRUCTURE_LU_MAX_VERSION, &Switch0Read, &buf_ptr);
+	Config_read_MSSwitch(CONFIG_LAYOUTSTRUCTURE_LU_MAX_VERSION, &MSSwitch0Read, &buf_ptr);
+	Config_read_Station(CONFIG_LAYOUTSTRUCTURE_LU_MAX_VERSION, &Station0Read, &buf_ptr);
+	Config_read_Signal(CONFIG_LAYOUTSTRUCTURE_LU_MAX_VERSION, &Signal0Read, &buf_ptr);
 
 	// Unit
 	CHECK(ReadUnit.Module == Unit.Module);

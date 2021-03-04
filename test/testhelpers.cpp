@@ -113,12 +113,18 @@ TestsFixture::~TestsFixture(){
   destroy_main();
 }
 
+void train_test_tick(struct train_sim * t, int32_t * i){
+  train_sim_tick(t);
+  if(AlQueue.queue->getItems() > 0){
+    Algorithm::BlockTick();
+  }
+  Algorithm::TrainTick();
+
+  i[0] -= 1;
+}
+
 void train_testSim_tick(struct train_sim * t, int32_t * i){
   usleep(TRAINSIM_INTERVAL_US);
 
-  train_sim_tick(t);
-  if(AlQueue.queue->getItems() > 0)
-    Algorithm::tick();
-
-  i[0] -= 1;
+  train_test_tick(t, i);
 }

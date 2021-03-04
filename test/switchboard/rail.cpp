@@ -695,17 +695,17 @@ TEST_CASE_METHOD(TestsFixture, "Block Max Speed", "[SB][SB-1][SB-1.4]") {
   CHECK(U->B[1]->MaxSpeed == U->B[1]->BlockMaxSpeed);
 
   U->Sw[0]->setState(1);
-  Algorithm::tick();
+  Algorithm::BlockTick();
 
   CHECK(U->B[1]->MaxSpeed == U->Sw[0]->MaxSpeed[1]);
 
   U->Sw[1]->setState(1);
-  Algorithm::tick();
+  Algorithm::BlockTick();
 
   CHECK(U->B[1]->MaxSpeed == U->Sw[1]->MaxSpeed[1]);
 
   U->Sw[0]->setState(0);
-  Algorithm::tick();
+  Algorithm::BlockTick();
 
   CHECK(U->B[1]->MaxSpeed == U->B[1]->BlockMaxSpeed);
 
@@ -717,17 +717,17 @@ TEST_CASE_METHOD(TestsFixture, "Block Max Speed", "[SB][SB-1][SB-1.4]") {
   CHECK(U->B[7]->MaxSpeed == U->B[7]->BlockMaxSpeed);
 
   U->Sw[2]->setState(1);
-  Algorithm::tick();
+  Algorithm::BlockTick();
 
   CHECK(U->B[7]->MaxSpeed == U->Sw[2]->MaxSpeed[1]);
 
   U->Sw[3]->setState(1);
-  Algorithm::tick();
+  Algorithm::BlockTick();
 
   CHECK(U->B[7]->MaxSpeed == U->Sw[3]->MaxSpeed[1]);
 
   U->Sw[2]->setState(0);
-  Algorithm::tick();
+  Algorithm::BlockTick();
 
   CHECK(U->B[7]->MaxSpeed == U->Sw[3]->MaxSpeed[1]);
 
@@ -737,7 +737,7 @@ TEST_CASE_METHOD(TestsFixture, "Block Max Speed", "[SB][SB-1][SB-1.4]") {
   CHECK(U->B[12]->MaxSpeed == U->MSSw[0]->stateMaxSpeed[0]);
 
   U->MSSw[0]->setState(1);
-  Algorithm::tick();
+  Algorithm::BlockTick();
 
   CHECK(U->B[12]->MaxSpeed == U->MSSw[0]->stateMaxSpeed[1]);
 }

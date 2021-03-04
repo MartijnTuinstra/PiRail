@@ -19,7 +19,8 @@ int InitFindModules(void);
 int InitConnectModules(void);
 int InitProcess(void);
 
-void tick(void);
+void BlockTick(void);
+void TrainTick(void);
 
 };
 

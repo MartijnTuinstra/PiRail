@@ -665,14 +665,12 @@ void train_following(Algor_Blocks * ABs, int debug){
 
 #define SpeedToDistance_A(s, a) 0.173625 * (s * s) / (2 * -a)
 
-void train_control(Algor_Blocks * ABs, int debug){
+void train_control(RailTrain * T){
   char Debug[100];
-  sprintf(Debug, "Algor_train_control %2i:%2i\n", ABs->B->module, ABs->B->id);
-  //Unpack AllBlocks
-  Block *  B = ABs->B;
-  Block ** N = ABs->N;
+  sprintf(Debug, "Algor_train_control RT%2i\n", T->id);
 
-  RailTrain * T = B->train;
+  Block * B = T->B;
+  Block ** N = B->Alg.N;
 
   if(!T->assigned)
     return;
@@ -681,7 +679,7 @@ void train_control(Algor_Blocks * ABs, int debug){
     return;
   T->speedCheck = false;
 
-  if(ABs->next == 0){
+  if(B->Alg.next == 0){
     T->changeSpeed(0, B->length);
     return;
   }
@@ -723,7 +721,7 @@ void train_control(Algor_Blocks * ABs, int debug){
 
   // Fill in all brake points
   //  TODO: add brake point for route
-  while(ABs->next > i){
+  while(B->Alg.next > i){
     if(N[i]->blocked){
       speeds[i].speed = 0;
       speeds[i].BrakingDistance = length - N[i]->length;
@@ -782,7 +780,7 @@ void train_control(Algor_Blocks * ABs, int debug){
     reason = RAILTRAIN_SPEED_R_MAXSPEED;
   }
 
-  loggerf(WARNING, "Train %ikm/h@%icm", Debug, speed, distance);
+  loggerf(WARNING, "Train %ikm/h@%icm", speed, distance);
   T->speedReason = reason;
   T->speedBlock = speedBlock;
   T->changeSpeed(speed, distance);

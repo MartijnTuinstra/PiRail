@@ -68,7 +68,9 @@ void * Run(void * args){
   loggerf(INFO, "Algor Ready");
 
   while(SYS->LC.state == Module_Run && SYS->stop == 0){
-    tick();
+    BlockTick();
+
+    TrainTick();
 
     // mutex_lock(&algor_mutex, "Algor Mutex"); // FIXME
     //Notify clients
@@ -144,10 +146,13 @@ int InitProcess(void){
   return 1;
 }
 
-void tick(void){
+void BlockTick(void){
   Block * B = AlQueue.getWait();
+  if(!B)
+    return;
 
-  while(B != 0){
+  do
+  {
     loggerf(TRACE, "Process %i:%i, %x, %x", B->module, B->id, B->IOchanged + (B->statechanged << 1) + (B->algorchanged << 2), B->state);
     process(B, 0);
      while(B->recalculate){
@@ -155,7 +160,15 @@ void tick(void){
       B->recalculate = 0;
       process(B, 0);
     }
-    B = AlQueue.get();
+  }
+  while( (B = AlQueue.get()) );
+}
+
+void TrainTick(void){
+  RailTrain * T = 0;
+
+  while( (T = AlQueue.getTrain()) ){
+    train_control(T);
   }
 }
 

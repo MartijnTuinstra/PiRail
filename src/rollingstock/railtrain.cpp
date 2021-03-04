@@ -265,6 +265,8 @@ void RailTrain::moveForward(Block * tB){
   loggerf(INFO, "MoveForward RT %i to block %2i:%2i", id, tB->module, tB->id);
   setBlock(tB);
 
+  AlQueue.put(this);
+
   for(uint8_t i = 0; i < Detectables; i++){
     struct RailTrainBlocksFifo * DB = &DetectedBlocks[i];
     Block * _B = DB->B[(DB->Front + RAILTRAIN_FIFO_SIZE - 1) % RAILTRAIN_FIFO_SIZE];

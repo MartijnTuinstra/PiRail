@@ -14,11 +14,13 @@ AlgorQueue AlQueue = AlgorQueue();
 AlgorQueue::AlgorQueue(){
   queue = new Queue<Block *>(500);
   tempQueue = new Queue<Block *>(25);
+  TrainQueue = new Queue<RailTrain *>(50);
 }
 
 AlgorQueue::~AlgorQueue(){
   delete queue;
   delete tempQueue;
+  delete TrainQueue;
 }
 
 void AlgorQueue::put(Algor_Blocks * ABs){
@@ -31,6 +33,7 @@ void AlgorQueue::put(Algor_Blocks * ABs){
     put(ABs->N[i]);
   }
 }
+
 void AlgorQueue::puttemp(Algor_Blocks * ABs){
   puttemp(ABs->B);
 

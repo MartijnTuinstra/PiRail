@@ -3,11 +3,13 @@
 
 #include "utils/queue.h"
 #include "switchboard/rail.h"
+#include "rollingstock/railtrain.h"
 
 class AlgorQueue {
   public:
     Queue<Block *> * queue;
     Queue<Block *> * tempQueue;
+    Queue<RailTrain *> * TrainQueue;
 
     AlgorQueue();
     ~AlgorQueue();
@@ -16,6 +18,10 @@ class AlgorQueue {
       queue->AddOnce(B);
     }
     void put(Algor_Blocks * ABs);
+
+    inline void put(RailTrain * T){
+      TrainQueue->AddOnce(T);
+    }
 
     inline void puttemp(Block * B){
       tempQueue->AddOnce(B);
@@ -31,11 +37,18 @@ class AlgorQueue {
       return queue->waitGet();
     }
 
+    inline RailTrain * getTrain(){
+      return TrainQueue->Get();
+    }
+
     inline void clear(){
       queue->clear();
     }
     inline void cleartmp(){
       tempQueue->clear();
+    }
+    inline void clearTrain(){
+      TrainQueue->clear();
     }
 };
 

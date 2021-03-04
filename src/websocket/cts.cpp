@@ -192,7 +192,7 @@ websocket_cts_func websocket_cts[256] = {
 };
 
 void WS_cts_SetSwitch(struct s_opc_SetSwitch * data, Websocket::Client * client){
-  // lock_Algor_process(); // FIXME
+  // FIXME lock_Algor_process();
   Unit * U = Units(data->module);
 
   if(data->mssw){
@@ -213,14 +213,14 @@ void WS_cts_SetSwitch(struct s_opc_SetSwitch * data, Websocket::Client * client)
       U->Sw[data->id]->setState(data->state, 1);
     }
   }
-  // unlock_Algor_process(); // FIXME
+  // FIXME unlock_Algor_process();
 }
 
 void WS_cts_SetMultiSwitch(struct s_opc_SetMultiSwitch * data, Websocket::Client * client){
   loggerf(INFO, "Throw multiple switches\n");
-  // lock_Algor_process(); // FIXME
+  // FIXME lock_Algor_process();
   throw_multiple_switches(data->nr, (char *)data->switches);
-  // unlock_Algor_process(); // FIXME
+  // FIXME unlock_Algor_process();
 }
 
 void WS_cts_SetEmergencyStop(void * data, Websocket::Client * client){

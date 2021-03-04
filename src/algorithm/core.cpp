@@ -48,7 +48,7 @@ void process(Block * B, int flags){
 
   if(flags & _LOCK){
     loggerf(WARNING, "LOCK");
-    // lock_Algor_process(); // FIXME
+    // FIXME lock_Algor_process(); 
   }
 
   flags |= _DEBUG;
@@ -89,7 +89,7 @@ void process(Block * B, int flags){
     loggerf(INFO, "Block Train ReProcess");
     if(flags & _LOCK){
       loggerf(WARNING, "UNLOCK");
-      // unlock_Algor_process(); // FIXME
+      // FIXME unlock_Algor_process(); 
     }
     return;
   }
@@ -100,7 +100,7 @@ void process(Block * B, int flags){
     loggerf(DEBUG, "Block Switch ReProcess");
     B->algorchanged = true;
     // if(flags & _LOCK)
-      // unlock_Algor_process(); // FIXME
+      // FIXME unlock_Algor_process(); 
     return;
   }
   
@@ -120,7 +120,7 @@ void process(Block * B, int flags){
 
   if(flags & _LOCK){
     loggerf(WARNING, "UNLOCK");
-    // unlock_Algor_process(); // FIXME
+    // FIXME unlock_Algor_process();
   }
   loggerf(TRACE, "Done");
 }
@@ -532,7 +532,7 @@ void train_following(Algor_Blocks * ABs, int debug){
         T->dir = 1;
 
         T->initMoveForward(B);
-        T->reverseZ21(); // Set Train in right direction
+        //FIXME T->reverseZ21(); // Set Train in right direction
       }
     }
     else if( ((prev > 0 && !BP[0]->blocked) || prev == 0) && ((next > 0 && !BN[0]->blocked) || next == 0) ){
@@ -785,7 +785,7 @@ void Connect_Rails(){
 
   while(SYS->LC.state == Module_LC_Connecting && !SYS->stop && SYS->modules_linked == 0){
   	// continue;
-    // sem_wait(&AlgorQueueNoEmpty); // FIXME
+    // FIXME sem_wait(&AlgorQueueNoEmpty); 
     Block * B = AlQueue.getWait();
     while(B != 0){
       B = AlQueue.get();
@@ -821,11 +821,11 @@ void Connect_Rails(){
       }
     }
 
-    // mutex_lock(&algor_mutex, "Algor Mutex"); // FIXME
+    // FIXME mutex_lock(&algor_mutex, "Algor Mutex");
     //Notify clients
     WS_stc_trackUpdate(0);
 
-    // mutex_unlock(&algor_mutex, "Algor Mutex"); // FIXME
+    // FIXME mutex_unlock(&algor_mutex, "Algor Mutex");
 
     usleep(100);
   }

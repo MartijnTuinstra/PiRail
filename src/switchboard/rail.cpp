@@ -423,7 +423,7 @@ void Block::reserve(RailTrain * T){
         setState(RESERVED_SWITCH);
     }
     else{
-      // loggerf(INFO, "ALSO RESERVE PATH"); // FIXME
+      // FIXME loggerf(INFO, "ALSO RESERVE PATH"); 
       reserved = true;
       if(!blocked)
         setState(RESERVED);

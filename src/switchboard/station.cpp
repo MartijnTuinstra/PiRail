@@ -78,7 +78,7 @@ void Station::exportConfig(struct configStruct_Station * cfg){
 
   cfg->blocks = (uint8_t *)_calloc(blocks_len, uint8_t);
   for(uint8_t i = 0; i < blocks_len; i++){
-    cfg->blocks[i] = (uint8_t)blocks[i]->id; // FIXME
+    cfg->blocks[i] = (uint8_t)blocks[i]->id;
   }
   cfg->name = (char *)_calloc(strlen(name) + 1, char);
   strcpy(cfg->name, name);

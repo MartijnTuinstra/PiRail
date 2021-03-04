@@ -72,14 +72,14 @@ void * Run(void * args){
 
     TrainTick();
 
-    // mutex_lock(&algor_mutex, "Algor Mutex"); // FIXME
+    // FIXME mutex_lock(&algor_mutex, "Algor Mutex");
     //Notify clients
     WS_stc_trackUpdate(0);
     WS_stc_SwitchesUpdate(0);
 
     update_IO();
 
-    // mutex_unlock(&algor_mutex, "Algor Mutex"); // FIXME
+    // FIXME mutex_unlock(&algor_mutex, "Algor Mutex");
 
     usleep(1000);
   }

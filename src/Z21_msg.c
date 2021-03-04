@@ -41,7 +41,7 @@ void Z21_Set_Loco_Drive_Engine(Engine * E){
     data[6] |= 0x80;
 
   data[7] = E->DCC_ID & 0xFF;
-  data[8] = ((E->dir & 1) << 7) | (E->speed & 0x7F);
+  data[8] = ((E->dir & 1) << 7) | (E->Z21_set_speed & 0x7F);
   data[9] = data[4] ^ data[5] ^ data[6] ^ data[7] ^ data[8];
 
   if(Z21)
@@ -73,8 +73,8 @@ void Z21_LAN_X_LOCO_INFO(uint8_t length, char * data){
   loggerf(INFO, " - Engine %i: speed(%i), dir(i)", DCC_ID, speed, dir);
   // loggerf(INFO, " -  %02x %02x %02x %02x", data[9], data[10], data[11], data[12]);
 
-  E->setFunctions(&data[4], length - 4);
-  E->Z21set(speed, dir);
+  E->Z21_setFunctions(&data[4], length - 4);
+  E->Z21_setSpeedDir(speed, dir);
 }
 
 void Z21_get_train(RailTrain * RT){

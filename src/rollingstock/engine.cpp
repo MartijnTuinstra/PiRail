@@ -98,76 +98,87 @@ void Engine::setSpeedSteps(uint8_t nr_steps, struct EngineSpeedSteps * speed_ste
   if(steps)
     _free(steps);
 
-  steps_len = nr_steps;
-  steps = (struct EngineSpeedSteps *)_calloc(nr_steps, struct EngineSpeedSteps);
-  memcpy(steps, speed_steps, nr_steps * sizeof(struct EngineSpeedSteps));
+  
+  if(!configSteps)
+    configSteps = (struct EngineSpeedSteps *)_calloc(nr_steps, struct EngineSpeedSteps);
+  else
+    configSteps = (struct EngineSpeedSteps *)_realloc(configSteps, nr_steps, struct EngineSpeedSteps);
+
+  memcpy(configSteps, speed_steps, nr_steps * sizeof(struct EngineSpeedSteps));
+  configSteps_len = nr_steps;
+
+  struct EngineSpeedSteps temp = {.speed = 0, .step = 0};
+
+  struct EngineSpeedSteps * s1 = &temp;
+  struct EngineSpeedSteps * s2;
+
+  steps[0] = {.speed = 0, .step = 0};
+  uint8_t i = 0;
+  uint8_t j;
+
+  do {
+    s2 = &configSteps[i];
+
+    float x1 = ((float)(s2->speed - s1->speed))/((float)(s2->step - s1->step));
+    for(j = s1->step + 1; j <= s2->step; j++){
+      steps[j].step = j;
+      steps[j].speed = (x1 * j + 0.5) + s1->speed;
+    }
+
+    s1 = s2;
+  }
+  while(++i < nr_steps - 1);
+
+  steps_len = j;
 
   // Get Max speed from speedsteps
   max_speed = 0;
-  for(uint8_t i = 0; i < steps_len; i++){
-    if(max_speed < steps[i].speed){
-      max_speed = steps[i].speed;
+  for(uint8_t i = 0; i < nr_steps; i++){
+    if(max_speed < configSteps[i].speed){
+      max_speed = configSteps[i].speed;
     }
   }
 }
 
-void Engine::setSpeed(uint16_t speed){
+void Engine::convertRealSpeedtoZ21(uint16_t speed){
   // Convert from scale speed to z21 steps
-  struct EngineSpeedSteps left;
-  struct EngineSpeedSteps right;
+  struct EngineSpeedSteps temp = {.speed = 0, .step = 0};
 
-  this->cur_speed = speed;
+  struct EngineSpeedSteps * left  = &temp;
+  struct EngineSpeedSteps * right = &steps[steps_len - 1];
 
-  left.speed = 0; left.step = 0;
-  right.speed = 0; right.step = 0;
+  cur_speed = speed;
 
-  for(int i = 0; i < this->steps_len; i++){
-    if(this->steps[i].speed < this->cur_speed){
-      left.speed = this->steps[i].speed;
-      left.step = this->steps[i].step;
+  for(int i = 0; i < steps_len; i++){
+    if(steps[i].speed < cur_speed){
+      left = &steps[i];
     }
 
-    if(this->steps[i].speed >= this->cur_speed && right.step == 0){
-      right.speed = this->steps[i].speed;
-      right.step = this->steps[i].step;
+    if(steps[i].speed >= cur_speed && &steps[i] != right){
+      right = &steps[i];
+      break;
     }
   }
 
-  float ratio = ((float)(this->cur_speed - left.speed)) / ((float)(right.speed - left.speed));
-  uint8_t step = ratio * ((float)(right.step - left.step)) + left.step;
+  if(cur_speed - left->speed < right->speed - cur_speed)
+    Z21_set_speed = left->step;  // If closer to the left marker
+  else
+    Z21_set_speed = right->step; // If closer to the right marker
 
-  this->speed = step;
+
+  // float ratio = ((float)(cur_speed - left->speed)) / ((float)(right.speed - left->speed));
+  // uint8_t step = ratio * ((float)(right.step - left->step)) + left->step;
+
+  // Z21_set_speed = step;
 }
 
-void Engine::readSpeed(){
+void Engine::convertZ21toRealSpeed(uint16_t Z21Speed){
   // Convert from z21 steps to scale speed
-  struct EngineSpeedSteps * left;
-  struct EngineSpeedSteps * right;
-
-  struct EngineSpeedSteps temp;
-  temp.step = 0;
-  temp.speed = 0;
-
-  left = &temp;
-  right = 0;
-
-  for(int i = 0; i < this->steps_len; i++){
-    if(this->steps[i].step < this->speed){
-      left = &this->steps[i];
-    }
-
-    if(this->steps[i].step >= this->speed && right == 0){
-      right = &this->steps[i];
-    }
-  }
-
-  float ratio = ((float)(this->speed - left->step)) / ((float)(right->step - left->step));
-  uint8_t speed = ratio * ((float)(right->speed - left->speed)) + left->speed;
-
-  this->cur_speed = speed;
+  Z21_get_speed = Z21Speed;
+  cur_speed = steps[Z21_get_speed].speed;
 }
 
-void Engine::setFunctions(char * funcs, uint8_t length){
+void Engine::Z21_setFunctions(char * funcs, uint8_t length){
   //Functions ....
   function[0].state = (funcs[0] >> 4) & 0x1;
   function[1].state =  funcs[0]       & 0x1;
@@ -185,45 +196,39 @@ void Engine::setFunctions(char * funcs, uint8_t length){
   }
 }
 
-void Engine::Z21set(char _speed, bool _dir){
-  bool samespeed = (_speed == speed);
+void Engine::setSpeed(uint16_t speed){
+  setSpeed(speed, dir);
+}
+
+void Engine::setSpeed(uint16_t speed, bool _dir){
+  dir = _dir;
+  convertRealSpeedtoZ21(speed);
+  
+  loggerf(DEBUG, "Engine setSpeed %i %i -> %i", speed, _dir, Z21_set_speed);
+
+  if(Z21_get_speed != Z21_set_speed)
+    Z21_Set_Loco_Drive_Engine(this);
+}
+
+void Engine::Z21_setSpeedDir(char _speed, bool _dir){
+  bool samespeed = (_speed == Z21_set_speed);
   bool samedir =   (_dir == dir);
 
-  speed = speed;
-  dir = dir;
+  dir = _dir;
 
-  readSpeed();
+  convertZ21toRealSpeed(_speed);
 
+  loggerf(DEBUG, "Engine Z21_setSpeedDir %i %i -> %i %i", _speed, _dir, Z21_get_speed, cur_speed);
+
+  // If linked to a RailTrain
   if(use){
-    if(!samedir && RT->type == RAILTRAIN_TRAIN_TYPE){
-      //->Z21set()
-      Train * T = RT->p.T;
-
-      for(uint8_t i = 0; i < T->engines->items; i++){
-        Engine * tE = T->engines->operator[](i);
-        if(this != tE){
-          tE->dir = dir;
-        }
-      }
+    if(!samedir && RT->dir != dir){
+      RT->Z21_reverse();
     }
 
     if(!samespeed){
-      RT->speed = cur_speed;
-
-      RT->changing_speed = RAILTRAIN_SPEED_T_DONE;
-
-      RT->setSpeed(RT->speed);
-    }
-
-    if((!samedir || !samespeed) && RT->type == RAILTRAIN_TRAIN_TYPE){
-      Train * T = RT->p.T;
-      // Set all other engines coupled to this train to new parameters
-      for(uint8_t i = 0; i < T->engines->items; i++){
-        Engine * tE = T->engines->operator[](i);
-        if(this != tE){
-          Z21_Set_Loco_Drive_Engine(tE);
-        }
-      }
+      RT->setSpeed(cur_speed);
+      // This will update other Engines in the train
     }
 
     WS_stc_UpdateTrain(RT);

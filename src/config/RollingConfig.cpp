@@ -169,8 +169,8 @@ void RollingConfig::addEngine(Engine * E){
   cE->icon_path = (char *)_calloc(strlen(E->icon_path), char);
   strcpy(cE->icon_path, E->icon_path);
 
-  cE->speed_steps = (struct configStruct_EngineSpeedSteps *)_calloc(E->steps_len, sizeof(struct configStruct_EngineSpeedSteps));
-  memcpy(cE->speed_steps, E->steps, sizeof(struct configStruct_EngineSpeedSteps) * E->steps_len);
+  cE->speed_steps = (struct configStruct_EngineSpeedSteps *)_calloc(E->configSteps_len, sizeof(struct configStruct_EngineSpeedSteps));
+  memcpy(cE->speed_steps, E->configSteps, sizeof(struct configStruct_EngineSpeedSteps) * E->configSteps_len);
 }
 void RollingConfig::addCar(Car * C){
   if(!C)

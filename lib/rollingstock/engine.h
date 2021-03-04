@@ -35,14 +35,16 @@ class Engine {
     bool dirZ21; // Z21 Direction
     bool dir;    // Disired Direction for the Z21
 
-    char speedZ21; // Z21 Speed
-    char speed;    // Disired Speed for the Z21
+    char Z21_get_speed;   // Z21 Speed (1-128/0-100%)
+    char Z21_set_speed;   // Disired Speed for the Z21 (1-128/0-100%)
     char speed_step_type; // Z21 FAHR_STUFEN 14/28/128
-    uint16_t max_speed; // Real Speed
-    uint16_t cur_speed; // Real Speed
+    uint16_t max_speed;   // Real Speed (km/h)
+    uint16_t cur_speed;   // Real Speed (km/h)
 
+    uint8_t configSteps_len;
+    struct EngineSpeedSteps * configSteps;
     uint8_t steps_len;
-    struct EngineSpeedSteps * steps;
+    struct EngineSpeedSteps steps[129];
 
     struct train_funcs function[29] = {{0, 0, 0}};
 
@@ -63,12 +65,16 @@ class Engine {
 
     void constructor(struct configStruct_Engine);
 
-    void setSpeed(uint16_t speed);
-    void readSpeed();
+  private:
+    void convertRealSpeedtoZ21(uint16_t);
+    void convertZ21toRealSpeed(uint16_t);
 
-    void setFunctions(char * functions, uint8_t length);
-    
-    void Z21set(char _speed, bool _dir);
+  public:
+    void Z21_setFunctions(char * functions, uint8_t length);
+    void Z21_setSpeedDir(char _speed, bool _dir);
+
+    void setSpeed(uint16_t);
+    void setSpeed(uint16_t, bool);
 };
 
 

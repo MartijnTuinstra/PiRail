@@ -299,7 +299,7 @@ void inline RailTrain::setSpeed(uint16_t _speed){
     loggerf(WARNING, "Railtrain setSpeed ContinueCheck");
     if(!ContinueCheck()){
       loggerf(WARNING, "RT%i unsafe to start moving", id);
-      setSpeedZ21(0);
+      _speed = 0;
     }
   }
 
@@ -311,18 +311,6 @@ void inline RailTrain::setSpeed(uint16_t _speed){
   if(!p.p) return;
   else if(type == RAILTRAIN_ENGINE_TYPE) p.E->setSpeed(speed);
   else p.T->setSpeed(speed);
-}
-
-void RailTrain::setSpeedZ21(uint16_t _speed){
-  loggerf(INFO, "setRailTrain %i Speed -> %i", id, _speed);
-  setSpeed(_speed);
-
-  if(!assigned)
-    return;
-
-  if(!p.p) return;
-  else if(type == RAILTRAIN_ENGINE_TYPE) Z21_Set_Loco_Drive_Engine(p.E);
-  else Z21_Set_Loco_Drive_Train(p.T);
 }
 
 void RailTrain::setStopped(bool stop){
@@ -369,7 +357,7 @@ void RailTrain::changeSpeed(struct TrainSpeedEventRequest Request){
 
   if(Request.distance == 0){
     changing_speed = RAILTRAIN_SPEED_T_DONE;
-    setSpeedZ21(Request.targetSpeed);
+    setSpeed(Request.targetSpeed);
 
     if(assigned)
       WS_stc_UpdateTrain(this);
@@ -523,7 +511,7 @@ void RailTrain::reverseBlocks(){
   setSpeed(0);
 }
 
-void RailTrain::reverseZ21(){
+void RailTrain::Z21_reverse(){
   
 }
 
@@ -863,7 +851,7 @@ void train_speed_event_tick(struct TrainSpeedEventData * data){
     data->reason = RAILTRAIN_SPEED_R_NONE;
   }
 
-  T->setSpeedZ21(T->speed);
+  T->setSpeed(T->speed);
   WS_stc_UpdateTrain(T);
 
   if(T->changing_speed == RAILTRAIN_SPEED_T_UPDATE){

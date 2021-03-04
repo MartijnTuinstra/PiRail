@@ -126,7 +126,6 @@ class RailTrain {
     void moveForward(Block * B);
 
     void setSpeed(uint16_t _speed);
-    void setSpeedZ21(uint16_t);
     void setStopped(bool);
 
     void changeSpeed(uint16_t, uint16_t);
@@ -135,7 +134,7 @@ class RailTrain {
     void reverse();    // Reverse all
     void reverseFromPath(Path * P);
     void reverseBlocks();
-    void reverseZ21(); // Reverse simple
+    void Z21_reverse(); // Reverse simple
 
     int link(int tid, char type);
     int link(int tid, char type, uint8_t, RailTrain **);

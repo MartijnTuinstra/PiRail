@@ -384,7 +384,7 @@ void WS_cts_SetTrainSpeed(struct s_opc_SetTrainSpeed * m, Websocket::Client * cl
   T->changing_speed = RAILTRAIN_SPEED_T_DONE;
 
   T->speed = speed;
-  T->target_speed = speed;
+  T->speed_event_data->target_speed = speed;
   T->dir   = (m->speed_high & 0x10) >> 4;
 
   if(T->type == RAILTRAIN_ENGINE_TYPE){
@@ -755,8 +755,7 @@ void WS_cts_Edit_Engine(struct s_opc_EditEnginelib * msg, Websocket::Client * cl
 
     // Copy speedsteps
     E->steps_len = data->steps;
-    E->steps = (struct EngineSpeedSteps *)_realloc(E->steps, data->steps, struct EngineSpeedSteps);
-    memcpy(E->steps, &data->strings + data->name_len, data->steps * 3);
+    E->setSpeedSteps(data->steps, (struct EngineSpeedSteps *)(&data->strings + data->name_len));
 
     E->length = data->length;
     E->type = data->type;

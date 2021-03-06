@@ -155,7 +155,7 @@ void Train::calcSpeed(){
 
 bool Train::enginesUsed(){
   for(int  i = 0; i < engines->items; i++){
-    if((*engines)[i]->use){
+    if((*engines)[i]->use || RSManager->getEngineDCC((*engines)[i]->DCC_ID) != nullptr){
       return true;
     }
   }
@@ -165,6 +165,11 @@ bool Train::enginesUsed(){
 
 void Train::setEnginesUsed(bool used, RailTrain * T){
   for(int  i = 0; i < engines->items; i++){
+    if(used)
+      RSManager->subDCCEngine((*engines)[i]->id);
+    else
+      RSManager->unsubDCCEngine((*engines)[i]->id);
+
     (*engines)[i]->use = used;
     (*engines)[i]->RT = T;
   }

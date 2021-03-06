@@ -15,6 +15,13 @@
 
 namespace RollingStock {
 
+struct DCCEngine {
+  Engine * E[10];
+  uint8_t nr_engines;
+  uint8_t engineUsed:1;
+  uint8_t uniqueEngine:7;
+};
+
 class Manager {
 public:
   struct configStruct_Category * PassengerCatagories;
@@ -27,7 +34,7 @@ public:
   ::dynArray<Train *>     Trains;
   ::dynArray<RailTrain *> RailTrains;
 
-  Engine * DCC[10000];
+  DCCEngine DCC[10000];
 
   char filename[100] = "";
   struct SchedulerEvent * continue_event = 0;
@@ -55,10 +62,13 @@ public:
   inline RailTrain * getRailTrain(uint16_t i){
     return RailTrains[i];
   }
+  Engine *  getEngineDCC(uint16_t i);
 
-  inline Engine *  getEngineDCC(uint16_t i){
-    return DCC[i];
-  }
+  bool subDCCEngine(uint16_t i);
+  void unsubDCCEngine(uint16_t i);
+  void addDCC(Engine * E);
+  void removeDCC(Engine * E);
+
   RailTrain * getRailTrainDCC(uint16_t);
 
   void removeCar(Car *);

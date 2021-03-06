@@ -12,7 +12,7 @@ RollingStock::Manager * RSManager;
 namespace RollingStock {
 
 Manager::Manager(){
-  memset(DCC, 0, 10000 * sizeof(Engine *));
+  memset(DCC, 0, 10000 * sizeof(struct DCCEngine));
 }
 
 void Manager::initScheduler(){
@@ -21,7 +21,7 @@ void Manager::initScheduler(){
 }
 
 void Manager::clear(){
-  memset(RSManager->DCC, 0, 10000 * sizeof(Engine *));
+  memset(RSManager->DCC, 0, 10000 * sizeof(struct DCCEngine));
 
   for(uint8_t i = 0; i < PassengerCatagories_length; i++)
     _free(PassengerCatagories[i].name);
@@ -115,7 +115,7 @@ Car * Manager::newCar(Car * C){
 
 Engine * Manager::newEngine(Engine * E){
   E->id = Engines.push_back(E);
-  DCC[E->DCC_ID] = E;
+  addDCC(E);
 
   return E;
 }
@@ -128,6 +128,80 @@ Train * Manager::newTrain(Train * T){
 
 int Manager::addRailTrain(RailTrain * T){
   return RailTrains.push_back(T);
+}
+
+Engine *  Manager::getEngineDCC(uint16_t i){
+  auto DCCE = &DCC[i];
+
+  loggerf(INFO, "getEngineDCC %i %i, %i, %i", i, DCCE->engineUsed, DCCE->nr_engines, DCCE->uniqueEngine);
+
+  if(DCCE->engineUsed)
+    return DCCE->E[DCCE->uniqueEngine];
+  else
+    return 0;
+}
+
+bool Manager::subDCCEngine(uint16_t i){
+  auto E = getEngine(i);
+
+  auto DCCE = &DCC[E->DCC_ID];
+
+  loggerf(INFO, "subDCCEngine (%i) %i, %i, %i", E->DCC_ID, DCCE->engineUsed, DCCE->nr_engines, DCCE->uniqueEngine);
+
+  if(DCCE->engineUsed)
+    return false;
+  
+  uint8_t j = 0;
+  while(j < DCCE->nr_engines){
+    if(DCCE->E[j] == E){
+      DCCE->engineUsed = true;
+      DCCE->uniqueEngine = j;
+      return true;
+    }
+    j++;
+  }
+  return false;
+}
+
+void Manager::unsubDCCEngine(uint16_t i){
+  auto E = getEngine(i);
+
+  auto DCCE = &DCC[E->DCC_ID];
+  
+  loggerf(INFO, "unsubDCCEngine (%i), %i, %i, %i", E->DCC_ID, DCCE->engineUsed, DCCE->nr_engines, DCCE->uniqueEngine);
+
+  if(!DCCE->engineUsed)
+    return;
+
+  if(DCCE->E[DCCE->uniqueEngine] != E)
+    return;
+
+  DCCE->engineUsed = 0;
+}
+
+void Manager::addDCC(Engine * E){
+  auto DCCE = &DCC[E->DCC_ID];
+
+  loggerf(CRITICAL, "addDCC (%i) %i, %i, %i", E->DCC_ID, DCCE->engineUsed, DCCE->nr_engines, DCCE->uniqueEngine);
+
+  DCCE->E[DCCE->nr_engines++] = E;
+}
+
+void Manager::removeDCC(Engine * E){
+  auto DCCE = &DCC[E->DCC_ID];
+  bool swap = false;
+  for(uint8_t i = 0; i < DCCE->nr_engines; i++){
+    if(!swap){
+      if(DCCE->E[i] == E){
+        swap = true;
+        DCCE->E[i] = 0;
+      }
+    }
+    else{
+      DCCE->E[i-1] = DCCE->E[i];
+      DCCE->E[i] = 0;
+    }
+  }
 }
 
 void Manager::removeCar(Car * C){
@@ -146,7 +220,7 @@ void Manager::removeEngine(Engine * E){
   remove(E->icon_path);
 
   // Remove Reference from DCC list
-  DCC[E->DCC_ID] = nullptr;
+  removeDCC(E);
 
   // Romove Reference from Engines list
   Engines.remove(E);
@@ -168,10 +242,9 @@ void Manager::removeRailTrain(RailTrain * T){
 }
 
 void Manager::moveEngine(Engine * E, uint16_t DCCid){
-  DCC[E->DCC_ID] = NULL; // Old pointer
-  DCC[DCCid] = E;          // New pointer
-
+  removeDCC(E);      // Old pointer
   E->DCC_ID = DCCid; // Update DCC
+  addDCC(E);         // New Pointer
 }
 
 void Manager::writeFile(){

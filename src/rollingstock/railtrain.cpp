@@ -546,13 +546,19 @@ int RailTrain::link(int tid, char _type){
 
   // If it is only a engine -> make it a train
   if(_type == RAILTRAIN_ENGINE_TYPE){
-    if(RSManager->getEngine(tid)->use){
+    Engine * E = RSManager->getEngine(tid);
+
+    if(E->use){
       loggerf(ERROR, "Engine allready used");
       return 3;
     }
 
+    if(RSManager->getEngineDCC(E->DCC_ID) != NULL){
+      loggerf(ERROR, "Engine with same DCC address allready on layout");
+      return 4;
+    }
+
     // Create train from engine
-    Engine * E = RSManager->getEngine(tid);
     type = _type;
     p.E = E;
     MaxSpeed = E->max_speed;
@@ -564,6 +570,7 @@ int RailTrain::link(int tid, char _type){
     Detectables = 1;
 
     //Lock engines
+    RSManager->subDCCEngine(tid);
     E->use = true;
     E->RT = this;
   }

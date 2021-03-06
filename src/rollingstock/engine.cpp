@@ -20,18 +20,12 @@ Engine::Engine(struct configStruct_Engine conf){
   setImagePath(conf.img_path);
   setIconPath(conf.icon_path);
 
-  //DCC cant be used twice
   if(conf.DCC_ID >= 9999){
     loggerf(CRITICAL, "DCC address (%i) not allowed", conf.DCC_ID);
     return;
   }
-  if(RSManager->DCC[conf.DCC_ID])
-    loggerf(WARNING,"create_engine: found duplicate: %s, overwriting!", RSManager->DCC[conf.DCC_ID]->name);
-
 
   DCC_ID = conf.DCC_ID;
-
-  RSManager->DCC[conf.DCC_ID] = this;
 
   length = conf.length;
   speed_step_type = conf.Z21_SpeedSteps;
@@ -48,20 +42,10 @@ Engine::Engine(struct configStruct_Engine conf){
 
     // loggerf(INFO, "Engine %i - Function %i - type %i - %i", DCC, i, this->function[i].type, this->function[i].button);
   }
-
-  // int index = find_free_index(engines, engines_len);
-
-  // engines[index] = this;
-  // this->id = index;
 }
 Engine::Engine(uint16_t DCC, char * name){
   setName(name);
   DCC_ID = DCC;
-
-  if(RSManager->DCC[DCC])
-    loggerf(WARNING,"create_engine: found duplicate: %s, overwriting!", RSManager->DCC[DCC]->name);
-
-  RSManager->DCC[DCC] = this;
 }
 
 Engine::~Engine(){

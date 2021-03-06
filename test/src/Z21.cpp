@@ -88,7 +88,7 @@ TEST_CASE_METHOD(TestsFixture, "RailTrain Z21", "[Z21]"){
     CHECK(E->Z21_get_speed == 40);
   }
 
-  SECTION("I - Speed Train Double"){
+  SECTION("II - Speed Train Double"){
     U->B[1]->setDetection(1);
     Algorithm::process(U->B[1], _FORCE);
 
@@ -105,6 +105,8 @@ TEST_CASE_METHOD(TestsFixture, "RailTrain Z21", "[Z21]"){
 
     Engine * E0 = RSManager->getEngine(0);
     Engine * E1 = RSManager->getEngine(1);
+
+    CHECK(RSManager->getEngineDCC(E0->DCC_ID) == E0);
     // Reply speed form Z21 device
     E0->Z21_setSpeedDir(36, 0);
 

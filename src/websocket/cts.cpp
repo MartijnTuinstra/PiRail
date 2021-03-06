@@ -667,12 +667,12 @@ void WS_cts_AddEnginetoLib(struct s_opc_AddNewEnginetolib * data, Websocket::Cli
 
   rdata->opcode = WSopc_AddNewEnginetolib;
 
-  if (RSManager->DCC[data->DCC_ID]){
-    loggerf(ERROR, "DCC %i allready in use", data->DCC_ID);
-    rdata->data.opc_AddNewEnginetolib_res.response = 255;
-    client->send((char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
-    return;
-  }
+  // if (RSManager->DCC[data->DCC_ID]){
+  //   loggerf(ERROR, "DCC %i allready in use", data->DCC_ID);
+  //   rdata->data.opc_AddNewEnginetolib_res.response = 255;
+  //   client->send((char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
+  //   return;
+  // }
 
   char name[100] = "";
   memcpy(name, &data->strings, data->name_len);
@@ -736,12 +736,12 @@ void WS_cts_Edit_Engine(struct s_opc_EditEnginelib * msg, Websocket::Client * cl
 
     rdata->opcode = WSopc_AddNewEnginetolib;
 
-    if (RSManager->DCC[data->DCC_ID] && data->DCC_ID != E->DCC_ID){
-      loggerf(ERROR, "DCC %i (%i) allready in use", data->DCC_ID, E->DCC_ID);
-      rdata->data.opc_AddNewEnginetolib_res.response = 255;
-      client->send((char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
-      return;
-    }
+    // if (RSManager->DCC[data->DCC_ID] && data->DCC_ID != E->DCC_ID){
+    //   loggerf(ERROR, "DCC %i (%i) allready in use", data->DCC_ID, E->DCC_ID);
+    //   rdata->data.opc_AddNewEnginetolib_res.response = 255;
+    //   client->send((char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
+    //   return;
+    // }
 
     RSManager->moveEngine(E, data->DCC_ID);
 

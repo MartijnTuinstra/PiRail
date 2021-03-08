@@ -1,9 +1,12 @@
 #include <algorithm>
 
 #include "pathfinding.h"
+
 #include "switchboard/manager.h"
 #include "switchboard/switch.h"
 #include "switchboard/msswitch.h"
+#include "switchboard/station.h"
+
 #include "utils/mem.h"
 #include "utils/logger.h"
 #include "websocket/stc.h"
@@ -15,7 +18,8 @@ namespace PathFinding {
 Route * find(Block * start, Block * end){
   struct control c = {
     .start = start,
-    .end = end,
+    .end = {end, 0},
+    .nr_Stations = 0,
     .prev = 0,
     .prevPtr = start,
     .dir = NEXT,
@@ -42,15 +46,124 @@ Route * find(Block * start, Block * end){
   Route * r = new Route(c, sf, sr);
 
   return r;
-
-  // if(s.found){
-  //   loggerf(INFO, "FOUND\nlenght: %i \t%x", s.length, (unsigned int)s.next);
-  // }
-  // else
-  //   loggerf(WARNING, "NOT FOUND");
-
-
 }
+
+
+Route * find(Block * start, Station * end){
+  struct control c = {
+    .start = start,
+    .nr_Stations = end->childs.size(),
+    .prev = 0,
+    .prevPtr = start,
+    .dir = NEXT,
+    .searchDepth = 0
+  };
+
+  c.link = start->NextLink(c.dir);
+
+  loggerf(INFO, "Pathfinding station %s (%i childs)", end->name, c.nr_Stations);
+
+  if(c.nr_Stations){
+    c.endStations = (Station **)_calloc(c.nr_Stations, void *);
+
+    uint8_t i = 0; // Copy stations into list
+    for(auto st: end->childs){ c.endStations[i++] = st; };
+    
+    // Find blocks on the edge of the station(s)
+    uint8_t i_Block = 0;
+
+    for(uint8_t i = 0; i < c.nr_Stations; i++){
+      for(uint8_t j = 0; j < c.endStations[i]->blocks_len; j++){
+        auto B = c.endStations[i]->blocks[j];
+        auto nB = B->Next_Block(NEXT, 1);
+        auto pB = B->Next_Block(PREV, 1);
+
+        loggerf(INFO, "Searching %02i:%02i [%02i  %02i]", B->module, B->id, pB ? pB->id : -1, nB ? nB->id : -1);
+
+        bool nSt = true;
+        bool pSt = true;
+
+        if(nB){
+          for(uint8_t k = 0; k < c.nr_Stations; k++){ nSt &= (nB->station != c.endStations[k]); }
+
+          if(nSt)
+            c.end[i_Block++] = B;
+        }
+        else{
+          c.end[i_Block++] = B;
+        }
+
+        if(pB){
+          for(uint8_t k = 0; k < c.nr_Stations; k++){ pSt &= (pB->station != c.endStations[k]); }
+
+          if(pSt)
+            c.end[i_Block++] = B;
+        }
+        else{
+          c.end[i_Block++] = B;;
+        }
+      }
+    }
+
+    if(i_Block == 1){
+      c.end[1] = c.end[0];
+    }
+    else if(i_Block == 0 || i_Block > 2){
+      loggerf(ERROR, "Failed to initialize Pathfinding (Block, Station)  i = %i", i_Block);
+      return 0;
+    }
+  }
+  else{
+    c.nr_Stations = 1;
+    c.endStations = (Station **)_calloc(c.nr_Stations, void *);
+    c.endStations[0] = end;
+
+    uint8_t i_Block = 0;
+
+    for(uint8_t i = 0; i < end->blocks_len; i++){
+      auto B = end->blocks[i];
+      auto nB = B->Next_Block(NEXT, 1);
+      auto pB = B->Next_Block(PREV, 1);
+
+      if((nB && nB->station != end) || !nB){
+        c.end[i_Block++] = B;
+      }
+
+      if((pB && pB->station != end) || !pB){
+        c.end[i_Block++] = B;
+      }
+    }
+
+    if(i_Block == 1){
+      c.end[1] = c.end[0];
+    }
+    else if(i_Block == 0){
+      loggerf(ERROR, "Failed to initialize Pathfinding (Block, Station)");
+      return 0;
+    }
+  }
+
+
+  c.Sw_S = (struct instruction **)_calloc(SwManager->uniqueSwitch.size, void *);
+  c.Sw_s = (struct instruction **)_calloc(SwManager->uniqueSwitch.size, void *);
+  c.MSSw_A = (struct instruction **)_calloc(SwManager->uniqueMSSwitch.size, void *);
+  c.MSSw_B = (struct instruction **)_calloc(SwManager->uniqueMSSwitch.size, void *);
+
+  loggerf(WARNING, "Searching Forward");
+  auto sf = findStep(c);
+
+  c.dir = PREV;
+  c.link = start->NextLink(c.dir);
+  c.prev = 0;
+  c.prevPtr = start;
+  loggerf(WARNING, "Searching Reverse");
+  auto sr = findStep(c);
+
+  Route * r = new Route(c, sf, sr);
+
+  return r;
+}
+
 
 struct step findStep(struct control c){
   struct step s = {
@@ -65,16 +178,6 @@ struct step findStep(struct control c){
   //   loggerf(INFO, "PF::findStep \t %s %02i:%02i  %x", t[c.link->type], c.link->module, c.link->id, (unsigned int)c.link->p.p);
   // else if(c.link->type == RAIL_LINK_E)
   //   loggerf(INFO, "PF::findStep \t E", c.link->module, c.link->id);
-
-  if(c.prev == c.start){
-    loggerf(WARNING, "Returned back to start");
-    return s;
-  }
-  else if(c.prev == c.end){
-    loggerf(WARNING, "FOUND!!! :)");
-    s.found = true;
-    return s;
-  }
 
   if(c.link->type == RAIL_LINK_R){
     Block * B = c.link->p.B;
@@ -92,7 +195,25 @@ struct step findStep(struct control c){
     c.prev = B;
     
     if(c.dir == PREV && B->oneWay){
-      return s; // Wrongway
+      return s; // failed - Wrongway
+    }
+    
+    if(B == c.start){
+      loggerf(WARNING, "Returned back to start");
+      return s; // return failed
+    }
+    else if(B == c.end[0] || B == c.end[1]){
+      loggerf(WARNING, "FOUND!!! :)");
+      s.found = true;
+      return s; // return found
+    }
+    else if(c.nr_Stations && B->station){
+      for(uint8_t i = 0; i < c.nr_Stations; i++){
+        if(c.endStations[i] == B->station){
+          loggerf(WARNING, "Found path entering station from the middle");
+          return s; // return failed
+        }
+      }
     }
 
     c.prevPtr = B;

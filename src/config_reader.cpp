@@ -1232,9 +1232,13 @@ void modify_Engine(struct RollingConfig * config, char ** cmds, uint8_t cmd_len)
     }
 
     for(int i = 0; i < config->Engines[id].config_steps; i++){
-      printf(" - Step %i   (%03i, %03i) | ", i, config->Engines[id].speed_steps[i].step, config->Engines[id].speed_steps[i].speed);
+      printf(" - Step %i (st%3i sp%3i)| ", i, config->Engines[id].speed_steps[i].step, config->Engines[id].speed_steps[i].speed);
       fgets(_cmd, 80, stdin);
       if(sscanf(_cmd, "%i %i", &tmp, &tmp1) > 1){
+        if(tmp > 128){
+          loggerf(WARNING, "Steps above 128 not allowed, step changed to 128");
+          tmp = 128;
+        }
         config->Engines[id].speed_steps[i].step = tmp;
         config->Engines[id].speed_steps[i].speed = tmp1;
       }

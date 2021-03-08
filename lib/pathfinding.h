@@ -29,7 +29,10 @@ class Route {
 
 struct control {
   Block * start;
-  Block * end;
+  Block * end[2];
+  
+  uint8_t nr_Stations;
+  Station ** endStations;
 
   Block * prev;
   void * prevPtr;
@@ -69,6 +72,8 @@ struct step {
 };
 
 Route * find(Block * start, Block * end);
+Route * find(Block * start, Station * end);
+
 struct step findStep(struct control c);
 
 void findStepSolveSwS(Switch * Sw, struct instruction * instr, struct step * str, struct step * div);

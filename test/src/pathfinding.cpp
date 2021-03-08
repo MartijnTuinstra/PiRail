@@ -29,7 +29,7 @@ public:
   ~TestsFixture();
 };
 
-TEST_CASE_METHOD(TestsFixture, "Path Finding", "[PF][PF-1]"){
+TEST_CASE_METHOD(TestsFixture, "Path Finding WayPoints", "[PF][PF-1]"){
   char filenames[1][30] = {"./testconfigs/PF-1.bin"};
   loadSwitchboard(filenames, 1);
   loadStock();
@@ -174,6 +174,82 @@ TEST_CASE_METHOD(TestsFixture, "Path Finding", "[PF][PF-1]"){
 
     delete route1;
     delete route2;
+  }
+
+  // logger.setlevel_stdout(NONE);
+}
+
+TEST_CASE_METHOD(TestsFixture, "Path Finding Stations", "[PF][PF-2]"){
+  char filenames[1][30] = {"./testconfigs/PF-2.bin"};
+  loadSwitchboard(filenames, 1);
+  loadStock();
+
+  Unit * U = switchboard::Units(1);
+  REQUIRE(U);
+
+  U->on_layout = true;
+  U->link_all();
+
+  /*                |--             Station 1             --|
+  //         Sw0/-> 1.2>              1.3>              1.4->
+  //    1.0> 1.1--> 1.5>  1.6>  1.7>--- ----1.8->  1.9> 1.10>
+  //                |- Station 2(a)-~ 1\ /2 ~- Station 2(b)-|
+  //                                    X
+  //                |- Station 3(a)-~ 3/ \4 ~- Station 3(b)-|
+  //   1.11> 1.12>  1.13> 1.14> 1.15>--- ---1.16> 1.17> 1.18>
+  //
+  */
+  
+  logger.setlevel_stdout(INFO);
+
+  SECTION("I - Find Route Station 1"){
+    auto route = PathFinding::find(U->B[0], U->St[0]); // Station 1
+
+    CHECK(route->found_forward);
+    CHECK(!route->found_reverse);
+
+    delete route;
+  }
+
+  SECTION("II - Find Route Station 2"){
+    auto route0  = PathFinding::find(U->B[0], U->St[1]);  // Station 2
+    auto route0A = PathFinding::find(U->B[0], U->St[2]); // Station 2a
+    auto route0B = PathFinding::find(U->B[0], U->St[3]); // Station 2b
+    
+    auto route11  = PathFinding::find(U->B[11], U->St[1]);  // Station 2
+    auto route11A = PathFinding::find(U->B[11], U->St[2]); // Station 2a
+    auto route11B = PathFinding::find(U->B[11], U->St[3]); // Station 2b
+
+    REQUIRE(route0);
+    REQUIRE(route0A);
+    REQUIRE(route0B);
+
+    REQUIRE(route11);
+    REQUIRE(route11A);
+    REQUIRE(route11B);
+
+    CHECK(route0->found_forward);
+    CHECK(route0A->found_forward);
+    CHECK(route0B->found_forward);
+
+    CHECK(!route11->found_forward);
+    CHECK(!route11A->found_forward);
+    CHECK( route11B->found_forward);
+
+    CHECK(!route0->found_reverse);
+    CHECK(!route0A->found_reverse);
+    CHECK(!route0B->found_reverse);
+
+    CHECK(!route11->found_reverse);
+    CHECK(!route11A->found_reverse);
+    CHECK(!route11B->found_reverse);
+
+    delete route0;
+    delete route0A;
+    delete route0B;
+    delete route11;
+    delete route11A;
+    delete route11B;
   }
 
   // logger.setlevel_stdout(NONE);

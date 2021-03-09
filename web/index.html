@@ -201,7 +201,7 @@ header('Pragma: no-cache');
 		.train-icon, .car-icon {background-size: 100%}
 
 		.train-box .train-info-box {padding: 0.5em;}
-		.train-box .route > button {float: right;}
+		.train-box .route > div {float: right;text-align: center;}
 		.train-box .control {text-align: center;}
 		.train-box .control button {white-space: nowrap}
 
@@ -305,7 +305,10 @@ header('Pragma: no-cache');
 										<div class="description">No train</div>
 										<div class="route">
 											<span>No Route</span>
-											<button class="set-route btn btn-xs btn-outline-primary">Set</button>
+											<div style="width: 48px; height: 24px; display: inline-block;">
+												<button class="set-route btn btn-xs btn-outline-primary">Set</button>
+												<img src="./img/RouteWaypoint.svg" style="display:none; width: 48px; height: 24px; cursor: pointer;" onClick='Modals.open("train_control.set_route", {"box": 1})' />
+											</div>
 										</div>
 										<div class="control">
 											<div class="btn-group btn-toggle-group" role="group" aria-label="Basic example">
@@ -365,7 +368,10 @@ header('Pragma: no-cache');
 										<div class="description">No Train</div>
 										<div class="route">
 											<span>No Route</span>
-											<button class="set-route btn btn-xs btn-outline-primary">Set</button>
+											<div style="width: 48px; height: 24px; display: inline-block;">
+												<button class="set-route btn btn-xs btn-outline-primary">Set</button>
+												<img src="./img/RouteWaypoint.svg" style="display:none; width: 48px; height: 24px; cursor: pointer;" onClick='Modals.open("train_control.set_route", {"box": 2})' />
+											</div>
 										</div>
 										<div class="control">
 											<div class="btn-group btn-toggle-group" role="group" aria-label="Basic example">

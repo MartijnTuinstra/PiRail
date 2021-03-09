@@ -7,7 +7,11 @@
 
 #define PATHFINDING_MAX_LENGHT 40
 
+#define PATHFINDING_ROUTE_BLOCK 0
+#define PATHFINDING_ROUTE_STATION 1
+
 namespace PathFinding {
+class Route;
 
 class Route {
   public:
@@ -15,6 +19,9 @@ class Route {
     bool found_reverse;
 
     uint16_t length;
+
+    uint16_t destination;
+    bool routeType;
 
     struct instruction ** Sw_S;
     struct instruction ** Sw_s;

@@ -525,11 +525,18 @@ void RailTrain::setRoute(Block * dest){
     onroute = 1;
   else
     onroute = 0;
+}
 
-  // if(path.found){
-  //   T->route = 1;
-  //   T->instructions = path.instructions;
-  // }
+
+void RailTrain::setRoute(Station * dest){
+  // struct pathfindingstep path = pathfinding(T->B, dest);
+
+  route = PathFinding::find(B, dest);
+
+  if(route)
+    onroute = 1;
+  else
+    onroute = 0;
 }
 
 

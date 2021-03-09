@@ -453,20 +453,41 @@ void Web_Train_Split(int i,char tID,char B[]){
 */
 
 void WS_cts_TrainRoute(struct s_opc_TrainRoute * data, Websocket::Client * client){
-  loggerf(WARNING, "WS_cts_TrainRoute Train %i to Station %i", data->train_id, data->station_id);
+  loggerf(WARNING, "WS_cts_TrainRoute Train %i to Station %2x-%2x", data->train_id, data->RouteHigh, data->RouteLow);
   RailTrain * T = RSManager->RailTrains[data->train_id];
 
   if(!T)
     return;
 
-  auto St = switchboard::SwManager->getStation(data->station_id);
-  
-  if(!St){
-    loggerf(WARNING, "Failed to get station");
-    return;
+  if(data->RouteType == PATHFINDING_ROUTE_STATION){
+    auto St = switchboard::SwManager->getStation((data->RouteHigh << 8) + data->RouteLow);
+    
+    if(!St){
+      loggerf(WARNING, "Failed to get station");
+      return;
+    }
+
+    T->setRoute(St);
+  }
+  else{
+    auto U = switchboard::Units(data->RouteHigh);
+
+    if(!U){
+      loggerf(WARNING, "Failed to get block");
+      return;
+    }
+
+    auto B = U->B[data->RouteLow];
+    
+    if(!B){
+      loggerf(WARNING, "Failed to get block");
+      return;
+    }
+
+    T->setRoute(B);
   }
 
-  T->setRoute(St->blocks[0]);
+  WS_stc_TrainRouteUpdate(T);
 }
 
 void WS_cts_DCCEngineSpeed(struct s_opc_DCCEngineSpeed * m, Websocket::Client * client){

@@ -70,15 +70,17 @@ packedstruct s_opc_UpdateTrain {
   uint8_t control:3;
   uint8_t dir:1;
   uint8_t speed_low;
-  uint8_t routeStation;
-  uint8_t routeModule;
   uint8_t functions[4];
 };
 
 // 0x46
 packedstruct s_opc_TrainRoute {
   uint8_t train_id;
-  uint16_t station_id;
+  uint8_t __emptyFlags:6;
+  uint8_t RouteEnabled:1;
+  uint8_t RouteType:1;
+  uint8_t RouteHigh;
+  uint8_t RouteLow;
 };
 
 // 0x4A

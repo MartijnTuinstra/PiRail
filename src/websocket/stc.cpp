@@ -222,6 +222,39 @@ void WS_stc_UpdateTrain(RailTrain * T){
   }
 }
 
+void WS_stc_TrainRouteUpdate(RailTrain * T){
+  if(!T)
+    return;
+
+  struct s_WS_Data return_msg;
+  return_msg.opcode = WSopc_TrainAddRoute;
+  struct s_opc_TrainRoute * msg = &return_msg.data.opc_TrainRoute;
+
+  msg->train_id = T->id;
+
+  if(T->route){
+    msg->RouteEnabled = 1;
+    msg->RouteHigh = T->route->destination >> 8;
+    msg->RouteLow  = T->route->destination & 0xFF;
+    msg->RouteType = T->route->routeType;
+  }
+  else{
+    msg->RouteEnabled = 0;
+    msg->RouteHigh = 0;
+    msg->RouteLow  = 0;
+    msg->RouteType = 0;
+  }
+
+  if(!WSServer)
+    return;
+  for(uint8_t i = 0; i < WSServer->clients.size(); i++){
+    if((WSServer->clients[i]->subscribedTrains[0] == T->id) || 
+       (WSServer->clients[i]->subscribedTrains[1] == T->id)){
+      WSServer->clients[i]->send((char *)&return_msg, sizeof(struct s_opc_TrainRoute) + 1, WS_Flag_Trains);
+    }
+  }
+}
+
 void WS_stc_DCCEngineUpdate(Engine * E){
   loggerf(TRACE, "WS_cts_DCCEngineUpdate");
 
@@ -302,10 +335,10 @@ void WS_stc_EnginesLib(Websocket::Client * client){
     memcpy(&data[len], E->icon_path, l);
     len += l;
 
-    for(int j = 0; j < E->steps_len; j++){
-      data[len++] = E->steps[j].speed & 0xFF;
-      data[len++] = E->steps[j].speed >> 8;
-      data[len++] = E->steps[j].step;
+    for(int j = 0; j < E->configSteps_len; j++){
+      data[len++] = E->configSteps[j].speed & 0xFF;
+      data[len++] = E->configSteps[j].speed >> 8;
+      data[len++] = E->configSteps[j].step;
     }
   }
   if(client)

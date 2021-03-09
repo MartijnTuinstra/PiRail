@@ -53,6 +53,7 @@ Route * find(Block * start, Station * end){
   struct control c = {
     .start = start,
     .nr_Stations = end->childs.size(),
+    .destination = end,
     .prev = 0,
     .prevPtr = start,
     .dir = NEXT,
@@ -77,8 +78,6 @@ Route * find(Block * start, Station * end){
         auto B = c.endStations[i]->blocks[j];
         auto nB = B->Next_Block(NEXT, 1);
         auto pB = B->Next_Block(PREV, 1);
-
-        loggerf(INFO, "Searching %02i:%02i [%02i  %02i]", B->module, B->id, pB ? pB->id : -1, nB ? nB->id : -1);
 
         bool nSt = true;
         bool pSt = true;
@@ -502,6 +501,14 @@ Route::Route(struct control c, struct step forward, struct step reverse){
   found_forward = forward.found;
   found_reverse = reverse.found;
   length = (forward.length > reverse.length) ? forward.length : reverse.length;
+
+  routeType = (c.nr_Stations > 0);
+  if(routeType){
+    destination = c.destination->uid;
+  }
+  else{
+    destination = (c.end[0]->module << 8) + c.end[0]->id;
+  }
 
   Sw_S = c.Sw_S;
   Sw_s = c.Sw_s;

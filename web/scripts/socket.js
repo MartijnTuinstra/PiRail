@@ -459,13 +459,10 @@ websocket.add_opcodes([
 
         Train_Control.apply_control(box);
 
-        // Route
-        // data[3] and data[4]
-
         // Functions
-        // data[5] - data[8]
+        // data[3] - data[6]
         for(var i = 0; i < 29; i++){
-          if((data[Math.floor(i / 8) + 5] & (0x80 >> (i % 8))) != 0){
+          if((data[Math.floor(i / 8) + 3] & (0x80 >> (i % 8))) != 0){
             Train_Control.train[box].t.functions[i].state = 1;
           }
           else{
@@ -483,12 +480,39 @@ websocket.add_opcodes([
         var msg = [];
 
         msg[0] = data.train_id;
-        msg[1] = data.station_id & 0xFF;
+        msg[1] = 0x80 | 0x40;
         msg[2] = data.station_id >> 8;
+        msg[3] = data.station_id & 0xFF;
 
         return msg;
       },
-      recv: function(data){ console.warn("TrainAddRoute", data); }
+      recv: function(data){
+        
+        var id = data[0];
+
+        var box = 0;
+
+        if(Train_Control.train[1] != undefined && Train_Control.train[1].t.railtrainid == id){
+          box = 1;
+        }
+        else if(Train_Control.train[2] != undefined && Train_Control.train[2].t.railtrainid == id){
+          box = 2;
+        }
+
+        if(box == 0){
+          console.warn("No box");
+          return;
+        }
+
+        if(data[1] & 0x40){
+          RouteType =  data[1] >> 7;
+          Route     = (data[2] << 8) + data[3];
+          Train_Control.set_Route(box, Route, RouteType);
+        }
+        else{
+          Train_Control.set_Route(box, undefined, undefined);
+        }
+      }
     },
     {
       opcode: 0x4A,

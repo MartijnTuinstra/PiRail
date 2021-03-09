@@ -311,6 +311,29 @@ var Train_Control = {
 
     websocket.cts_TrainSpeed({type: this.train[box].type, train: this.train[box].t});
   },
+
+  set_Route: function(box, Route, RouteType){
+    var text = "";
+    if(Route == undefined || RouteType == undefined){
+      text = "No Route";
+      $('.train-box.box'+box+' .train-info-box .route img').hide();
+      $('.train-box.box'+box+' .train-info-box .route button').show();
+    }
+    else if(RouteType){
+      $('.train-box.box'+box+' .train-info-box .route img').attr("src", "./img/RouteStation.svg");
+      $('.train-box.box'+box+' .train-info-box .route button').hide();
+      $('.train-box.box'+box+' .train-info-box .route img').show();
+      text = stations[Route].name;
+    }
+    else{
+      $('.train-box.box'+box+' .train-info-box .route img').attr("src", "./img/RouteWaypoint.svg");
+      $('.train-box.box'+box+' .train-info-box .route button').hide();
+      $('.train-box.box'+box+' .train-info-box .route img').show();
+      text = "Block " + (Route >> 8) + ":" + (Route & 0xFF);
+    }
+    $('.train-box.box'+box+' .train-info-box .route span').text(text);
+  },
+
   get_box: function(target){
     var box = $(target).closest('.train-box');
     if(box.hasClass("box1")){

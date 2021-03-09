@@ -32,6 +32,7 @@ struct s_opc_LinkTrain;
 void WS_stc_LinkTrain(struct s_opc_LinkTrain * msg);
 // void WS_TrainData(char data[14]);
 void WS_stc_UpdateTrain(RailTrain * T);
+void WS_stc_TrainRouteUpdate(RailTrain * T);
 void WS_stc_DCCEngineUpdate(Engine * E);
 void WS_stc_EnginesLib(Websocket::Client * client);
 void WS_stc_CarsLib(Websocket::Client * client);

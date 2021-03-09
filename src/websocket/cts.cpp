@@ -387,34 +387,11 @@ void WS_cts_SetTrainSpeed(struct s_opc_SetTrainSpeed * m, Websocket::Client * cl
   T->speed_event_data->target_speed = speed;
   T->dir   = (m->speed_high & 0x10) >> 4;
 
-  if(T->type == RAILTRAIN_ENGINE_TYPE){
-    Engine * E = T->p.E;
-    E->dir = T->dir;
-    E->setSpeed(speed);
-    Z21_Set_Loco_Drive_Engine(E);
-  }
-  else{
-    Train * tmpT = T->p.T;
-    // tmpT->cur_speed = ;
-    tmpT->dir = T->dir;
-    tmpT->setSpeed(speed);
-    Z21_Set_Loco_Drive_Train(tmpT);
-  }
+  // TODO add direction / reversing
 
-  // loggerf(INFO, "IMPLEMENT Z21");
-  // if(data[2] & 0x20 && id < trains_len){ //Train
-  //   trains[id]->cur_speed = speed;
-  //   trains[id]->dir = (data[2] & 0x10) >> 4;
+  T->setSpeed(speed);
 
-  //   train_calc_speed(trains[id]);
-
-  // }
-  // else if(id < engines_len){ //Engine
-  //   engines[id]->dir = (data[2] & 0x10) >> 4;
-
-  //   engine_set_speed(engines[id], speed);
-
-  // }
+  // FIXME send to other clients that are subscribe to this train
 }
 
 void WS_cts_TrainSubscribe(struct s_opc_SubscribeTrain * m, Websocket::Client * client){
@@ -503,7 +480,6 @@ void WS_cts_DCCEngineSpeed(struct s_opc_DCCEngineSpeed * m, Websocket::Client * 
   loggerf(WARNING, "Set DCCENGINESPEED %02x %02x %02x", m->id, m->speed_high, m->speed_low); 
   loggerf(WARNING, "Set DCCEngineSpeed %i, dir: %i", speed, E->dir);
   E->setSpeed(speed);
-  Z21_Set_Loco_Drive_Engine(E);
 }
 
 void WS_cts_DCCEngineFunction(struct s_opc_DCCEngineFunction * m, Websocket::Client * client){

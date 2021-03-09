@@ -279,16 +279,29 @@ void RailTrain::moveForward(Block * tB){
       }
 
       if(i == 0){
-        B = tB;
-
-        if(virtualLength)
-          setVirtualBlocks();
+        moveFrontForward(tB);
       }
 
       DB->B[DB->Front] = tB;
       DB->Front++;
 
       break;
+    }
+  }
+}
+
+void RailTrain::moveFrontForward(Block * _B){
+  B = _B;
+
+  if(virtualLength)
+    setVirtualBlocks();
+
+  if(routeStatus){
+    if(_B == route->destinationBlocks[0] || _B == route->destinationBlocks[1]){
+      if(route->routeType == PATHFINDING_ROUTE_BLOCK)
+        routeStatus = RAILTRAIN_ROUTE_AT_DESTINATION;
+      else
+        routeStatus++;
     }
   }
 }
@@ -517,26 +530,22 @@ void RailTrain::Z21_reverse(){
 
 
 void RailTrain::setRoute(Block * dest){
-  // struct pathfindingstep path = pathfinding(T->B, dest);
-
   route = PathFinding::find(B, dest);
 
-  if(route)
-    onroute = 1;
+  if(route && (route->found_forward || route->found_reverse))
+    routeStatus = RAILTRAIN_ROUTE_RUNNING;
   else
-    onroute = 0;
+    routeStatus = RAILTRAIN_ROUTE_DISABLED;
 }
 
 
 void RailTrain::setRoute(Station * dest){
-  // struct pathfindingstep path = pathfinding(T->B, dest);
-
   route = PathFinding::find(B, dest);
 
-  if(route)
-    onroute = 1;
+  if(route && (route->found_forward || route->found_reverse))
+    routeStatus = RAILTRAIN_ROUTE_RUNNING;
   else
-    onroute = 0;
+    routeStatus = RAILTRAIN_ROUTE_DISABLED;
 }
 
 

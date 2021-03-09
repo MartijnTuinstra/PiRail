@@ -453,7 +453,7 @@ int solve(RailTrain * T, Block * B, Block * tB, struct rail_link link, int flags
 
   PathFinding::Route * r = 0;
 
-  if(T && T->onroute && T->route){
+  if(T && T->routeStatus && T->route){
     r = T->route;
   }
 

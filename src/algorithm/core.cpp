@@ -106,6 +106,7 @@ void process(Block * B, int flags){
   
   // Print all found blocks
   // if(flags & _DEBUG)
+  print_block_debug(B);
 
   // Station Stating
   if(B->station){
@@ -697,6 +698,7 @@ void train_control(RailTrain * T){
 
   // Counter and distance for loop
   uint8_t i = 0;
+  uint8_t addI = 1;
   uint16_t length = B->length;
 
   // Array of brake points
@@ -705,13 +707,30 @@ void train_control(RailTrain * T){
     int16_t BrakingDistance;
     int16_t BrakingOffset;
     uint8_t reason;
-  } speeds[10] = {{0,0,0,0}};
+  } speeds[12] = {{0,0,0,0}};
 
-  memset(speeds, 0, 10 * (sizeof(uint16_t)*3 + sizeof(uint8_t)) );
+  memset(speeds, 0, 12 * (sizeof(uint16_t)*3 + sizeof(uint8_t)) );
+
+  uint8_t RouteBrake = 0;
+
+
+  if(T->routeStatus == RAILTRAIN_ROUTE_AT_DESTINATION && 
+      T->route->routeType == PATHFINDING_ROUTE_STATION){
+    speeds[i].speed = 0;
+    speeds[i].BrakingDistance = 0.173625 * (T->speed * T->speed) / 20;
+    speeds[i].BrakingOffset = length - speeds[i].BrakingDistance;
+    speeds[i].reason = RAILTRAIN_SPEED_R_ROUTE;
+      
+    i++;
+
+    RouteBrake = 2;
+  }
 
   // Fill in all brake points
   //  TODO: add brake point for route
   while(B->Alg.next > i){
+    addI = 1;
+
     if(N[i]->blocked){
       speeds[i].speed = 0;
       speeds[i].BrakingDistance = length - N[i]->length;
@@ -732,13 +751,33 @@ void train_control(RailTrain * T){
         speeds[i].reason = RAILTRAIN_SPEED_R_MAXSPEED;
     }
 
+    if(T->routeStatus != RAILTRAIN_ROUTE_DISABLED && RouteBrake < 2){
+      if(T->routeStatus == RAILTRAIN_ROUTE_ENTERED_DESTINATION)
+        RouteBrake = 1;
+
+      if(T->route->routeType == PATHFINDING_ROUTE_STATION){
+        if(N[i] == T->route->destinationBlocks[0] || N[i] == T->route->destinationBlocks[1]){
+          if(RouteBrake){
+            speeds[i+1].speed = 0;
+            speeds[i+1].BrakingDistance = 0.173625 * (T->speed * T->speed) / 20;
+            speeds[i+1].BrakingOffset = N[i]->length + length - speeds[i+1].BrakingDistance;
+            speeds[i+1].reason = RAILTRAIN_SPEED_R_ROUTE;
+            
+            addI = 2;
+          }
+
+          RouteBrake++;
+        }
+      }
+    }
+
     if(length > maxDistance){
-      i++;
+      i += addI;
       break;
     }
 
     length += N[i]->length;
-    i++;
+    i += addI;
   }
 
   // Parameters for acceleration/deceleration:

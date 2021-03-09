@@ -908,16 +908,17 @@ TEST_CASE_METHOD(TestsFixture, "Algorithm Switch Setter", "[Alg][Alg-3]"){
     U->B[22]->setDetection(1);
     Algorithm::process(U->B[22], _FORCE);
 
-    auto route = PathFinding::find(U->B[22], U->B[21]);
+    auto T = U->B[22]->train;
 
-    REQUIRE(route->found_forward);
-    REQUIRE(U->B[22]->train);
+    REQUIRE(T);
 
-    U->B[22]->train->route = route;
-    U->B[22]->train->onroute = true;
+    T->setRoute(U->B[21]);
+    
+    REQUIRE(T->route);
+    REQUIRE(T->route->found_forward);
 
-    CHECK(U->B[22]->train != nullptr);
-    CHECK(U->B[22]->train == RSManager->getRailTrain(0));
+    CHECK(T != nullptr);
+    CHECK(T == RSManager->getRailTrain(0));
 
     RSManager->getRailTrain(0)->setSpeed(10);
     Algorithm::process(U->B[22], _FORCE);
@@ -933,15 +934,16 @@ TEST_CASE_METHOD(TestsFixture, "Algorithm Switch Setter", "[Alg][Alg-3]"){
     Algorithm::process(U->B[22], _FORCE);
     Algorithm::process(U->B[21], _FORCE);
 
-    auto route = PathFinding::find(U->B[22], U->B[21]);
+    auto T = U->B[22]->train;
 
-    REQUIRE(route->found_forward);
-    REQUIRE(U->B[22]->train);
+    REQUIRE(T);
 
-    U->B[22]->train->route = route;
-    U->B[22]->train->onroute = true;
+    T->setRoute(U->B[21]);
 
-    CHECK(U->B[22]->train == RSManager->getRailTrain(0));
+    REQUIRE(T->route);
+    REQUIRE(T->route->found_forward);
+
+    CHECK(T == RSManager->getRailTrain(0));
 
     RSManager->getRailTrain(0)->setSpeed(10);
     Algorithm::process(U->B[22], _FORCE);
@@ -959,21 +961,17 @@ TEST_CASE_METHOD(TestsFixture, "Algorithm Switch Setter", "[Alg][Alg-3]"){
     Algorithm::process(U->B[22], _FORCE);
     Algorithm::process(U->B[26], _FORCE);
 
-    REQUIRE(U->B[22]->train);
-    CHECK(U->B[22]->train == RSManager->getRailTrain(0));
+    auto T = U->B[22]->train;
+
+    REQUIRE(T);
+    CHECK(T == RSManager->getRailTrain(0));
     REQUIRE(U->B[26]->train);
     CHECK(U->B[26]->train == RSManager->getRailTrain(1));
 
-    auto route = PathFinding::find(U->B[22], U->B[33]);
+    T->setRoute(U->B[33]);
 
-    char debug[1000];
-    route->print(debug);
-    loggerf(INFO, "%s", debug);
-
-    REQUIRE(route->found_forward);
-
-    U->B[22]->train->route = route;
-    U->B[22]->train->onroute = true;
+    REQUIRE(T->route);
+    REQUIRE(T->route->found_forward);
 
     RSManager->getRailTrain(0)->setSpeed(10);
     Algorithm::process(U->B[22], _FORCE);
@@ -1339,11 +1337,7 @@ TEST_CASE_METHOD(TestsFixture, "Train Speed Control", "[Alg][Alg-Sp]"){
 
     // Skip first blocks
     while(!U->B[5]->blocked){
-      train_sim_tick(&train);
-      if(AlQueue.queue->getItems() > 0)
-        Algorithm::BlockTick();
-
-      maxIterations--;
+      train_test_tick(&train, &maxIterations);
     }
 
     while(!U->B[7]->blocked && maxIterations > 0){
@@ -1397,6 +1391,66 @@ TEST_CASE_METHOD(TestsFixture, "Train Speed Control", "[Alg][Alg-Sp]"){
     CHECK(ED->target_speed < 180);
     CHECK(ED->target_distance == 100);
     CHECK(ED->reason == RAILTRAIN_SPEED_R_MAXSPEED);
+  }
+
+  SECTION("V - End of route"){
+    REQUIRE(U->St[0]);
+
+    T->setRoute(U->St[0]);
+
+    REQUIRE(T->route);
+    REQUIRE(T->routeStatus == RAILTRAIN_ROUTE_RUNNING);
+    REQUIRE(T->route->destination == U->St[0]->uid);
+
+    while(!U->B[7]->blocked && maxIterations > 0){
+      train_test_tick(&train, &maxIterations);
+    }
+
+    while(!U->B[10]->blocked && maxIterations > 0){
+      train_testSim_tick(&train, &maxIterations);
+    }
+
+    CHECK(T->routeStatus == RAILTRAIN_ROUTE_ENTERED_DESTINATION);
+
+    while(!U->B[13]->blocked && T->speed > 90 && maxIterations > 0){
+      train_testSim_tick(&train, &maxIterations);
+    }
+
+    CHECK(T->routeStatus == RAILTRAIN_ROUTE_AT_DESTINATION);
+    CHECK(ED->reason == RAILTRAIN_SPEED_R_ROUTE);
+
+    while(!U->B[13]->blocked && T->speed != 0 && maxIterations > 0){
+      train_testSim_tick(&train, &maxIterations);
+    }
+
+    CHECK(T->speed == 0);
+    CHECK(!U->B[13]->blocked);
+    CHECK(U->B[12]->blocked);
+    CHECK(!U->B[10]->blocked);
+    CHECK(ED->reason == RAILTRAIN_SPEED_R_NONE);
+
+  }
+
+  SECTION("VI - At of waypoint"){
+    T->setRoute(U->B[10]);
+
+    REQUIRE(T->route);
+    REQUIRE(T->routeStatus == RAILTRAIN_ROUTE_RUNNING);
+    REQUIRE(T->route->destination == 0x010A); // Unit 1 Block 10
+
+    while(!U->B[10]->blocked && maxIterations > 0){
+      train_testSim_tick(&train, &maxIterations);
+    }
+
+    CHECK(T->routeStatus == RAILTRAIN_ROUTE_AT_DESTINATION);
+
+    while(!U->B[13]->blocked && T->speed != 0 && maxIterations > 0){
+      train_testSim_tick(&train, &maxIterations);
+    }
+
+    CHECK(T->speed != 0);
+    CHECK(U->B[13]->blocked);
+
   }
 
   scheduler->stop();

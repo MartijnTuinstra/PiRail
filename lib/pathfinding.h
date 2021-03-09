@@ -21,6 +21,7 @@ class Route {
     uint16_t length;
 
     uint16_t destination;
+    Block * destinationBlocks[2];
     bool routeType;
 
     struct instruction ** Sw_S;
@@ -39,6 +40,7 @@ struct control {
   Block * end[2];
   
   uint8_t nr_Stations;
+  Station * destination;
   Station ** endStations;
 
   Block * prev;

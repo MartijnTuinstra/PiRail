@@ -509,6 +509,8 @@ Route::Route(struct control c, struct step forward, struct step reverse){
   else{
     destination = (c.end[0]->module << 8) + c.end[0]->id;
   }
+  destinationBlocks[0] = c.end[0];
+  destinationBlocks[1] = c.end[1];
 
   Sw_S = c.Sw_S;
   Sw_s = c.Sw_s;

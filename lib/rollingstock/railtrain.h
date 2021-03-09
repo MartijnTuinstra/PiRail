@@ -17,6 +17,11 @@
 #define TRAIN_SEMI_AUTO 1
 #define TRAIN_FULL_AUTO 2
 
+#define RAILTRAIN_ROUTE_DISABLED 0
+#define RAILTRAIN_ROUTE_RUNNING 1
+#define RAILTRAIN_ROUTE_ENTERED_DESTINATION 2
+#define RAILTRAIN_ROUTE_AT_DESTINATION 3
+
 #define RAILTRAIN_FIFO_SIZE 64 // Blocks
 
 
@@ -88,11 +93,11 @@ class RailTrain {
 
     bool manual = 1;   // TRAIN_MANUAL
     bool fullAuto = 0; // TRAIN_FULL_AUTO
-    bool onroute = 0;         // TRAIN_ONROUTE = true
     bool stopped = 1;         // 
     bool dir = 0;             // TRAIN_FORWARD / TRAIN_REVERSE
     bool directionKnown = 0;  //  block direction is matched to the Z21 direction
     bool reverseDirection = 0;  // Train is reversed with respect to the front block
+    uint8_t routeStatus = RAILTRAIN_ROUTE_DISABLED;         // RAILTRAIN_ROUTE - DISABLED / RUNNING / ENTERED_DESTINATION / AT_DESTINATION
 
     PathFinding::Route * route = 0;
 
@@ -122,8 +127,9 @@ class RailTrain {
     void initVirtualBlocks();
     void setVirtualBlocks();
 
-    void initMoveForward(Block * B);
-    void moveForward(Block * B);
+    void initMoveForward(Block *);
+    void moveForward(Block *);
+    void moveFrontForward(Block *);
 
     void setSpeed(uint16_t _speed);
     void setStopped(bool);
@@ -141,6 +147,7 @@ class RailTrain {
     void unlink();
 
     void setRoute(Block * dest);
+    void setRoute(Station * dest);
 
     bool ContinueCheck();
     uint16_t checkMaxSpeed();

@@ -213,9 +213,9 @@ void Engine::Z21_setSpeedDir(char _speed, bool _dir){
     if(!samespeed){
       RT->setSpeed(cur_speed);
       // This will update other Engines in the train
-    }
 
-    WS_stc_UpdateTrain(RT);
+      WS_stc_UpdateTrain(RT);
+    }
   }
   else{
     WS_stc_DCCEngineUpdate(this);

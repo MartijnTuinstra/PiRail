@@ -302,7 +302,7 @@ void Switch_Checker(Algor_Blocks * ABs, int debug){
   uint8_t next = ABs->next;
   //Block BNNN = *AllBlocks.BNNN;
 
-  if(!B->blocked || (B->train && B->train->stopped))
+  if(!B->blocked || (B->train && (B->train->stopped || B->train->B != B)))
     return;
 
   RailTrain * T = B->train;
@@ -459,19 +459,29 @@ void train_following(Algor_Blocks * ABs, int debug){
   uint8_t next = ABs->next;
 
   // If block is not blocked but still containing a train
-  if(!B->blocked && B->train != 0){
-    // Train is lost
-    //  If blocks around are also not blocked
-    if(prev > 0 && next > 0 && !BN[0]->blocked && !BP[0]->blocked){
-      B->setState(UNKNOWN);
-      loggerf(WARNING, "%02i%02i LOST Train block %x", B->module, B->id, (unsigned int)B);
-    }
-    else{ // Release the block
-      B->train->releaseBlock(B);
-      B->train = 0;
+  if(B->train){
+    if(!B->blocked){
+      // Train is lost
+      //  If blocks around are also not blocked
 
-      loggerf(DEBUG, "RESET Train block %x", (unsigned int)B);
-      // Units[B->module]->changed |= Unit_Blocks_changed;
+      if(prev > 0 && next > 0 && !BN[0]->blocked && !BP[0]->blocked){
+        B->setState(UNKNOWN);
+        loggerf(WARNING, "%02i%02i LOST Train block %x", B->module, B->id, (unsigned int)B);
+      }
+      // Detection is lost when the train should be in the block
+      else if(B->train == B->expectedTrain && B->train->assigned){
+        B->setState(UNKNOWN);
+      }
+      else{ // Release the block
+        B->train->moveForwardFree(B);
+        B->train = 0;
+
+        loggerf(DEBUG, "RESET Train block %x", (unsigned int)B);
+        // Units[B->module]->changed |= Unit_Blocks_changed;
+      }
+    }
+    else if(!B->detectionBlocked && B->expectedTrain == 0 && B->train->assigned){
+      B->train->moveForwardFree(B);
     }
   }
 

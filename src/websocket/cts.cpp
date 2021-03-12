@@ -392,6 +392,7 @@ void WS_cts_SetTrainSpeed(struct s_opc_SetTrainSpeed * m, Websocket::Client * cl
   T->setSpeed(speed);
 
   // FIXME send to other clients that are subscribe to this train
+  WS_stc_UpdateTrain(T, client);
 }
 
 void WS_cts_TrainSubscribe(struct s_opc_SubscribeTrain * m, Websocket::Client * client){
@@ -400,9 +401,11 @@ void WS_cts_TrainSubscribe(struct s_opc_SubscribeTrain * m, Websocket::Client * 
 
   if(client->subscribedTrains[0] < 0xFF && RSManager->RailTrains[client->subscribedTrains[0]]){
     WS_stc_UpdateTrain(RSManager->RailTrains[client->subscribedTrains[0]]);
+    WS_stc_TrainRouteUpdate(RSManager->RailTrains[client->subscribedTrains[0]]);
   }
   if(client->subscribedTrains[1] < 0xFF && RSManager->RailTrains[client->subscribedTrains[1]]){
     WS_stc_UpdateTrain(RSManager->RailTrains[client->subscribedTrains[1]]);
+    WS_stc_TrainRouteUpdate(RSManager->RailTrains[client->subscribedTrains[1]]);
   }
 
   loggerf(INFO, "WS_cts_TrainSubscribe client %i = %i, %i", client->fd, client->subscribedTrains[0], client->subscribedTrains[1]);

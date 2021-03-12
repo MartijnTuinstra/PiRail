@@ -181,6 +181,11 @@ void WS_stc_LinkTrain(struct s_opc_LinkTrain * msg){
 }
 
 void WS_stc_UpdateTrain(RailTrain * T){
+  WS_stc_UpdateTrain(T, 0);
+}
+void WS_stc_UpdateTrain(RailTrain * T, Websocket::Client * client){
+  // send to all except client
+
   if(!T)
     return;
 
@@ -215,9 +220,12 @@ void WS_stc_UpdateTrain(RailTrain * T){
   if(!WSServer)
     return;
   for(uint8_t i = 0; i < WSServer->clients.size(); i++){
-    if((WSServer->clients[i]->subscribedTrains[0] == T->id) || 
-       (WSServer->clients[i]->subscribedTrains[1] == T->id)){
-      WSServer->clients[i]->send((char *)&return_msg, sizeof(struct s_opc_UpdateTrain) + 1, WS_Flag_Trains);
+    auto c = WSServer->clients[i];
+    if(c == client)
+      continue;
+
+    if((c->subscribedTrains[0] == T->id) || (c->subscribedTrains[1] == T->id)){
+      c->send((char *)&return_msg, sizeof(struct s_opc_UpdateTrain) + 1, WS_Flag_Trains);
     }
   }
 }
@@ -314,7 +322,7 @@ void WS_stc_EnginesLib(Websocket::Client * client){
 
     data[len++] = E->speed_step_type & 0x3;
 
-    data[len++] = E->steps_len;
+    data[len++] = E->configSteps_len;
     data[len++] = strlen(E->name);
     data[len++] = strlen(E->img_path);
     data[len++] = strlen(E->icon_path);

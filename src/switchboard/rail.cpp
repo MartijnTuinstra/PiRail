@@ -463,12 +463,19 @@ bool Block::isReservedBy(RailTrain * T){
   return false;
 }
 
-void Block::setState(enum Rail_states state){
-  this->state = state;
+void Block::setState(enum Rail_states _state){
+  if(_state == PROCEED){
+    if(reserved)
+      _state = RESERVED;
+    else if(switchReserved)
+      _state = RESERVED_SWITCH;
+  }
 
-  uint8_t signalsize = this->forward_signal->size();
+  state = _state;
+
+  uint8_t signalsize = forward_signal->size();
   for(uint8_t i = 0; i < signalsize; i++){
-    this->forward_signal->operator[](i)->set(state);
+    forward_signal->operator[](i)->set(state);
   }
 
   statechanged = 1;

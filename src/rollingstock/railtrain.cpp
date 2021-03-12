@@ -70,7 +70,10 @@ void RailTrain::setBlock(Block * sB){
 void RailTrain::releaseBlock(Block * rB){
   loggerf(TRACE, "train %i: releaseBlock %2i:%2i %x", id, rB->module, rB->id, (unsigned int)rB);
   rB->train = 0;
-  blocks.erase(std::remove_if(blocks.begin(), blocks.end(), [rB](const auto & o) { return (o == rB); }), blocks.end());
+  blocks.erase(std::remove_if(blocks.begin(),
+                              blocks.end(),
+                              [rB](const auto & o) { return (o == rB); }),
+               blocks.end());
 
   if(rB == B)
     B = blocks[0];
@@ -220,56 +223,91 @@ void RailTrain::initMoveForward(Block * tB){
   blockLength = length + B->length;
   uint8_t i = 0;
   uint8_t DetectableCounter = 0;
-  bool expecting = true;
-  while(listBlock && (blockLength > 0 || listBlock->train == this)){
+  while(blockLength > 0 || listBlock->train == this){
     blockLength -= listBlock->length;
 
-    if(listBlock->train == this){
+    if(listBlock->train == this && listBlock->detectionBlocked){
+      struct RailTrainDetectables * DB = &DetectedBlocks[DetectableCounter];
+      listBlock->expectedTrain = this;
+      DB->B[i++] = listBlock;
+      DB->BlockedLength += listBlock->length;;
+      DB->BlockedBlocks++;
 
-      if(expecting){
-        expecting = false;
-        Block * tmp_Block = listBlock->Next_Block(dir == 1 ? PREV : NEXT, 1);
+      for(int8_t j = i - 1; j > 0; j--)
+        std::swap(DB->B[j], DB->B[j-1]);
 
-        if(tmp_Block){
-          tmp_Block->expectedTrain = this;
-        }
-      }
-
-      if(listBlock->detectionBlocked){
-        struct RailTrainBlocksFifo * DB = &DetectedBlocks[DetectableCounter];
-        DB->B[i++] = listBlock;
-        DB->Front++;
-
-        for(int8_t j = i - 1; j > 0; j--)
-          std::swap(DB->B[j], DB->B[j-1]);
-
-      }
-    }
-    else if(!expecting){
-      if(DetectableCounter + 1 < Detectables){
-        DetectableCounter++;
-        i = 0;
-      }
-      expecting = true;
     }
 
-    listBlock = listBlock->Next_Block(dir == 1 ? NEXT : PREV, 1);
+    Block * oldListBlock = listBlock;
+    listBlock = listBlock->Next_Block(dir ? NEXT : PREV, 1);
+
+    if(!listBlock)
+      break;
+
+    if(!listBlock->detectionBlocked && oldListBlock->detectionBlocked)
+      DetectableCounter++;
+  }
+
+  for(uint8_t i = 0; i < Detectables; i++){
+    auto DB = &DetectedBlocks[i];
+    
+    if(DB->BlockedBlocks){
+      if(DB->BlockedLength - DB->B[DB->BlockedBlocks - 1]->length > DB->DetectableLength)
+        DB->B[0]->expectedTrain = 0; // Clear expectedTrain
+      
+      Block * tmpBlock = DB->B[DB->BlockedBlocks - 1]->Next_Block(dir ? PREV : NEXT, 1);
+      if(tmpBlock) // Set new expectedTrain
+        tmpBlock->expectedTrain = this;
+    }
+    
   }
 
   if(virtualLength)
     setVirtualBlocks();
-  
+}
+
+void RailTrain::moveForwardFree(Block * tB){
+  loggerf(INFO, "MoveForwardFree RT %i from block %2i:%2i", id, tB->module, tB->id);
+
+  if(!virtualLength){
+    releaseBlock(tB);
+    AlQueue.put(this); // Put in traincontrol queue for speed control
+  }
+
+  for(uint8_t i = 0; i < Detectables; i++){
+    struct RailTrainDetectables * DB = &DetectedBlocks[i];
+
+
+    if(tB != DB->B[0])
+      continue;
+
+    DB->B[0] = 0x0;
+    for(uint8_t j = 1; j < DB->BlockedBlocks; j++){
+      std::swap(DB->B[j-1], DB->B[j]);
+    }
+    DB->BlockedBlocks--;
+    DB->BlockedLength -= tB->length;
+    
+    if(DB->BlockedLength - DB->B[DB->BlockedBlocks - 1]->length > DB->DetectableLength)
+      DB->B[0]->expectedTrain = 0;
+
+    break;
+  }
 }
 
 void RailTrain::moveForward(Block * tB){
   loggerf(INFO, "MoveForward RT %i to block %2i:%2i", id, tB->module, tB->id);
   setBlock(tB);
+  dereserveBlock(tB);
 
   AlQueue.put(this); // Put in traincontrol queue
 
   for(uint8_t i = 0; i < Detectables; i++){
-    struct RailTrainBlocksFifo * DB = &DetectedBlocks[i];
-    Block * _B = DB->B[(DB->Front + RAILTRAIN_FIFO_SIZE - 1) % RAILTRAIN_FIFO_SIZE];
+    struct RailTrainDetectables * DB = &DetectedBlocks[i];
+    if(!DB->BlockedBlocks)
+      continue;
+
+    Block * _B = DB->B[DB->BlockedBlocks - 1];
 
     if(_B->Alg.next > 0 && _B->Alg.N[0] == tB){
       Block * nextBlock = _B->Next_Block(NEXT, 2);
@@ -282,8 +320,12 @@ void RailTrain::moveForward(Block * tB){
         moveFrontForward(tB);
       }
 
-      DB->B[DB->Front] = tB;
-      DB->Front++;
+      DB->BlockedLength += tB->length;
+      DB->B[DB->BlockedBlocks] = tB;
+      DB->BlockedBlocks++;
+
+      if(DB->BlockedLength - DB->B[DB->BlockedBlocks - 1]->length > DB->DetectableLength)
+        DB->B[0]->expectedTrain = 0;
 
       break;
     }
@@ -444,13 +486,17 @@ void RailTrain::reverseBlocks(){
   if(!assigned || !directionKnown)
     return;
 
-  // Remove expectedTrain
+  // Remove expectedTrain from the front
+  // Reset  expectedTrain at the rear as it is still blocked and becomes the front
   for(uint8_t i = 0; i < Detectables; i++){
     auto DB = &DetectedBlocks[i];
-    Block * _B = DB->B[(DB->Front + RAILTRAIN_FIFO_SIZE - 1) % RAILTRAIN_FIFO_SIZE];
-    Block * nextBlock = _B->Next_Block(PREV, 1);
+    if(!DB->BlockedBlocks)
+      continue;
 
-    loggerf(INFO, "Disregarding expectedTrain %02i -> %02i:%02i", _B->id, nextBlock->module, nextBlock->id);
+    if(DB->B[0]->expectedTrain == 0)
+      DB->B[0]->expectedTrain = this;
+
+    Block * nextBlock = DB->B[DB->BlockedBlocks - 1]->Next_Block(PREV, 1);
 
     if(nextBlock->expectedTrain == this)
       nextBlock->expectedTrain = 0;
@@ -463,10 +509,10 @@ void RailTrain::reverseBlocks(){
   while(leftIndex < rightIndex)
   {
     /* Copy value from original array to reverse array */
-    struct RailTrainBlocksFifo temp;
-    memcpy(&temp, &DetectedBlocks[leftIndex], sizeof(struct RailTrainBlocksFifo));
-    memcpy(&DetectedBlocks[leftIndex], &DetectedBlocks[rightIndex], sizeof(struct RailTrainBlocksFifo));
-    memcpy(&DetectedBlocks[rightIndex], &temp, sizeof(struct RailTrainBlocksFifo));
+    struct RailTrainDetectables temp;
+    memcpy(&temp, &DetectedBlocks[leftIndex], sizeof(struct RailTrainDetectables));
+    memcpy(&DetectedBlocks[leftIndex], &DetectedBlocks[rightIndex], sizeof(struct RailTrainDetectables));
+    memcpy(&DetectedBlocks[rightIndex], &temp, sizeof(struct RailTrainDetectables));
     
     leftIndex++;
     rightIndex--;
@@ -476,8 +522,8 @@ void RailTrain::reverseBlocks(){
   for(uint8_t i = 0; i < Detectables; i++){
     auto DB = &DetectedBlocks[i];
 
-    leftIndex  = DB->End;
-    rightIndex = DB->Front - 1;
+    leftIndex  = 0;
+    rightIndex = DB->BlockedBlocks - 1;
     while(leftIndex < rightIndex)
     {
       /* Copy value from original array to reverse array */
@@ -504,13 +550,18 @@ void RailTrain::reverseBlocks(){
     b->reverse();
 
 
-  // Add expectedTrain
+  // Add expectedTrain to the front
+  // remove expectedTrain from the rear
   if(!reverseDirection){
     for(uint8_t i = 0; i < Detectables; i++){
       auto DB = &DetectedBlocks[i];
-      Block * nextBlock = DB->B[(DB->Front + RAILTRAIN_FIFO_SIZE - 1) % RAILTRAIN_FIFO_SIZE]->Next_Block(NEXT, 1);
+      if(!DB->BlockedBlocks)
+        continue;
 
-      loggerf(INFO, "Setting expectedTrain %02i:%02i", nextBlock->module, nextBlock->id);
+      Block * nextBlock = DB->B[DB->BlockedBlocks - 1]->Next_Block(NEXT, 1);
+      
+      if(DB->BlockedLength - DB->B[DB->BlockedBlocks - 1]->length > DB->DetectableLength)
+        DB->B[0]->expectedTrain = 0;
 
       if(nextBlock->expectedTrain == 0)
         nextBlock->expectedTrain = this;
@@ -518,7 +569,7 @@ void RailTrain::reverseBlocks(){
     }
   }
 
-  B = DetectedBlocks[0].B[DetectedBlocks[0].Front - 1];
+  B = DetectedBlocks[0].B[DetectedBlocks[0].BlockedBlocks - 1];
   dir ^= 1;
 
   setSpeed(0);
@@ -584,6 +635,8 @@ int RailTrain::link(int tid, char _type){
     name = E->name;
 
     Detectables = 1;
+    DetectedBlocks = (RailTrainDetectables *)_calloc(Detectables, RailTrainDetectables);
+    DetectedBlocks[0].DetectableLength = length / 10;
 
     //Lock engines
     RSManager->subDCCEngine(tid);
@@ -607,14 +660,28 @@ int RailTrain::link(int tid, char _type){
     name = T->name;
 
     Detectables = T->detectables;
+    DetectedBlocks = (RailTrainDetectables *)_calloc(Detectables, RailTrainDetectables);
+    uint8_t DB_counter = 0;
+    bool detectable = true;
+    auto Tcomp = T->composition;
+    for(uint8_t i = 0; i < T->nr_stock; i++){
+      if(!detectable && Tcomp[i].type == RAILTRAIN_ENGINE_TYPE){
+        DB_counter++;
+        detectable = true;
+      }
+      else if(detectable && Tcomp[i].type != RAILTRAIN_ENGINE_TYPE){
+        detectable = false;
+      }
+
+      if(detectable)
+        DetectedBlocks[DB_counter].DetectableLength += ((Engine *)Tcomp[i].p)->length / 10;
+    }
 
     //Lock all engines
     T->setEnginesUsed(true, this);
 
     virtualLength = T->virtualDetection;
   }
-
-  DetectedBlocks = (RailTrainBlocksFifo *)_calloc(Detectables, RailTrainBlocksFifo);
 
   assigned = true;
 

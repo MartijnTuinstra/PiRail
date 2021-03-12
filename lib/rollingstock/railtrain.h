@@ -62,10 +62,12 @@ struct TrainSpeedEventData {
   struct timespec starttime;
 };
 
-struct RailTrainBlocksFifo {
+struct RailTrainDetectables {
   Block * B[RAILTRAIN_FIFO_SIZE];
-  uint8_t Front = 0;
-  uint8_t End = 0;
+  uint8_t BlockedBlocks = 0;
+  
+  uint16_t DetectableLength;
+  uint16_t BlockedLength;
 };
 
 class RailTrain {
@@ -110,7 +112,7 @@ class RailTrain {
     uint8_t category = 0;
 
     uint8_t Detectables;
-    struct RailTrainBlocksFifo * DetectedBlocks;
+    struct RailTrainDetectables * DetectedBlocks;
 
     // struct pathinstruction * instructions;
 
@@ -128,6 +130,7 @@ class RailTrain {
     void setVirtualBlocks();
 
     void initMoveForward(Block *);
+    void moveForwardFree(Block * tB);
     void moveForward(Block *);
     void moveFrontForward(Block *);
 

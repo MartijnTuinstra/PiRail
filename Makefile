@@ -11,10 +11,13 @@ GCC_FLAGS = -D _DEFAULT_SOURCE -D _POSIX_C_SOURCE=600
 
 GCC = g++ -std=c++14 -g3 $(GCC_INCLUDE) $(GCC_ERROR_FLAGS) $(GCC_LIBS) $(GCC_FLAGS)
 
-GENERATED_FILES = $(addprefix generated/lib/,config/LayoutStructure config/RollingStructure)
+GENERATED = config/LayoutStructure config/RollingStructure
+GENERATED_OBJS =  $(addprefix $(BIN)/,$(addsuffix .o,$(GENERATED)))
+GENERATED_FILES = $(addprefix generated/lib/,$(GENERATED))
 GENERATOR = layoutGenerator.py
 
-SHARED_OBJ_FILES = circularbuffer
+SHARED_FILES = circularbuffer
+SHARED_OBJ = $(addprefix $(BIN)/shared/,$(addsuffix .o,$(SHARED_FILES)))
 
 FILES_CONFIG = $(addprefix config/,LayoutStructure RollingStructure ModuleConfig RollingConfig configReader)
 FILES_SWITCHBOARD = $(addprefix switchboard/,blockconnector links rail switch msswitch unit station signals manager)
@@ -28,11 +31,11 @@ BAAN_FILES = $(FILES_CONFIG) $(FILES_ROLLING) $(FILES_WEBSOCKET) \
              baan system IO \
              Z21 Z21_msg train submodule com sim path pathfinding scheduler/scheduler
 
-BAAN_OBJS  = $(addprefix $(BIN)/,$(addsuffix .o, $(BAAN_FILES))) $(addprefix $(BIN)/shared/,$(addsuffix .o, $(SHARED_OBJ_FILES)))
+BAAN_OBJS  = $(addprefix $(BIN)/,$(addsuffix .o, $(BAAN_FILES))) $(SHARED_OBJ) $(GENERATED_OBJS)
 
 COMTEST_FILES = comtest system IO Z21 Z21_msg train submodule com sim path pathfinding scheduler/scheduler \
                 $(FILES_ROLLING) $(FILES_WEBSOCKET) $(FILES_SWITCHBOARD) $(FILES_CONFIG) $(FILES_ALGORITHM) $(FILES_UTILS)
-COMTEST_OBJS  = $(addprefix $(BIN)/,$(addsuffix .o, $(COMTEST_FILES))) $(addprefix $(BIN)/shared/,$(addsuffix .o, $(SHARED_OBJ_FILES)))
+COMTEST_OBJS  = $(addprefix $(BIN)/,$(addsuffix .o, $(COMTEST_FILES))) $(SHARED_OBJ)
 
 CONFIG_READER_FILES = config_reader $(FILES_CONFIG) $(FILES_UTILS)
 CONFIG_OBJS         = $(addprefix $(BIN)/,$(addsuffix .o, $(CONFIG_READER_FILES)))

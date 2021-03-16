@@ -182,6 +182,22 @@ TEST_CASE_METHOD(TestsFixture, "Block Algorithm Search", "[SB][SB-1][SB-1.2]" ) 
     CHECK(U->B[4]->Alg.prev1 == 1);
     CHECK(U->B[4]->Alg.prev2 == 2);
     CHECK(U->B[4]->Alg.prev3 == 3);
+
+    U->B[4]->reverse();
+
+    REQUIRE(U->B[4]->Alg.prev == 1);
+    REQUIRE(U->B[4]->Alg.next == 4);
+
+    CHECK(U->B[4]->Alg.P[0] == U->B[5]);
+
+    CHECK(U->B[4]->Alg.N[0] == U->B[3]);
+    CHECK(U->B[4]->Alg.N[1] == U->B[2]);
+    CHECK(U->B[4]->Alg.N[2] == U->B[1]);
+    CHECK(U->B[4]->Alg.N[3] == U->B[0]);
+
+    CHECK(U->B[4]->Alg.next1 == 1);
+    CHECK(U->B[4]->Alg.next2 == 2);
+    CHECK(U->B[4]->Alg.next3 == 3);
   }
 
   SECTION("II - Block smaller than 1 meter"){
@@ -208,11 +224,13 @@ TEST_CASE_METHOD(TestsFixture, "Block Algorithm Search", "[SB][SB-1][SB-1.2]" ) 
     Algorithm::print_block_debug(U->B[15]);
 
     REQUIRE(U->B[15]->Alg.next == 0);
-    REQUIRE(U->B[15]->Alg.prev == 1);
+    REQUIRE(U->B[15]->Alg.prev == 3);
 
     CHECK(U->B[15]->Alg.P[0] == U->B[14]);
 
     CHECK(U->B[15]->Alg.prev1 == 1);
+    CHECK(U->B[15]->Alg.prev2 == 2);
+    CHECK(U->B[15]->Alg.prev3 == 3);
 
     U->B[13]->reverse();
     U->B[12]->reverse();
@@ -429,50 +447,28 @@ TEST_CASE_METHOD(TestsFixture, "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" )
     CHECK(U->B[11]->state == CAUTION);
   }
 
-  /*
   SECTION("III - Blocks change direction"){
-    U->B[15]->AlgorSearch(0);
-    Algorithm::print_block_debug(U->B[15]);
+    U->B[15]->setDetection(1);
+    Algorithm::process(U->B[15], _FORCE);
 
-    REQUIRE(U->B[15]->Alg.next == 0);
-    REQUIRE(U->B[15]->Alg.prev == 1);
-
-    CHECK(U->B[15]->Alg.P[0] == U->B[14]);
-
-    CHECK(U->B[15]->Alg.prev1 == 1);
-
-    U->B[13]->reverse();
-    U->B[12]->reverse();
-    U->B[15]->AlgorSearch(0);
-    Algorithm::print_block_debug(U->B[15]);
-
-    REQUIRE(U->B[15]->Alg.next == 0);
-    REQUIRE(U->B[15]->Alg.prev == 3);
-
-    CHECK(U->B[15]->Alg.P[0] == U->B[14]);
-    CHECK(U->B[15]->Alg.P[1] == U->B[13]);
-    CHECK(U->B[15]->Alg.P[2] == U->B[12]);
-
-    CHECK(U->B[15]->Alg.prev1 == 1);
-    CHECK(U->B[15]->Alg.prev2 == 2);
+    CHECK(U->B[15]->state == BLOCKED);
+    CHECK(U->B[14]->state == DANGER);
+    CHECK(U->B[13]->reverse_state == CAUTION);
+    CHECK(U->B[12]->reverse_state == PROCEED);
+    
+    CHECK(U->B[13]->state == PROCEED);
+    CHECK(U->B[12]->state == PROCEED);
   }
 
   SECTION("IV - Blocks change direction"){
-    U->B[47]->AlgorSearch(0);
-    Algorithm::print_block_debug(U->B[47]);
+    U->B[47]->setDetection(1);
+    Algorithm::process(U->B[47], _FORCE);
 
-    REQUIRE(U->B[47]->Alg.next == 0);
-    REQUIRE(U->B[47]->Alg.prev == 4);
-
-    CHECK(U->B[47]->Alg.P[0] == U->B[46]);
-    CHECK(U->B[47]->Alg.P[1] == U->B[45]);
-    CHECK(U->B[47]->Alg.P[2] == U->B[44]);
-    CHECK(U->B[47]->Alg.P[3] == U->B[43]);
-
-    CHECK(U->B[47]->Alg.prev1 == 1);
-    CHECK(U->B[47]->Alg.prev2 == 2);
-    CHECK(U->B[47]->Alg.prev3 == 3);
-  } */
+    CHECK(U->B[47]->state == BLOCKED);
+    CHECK(U->B[46]->state == DANGER);
+    CHECK(U->B[45]->state == CAUTION);
+    CHECK(U->B[44]->state == PROCEED);
+  }
 
   SECTION("V - Blocks and switch"){
     U->B[19]->setDetection(1);

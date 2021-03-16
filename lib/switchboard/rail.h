@@ -166,8 +166,9 @@ class Block {
     void dereserve(RailTrain *);
     bool isReservedBy(RailTrain *);
 
-    void setState(enum Rail_states state);
-    void setReversedState(enum Rail_states state);
+    void setState(enum Rail_states, bool);
+    void setState(enum Rail_states);
+    void setReversedState(enum Rail_states);
 
     void setDetection(bool d);
     void setVirtualDetection(bool d);
@@ -179,6 +180,7 @@ class Block {
     void AlgorClear();
     void AlgorSearch(int debug);
     void AlgorSearchMSSwitch(int debug);
+    void AlgorSetDepths(bool Side);
 
     void checkSwitchFeedback(bool);
 };

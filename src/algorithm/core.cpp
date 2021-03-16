@@ -130,7 +130,10 @@ void process(Block * B, int flags){
 void Set_Changed(Algor_Blocks * ABs){
   loggerf(TRACE, "Algor_Set_Changed");
   //Scroll through all the pointers of allblocks
-  for(int i = 0; i < ABs->prev; i++){
+  uint8_t prev = ABs->prev;
+  uint8_t next = ABs->next;
+
+  for(int i = 0; i < prev; i++){
     if(!ABs->P[i])
       continue;
 
@@ -144,7 +147,7 @@ void Set_Changed(Algor_Blocks * ABs){
     if(!ABs->P[i]->blocked)
       ABs->P[i]->setState(PROCEED);
   }
-  for(int i = 0; i < ABs->next; i++){
+  for(int i = 0; i < next; i++){
     if(!ABs->N[i])
       continue;
 
@@ -357,16 +360,22 @@ void rail_state(Algor_Blocks * ABs, int debug){
     enum Rail_states prev2state = CAUTION;
     enum Rail_states prev3state = PROCEED;
 
+    bool Dir = 0; // 0 = setState
+                  // 1 = setReversedState
+
     if(B->type == STATION && B->station->type >= STATION_YARD)
       prev1state = RESTRICTED;
 
     for(uint8_t i = 0; i < ABs->prev; i++){
       if(!BP[i])
         break;
-      else if(BP[i]->blocked)
+      
+      Dir ^= !dircmp(Dir, BP[i]->dir);
+      
+      if(BP[i]->blocked)
         break;
       else if(i < ABs->prev1)
-        BP[i]->setState(prev1state);
+        BP[i]->setState(prev1state, Dir);
     
       else if(i == ABs->prev1){
         if(BP[i]->type == STATION && B->type == STATION){
@@ -384,17 +393,17 @@ void rail_state(Algor_Blocks * ABs, int debug){
           }
         }
 
-        BP[i]->setState(prev2state);
+        BP[i]->setState(prev2state, Dir);
       }
       else if(i < ABs->prev2){
-        BP[i]->setState(prev2state);
+        BP[i]->setState(prev2state, Dir);
       }
     
       else if(i < ABs->prev3)
-        BP[i]->setState(prev3state);
+        BP[i]->setState(prev3state, Dir);
 
       else
-        BP[i]->setState(PROCEED);
+        BP[i]->setState(PROCEED, Dir);
 
     }
   }

@@ -179,22 +179,37 @@ void RailTrain::setVirtualBlocks(){
       break;
   }
 
-  while(B->Alg.prev >= offset){
+  // Blocks must be released in oposite order. Container for storage.
+  Block * ReleaseBlocks[10];
+  uint8_t BlocksToRelease = 0;
+
+  // Find blocks to be released
+  while(B->Alg.prev > offset){
+    if(tB->train != this)
+      break;
+
     tB->setVirtualDetection(0);
     if(tB->train && !tB->detectionBlocked)
       tB->train->releaseBlock(tB);
 
-    AlQueue.puttemp(tB);
+    ReleaseBlocks[BlocksToRelease++] = tB;
 
-    if(B->Alg.prev > offset){
+    if(B->Alg.prev > offset)
       tB = B->Alg.P[offset++];
-      if(tB->train == this)
-        continue;
-    }
-
-    break;
     // loggerf(INFO, "f block %2i:%2i", tB->module, tB->id);
   }
+
+  // Release blocks
+  for(int i = BlocksToRelease - 1; i >= 0; i--){
+    loggerf(INFO, "--block %2i:%2i", ReleaseBlocks[i]->module, ReleaseBlocks[i]->id);
+    AlQueue.puttemp(ReleaseBlocks[i]);
+
+    if(ReleaseBlocks[i]->module == 25 &&ReleaseBlocks[i]->id == 0){
+      loggerf(INFO, "SOME DING");
+    }
+  }
+
+  AlQueue.cpytmp();
 }
 
 void RailTrain::initMoveForward(Block * tB){

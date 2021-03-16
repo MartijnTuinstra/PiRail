@@ -385,24 +385,10 @@ void Block::reverse(){
   else
     len = AB->prev;
 
-  uint8_t temp;
-
-  temp = AB->next;
-  AB->next = AB->prev;
-  AB->prev = temp;
-
-  temp = AB->next1;
-  AB->next1 = AB->prev1;
-  AB->prev1 = temp;
-
-  temp = AB->next2;
-  AB->next2 = AB->prev2;
-  AB->prev2 = temp;
-
-  temp = AB->next3;
-  AB->next3 = AB->prev3;
-  AB->prev3 = temp;
-
+  std::swap(AB->prev,  AB->next);
+  std::swap(AB->prev1, AB->next1);
+  std::swap(AB->prev2, AB->next2);
+  std::swap(AB->prev3, AB->next3);
 
   Block * tmp;
   for(uint8_t i = 0; i < len; i++){
@@ -463,6 +449,17 @@ bool Block::isReservedBy(RailTrain * T){
   return false;
 }
 
+void Block::setState(enum Rail_states _state, bool reversed){
+  switch(reversed){
+    case true:
+      setReversedState(_state);
+      break;
+    case false:
+      setState(_state);
+      break;
+  }
+}
+
 void Block::setState(enum Rail_states _state){
   if(_state == PROCEED){
     if(reserved)
@@ -499,15 +496,23 @@ void Block::setDetection(bool d){
     train->moveForward(this);
   }
 
+  bool prevBlocked = detectionBlocked;
+
   detectionBlocked = d;
   blocked = (detectionBlocked || virtualBlocked);
-  IOchanged = 1;
+
+  if(prevBlocked != detectionBlocked)
+    IOchanged = 1;
 }
 
 void Block::setVirtualDetection(bool d){
+  bool prevBlocked = virtualBlocked;
+
   virtualBlocked = d;
   blocked = (detectionBlocked || virtualBlocked);
-  IOchanged = 1;
+
+  if(prevBlocked != virtualBlocked)
+    IOchanged = 1;
 }
 
 enum Rail_states Block::addSignal(Signal * Sig){
@@ -546,17 +551,9 @@ uint16_t Block::getSpeed(){
 
 void Block::AlgorClear(){
   loggerf(TRACE, "Block %02i:%02i AlgorClear", module, id);
-  memset(Alg.P, 0, 10*sizeof(void *));
-  memset(Alg.N, 0, 10*sizeof(void *));
-  Alg.prev  = 0;
-  Alg.prev1 = 0;
-  Alg.prev2 = 0;
-  Alg.prev3 = 0;
+  memset(&Alg, 0, sizeof(struct algor_blocks));
 
-  Alg.next = 0;
-  Alg.next1 = 0;
-  Alg.next2 = 0;
-  Alg.next3 = 0;
+  Alg.B = this;
 
   MaxSpeed = BlockMaxSpeed;
 }
@@ -571,57 +568,67 @@ void Block::AlgorSearch(int debug){
 
   loggerf(TRACE, "Search blocks %02i:%02i", module, id);
 
-  next = Next_Block(0 | SWITCH_CARE, 1);
-  prev = Next_Block(1 | SWITCH_CARE | DIRECTION_CARE,1);
+  next = Next_Block(NEXT | SWITCH_CARE, 1);
+  prev = Next_Block(PREV | SWITCH_CARE, 1);
 
   if(next){
     Alg.next = _NextList(this, Alg.N, 0, NEXT | SWITCH_CARE, 600);
 
-    Alg.next1 = Alg.next;
-    Alg.next2 = Alg.next;
-    Alg.next3 = Alg.next;
-
-    uint16_t length = 0;
-    uint8_t j = 0;
-    uint8_t * n[3] = {&Alg.next1, &Alg.next2, &Alg.next3};
-
-    if(Alg.next > 0)
-      length = Alg.N[0]->length;
-
-    for(uint8_t i = 1; i < Alg.next; i++){
-      if(length >= ALGORLENGTH && j < 3 && Alg.N[i]->type != NOSTOP &&
-         ((!Alg.N[i]->station || (Alg.N[i-1]->station && Alg.N[i]->station != Alg.N[i-1]->station) || Alg.N[i-1]->type == NOSTOP) || !this->station)){
-
-        *(n[j++]) = i;
-        length = 0;
-      }
-
-      length += Alg.N[i]->length;
-    }
+    AlgorSetDepths(NEXT);
   }
   if(prev){
-    Alg.prev = _NextList(this, Alg.P, 0, PREV | SWITCH_CARE | DIRECTION_CARE, 600);
+    Alg.prev = _NextList(this, Alg.P, 0, PREV | SWITCH_CARE, 600);
 
-    Alg.prev1 = Alg.prev;
-    Alg.prev2 = Alg.prev;
-    Alg.prev3 = Alg.prev;
+    AlgorSetDepths(PREV);
+  }
+}
 
-    uint16_t length = 0;
-    uint8_t j = 0;
-    uint8_t * p[3] = {&Alg.prev1, &Alg.prev2, &Alg.prev3};
+void Block::AlgorSetDepths(bool Side){
+  struct {
+    uint8_t * n;
+    uint8_t * nx[3];// = {D1, D2, D3};
+    Block ** B;
+  } data;
 
-    if(Alg.prev > 0)
-      length = Alg.P[0]->length;
+  switch(Side){
+    case NEXT:
+      data.nx[0] = &Alg.next1;
+      data.nx[1] = &Alg.next2;
+      data.nx[2] = &Alg.next3;
+      data.n     = &Alg.next;
+      data.B    = (Block **)&Alg.N;
+      break;
+    case PREV:
+      data.nx[0] = &Alg.prev1;
+      data.nx[1] = &Alg.prev2;
+      data.nx[2] = &Alg.prev3;
+      data.n     = &Alg.prev;
+      data.B    = (Block **)&Alg.P;
+      break;
+  }
 
-    for(uint8_t i = 1; i < Alg.prev; i++){
-      if(length >= ALGORLENGTH && j < 3 && Alg.P[i]->type != NOSTOP &&
-         ((!Alg.P[i]->station || (Alg.P[i-1]->station && Alg.P[i]->station != Alg.P[i-1]->station) || Alg.P[i-1]->type == NOSTOP) || !this->station)){
+  *data.nx[0] = *data.n;
+  *data.nx[1] = *data.n;
+  *data.nx[2] = *data.n;
 
-        *(p[j++]) = i;
-        length = 0;
-      }
-      length += Alg.P[i]->length;
+  uint16_t length = 0;
+  uint8_t j = 0;
+
+  if(*data.n > 0)
+    length = data.B[0]->length;
+
+  for(uint8_t i = 1; i < *data.n; i++){
+    bool sameStation  = !this->station;
+         sameStation |= !data.B[i]->station;
+         sameStation |= (data.B[i-1]->station && data.B[i]->station != data.B[i-1]->station);
+         sameStation |= data.B[i-1]->type == NOSTOP;
+
+    if(length >= ALGORLENGTH && j < 3 && data.B[i]->type != NOSTOP && sameStation){
+      *(data.nx[j++]) = i;
+      length = 0;
     }
+
+    length += data.B[i]->length;
   }
 }
 

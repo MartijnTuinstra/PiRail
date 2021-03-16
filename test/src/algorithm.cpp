@@ -415,7 +415,8 @@ TEST_CASE_METHOD(TestsFixture, "Train Following", "[Alg][Alg-2]"){
     CHECK(U->B[3]->train == 0);
 
     U->B[3]->setDetection(1);
-    Algorithm::process(U->B[3], _FORCE);
+    AlQueue.put(U->B[3]);
+    Algorithm::BlockTick();
 
     REQUIRE(U->B[3]->train != 0);
     RailTrain * T = U->B[3]->train;
@@ -424,13 +425,18 @@ TEST_CASE_METHOD(TestsFixture, "Train Following", "[Alg][Alg-2]"){
     T->link(0, RAILTRAIN_TRAIN_TYPE);
 
     // Train direction is unknown
-    CHECK(!U->B[2]->virtualBlocked);
     CHECK(!U->B[1]->virtualBlocked);
+    CHECK(!U->B[2]->virtualBlocked);
 
     // Move train to next block
     T->setSpeed(20);
     U->B[4]->setDetection(1);
-    Algorithm::process(U->B[4], _FORCE);
+    AlQueue.put(U->B[4]);
+    Algorithm::BlockTick();
+
+    CHECK(!U->B[1]->virtualBlocked);
+    CHECK(U->B[2]->virtualBlocked);
+    CHECK(U->B[3]->virtualBlocked);
 
     REQUIRE(T->directionKnown);
 
@@ -444,11 +450,13 @@ TEST_CASE_METHOD(TestsFixture, "Train Following", "[Alg][Alg-2]"){
     for(auto b: T->blocks){
       loggerf(ERROR, "Have block %2i:%2i", b->module, b->id);
       CHECK(((b != U->B[5] && b != U->B[1]) && (b == U->B[2] || b == U->B[3] || b == U->B[4])));
+      CHECK(b->train == T);
     }
 
     // Step Forward
     U->B[3]->setDetection(0);
-    Algorithm::process(U->B[3], _FORCE);
+    AlQueue.put(U->B[3]);
+    Algorithm::BlockTick();
 
     // Train is 58cm long but moving, so an extra block is blocked.
     CHECK(T->blocks.size() == 3);
@@ -460,14 +468,16 @@ TEST_CASE_METHOD(TestsFixture, "Train Following", "[Alg][Alg-2]"){
 
     // Step Forward
     U->B[5]->setDetection(1);
-    Algorithm::process(U->B[5], _FORCE);
+    AlQueue.put(U->B[5]);
+    Algorithm::BlockTick();
 
     CHECK(U->B[4]->expectedTrain == 0); // Expected to get unblocked
     CHECK(U->B[5]->expectedTrain == T); // Still blocked by train
     CHECK(U->B[6]->expectedTrain == T); // Next to be blocked by train
     
     U->B[4]->setDetection(0);
-    Algorithm::process(U->B[4], _FORCE);
+    AlQueue.put(U->B[4]);
+    Algorithm::BlockTick();
 
     // Train is 58cm long but moving, so an extra block is blocked.
     CHECK(U->B[5] == T->B);
@@ -477,6 +487,23 @@ TEST_CASE_METHOD(TestsFixture, "Train Following", "[Alg][Alg-2]"){
       CHECK(((b != U->B[6] && b != U->B[2]) && (b == U->B[3] || b == U->B[4] || b == U->B[5])));
       CHECK(b->train == T);
     }
+
+    // Simulate that two virtual blocked blocks can be freed
+    U->B[2]->setVirtualDetection(1);
+    U->B[2]->train = T;
+
+    U->B[6]->setDetection(1);
+    AlQueue.put(U->B[6]);
+    Algorithm::BlockTick();
+
+    CHECK(!U->B[2]->train);
+    CHECK(!U->B[3]->train);
+    CHECK(U->B[4]->train == T);
+    CHECK(U->B[5]->train == T);
+    CHECK(U->B[6]->train == T);
+
+    CHECK(!U->B[2]->virtualBlocked);
+    CHECK(!U->B[3]->virtualBlocked);
   }
 
   SECTION("V - Train with split detectables"){

@@ -61,8 +61,10 @@ void Engine::setName(char * new_name){
   if(name)
     _free(name);
 
-  name = (char *)_calloc(strlen(new_name) + 10, char);
-  strncpy(name, new_name, strlen(new_name) + 1);
+  uint8_t len = strlen(new_name);
+
+  name = (char *)_calloc(len + 10, char);
+  strncpy(name, new_name, len + 1);
 }
 void Engine::setImagePath(char * newpath){
   if(img_path)

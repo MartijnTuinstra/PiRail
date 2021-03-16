@@ -110,7 +110,7 @@ void Logger::f(enum logging_levels level, const char * file, const int line, con
 
   strftime(c_time, sizeof(c_time), "%H:%M:%S", time_info);
 
-  char msg[1000];
+  char msg[10000];
   char loggertext[900];
 
   vsprintf(loggertext, text, arglist);
@@ -120,9 +120,9 @@ void Logger::f(enum logging_levels level, const char * file, const int line, con
   char * newline = strchr(loggertext, '\n');
 
   if(newline){
-    char * ptr = msg;
+    char * ptr = &msg[0];
 
-    ptr += sprintf(ptr, "%s.%03d %s%s -%20s:%4i- ", c_time, (uint16_t)(clock.tv_nsec / 1e6), levels_colour[level],
+    ptr += sprintf(ptr, "%s.%03d - %s%s -%20s:%4i- ", c_time, (uint16_t)(clock.tv_nsec / 1e6), levels_colour[level],
                                                     levels_str[level], file, line);
 
     char * token = strtok(loggertext, "\n");
@@ -131,21 +131,21 @@ void Logger::f(enum logging_levels level, const char * file, const int line, con
 
     while( token != NULL ) {
       if(!first){
-        ptr += sprintf(ptr, "                                                  ");
+        ptr += sprintf(ptr, "\n             -          -                         - ");
       }
       else{
         first = false;
       }
-      ptr += sprintf(ptr, "%s\n", token); //printing each token
+      ptr += sprintf(ptr, "%s", token); //printing each token
 
       token = strtok(NULL, "\n");
     }
 
-    ptr += sprintf(ptr, "%s", levels_colour[8]); // reset colour
+    ptr += sprintf(ptr, "%s\n", levels_colour[8]); // reset colour
   }
   else{
-    sprintf(msg, "%s.%03d %s%s -%20s:%4i- %s%s\n", c_time, (uint16_t)(clock.tv_nsec / 1e6), levels_colour[level],
-                                                   levels_str[level], file, line, loggertext, levels_colour[8]);
+    sprintf(msg, "%s.%03d - %s%s -%20s:%4i- %s%s\n", c_time, (uint16_t)(clock.tv_nsec / 1e6), levels_colour[level],
+                                                     levels_str[level], file, line, loggertext, levels_colour[8]);
   }
 
 
@@ -170,5 +170,5 @@ void Logger::hexdump(const char * file, const int line, const char * header, voi
       ptr += sprintf(ptr, "\n");
   }
 
-  f(INFO, file, line, (const char *)text);
+  f(DEBUG, file, line, (const char *)text);
 }

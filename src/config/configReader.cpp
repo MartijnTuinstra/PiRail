@@ -51,7 +51,40 @@ void Config_read_BitField(uint8_t * put, uint8_t get, uint8_t bitOffset, uint8_t
 	*put = (get & mask) >> bitOffset;
 }
 
+void Config_read_BitField(uint8_t * put, uint16_t get, uint8_t bitOffset, uint8_t bitSize){
+	uint16_t mask = 0;
+
+	for(uint8_t i = 0; i < (bitSize - 1); i++){
+		mask |= 1;
+		mask <<= 1;
+	}
+	mask |= 1;
+
+	mask <<= bitOffset;
+
+	#ifdef DEBUG
+	printf("r bitu16->u8     : (%i & %4x) >> %i -> %i\n", get, mask, bitOffset, (get & mask) >> bitOffset);
+	#endif
+
+	*put = (get & mask) >> bitOffset;
+}
+
 void Config_read_BitField(uint16_t * put, uint16_t get, uint8_t bitOffset, uint8_t bitSize){
+	uint16_t mask = 0;
+
+	for(uint8_t i = 0; i < (bitSize - 1); i++){
+		mask |= 1;
+		mask <<= 1;
+	}
+	mask |= 1;
+
+	mask <<= bitOffset;
+
+	#ifdef DEBUG
+	printf("r bitu16         : (%i & %4x) >> %i -> %i\n", get, mask, bitOffset, (get & mask) >> bitOffset);
+	#endif
+
+	*put = (get & mask) >> bitOffset;
 }
 
 void Config_read_BitField(uint32_t * put, uint32_t get, uint8_t bitOffset, uint8_t bitSize){
@@ -89,6 +122,38 @@ void Config_write_BitField(uint8_t get, uint8_t * put, uint8_t bitOffset, uint8_
 
 	*put = *put | ((get & mask) << bitOffset);
 }
-void Config_write_BitField(uint16_t * get, uint16_t put, uint8_t bitOffset, uint8_t bitSize);
+
+void Config_write_BitField(uint8_t get, uint16_t * put, uint8_t bitOffset, uint8_t bitSize){
+	uint16_t mask = 0;
+
+	for(uint8_t i = 0; i < (bitSize - 1); i++){
+		mask |= 1;
+		mask <<= 1;
+	}
+	mask |= 1;
+
+	#ifdef DEBUG
+	printf("w bitu8->u16     : (%i & %x) << %i -> %i | %i\n", get, mask, bitOffset, *put, (get & mask) << bitOffset);
+	#endif
+
+	*put = *put | ((get & mask) << bitOffset);
+}
+
+void Config_write_BitField(uint16_t get, uint16_t * put, uint8_t bitOffset, uint8_t bitSize){
+	uint16_t mask = 0;
+
+	for(uint8_t i = 0; i < (bitSize - 1); i++){
+		mask |= 1;
+		mask <<= 1;
+	}
+	mask |= 1;
+
+	#ifdef DEBUG
+	printf("w bitu16         : (%i & %x) << %i -> %i | %i\n", get, mask, bitOffset, *put, (get & mask) << bitOffset);
+	#endif
+
+	*put = *put | ((get & mask) << bitOffset);
+}
+
 void Config_write_BitField(uint32_t * get, uint32_t put, uint8_t bitOffset, uint8_t bitSize);
 

@@ -450,6 +450,7 @@ namespace SwitchSolver {
 
 int solve(RailTrain * T, Block * B, Block * tB, struct rail_link link, int flags){
   struct find f = {0, 0};
+  bool changed = false;
 
   PathFinding::Route * r = 0;
 
@@ -479,6 +480,8 @@ int solve(RailTrain * T, Block * B, Block * tB, struct rail_link link, int flags
 
     f.possible &= setPath(T, r, tB, link, flags);
 
+    changed = true;
+
     if(f.possible)
       B->recalculate = 1;
   }
@@ -491,7 +494,7 @@ int solve(RailTrain * T, Block * B, Block * tB, struct rail_link link, int flags
     reservePath(T, r, tB, link, flags);
   }
 
-  return f.possible;
+  return changed;
 }
 
 struct find findPath(RailTrain * T, PathFinding::Route * r, void * p, struct rail_link link, int flags){

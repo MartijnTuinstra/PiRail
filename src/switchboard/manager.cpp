@@ -73,13 +73,11 @@ Station *  Manager::getStation(uint16_t index){
 }
 
 void Manager::openDir(char * path){
-  DIR *d;
-
   struct dirent *dir;
 
-  d = opendir(path);
+  DIR *d = opendir(path);
 
-  char type[5] = "";
+  char type[10] = "";
   int moduleID;
 
   if (d)

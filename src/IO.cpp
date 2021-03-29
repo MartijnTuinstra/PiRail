@@ -16,19 +16,19 @@
 using namespace switchboard;
 
 IO_Node::IO_Node(Unit * U, struct configStruct_Node * conf){
-  loggerf(DEBUG, "  Node %02i (0-%3i)", conf->Node, conf->size);
+  loggerf(DEBUG, "  Node %02i (0-%3i)", conf->Node, conf->ports);
   memset(this, 0 , sizeof(IO_Node));
 
   this->id = conf->Node;
-  this->io_ports = conf->size;
+  this->io_ports = conf->ports;
   
-  this->io = (IO_Port **)_calloc(conf->size, IO_Port*);
-  // this->io = new IO_Port[conf->size];
+  this->io = (IO_Port **)_calloc(conf->ports, IO_Port*);
+  // this->io = new IO_Port[conf->ports];
 
   // loggerf(CRITICAL, "TODO IMPLEMENT node data"); // TODO: What is this?
 
-  for(int i = 0; i < conf->size; i++){
-    this->io[i] = new IO_Port(this, i, (enum e_IO_type)((conf->data[i/2] >> (4 * (i % 2))) & 0xF));
+  for(int i = 0; i < conf->ports; i++){
+    this->io[i] = new IO_Port(this, i, (enum e_IO_type)(conf->config[i].type));
     // this->io[i]->type = (enum e_IO_type);
   }
 
@@ -188,10 +188,10 @@ const char * IO_enum_type_string[9] = {
   "IO_Output_Blink",
   "IO_Output_Servo",
   "IO_Output_PWM",
+  "IO_Input",
   "IO_Input_Block",
   "IO_Input_Switch",
-  "IO_Input_MSSwitch",
-  "IO_Input"
+  "IO_Input_MSSwitch"
 };
 
 const char * IO_undefined_string[4] = {

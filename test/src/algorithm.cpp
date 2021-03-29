@@ -1526,16 +1526,30 @@ TEST_CASE_METHOD(TestsFixture, "Train Speed Control", "[Alg][Alg-Sp]"){
     CHECK(ED->target_distance == 100);
     CHECK(ED->reason == RAILTRAIN_SPEED_R_MAXSPEED);
 
-    // Train does not accelerate on block release. FIXME
-    // while(!U->B[13]->blocked && maxIterations > 0){
-    //   train_testSim_tick(&train, &maxIterations);
-    // }
+    while(!U->B[12]->blocked && maxIterations > 0){
+      Block * trainBlock = T->B;
 
-    // REQUIRE(U->B[13]->blocked);
-    // CHECK(T->changing_speed == RAILTRAIN_SPEED_T_CHANGING);
-    // CHECK(ED->target_speed == 180);
-    // CHECK(ED->target_distance >= 100);
-    // CHECK(ED->reason == RAILTRAIN_SPEED_R_MAXSPEED);
+      while(T->B == trainBlock && maxIterations > 0){
+        train_testSim_tick(&train, &maxIterations);
+      }
+
+      CHECK(T->changing_speed != RAILTRAIN_SPEED_T_CHANGING);
+      CHECK(T->speed == 100);
+    }
+
+    REQUIRE(U->B[12]->blocked);
+    CHECK(T->changing_speed != RAILTRAIN_SPEED_T_CHANGING);
+    CHECK(T->speed == 100);
+
+    while(U->B[12]->blocked && maxIterations > 0){
+      train_testSim_tick(&train, &maxIterations);
+    }
+
+    REQUIRE(!U->B[12]->blocked);
+    CHECK(T->changing_speed == RAILTRAIN_SPEED_T_CHANGING);
+    CHECK(ED->target_speed > 100);
+    CHECK(ED->target_distance == 100);
+    CHECK(ED->reason == RAILTRAIN_SPEED_R_MAXSPEED);
 
     while(!U->B[14]->blocked && maxIterations > 0){
       train_testSim_tick(&train, &maxIterations);
@@ -1544,7 +1558,7 @@ TEST_CASE_METHOD(TestsFixture, "Train Speed Control", "[Alg][Alg-Sp]"){
     REQUIRE(U->B[14]->blocked);
     CHECK(T->changing_speed == RAILTRAIN_SPEED_T_CHANGING); // FIXME, train could allready be accelerating because it left B[13]
     CHECK(ED->target_speed > 100);
-    CHECK(ED->target_speed < 180);
+    CHECK(ED->target_speed <= 180);
     CHECK(ED->target_distance == 100);
     CHECK(ED->reason == RAILTRAIN_SPEED_R_MAXSPEED);
   }

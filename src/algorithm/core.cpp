@@ -51,7 +51,7 @@ void process(Block * B, int flags){
     // FIXME lock_Algor_process(); 
   }
 
-  flags |= _DEBUG;
+  // flags |= _DEBUG;
 
   // Find all surrounding blocks only if direction has changed or nearby switches
   if(B->IOchanged && B->algorchanged){
@@ -310,6 +310,11 @@ void Switch_Checker(Algor_Blocks * ABs, int debug){
 
   RailTrain * T = B->train;
   Block * tB;
+  uint8_t routeStatus = T->routeStatus;
+  uint16_t distance = SpeedToDistance_A(T->speed, -10);
+
+  if(routeStatus == RAILTRAIN_ROUTE_AT_DESTINATION)
+    return;
 
   for(uint8_t i = 0; i < 5; i++){
     if(i > next)
@@ -318,16 +323,28 @@ void Switch_Checker(Algor_Blocks * ABs, int debug){
     if(i == 0) tB = B;
     else tB = N[i-1];
 
+    distance -= tB->length;
+
+    if(distance < 0)
+      break;
+
     if(tB->blocked && tB != B)
       break;
 
+    if(routeStatus && (tB == T->route->destinationBlocks[0] || tB == T->route->destinationBlocks[1])){
+      routeStatus++;
+
+      if(routeStatus == RAILTRAIN_ROUTE_AT_DESTINATION)
+        break;
+    }
+
     struct rail_link * link = tB->NextLink(NEXT);
-    loggerf(DEBUG, "Switch_Checker scan block (%i,%i) - %i", tB->module, tB->id, link->type);
+    loggerf(DEBUG, "Switch_Checker scan block (%i,%i) - %i - %i", tB->module, tB->id, link->type, routeStatus);
 
     if((i >  0 && link->type == RAIL_LINK_S) || (link->type >= RAIL_LINK_s && link->type <= RAIL_LINK_MB_inside)){
-      SwitchSolver::solve(T, B, tB, *link, NEXT | SWITCH_CARE);
-
-      return;
+      if(SwitchSolver::solve(T, B, tB, *link, NEXT | SWITCH_CARE)){ // Returns true if path is changed
+        return;
+      }
     }
   }
 }
@@ -353,15 +370,15 @@ void rail_state(Algor_Blocks * ABs, int debug){
   else{
     B->setState(BLOCKED);
   }
+  
+  bool Dir = 0; // 0 = setState
+                // 1 = setReversedState
 
   if(B->blocked){
     // Set states
     enum Rail_states prev1state = DANGER;
     enum Rail_states prev2state = CAUTION;
     enum Rail_states prev3state = PROCEED;
-
-    bool Dir = 0; // 0 = setState
-                  // 1 = setReversedState
 
     if(B->type == STATION && B->station->type >= STATION_YARD)
       prev1state = RESTRICTED;
@@ -417,7 +434,9 @@ void rail_state(Algor_Blocks * ABs, int debug){
           if(BP[i]->blocked)
             break;
 
-          BP[i]->setState(CAUTION);
+          Dir ^= !dircmp(Dir, BP[i]->dir);
+          
+          BP[i]->setState(CAUTION, Dir);
         }
       }
     }
@@ -431,8 +450,10 @@ void rail_state(Algor_Blocks * ABs, int debug){
         if(BP[i]->blocked)
           break;
 
+        Dir ^= !dircmp(Dir, BP[i]->dir);
+
         if(BP[i]->type != NOSTOP){
-          BP[i]->setState(CAUTION);
+          BP[i]->setState(CAUTION, Dir);
 
           nostopper = CAUTION;
 
@@ -440,7 +461,7 @@ void rail_state(Algor_Blocks * ABs, int debug){
             maxblocks = ABs->prev1;
         }
         else
-          BP[i]->setState(nostopper);
+          BP[i]->setState(nostopper, Dir);
       }
     }
   }
@@ -515,7 +536,7 @@ void train_following(Algor_Blocks * ABs, int debug){
     }
 
     if(B->expectedTrain){
-      loggerf(INFO, "Copy expectedTrain");
+      // loggerf(INFO, "Copy expectedTrain");
 
       B->train = B->expectedTrain;
       B->train->moveForward(B);
@@ -677,8 +698,6 @@ void train_following(Algor_Blocks * ABs, int debug){
 
 }
 
-#define SpeedToDistance_A(s, a) 0.173625 * (s * s) / (2 * -a)
-
 void train_control(RailTrain * T){
   char Debug[100];
   sprintf(Debug, "Algor_train_control RT%2i\n", T->id);
@@ -708,7 +727,7 @@ void train_control(RailTrain * T){
   }
   bool accelerate = true;
   
-  if(T->manual)
+  if(T->manual || T->changing_speed == RAILTRAIN_SPEED_T_CHANGING || T->changing_speed == RAILTRAIN_SPEED_T_UPDATE)
     accelerate = false;
 
   // Calculate the distances needed to make a full stop
@@ -746,7 +765,6 @@ void train_control(RailTrain * T){
   }
 
   // Fill in all brake points
-  //  TODO: add brake point for route
   while(B->Alg.next > i){
     addI = 1;
 
@@ -804,17 +822,20 @@ void train_control(RailTrain * T){
 
   // For each brake point check if it must brake now or if it could be done later.
   for(int8_t j = i - 1; j >= 0; j--){
-    if(speeds[j].BrakingOffset < (B->length + 10) && speeds[j].speed < Request.targetSpeed){
-      accelerate = false;
-      Request.targetSpeed = speeds[j].speed;
-      Request.distance = speeds[j].BrakingDistance + speeds[j].BrakingOffset;
-      Request.reason = speeds[j].reason;
-      if(Request.reason == RAILTRAIN_SPEED_R_SIGNAL)
-        Request.ptr = (void *)N[j];
-    }
-    else if(accelerate){
-      if(speeds[j].BrakingOffset - extraBrakingDistance < (B->length + 10))
+    // loggerf(INFO, " %i   %3ikm/h %3icm %3icm %1i %c %3icm", j, speeds[j].speed, speeds[j].BrakingOffset, speeds[j].BrakingDistance, speeds[j].reason, accelerate ? '+' : '-', speeds[j].BrakingOffset - extraBrakingDistance);
+    if(speeds[j].speed <= Request.targetSpeed){
+      if(speeds[j].BrakingOffset < (B->length + 10)){
         accelerate = false;
+        Request.targetSpeed = speeds[j].speed;
+        Request.distance = speeds[j].BrakingDistance + speeds[j].BrakingOffset;
+        Request.reason = speeds[j].reason;
+        if(Request.reason == RAILTRAIN_SPEED_R_SIGNAL)
+          Request.ptr = (void *)N[j];
+      }
+      else if(accelerate){
+        if(speeds[j].BrakingOffset - extraBrakingDistance < (B->length + 10))
+          accelerate = false;
+      }
     }
   }
 
@@ -825,7 +846,6 @@ void train_control(RailTrain * T){
     Request.reason = RAILTRAIN_SPEED_R_MAXSPEED;
   }
 
-  loggerf(WARNING, "Train %ikm/h@%icm", Request.targetSpeed, Request.distance);
   T->changeSpeed(Request);
 }
 

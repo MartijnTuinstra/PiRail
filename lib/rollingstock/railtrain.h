@@ -151,6 +151,7 @@ class RailTrain {
 
     void setRoute(Block * dest);
     void setRoute(Station * dest);
+    void clearRoute();
 
     bool ContinueCheck();
     uint16_t checkMaxSpeed();

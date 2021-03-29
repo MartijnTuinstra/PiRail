@@ -590,7 +590,7 @@ void WS_stc_trackUpdate(Websocket::Client * client){
 
   for(int i = 0; i < SwManager->Units.size; i++){
     Unit * U = Units(i);
-    if(!U || !U->on_layout || U->block_state_changed == 0)
+    if(!U || !U->on_layout || !U->block_state_changed)
       continue;
 
     U->block_state_changed = 0;

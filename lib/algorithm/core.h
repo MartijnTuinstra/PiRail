@@ -8,6 +8,10 @@
 #define _FORCE 2
 #define _LOCK  0x80
 
+
+#define SpeedToDistance_A(s, a) 0.173625 * (s * s) / (2 * -a)
+
+
 namespace Algorithm {
 
 extern pthread_mutex_t process_mutex;

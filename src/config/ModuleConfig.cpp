@@ -212,7 +212,7 @@ ModuleConfig::~ModuleConfig(){
   loggerf(DEBUG, "Destructor ModuleConfig %s", this->filename);
 
   for(int i = 0; i < header->IO_Nodes; i++){
-    _free(Nodes[i].data);
+    _free(Nodes[i].config);
   }
 
   loggerf(TRACE, "  Module Block");
@@ -502,21 +502,24 @@ void print_link(char ** debug, struct configStruct_RailLink link){
 }
 
 void print_Node(struct configStruct_Node node){
-  char debug[300];
-  char * debugptr = debug;
-  const char hexset[17] = "0123456789ABCDEF";
+  char debug[3000];
+  char * debugptr = &debug[0];
+  // const char hexset[17] = "0123456789ABCDEF";
 
-  debugptr += sprintf(debugptr, "%i\t%i\t", node.Node, node.size);
+  debugptr += sprintf(debugptr, "%2i (%2i)\n\t\t00\t01\t02\t03\t04\t05\t06\t07\t08\t09\t0A\t0B\t0C\t0D\t0E\t0F\n\t00\t", node.Node, node.ports);
+  // printf("%2i (%2i)\n\t\t01\t02\t03\t04\t05\t06\t07\t08\t09\t0A\t0B\t0C\t0D\t0E\t0F\n\t\t", node.Node, node.ports);
 
-  for(int j = 0; j < node.size; j++){
-    debugptr[0] = hexset[(node.data[j/2] >> (4 * (j%2))) & 0xF];
-    debugptr++;
+  for(int j = 0; j < node.ports; j++){
+    debugptr += sprintf(debugptr, "%x %x %c\t", node.config[j].type, node.config[j].defaultState, node.config[j].inverted ? 'I' : ' ');
+    // printf("%x %x %c\t", node.config[j].type, node.config[j].defaultState, node.config[j].inverted ? 'I' : ' ');
+
+    if(j % 16 == 15){
+      debugptr += sprintf(debugptr, "\n\t%2x\t", (j + 1) / 16);
+      // printf("\n\t%2x\t", j / 16);
+    }
   }
 
-  debugptr[0] = '\n';
-  debugptr[1] = 0;
-
-  printf("%s", debug);
+  printf("%s\n\n", debug);
 }
 
 void print_Block(struct configStruct_Block block){

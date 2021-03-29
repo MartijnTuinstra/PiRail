@@ -1,9 +1,9 @@
 from .layoutGenerator import *
 
-versionLookup = [[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0], 
-                 [0,0,0,1,0,0,0,0,0,0,0,0,0,0,0], # UnitConfig Update
-                 [0,0,0,1,1,0,0,0,0,0,0,0,0,0,0], # BlockConfig Update
-                 [0,0,0,1,1,0,0,0,1,0,0,0,0,0,0]  # StationConfig Update
+versionLookup = [[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0], 
+                 [0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0], # UnitConfig Update
+                 [0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0], # BlockConfig Update
+                 [0,0,0,0,1,1,0,0,0,1,0,0,0,0,0,0]  # StationConfig Update
                 ]
 
 CFL = ConfigFileLayout("LayoutStructure", versionLookup, includePath="config/", sourcePath="generated/src/config/", headerPath="generated/lib/config/")
@@ -37,13 +37,24 @@ IOConfig = CFL.addStructure("IOport",
 	[[FF(FT.U8, 0), FF(FT.U16, 1)]]
 )
 
+NodeIOConfig = CFL.addStructure("NodeIO",
+	[
+		StF(0, "type",   FT.U8),
+		StF(1, "defaultState", FT.U8),
+		StF(2, "inverted", FT.U8),
+
+		StF(3, "reserved", FT.U8)
+	],
+	[[FF(FT.U16 | FT.BIT, [0, 1, 2, 3], offset=[0, 4, 8, 9], width=[4, 4, 1, 7])]]
+)
+
 NodeConfig = CFL.addStructure("Node",
 	[
 		StF(0, "Node",   FT.U8),
-		StF(1, "size",   FT.U8),
-		StF(2, "data",   FT.LIST, nested=FT.U8)
+		StF(1, "ports",  FT.U8),
+		StF(2, "config", FT.LIST, nested=NodeIOConfig)
 	],
-	[[FF(FT.U8, 0), FF(FT.U8, 1), FF(FT.LIST | FT.U8, 2, lengthField=1)]]
+	[[FF(FT.U8, 0), FF(FT.U8, 1), FF(FT.LIST | FT.NESTED, 2, lengthField=1, nested=NodeIOConfig, version=0)]]
 )
 
 UnitConfig = CFL.addStructure("Unit",
@@ -100,7 +111,7 @@ SwitchConfig = CFL.addStructure("Switch",
 		StF(13,"FB_Event",     FT.LIST, nested=FT.U8)
 	],
 	[[FF(FT.U8, 0), FF(FT.U8, 1), FF(RailLinkConfig, 2, version=0), FF(RailLinkConfig, 3, version=0), FF(RailLinkConfig, 4, version=0),
-	                FF(FT.U8 | FT.BIT, 5, offset=0, width=4), FF(FT.U8 | FT.BIT, 6, offset=4, width=4), FF(FT.U8, 7), FF(FT.U8, 8), FF(FT.U8, 9),
+	                FF(FT.U8 | FT.BIT, [5, 6], offset=[0, 4], width=[4, 4]), FF(FT.U8, 7), FF(FT.U8, 8), FF(FT.U8, 9),
 
 	                FF(FT.LIST | FT.NESTED, 10, lengthField=5, nested=IOConfig, version=0), FF(FT.LIST | FT.U8, 11, lengthField=5, sizeMultiply=2),
 	                FF(FT.LIST | FT.NESTED, 12, lengthField=9, nested=IOConfig, version=0), FF(FT.LIST | FT.U8, 13, lengthField=9, sizeMultiply=2)

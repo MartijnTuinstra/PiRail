@@ -74,7 +74,11 @@ class Structure:
 			f   = self.fS[version][fI]
 			fI += 1
 
-			openFields.remove(f.id)
+			if isinstance(f.id, list):
+				for id in f.id:
+					openFields.remove(id)
+			else:
+				openFields.remove(f.id)
 
 			if not isinstance(f, FF):
 				print("No a File Field ", f)
@@ -120,23 +124,16 @@ class Structure:
 				# 	s += f"    *buffer += sizeof({FieldType}) * {f.size};\n"
 			elif (f.type & FT.BIT):
 				bitFieldType = FT(f.type & 0x0F).toTypeC()
+				tempName = f"tmp{bitFieldTypeCounter}"
+				bitFieldTypeCounter += 1
 
-				if not bitFieldSame:
-					bitFieldTypeCounter += 1
-					tempName = f"tmp{bitFieldTypeCounter}"
+				s += f"\n    {bitFieldType} {tempName} = 0;\n"
+				s += f"    Config_read_{bitFieldType}_{bitFieldType}(&{tempName}, buffer);\n"
 
-					s += f"\n    {bitFieldType} {tempName} = 0;\n"
-					s += f"    Config_read_{bitFieldType}_{bitFieldType}(&{tempName}, buffer);\n"
+				for i in range(0, len(f.id)):
+					s += f"    Config_read_BitField(&obj->{self.pS[f.id[i]].name}, {tempName}, {f.offset[i]}, {f.width[i]});\n"
 
-				s += f"    Config_read_BitField(&obj->{self.pS[f.id].name}, {tempName}, {f.offset}, {f.width});\n"
-
-				nF = self.fS[version][fI]
-
-				if(nF.type & FT.BIT and bitFieldType == FT(nF.type & 0x0F).toTypeC()):
-					bitFieldSame = True
-				else:
-					bitFieldSame = False
-					s += "\n"
+				s += "\n"
 
 			else:
 				s += f"    Config_read_{f.type.toTypeC()}_{self.pS[f.id].type.toTypeC()}(&obj->{self.pS[f.id].name}, buffer);\n"
@@ -219,23 +216,16 @@ class Structure:
 
 			elif (f.type & FT.BIT):
 				bitFieldType = FT(f.type & 0x0F).toTypeC()
+				tempName = f"tmp{bitFieldTypeCounter}"
+				bitFieldTypeCounter += 1
 
-				if not bitFieldSame:
-					bitFieldTypeCounter += 1
-					tempName = f"tmp{bitFieldTypeCounter}"
+				code['write'] += f"\n    {bitFieldType} {tempName} = 0;\n"
 
-					code['write'] += f"\n    {bitFieldType} {tempName} = 0;\n"
+				for i in range(0, len(f.id)):
+					code['write'] += f"    Config_write_BitField(obj->{self.pS[f.id[i]].name}, &{tempName}, {f.offset[i]}, {f.width[i]});\n"
 
-				code['write'] += f"    Config_write_BitField(obj->{self.pS[f.id].name}, &{tempName}, {f.offset}, {f.width});\n"
-
-				nF = self.fS[version][fI]
-
-				if(nF.type & FT.BIT and bitFieldType == FT(nF.type & 0x0F).toTypeC() and f.type != 0):
-					bitFieldSame = True
-				else:
-					bitFieldSame = False
-					code['write'] += f"    Config_write_{bitFieldType}(&{tempName}, buffer); // BitField\n\n"
-					code['size']  += f"    size += sizeof({bitFieldType});\n"
+				code['write'] += f"    Config_write_{bitFieldType}(&{tempName}, buffer); // BitField\n\n"
+				code['size']  += f"    size += sizeof({bitFieldType});\n"
 
 			else:
 				code['write'] += f"    Config_write_{f.type.toTypeC()}(&obj->{self.pS[f.id].name}, buffer);\n"
@@ -287,6 +277,9 @@ class FF: # File Field
 
 		for key, value in kwargs.items():
 			setattr(self, key, value)
+			
+		if isinstance(self.id, list) and (self.type & FT.BIT):
+			assert len(self.id) == len(self.offset) == len(self.width)
 
 
 FT = FieldTypes

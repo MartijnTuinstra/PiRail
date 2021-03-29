@@ -1,7 +1,7 @@
 #ifndef INCLUDED_RNET_H
 #define INCLUDED_RNET_H
 
-//#include "IO.h"
+#include "circularbuffer.h"
 
 #define RNET_BROADCAST_MODULE 0xFF
 // #define RNET_MASTER 0x0
@@ -182,8 +182,6 @@ enum status {
   UNKNOWN
 };
 
-extern struct _RNet_buffer RNet_rx_buffer;
-extern struct _RNet_buffer RNet_tx_buffer;
 extern uint8_t tmp_rx_msg[RNET_MAX_BUFFER];
 
 class RNet {
@@ -195,20 +193,20 @@ class RNet {
     void init(uint8_t dev, uint8_t node);
     #endif
     void reset_bus();
-    uint8_t getMsgSize(struct _RNet_buffer * msg);
-    inline uint8_t getMsgSize(struct _RNet_buffer * msg, uint8_t offset);
+    uint8_t getMsgSize(CircularBuffer * msg);
+    inline uint8_t getMsgSize(CircularBuffer * msg, uint8_t offset);
 
     bool available();
     void read();
 
     void calculateTxChecksum();
 
-    uint8_t * getBufP(struct _RNet_buffer * buf, uint8_t write);
+    volatile uint8_t * getBufP(CircularBuffer * buf, uint8_t write);
 
     #ifdef RNET_MASTER
     void try_transmit();
     status transmit(uint8_t addr);
-    status transmit(struct _RNet_buffer * buf);
+    status transmit(CircularBuffer * buf);
     void _transmit();
 
     void request_all();
@@ -216,8 +214,9 @@ class RNet {
     #else
     #endif
 
-    struct _RNet_buffer rx;
-    struct _RNet_buffer tx;
+    CircularBuffer rx;
+    CircularBuffer tx;
+
     #ifdef RNET_MASTER
     uint8_t devices_list[32]; // 256-bits
 
@@ -231,9 +230,6 @@ class RNet {
 
 extern RNet net;
 
-void RNet_add_to_buf(uint8_t * data, uint8_t len, struct _RNet_buffer * buffer);
-void RNet_add_char_to_buf(uint8_t data, struct _RNet_buffer * buffer);
-void readRXBuf();
 void printHex(uint8_t x);
 
 #endif

@@ -12,9 +12,9 @@
 
 class CircularBuffer {
   public:
-    uint8_t buf[CB_MAX_BUFFER];
-    uint8_t read_index;
-    uint8_t write_index;
+    volatile uint8_t buf[CB_MAX_BUFFER];
+    volatile uint8_t read_index;
+    volatile uint8_t write_index;
 
     #ifdef CB_NON_AVR
     uint8_t writefromfd(int fd);

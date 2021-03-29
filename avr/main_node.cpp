@@ -50,6 +50,12 @@ void flash_number(uint8_t number){
 
 RNet net;
 
+#ifdef RNET_CSMA
+
+struct RNet_Message RNet_TX_Msg;
+
+#endif
+
 int main(){
   uart.init();
   #ifndef RNET_MASTER
@@ -145,22 +151,27 @@ int main(){
 
     _delay_us(100);
 
+    #ifdef IO_SPI
+    io.readwrite();
+    #endif
+
     checkcounter++;
 
     if(checkcounter > 10){
       checkcounter = 0;
 
     //continue;
-
+      #ifndef IO_SPI
       io.copyInput();
       io.readInput();
+      #endif
 
       uint8_t diff = 0;
 
       for(int i = 0; i < MAX_PORTS; i++){
         if(io.oldreadData[i] ^ io.readData[i]){
-          io.oldreadData[i] = io.readData[i];
           diff = 1;
+          break;
         }
       }
 
@@ -169,29 +180,48 @@ int main(){
         uart.transmit(RNet_OPC_ReadInput, HEX,2);
         uart.transmit(net.node_id, HEX, 2);
         uart.transmit(MAX_PORTS, HEX, 2);
-        net.tx.buf[net.tx.write_index] = RNet_OPC_ReadInput;
-        net.tx.buf[(net.tx.write_index+1)%RNET_MAX_BUFFER] = net.node_id;
-        net.tx.buf[(net.tx.write_index+2)%RNET_MAX_BUFFER] = MAX_PORTS;
+        net.tx.write(RNet_OPC_ReadInput);
+        net.tx.write(net.node_id);
 
-        uint8_t checksum = RNET_CHECKSUM_SEED ^ RNet_OPC_ReadInput ^ MAX_PORTS ^ net.node_id;
+        uint8_t checksum = RNET_CHECKSUM_SEED ^ RNet_OPC_ReadInput ^ net.node_id;
 
-        uint8_t x = 3;
+        #ifdef IO_SPI
+        net.tx.write(MAX_PORTS);
+        checksum ^= MAX_PORTS;
+        #else
+        net.tx.write((MAX_PINS + 7)/8);
+        checksum ^= (MAX_PINS + 7)/8;
+        #endif
+
+        #ifdef IO_SPI
 
         for(uint8_t i = 0; i < MAX_PORTS; i++){
           uart.transmit(io.readData[i], HEX, 2);
-          net.tx.buf[(net.tx.write_index+x)%RNET_MAX_BUFFER] = io.readData[i];
-          x++;
+          net.tx.write(io.readData[i]);
           checksum ^= io.readData[i];
         }
 
+        #else  // not IO_SPI
+
+        for(uint8_t i = 0; i < ((MAX_PINS + 7) / 8); i++){
+          uart.transmit(io.readData[i], HEX, 2);
+          net.tx.write(io.readData[i]);
+          checksum ^= io.readData[i];
+        }
+
+        #endif // not IO_SPI
+
         uart.transmit(checksum, HEX, 2);
-        net.tx.buf[(net.tx.write_index+x)%RNET_MAX_BUFFER] = checksum;
-        x++;
-        net.tx.write_index = (net.tx.write_index+x)%RNET_MAX_BUFFER;
+        net.tx.write(checksum);
         net.txdata++;
         uart.transmit('\n');
         uart.transmit('\r');
       }
+
+
+      #ifdef IO_SPI
+      io.copyInput();
+      #endif
     }
   }
 

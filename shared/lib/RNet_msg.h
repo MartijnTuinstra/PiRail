@@ -27,6 +27,7 @@
 #define RNet_OPC_SetBlink      0x52
 #define RNet_OPC_SetPulse      0x53
 #define RNet_OPC_SetCheck      0x54
+#define RNet_OPC_SetIO         0x55
 
 #define RNet_OPC_ReadEEPROM    0x60
 

@@ -17,6 +17,7 @@ struct _RNet_buffer RNet_tx_buffer;
 uint8_t tmp_rx_msg[RNET_MAX_BUFFER];
 
 // #define RNET_DEBUG
+// #define RNET_MASTER
 
 bool RNet::available(){
   if (rx.read_index != rx.write_index){;
@@ -39,20 +40,17 @@ bool RNet::available(){
       return false;
     }
 
-    if ((uint8_t)(rx.write_index - rx.read_index) % RNET_MAX_BUFFER >= size){
+    if (rx.size() >= size){
       //Copy message and check checksum
       uint8_t checksum = RNET_CHECKSUM_SEED;
       uint8_t i = 0;
       while(rx.read_index != rx.write_index && i != size){
-        tmp_rx_msg[i] = rx.buf[rx.read_index++];
+        tmp_rx_msg[i] = rx.read();
         uart.transmit(checksum, HEX, 2);
         uart.transmit(tmp_rx_msg[i], HEX, 2);
         uart.transmit(' ');
 
         checksum ^= tmp_rx_msg[i++];
-
-        if(rx.read_index >= RNET_MAX_BUFFER)
-          rx.read_index = 0;
       }
 
       uart.transmit(checksum, HEX, 2);
@@ -72,6 +70,16 @@ bool RNet::available(){
 }
 
 #ifndef RNET_MASTER
+void writeACK(CircularBuffer * b){
+  b->write(RNet_OPC_ACK);
+  net.txdata++;
+}
+
+void writeNACK(CircularBuffer * b){
+  b->write(RNet_OPC_NACK);
+  net.txdata++;
+}
+
 void RNet::read(){
   if(tmp_rx_msg[0] == RNet_OPC_SetEmergency){
     uart.transmit("SEm\n", 4);
@@ -99,35 +107,39 @@ void RNet::read(){
     return;
   }
   else if(tmp_rx_msg[0] == RNet_OPC_DEV_ID){
-    uart.transmit("DEVID\n", 6);
+    uart.transmit("DEVID\t", 6);
+    uart.transmit(net.dev_id);
+    uart.transmit('\n');
     reset_bus();
 
     uart.transmit('!');
 
     while(tx.read_index < 1){
-      asm("nop");
+      _delay_us(100);
     }
+    
+    uart.transmit('!');
 
     return;
   }
 
   else if(tmp_rx_msg[0] == RNet_OPC_ReqReadInput){
     uart.transmit("RQRI\n", 5);
-    net.tx.buf[net.tx.write_index] = RNet_OPC_ReadInput;
-    net.tx.buf[(net.tx.write_index+1)%RNET_MAX_BUFFER] = net.node_id;
-    net.tx.buf[(net.tx.write_index+2)%RNET_MAX_BUFFER] = MAX_PORTS;
+    net.tx.write(RNet_OPC_ReadInput);
+    net.tx.write(net.node_id);
+    net.tx.write(MAX_PORTS);
 
     uint8_t checksum = RNET_CHECKSUM_SEED ^ RNet_OPC_ReadInput ^ MAX_PORTS ^ net.node_id;
 
-    uint8_t x = 3;
-
     for(uint8_t i = 0; i < MAX_PORTS; i++){
-      net.tx.buf[(net.tx.write_index+(x++))%RNET_MAX_BUFFER] = io.readData[i];
+      net.tx.write(io.readData[i]);
+      // net.tx.buf[(net.tx.write_index+(x++))%RNET_MAX_BUFFER] = io.readData[i];
       checksum ^= io.readData[i];
     }
 
-    net.tx.buf[(net.tx.write_index+(x++))%RNET_MAX_BUFFER] = checksum;
-    net.tx.write_index = (net.tx.write_index+x)%RNET_MAX_BUFFER;
+    net.tx.write(checksum);
+    // net.tx.buf[(net.tx.write_index+(x++))%RNET_MAX_BUFFER] = checksum;
+    // net.tx.write_index = (net.tx.write_index+x)%RNET_MAX_BUFFER;
     net.txdata++;
 
     return;
@@ -142,32 +154,23 @@ void RNet::read(){
     uart.transmit("SOut\n", 5);
     union u_IO_event event;
     event.value = tmp_rx_msg[2] & 0x3;
-    #ifdef IO_SPI
-    io.set(tmp_rx_msg[1] - (MAX_PORTS*8), event);
-    #else
     io.set(tmp_rx_msg[1], event);
-    #endif
     io.pulse_high();
   }
   else if(tmp_rx_msg[0] == RNet_OPC_SetAllOutput){
     uart.transmit("SAOut\n", 6);
     uint8_t i = 0;
     union u_IO_event event;
-    for(uint8_t j = 0; j < tmp_rx_msg[1]; j++){
-
+    for(uint8_t j = 0; j < (tmp_rx_msg[1] * 4); j++){
       event.value = (tmp_rx_msg[2+i] >> ((j%4)*2)) & 0x3;
-      #ifdef IO_SPI
-      io.set(j - (MAX_PORTS*8), event);
-      #else
       io.set(j, event);
-      #endif
 
       if(j%4==3)
         i++;
 
-      if(i+1 >= tmp_rx_msg[2]){
-        break;
-      }
+      // if(i+1 >= tmp_rx_msg[2]){
+      //   break;
+      // }
     }
 
     io.pulse_high();
@@ -178,15 +181,10 @@ void RNet::read(){
       eeprom_write_byte(&EE_Mem.ModuleID, tmp_rx_msg[1]);
       dev_id = tmp_rx_msg[1];
 
-      tx.buf[tx.write_index] = RNet_OPC_ACK;
-      tx.write_index = (tx.write_index + 1) % RNET_MAX_BUFFER;
-      txdata++;
+      writeACK(&tx);
     }
-    else{
-      tx.buf[tx.write_index] = RNet_OPC_NACK;
-      tx.write_index = (tx.write_index + 1) % RNET_MAX_BUFFER;
-      txdata++;
-    }
+    else
+      writeNACK(&tx);
   }
   else if(tmp_rx_msg[0] == RNet_OPC_ChangeNode){
     uart.transmit("CHNG\n", 5);
@@ -194,15 +192,27 @@ void RNet::read(){
       eeprom_write_byte(&EE_Mem.NodeID, tmp_rx_msg[1]);
       node_id = tmp_rx_msg[1];
 
-      tx.buf[tx.write_index] = RNet_OPC_ACK;
-      tx.write_index = (tx.write_index + 1) % RNET_MAX_BUFFER;
-      txdata++;
+      writeACK(&tx);
     }
-    else{
-      tx.buf[tx.write_index] = RNet_OPC_NACK;
-      tx.write_index = (tx.write_index + 1) % RNET_MAX_BUFFER;
-      txdata++;
+    else
+      writeNACK(&tx);
+  }
+  else if(tmp_rx_msg[0] == RNet_OPC_SetIO){
+    uart.transmit("SetIO\n", 6);
+
+    uint8_t ioPort = tmp_rx_msg[1];
+    uint16_t conf  = (tmp_rx_msg[3] << 8) + tmp_rx_msg[2];
+
+    if(ioPort >= MAX_PINS){
+      writeNACK(&tx);
+      return;
     }
+
+    eeprom_write_word(&EE_Mem.IO[ioPort], conf);
+
+    io.initPin(ioPort);
+
+    writeACK(&tx);
   }
   else if(tmp_rx_msg[0] == RNet_OPC_SetBlink){
     uart.transmit("SetB\n", 4);
@@ -211,26 +221,20 @@ void RNet::read(){
     value = (tmp_rx_msg[3] << 8) + tmp_rx_msg[4];
     eeprom_write_word(&EE_Mem.settings.blink2, value);
 
-    tx.buf[tx.write_index] = RNet_OPC_ACK;
-    tx.write_index = (tx.write_index + 1) % RNET_MAX_BUFFER;
-    txdata++;
+    writeACK(&tx);
   }
   else if(tmp_rx_msg[0] == RNet_OPC_SetPulse){
     uart.transmit("SetP\n", 4);
     eeprom_write_byte(&EE_Mem.settings.pulse, tmp_rx_msg[1]);
 
-    tx.buf[tx.write_index] = RNet_OPC_ACK;
-    tx.write_index = (tx.write_index + 1) % RNET_MAX_BUFFER;
-    txdata++;
+    writeACK(&tx);
   }
   else if(tmp_rx_msg[0] == RNet_OPC_SetCheck){
     uart.transmit("SetC\n", 4);
     eeprom_write_byte(&EE_Mem.settings.poll, tmp_rx_msg[1]);
     io.pulse_length = io.calculateTimer(tmp_rx_msg[1]*10);
 
-    tx.buf[tx.write_index] = RNet_OPC_ACK;
-    tx.write_index = (tx.write_index + 1) % RNET_MAX_BUFFER;
-    txdata++;
+    writeACK(&tx);
   }
   else if(tmp_rx_msg[0] == RNet_OPC_ReadEEPROM){
     uart.transmit("RDEE\n", 5);
@@ -239,22 +243,22 @@ void RNet::read(){
 
       for (uint8_t i = 0; i < parts; i++){
         uint8_t checksum = RNET_CHECKSUM_SEED ^ (i + 1) ^ parts ^ RNet_OPC_ReadEEPROM ^ sizeof(struct _EE_Mem);
-        uint8_t x = 0;
-        tx.buf[(tx.write_index+(x++)) % RNET_MAX_BUFFER] = RNet_OPC_ReadEEPROM;
-        tx.buf[(tx.write_index+(x++)) % RNET_MAX_BUFFER] = sizeof(struct _EE_Mem);
-        tx.buf[(tx.write_index+(x++)) % RNET_MAX_BUFFER] = i + 1; // Part
-        tx.buf[(tx.write_index+(x++)) % RNET_MAX_BUFFER] = parts; //  out of parts
+        net.tx.write(RNet_OPC_ReadEEPROM);
+        net.tx.write(sizeof(struct _EE_Mem));
+        net.tx.write(i + 1);
+        net.tx.write(parts);
+
         for(uint8_t j = 0; j < 100; j++){
           if((uint16_t)(i * 100 + j) > sizeof(struct _EE_Mem)){
             break;
           }
 
-          checksum = checksum ^ tx.buf[(tx.write_index+x) % RNET_MAX_BUFFER];
-          tx.buf[(tx.write_index+(x++)) % RNET_MAX_BUFFER] = eeprom_read_byte((&EE_Mem.ModuleID) + (i*100) + j);
+          uint8_t data = eeprom_read_byte((&EE_Mem.ModuleID) + (i*100) + j);
+          checksum = checksum ^ data;
+          net.tx.write(data);
         }
-        tx.buf[(tx.write_index+(x++)) % RNET_MAX_BUFFER] = checksum;
-        
-        tx.write_index = (tx.write_index + x) % RNET_MAX_BUFFER;
+
+        net.tx.write(checksum);
         txdata++;
 
         // Wait untill packet is fully transmitted
@@ -263,25 +267,25 @@ void RNet::read(){
     }
     else{
       uint8_t checksum = RNET_CHECKSUM_SEED ^ RNet_OPC_ReadEEPROM ^ sizeof(struct _EE_Mem);
-      uint8_t x = 0;
-      tx.buf[(tx.write_index+(x++)) % RNET_MAX_BUFFER] = RNet_OPC_ReadEEPROM;
-      tx.buf[(tx.write_index+(x++)) % RNET_MAX_BUFFER] = sizeof(struct _EE_Mem);
-      tx.buf[(tx.write_index+(x++)) % RNET_MAX_BUFFER] = 1; // Part
-      tx.buf[(tx.write_index+(x++)) % RNET_MAX_BUFFER] = 1; //  out of parts
+      net.tx.write(RNet_OPC_ReadEEPROM);
+      net.tx.write(sizeof(struct _EE_Mem));
+      net.tx.write(1);
+      net.tx.write(1);
+
       for(uint8_t i = 0; i < sizeof(struct _EE_Mem); i++){
-        checksum = checksum ^ tx.buf[(tx.write_index+x) % RNET_MAX_BUFFER];
-        tx.buf[(tx.write_index+(x++)) % RNET_MAX_BUFFER] = eeprom_read_byte((&EE_Mem.ModuleID) + i);
+        uint8_t data = eeprom_read_byte((&EE_Mem.ModuleID) + i);
+        checksum = checksum ^ data;
+        net.tx.write(data);
       }
-      tx.buf[(tx.write_index+(x++)) % RNET_MAX_BUFFER] = checksum;
       
-      tx.write_index = (tx.write_index + x) % RNET_MAX_BUFFER;
+      net.tx.write(checksum);
       txdata++;
     }
   }
 }
 #endif
 
-uint8_t RNet::getMsgSize(struct _RNet_buffer * msg){
+uint8_t RNet::getMsgSize(CircularBuffer * msg){
 #ifdef RNET_MASTER
   uint8_t r = (msg->read_index + 1) % RNET_MAX_BUFFER;
   if( (uint8_t)(msg->write_index - msg->read_index) % RNET_MAX_BUFFER < 2){
@@ -293,7 +297,7 @@ uint8_t RNet::getMsgSize(struct _RNet_buffer * msg){
   return getMsgSize(msg, r);
 }
 
-inline uint8_t RNet::getMsgSize(struct _RNet_buffer * msg, uint8_t offset){
+inline uint8_t RNet::getMsgSize(CircularBuffer * msg, uint8_t offset){
   if(msg->buf[offset] == RNet_OPC_DEV_ID ||
      msg->buf[offset] == RNet_OPC_SetEmergency ||
      msg->buf[offset] == RNet_OPC_RelEmergency ||
@@ -314,27 +318,30 @@ inline uint8_t RNet::getMsgSize(struct _RNet_buffer * msg, uint8_t offset){
   else if (msg->buf[offset] == RNet_OPC_SetOutput){
     return 4;
   }
+  else if(msg->buf[offset] == RNet_OPC_SetIO){
+    return 5;
+  }
   else if(msg->buf[offset] == RNet_OPC_SetBlink){
     return 8;
   }
   else if(msg->buf[offset] == RNet_OPC_ReadAll){
-    if( (uint8_t)(msg->write_index - offset) % RNET_MAX_BUFFER < 3){
+    if( (uint8_t)(msg->write_index - offset) % CB_MAX_BUFFER < 3){
       return RNet_msg_len_NotWhole; // Not enough bytes
     }
-    return 4+msg->buf[(offset+1)%RNET_MAX_BUFFER];
+    return 4+msg->buf[(offset+1)%CB_MAX_BUFFER];
   }
   else if(msg->buf[offset] == RNet_OPC_SetAllOutput){
-    if( (uint8_t)(msg->write_index - offset) % RNET_MAX_BUFFER < 4){
+    if( (uint8_t)(msg->write_index - offset) % CB_MAX_BUFFER < 2){
       return RNet_msg_len_NotWhole; // Not enough bytes
     }
-    return (msg->buf[(offset+2)%RNET_MAX_BUFFER] + 3) / 4 + 4;
+    return msg->buf[(offset+1)%CB_MAX_BUFFER] + 3;
   }
   else if(msg->buf[offset] == RNet_OPC_ReadInput  || 
           msg->buf[offset] == RNet_OPC_ReadEEPROM){
-    if( (uint8_t)(msg->write_index - offset) % RNET_MAX_BUFFER < 4){
+    if( (uint8_t)(msg->write_index - offset) % CB_MAX_BUFFER < 4){
       return RNet_msg_len_NotWhole; // Not enough bytes
     }
-    return msg->buf[(offset+2)%RNET_MAX_BUFFER] + 4;
+    return msg->buf[(offset+2)%CB_MAX_BUFFER] + 4;
   }
   return 0;
 }
@@ -367,8 +374,7 @@ void RNet::init (uint8_t dev, uint8_t node)
   _set_out(DDR(RNET_TX_PORT), RNET_TX_pin); //Set as output
 
   _set_in(DDR(RNET_RX_PORT), RNET_RX_pin);   //Set as input
-  //_set_low(PORT(RNET_RX_PORT), RNET_TX_pin); //Disable pull-resistor
-  // _set_high(PORT(RNET_RX_PORT), RNET_RX_pin); //Enable pull-resistor for debug
+  _set_high(PORT(RNET_RX_PORT), RNET_RX_pin); //Enable pull-resistor for debug
 
   _set_out(DDR(RNET_DUPLEX_PORT), RNET_DUPLEX_pin); //Set as output
   RNET_DUPLEX_SET_RX;
@@ -418,6 +424,7 @@ void RNet::reset_bus(){
 uint8_t * msg;
 uint8_t cAddr = 0;
 uint8_t * cMsg = 0; // current message pointer
+uint8_t cdataByte = 0; // current message pointer
 uint8_t cBy = 0; //currentByte
 uint8_t cBi = 0; //currentBit
 uint8_t cLen = 0; //current messageLength
@@ -441,7 +448,7 @@ uint8_t cStart = 0;
 #ifdef RNET_MASTER
 void RNet::try_transmit(){
   if(tx.write_index != tx.read_index){
-    uint8_t readlen = (uint8_t)(tx.write_index - tx.read_index) % RNET_MAX_BUFFER;
+    uint8_t readlen = tx.size();
     uint8_t size = getMsgSize(&tx);
     if(size == RNet_msg_len_NotWhole){
       return;
@@ -449,10 +456,16 @@ void RNet::try_transmit(){
     else if(size == 0){
       return;
     }
-    if(readlen > 1 && tx.buf[tx.read_index] == 0xFF && tx.buf[(tx.read_index + 1)%RNET_MAX_BUFFER] == 0x01){
-      net.transmit(&tx);
+
+    // uart.transmit("tt: ", 4);
+    // uart.transmit(size, HEX, 2);
+    // uart.transmit(readlen, HEX, 2);
+    // uart.transmit('\n');
+
+    if(readlen > 1 && tx.peek(0) == 0xFF && tx.peek(1) == 0x01){
+      transmit(&tx);
       _delay_ms(1000);
-      net.request_all();
+      request_all();
     }
     else if(readlen > size){
       transmit(&tx);
@@ -489,9 +502,13 @@ void RNet::request_all(){
 
   uart.transmit(0xFF);
   uart.transmit(0x01);
+
+  uint8_t checksum = RNET_CHECKSUM_SEED ^ 0x01;
   for(uint8_t i = 0; i < 32; i++){
     uart.transmit(devices_list[i]);
+    checksum ^= devices_list[i];
   }
+  uart.transmit(checksum);
 
   rx.write_index = 0;
   rx.read_index = 0;
@@ -524,6 +541,7 @@ status RNet::transmit(uint8_t addr){
   cAddr = addr;
   cBy = 0;
   cBi = 0;
+  cdataByte = 0;
 
   _transmit();
 
@@ -532,7 +550,7 @@ status RNet::transmit(uint8_t addr){
   return OK;
 }
 
-status RNet::transmit(struct _RNet_buffer * buf){
+status RNet::transmit(CircularBuffer * buf){
   //Check if Bus is IDLE (Last check)
   if(state != IDLE){
     #ifdef RNET_DEBUG
@@ -541,20 +559,22 @@ status RNet::transmit(struct _RNet_buffer * buf){
     return BUSY;
   }
 
-  cAddr = buf->buf[buf->read_index];
   cLen = getMsgSize(buf);         //Get size of message
+  cAddr = buf->read();
   
   if(!(devices_list[cAddr / 8] & (1 << (cAddr % 8))) && cAddr != 0xFF){
-    buf->read_index = (buf->read_index + cLen + 1) % RNET_MAX_BUFFER;
+    for(uint8_t i = 0; i < cLen; i++)
+      buf->read();
+    // uart.transmit('X');
     return FAILED;
   }
 
   if(cLen == RNet_msg_len_NotWhole){
-    uart.transmit("Message too short ", 17);
+    // uart.transmit("Message too short ", 17);
     return FAILED;
   }
   else if(cLen == 0){
-    uart.transmit("No Message ", 11);
+    // uart.transmit("No Message ", 11);
     return FAILED;
   }
 
@@ -567,8 +587,9 @@ status RNet::transmit(struct _RNet_buffer * buf){
   uart.transmit("->", 2);
   uart.transmit(buf->write_index, HEX,2);
   uart.transmit('{');
-  for(uint8_t i = buf->read_index; i != buf->write_index; i = (i + 1) % RNET_MAX_BUFFER){
-    uart.transmit(buf->buf[i], HEX, 2);
+  uint8_t size = buf->size();
+  for(uint8_t i = 0; i != size; i++){
+    uart.transmit(buf->peek(i), HEX, 2);
   }
   uart.transmit('}');
 
@@ -577,7 +598,7 @@ status RNet::transmit(struct _RNet_buffer * buf){
   uart.transmit('\n');
   #endif
 
-  cMsg = &buf->buf[(buf->read_index + 1) % RNET_MAX_BUFFER]; // skip addr
+  cdataByte = buf->read(); // skip addr
   cBy = 0;
   cBi = 0;
 
@@ -656,7 +677,7 @@ void RNet::_transmit(){
 //   uart.transmit('\n');
 // }
 
-uint8_t * RNet::getBufP(struct _RNet_buffer * buf, uint8_t write){
+volatile uint8_t * RNet::getBufP(CircularBuffer * buf, uint8_t write){
   if(write)
     return &buf->buf[buf->write_index];
   else
@@ -672,16 +693,16 @@ ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
   if(net.state == RX){
     if(cBi == 0){ // Start-bit (Acknowledge)
       cBi++;
-      cMsg = &net.rx.buf[net.rx.write_index];
+      cdataByte = 0;
       return;
     }
     else if(cBi < 9){ // A data bit
-      cMsg[0] >>= 1;
+      cdataByte >>= 1;
       if(RNET_READ_RX){
         #ifdef RNET_DEBUG
           uart.transmit('1');
         #endif
-        cMsg[0] |= 0x80;
+        cdataByte |= 0x80;
       }
       #ifdef RNET_DEBUG
       else{
@@ -694,10 +715,9 @@ ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
       return;
     }
     else if(cBi == 9){ // Stop-bit
-      net.rx.write_index = (net.rx.write_index + 1) % RNET_MAX_BUFFER;
+      net.rx.write(cdataByte);
       cBi++;
       cBy++;
-      // uart.transmit(cMsg[0]);
 
       if(RNET_READ_RX){
         // Enable input interrupt
@@ -730,7 +750,7 @@ ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
 
       #ifdef RNET_DEBUG
       uart.transmit('R');
-      uart.transmit(cMsg[0], HEX, 2);
+      uart.transmit(cdataByte, HEX, 2);
       #endif
 
     }
@@ -753,7 +773,7 @@ ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
         RNET_DISABLE_ISR_CAPT;
         RNET_CLEAR_ISR_COMPA;
         cBi = 1;
-        cMsg = &net.rx.buf[net.rx.write_index];
+        cdataByte = 0;
         return;
       }
 
@@ -761,10 +781,10 @@ ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
       #ifdef RNET_DEBUG
       uart.transmit('T');
       #endif
-      net.tx.read_index = (net.tx.read_index + 1) % RNET_MAX_BUFFER;
-      net.rx.buf[net.rx.write_index] = 0xAB;
-      net.tx.read_index = (net.tx.read_index + 1) % RNET_MAX_BUFFER;
-      net.rx.buf[net.rx.write_index] = 0xDC;
+      // net.tx.read_index = (net.tx.read_index + 1) % RNET_MAX_BUFFER;
+      // net.rx.buf[net.rx.write_index] = 0xAB;
+      // net.tx.read_index = (net.tx.read_index + 1) % RNET_MAX_BUFFER;
+      // net.rx.buf[net.rx.write_index] = 0xDC;
       RNET_TIMER_DISABLE;
       net.state = TIMEOUT;
     }
@@ -779,7 +799,7 @@ ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
       return;
     }
     else if(cBi < 9){ // Data
-      if(cMsg[0] & _BV(cBi - 1)){
+      if(cdataByte & _BV(cBi - 1)){
         #ifdef RNET_DEBUG
           uart.transmit('1');
         #endif
@@ -795,11 +815,10 @@ ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
       return;
     }
     else if(cBi == 9){ //Stop bit
-      net.tx.read_index = (net.tx.read_index + 1) % RNET_MAX_BUFFER;
-      cMsg = &net.tx.buf[net.tx.read_index];
       if(++cBy < cLen){
         //Data available
         cBi = 0;
+        cdataByte = net.tx.read();
         RNET_TX_SET_HIGH;
         #ifdef RNET_DEBUG
           uart.transmit('C');
@@ -821,7 +840,7 @@ ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
       cBi++;
 
       cBy = 0;
-      cMsg= 0;
+      cdataByte = 0;
       cLen= 0;
     }
     else{
@@ -847,26 +866,24 @@ ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
       return;
     }
     else if(cBi == 8){ // R/W bit
-      if(cMsg != 0){
+      if(cdataByte != 0){
         // Write
+        RNET_TX_SET_HIGH;
         #ifdef RNET_DEBUG
           uart.transmit('W');
         #endif
-        RNET_TX_SET_HIGH;
         net.state = TX;
 
-        // Address read, increment read_index
-        net.tx.read_index = (net.tx.read_index + 1) % RNET_MAX_BUFFER;
         cBi = 0;
         cBy = 0;
         return;
       }
       else{
         // Read
+        RNET_TX_SET_LOW;
         #ifdef RNET_DEBUG
           uart.transmit('R');
         #endif
-        RNET_TX_SET_LOW;
         cBi++;
         return;
       }
@@ -915,18 +932,18 @@ ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
   _TIM_COUNTER = 0;
   _TIM_COMPA = RNET_TICK;
   _TIM_ICRn  = RNET_TICK;
-  // PORTB ^= 0b00100000;
+  // PORTC ^= 0b1;
   if(net.state == RX){
     if(cBi == 0){
       #ifdef RNET_DEBUG
-      //uart.transmit('S');
+      uart.transmit('S');
       #endif
-      cMsg = net.getBufP(&net.rx, 1);
+      cdataByte = 0;
     }
     else if(cBi < 9){
-      cMsg[0] >>= 1;
+      cdataByte >>= 1;
       if(RNET_READ_RX){
-        cMsg[0] |= 0x80;
+        cdataByte |= 0x80;
         #ifdef RNET_DEBUG
         //uart.transmit('1');
         #endif
@@ -938,9 +955,7 @@ ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
       #endif
     }
     else if(cBi == 9){
-      net.rx.write_index++;
-      if(net.rx.write_index >= RNET_MAX_BUFFER)
-        net.rx.write_index = 0;
+      net.rx.write(cdataByte);
 
       if(RNET_READ_RX){
         #ifdef RNET_DEBUG
@@ -959,7 +974,7 @@ ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
         #ifdef RNET_DEBUG
         //uart.transmit('S');
         //uart.transmit('\n');
-	      uart.transmit(cMsg[0], HEX, 2);
+	      uart.transmit(cdataByte, HEX, 2);
         #endif
 
         // Enable input interrupt to capture start next master transmission
@@ -984,10 +999,11 @@ ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
       #endif
       RNET_TX_SET_LOW;
       cBi++;
+      cdataByte = net.tx.read();
       return;
     }
     else if(cBi < 9){ // Data
-      if(net.tx.buf[net.tx.read_index] & _BV(cBi - 1)){
+      if(cdataByte & _BV(cBi - 1)){
         #ifdef RNET_DEBUG
         //uart.transmit('1');
         #endif
@@ -1019,9 +1035,9 @@ ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
         cBi++;
       }
       #ifdef RNET_DEBUG
-      uart.transmit(net.tx.buf[net.tx.read_index], HEX, 2);
+      uart.transmit(cdataByte, HEX, 2);
       #endif
-      net.tx.read_index = (net.tx.read_index + 1) % RNET_MAX_BUFFER;
+
       return;
     }
     else{
@@ -1085,18 +1101,18 @@ ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
         net.state = OTHER;
         return;
       }
-      if(RNET_READ_RX){
+      if(RNET_READ_RX){ // Master writing to node
         #ifdef RNET_DEBUG
-          uart.transmit('W'); // Master writing
+        uart.transmit('W');
         #endif
         net.state = RX;
         cBi = 0;
         cBy = 0;
         return;
       }
-      else{
+      else{ // Master request Reading from node (wait one tick extra)
         #ifdef RNET_DEBUG
-          uart.transmit('R');
+        uart.transmit('R');
         #endif
         if(net.txdata){
           cBi++;
@@ -1119,7 +1135,7 @@ ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
         return;
       }
     }
-    else if(cBi == 10){ // Master Read
+    else if(cBi == 10){ // Master Reading from node
       cBi = 0; // Slave writing
       cBy = 0;
 
@@ -1127,7 +1143,6 @@ ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
       uart.transmit('+');
       #endif
 
-      cMsg = net.getBufP(&net.tx, 0);
       cLen = net.getMsgSize(&net.tx);
 
       RNET_TX_SET_HIGH;
@@ -1209,8 +1224,7 @@ ISR(RNET_RX_ICP_ISR_vect){
 
   #ifdef RNET_MASTER
   if(net.state == ADDR){
-    net.rx.buf[net.rx.write_index] = cAddr;
-    net.rx.write_index = (net.rx.write_index + 1) % RNET_MAX_BUFFER;
+    net.rx.write(cAddr);
     cStart = net.rx.write_index;
     #ifdef RNET_DEBUG
     uart.transmit('$');

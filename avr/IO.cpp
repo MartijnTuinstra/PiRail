@@ -180,62 +180,8 @@ void IO::init(){
 
 	// Init io ports
 	for(uint8_t i = 0; i < MAX_PINS; i++){
-		uint16_t portconfig = eeprom_read_word(&EE_Mem.IO[i]);
-		union u_IO_event defaultState;
-		defaultState.value = (portconfig & 0x0F00) >> 8;
-		enum e_IO_type type = (enum e_IO_type)(portconfig >> 12);
-
-		#ifndef IO_SPI
-		uart.transmit(list[i] / 8, HEX, 2);
-		uart.transmit('\t');
-		uart.transmit(1 << (list[i] % 8), HEX, 2);
-		uart.transmit('\t');
-		#else
-		uart.transmit(i, HEX, 2);
-		uart.transmit('\t');
-		#endif
-		uart.transmit((uint8_t)type, HEX, 2);
-		uart.transmit('\t');
-		uart.transmit(defaultState.value, HEX, 2);
-		uart.transmit('\t');
-		uart.transmit(portconfig, HEX, 4);
-		uart.transmit('\n');
-
-		typelist[i] = (enum e_IO_type)type;
-
-		if(type == IO_Undefined)
-			in(i);
-		else if(type <= IO_Output_PWM){
-			#ifdef IO_SPI
-			out(i - 48);
-			set(i - 48, defaultState);
-			#else
-			out(i);
-			set(i, defaultState);
-			#endif
-		}
-		else{ // IO_Input_*
-			if(portconfig & 0x0080)
-				set_mask(i, invertedMask);
-
-			in(i);
-			// set(i, defaultState);
-			if(defaultState.output == IO_event_High)
-				high(i);
-			else
-				low(i);
-		}
+		initPin(i);
 	}
-
-	// uart.transmit("ReadMask: ", 10);
-	// for(uint8_t i = 0; i < MAX_PORTS; i++){
-	// 	uart.transmit(readMask[i], HEX, 2);
-	// }
-	// uart.transmit("\ninvertedMask: ", 15);
-	// for(uint8_t i = 0; i < MAX_PORTS; i++){
-	// 	uart.transmit(invertedMask[i], HEX, 2);
-	// }
-	// uart.transmit('\n');
 
 	//Init blink timer
 	blink1_period = calculateTimer(eeprom_read_word(&EE_Mem.settings.blink1));
@@ -263,8 +209,56 @@ void IO::init(){
 	sei();
 }
 
+void IO::initPin(uint8_t pin){
+	uint16_t portconfig = eeprom_read_word(&EE_Mem.IO[pin]);
+	union u_IO_event defaultState;
+	defaultState.value = (portconfig & 0x0F00) >> 8;
+	enum e_IO_type type = (enum e_IO_type)(portconfig >> 12);
+
+	#ifndef IO_SPI
+	uart.transmit(list[pin] / 8, HEX, 2);
+	uart.transmit('\t');
+	uart.transmit(1 << (list[pin] % 8), HEX, 2);
+	uart.transmit('\t');
+	#else
+	uart.transmit(pin, HEX, 2);
+	uart.transmit('\t');
+	#endif
+	uart.transmit((uint8_t)type, HEX, 2);
+	uart.transmit('\t');
+	uart.transmit(defaultState.value, HEX, 2);
+	uart.transmit('\t');
+	uart.transmit(portconfig, HEX, 4);
+	uart.transmit('\n');
+
+	typelist[pin] = (enum e_IO_type)type;
+
+	if(type == IO_Undefined)
+		in(pin);
+	else if(type <= IO_Output_PWM){
+		#ifdef IO_SPI
+		out(pin - 48);
+		set(pin - 48, defaultState);
+		#else
+		out(pin);
+		set(pin, defaultState);
+		#endif
+	}
+	else{ // IO_Input_*
+		if(portconfig & 0x0080)
+			set_mask(pin, invertedMask);
+
+		in(pin);
+		// set(i, defaultState);
+		if(defaultState.output == IO_event_High)
+			high(pin);
+		else
+			low(pin);
+	}
+}
+
 void IO::blink1(){
-	uart.transmit("BLINK1\n", 7);
+	// uart.transmit("BLINK1\n", 7);
 	for(int i = 0; i < MAX_PORTS; i++){
 		#ifdef IO_SPI
 		writeData[i] ^= blink1Mask[i];
@@ -272,12 +266,12 @@ void IO::blink1(){
 		*_portOutputRegister(i) ^= blink1Mask[i];
 		#endif
 	}
-      #ifdef IO_SPI
-      uart.transmit('-');
-      for(uint8_t i = 0; i < MAX_PORTS; i++)
-        uart.transmit(io.writeData[i], HEX, 2);
-      uart.transmit('\n');
-      #endif
+    //   #ifdef IO_SPI
+    //   uart.transmit('-');
+    //   for(uint8_t i = 0; i < MAX_PORTS; i++)
+    //     uart.transmit(io.writeData[i], HEX, 2);
+    //   uart.transmit('\n');
+    //   #endif
 
 	// #ifdef IO_SPI
 	// writeOutput();
@@ -285,7 +279,7 @@ void IO::blink1(){
 }
 
 void IO::blink2(){
-	uart.transmit("BLINK2\n", 7);
+	// uart.transmit("BLINK2\n", 7);
 	for(int i = 0; i < MAX_PORTS; i++){
 		#ifdef IO_SPI
 		writeData[i] ^= blink2Mask[i];
@@ -293,12 +287,12 @@ void IO::blink2(){
 		*_portOutputRegister(i) ^= blink2Mask[i];
 		#endif
 	}
-      #ifdef IO_SPI
-      uart.transmit('-');
-      for(uint8_t i = 0; i < MAX_PORTS; i++)
-        uart.transmit(io.writeData[i], HEX, 2);
-      uart.transmit('\n');
-      #endif
+    //   #ifdef IO_SPI
+    //   uart.transmit('-');
+    //   for(uint8_t i = 0; i < MAX_PORTS; i++)
+    //     uart.transmit(io.writeData[i], HEX, 2);
+    //   uart.transmit('\n');
+    //   #endif
 
 	// #ifdef IO_SPI
 	// writeOutput();

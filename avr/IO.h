@@ -105,7 +105,7 @@ union u_IO_event {
 
 #define _portOutputRegister(P) ( (volatile uint8_t *)( pgm_read_word( portlist + (P))) )
 #define _portModeRegister(P) ( (volatile uint8_t *)( pgm_read_word( ddrlist + (P))) )
-#define _portInputRegister(P) ( (volatile uint8_t *)( pgm_read_word( pinlins + (P))) )
+#define _portInputRegister(P) ( (volatile uint8_t *)( pgm_read_word( pinlist + (P))) )
 
 // extern const uint16_t PROGMEM _PORT[];
 
@@ -247,7 +247,7 @@ const uint16_t PROGMEM pinlist[] = {
 #else // IO_SPI
 	#undef MAX_PORTS
 	#define MAX_PORTS 6
-	#define MAX_PINS 0
+	#define MAX_PINS 48*2
 #endif
 
 class IO {
@@ -262,6 +262,7 @@ class IO {
 		inline uint8_t read(uint8_t pin);
 
 		void init();
+		void initPin(uint8_t pin);
 
 		void blink1();
 		void blink2();
@@ -279,6 +280,7 @@ class IO {
 		void copyInput();
 		#ifdef IO_SPI
 		void writeOutput();
+		void readwrite();
 		#endif
 
 		uint16_t calculateTimer(uint16_t mseconds);
@@ -305,7 +307,7 @@ class IO {
 		uint8_t oldreadData[MAX_PORTS];
 		uint8_t readMask[MAX_PORTS];
 
-	private:
+	// private:
 		uint8_t blink1Mask[MAX_PORTS];
 		uint8_t blink2Mask[MAX_PORTS];
 
@@ -321,7 +323,7 @@ class IO {
 
 		#ifdef IO_SPI
 		uint8_t writeData[MAX_PORTS];
-		enum e_IO_type typelist[MAX_PORTS*8];
+		enum e_IO_type typelist[MAX_PORTS*16];
 		#else
 		enum e_IO_type typelist[MAX_PINS];
 		#endif

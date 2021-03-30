@@ -5,13 +5,13 @@
 #include "utils/logger.h"
 #include "utils/mem.h"
 #include "system.h"
-#include "com.h"
 #include "algorithm/queue.h"
 
 #include "config/LayoutStructure.h"
 
 #include "switchboard/manager.h"
 #include "switchboard/unit.h"
+#include "switchboard/switch.h"
 
 using namespace switchboard;
 
@@ -176,7 +176,7 @@ void update_IO(){
     if(!Units(u) || !Units(u)->io_updated)
       continue;
 
-    Units(u)->updateIO(0);
+    Units(u)->updateIO();
   }
 }
 

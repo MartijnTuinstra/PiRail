@@ -26,7 +26,7 @@
 #include "train.h"
 #include "train.h"
 
-#include "com.h"
+#include "uart/uart.h"
 #include "websocket/stc.h"
 
 #include "sim.h"

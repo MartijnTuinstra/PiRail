@@ -20,7 +20,7 @@
 #include "utils/logger.h"
 #include "system.h"
 
-#include "com.h"
+#include "uart/RNetTX.h"
 #include "sim.h"
 
 namespace Algorithm {

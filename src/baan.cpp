@@ -12,15 +12,13 @@
 
 #include "algorithm/traincontrol.h"
 
+#include "uart/uart.h"
 #include "pathfinding.h"
 #include "Z21.h"
 
 #define TRAIN_CONF_PATH "configs/stock.bin"
 
 struct s_systemState * SYS;
-
-char * UART_Serial_Port = 0;
-
 
 int main(int argc, char * argv[]){
   scheduler = new Scheduler();
@@ -36,8 +34,7 @@ int main(int argc, char * argv[]){
 
   if(argc > 1){
     printf("Got argument %s\n", argv[1]);
-    UART_Serial_Port = (char *)_calloc(strlen(argv[1])+5, char);
-    strcpy(UART_Serial_Port, argv[1]);
+    uart.setDevice(argv[1]);
   }
 
   // Stop program when receiving SIGINT

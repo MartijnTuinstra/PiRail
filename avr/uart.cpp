@@ -72,19 +72,11 @@ uint8_t UART::receive(){
 }
 
 void UART::_rx_complete_irq(){
-  net.tx.buf[net.tx.write_index] = UDR0;
-
-  if(++net.tx.write_index >= RNET_MAX_BUFFER){
-    net.tx.write_index = 0;
-  }
+  net.tx.write(UDR0);
 }
 
 void UART::start_tx(){
-  UDR0 = net.rx.buf[net.rx.read_index];
-
-  if(++net.rx.read_index >= RNET_MAX_BUFFER){
-    net.rx.read_index = 0;
-  }
+  UDR0 = net.rx.read();
 
   UCSR0B |= (1<<UDRIE0);
 }
@@ -92,11 +84,7 @@ void UART::start_tx(){
 void UART::_tx_complete_irq(){
   #ifdef RNET_MASTER
   if(net.rx.read_index != net.rx.write_index){
-    UDR0 = net.rx.buf[net.rx.read_index];
-
-    if(++net.rx.read_index >= RNET_MAX_BUFFER){
-      net.rx.read_index = 0;
-    }
+    UDR0 = net.rx.read();
 
     UCSR0B |= (1<<UDRIE0);
     UCSR0A &= ~(1<<UDRE0); // Clear interrupt

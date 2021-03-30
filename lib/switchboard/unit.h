@@ -78,7 +78,7 @@ class Unit {
     IO_Port * IO(struct s_IO_port_conf adr);
     IO_Port * IO(struct configStruct_IOport);
 
-    void updateIO(int uart_filestream);
+    void updateIO();
 
     void link_all();
 };

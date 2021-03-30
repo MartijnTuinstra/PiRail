@@ -3,9 +3,10 @@
 #include "utils/logger.h"
 
 #include "submodule.h"
+#include "system.h"
 
 #include "algorithm/component.h"
-#include "com.h"
+#include "uart/uart.h"
 #include "sim.h"
 #include "Z21.h"
 // #include "pathfinding.h"
@@ -36,14 +37,21 @@ void Algor_stop(){
   // sem_post(&AlgorQueueNoEmpty);
 }
 
+void UART_state_callback(enum e_SYS_Module_State s){
+  if(SYS)
+    SYS_set_state(&SYS->UART.state, s);
+}
+
 void UART_start(){
+  uart.setUpdateStatusCb(&UART_state_callback);
+
   if(SYS->UART.state != Module_Fail && SYS->UART.state != Module_STOP){
     loggerf(WARNING, "UART allraedy running/started");
     return;
   }
 
   pthread_join(SYS->UART.th, NULL);
-  pthread_create(&SYS->UART.th, NULL, UART, NULL);
+  pthread_create(&SYS->UART.th, NULL, uart.serve, &uart);
 
   // Wait until UART is out of STOP state
   while(SYS->UART.state == Module_STOP){
@@ -56,6 +64,7 @@ void UART_start(){
 void UART_stop(){
   Algor_stop();
   SYS_set_state(&SYS->UART.state, Module_STOP);
+  uart.setState(Module_STOP);
 }
 
 pthread_t pt_train_simA;

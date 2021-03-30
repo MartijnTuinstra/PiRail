@@ -287,8 +287,8 @@ void RNet::read(){
 
 uint8_t RNet::getMsgSize(CircularBuffer * msg){
 #ifdef RNET_MASTER
-  uint8_t r = (msg->read_index + 1) % RNET_MAX_BUFFER;
-  if( (uint8_t)(msg->write_index - msg->read_index) % RNET_MAX_BUFFER < 2){
+  uint8_t r = (msg->read_index + 1) % CB_MAX_BUFFER;
+  if( (uint8_t)(msg->write_index - msg->read_index) % CB_MAX_BUFFER < 2){
     return RNet_msg_len_NotWhole;
   }
 #else

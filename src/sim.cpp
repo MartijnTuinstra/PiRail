@@ -72,6 +72,12 @@ void train_sim_tick(struct train_sim * t){
   if(t->posRear <= 0){
     // Remove block
     t->blocks--;
+
+    if(t->B[t->blocks]->detectionBlocked){
+      t->B[t->blocks]->setDetection(0);
+      AlQueue.puttemp(t->B[t->blocks]);
+    }
+
     t->B[t->blocks] = 0;
     t->posRear += t->B[t->blocks - 1]->length;
   }
@@ -85,8 +91,8 @@ void train_sim_tick(struct train_sim * t){
 
   uint8_t stockid = 0;
 
-  char debug[100] = " ";
-  char * p = &debug[0];
+  // char debug[100] = " ";
+  // char * p = &debug[0];
 
   for(uint8_t i = 0; i < t->blocks; i++){
     bool blocktheblock = false;
@@ -112,16 +118,20 @@ void train_sim_tick(struct train_sim * t){
         break; // Detectable is not in this block but maybe in the next.
     }
 
-    if(blocktheblock && !t->B[i]->detectionBlocked)
-        t->B[i]->setDetection(1);
-    else if(!blocktheblock && t->B[i]->detectionBlocked)
-        t->B[i]->setDetection(0);
-    AlQueue.puttemp(t->B[i]);
+    if(blocktheblock && !t->B[i]->detectionBlocked){
+      t->B[i]->setDetection(1);
+      AlQueue.puttemp(t->B[i]);
+    }
+    else if(!blocktheblock && t->B[i]->detectionBlocked){
+      t->B[i]->setDetection(0);
+      AlQueue.puttemp(t->B[i]);
+    }
 
-    p += sprintf(p, "%02i:%02i%c ", t->B[i]->module, t->B[i]->id, blocktheblock ? 'B' : ' ');
+    // p += sprintf(p, "%c%02i:%02i%c ", t->B[i]->detectionBlocked ? 'B' : ' ', t->B[i]->module, t->B[i]->id, blocktheblock ? 'B' : ' ');
 
     blockoffset += t->B[i]->length;
   }
+
   // loggerf(INFO, "SIM blocks (%i): %s", t->blocks, debug);
 
   AlQueue.cpytmp();
@@ -177,7 +187,10 @@ void *TRAIN_SIMA(void * args){
   };
   WS_stc_LinkTrain(&msg);
 
-  loggerf(INFO, "SIMTrain linked %s", B->train->p.E->name);
+  if(B->train->type == RAILTRAIN_TRAIN_TYPE)
+    loggerf(INFO, "SIMTrain linked %s", B->train->p.T->name);
+  else
+    loggerf(INFO, "SIMTrain linked %s", B->train->p.E->name);
 
   B->train->setControl(TRAIN_MANUAL);
 
@@ -185,7 +198,7 @@ void *TRAIN_SIMA(void * args){
 
   train.T = B->train;
 
-  train.T->changeSpeed(50, 0);
+  train.T->changeSpeed(10, 0);
  
   AlQueue.put(B);
 
@@ -244,72 +257,108 @@ void *TRAIN_SIMA(void * args){
 
 void *TRAIN_SIMB(void * args){
   if(!SYS_wait_for_state(&SYS->LC.state, Module_Run)){
-    SYS_set_state(&SYS->SimA.state, Module_Fail);
+    SYS_set_state(&SYS->SimB.state, Module_Fail);
     return 0;
   }
 
-  usleep(11000000);
+  usleep(100000);
 
   Block *B = Units(25)->B[3];
 
-  struct train_sim train;
-  train.B = (Block **)_calloc(10, Block *);
-  train.sim = 'B';
-  train.posFront = 0;
-  train.posRear = B->length;
-  train.Front = 0;
+  struct train_sim train = {
+    .sim = 'B',
+    .train_length = 0,
+    .posFront = 0.0,
+    .posRear = 124.0,
+    .Front = 0,
+    .B = (Block **)_calloc(10, Block *),
+    .blocks = 1,
+  };
+  train.B[0] = B;
 
-  train.blocks = 0;
-  // train.B[0] = B;
+  while(!B->Alg.N[0] || !B->Alg.P[0]){usleep(10000);}
+  while(B->Alg.N[0]->blocked || B->blocked || B->Alg.P[0]->blocked){usleep(10000);} // Wait for space
 
-  while(!B->Alg.N[0] || !B->Alg.P[0]){}
-  while(B->Alg.N[0]->blocked || B->blocked || B->Alg.P[0]->blocked){} // Wait for space
+  // B->train = new RailTrain(B);
 
   change_Block(B, BLOCKED);
+  // algor_queue_enable(1);
+  AlQueue.cpytmp();
+  // B->setDetection(1);
+  
 
-  usleep(100000);
+  // usleep(100000);
 
   while(!B->train){
-      usleep(10000);
-  }
-
-  B->train->setControl(TRAIN_MANUAL);
-
-  while(!B->train->p.p){
     usleep(10000);
   }
 
+  // B->train = new RailTrain(B);
+
+  B->train->link(1, RAILTRAIN_ENGINE_TYPE);
+  struct s_opc_LinkTrain msg = {
+    .follow_id=B->train->id,
+    .real_id=1,
+    .message_id_H=0,
+    .type=RAILTRAIN_ENGINE_TYPE,
+    .message_id_L=1
+  };
+  WS_stc_LinkTrain(&msg);
+
+  if(B->train->type == RAILTRAIN_TRAIN_TYPE)
+    loggerf(INFO, "SIMTrain linked %s", B->train->p.T->name);
+  else
+    loggerf(INFO, "SIMTrain linked %s", B->train->p.E->name);
+
+  B->train->setControl(TRAIN_MANUAL);
+
+  train.train_length = B->train->length;
+
   train.T = B->train;
+
+  train.T->changeSpeed(10, 0);
+ 
+  AlQueue.put(B);
 
   if(train.T->type == RAILTRAIN_ENGINE_TYPE){
     //Engine only
     train.train_length = train.T->p.E->length / 10;
+
+    train.engines_len = 1;
+    train.engines = (struct engine_sim *)_calloc(1, struct engine_sim);
+    train.engines[0].offset = 0;
+    train.engines[0].length = train.T->p.E->length;
   }
   else{
     //Train
     train.train_length = train.T->p.T->length / 10;
+
+    uint16_t offset = 0;
+
+    train.engines_len = train.T->p.T->detectables;
+    train.engines = (struct engine_sim *)_calloc(train.T->p.T->detectables, struct engine_sim);
+
+    uint8_t j = 0;
+
+    for(uint8_t i = 0; i < train.T->p.T->nr_stock; i++){
+      if(train.T->p.T->composition[i].type == 0){
+        train.engines[j].offset = offset;
+        train.engines[j++].length = ((Engine *)train.T->p.T->composition[i].p)->length;
+      }
+      else if(train.T->p.T->composition[i].type == 1 && ((Car *)train.T->p.T->composition[i].p)->detectable){
+        train.engines[j].offset = offset;
+        train.engines[j++].length = ((Car *)train.T->p.T->composition[i].p)->length;
+      }
+
+      if(train.T->p.T->composition[i].type == 0)
+        offset += ((Engine *)train.T->p.T->composition[i].p)->length / 10;
+      else
+        offset += ((Car *)train.T->p.T->composition[i].p)->length / 10;
+    }
   }
+  train.posFront = train.B[0]->length - (train.engines[0].length / 10);
+  train.posRear = train.B[0]->length;
   loggerf(INFO, "train length %icm", train.train_length);
-
-  int32_t len = train.train_length;
-  while(len > 0){
-    len -= B->length;
-
-    for(uint8_t i = train.blocks - 1; i >= 0 && i < 10; i--){
-      train.B[i + 1] = train.B[i];
-    }
-    train.blocks++;
-
-    change_Block(B, BLOCKED);
-    loggerf(INFO, "Add block %i (%02i:%02i)", train.blocks, B->module, B->id);
-
-    if(B->Alg.next){
-      train.B[0] = B;
-      B = B->Alg.N[0];
-    }
-  }
-
-  train.posFront -= len;
 
   SYS_set_state(&SYS->SimB.state, Module_Run);
 
@@ -319,6 +368,7 @@ void *TRAIN_SIMB(void * args){
   }
 
   _free(train.B);
+  SYS_set_state(&SYS->SimB.state, Module_STOP);
 
   return 0;
 }

@@ -1294,7 +1294,7 @@ TEST_CASE_METHOD(TestsFixture, "Train Speed Control", "[Alg][Alg-Sp]"){
     .sim = 'A',
     .train_length = 0,
     .posFront = 0.0,
-    .posRear = U->B[0]->length * 1.0,
+    .posRear = U->B[0]->length * 1.0f,
     .Front = 0,
     .B = (Block **)_calloc(10, Block *),
     .blocks = 1,

@@ -1,7 +1,7 @@
 
 #include "utils/mem.h"
 #include "utils/logger.h"
-#include "com.h"
+#include "uart/RNetTX.h"
 
 #include "config/LayoutStructure.h"
 
@@ -339,55 +339,14 @@ IO_Port * Unit::IO(struct configStruct_IOport adr){
 }
 
 
-void Unit::updateIO(int uart_filestream){
-  struct COM_t tx;
-  uint8_t check = 0;
-
+void Unit::updateIO(){
   for(int n = 0; n < this->IO_Nodes; n++){
     IO_Node * N = this->Node[n];
 
-    tx.data[0] = module;
-    tx.data[1] = COMopc_SetAllOut;
-    tx.data[2] = N->io_ports;
-
-    bool data = 0;
-
-    check = UART_CHECKSUM_SEED ^ tx.data[1] ^ tx.data[2];
-
-    memset(&tx.data[3], 0, UART_COM_t_Length - 3);
-
-    for(int io = 0; io < N->io_ports; io++){
-      IO_Port * IO = N->io[io];
-
-      if(IO->type == IO_Undefined)
-        continue;
-
-      // loggerf(WARNING, "Update io %02i:%02i:%02i %s (%i)", module, n, io, IO_event_string[U_IO(module, n, io)->type][U_IO(module, n, io)->w_state.value], U_IO(module, n, io)->w_state.value);
-      if(IO->type <= IO_Output_PWM){
-        tx.data[io/4 + 3] |= IO->w_state.value << ((io % 4) * 2);
-
-        if(IO->r_state.value != IO->w_state.value)
-          data = 1;
-
-        IO->r_state.value = IO->w_state.value;
-      }
-
-      if(io%4 == 3)
-        check ^= tx.data[io/4 + 2];
-
-      if(IO->type == IO_Output && IO->w_state.output == IO_event_Pulse){ // Reset When pulsing output
-        IO->w_state.output = IO_event_Low;
-        IO->r_state.value = IO->w_state.value;
-      }
-    }
-    tx.data[N->io_ports/4 + 3] = check;
-    tx.length = N->io_ports/4 + 4;
-
-    if(!data){
+    if(!N)
       continue;
-    }
 
-    COM_Send(&tx);
+    COM_change_Output(N);
   }
 }
 

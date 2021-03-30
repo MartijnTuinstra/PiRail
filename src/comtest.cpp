@@ -4,10 +4,12 @@
 
 #include "utils/logger.h"
 #include "utils/mem.h"
-#include "com.h"
+#include "uart/uart.h"
+#include "uart/RNetTX.h"
 #include "system.h"
 
 #include "switchboard/manager.h"
+#include "switchboard/unit.h"
 
 #include "RNet_msg.h"
 
@@ -16,18 +18,19 @@
 struct s_systemState * SYS;
 pthread_t thread;
 
-char * UART_Serial_Port;
-
 int main(int argc, char *argv[]){
+
+
+  // scheduler = new Scheduler();
+  // RSManager = new RollingStock::Manager();
+  switchboard::SwManager = new switchboard::Manager();
 
   if(argc > 1){
     printf("Got argument %s", argv[1]);
-    UART_Serial_Port = (char *)_calloc(strlen(argv[1])+5, char);
-    strcpy(UART_Serial_Port, argv[1]);
+    uart.setDevice((const char *)argv[1]);
   }
   else{
-    UART_Serial_Port = (char *)_calloc(30, char);
-    strcpy(UART_Serial_Port, "/dev/ttyUSB1");
+    uart.setDevice("/dev/ttyUSB1");
   }
 
   init_main();
@@ -42,7 +45,7 @@ int main(int argc, char *argv[]){
 
   Z21 = new Z21_Client();
 
-  pthread_create(&thread, NULL, UART, NULL);
+  pthread_create(&thread, NULL, &uart.serve, &uart);
 
   char cmd[300];
   char ** cmds = (char **)_calloc(20, char *);
@@ -90,11 +93,7 @@ int main(int argc, char *argv[]){
       printf("\ts                   \tSave configuration\n");
     }
     else if(strcmp(cmds[0], "DEVID") == 0){
-      struct COM_t data;
-      data.data[0] = 0xFF;
-      data.data[1] = RNet_OPC_DEV_ID;
-      data.length = 2;
-      COM_Send(&data);
+      COM_DevReset();
     }
     else if(strcmp(cmds[0], "SETOUT") == 0){
       if(cmds_len <= 3)
@@ -116,7 +115,7 @@ int main(int argc, char *argv[]){
 
       int M = atoi(cmds[1]);
 
-      switchboard::Units(M)->updateIO(0);
+      switchboard::Units(M)->updateIO();
     }
     else if(strcmp(cmds[0], "REQIN") == 0){
       if(cmds_len <= 1)
@@ -130,7 +129,7 @@ int main(int argc, char *argv[]){
 
       data.length = 2;
 
-      COM_Send(&data);
+      uart.send(&data);
     }
     else if(strcmp(cmds[0], "EMEGSTOP") == 0){
       loggerf(INFO, "Set Emergency Stop");
@@ -141,7 +140,7 @@ int main(int argc, char *argv[]){
 
       data.length = 2;
 
-      COM_Send(&data);
+      uart.send(&data);
     }
     else if(strcmp(cmds[0], "EMEGGO") == 0){
       loggerf(INFO, "Release Emergency Stop");
@@ -152,7 +151,7 @@ int main(int argc, char *argv[]){
 
       data.length = 2;
 
-      COM_Send(&data);
+      uart.send(&data);
     }
     else if(strcmp(cmds[0], "POWERON") == 0){
       loggerf(INFO, "Set Power On");
@@ -163,7 +162,7 @@ int main(int argc, char *argv[]){
 
       data.length = 2;
 
-      COM_Send(&data);
+      uart.send(&data);
     }
     else if(strcmp(cmds[0], "POWEROFF") == 0){
       loggerf(INFO, "Set Power Off");
@@ -174,7 +173,7 @@ int main(int argc, char *argv[]){
 
       data.length = 2;
 
-      COM_Send(&data);
+      uart.send(&data);
     }
     else if(strcmp(cmds[0], "CHANGENODE") == 0){
       if(cmds_len <= 2)
@@ -190,18 +189,18 @@ int main(int argc, char *argv[]){
 
       data.length = 2;
 
-      COM_Send(&data);
+      uart.ACK = 0;
+      uart.NACK = 0;
 
-      COM_ACK = 0;
-      COM_NACK = 0;
+      uart.send(&data);
 
-      while(COM_ACK == 0 && COM_NACK == 0){}
+      while(uart.ACK == 0 && uart.NACK == 0){}
 
       loggerf(INFO, "Programming routine done");
     }
     else if(strcmp(cmds[0], "RESET") == 0){
       loggerf(INFO, "RESET UART with DTS signal");
-      void COM_Reset();
+      uart.resetDevice();
     }
     // else if(strcmp(cmds[0], "ex") == 0 || strcmp(cmds[0], "Ex") == 0){
     //   export_Layout(&config, cmds[1]);

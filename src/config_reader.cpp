@@ -6,6 +6,10 @@
 #include "utils/logger.h"
 #include "utils/mem.h"
 
+#include "uart/uart.h"
+#include "RNet_msg.h"
+#include "system.h"
+
 #include "switchboard/links.h"
 
 #include "config/LayoutStructure.h"
@@ -26,6 +30,78 @@ const char * rail_states_string[8] = {
   "RESERVED_SWITCH",
   "UNKNOWN" 
 };
+
+
+void UART_ACK(uint8_t device){
+  loggerf(INFO, "ACK");
+  uart.ACK = true;
+}
+void UART_NACK(uint8_t device){
+  loggerf(WARNING, "NACK");
+  uart.NACK = true;
+}
+
+void COM_Configure_IO(uint8_t M, uint8_t ioPort, uint16_t config){
+  struct COM_t TX;
+  TX.data[0] = M;
+  TX.data[1] = RNet_OPC_SetIO;
+  TX.data[2] = ioPort;
+  TX.data[3] = (config & 0xFF);
+  TX.data[4] = (config >> 8);
+  TX.data[5] = UART_CHECKSUM_SEED ^ RNet_OPC_SetIO ^ ioPort ^ (config & 0xFF) ^ (config >> 8);
+  TX.length = 6;
+  uart.send(&TX);
+}
+
+void COM_DevReset(){
+  struct COM_t Tx;
+  Tx.data[0] = 0xFF;  //Broadcast
+  Tx.data[1] = RNet_OPC_DEV_ID;
+  Tx.length  = 2;
+  uart.send(&Tx);
+}
+
+
+void (*UART_RecvCb[256])(uint8_t, uint8_t *) = {
+  // 0x00 - 0x0F
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+  // 0x10 - 0x1F
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+  // 0x20 - 0x2F
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+  // 0x30 - 0x3F
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+  // 0x40 - 0x4F
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+  // 0x50 - 0x5F
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+  // 0x60 - 0x6F
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+  // 0x70 - 0x7D
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+  // 0x7E
+  (void (*)(uint8_t, uint8_t *))&UART_NACK,
+  // 0x7F
+  (void (*)(uint8_t, uint8_t *))&UART_ACK,
+
+  // 0x80 - 0x8F
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+  // 0x90 - 0x9F
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+  // 0xA0 - 0xAF
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+  // 0xB0 - 0xBF
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+  // 0xC0 - 0xCF
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+  // 0xD0 - 0xDF
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+  // 0xE0 - 0xEF
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+  // 0xF0 - 0xFF
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+};
+
 
 void modify_Node(struct ModuleConfig * config, char ** cmds, uint8_t cmd_len){
   if(!cmds)
@@ -82,15 +158,15 @@ void modify_Node(struct ModuleConfig * config, char ** cmds, uint8_t cmd_len){
   if((mode == 'e' && cmd_len <= 3) || (mode == 'a' && cmd_len <= 2)){
     int tmp;
     char _cmd[20];
-    printf("Node Size      (%i)         | ", config->Nodes[id].size);
+    printf("Node Size      (%i)         | ", config->Nodes[id].ports);
     fgets(_cmd, 20, stdin);
     if(sscanf(_cmd, "%i", &tmp) > 0){
-      if(config->Nodes[id].size)
-        config->Nodes[id].data = (uint8_t *)_realloc(config->Nodes[id].data, tmp, uint8_t);
+      if(config->Nodes[id].ports)
+        config->Nodes[id].config = (struct configStruct_NodeIO *)_realloc(config->Nodes[id].config, tmp, struct configStruct_NodeIO);
       else
-        config->Nodes[id].data = (uint8_t *)_calloc(tmp, uint8_t);
+        config->Nodes[id].config = (struct configStruct_NodeIO *)_calloc(tmp, struct configStruct_NodeIO);
 
-      config->Nodes[id].size = tmp;
+      config->Nodes[id].ports = tmp;
     }
 
     printf("New:      \t");
@@ -112,21 +188,43 @@ void modify_Node(struct ModuleConfig * config, char ** cmds, uint8_t cmd_len){
       }
       else if(strcmp(cmds[i], "-p") == 0){
         printf("set size");
-        config->Nodes[id].size = atoi(cmds[i+1]);
-        config->Nodes[id].data = (uint8_t *)_realloc(config->Nodes[id].data, (config->Nodes[id].size + 2) / 2, uint8_t);
+        config->Nodes[id].ports = atoi(cmds[i+1]);
+        config->Nodes[id].config = (struct configStruct_NodeIO *)_realloc(config->Nodes[id].config, config->Nodes[id].ports, struct configStruct_NodeIO);
         i+=2;
       }
       else if(strcmp(cmds[i], "-t") == 0){
         uint8_t port = atoi(cmds[i+1]);
-        if(port > config->Nodes[id].size){
+        if(port > config->Nodes[id].ports){
           printf("Invalid io port\n");
           i += 3;
           continue;
         }
         printf("%d %i => %s\t%x %x\n", id, port, cmds[i+2], (0xF << (4 * ((port + 1)% 2))), (atoi(cmds[i+2]) & 0xF) << (4 * (port % 2)));
-        config->Nodes[id].data[port/2] &= (0xF << (4 * ((port + 1)% 2)));
-        config->Nodes[id].data[port/2] |= (atoi(cmds[i+2]) & 0xF) << (4 * (port % 2));
-        printf("%x\n", config->Nodes[id].data[port/2]);
+        config->Nodes[id].config[port].type = atoi(cmds[i+2]);
+        printf("%x\n", config->Nodes[id].config[port]);
+        i += 3;
+      }
+      else if(strcmp(cmds[i], "-d") == 0){
+        uint8_t port = atoi(cmds[i+1]);
+        if(port > config->Nodes[id].ports){
+          printf("Invalid io port\n");
+          i += 3;
+          continue;
+        }
+
+        config->Nodes[id].config[port].defaultState = atoi(cmds[i+2]);
+        i += 3;
+      }
+      else if(strcmp(cmds[i], "-i") == 0){
+        uint8_t port = atoi(cmds[i+1]);
+        if(port > config->Nodes[id].ports){
+          printf("Invalid io port\n");
+          i += 3;
+          continue;
+        }
+
+        bool inverting = (cmds[i+2][0] == '1');
+        config->Nodes[id].config[port].inverted = inverting;
         i += 3;
       }
     }
@@ -1529,13 +1627,7 @@ int edit_module(char * filename, bool update){
   }
 
   if(update){
-    uint8_t len = strlen(config.filename);
-    config.filename[len] = '_';
-    config.filename[len+1] = 'b';
-    config.filename[len+2] = 'u';
-    config.filename[len+3] = 0;
-    config.dump();
-    config.filename[len] = 0;
+    // uint8_t len = strlen(config.filename);
     config.write();
   }
 
@@ -1622,6 +1714,88 @@ int edit_module(char * filename, bool update){
     }
     else if(strcmp(cmds[0], "s") == 0){
       config.write();
+      printf("Config Saved\n");
+    }
+    else if(strcmp(cmds[0], "wio") == 0){
+      printf("Write to IO");
+
+      if(cmds_len < 3){
+        printf("Not enough arguments\n wio comport node_id\n");
+        continue;
+      }
+
+      uint8_t offset = 0;
+
+      if(cmds_len > 3){
+        if(strcmp(cmds[3], "-o") == 0 && cmds_len > 4)
+          offset = atoi(cmds[4]);
+      }
+
+      printf("wio [%s] [%s]", cmds[1], cmds[2]);
+
+      uart.setDevice((const char *)cmds[1]);
+
+      uint8_t NodeID = atoi(cmds[2]);
+
+      if(NodeID >= config.header->IO_Nodes){
+        loggerf(ERROR, "Node ID does not exist");
+        continue;
+      }
+
+      bool stop = false;
+      uint8_t send = 0;
+      uint8_t i = 0;
+      
+      struct configStruct_Node * N = &config.Nodes[NodeID];
+
+      if(!uart.init()){
+        loggerf(ERROR, "Failed to open serial device");
+        continue;
+      }
+
+      // Disable functions that are not needed / will crash due to uninitialized objects
+      UART_RecvCb[RNet_OPC_DEV_ID] = 0;
+      UART_RecvCb[RNet_OPC_ReadInput] = 0;
+
+      usleep(10000000);
+
+      COM_DevReset();
+
+      usleep(1500000);
+
+      uart.recv(); // Recv first 32
+
+      while(!stop && i < N->ports && send < 10){
+        if(uart.recv()){
+          uart.parse();
+        }
+
+        if(send == 0){
+          uint16_t PortConfig = (N->config[i].type << 12) | (N->config[i].defaultState << 8) | (N->config[i].inverted);
+          COM_Configure_IO(config.header->Module, i + offset, PortConfig);
+          send = 1;
+        }
+        else{
+          send++;
+        }
+
+        if(uart.NACK){
+          loggerf(WARNING, "Failed to write io %i, aborting ...", i);
+          stop = true;
+        }
+        else if(uart.ACK){
+          loggerf(INFO, "set IO config %i succesfull", i);
+          i++;
+          uart.ACK = 0;
+          send = 0;
+        }
+
+        usleep(1000);
+
+        loggerf(INFO, "!(%i) && %i < %i && %i < 10", stop, i, N->ports, send);
+      }
+
+      uart.close();
     }
     else if(strcmp(cmds[0], "p") == 0){
       config.print(cmds, cmds_len);
@@ -1760,6 +1934,10 @@ int edit_rolling_stock(char * filename, bool update){
   printf("Done\n");
   return 1;
 }
+
+///////////////////////////
+
+struct s_systemState * SYS;
 
 int main(int argc, char ** argv){
   logger.setfilename("log.txt");

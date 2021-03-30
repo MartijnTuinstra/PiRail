@@ -94,7 +94,7 @@ TEST_CASE_METHOD(TestsFixture, "IO Output", "[IO][IO-2]"){
   REQUIRE(U->Node[0]->io[22]->w_state.value == IO_event_High);
   REQUIRE(U->Node[0]->io[22]->r_state.value != IO_event_High);
 
-  U->updateIO(0);
+  U->updateIO();
 
   REQUIRE(U->Node[0]->io[22]->w_state.value == IO_event_High);
   REQUIRE(U->Node[0]->io[22]->r_state.value == IO_event_High);
@@ -118,6 +118,11 @@ TEST_CASE_METHOD(TestsFixture, "IO and Switchboard object", "[IO][IO-3]"){
   }
 
   SECTION("II - Switches"){
+    REQUIRE(U->Sw[0]);
+    REQUIRE(U->Sw[0]->IO[0]);
+    REQUIRE(U->Sw[0]->IO[1]);
+    REQUIRE(U->Sw[1]->IO[0]);
+    REQUIRE(U->Sw[2]->feedback[0]);
     // Solonoid operated switch
 
     CHECK(U->Sw[0]->IO[0]->w_state.output == IO_event_Low);

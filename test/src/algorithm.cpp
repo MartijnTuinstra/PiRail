@@ -43,8 +43,6 @@ TEST_CASE_METHOD(TestsFixture, "Connector Algorithm", "[Alg][Alg-1]"){
   loadSwitchboard(filenames, 4);
   loadStock();
 
-  // logger.setlevel_stdout(DEBUG);
-
   REQUIRE(switchboard::Units(1));
   REQUIRE(switchboard::Units(2));
   REQUIRE(switchboard::Units(3));
@@ -337,7 +335,6 @@ TEST_CASE_METHOD(TestsFixture, "Train Following", "[Alg][Alg-2]"){
 
   SECTION("III - Full Detectable Train"){
     loggerf(CRITICAL, "SECTION III");
-    // logger.setlevel_stdout(DEBUG);
     CHECK(U->B[0]->train == 0);
 
     U->B[0]->setDetection(1);
@@ -606,7 +603,6 @@ TEST_CASE_METHOD(TestsFixture, "Train Following", "[Alg][Alg-2]"){
   }
 
   SECTION("VI - Reversing Full Detectable Train"){
-    logger.setlevel_stdout(INFO);
     loggerf(CRITICAL, "SECTION VI");
 
     U->B[3]->setDetection(1);
@@ -843,19 +839,22 @@ TEST_CASE_METHOD(TestsFixture, "Algorithm Switch Setter", "[Alg][Alg-3]"){
 
   pathlist_find();
 
-  // logger.setlevel_stdout(DEBUG);
-
-  /*           Sw0/--->
+  /*
+  // I
+  //           Sw0/--->
   // 1.0> 1.1> 1.2----> 1.3>
   //
+  // II
   //           ---\Sw1
   // 1.4> 1.5> ----1.6> 1.7>
   //
+  // III - IV
   //                       |---St0---|
   //              Sw2/---> 1.11> 1.12>
   // 1.08> 1.09> 1.10----> 1.13> 1.14>
   //                       |---St1---|
   //
+  // V - XII
   //                             |---St2---|
   //                    Sw5/---> 1.20> 1.21> ---\Sw6
   // 1.15> 1.16> ------1.17----> 1.18> 1.19> ----1.27> 1.28-> ----\
@@ -865,6 +864,14 @@ TEST_CASE_METHOD(TestsFixture, "Algorithm Switch Setter", "[Alg][Alg-3]"){
   //               Sw9\Sw10                                MSSw0  \
   // <1.34 <1.35 <----------1.36 <1.37 <1.38 <1.39                 \-> 1.32>
   //                             |---St5---|
+  //
+  // XIII
+  //
+  //         <-1.40- <-1.41- <---1.42- <-1.43- <-1.44-
+  //                          / Sw11
+  //                    Sw12 /
+  // -1.45-> -1.46-> -1.47---> -1.48-> -1.49->
+  //
   */
 
   for(uint8_t i = 0; i < 39; i++){
@@ -881,20 +888,25 @@ TEST_CASE_METHOD(TestsFixture, "Algorithm Switch Setter", "[Alg][Alg-3]"){
     Algorithm::BlockTick();
 
   SECTION("I - Approaching S side"){
+    // End of divergence is end of track therefore no valid solution
+    //  - Always set the switch to straight
+
     U->B[0]->setDetection(1);
     Algorithm::process(U->B[0], _FORCE);
 
-    CHECK(U->B[0]->train != nullptr);
-    CHECK(U->B[0]->train == RSManager->getRailTrain(0));
-
-    RSManager->getRailTrain(0)->setSpeed(10);
-    Algorithm::process(U->B[0], _FORCE);
+    auto T = U->B[0]->train;
+    REQUIRE(T != nullptr);
+    REQUIRE(T == RSManager->getRailTrain(0));
+    
+    // Force Switchsolver, since train is stopped
+    SwitchSolver::solve(T, U->B[0], U->B[2], U->B[2]->next, NEXT | SWITCH_CARE);
 
     CHECK(U->Sw[0]->state == 0);
+    CHECK(U->Sw[0]->Detection->state == CAUTION);
     CHECK(U->Sw[0]->Detection->switchReserved);
-    CHECK(U->Sw[0]->Detection->isReservedBy(U->B[0]->train));
+    CHECK(U->Sw[0]->Detection->isReservedBy(T));
 
-    U->B[0]->train->dereserveBlock(U->Sw[0]->Detection);
+    T->dereserveBlock(U->Sw[0]->Detection);
     U->Sw[0]->Detection->state = PROCEED;
 
     U->Sw[0]->setState(1); // Set Diverging
@@ -902,70 +914,106 @@ TEST_CASE_METHOD(TestsFixture, "Algorithm Switch Setter", "[Alg][Alg-3]"){
 
     Algorithm::BlockTick();
 
-
-    Algorithm::process(U->B[0], _FORCE);
+    // Force Switchsolver, since train is stopped
+    SwitchSolver::solve(T, U->B[0], U->B[2], U->B[2]->next, NEXT | SWITCH_CARE);
 
     CHECK(U->Sw[0]->state == 0);
+    CHECK(U->Sw[0]->Detection->state == RESERVED_SWITCH);
     CHECK(U->Sw[0]->Detection->switchReserved);
-    CHECK(U->Sw[0]->Detection->isReservedBy(U->B[0]->train));
+    CHECK(U->Sw[0]->Detection->isReservedBy(T));
+
+    Algorithm::BlockTick();
+    
+    CHECK(U->Sw[0]->Detection->state == CAUTION);
   }
 
   SECTION("II - Approaching s side"){
+    // Set the switch to the correct state
+    //  - set straight
+
     U->B[4]->setDetection(1);
     Algorithm::process(U->B[4], _FORCE);
 
-    CHECK(U->B[4]->train != nullptr);
-    CHECK(U->B[4]->train == RSManager->getRailTrain(0));
+    auto T = U->B[4]->train;
+    CHECK(T != nullptr);
+    CHECK(T == RSManager->getRailTrain(0));
 
-    RSManager->getRailTrain(0)->setSpeed(10);
-    Algorithm::process(U->B[4], _FORCE);
+    // Force SwitchSolver, since no speed
+    SwitchSolver::solve(T, U->B[4], U->B[5], U->B[5]->next, NEXT | SWITCH_CARE);
 
     CHECK(U->Sw[1]->state == 0);
-    CHECK(U->Sw[1]->Detection->isReservedBy(U->B[4]->train));
+    CHECK(U->Sw[1]->Detection->state == CAUTION);
+    CHECK(U->Sw[1]->Detection->switchReserved);
+    CHECK(U->Sw[1]->Detection->isReservedBy(T));
 
-    U->B[4]->train->dereserveBlock(U->Sw[1]->Detection);
+    T->dereserveBlock(U->Sw[1]->Detection);
 
     U->Sw[1]->setState(1); // Set Diverging
     CHECK(U->Sw[1]->state == 1);
 
     Algorithm::BlockTick();
 
-    // Algorithm::process(U->B[4], _FORCE);
+    // Force SwitchSolver, since no speed
+    SwitchSolver::solve(T, U->B[4], U->B[5], U->B[5]->next, NEXT | SWITCH_CARE);
 
     CHECK(U->Sw[1]->state == 0);
+    CHECK(U->Sw[1]->Detection->state == RESERVED_SWITCH);
     CHECK(U->Sw[1]->Detection->switchReserved);
-    CHECK(U->Sw[1]->Detection->isReservedBy(U->B[4]->train));
+    CHECK(U->Sw[1]->Detection->isReservedBy(T));
+
+    Algorithm::BlockTick();
+    
+    CHECK(U->Sw[1]->Detection->state == CAUTION);
   }
 
-  SECTION("III - Approaching S side with station"){
+  SECTION("IIIa - Approaching S side with station"){
+    // Train will try to go around stopped train inside station
+    //  - Set switch to diverging
+    //  - Reserve Switch
+
     U->B[8]->setDetection(1);
     U->B[14]->setDetection(1);
     Algorithm::process(U->B[8], _FORCE);
     Algorithm::process(U->B[14], _FORCE);
 
-    CHECK(U->B[8]->train != nullptr);
-    CHECK(U->B[8]->train == RSManager->getRailTrain(0));
+    auto T = U->B[8]->train;
+    REQUIRE(T != nullptr);
+    REQUIRE(T == RSManager->getRailTrain(0));
     CHECK(U->B[14]->train == RSManager->getRailTrain(1));
+    CHECK(U->B[14]->train->stopped);
 
     RSManager->getRailTrain(0)->setSpeed(10);
-    Algorithm::process(U->B[8], _FORCE);
+    
+    // Force switchsolver, since speed is too low
+    SwitchSolver::solve(T, U->B[8], U->B[10], U->B[10]->next, NEXT | SWITCH_CARE);
 
     CHECK(U->Sw[2]->state == 1);
+    CHECK(U->Sw[2]->Detection->state == RESERVED_SWITCH);
     CHECK(U->Sw[2]->Detection->switchReserved);
-    CHECK(U->Sw[2]->Detection->isReservedBy(U->B[8]->train));
+    CHECK(U->Sw[2]->Detection->isReservedBy(T));
   }
 
   SECTION("IIIb - Approaching S side with station"){
+    // Train will try to go around stopped train inside station
+    //   even if it is allready reserved
+    //  - Set switch to diverging
+    //  - Reserve Switch
+
     U->B[8]->setDetection(1);
     Algorithm::process(U->B[8], _FORCE);
     
-    CHECK(U->B[8]->train == RSManager->getRailTrain(0));
+    auto T = U->B[8]->train;
+    REQUIRE(T == RSManager->getRailTrain(0));
 
     RSManager->getRailTrain(0)->setSpeed(10);
-    Algorithm::process(U->B[8], _FORCE);
+    
+    // Force switchsolver, since speed is too low
+    SwitchSolver::solve(T, U->B[8], U->B[10], U->B[10]->next, NEXT | SWITCH_CARE);
     
     CHECK(U->Sw[2]->state == 0);
-    CHECK(U->Sw[2]->Detection->switchReserved);
+    CHECK(U->Sw[2]->Detection->state == CAUTION);
+    CHECK( U->Sw[2]->Detection->switchReserved);
+    CHECK(!U->Sw[2]->Detection->reserved);
     CHECK(U->Sw[2]->Detection->isReservedBy(U->B[8]->train));
 
     U->B[14]->setDetection(1);
@@ -973,11 +1021,83 @@ TEST_CASE_METHOD(TestsFixture, "Algorithm Switch Setter", "[Alg][Alg-3]"){
 
     CHECK(U->B[14]->train == RSManager->getRailTrain(1));
 
-    Algorithm::process(U->B[8], _FORCE);
+    // Force switchsolver, since speed is too low
+    SwitchSolver::solve(T, U->B[8], U->B[10], U->B[10]->next, NEXT | SWITCH_CARE);
+    
     CHECK(U->Sw[2]->state == 1);
   }
 
+  SECTION("IIIc - Approaching S side with station"){
+    // Paths after a switch must be set to the correct direction
+    //  - Reserve Switch
+    //  - Reserve Path
+
+    U->B[11]->path->reverse();
+    U->B[13]->path->reverse();
+
+    CHECK(U->B[11]->dir == 4);
+    CHECK(U->B[13]->dir == 4);
+
+    U->B[8]->setDetection(1);
+    Algorithm::process(U->B[8], _FORCE);
+    
+    CHECK(U->B[8]->train == RSManager->getRailTrain(0));
+
+    RSManager->getRailTrain(0)->setSpeed(10);
+    
+    // Force switchsolver, since speed is too low
+    SwitchSolver::solve(U->B[8]->train, U->B[8], U->B[10], U->B[10]->next, NEXT | SWITCH_CARE);
+    
+    CHECK(U->Sw[2]->state == 0);
+    CHECK(U->Sw[2]->Detection->state == CAUTION);
+    CHECK( U->Sw[2]->Detection->switchReserved);
+    CHECK(!U->Sw[2]->Detection->reserved);
+    CHECK(U->Sw[2]->Detection->isReservedBy(U->B[8]->train));
+
+    CHECK(U->B[11]->dir == 4);
+    CHECK(U->B[13]->dir == 0);
+  }
+  
+  SECTION("IIId - Approaching S side with station"){
+    // Paths after a switch must be set to the correct direction
+    //  - Set Switch to diverging
+    //  - Reserve Switch
+    //  - Reserve Path
+
+    U->B[11]->path->reverse();
+    U->B[13]->path->reverse();
+    U->B[13]->path->reserve(new RailTrain(U->B[0]));
+
+    CHECK(U->B[11]->dir == 4);
+    CHECK(U->B[13]->dir == 4);
+
+    U->B[8]->setDetection(1);
+    Algorithm::process(U->B[8], _FORCE);
+    
+    auto T = U->B[8]->train;
+    CHECK(T == RSManager->getRailTrain(1));
+
+    T->setSpeed(10);
+    
+    // Force switchsolver, since speed is too low
+    SwitchSolver::solve(U->B[8]->train, U->B[8], U->B[10], U->B[10]->next, NEXT | SWITCH_CARE);
+    
+    CHECK(U->Sw[2]->state == 1);
+    CHECK(U->Sw[2]->Detection->state == RESERVED_SWITCH);
+    CHECK( U->Sw[2]->Detection->switchReserved);
+    CHECK(!U->Sw[2]->Detection->reserved);
+    CHECK(U->Sw[2]->Detection->isReservedBy(U->B[8]->train));
+
+    CHECK(U->B[11]->dir == 0);
+    CHECK(U->B[13]->dir == 4);
+  }
+
   SECTION("IV - Approaching S side with station fully blocked"){
+    // If no valid solution is possible, both states lead to invalid solution.
+    //  - enable switchWrongState
+    //  - block state must be DANGER
+    //  - block must not be reserved
+
     U->B[8]->setDetection(1);
     U->B[12]->setDetection(1);
     U->B[14]->setDetection(1);
@@ -989,16 +1109,23 @@ TEST_CASE_METHOD(TestsFixture, "Algorithm Switch Setter", "[Alg][Alg-3]"){
     CHECK(U->B[8]->train == RSManager->getRailTrain(0));
 
     RSManager->getRailTrain(0)->setSpeed(10);
-    Algorithm::process(U->B[8], _FORCE);
+
+    // Force SwitchSolver, since speed is too low
+    SwitchSolver::solve(U->B[8]->train, U->B[8], U->B[10], U->B[10]->next, NEXT | SWITCH_CARE);
 
     CHECK(U->Sw[2]->state == 0);
     CHECK(U->Sw[2]->Detection->state == DANGER);
-
+    CHECK(U->Sw[2]->Detection->state != RESERVED_SWITCH);
+    CHECK(U->Sw[2]->Detection->switchWrongState);
     CHECK(!U->Sw[2]->Detection->switchReserved);
-    // CHECK(U->Sw[2]->Detection->switchWrongState);
+    CHECK(!U->Sw[2]->Detection->reserved);
   }
 
   SECTION("V - Approaching s side with station and switchblock"){
+    // Go around B[19]
+    //  - set Sw[4] straight
+    //  - set Sw[5] diverging
+
     U->B[15]->setDetection(1);
     U->B[19]->setDetection(1);
     Algorithm::process(U->B[15], _FORCE);
@@ -1017,8 +1144,9 @@ TEST_CASE_METHOD(TestsFixture, "Algorithm Switch Setter", "[Alg][Alg-3]"){
     CHECK(U->B[15]->train == RSManager->getRailTrain(0));
 
     RSManager->getRailTrain(0)->setSpeed(10);
-    Algorithm::process(U->B[15], _FORCE);
-
+    
+    // Force SwitchSolver, since speed is too low
+    SwitchSolver::solve(U->B[15]->train, U->B[15], U->B[16], U->B[16]->next, NEXT | SWITCH_CARE);
 
     CHECK(U->Sw[4]->state == 0);
     CHECK(U->Sw[5]->state == 1);
@@ -1028,6 +1156,11 @@ TEST_CASE_METHOD(TestsFixture, "Algorithm Switch Setter", "[Alg][Alg-3]"){
   }
 
   SECTION("VI- Approaching S side with full station and switchblock"){
+    // No valid solution therefore
+    //  - do not set switcWrongState (switch state is not changed therefore it is implicit that switc is in the wrong state)
+    //  - set DANGER
+    //  - not reserved
+
     U->B[15]->setDetection(1);
     U->B[19]->setDetection(1);
     U->B[21]->setDetection(1);
@@ -1052,12 +1185,17 @@ TEST_CASE_METHOD(TestsFixture, "Algorithm Switch Setter", "[Alg][Alg-3]"){
     CHECK(U->B[15]->train == RSManager->getRailTrain(0));
 
     RSManager->getRailTrain(0)->setSpeed(10);
-    Algorithm::process(U->B[15], _FORCE);
+        
+    // Force SwitchSolver, since speed is too low
+    SwitchSolver::solve(U->B[15]->train, U->B[15], U->B[16], U->B[16]->next, NEXT | SWITCH_CARE);
 
     CHECK(U->Sw[4]->state == 1);
     CHECK(U->Sw[5]->state == 0);
 
-    CHECK(!U->Sw[3]->Detection->switchReserved);
+    CHECK( U->Sw[4]->Detection->state == DANGER);
+    CHECK(!U->Sw[4]->Detection->switchWrongState);
+    CHECK(!U->Sw[4]->Detection->switchReserved);
+    CHECK(!U->Sw[4]->Detection->reserved);
   }
 
   SECTION("VII - Approaching switch with route"){
@@ -1077,7 +1215,10 @@ TEST_CASE_METHOD(TestsFixture, "Algorithm Switch Setter", "[Alg][Alg-3]"){
     CHECK(T == RSManager->getRailTrain(0));
 
     RSManager->getRailTrain(0)->setSpeed(10);
-    Algorithm::process(U->B[22], _FORCE);
+
+    // Force SwitchSolver, since speed is too low
+    SwitchSolver::solve(U->B[22]->train, U->B[22], U->B[24], U->B[24]->next, NEXT | SWITCH_CARE);
+
 
     CHECK(U->Sw[3]->state == 1);
     CHECK(U->Sw[4]->state == 1);
@@ -1102,7 +1243,9 @@ TEST_CASE_METHOD(TestsFixture, "Algorithm Switch Setter", "[Alg][Alg-3]"){
     CHECK(T == RSManager->getRailTrain(0));
 
     RSManager->getRailTrain(0)->setSpeed(10);
-    Algorithm::process(U->B[22], _FORCE);
+
+    // Force SwitchSolver, since speed is too low
+    SwitchSolver::solve(U->B[22]->train, U->B[22], U->B[24], U->B[24]->next, NEXT | SWITCH_CARE);
 
     CHECK(U->Sw[3]->state == 0);
     CHECK(U->Sw[4]->state == 0);
@@ -1130,7 +1273,9 @@ TEST_CASE_METHOD(TestsFixture, "Algorithm Switch Setter", "[Alg][Alg-3]"){
     REQUIRE(T->route->found_forward);
 
     RSManager->getRailTrain(0)->setSpeed(10);
-    Algorithm::process(U->B[22], _FORCE);
+
+    // Force SwitchSolver, since speed is too low
+    SwitchSolver::solve(U->B[22]->train, U->B[22], U->B[24], U->B[24]->next, NEXT | SWITCH_CARE);
 
     CHECK(U->Sw[3]->state == 1);
     CHECK(U->Sw[4]->state == 1);
@@ -1152,7 +1297,9 @@ TEST_CASE_METHOD(TestsFixture, "Algorithm Switch Setter", "[Alg][Alg-3]"){
 
     REQUIRE(U->B[22]->train);
     U->B[22]->train->setSpeed(10);
-    Algorithm::process(U->B[22], _FORCE);
+
+    // Force SwitchSolver, since speed is too low
+    SwitchSolver::solve(U->B[22]->train, U->B[22], U->B[24], U->B[24]->next, NEXT | SWITCH_CARE);
 
     CHECK(U->Sw[3]->state == 0);
     CHECK(U->Sw[4]->state == 0);
@@ -1175,7 +1322,8 @@ TEST_CASE_METHOD(TestsFixture, "Algorithm Switch Setter", "[Alg][Alg-3]"){
     U->B[22]->train->setRoute(U->B[39]);
     U->B[22]->train->setSpeed(10);
 
-    Algorithm::process(U->B[22], _FORCE);
+    // Force SwitchSolver, since speed is too low
+    SwitchSolver::solve(U->B[22]->train, U->B[22], U->B[24], U->B[24]->next, NEXT | SWITCH_CARE);
 
     CHECK(U->Sw[3]->state == 0);
     CHECK(U->Sw[9]->state == 1);
@@ -1195,8 +1343,6 @@ TEST_CASE_METHOD(TestsFixture, "Algorithm Switch Setter", "[Alg][Alg-3]"){
     RailTrain * tmpRT = new RailTrain(U->B[37]);
     U->B[37]->path->reserve(tmpRT);
 
-    // logger.setlevel_stdout(INFO);
-
     U->B[22]->setDetection(1);
     Algorithm::process(U->B[22], _FORCE);
 
@@ -1207,7 +1353,8 @@ TEST_CASE_METHOD(TestsFixture, "Algorithm Switch Setter", "[Alg][Alg-3]"){
     REQUIRE(route);
     U->B[22]->train->setSpeed(10);
 
-    Algorithm::process(U->B[22], _FORCE);
+    // Force SwitchSolver, since speed is too low
+    SwitchSolver::solve(U->B[22]->train, U->B[22], U->B[24], U->B[24]->next, NEXT | SWITCH_CARE);
 
     CHECK(U->B[24]->switchWrongState);
     CHECK(!U->B[24]->reserved);
@@ -1217,13 +1364,48 @@ TEST_CASE_METHOD(TestsFixture, "Algorithm Switch Setter", "[Alg][Alg-3]"){
 
     
   }
+
+  SECTION("XIII - Switchover"){
+    U->Sw[11]->setState(1);
+    U->Sw[12]->setState(1);
+
+    Algorithm::BlockTick();
+
+    auto T = new RailTrain(U->B[45]);
+    U->B[45]->path->reserve(T);
+
+    CHECK(U->B[42]->state == DANGER);
+
+    U->B[45]->expectedTrain = T;
+    U->B[45]->setDetection(1);
+    Algorithm::process(U->B[45], _FORCE);
+    
+    // Force SwitchSolver, since speed is too low
+    SwitchSolver::solve(T, U->B[45], U->B[47], U->B[47]->next, NEXT | SWITCH_CARE);
+
+    CHECK(U->B[42]->dir == 0b101);
+    CHECK(U->B[43]->dir == 0b101);
+    CHECK(U->B[44]->dir == 0b101);
+    CHECK(!U->B[43]->path->direction);
+
+    CHECK(U->B[42]->isReservedBy(T));
+    CHECK(U->B[43]->isReservedBy(T));
+
+    CHECK(U->B[42]->state == RESERVED_SWITCH);
+    CHECK(U->B[43]->state == RESERVED);
+    CHECK(U->B[44]->state == RESERVED);
+
+    CHECK(U->B[47]->state == RESERVED_SWITCH);
+    CHECK(U->B[44]->state == RESERVED);
+  }
+
+  // TODO add testcases for MSSwitch
 }
 
 TEST_CASE_METHOD(TestsFixture, "Algor Queue", "[Alg][Alg-Q]"){
   char filenames[1][30] = {"./testconfigs/Alg-3.bin"};
   loadSwitchboard(filenames, 1);
   loadStock();
-  // logger.setlevel_stdout(CRITICAL);
 
   Unit * U = switchboard::Units(1);
   REQUIRE(U);
@@ -1267,8 +1449,6 @@ TEST_CASE_METHOD(TestsFixture, "Train Speed Control", "[Alg][Alg-Sp]"){
   char filenames[1][30] = {"./testconfigs/Alg-Sp.bin"};
   loadSwitchboard(filenames, 1);
   loadStock();
-
-  logger.setlevel_stdout(INFO);
 
   Unit * U = switchboard::Units(1);
 
@@ -1634,8 +1814,6 @@ TEST_CASE_METHOD(TestsFixture, "Train Route Following", "[Alg][Alg-R]"){
   loadSwitchboard(filenames, 4);
   loadStock();
 
-  logger.setlevel_stdout(INFO);
-
   Unit * U[5] = {0, switchboard::Units(1),switchboard::Units(2),switchboard::Units(3),switchboard::Units(4)};
 
   for(uint8_t i = 1; i <= 4; i++){
@@ -1725,6 +1903,8 @@ TEST_CASE_METHOD(TestsFixture, "Train Route Following", "[Alg][Alg-R]"){
   }
 
   SECTION("II - A route"){
+    logger.setlevel_stdout(TRACE);
+
     train.T->setRoute(U[1]->B[8]);
 
     while(!U[3]->B[2]->blocked && maxIterations > 0){
@@ -1738,15 +1918,17 @@ TEST_CASE_METHOD(TestsFixture, "Train Route Following", "[Alg][Alg-R]"){
       train_test_tick(&train, &maxIterations);
     }
 
+    REQUIRE(maxIterations > 0);
     maxIterations = 100;
 
-    // Train should stop on destination
-    while(maxIterations > 0){
+    // Train should stop not stop on a waypoint
+    while(!U[1]->B[8]->blocked && maxIterations > 0){
       train_testSim_tick(&train, &maxIterations);
     }
 
     CHECK(U[1]->B[8]->blocked);
     CHECK(maxIterations > 0);
+    CHECK(U[1]->B[8]->train->speed_event_data->target_speed > 0);
   }
 
   SECTION("III - A blocked route"){

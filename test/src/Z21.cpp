@@ -44,8 +44,6 @@ TEST_CASE_METHOD(TestsFixture, "RailTrain Z21", "[Z21]"){
   loadSwitchboard(filenames, 1);
   loadStock();
 
-  // logger.setlevel_stdout(DEBUG);
-
   Unit * U = switchboard::Units(1);
 
   REQUIRE(U);
@@ -57,8 +55,6 @@ TEST_CASE_METHOD(TestsFixture, "RailTrain Z21", "[Z21]"){
   for(uint8_t i = 0; i < 27; i++){
     Algorithm::process(U->B[i], _FORCE);
   }
-
-  logger.setlevel_stdout(TRACE);
 
   SECTION("I - Speed Engine"){
     U->B[1]->setDetection(1);

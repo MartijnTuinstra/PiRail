@@ -175,8 +175,6 @@ TEST_CASE_METHOD(TestsFixture, "Path Finding WayPoints", "[PF][PF-1]"){
     delete route1;
     delete route2;
   }
-
-  // logger.setlevel_stdout(NONE);
 }
 
 TEST_CASE_METHOD(TestsFixture, "Path Finding Stations", "[PF][PF-2]"){
@@ -199,8 +197,6 @@ TEST_CASE_METHOD(TestsFixture, "Path Finding Stations", "[PF][PF-2]"){
   //   1.11> 1.12>  1.13> 1.14> 1.15>--- ---1.16> 1.17> 1.18>
   //
   */
-  
-  logger.setlevel_stdout(INFO);
 
   SECTION("I - Find Route Station 1"){
     auto route = PathFinding::find(U->B[0], U->St[0]); // Station 1
@@ -251,6 +247,4 @@ TEST_CASE_METHOD(TestsFixture, "Path Finding Stations", "[PF][PF-2]"){
     delete route11A;
     delete route11B;
   }
-
-  // logger.setlevel_stdout(NONE);
 }

@@ -115,13 +115,10 @@ TEST_CASE_METHOD(TestsFixture, "Block Algorithm Search", "[SB][SB-1][SB-1.2]" ) 
   loadSwitchboard(filenames, 1);
   loadStock();
 
-  // logger.setlevel_stdout(INFO);
-
   Unit * U = switchboard::Units(1);
   REQUIRE(U);
 
   U->link_all();
-  
 
   /*
   // SECTION I
@@ -371,7 +368,9 @@ TEST_CASE_METHOD(TestsFixture, "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" )
   Unit * U = switchboard::Units(1);
   REQUIRE(U);
 
+  U->on_layout = true;
   U->link_all();
+  pathlist_find();
 
   for(uint8_t i = 0; i < U->block_len; i++){
     U->B[i]->AlgorSearch(0);
@@ -417,6 +416,15 @@ TEST_CASE_METHOD(TestsFixture, "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" )
   //  1.36-> -1.37-> -1.38-> -1.39-> ---- -1.40-> -1.41-> -1.42->
   //         [   Station   ]              [   Station   ]
   //         [                 Station                  ]
+  //
+  // SECTION XI
+  //
+  //           [   Station   ]
+  //           <-1.54- <-1.55- \
+  //   <-1.56- <-1.57- <-1.58- --1.59-- <-1.60- <-1.61-
+  //           [   Station   ]        \
+  //   --1.62> --1.63> --1.64> ----------1.65-> --1.66>
+  //           [   Station   ]
   */
 
   SECTION("I - Standard"){
@@ -470,7 +478,7 @@ TEST_CASE_METHOD(TestsFixture, "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" )
     CHECK(U->B[44]->state == PROCEED);
   }
 
-  SECTION("V - Blocks and switch"){
+  SECTION("Va - Blocks and switch"){
     U->B[19]->setDetection(1);
 
     Algorithm::process(U->B[19], _FORCE);
@@ -483,6 +491,7 @@ TEST_CASE_METHOD(TestsFixture, "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" )
     Algorithm::process(U->B[17], _FORCE);
 
     REQUIRE(U->B[17]->Alg.prev == 1);
+    REQUIRE(U->B[17]->Alg.next == 0);
 
     CHECK(U->B[17]->state == DANGER);
     CHECK(U->B[17]->Alg.P[0]->state == CAUTION);
@@ -529,9 +538,33 @@ TEST_CASE_METHOD(TestsFixture, "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" )
     CHECK(U->B[16]->state == CAUTION);
   }
 
-  SECTION("VI - Blocks and msswitch"){
-    logger.setlevel_stdout(DEBUG);
+  
+  SECTION("Vb - Blocks and switch"){
+    REQUIRE(U->B[19]->path);
 
+    U->B[19]->path->reverse();
+    U->B[17]->reverse();
+
+    uint8_t indices[5] = {16, 17, 18, 19, 48};
+
+    for(uint8_t i = 0; i < 5; i++){
+      Algorithm::process(U->B[indices[i]], _FORCE);
+      CHECK(U->B[indices[i]]->state == PROCEED);
+      CHECK(U->B[indices[i]]->reverse_state == PROCEED);
+    }
+
+    U->B[16]->reserve(new RailTrain(U->B[16]));
+
+    REQUIRE(U->B[16]->reverse_state == DANGER);
+    REQUIRE(U->B[17]->getNextState() == DANGER);
+
+    Algorithm::process(U->B[17], _FORCE);
+
+    CHECK(U->B[17]->state == DANGER);
+    CHECK(U->B[18]->state == CAUTION);
+  }
+
+  SECTION("VI - Blocks and msswitch"){
     U->B[23]->setDetection(1);
 
     Algorithm::process(U->B[23], _FORCE);
@@ -555,13 +588,10 @@ TEST_CASE_METHOD(TestsFixture, "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" )
     Algorithm::process(U->B[20], _FORCE);
     Algorithm::process(U->B[21], _FORCE);
     Algorithm::process(U->B[22], _FORCE);
-    Algorithm::process(U->B[23], _FORCE);
-    Algorithm::process(U->B[24], _FORCE);
 
     CHECK(U->B[20]->state == PROCEED);
     CHECK(U->B[21]->state == CAUTION);
     CHECK(U->B[22]->state == PROCEED);
-    CHECK(U->B[24]->state == CAUTION);
 
     // U->Sw[0]->feedback[0]->setInput(IO_event_High); // Set feedback right TODO
 
@@ -627,12 +657,14 @@ TEST_CASE_METHOD(TestsFixture, "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" )
     Algorithm::print_block_debug(U->B[34]);
 
     CHECK(U->B[34]->Alg.P[0]->state == DANGER);
-    CHECK(U->B[34]->Alg.P[1]->state == DANGER);
-    CHECK(U->B[34]->Alg.P[2]->state == DANGER);
+    CHECK(U->B[34]->Alg.P[1]->state == RESTRICTED);
+    CHECK(U->B[34]->Alg.P[2]->state == RESTRICTED);
     CHECK(U->B[34]->Alg.P[3]->state == CAUTION);
   }
 
   SECTION("X - Blocks and switchedstation"){
+    REQUIRE(U->B[41]);
+    REQUIRE(U->B[41]->Alg.prev > 4);
     U->B[41]->setDetection(1);
 
     Algorithm::process(U->B[41], _FORCE);
@@ -644,6 +676,53 @@ TEST_CASE_METHOD(TestsFixture, "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" )
     CHECK(U->B[41]->Alg.P[2]->state == RESTRICTED);
     CHECK(U->B[41]->Alg.P[3]->state == RESTRICTED);
     CHECK(U->B[41]->Alg.P[4]->state == CAUTION);
+  }
+
+  SECTION("XI - Blocks direction"){
+    Algorithm::process(U->B[54], _FORCE);
+    Algorithm::process(U->B[57], _FORCE);
+    Algorithm::process(U->B[65], _FORCE);
+
+    CHECK(U->B[54]->state == CAUTION);
+    CHECK(U->B[55]->state == CAUTION);
+
+    CHECK(U->B[57]->state == PROCEED);
+    CHECK(U->B[58]->state == PROCEED);
+    CHECK(U->B[59]->state == PROCEED);
+
+    CHECK(U->B[65]->state == PROCEED);
+    CHECK(U->B[64]->state == PROCEED);
+    CHECK(U->B[63]->state == PROCEED);
+
+    U->Sw[2]->setState(1);
+
+    U->B[54]->AlgorSearch(0);
+    U->B[57]->AlgorSearch(0);
+    Algorithm::process(U->B[54], _FORCE);
+    Algorithm::process(U->B[57], _FORCE);
+
+    CHECK(U->B[54]->state == CAUTION);
+    CHECK(U->B[55]->state == CAUTION);
+    CHECK(U->B[59]->state == CAUTION);
+
+    CHECK(U->B[57]->state == PROCEED);
+    CHECK(U->B[58]->state == PROCEED);
+
+    CHECK(U->B[65]->state == PROCEED);
+    CHECK(U->B[65]->reverse_state == PROCEED);
+
+    U->Sw[3]->setState(1);
+    U->Sw[4]->setState(1);
+
+    U->B[54]->AlgorSearch(0);
+    Algorithm::process(U->B[54], _FORCE);
+
+    CHECK(U->B[54]->state == CAUTION);
+    CHECK(U->B[55]->state == CAUTION);
+    CHECK(U->B[59]->state == CAUTION);
+    CHECK(U->B[65]->state == PROCEED); // Wrong direction
+    CHECK(U->B[65]->reverse_state == CAUTION);
+
   }
 }
 

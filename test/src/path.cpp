@@ -45,6 +45,7 @@ TEST_CASE_METHOD(TestsFixture, "Path Construction", "[PATH][PATH-1]" ) {
   /*
   // I
   //  1.0->  --1.1->  --1.2->
+  //  <1.39 <-1.40-- <-1.41--
   //
   // II
   //                    /Sw1:0
@@ -64,6 +65,7 @@ TEST_CASE_METHOD(TestsFixture, "Path Construction", "[PATH][PATH-1]" ) {
   //
   // V
   //  1.17-> -1.18-> <-1.19- <-1.20-
+  //  1.42-> -1.43-> <-1.44-> <-1.45- <-1.46-
   //
   // VI
   //  1.37-> 1.21-> <-\
@@ -96,6 +98,21 @@ TEST_CASE_METHOD(TestsFixture, "Path Construction", "[PATH][PATH-1]" ) {
     CHECK(P[0]->Exit == U->B[2]);
     CHECK(P[0]->next == &U->B[2]->next);
     CHECK(P[0]->prev == &U->B[0]->prev);
+
+    P[1] = U->B[39]->path;
+    CHECK(P[1] == U->B[40]->path);
+    CHECK(P[1] == U->B[41]->path);
+
+    CHECK(P[1]->front == U->B[39]);
+    CHECK(P[1]->end   == U->B[41]);
+    CHECK(P[1]->Entrance == U->B[41]);
+    CHECK(P[1]->Exit     == U->B[39]);
+    CHECK(P[1]->next == &U->B[39]->prev);
+    CHECK(P[1]->prev == &U->B[41]->next);
+
+    CHECK(U->B[39]->dir == 1);
+    CHECK(U->B[40]->dir == 1);
+    CHECK(U->B[41]->dir == 1);
   }
 
   SECTION("II - Blocks arround switch"){
@@ -151,7 +168,8 @@ TEST_CASE_METHOD(TestsFixture, "Path Construction", "[PATH][PATH-1]" ) {
   }
 
 
-  SECTION("V - Blocks with sudden direction change"){
+  SECTION("V - Blocks with direction change"){
+    // Sudden change
     P[0] = U->B[17]->path;
     P[1] = U->B[18]->path;
     P[2] = U->B[19]->path;
@@ -168,10 +186,34 @@ TEST_CASE_METHOD(TestsFixture, "Path Construction", "[PATH][PATH-1]" ) {
     CHECK(P[0]->Entrance == U->B[17]);
     CHECK(P[0]->Exit == U->B[20]);
 
-    CHECK(U->B[18] == U->B[17]->Next_Block(NEXT, 1));
-    CHECK(U->B[19] == U->B[18]->Next_Block(NEXT, 1));
-    CHECK(U->B[20] == U->B[19]->Next_Block(NEXT, 1));
-    CHECK(U->B[19] == U->B[20]->Next_Block(PREV, 1));
+    CHECK(U->B[17]->dir == 0);
+    CHECK(U->B[18]->dir == 0);
+    CHECK(U->B[19]->dir == 5);
+    CHECK(U->B[20]->dir == 5);
+
+    // Change over to opposite direction
+    P[0] = U->B[42]->path;
+    P[1] = U->B[43]->path;
+    P[2] = U->B[44]->path;
+    P[3] = U->B[45]->path;
+    P[4] = U->B[46]->path;
+    for(int i = 0; i < 5; i++){
+      for(int j = 0; j < 5; j++){
+        if(i == j)
+          continue;
+
+        CHECK(P[i] == P[j]);
+      }
+    }
+
+    CHECK(P[0]->Entrance == U->B[42]);
+    CHECK(P[0]->Exit == U->B[46]);
+
+    CHECK(U->B[42]->dir == 0);
+    CHECK(U->B[43]->dir == 0);
+    CHECK(U->B[44]->dir == 2);
+    CHECK(U->B[45]->dir == 5);
+    CHECK(U->B[46]->dir == 5);
   }
 
   SECTION("VI - Blocks with direction change"){
@@ -249,107 +291,107 @@ TEST_CASE_METHOD(TestsFixture, "Path Reverse", "[PATH][PATH-2]") {
 
   pathlist_find();
 
-  REQUIRE(U->B[0]->path == U->B[10]->path);
-  Path * P = U->B[0]->path;
+  REQUIRE(U->B[3]->path == U->B[10]->path);
+  Path * P = U->B[3]->path;
 
   SECTION("I - Only reversing the path"){
 
     CHECK(P->next == &U->B[10]->next);
-    CHECK(P->prev == &U->B[0]->prev);
+    CHECK(P->prev == &U->B[3]->prev);
 
     P->reverse();
 
     CHECK(P->Entrance == U->B[10]);
-    CHECK(P->Exit == U->B[0]);
+    CHECK(P->Exit == U->B[3]);
 
-    CHECK(P->next == &U->B[0]->prev);
+    CHECK(P->next == &U->B[3]->prev);
     CHECK(P->prev == &U->B[10]->next);
 
     CHECK(P->direction == 1);
 
-    for(uint8_t i = 0; i < 11; i++)
+    for(uint8_t i = 3; i < 11; i++)
       CHECK(U->B[i]->dir == 0b100);
 
     P->reverse();
 
-    CHECK(P->Entrance == U->B[0]);
+    CHECK(P->Entrance == U->B[3]);
     CHECK(P->Exit == U->B[10]);
 
     CHECK(P->next == &U->B[10]->next);
-    CHECK(P->prev == &U->B[0]->prev);
+    CHECK(P->prev == &U->B[3]->prev);
 
     CHECK(P->direction == 0);
 
-    for(uint8_t i = 0; i < 11; i++)
+    for(uint8_t i = 3; i < 11; i++)
       CHECK(U->B[i]->dir == 0b000);
   }
 
   SECTION("II - One Train on the path"){
-    U->B[4]->setDetection(1);
-    Algorithm::process(U->B[4], _FORCE);
-
-    REQUIRE(U->B[4]->train);
-
-    U->B[4]->train->link(0, RAILTRAIN_ENGINE_TYPE);
-    U->B[4]->train->setSpeed(10);
-
     U->B[5]->setDetection(1);
     Algorithm::process(U->B[5], _FORCE);
 
-    REQUIRE(U->B[4]->train->assigned);
-    REQUIRE(U->B[4]->train->directionKnown);
+    REQUIRE(U->B[5]->train);
 
-    // logger.setlevel_stdout(TRACE);
+    U->B[5]->train->link(0, RAILTRAIN_ENGINE_TYPE);
+    U->B[5]->train->setSpeed(10);
+
+    U->B[6]->setDetection(1);
+    Algorithm::process(U->B[6], _FORCE);
+
+    REQUIRE(U->B[6]->train->assigned);
+    REQUIRE(U->B[6]->train->directionKnown);
 
     // Train is moving so no reversing
     P->reverse();
 
     CHECK(P->direction == 0);
 
-    U->B[4]->train->setSpeed(0);
+    U->B[6]->train->setSpeed(0);
 
     // Train is stopped so should be reversed
     P->reverse();
 
     CHECK(P->direction == 1);
 
-    U->B[4]->train->setSpeed(0);
+    U->B[6]->train->setSpeed(0);
 
-    CHECK(U->B[4]->train->dir == 1);
+    CHECK(U->B[6]->train->dir == 1);
 
   }
 
   SECTION("III - More trains"){
-    U->B[1]->setDetection(1);
-    Algorithm::process(U->B[1], _FORCE);
+    U->B[4]->setDetection(1);
+    Algorithm::process(U->B[4], _FORCE);
 
     U->B[8]->setDetection(1);
     Algorithm::process(U->B[8], _FORCE);
 
-    REQUIRE(U->B[1]->train);
+    REQUIRE(U->B[4]->train);
     REQUIRE(U->B[8]->train);
 
-    U->B[1]->train->setSpeed(10);
-    U->B[1]->train->link(0, RAILTRAIN_ENGINE_TYPE);
+    U->B[4]->train->setSpeed(10);
+    U->B[4]->train->link(0, RAILTRAIN_ENGINE_TYPE);
     U->B[8]->train->setSpeed(10);
     U->B[8]->train->link(1, RAILTRAIN_ENGINE_TYPE);
 
-    U->B[2]->setDetection(1);
-    Algorithm::process(U->B[2], _FORCE);
+    U->B[5]->setDetection(1);
+    Algorithm::process(U->B[5], _FORCE);
     U->B[9]->setDetection(1);
     Algorithm::process(U->B[9], _FORCE);
 
-    // Trains are mvoing
+    // Moving trains on the path
     P->reverse();
     CHECK(P->direction == 0);
 
-    U->B[1]->train->setSpeed(0);
+    U->B[4]->train->setSpeed(0);
 
+    // Still a moving train
     P->reverse();
     CHECK(P->direction == 0);
 
     U->B[9]->train->setSpeed(0);
 
+    // No moving train, so reverse blocks
     P->reverse();
     CHECK(P->direction == 1);
   }
@@ -366,18 +408,52 @@ TEST_CASE_METHOD(TestsFixture, "Path Reserve", "[PATH][PATH-3]") {
 
   U->on_layout = true;
   U->link_all();
-
   pathlist_find();
 
-  REQUIRE(U->B[0]->path == U->B[10]->path);
-  Path * P = U->B[0]->path;
+  for(uint8_t i = 0; i < 14; i++){
+    Algorithm::process(U->B[i], _FORCE);
+  }
 
-  RailTrain * RT = new RailTrain(U->B[0]);
+  REQUIRE(U->B[3]->path == U->B[10]->path);
+  Path * P = U->B[3]->path;
 
-  P->reserve(RT);
+  SECTION("I - Normal block at the end"){    
+    RailTrain * RT = new RailTrain(U->B[3]);
 
-  CHECK(P->reserved);
+    P->reserve(RT);
 
-  for(uint8_t i = 0; i < 11; i++)
-    CHECK(U->B[i]->reserved);
+    CHECK(P->reserved);
+
+    for(uint8_t i = 3; i < 11; i++)
+      CHECK(U->B[i]->reserved);
+
+    CHECK(U->B[11]->state == CAUTION);
+    CHECK(U->B[11]->reverse_state == DANGER);
+
+    CHECK(U->B[12]->state == CAUTION);
+    CHECK(U->B[12]->reverse_state == CAUTION);
+  }
+
+  SECTION("II - Reversed block at the end"){
+    U->B[11]->reverse();
+    U->B[12]->reverse();
+
+    CHECK(U->B[11]->state == PROCEED);
+    CHECK(U->B[12]->state == PROCEED);
+
+    RailTrain * RT = new RailTrain(U->B[3]);
+
+    P->reserve(RT);
+
+    CHECK(P->reserved);
+
+    for(uint8_t i = 3; i < 11; i++)
+      CHECK(U->B[i]->reserved);
+
+    CHECK(U->B[11]->state == DANGER);
+    CHECK(U->B[11]->reverse_state == PROCEED);
+
+    CHECK(U->B[12]->state == CAUTION);
+    CHECK(U->B[12]->reverse_state == CAUTION);
+  }
 }

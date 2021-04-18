@@ -7,7 +7,7 @@ GCC_DEPFLAGS = -MT $@ -MMD -MF $(DEPDIR)/$*.d
 GCC_INCLUDE = -I $(LIB) -I generated/$(LIB) -I $(SHARED_LIB)
 GCC_ERROR_FLAGS = -Werror=unused-variable -Wno-packed-bitfield-compat -Wno-unused-parameter -Wall
 GCC_LIBS = -pthread -lssl -lcrypto -lm
-GCC_FLAGS = -D _DEFAULT_SOURCE -D _POSIX_C_SOURCE=600
+GCC_FLAGS = -D _DEFAULT_SOURCE -D _POSIX_C_SOURCE=600 -D CB_NON_AVR
 
 GCC = g++ -std=c++14 -g3 $(GCC_INCLUDE) $(GCC_ERROR_FLAGS) $(GCC_LIBS) $(GCC_FLAGS)
 
@@ -25,23 +25,25 @@ FILES_WEBSOCKET = $(addprefix websocket/,server client stc cts message)
 FILES_ROLLING = $(addprefix rollingstock/,manager train engine car railtrain)
 FILES_UTILS = $(addprefix utils/,logger mem encryption utils)
 FILES_ALGORITHM = $(addprefix algorithm/,core component queue blockconnector traincontrol)
+FILES_UART = $(addprefix uart/,uart RNetRX RNetTX)
 
 BAAN_FILES = $(FILES_CONFIG) $(FILES_ROLLING) $(FILES_WEBSOCKET) \
              $(FILES_SWITCHBOARD) $(FILES_ALGORITHM) $(FILES_UTILS) \
              baan system IO \
-             Z21 Z21_msg train submodule com sim path pathfinding scheduler/scheduler
+             Z21 Z21_msg train submodule uart/uart uart/RNetTX uart/RNetRX sim path pathfinding scheduler/scheduler
 
 BAAN_OBJS  = $(addprefix $(BIN)/,$(addsuffix .o, $(BAAN_FILES))) $(SHARED_OBJ) $(GENERATED_OBJS)
 
-COMTEST_FILES = comtest system IO Z21 Z21_msg train submodule com sim path pathfinding scheduler/scheduler \
+COMTEST_FILES = comtest system IO Z21 Z21_msg train submodule $(FILES_UART) sim path pathfinding scheduler/scheduler \
                 $(FILES_ROLLING) $(FILES_WEBSOCKET) $(FILES_SWITCHBOARD) $(FILES_CONFIG) $(FILES_ALGORITHM) $(FILES_UTILS)
 COMTEST_OBJS  = $(addprefix $(BIN)/,$(addsuffix .o, $(COMTEST_FILES))) $(SHARED_OBJ)
 
-CONFIG_READER_FILES = config_reader $(FILES_CONFIG) $(FILES_UTILS)
-CONFIG_OBJS         = $(addprefix $(BIN)/,$(addsuffix .o, $(CONFIG_READER_FILES)))
+CONFIG_READER_FILES = $(FILES_CONFIG) $(FILES_UTILS) $(FILES_UTILS) \
+                      config_reader uart/uart
+CONFIG_OBJS         = $(addprefix $(BIN)/,$(addsuffix .o, $(CONFIG_READER_FILES))) $(GENERATED_OBJS) $(SHARED_OBJ)
 
 BAAN_CONFIGS = 1 2 3 4 10 20 21 22 23 25 26
-TEST_CONFIGS = PATH-1 PATH-2 IO-1 IO-3 SB-1.1 SB-1.2 SB-1.3 SB-2.1 SB-3.1 SB-4.1 SB-4.2-1 SB-4.2-2 Alg-1-1 Alg-1-2 Alg-1-3 Alg-1-4 Alg-2 Alg-3 PF-1
+TEST_CONFIGS = Alg-1-1 Alg-1-2 Alg-1-3 Alg-3 Alg-1-4 Alg-2 Alg-R-1 Alg-R-2 Alg-R-3 Alg-R-4 Alg-Sp IO-1 IO-3 PATH-1 PATH-2 PF-1 PF-2 RT-Z21 SB-1.1 SB-1.2 SB-1.3 SB-1.4 SB-2.1 SB-3.1 SB-4.1 SB-4.2-1 SB-4.2-2
 
 TEST_STOCK_CONFIGS =
 
@@ -54,6 +56,7 @@ TEST_STOCK_CONFIGS =
 -include $(BIN)/scheduler/*.d
 -include $(BIN)/switchboard/*.d
 -include $(BIN)/utils/*.d
+-include $(BIN)/uart/*.d
 -include $(BIN)/websocket/*.d
 
 $(BIN)/shared/%.o: shared/src/%.c
@@ -128,7 +131,7 @@ baan: $(BAAN_OBJS)
 	@echo '( GCCLD ) $@'
 	@echo $^
 	@$(GCC) -o $@ $^ -D CB_NON_AVR
-	@$(GCC) -shared -o $@.so $(addprefix $(BIN)/,$(addsuffix .o, $(BAAN_FILES))) $(addprefix $(BIN)/shared/,$(addsuffix .o, $(SHARED_OBJ_FILES))) -D CB_NON_AVR
+	@$(GCC) -shared -o $@.so $^ -D CB_NON_AVR
 
 config_reader: $(CONFIG_OBJS)
 	@echo '( GCCLD ) $@'

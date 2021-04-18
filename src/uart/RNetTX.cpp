@@ -47,7 +47,7 @@ void COM_change_Output(IO_Node * N){
   uint8_t j = 3;
   for(uint8_t i = 0; i < N->io_ports; i++){
     if(i%4 == 0)
-      TX.data[j] == 0;
+      TX.data[j] = 0;
 
     TX.data[j] |= (N->io[i]->w_state.value & 0b11) << ((i % 4) * 2);
 

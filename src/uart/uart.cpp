@@ -34,6 +34,11 @@ UART::UART(){
 }
 
 void UART::setDevice(const char * newDevice){
+  if(!newDevice){
+    updateState(Module_SIM_State);
+    return;
+  }
+
   if(strlen(newDevice) > 49)
     loggerf(WARNING, "UART Device is too long (over 50 characters)");
   strncpy(device, newDevice, 49);
@@ -253,4 +258,7 @@ void UART::updateState(enum e_SYS_Module_State s){
 
 void UART::setUpdateStatusCb(void (*f)(enum e_SYS_Module_State)){
   callback = f;
+
+  if(callback)
+    callback(status);
 }

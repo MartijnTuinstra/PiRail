@@ -311,7 +311,7 @@ void Switch_Checker(Algor_Blocks * ABs, int debug){
   RailTrain * T = B->train;
   Block * tB;
   uint8_t routeStatus = T->routeStatus;
-  uint16_t distance = SpeedToDistance_A(T->speed, -10);
+  int16_t distance = SpeedToDistance_A(T->speed, -10);
 
   if(routeStatus == RAILTRAIN_ROUTE_AT_DESTINATION)
     return;
@@ -323,23 +323,42 @@ void Switch_Checker(Algor_Blocks * ABs, int debug){
     if(i == 0) tB = B;
     else tB = N[i-1];
 
-    distance -= tB->length;
+    if(tB->type != NOSTOP)
+      distance -= tB->length;
 
-    if(distance < 0)
+    if(distance < 0){
+      loggerf(DEBUG, "distanceBreak");
       break;
+    }
 
-    if(tB->blocked && tB != B)
+    if(tB->type == NOSTOP)
+      distance -= tB->length;
+
+    if(tB->blocked && tB != B){
+      loggerf(DEBUG, "blockedBreak");
       break;
+    }
 
     if(routeStatus && (tB == T->route->destinationBlocks[0] || tB == T->route->destinationBlocks[1])){
       routeStatus++;
 
-      if(routeStatus == RAILTRAIN_ROUTE_AT_DESTINATION)
+      if(routeStatus == RAILTRAIN_ROUTE_AT_DESTINATION){
+        loggerf(DEBUG, "routeBreak");
         break;
+      }
     }
 
-    struct rail_link * link = tB->NextLink(NEXT);
-    loggerf(DEBUG, "Switch_Checker scan block (%i,%i) - %i - %i", tB->module, tB->id, link->type, routeStatus);
+    uint8_t flags = 0;
+    if     (i == 0) flags = NEXT;
+    else if(i == 1) flags = dircmp(B, tB)      ? NEXT : PREV;
+    else            flags = dircmp(N[i-2], tB) ? NEXT : PREV;
+
+    struct rail_link * link = tB->NextLink(flags);
+    loggerf(DEBUG, "Switch_Checker scan block (%2i:%2i) f:%x, d:%i, %i - %i", tB->module, tB->id, flags, tB->dir, link->type, routeStatus);
+
+    if(tB->type == NOSTOP){
+      tB = (i > 2) ? N[i-2] : B;
+    }
 
     if((i >  0 && link->type == RAIL_LINK_S) || (link->type >= RAIL_LINK_s && link->type <= RAIL_LINK_MB_inside)){
       if(SwitchSolver::solve(T, B, tB, *link, NEXT | SWITCH_CARE)){ // Returns true if path is changed
@@ -356,114 +375,65 @@ void rail_state(Algor_Blocks * ABs, int debug){
   // uint8_t prev  = ABs->prev;
   Block ** BP   = ABs->P;
   Block *  B    = ABs->B;
-  // Block ** BN   = ABs->N;
+  Block ** BN   = ABs->N;
   // uint8_t next  = ABs->next;
-
-  if(!B->blocked){
-    if(!B->reserved){
-      B->setReversedState(PROCEED);
-    }
-    else{
-      B->setReversedState(DANGER);
-    }
-  }
-  else{
-    B->setState(BLOCKED);
-  }
   
   bool Dir = 0; // 0 = setState
                 // 1 = setReversedState
-
+  
+  enum Rail_states state[3]     = {PROCEED, PROCEED, PROCEED};
+  enum Rail_states Rev_state[3] = {PROCEED, PROCEED, PROCEED};
+  uint8_t prevGroup[3] = {ABs->prev1, ABs->prev2, ABs->prev3};
+  uint8_t nextGroup[3] = {ABs->next1, ABs->next2, ABs->next3};
+  uint8_t j = 0;
+  uint8_t Rev_j = 0;
+    
   if(B->blocked){
+    B->setState(BLOCKED);
     // Set states
-    enum Rail_states prev1state = DANGER;
-    enum Rail_states prev2state = CAUTION;
-    enum Rail_states prev3state = PROCEED;
+    state[0] = DANGER;
+    state[1] = CAUTION;
 
     if(B->type == STATION && B->station->type >= STATION_YARD)
-      prev1state = RESTRICTED;
+      state[0] = RESTRICTED;
+  }
+  else if(B->type == NOSTOP && ((ABs->next && B->Alg.N[0]->type != NOSTOP) || ABs->next == 0) && B->getNextState() == DANGER){
+    loggerf(TRACE, "setState getNextState");
+    B->setState(DANGER);
+    state[0] = DANGER;
+    state[1] = CAUTION;
 
-    for(uint8_t i = 0; i < ABs->prev; i++){
-      if(!BP[i])
-        break;
-      
-      Dir ^= !dircmp(Dir, BP[i]->dir);
-      
-      if(BP[i]->blocked)
-        break;
-      else if(i < ABs->prev1)
-        BP[i]->setState(prev1state, Dir);
-    
-      else if(i == ABs->prev1){
-        if(BP[i]->type == STATION && B->type == STATION){
-          if(BP[i]->station == B->station){
-            prev2state = DANGER;
-            prev3state = CAUTION;
-          }
-          else if(i > 0 && BP[i-1]->type == NOSTOP){
-            prev2state = RESTRICTED;
-            prev3state = CAUTION;
-          }
-          else{
-            prev2state = DANGER;
-            prev3state = CAUTION;
-          }
-        }
-
-        BP[i]->setState(prev2state, Dir);
-      }
-      else if(i < ABs->prev2){
-        BP[i]->setState(prev2state, Dir);
-      }
-    
-      else if(i < ABs->prev3)
-        BP[i]->setState(prev3state, Dir);
-
-      else
-        BP[i]->setState(PROCEED, Dir);
-
-    }
+    if(BP[0] && BP[0]->type != NOSTOP)
+      j++;
   }
   else if(ABs->next == 0 || B->switchWrongState || B->switchWrongFeedback){
-    if(B->type != NOSTOP){
-      B->setState(CAUTION);
+    B->setState(CAUTION);
 
+    state[0] = CAUTION;
+  }
 
-      if(B->type == STATION){
-        for(uint8_t i = 0; i < ABs->prev1; i++){
-          if(BP[i]->blocked)
-            break;
+  if(B->type == NOSTOP && ABs->prev && B->Alg.P[0]->type != NOSTOP && B->getPrevState() == DANGER){
+    loggerf(TRACE, "setState getPrevState");
+    B->setReversedState(DANGER);
+    Rev_state[0] = DANGER;
+    Rev_state[1] = CAUTION;
 
-          Dir ^= !dircmp(Dir, BP[i]->dir);
-          
-          BP[i]->setState(CAUTION, Dir);
-        }
-      }
-    }
-    else{
-      B->setState(DANGER);
+    if(BN[0] && BN[0]->type != NOSTOP)
+      Rev_j++;
+  }
+  else if(!B->blocked){
+    if(!B->reserved && !B->switchReserved)
+      B->setReversedState(PROCEED);
+    else
+      B->setReversedState(DANGER);
+  }
 
-      uint8_t maxblocks = ABs->prev2;
-      enum Rail_states nostopper = DANGER;
+  if(state[0] != PROCEED){
+    ApplyRailState(ABs->prev, B, BP, state, prevGroup, j, Dir);
+  }
 
-      for(uint8_t i = 0; i < maxblocks; i++){
-        if(BP[i]->blocked)
-          break;
-
-        Dir ^= !dircmp(Dir, BP[i]->dir);
-
-        if(BP[i]->type != NOSTOP){
-          BP[i]->setState(CAUTION, Dir);
-
-          nostopper = CAUTION;
-
-          if(i == 0)
-            maxblocks = ABs->prev1;
-        }
-        else
-          BP[i]->setState(nostopper, Dir);
-      }
-    }
+  if(Rev_state[0] != PROCEED){
+    ApplyRailState(ABs->next, B, BN, Rev_state, nextGroup, Rev_j, Dir^1);
   }
   // else{
   //   bool blocked = false;
@@ -477,6 +447,57 @@ void rail_state(Algor_Blocks * ABs, int debug){
   //   if(!blocked)
   //     B->setState(PROCEED);
   // }
+}
+
+void ApplyRailState(uint8_t blocks, Block * B, Block * BL[10], enum Rail_states state[3], uint8_t prevGroup[3], uint8_t j, bool Dir){
+  for(uint8_t i = 0; i < blocks; i++){
+    if(!BL[i])
+      break;
+
+    if(i > 0)
+      Dir ^= !dircmp(BL[i-1], BL[i]);
+    else
+      Dir ^= !dircmp(B, BL[i]);
+    
+    if(BL[i]->blocked)
+      break;
+    else if(j > 2)
+      BL[i]->setState(PROCEED, Dir);
+    else if(i < prevGroup[j])
+      BL[i]->setState(state[j], Dir);
+  
+    else if(i == prevGroup[j]){ // Ready to go to the next group
+      if(BL[i]->type == STATION && B->type == STATION){
+        if((i == 0 && BL[i]->station == B->station) ||
+          (i > 0  && BL[i]->station == BL[i-1]->station)){
+
+          prevGroup[j]++; // Extend group, same station
+        }
+        else if(i > 0  && BL[i]->station != BL[i-1]->station){
+          // Other station
+          state[1] = RESTRICTED;
+          state[2] = CAUTION;
+          j++;
+        }
+        else
+          j++;
+      }
+      else if(BL[i]->type == NOSTOP){
+        prevGroup[j]++;
+      }
+      else{
+        j++;
+      }
+
+      if(j > 2)
+        BL[i]->setState(PROCEED, Dir);
+      else
+        BL[i]->setState(state[j], Dir);
+    }
+    else
+      BL[i]->setState(PROCEED, Dir);
+
+  }
 }
 
 void train_following(Algor_Blocks * ABs, int debug){
@@ -739,6 +760,9 @@ void train_control(RailTrain * T){
   uint8_t addI = 1;
   uint16_t length = B->length;
 
+  bool Dir = 0; // 0 = setState
+                // 1 = setReversedState
+
   // Array of brake points
   struct {
     uint16_t speed;
@@ -767,6 +791,11 @@ void train_control(RailTrain * T){
   // Fill in all brake points
   while(B->Alg.next > i){
     addI = 1;
+    
+    if(i > 0)
+      Dir ^= !dircmp(N[i-1], N[i]);
+    else
+      Dir ^= !dircmp(B, N[i]);
 
     if(N[i]->blocked){
       speeds[i].speed = 0;
@@ -777,7 +806,7 @@ void train_control(RailTrain * T){
       break;
     }
     else{
-      uint16_t BlockSpeed = N[i]->getSpeed();
+      uint16_t BlockSpeed = N[i]->getSpeed(Dir);
       speeds[i].speed = BlockSpeed;
       speeds[i].BrakingDistance = 0.173625 * ( (BlockSpeed * BlockSpeed) - (T->speed * T->speed) ) / (2 * -10);
       speeds[i].BrakingOffset = length - speeds[i].BrakingDistance;

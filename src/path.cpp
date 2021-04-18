@@ -8,6 +8,8 @@
 #include "switchboard/msswitch.h"
 #include "switchboard/station.h"
 
+#include "algorithm/core.h"
+
 #include "rollingstock/railtrain.h"
 
 std::vector<Path *> pathlist;
@@ -20,8 +22,14 @@ Path::Path(Block * B){
 
   direction = B->dir & 0b1;
 
-  next = &B->next;
-  prev = &B->prev;
+  if(direction == 0){
+    next = &B->next;
+    prev = &B->prev;
+  }
+  else{
+    next = &B->prev;
+    prev = &B->next;
+  }
 
   front = B;
   front_direction = direction;
@@ -51,14 +59,15 @@ Path::~Path(){
 
 void Path::updateEntranceExit(){
   // Set Entrance/Exit right
-  if(!direction){
+  // if(!direction){
     Entrance = end;
     Exit = front;
-  }
-  else{
-    Entrance = front;
-    Exit = end;
-  }
+  // }
+  // else{
+    // Entrance = front;
+    // Exit = end;
+  // }
+
 }
 
 void Path::add(Block * B, bool side){
@@ -271,14 +280,14 @@ void Path::find(){
     if(!B)
       break;
 
-    struct rail_link * link = B->NextLink(PREV ^ dir);
+    struct rail_link * link = B->NextLink(PREV);
 
     // loggerf(INFO, "                 -> link %02d:%02d:%02x", link->module, link->id, link->type);
 
     if(link->p.B == this->front){
       // loggerf(WARNING, "FLIP");
-      dir ^= 0b1;
-      link = B->NextLink(PREV ^ dir);
+      B->reverse();
+      link = B->NextLink(PREV);
     }
 
     // loggerf(INFO, "Prev Block %02d:%02d -> link %02d:%02d:%02x", B->module, B->id, link->module, link->id, link->type);
@@ -356,6 +365,11 @@ void Path::reserve(RailTrain * T){
 
   for(auto B: Blocks){
     T->reserveBlock(B);
+  }
+
+  if(Exit->Alg.next){
+    Algorithm::print_block_debug(Exit->Alg.N[0]);
+    Algorithm::rail_state(&Exit->Alg.N[0]->Alg, 0);
   }
 }
 

@@ -365,53 +365,40 @@ uint8_t Block::_NextList(Block * Origin, Block ** blocks, uint8_t block_counter,
 }
 
 void Block::reverse(){
-  Algor_Blocks * AB = &this->Alg;
-  if(!AB)
-    return;
-  loggerf(INFO, "Block_Reverse %02i:%02i", AB->B->module, AB->B->id);
+  loggerf(INFO, "Block_Reverse %02i:%02i %i -> %i", module, id, dir, dir ^ 0b100);
 
   //_ALGOR_BLOCK_APPLY(_ABl, _A, _B, _C) if(_ABl->len == 0){_A}else{_B;for(uint8_t i = 0; i < _ABl->len; i++){_C}}
-  int tmp_state;
-  AB->B->dir ^= 0b100;
-  if(AB->B->state != RESERVED_SWITCH){
-    tmp_state = AB->B->state;
-    AB->B->state = AB->B->reverse_state;
-    AB->B->reverse_state = (enum Rail_states)tmp_state;
-  }
+  dir ^= 0b100;
+  if(state != RESERVED_SWITCH)
+    std::swap(state, reverse_state);
 
   uint8_t len = 0;
-  if(AB->next > AB->prev)
-    len = AB->next;
+  if(Alg.next > Alg.prev)
+    len = Alg.next;
   else
-    len = AB->prev;
+    len = Alg.prev;
 
-  std::swap(AB->prev,  AB->next);
-  std::swap(AB->prev1, AB->next1);
-  std::swap(AB->prev2, AB->next2);
-  std::swap(AB->prev3, AB->next3);
+  std::swap(Alg.prev,  Alg.next);
+  std::swap(Alg.prev1, Alg.next1);
+  std::swap(Alg.prev2, Alg.next2);
+  std::swap(Alg.prev3, Alg.next3);
 
-  Block * tmp;
-  for(uint8_t i = 0; i < len; i++){
-    tmp = AB->N[i];
-    AB->N[i] = AB->P[i];
-    AB->P[i] = tmp;
-  }
+  for(uint8_t i = 0; i < len; i++)
+    std::swap(Alg.N[i], Alg.P[i]);
 
-  Algorithm::print_block_debug(AB->B);
+  Algorithm::print_block_debug(this);
 }
 
 void Block::reserve(RailTrain * T){
+  loggerf(INFO, "Reserve Block %2i:%2i for train %i (%i, %i)", module, id, T->id, switchReserved, reserved);
+  if(type != NOSTOP)
+    reserved = true;
 
-  if(!(switchReserved || reserved)){
-    if(type == NOSTOP){
-      switchReserved = true;
-      if(!blocked && state >= PROCEED)
+  if(switchReserved || reserved){
+    if(!blocked && state >= PROCEED){
+      if(switchReserved)
         setState(RESERVED_SWITCH);
-    }
-    else{
-      // FIXME loggerf(INFO, "ALSO RESERVE PATH"); 
-      reserved = true;
-      if(!blocked && state >= PROCEED)
+      else
         setState(RESERVED);
     }
 
@@ -461,6 +448,7 @@ void Block::setState(enum Rail_states _state, bool reversed){
 }
 
 void Block::setState(enum Rail_states _state){
+  loggerf(TRACE, "Block %2i:%2i setState %s", module, id, rail_states_string[_state]);
   if(_state == PROCEED){
     if(reserved)
       _state = RESERVED;
@@ -479,16 +467,43 @@ void Block::setState(enum Rail_states _state){
   U->block_state_changed |= 1;
 }
 
-void Block::setReversedState(enum Rail_states state){
-  this->reverse_state = state;
+void Block::setReversedState(enum Rail_states _state){
+  loggerf(TRACE, "Block %2i:%2i setReversedState %s", module, id, rail_states_string[_state]);
+  reverse_state = _state;
 
-  uint8_t signalsize = this->reverse_signal->size();
+  uint8_t signalsize = reverse_signal->size();
   for(uint8_t i = 0; i < signalsize; i++){
-    this->reverse_signal->operator[](i)->set(state);
+    reverse_signal->operator[](i)->set(state);
   }
 
   statechanged = 1;
   U->block_state_changed |= 1;
+}
+
+enum Rail_states Block::getNextState(){
+  Block * Next = 0;
+  if(Alg.next > 0)
+    Next = Alg.N[0];
+  else
+    return DANGER;
+
+  if(dircmp(this, Next))
+    return Next->state;
+  else
+    return Next->reverse_state;
+}
+
+enum Rail_states Block::getPrevState(){
+  Block * Prev = 0;
+  if(Alg.prev > 0)
+    Prev = Alg.P[0];
+  else
+    return DANGER;
+
+  if(dircmp(this, Prev))
+    return Prev->reverse_state;
+  else
+    return Prev->state;
 }
 
 void Block::setDetection(bool d){
@@ -527,9 +542,13 @@ enum Rail_states Block::addSignal(Signal * Sig){
 }
 
 uint16_t Block::getSpeed(){
+  return getSpeed(0);
+}
+
+uint16_t Block::getSpeed(uint8_t Dir){
   uint16_t speed = MaxSpeed;
 
-  switch(state){
+  switch(Dir ? reverse_state : state){
     case DANGER:
       speed = 0;
       break;

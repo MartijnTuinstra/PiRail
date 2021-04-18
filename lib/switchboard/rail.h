@@ -169,6 +169,8 @@ class Block {
     void setState(enum Rail_states, bool);
     void setState(enum Rail_states);
     void setReversedState(enum Rail_states);
+    enum Rail_states getNextState();
+    enum Rail_states getPrevState();
 
     void setDetection(bool d);
     void setVirtualDetection(bool d);
@@ -176,6 +178,7 @@ class Block {
     enum Rail_states addSignal(Signal * Sig);
 
     uint16_t getSpeed();
+    uint16_t getSpeed(uint8_t Dir);
 
     void AlgorClear();
     void AlgorSearch(int debug);

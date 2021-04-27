@@ -369,8 +369,13 @@ void Block::reverse(){
 
   //_ALGOR_BLOCK_APPLY(_ABl, _A, _B, _C) if(_ABl->len == 0){_A}else{_B;for(uint8_t i = 0; i < _ABl->len; i++){_C}}
   dir ^= 0b100;
+
+  // Swap states
+
   if(state != RESERVED_SWITCH)
     std::swap(state, reverse_state);
+
+  // Swap block lists
 
   uint8_t len = 0;
   if(Alg.next > Alg.prev)
@@ -387,6 +392,10 @@ void Block::reverse(){
     std::swap(Alg.N[i], Alg.P[i]);
 
   Algorithm::print_block_debug(this);
+
+  // Swap Signals
+
+  std::swap(forward_signal, reverse_signal);
 }
 
 void Block::reserve(RailTrain * T){
@@ -473,7 +482,7 @@ void Block::setReversedState(enum Rail_states _state){
 
   uint8_t signalsize = reverse_signal->size();
   for(uint8_t i = 0; i < signalsize; i++){
-    reverse_signal->operator[](i)->set(state);
+    reverse_signal->operator[](i)->set(reverse_state);
   }
 
   statechanged = 1;
@@ -532,12 +541,12 @@ void Block::setVirtualDetection(bool d){
 
 enum Rail_states Block::addSignal(Signal * Sig){
   if(Sig->direction){
-    this->forward_signal->push_back(Sig);
-    return this->state;
+    forward_signal->push_back(Sig);
+    return state;
   }
   else{
-    this->reverse_signal->push_back(Sig);
-    return this->reverse_state;
+    reverse_signal->push_back(Sig);
+    return reverse_state;
   }
 }
 

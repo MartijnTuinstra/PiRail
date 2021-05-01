@@ -843,14 +843,15 @@ bool RailTrain::ContinueCheck(){
 }
 
 uint16_t RailTrain::checkMaxSpeed(){
-  uint16_t ms = MaxSpeed;
+  uint16_t maxspeed = MaxSpeed;
 
   for(auto b: blocks){
-    if(b->BlockMaxSpeed < ms)
-      ms = b->BlockMaxSpeed;
+    uint16_t speed = b->getSpeed();
+    if(speed < maxspeed)
+      maxspeed = speed;
   }
 
-  return ms;
+  return maxspeed;
 }
 
 void RailTrain_ContinueCheck(void * args){

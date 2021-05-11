@@ -36,6 +36,7 @@ class Path {
     void find();
 
     void reserve(RailTrain *);
+    void reserve(RailTrain *, Block *);
     void dereserve(RailTrain *);
     void trainAtEnd(RailTrain *);
 

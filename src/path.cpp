@@ -373,6 +373,30 @@ void Path::reserve(RailTrain * T){
   }
 }
 
+void Path::reserve(RailTrain * T, Block * B){
+  reserved = true;
+  reservedTrains.push_back(T);
+
+  if(B->Alg.next > 0)
+    B = B->Alg.N[0];
+  else
+    B = 0;
+
+  while(B && B->path == this){
+    T->reserveBlock(B);
+
+    if(B->Alg.next > 0)
+      B = B->Alg.N[0];
+    else
+      B = 0;
+  }
+
+  if(Exit->Alg.next){
+    Algorithm::print_block_debug(Exit->Alg.N[0]);
+    Algorithm::rail_state(&Exit->Alg.N[0]->Alg, 0);
+  }
+}
+
 void Path::dereserve(RailTrain * RT){
   reservedTrains.erase(std::remove_if(reservedTrains.begin(),
                                      reservedTrains.end(),

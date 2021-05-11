@@ -288,6 +288,10 @@ void RailTrain::initMoveForward(Block * tB){
     
   }
 
+  // Register and reserve paths
+  if(B->path)
+    B->path->reserve(this, B);
+
   if(virtualLength)
     setVirtualBlocks();
 }

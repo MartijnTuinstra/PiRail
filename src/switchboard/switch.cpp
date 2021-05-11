@@ -516,7 +516,7 @@ struct find findPath(RailTrain * T, PathFinding::Route * r, void * p, struct rai
     Switch * Sw = link.p.Sw;
 
     Block * B = Sw->Detection;
-    if(B && B->reservedBy.size() > 0 && !B->isReservedBy(T)){
+    if(B && ((B->reservedBy.size() > 0 && !B->isReservedBy(T)) || B->blocked)){
       return f;
     }
 
@@ -531,7 +531,7 @@ struct find findPath(RailTrain * T, PathFinding::Route * r, void * p, struct rai
       str = findPath(T, r, Sw, Sw->str, flags);
       div = findPath(T, r, Sw, Sw->div, flags);
 
-      loggerf(INFO, "SwitchFindPath: %02i:%02i str: (%i, %i), div: (%i, %i)", Sw->module, Sw->id, str.possible, str.allreadyCorrect, div.possible, div.allreadyCorrect);
+      // loggerf(INFO, "SwitchFindPath: %02i:%02i str: (%i, %i), div: (%i, %i)", Sw->module, Sw->id, str.possible, str.allreadyCorrect, div.possible, div.allreadyCorrect);
 
       f.possible = (str.possible | div.possible);
 
@@ -563,7 +563,7 @@ struct find findPath(RailTrain * T, PathFinding::Route * r, void * p, struct rai
     Switch * Sw = link.p.Sw;
 
     Block * B = Sw->Detection;
-    if(B && B->reservedBy.size() > 0 && !B->isReservedBy(T))
+    if(B && ((B->reservedBy.size() > 0 && !B->isReservedBy(T)) || B->blocked))
       return f;
 
     // loggerf(INFO, "check s %i (state: %i, str.p: %x, div.p: %x)", Sw->id, Sw->state, (unsigned int)Sw->str.p.p, (unsigned int)Sw->div.p.p);
@@ -576,7 +576,7 @@ struct find findPath(RailTrain * T, PathFinding::Route * r, void * p, struct rai
     MSSwitch * Sw = link.p.MSSw;
 
     Block * B = Sw->Detection;
-    if(B && B->reservedBy.size() > 0 && !B->isReservedBy(T))
+    if(B && ((B->reservedBy.size() > 0 && !B->isReservedBy(T)) || B->blocked))
       return f;
 
     PathFinding::instruction * instr = 0;
@@ -623,7 +623,7 @@ struct find findPath(RailTrain * T, PathFinding::Route * r, void * p, struct rai
     MSSwitch * Sw = link.p.MSSw;
 
     Block * B = Sw->Detection;
-    if(B && B->reservedBy.size() > 0 && !B->isReservedBy(T))
+    if(B && ((B->reservedBy.size() > 0 && !B->isReservedBy(T)) || B->blocked))
       return f;
 
     PathFinding::instruction * instr = 0;
@@ -773,7 +773,7 @@ int setPath(RailTrain * T, PathFinding::Route * r, void * p, struct rail_link li
 
       if(instr->possible[i]){
         if(Sw->state != instr->options[i])
-          Sw->setState(instr->options[i]);
+          Sw->setState(instr->options[i], 0);
 
         switchSet = setPath(T, r, Sw, *links[instr->options[i]], flags);
         break;
@@ -804,11 +804,11 @@ int setPath(RailTrain * T, PathFinding::Route * r, void * p, struct rail_link li
     // loggerf(INFO, "set s %i (state: %i, str.p: %x, div.p: %x)", Sw->id, Sw->state, (unsigned int)Sw->str.p.p, (unsigned int)Sw->div.p.p);
     if(Sw->state == 0){
       if(Sw->str.p.p != p)
-        Sw->setState(1, 1);
+        Sw->setState(1, 0);
     }
     else if(Sw->state == 1){
       if(Sw->div.p.p != p)
-        Sw->setState(0, 1);
+        Sw->setState(0, 0);
     }
 
     return path;
@@ -851,7 +851,7 @@ int setPath(RailTrain * T, PathFinding::Route * r, void * p, struct rail_link li
 
       for(uint8_t i = 0; i < Sw->state_len; i++){
         if(setArray[i]){
-          Sw->setState(i);
+          Sw->setState(i, 0);
           return 1;
         }
       }
@@ -869,7 +869,7 @@ int setPath(RailTrain * T, PathFinding::Route * r, void * p, struct rail_link li
 
       if(instr->possible[i] && ((link.type == RAIL_LINK_MA) ? Sw->approachableA(p, SWITCH_CARE) : Sw->approachableB(p, SWITCH_CARE)) ){
         if(Sw->state != instr->options[i])
-          Sw->setState(instr->options[i]);
+          Sw->setState(instr->options[i], 0);
 
         switchSet = setPath(T, r, Sw, nextLink[instr->options[i]], flags);
         break;

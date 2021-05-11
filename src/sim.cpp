@@ -10,7 +10,7 @@
 // #include "switchboard/blockconnector.h"
 #include "train.h"
 
-// #include "algorithm/core.h"
+#include "algorithm/core.h"
 #include "algorithm/queue.h"
 #include "algorithm/blockconnector.h"
 
@@ -50,6 +50,8 @@ void change_Block(Block * B, enum Rail_states state){
 }
 
 void train_sim_tick(struct train_sim * t){
+
+  const std::lock_guard<std::mutex> lock(Algorithm::processMutex);
 
   if(t->posFront <= 0 && t->blocks < 10){
     // Add block

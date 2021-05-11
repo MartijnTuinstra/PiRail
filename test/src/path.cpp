@@ -456,4 +456,17 @@ TEST_CASE_METHOD(TestsFixture, "Path Reserve", "[PATH][PATH-3]") {
     CHECK(U->B[12]->state == CAUTION);
     CHECK(U->B[12]->reverse_state == CAUTION);
   }
+
+  SECTION("III - Partial Reserve"){   
+    RailTrain * RT = new RailTrain(U->B[5]);
+
+    P->reserve(RT, U->B[5]);
+
+    CHECK(P->reserved);
+
+    for(uint8_t i = 3; i < 6; i++)
+      CHECK(!U->B[i]->reserved);
+    for(uint8_t i = 6; i < 11; i++)
+      CHECK(U->B[i]->reserved);
+  }
 }

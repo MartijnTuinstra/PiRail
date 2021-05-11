@@ -224,6 +224,8 @@ TEST_CASE_METHOD(TestsFixture, "Block Algorithm Search", "[SB][SB-1][SB-1.2]" ) 
     REQUIRE(U->B[15]->Alg.prev == 3);
 
     CHECK(U->B[15]->Alg.P[0] == U->B[14]);
+    CHECK(U->B[15]->Alg.P[1] == U->B[13]);
+    CHECK(U->B[15]->Alg.P[2] == U->B[12]);
 
     CHECK(U->B[15]->Alg.prev1 == 1);
     CHECK(U->B[15]->Alg.prev2 == 2);
@@ -243,14 +245,30 @@ TEST_CASE_METHOD(TestsFixture, "Block Algorithm Search", "[SB][SB-1][SB-1.2]" ) 
 
     CHECK(U->B[15]->Alg.prev1 == 1);
     CHECK(U->B[15]->Alg.prev2 == 2);
+    
+    U->B[14]->reverse();
+    U->B[15]->reverse();
+    U->B[15]->AlgorSearch(0);
+    Algorithm::print_block_debug(U->B[15]);
+
+    REQUIRE(U->B[15]->Alg.prev == 0);
+    REQUIRE(U->B[15]->Alg.next == 3);
+
+    CHECK(U->B[15]->Alg.N[0] == U->B[14]);
+    CHECK(U->B[15]->Alg.N[1] == U->B[13]);
+    CHECK(U->B[15]->Alg.N[2] == U->B[12]);
+
+    CHECK(U->B[15]->Alg.next1 == 1);
+    CHECK(U->B[15]->Alg.next2 == 2);
+    CHECK(U->B[15]->Alg.next3 == 3);
   }
 
-  SECTION("III - Blocks change direction"){
+  SECTION("IV - Blocks change direction"){
     U->B[47]->AlgorSearch(0);
     Algorithm::print_block_debug(U->B[47]);
 
-    REQUIRE(U->B[47]->Alg.next == 0);
-    REQUIRE(U->B[47]->Alg.prev == 4);
+    CHECK(U->B[47]->Alg.next == 0);
+    CHECK(U->B[47]->Alg.prev == 4);
 
     CHECK(U->B[47]->Alg.P[0] == U->B[46]);
     CHECK(U->B[47]->Alg.P[1] == U->B[45]);
@@ -260,6 +278,56 @@ TEST_CASE_METHOD(TestsFixture, "Block Algorithm Search", "[SB][SB-1][SB-1.2]" ) 
     CHECK(U->B[47]->Alg.prev1 == 1);
     CHECK(U->B[47]->Alg.prev2 == 2);
     CHECK(U->B[47]->Alg.prev3 == 3);
+
+    U->B[43]->reverse();
+    U->B[44]->reverse();
+    U->B[47]->AlgorSearch(0);
+    Algorithm::print_block_debug(U->B[47]);
+
+    CHECK(U->B[47]->Alg.next == 0);
+    CHECK(U->B[47]->Alg.prev == 4);
+
+    CHECK(U->B[47]->Alg.P[0] == U->B[46]);
+    CHECK(U->B[47]->Alg.P[1] == U->B[45]);
+    CHECK(U->B[47]->Alg.P[2] == U->B[44]);
+    CHECK(U->B[47]->Alg.P[3] == U->B[43]);
+
+    CHECK(U->B[47]->Alg.prev1 == 1);
+    CHECK(U->B[47]->Alg.prev2 == 2);
+    CHECK(U->B[47]->Alg.prev3 == 3);
+
+    U->B[45]->reverse();
+    U->B[47]->AlgorSearch(0);
+    Algorithm::print_block_debug(U->B[47]);
+
+    CHECK(U->B[47]->Alg.next == 0);
+    CHECK(U->B[47]->Alg.prev == 4);
+
+    CHECK(U->B[47]->Alg.P[0] == U->B[46]);
+    CHECK(U->B[47]->Alg.P[1] == U->B[45]);
+    CHECK(U->B[47]->Alg.P[2] == U->B[44]);
+    CHECK(U->B[47]->Alg.P[3] == U->B[43]);
+
+    CHECK(U->B[47]->Alg.prev1 == 1);
+    CHECK(U->B[47]->Alg.prev2 == 2);
+    CHECK(U->B[47]->Alg.prev3 == 3);
+
+    U->B[46]->reverse();
+    U->B[47]->reverse();
+    U->B[47]->AlgorSearch(0);
+    Algorithm::print_block_debug(U->B[47]);
+
+    CHECK(U->B[47]->Alg.prev == 0);
+    CHECK(U->B[47]->Alg.next == 4);
+
+    CHECK(U->B[47]->Alg.N[0] == U->B[46]);
+    CHECK(U->B[47]->Alg.N[1] == U->B[45]);
+    CHECK(U->B[47]->Alg.N[2] == U->B[44]);
+    CHECK(U->B[47]->Alg.N[3] == U->B[43]);
+
+    CHECK(U->B[47]->Alg.next1 == 1);
+    CHECK(U->B[47]->Alg.next2 == 2);
+    CHECK(U->B[47]->Alg.next3 == 3);
   }
 
   SECTION("V - Blocks and switch"){
@@ -678,7 +746,7 @@ TEST_CASE_METHOD(TestsFixture, "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" )
     CHECK(U->B[41]->Alg.P[4]->state == CAUTION);
   }
 
-  SECTION("XI - Blocks direction"){
+  SECTION("XIa - Blocks direction"){
     Algorithm::process(U->B[54], _FORCE);
     Algorithm::process(U->B[57], _FORCE);
     Algorithm::process(U->B[65], _FORCE);
@@ -723,6 +791,46 @@ TEST_CASE_METHOD(TestsFixture, "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" )
     CHECK(U->B[65]->state == PROCEED); // Wrong direction
     CHECK(U->B[65]->reverse_state == CAUTION);
 
+  }
+
+  SECTION("XIb - Blocks direction"){
+    REQUIRE(U->B[58]->path);
+
+    U->B[58]->path->reverse();
+    U->B[59]->reverse();
+    U->B[65]->reverse();
+    U->B[66]->reverse();
+
+    U->Sw[3]->setState(1);
+    U->Sw[4]->setState(1);
+
+    Algorithm::BlockTick();
+
+    auto T = new RailTrain(U->B[1]);
+
+    REQUIRE(U->B[58]->Alg.N[0] == U->B[59]);
+
+    U->B[66]->path->reserve(T);
+
+    logger.setlevel_stdout(TRACE);
+    U->B[65]->IOchanged = true;
+    U->B[65]->algorchanged = true;
+    Algorithm::process(U->B[65], _FORCE);
+
+    // Block 66 direction is fixed
+    // Therefore should block 65 be danger in reverse
+    // and: - 59 in danger (because of 65 sharing NOSTOP)
+    //      - 58 in caution (because 59 is in DANGER)
+    //      - 57 in caution (because of station with 58 / group of one meter)
+
+    CHECK(U->B[65]->state == PROCEED);
+    CHECK(U->B[65]->reverse_state == DANGER);
+    CHECK(U->B[59]->state == DANGER);
+    CHECK(U->B[59]->reverse_state == PROCEED);
+
+    CHECK(U->B[58]->state == CAUTION);
+    CHECK(U->B[57]->state == CAUTION);
+    CHECK(U->B[56]->state == PROCEED);
   }
 }
 

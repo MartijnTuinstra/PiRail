@@ -1842,6 +1842,15 @@ TEST_CASE_METHOD(TestsFixture, "Train Route Following", "[Alg][Alg-R]"){
 
   pathlist_find();
 
+  for(uint8_t i = 1; i < 5; i++){
+    for(uint8_t j = 0; j < U[i]->block_len; j++){
+      if(!U[i]->B[j])
+        continue;
+
+      AlQueue.put(U[i]->B[j]);
+    }
+  }
+
   Algorithm::BlockTick();
 
   Block *B = U[1]->B[3];
@@ -1903,8 +1912,6 @@ TEST_CASE_METHOD(TestsFixture, "Train Route Following", "[Alg][Alg-R]"){
   }
 
   SECTION("II - A route"){
-    logger.setlevel_stdout(TRACE);
-
     train.T->setRoute(U[1]->B[8]);
 
     while(!U[3]->B[2]->blocked && maxIterations > 0){
@@ -1914,19 +1921,19 @@ TEST_CASE_METHOD(TestsFixture, "Train Route Following", "[Alg][Alg-R]"){
     CHECK(U[3]->B[2]->blocked);
     CHECK(maxIterations > 0);
     
-    while(!U[1]->B[6]->blocked && maxIterations > 0){
-      train_test_tick(&train, &maxIterations);
+    while(!U[1]->B[10]->blocked && maxIterations > 0){
+      train_testSim_tick(&train, &maxIterations);
     }
 
     REQUIRE(maxIterations > 0);
-    maxIterations = 100;
+    maxIterations = 1000;
 
     // Train should stop not stop on a waypoint
     while(!U[1]->B[8]->blocked && maxIterations > 0){
       train_testSim_tick(&train, &maxIterations);
     }
 
-    CHECK(U[1]->B[8]->blocked);
+    REQUIRE(U[1]->B[8]->blocked);
     CHECK(maxIterations > 0);
     CHECK(U[1]->B[8]->train->speed_event_data->target_speed > 0);
   }

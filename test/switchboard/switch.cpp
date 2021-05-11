@@ -97,8 +97,8 @@ TEST_CASE_METHOD(TestsFixture, "Switch Link", "[SB][SB-2][SB-2.1]" ) {
     CHECK(U->Sw[0]->state == 1);
 
     // Algor cleared
-    CHECK(U->B[0]->Alg.N[0] == 0);
-    CHECK(U->B[2]->Alg.P[0] == 0);
+    CHECK(U->B[0]->Alg.N[0] == nullptr);
+    CHECK(U->B[2]->Alg.P[0] == nullptr);
 
     Algorithm::BlockTick();
 
@@ -106,10 +106,17 @@ TEST_CASE_METHOD(TestsFixture, "Switch Link", "[SB][SB-2][SB-2.1]" ) {
     CHECK(U->B[0]->Alg.N[0] == U->B[1]);
     CHECK(U->B[0]->Alg.N[1] == U->B[3]);
 
-    U->Sw[0]->setState(1);
+    U->Sw[0]->setState(0);
 
     // Algor not cleared, no new state
-    CHECK(U->B[0]->Alg.N[0] != 0);
-    CHECK(U->B[3]->Alg.P[0] != 0);
+    CHECK(U->B[0]->Alg.N[0] == nullptr);
+    CHECK(U->B[2]->Alg.P[0] == nullptr);
+    CHECK(U->B[3]->Alg.P[0] == nullptr);
+
+    Algorithm::BlockTick();
+
+    CHECK(U->B[0]->Alg.N[0]);
+    CHECK(U->B[2]->Alg.P[0]);
+    CHECK(U->B[3]->Alg.P[0] == nullptr);
   }
 }

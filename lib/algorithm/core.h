@@ -2,6 +2,7 @@
 #define _INCLUDE_ALGORITHM_CORE_H
 
 #include <pthread.h>
+#include <mutex>
 #include "switchboard/rail.h"
 
 #define _DEBUG 1
@@ -13,6 +14,8 @@
 
 
 namespace Algorithm {
+
+extern std::mutex processMutex;
 
 extern pthread_mutex_t process_mutex;
 

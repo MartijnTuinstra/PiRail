@@ -319,8 +319,8 @@ void Switch::setState(uint8_t _state){
   setState(_state, 1);
 }
 
-void Switch::setState(uint8_t _state, uint8_t lock){
-  loggerf(TRACE, "Switch::setState (%x, %i, %i)", (unsigned int)this, _state, lock);
+void Switch::setState(uint8_t _state, uint8_t _lock){
+  loggerf(WARNING, "Switch::setState (%x, %i, %i)", (unsigned int)this, _state, _lock);
 
   if(Detection && (Detection->state == BLOCKED || Detection->reserved || Detection->switchReserved)){
     loggerf(WARNING, "Failed to setState switch %i to state %i", id, _state);
@@ -332,15 +332,21 @@ void Switch::setState(uint8_t _state, uint8_t lock){
     return;
   }
 
+  std::mutex localMutex;
+  std::mutex * scopeMutex = _lock ? &Algorithm::processMutex : &localMutex;
 
-  Algorithm::Set_Changed(&Detection->Alg);
-  AlQueue.puttemp(&Detection->Alg);
+  { // Mutex Scope
+    const std::lock_guard<std::mutex> lock(*scopeMutex);
 
-  updateState(_state);
+    Algorithm::Set_Changed(&Detection->Alg);
+    AlQueue.puttemp(&Detection->Alg);
 
-  Detection->AlgorSearch(0);
+    updateState(_state);
 
-  Algorithm::Set_Changed(&Detection->Alg);
+    Detection->AlgorSearch(0);
+
+    Algorithm::Set_Changed(&Detection->Alg);
+  } // Mutex Scope
 
   Detection->algorchanged = 0; // Block is allready search should not be researched
   

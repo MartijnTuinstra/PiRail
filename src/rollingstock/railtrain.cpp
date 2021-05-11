@@ -8,6 +8,7 @@
 #include "utils/logger.h"
 #include "scheduler/scheduler.h"
 #include "system.h"
+#include "algorithm/core.h"
 #include "algorithm/queue.h"
 
 #include "websocket/stc.h"
@@ -812,34 +813,75 @@ bool RailTrain::ContinueCheck(){
   if(routeStatus == RAILTRAIN_ROUTE_AT_DESTINATION && stopped)
     return false;
 
+  const std::lock_guard<std::mutex> lock(Algorithm::processMutex);
+
+  // If a block is available
   if(B->Alg.next > 0){
     //if(this->Route && Switch_Check_Path(this->B)){
     //  return true;
     //}
+
+    // If it is blocked by another train dont accelerate
     if(B->Alg.N[0]->blocked && B->Alg.N[0]->train != this){
       loggerf(TRACE, "RailTrain %i: ContinueCheck - false", id);
       return false;
     }
+
+    // If it is not DANGER/BLOCKED then accelerate
     else if(B->Alg.N[0]->state > DANGER){
       loggerf(TRACE, "RailTrain %i: ContinueCheck - true", id);
       return true;
     }
   }
-  struct rail_link * next = B->NextLink(NEXT);
 
-  loggerf(DEBUG, "next type %i", next->type);
+  Block * tB = B;
+  uint8_t i = 0;
 
-  if(next->type != RAIL_LINK_E){
-    if(SwitchSolver::solve(this, B, B, *next, NEXT | SWITCH_CARE)){
-      AlQueue.put(B);
+  while(tB){
 
-      loggerf(TRACE, "RailTrain %i: ContinueCheck - true", id);
-      return true;
+    struct rail_link * next = tB->NextLink(NEXT);
+
+    loggerf(INFO, "next type %i", next->type);
+
+    if(next->type != RAIL_LINK_E && next->type != RAIL_LINK_R){
+      logger.setlevel_stdout(DEBUG);
+      if(SwitchSolver::solve(this, B, tB, *next, NEXT | SWITCH_CARE)){
+        loggerf(WARNING, "ContinueCheck True");
+        logger.setlevel_stdout(INFO);
+        return true;
+      }
+      logger.setlevel_stdout(INFO);
+
+      switch(next->type){
+        case RAIL_LINK_S:
+        case RAIL_LINK_s:
+          if (next->p.Sw->Detection->switchWrongState){
+            loggerf(WARNING, "ContinueCheck False");
+            return false;
+          }
+          break;
+        case RAIL_LINK_MA:
+        case RAIL_LINK_MB:
+          if (next->p.MSSw->Detection->switchWrongState){
+            loggerf(WARNING, "ContinueCheck False");
+            return false;
+          }
+          break;
+        default:
+          break;
+      }
     }
-  }
 
-  loggerf(TRACE, "RailTrain %i: ContinueCheck - false", id);
-  return false;
+    if(tB->type == NOSTOP){
+      loggerf(WARNING, "ContinueCheck False");
+      return false;
+    }
+
+    if(i < B->Alg.next)
+      tB = B->Alg.N[i++];
+    else
+      break;
+  }
 }
 
 uint16_t RailTrain::checkMaxSpeed(){

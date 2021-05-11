@@ -36,6 +36,8 @@
 
 namespace Algorithm {
 
+std::mutex processMutex;
+
 using namespace switchboard;
 
 void process(Block * B, int flags){
@@ -46,10 +48,7 @@ void process(Block * B, int flags){
     return;
   }
 
-  if(flags & _LOCK){
-    loggerf(WARNING, "LOCK");
-    // FIXME lock_Algor_process(); 
-  }
+  const std::lock_guard<std::mutex> lock(processMutex);
 
   // flags |= _DEBUG;
 
@@ -87,11 +86,6 @@ void process(Block * B, int flags){
   train_following(&B->Alg, flags);
   if (B->recalculate){
     loggerf(INFO, "Block Train ReProcess");
-    if(flags & _LOCK){
-      loggerf(WARNING, "UNLOCK");
-      // FIXME unlock_Algor_process(); 
-    }
-    return;
   }
 
   //Set oncomming switch to correct state
@@ -99,9 +93,6 @@ void process(Block * B, int flags){
   if (B->recalculate){
     loggerf(DEBUG, "Block Switch ReProcess");
     B->algorchanged = true;
-    // if(flags & _LOCK)
-      // FIXME unlock_Algor_process(); 
-    return;
   }
   
   // Print all found blocks
@@ -118,11 +109,6 @@ void process(Block * B, int flags){
 
   //Apply block stating
   rail_state(&B->Alg, flags);
-
-  if(flags & _LOCK){
-    loggerf(WARNING, "UNLOCK");
-    // FIXME unlock_Algor_process();
-  }
   loggerf(TRACE, "Done");
 }
 

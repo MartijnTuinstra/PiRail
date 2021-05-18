@@ -20,7 +20,7 @@ SHARED_FILES = circularbuffer
 SHARED_OBJ = $(addprefix $(BIN)/shared/,$(addsuffix .o,$(SHARED_FILES)))
 
 FILES_CONFIG = $(addprefix config/,LayoutStructure RollingStructure ModuleConfig RollingConfig configReader)
-FILES_SWITCHBOARD = $(addprefix switchboard/,blockconnector links rail switch msswitch unit station signals manager)
+FILES_SWITCHBOARD = $(addprefix switchboard/,blockconnector links rail switch switchsolver msswitch unit station signals manager)
 FILES_WEBSOCKET = $(addprefix websocket/,server client stc cts message)
 FILES_ROLLING = $(addprefix rollingstock/,manager train engine car railtrain)
 FILES_UTILS = $(addprefix utils/,logger mem encryption utils)

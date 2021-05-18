@@ -466,8 +466,6 @@ void WS_cts_TrainRoute(struct s_opc_TrainRoute * data, Websocket::Client * clien
 
     T->setRoute(B);
   }
-
-  WS_stc_TrainRouteUpdate(T);
 }
 
 void WS_cts_DCCEngineSpeed(struct s_opc_DCCEngineSpeed * m, Websocket::Client * client){

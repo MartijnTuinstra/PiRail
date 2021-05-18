@@ -153,7 +153,9 @@ class RailTrain {
     void setRoute(Station * dest);
     void clearRoute();
 
-    bool ContinueCheck();
+    bool ContinueCheck(); // Function to check if the train is allowed or able to continue
+    void Continue();      // Function to set switches when granted by ContinueCheck
+
     uint16_t checkMaxSpeed();
 
     inline void setControl(uint8_t control){

@@ -7,6 +7,7 @@
 #include "utils/logger.h"
 #include "IO.h"
 #include "system.h"
+#include "flags.h"
 
 #include "algorithm/core.h"
 #include "algorithm/queue.h"
@@ -141,7 +142,7 @@ void MSSwitch::addSignal(Signal * Sig){
 
 bool MSSwitch::approachableA(void * p, int flags){
   loggerf(TRACE, "MSSwitch::approachableA (%x, %x, %x)", (unsigned int)this, (unsigned int)p, flags);
-  if((flags & SWITCH_CARE) == 0){
+  if((flags & FL_SWITCH_CARE) == 0){
     return 1;
   }
 
@@ -153,7 +154,7 @@ bool MSSwitch::approachableA(void * p, int flags){
 
 bool MSSwitch::approachableB(void * p, int flags){
   loggerf(TRACE, "MSSwitch::approachableB (%x, %x, %x)", (unsigned int)this, (unsigned int)p, flags);
-  if((flags & SWITCH_CARE) == 0){
+  if((flags & FL_SWITCH_CARE) == 0){
     return 1;
   }
 
@@ -258,7 +259,7 @@ uint MSSwitch::NextList_Block(Block * Origin, Block ** blocks, uint8_t block_cou
     // return this->Detection->Next_BlockList(Origin, blocks, block_counter, flags, length);
   }else if(type == RAIL_LINK_MB_inside){
     next = &this->sideB[this->state];
-    flags |= NEXT_FIRST_TIME_SKIP;
+    flags |= FL_NEXT_FIRST_TIME_SKIP;
 
     uint8_t dir = (flags & 1) + (this->Detection->dir << 1);
     flags = (flags & 0xF0) + (dir & 0x0F);
@@ -269,7 +270,7 @@ uint MSSwitch::NextList_Block(Block * Origin, Block ** blocks, uint8_t block_cou
     // return this->Detection->Next_BlockList(Origin, blocks, block_counter, flags, length);
   }else if(type == RAIL_LINK_MA_inside){
     next = &this->sideA[this->state];
-    flags |= NEXT_FIRST_TIME_SKIP;
+    flags |= FL_NEXT_FIRST_TIME_SKIP;
 
     uint8_t dir = (flags & 1) + (this->Detection->dir << 1);
     flags = (flags & 0xF0) + (dir & 0x0F);
@@ -363,6 +364,7 @@ void MSSwitch::setState(uint8_t _state, uint8_t lock){
 }
 
 void MSSwitch::updateState(uint8_t _state){
+  // FIXME unused statement
   if (state_direction[state] != state_direction[state])
     Detection->dir ^= 0b100;
 

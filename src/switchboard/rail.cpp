@@ -138,116 +138,21 @@ struct rail_link * Block::NextLink(int flags){
   return next;
 }
 
-
 Block * Block::Next_Block(int flags, int level){
-  loggerf(TRACE, "Next(%02i:%02i, %2x, %2x)", this->module, this->id, flags, level);
   // Find next (detection) block in direction dir. Could be used recurse for x-levels
-  int dir = flags & 0x0F;
-  // dir: 0 next, 1 prev
+  Block * B[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
-  struct rail_link * next = 0;
+  uint8_t blocks = _NextList(this, (Block **)B, 0, flags, 1);
 
-  uint8_t pdir = (dir >> 1);
-
-  if(level <= 0){
-    return this;
-  }
-  
-  level--;
-
-  // If not Init
-  if(flags & NEXT_FIRST_TIME_SKIP){
-    // If toggle request
-    if((pdir ^ 0b100) == this->dir){
-      dir ^= 0b1;
-    }
-    // prev -> next
-    // reverse(1) -> normal(2)  change direction after next link
-    // normal(2) -> reverse(1)  change direction now
-    else if(pdir == 2 && this->dir == 1){
-      dir ^= 0b1;
-    }
-    else if(pdir == 1 && this->dir == 2){
-      next = this->NextLink(dir & 1);
-
-      dir ^= 0b1;
-    }
-    // prev -> next
-    // reverse(1) -> normal(0)
-    // normal(0) -> reverse(1)
-    else if((pdir == 1 && this->dir == 0) || (pdir == 0 && this->dir == 1)){
-      dir ^= 0b1;
-
-      if(flags & DIRECTION_CARE)
-        return this;
-    }
-  }
-  else{
-    flags |= NEXT_FIRST_TIME_SKIP;
-  }
-
-  if(!next)
-    next = this->NextLink(dir & 1);
-
-  // loggerf(TRACE, "dir: %i:%i-%x %x\t%i", this->module, this->id, dir, this->dir, pdir);
-
-  dir = (dir & 1) + (this->dir << 1);
-
-  flags = (flags & 0xF0) + (dir & 0x0F);
-
-  // loggerf(TRACE, "Next     : dir:%i/%x\t%i:%i => %i:%i:%i\t%i", this->dir, dir, this->module, this->id, next->module, next->id, next->type, level);
-
-  if(!next->p.p){
+  if(!blocks)
     return 0;
-  }
-
-  if(next->type == RAIL_LINK_R){
-    return next->p.B->Next_Block(flags, level);
-  }
-  else if(next->type == RAIL_LINK_S){
-    return next->p.Sw->Next_Block(next->type, flags, level);
-  }
-  else if(next->type == RAIL_LINK_s && next->p.Sw->approachable(this, flags)){
-    return next->p.Sw->Next_Block(next->type, flags, level);
-  }
-  else if(next->type == RAIL_LINK_MA && next->p.MSSw->approachableA(this, flags)){
-    return next->p.MSSw->Next_Block(next->type, flags, level);
-  }
-  else if(next->type == RAIL_LINK_MB && next->p.MSSw->approachableB(this, flags)){
-    return next->p.MSSw->Next_Block(next->type, flags, level);
-  }
-  else if(next->type == RAIL_LINK_MA_inside || next->type == RAIL_LINK_MB_inside){
-    return next->p.MSSw->Next_Block(next->type, flags, level);
-  }
-  else if(next->type == RAIL_LINK_TT){
-    if(next->p.MSSw->approachableA(this, flags)){
-      next->type = RAIL_LINK_MA;
-    }
-    else if(next->p.MSSw->approachableB(this, flags)){
-      next->type = RAIL_LINK_MB;
-    }
-    return next->p.MSSw->Next_Block(next->type, flags, level);
-  }
-    // if(Next_check_Switch(this, *next, flags)){
-      // if(level <= 0 && (next->p.MSSw)->Detection != B){
-      //   // printf("Detection block\n");
-      //   return (next->p.MSSw)->Detection;
-      // }
-      // else{
-        // return Next_MSSwitch_Block(next->p.MSSw, next->type, flags, level);
-      // }
-    // }
-  // }
-  else if(next->type == RAIL_LINK_E && next->module == 0 && next->id == 0){
-    return 0;
-  }
-
-  return 0;
+  else
+    return B[0];
 }
 
 uint8_t Block::_NextList(Block * Origin, Block ** blocks, uint8_t block_counter, int flags, int length){
+  // Find next (detection) blocks in direction dir.
   loggerf(TRACE, "NextList(%02i:%02i, %i, %i)", this->module, this->id, block_counter, length);
-  // Find next (detection) block in direction dir. Could be used recurse for x-levels
   int dir = flags & 0x0F;
   // dir: 0 next, 1 prev
 
@@ -262,31 +167,24 @@ uint8_t Block::_NextList(Block * Origin, Block ** blocks, uint8_t block_counter,
   length -= this->length;
 
   // If not Init
-  if(flags & NEXT_FIRST_TIME_SKIP){
+  if(flags & FL_NEXT_FIRST_TIME_SKIP){
     // If toggle request
-    if((pdir ^ 0b100) == this->dir){
-      dir ^= 0b1;
-    }
-    // prev -> next
-    // reverse(1) -> normal(2)
-    // normal(2) -> reverse(1)
-    else if((pdir == 1 && this->dir == 2) || (pdir == 2 && this->dir == 1)){
-      dir ^= 0b1;
-    }
-    // prev -> next
-    // reverse(1) -> normal(0)
-    // normal(0) -> reverse(1)
-    else if((pdir == 1 && this->dir == 0) || (pdir == 0 && this->dir == 1)){
+    if(!dircmp(pdir, this->dir)){
       dir ^= 0b1;
 
-      if(flags & DIRECTION_CARE)
+      if(!((pdir & 0b010) || (this->dir & 0b010)) && flags & FL_DIRECTION_CARE){
         return block_counter;
+      }
+    }
+    else if((pdir == 2 && this->dir == 1) || (pdir == 6 && this->dir == 5) || 
+            (pdir == 1 && this->dir == 2) || (pdir == 5 && this->dir == 6)){
+      dir ^= 0b1;
     }
     
     blocks[block_counter++] = this;
   }
   else{
-    flags |= NEXT_FIRST_TIME_SKIP;
+    flags |= FL_NEXT_FIRST_TIME_SKIP;
     length += this->length;
   }
 
@@ -550,6 +448,27 @@ enum Rail_states Block::addSignal(Signal * Sig){
   }
 }
 
+// void Block::setSpeed(){
+//   loggerf(WARNING, "Block reset MaxSpeed %3i", BlockMaxSpeed);
+//   MaxSpeed = BlockMaxSpeed;
+
+//   for(uint8_t i = 0; i < switch_len; i++){
+//     uint16_t SwSpeed = Sw[i]->MaxSpeed[Sw[i]->state];
+//     loggerf(WARNING, "  Got switch %2i -> %3i", Sw[i]->id, SwSpeed);
+//     if(SwSpeed && SwSpeed < MaxSpeed)
+//       MaxSpeed = SwSpeed;
+//   }
+
+//   if(MSSw){
+//     uint16_t SwSpeed = MSSw->maxSpeed;
+//     loggerf(WARNING, "  Got msswitch %2i -> %3i", MSSw->id, SwSpeed);
+//     if(SwSpeed && SwSpeed < MaxSpeed)
+//       MaxSpeed = SwSpeed;
+//   }
+
+//   loggerf(WARNING, "Block MaxSpeed: %3i", MaxSpeed);
+// }
+
 uint16_t Block::getSpeed(){
   return getSpeed(0);
 }
@@ -568,11 +487,8 @@ uint16_t Block::getSpeed(uint8_t Dir){
       speed = CAUTION_SPEED;
       break;
     default:
-      speed = BlockMaxSpeed;
+      break;
   }
-
-  if(speed > MaxSpeed)
-    speed = MaxSpeed;
 
   return speed;
 }
@@ -596,16 +512,16 @@ void Block::AlgorSearch(int debug){
 
   loggerf(TRACE, "Search blocks %02i:%02i", module, id);
 
-  next = Next_Block(NEXT | SWITCH_CARE, 1);
-  prev = Next_Block(PREV | SWITCH_CARE, 1);
+  next = Next_Block(NEXT | FL_SWITCH_CARE, 1);
+  prev = Next_Block(PREV | FL_SWITCH_CARE, 1);
 
   if(next){
-    Alg.next = _NextList(this, Alg.N, 0, NEXT | SWITCH_CARE, 600);
+    Alg.next = _NextList(this, Alg.N, 0, NEXT | FL_SWITCH_CARE, 600);
 
     AlgorSetDepths(NEXT);
   }
   if(prev){
-    Alg.prev = _NextList(this, Alg.P, 0, PREV | SWITCH_CARE, 600);
+    Alg.prev = _NextList(this, Alg.P, 0, PREV | FL_SWITCH_CARE, 600);
 
     AlgorSetDepths(PREV);
   }

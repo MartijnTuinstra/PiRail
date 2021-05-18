@@ -1,6 +1,7 @@
 #include <math.h>
 
 #include "switchboard/station.h"
+#include "switchboard/switchsolver.h"
 #include "rollingstock/railtrain.h"
 #include "train.h"
 
@@ -8,6 +9,7 @@
 #include "utils/logger.h"
 #include "scheduler/scheduler.h"
 #include "system.h"
+#include "flags.h"
 #include "algorithm/core.h"
 #include "algorithm/queue.h"
 
@@ -236,7 +238,7 @@ void RailTrain::initMoveForward(Block * tB){
     listBlock = listBlock->Next_Block(dir == 1 ? PREV : NEXT, 1);
   }
 
-  // Fill buffer
+  // Fill lists detectables
   listBlock = B;
   blockLength = length + B->length;
   uint8_t i = 0;
@@ -266,17 +268,11 @@ void RailTrain::initMoveForward(Block * tB){
       DetectableCounter++;
   }
 
+  // Set expectedTrain in front of each detectable.
+  //  and reset at the rear of each detectable.
   for(uint8_t i = 0; i < Detectables; i++){
     auto DB = &DetectedBlocks[i];
     
-    // char debug[1000] = "RailTrain initMoveForward Detectable ";
-    // char * ptr = &debug[strlen(debug)];
-    // ptr += sprintf(ptr, "(%i - %i - %3i > %3icm)\n", i, DB->BlockedBlocks, DB->BlockedLength - DB->B[DB->BlockedBlocks - 1]->length, DB->DetectableLength);
-    // for(uint8_t j = 0; j < DB->BlockedBlocks; j++){
-    //   ptr += sprintf(ptr, " %2i:%2i \n", DB->B[j] ? DB->B[j]->module : -1, DB->B[j] ? DB->B[j]->id : -1);
-    // }
-    // loggerf(INFO, "%s", debug);
-
     if(DB->BlockedBlocks){
       if(DB->BlockedLength - DB->B[DB->BlockedBlocks - 1]->length > DB->DetectableLength)
         DB->B[0]->expectedTrain = 0; // Clear expectedTrain
@@ -285,7 +281,6 @@ void RailTrain::initMoveForward(Block * tB){
       if(tmpBlock) // Set new expectedTrain
         tmpBlock->expectedTrain = this;
     }
-    
   }
 
   // Register and reserve paths
@@ -305,15 +300,12 @@ void RailTrain::moveForwardFree(Block * tB){
   }
 
   for(uint8_t i = 0; i < Detectables; i++){
-    struct RailTrainDetectables * DB = &DetectedBlocks[i];
+    // Find the detectable that has the front block
+    //  then pop it out of the list and reorder
 
-    // char debug[1000] = "RailTrain MoveForward Detectable ";
-    // char * ptr = &debug[strlen(debug)];
-    // ptr += sprintf(ptr, "(%i - %i)\n", i, DB->BlockedBlocks);
-    // for(uint8_t j = 0; j < DB->BlockedBlocks; j++){
-    //   ptr += sprintf(ptr, " %2i:%2i \n", DB->B[j] ? DB->B[j]->module : -1, DB->B[j] ? DB->B[j]->id : -1);
-    // }
-    // loggerf(INFO, "%s", debug);
+    struct RailTrainDetectables * DB = &DetectedBlocks[i];
+    if(!DB->BlockedBlocks)
+      continue;
 
     if(tB != DB->B[0])
       continue;
@@ -340,19 +332,14 @@ void RailTrain::moveForward(Block * tB){
   AlQueue.put(this); // Put in traincontrol queue
 
   for(uint8_t i = 0; i < Detectables; i++){
+    // Find the detectable that has the front block
+    //  then add it to the list
+
     struct RailTrainDetectables * DB = &DetectedBlocks[i];
     if(!DB->BlockedBlocks)
       continue;
 
     Block * _B = DB->B[DB->BlockedBlocks - 1];
-
-    // char debug[1000] = "RailTrain MoveForward Detectable ";
-    // char * ptr = &debug[strlen(debug)];
-    // ptr += sprintf(ptr, "(%i - %i)\n", i, DB->BlockedBlocks);
-    // for(uint8_t j = 0; j < DB->BlockedBlocks; j++){
-    //   ptr += sprintf(ptr, " %2i:%2i \n", DB->B[j] ? DB->B[j]->module : -1, DB->B[j] ? DB->B[j]->id : -1);
-    // }
-    // loggerf(INFO, "%s", debug);
 
     if(_B->Alg.next > 0 && _B->Alg.N[0] == tB){
       Block * nextBlock = _B->Next_Block(NEXT, 2);
@@ -413,6 +400,16 @@ void inline RailTrain::setSpeed(uint16_t _speed){
       loggerf(WARNING, "RT%i unsafe to start moving", id);
       _speed = 0;
     }
+    else{
+      loggerf(WARNING, "RT%i start moving", id);
+      Continue();
+      Block * nextBlock = B->Next_Block(NEXT, 2);
+
+      if(nextBlock){
+        loggerf(WARNING, "RT%i set expectedTrain %2i:%2i", id, nextBlock->module, nextBlock->id);
+        nextBlock->expectedTrain = this;
+      }
+    }
   }
 
   speed = _speed;
@@ -455,7 +452,7 @@ void RailTrain::changeSpeed(struct TrainSpeedEventRequest Request){
     return;
   }
 
-  loggerf(INFO, "RT %i changeSpeed (%3i %3i %i) \t %s", id, Request.targetSpeed, Request.distance, Request.reason, railtrain_speed_t_strings[changing_speed]);
+  loggerf(INFO, "RT %i changeSpeed (=>%3i %3icm %i) \t %s", id, Request.targetSpeed, Request.distance, Request.reason, railtrain_speed_t_strings[changing_speed]);
 
   if(Request.targetSpeed > MaxSpeed)
     Request.targetSpeed = MaxSpeed;
@@ -652,6 +649,8 @@ void RailTrain::setRoute(Block * dest){
     routeStatus = RAILTRAIN_ROUTE_RUNNING;
   else
     routeStatus = RAILTRAIN_ROUTE_DISABLED;
+
+  WS_stc_TrainRouteUpdate(this);
 }
 
 
@@ -662,11 +661,15 @@ void RailTrain::setRoute(Station * dest){
     routeStatus = RAILTRAIN_ROUTE_RUNNING;
   else
     routeStatus = RAILTRAIN_ROUTE_DISABLED;
+  
+  WS_stc_TrainRouteUpdate(this);
 }
 
 void RailTrain::clearRoute(){
   route = 0;
   routeStatus = RAILTRAIN_ROUTE_DISABLED;
+  
+  WS_stc_TrainRouteUpdate(this);
 }
 
 
@@ -838,53 +841,59 @@ bool RailTrain::ContinueCheck(){
     }
   }
 
-  Block * tB = B;
-  uint8_t i = 0;
+  loggerf(WARNING, "NEW RAILTRAIN::CONTINUECHECK");
+  struct SwitchSolver::find f = {0, 0};
+  struct rail_link * next = B->NextLink(NEXT);
+  Block * nextBlock  = B->Next_Block(NEXT, 1);
+  Block * next2Block = B->Next_Block(NEXT, 2);
 
-  while(tB){
-
-    struct rail_link * next = tB->NextLink(NEXT);
-
-    loggerf(INFO, "next type %i", next->type);
-
-    if(next->type != RAIL_LINK_E && next->type != RAIL_LINK_R){
-      logger.setlevel_stdout(DEBUG);
-      if(SwitchSolver::solve(this, B, tB, *next, NEXT | SWITCH_CARE)){
-        loggerf(WARNING, "ContinueCheck True");
-        logger.setlevel_stdout(INFO);
-        return true;
-      }
-      logger.setlevel_stdout(INFO);
-
-      switch(next->type){
-        case RAIL_LINK_S:
-        case RAIL_LINK_s:
-          if (next->p.Sw->Detection->switchWrongState){
-            loggerf(WARNING, "ContinueCheck False");
-            return false;
-          }
-          break;
-        case RAIL_LINK_MA:
-        case RAIL_LINK_MB:
-          if (next->p.MSSw->Detection->switchWrongState){
-            loggerf(WARNING, "ContinueCheck False");
-            return false;
-          }
-          break;
-        default:
-          break;
-      }
-    }
-
-    if(tB->type == NOSTOP){
-      loggerf(WARNING, "ContinueCheck False");
+  if(next->type != RAIL_LINK_E && next->type != RAIL_LINK_R){
+    // Next is a (ms)switch
+    //  solve it
+    f = SwitchSolver::findPath(this, route, B, *next, NEXT | FL_SWITCH_CARE | FL_CONTINUEDANGER);
+    loggerf(INFO, "First %i", f.possible);
+    if(!f.possible || (nextBlock && nextBlock->state <= DANGER))
       return false;
-    }
+  }
 
-    if(i < B->Alg.next)
-      tB = B->Alg.N[i++];
-    else
-      break;
+  if(!B->Alg.next)
+    return f.possible;
+  else if(B->Alg.N[0]->type != NOSTOP)
+    return true;
+
+  next = B->Alg.N[0]->NextLink(NEXT);
+
+  if(next->type != RAIL_LINK_E && next->type != RAIL_LINK_R){
+    // Next is a (ms)switch
+    //  solve it
+    f = SwitchSolver::findPath(this, route, B->Alg.N[0], *next, NEXT | FL_SWITCH_CARE | FL_CONTINUEDANGER);
+    loggerf(INFO, "Second %i", f.possible);
+    return f.possible && (next2Block && next2Block->state > DANGER);
+  }
+}
+
+void RailTrain::Continue(){
+  struct rail_link * next = B->NextLink(NEXT);
+
+  uint8_t nextLen = B->Alg.next;
+  Block * NextBlock = B->Alg.N[0];
+
+  if(next->type != RAIL_LINK_E && next->type != RAIL_LINK_R){
+    // Next is a (ms)switch
+    //  solve it
+    if(SwitchSolver::solve(this, B, B, *next, NEXT | FL_SWITCH_CARE | FL_CONTINUEDANGER))
+      return;
+  }
+
+  if(!nextLen && NextBlock->type == NOSTOP)
+    return;
+
+  next = NextBlock->NextLink(NEXT);
+
+  if(next->type != RAIL_LINK_E && next->type != RAIL_LINK_R){
+    // Next is a (ms)switch
+    //  solve it
+    SwitchSolver::solve(this, B, B->Alg.N[0], *next, NEXT | FL_SWITCH_CARE | FL_CONTINUEDANGER);
   }
 }
 
@@ -915,6 +924,13 @@ void RailTrain_ContinueCheck(void * args){
     loggerf(DEBUG, "RailTrain ContinueCheck %i", i);
     if(T->p.p && T->speed == 0 && T->ContinueCheck()){
       loggerf(ERROR, "RailTrain ContinueCheck accelerating train %i", i);
+      T->Continue();
+      Block * nextBlock = T->B->Next_Block(NEXT, 2);
+
+      if(nextBlock){
+        nextBlock->expectedTrain = T;
+      }
+
       T->changeSpeed(40, 50);
       WS_stc_UpdateTrain(T);
     }
@@ -1039,7 +1055,7 @@ void train_speed_event_init(RailTrain * T){
 void train_speed_event_tick(struct TrainSpeedEventData * data){
   data->stepCounter++;
 
-  loggerf(INFO, "train_speed_event_tick %i a:%f, s:(%i/%i), t:%i", data->T->speed, data->acceleration, data->stepCounter, data->steps, data->stepTime);
+  loggerf(TRACE, "train_speed_event_tick %i a:%f, s:(%i/%i), t:%i", data->T->speed, data->acceleration, data->stepCounter, data->steps, data->stepTime);
 
   RailTrain * T = data->T;
 
@@ -1056,12 +1072,8 @@ void train_speed_event_tick(struct TrainSpeedEventData * data){
     T->changing_speed = RAILTRAIN_SPEED_T_DONE;
     scheduler->disableEvent(T->speed_event);
     
-    if( !(data->reason == RAILTRAIN_SPEED_R_SIGNAL && data->signalBlock->getSpeed() != data->target_speed) ){
-      loggerf(INFO, "train_speed_event_tick done idk why");
+    if( !(data->reason == RAILTRAIN_SPEED_R_SIGNAL && data->signalBlock->getSpeed() != data->target_speed) )
       T->speed = data->target_speed;
-    }
-    else
-      loggerf(INFO, "train_speed_event_tick done free block");
 
     data->signalBlock = 0;
     data->reason = RAILTRAIN_SPEED_R_NONE;

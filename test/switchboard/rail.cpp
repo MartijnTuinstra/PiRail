@@ -132,6 +132,7 @@ TEST_CASE_METHOD(TestsFixture, "Block Algorithm Search", "[SB][SB-1][SB-1.2]" ) 
   //
   // SECTION IV
   //  <-1.43- <-1.44- <-1.45-> -1.46-> -1.47-> 
+  //??-1.43-> -1.44-> <-1.45-> <-1.46- <-1.47-
   //
   // SECTION V
   //                    /Sw1:0
@@ -796,6 +797,7 @@ TEST_CASE_METHOD(TestsFixture, "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" )
   SECTION("XIb - Blocks direction"){
     REQUIRE(U->B[58]->path);
 
+    U->B[56]->reverse(); // not reversed by path
     U->B[58]->path->reverse();
     U->B[59]->reverse();
     U->B[65]->reverse();
@@ -812,7 +814,6 @@ TEST_CASE_METHOD(TestsFixture, "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" )
 
     U->B[66]->path->reserve(T);
 
-    logger.setlevel_stdout(TRACE);
     U->B[65]->IOchanged = true;
     U->B[65]->algorchanged = true;
     Algorithm::process(U->B[65], _FORCE);
@@ -821,7 +822,8 @@ TEST_CASE_METHOD(TestsFixture, "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" )
     // Therefore should block 65 be danger in reverse
     // and: - 59 in danger (because of 65 sharing NOSTOP)
     //      - 58 in caution (because 59 is in DANGER)
-    //      - 57 in caution (because of station with 58 / group of one meter)
+    //      - 57 in proceed
+    //      - 56 in proceed
 
     CHECK(U->B[65]->state == PROCEED);
     CHECK(U->B[65]->reverse_state == DANGER);
@@ -829,7 +831,7 @@ TEST_CASE_METHOD(TestsFixture, "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" )
     CHECK(U->B[59]->reverse_state == PROCEED);
 
     CHECK(U->B[58]->state == CAUTION);
-    CHECK(U->B[57]->state == CAUTION);
+    CHECK(U->B[57]->state == PROCEED);
     CHECK(U->B[56]->state == PROCEED);
   }
 }

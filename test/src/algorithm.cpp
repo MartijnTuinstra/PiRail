@@ -9,6 +9,7 @@
 #include "switchboard/manager.h"
 #include "switchboard/rail.h"
 #include "switchboard/switch.h"
+#include "switchboard/switchsolver.h"
 #include "switchboard/msswitch.h"
 #include "switchboard/station.h"
 #include "switchboard/unit.h"

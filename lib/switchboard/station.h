@@ -30,9 +30,9 @@ class Station {
     char * name;
 
     uint8_t state; // REMOVE
-    bool occupied;
-    bool occupiedChild;
-    bool stoppedTrain;
+    bool occupied;       // There is a train on the station blocks
+    bool occupiedChild;  // There is a child station which is occupied
+    bool stoppedTrain;   // There is a train stopped on the station blocks
 
     RailTrain * train;
 

@@ -36,6 +36,9 @@ int main(int argc, char * argv[]){
     printf("Got argument %s\n", argv[1]);
     uart.setDevice(argv[1]);
   }
+  else{
+    uart.setDevice(0);
+  }
 
   // Stop program when receiving SIGINT
   if (signal(SIGINT, sigint_func) == SIG_ERR){

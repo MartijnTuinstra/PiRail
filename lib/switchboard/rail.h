@@ -9,15 +9,9 @@
 
 #include "switchboard/declares.h"
 #include "path.h"
+#include "flags.h"
 
 #include "config/LayoutStructure.h"
-
-#define NEXT 0
-#define PREV 1
-
-#define SWITCH_CARE          0x80
-#define DIRECTION_CARE       0x40
-#define NEXT_FIRST_TIME_SKIP 0x20
 
 // IO.h
 class IO_Port;
@@ -177,8 +171,9 @@ class Block {
 
     enum Rail_states addSignal(Signal * Sig);
 
-    uint16_t getSpeed();
-    uint16_t getSpeed(uint8_t Dir);
+    void setSpeed();                  // Function to recalculate max speed
+    uint16_t getSpeed();              // Function to get current allowed max speed
+    uint16_t getSpeed(uint8_t Dir);   // Function to get current allowed max speed
 
     void AlgorClear();
     void AlgorSearch(int debug);

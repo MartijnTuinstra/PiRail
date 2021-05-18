@@ -29,6 +29,8 @@ class Route {
     struct instruction ** MSSw_A;
     struct instruction ** MSSw_B;
 
+    Route * onComplete;
+
     Route(struct control, struct step, struct step);
     ~Route();
 

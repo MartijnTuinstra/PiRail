@@ -121,27 +121,6 @@ class Switch {
 
 int throw_multiple_switches(uint8_t len, char * data);
 
-
-namespace SwitchSolver {
-
-int solve(RailTrain *, Block *, Block *, struct rail_link, int);
-
-struct find {
-  int possible;
-  int allreadyCorrect;
-};
-
-struct find findPath(RailTrain *, PathFinding::Route *, void *, struct rail_link, int);
-int setPath(RailTrain *, PathFinding::Route *, void *, struct rail_link, int);
-
-void setWrong(PathFinding::Route *, void *, struct rail_link, int);
-
-void dereservePath(RailTrain * T, PathFinding::Route * r, void * p, struct rail_link link, int flags);
-int reservePath(RailTrain *, PathFinding::Route *, void *, struct rail_link, int);
-
-};
-
-
 // int Switch_Check_Path(void * p, struct rail_link link, int flags);
 // int Switch_Check_Path(PathFinding::Route * r, void * p, struct rail_link link, int flags);
 

@@ -19,12 +19,13 @@
 #include "switchboard/manager.h"
 #include "switchboard/rail.h"
 #include "switchboard/switch.h"
+#include "switchboard/switchsolver.h"
 #include "switchboard/msswitch.h"
 #include "switchboard/signals.h"
 #include "switchboard/station.h"
 #include "switchboard/blockconnector.h"
 #include "train.h"
-#include "train.h"
+#include "flags.h"
 
 #include "uart/uart.h"
 #include "websocket/stc.h"
@@ -297,7 +298,7 @@ void Switch_Checker(Algor_Blocks * ABs, int debug){
   RailTrain * T = B->train;
   Block * tB;
   uint8_t routeStatus = T->routeStatus;
-  int16_t distance = SpeedToDistance_A(T->speed, -10);
+  int16_t distance = SpeedToDistance_A(T->speed, -10) + B->length;
 
   if(routeStatus == RAILTRAIN_ROUTE_AT_DESTINATION)
     return;
@@ -347,7 +348,7 @@ void Switch_Checker(Algor_Blocks * ABs, int debug){
     }
 
     if((i >  0 && link->type == RAIL_LINK_S) || (link->type >= RAIL_LINK_s && link->type <= RAIL_LINK_MB_inside)){
-      if(SwitchSolver::solve(T, B, tB, *link, NEXT | SWITCH_CARE)){ // Returns true if path is changed
+      if(SwitchSolver::solve(T, B, tB, *link, NEXT | FL_SWITCH_CARE)){ // Returns true if path is changed
         return;
       }
     }
@@ -373,7 +374,10 @@ void rail_state(Algor_Blocks * ABs, int debug){
   uint8_t nextGroup[3] = {ABs->next1, ABs->next2, ABs->next3};
   uint8_t j = 0;
   uint8_t Rev_j = 0;
-    
+
+  if(!B->blocked && B->state == BLOCKED)
+    B->setState(DANGER);;
+
   if(B->blocked){
     B->setState(BLOCKED);
     // Set states
@@ -383,29 +387,48 @@ void rail_state(Algor_Blocks * ABs, int debug){
     if(B->type == STATION && B->station->type >= STATION_YARD)
       state[0] = RESTRICTED;
   }
-  else if(B->type == NOSTOP && ((ABs->next && B->Alg.N[0]->type != NOSTOP) || ABs->next == 0) && B->getNextState() == DANGER){
-    loggerf(TRACE, "setState getNextState");
+  else if(B->type == NOSTOP && ABs->prev
+           && ((ABs->next && B->Alg.N[0]->type != NOSTOP) || ABs->next == 0)
+           && (B->getNextState() == DANGER || B->switchWrongState || B->switchWrongFeedback)
+          ){
     B->setState(DANGER);
     state[0] = DANGER;
     state[1] = CAUTION;
 
-    if(BP[0] && BP[0]->type != NOSTOP)
+    uint8_t i = 0;
+    while(BP[i]->type == NOSTOP && i++ < ABs->prev);
+
+    if(i == 0)
       j++;
+    else if(i != ABs->prev){
+      i = prevGroup[0] - i;
+      prevGroup[0] -= i;
+      prevGroup[1] -= i;
+      prevGroup[2] -= i;
+    }
   }
-  else if(ABs->next == 0 || B->switchWrongState || B->switchWrongFeedback){
+  else if(ABs->next == 0){
     B->setState(CAUTION);
 
     state[0] = CAUTION;
   }
 
-  if(B->type == NOSTOP && ABs->prev && B->Alg.P[0]->type != NOSTOP && B->getPrevState() == DANGER){
-    loggerf(TRACE, "setState getPrevState");
+  if(B->type == NOSTOP && ABs->next && ABs->prev && B->Alg.P[0]->type != NOSTOP && B->getPrevState() == DANGER){
     B->setReversedState(DANGER);
     Rev_state[0] = DANGER;
     Rev_state[1] = CAUTION;
 
-    if(BN[0] && BN[0]->type != NOSTOP)
+    uint8_t i = 0;
+    while(BN[i]->type == NOSTOP && i++ < ABs->next);
+
+    if(i == 0)
       Rev_j++;
+    else if(i != ABs->next){
+      i = nextGroup[0] - i;
+      nextGroup[0] -= i;
+      nextGroup[1] -= i;
+      nextGroup[2] -= i;
+    }
   }
   else if(!B->blocked){
     if(!B->reserved && !B->switchReserved)
@@ -440,11 +463,13 @@ void ApplyRailState(uint8_t blocks, Block * B, Block * BL[10], enum Rail_states 
     if(!BL[i])
       break;
 
+    // Set Dir for state/reversed_state
     if(i > 0)
       Dir ^= !dircmp(BL[i-1], BL[i]);
     else
       Dir ^= !dircmp(B, BL[i]);
     
+    // Apply railstate
     if(BL[i]->blocked)
       break;
     else if(j > 2)
@@ -452,28 +477,21 @@ void ApplyRailState(uint8_t blocks, Block * B, Block * BL[10], enum Rail_states 
     else if(i < prevGroup[j])
       BL[i]->setState(state[j], Dir);
   
-    else if(i == prevGroup[j]){ // Ready to go to the next group
-      if(BL[i]->type == STATION && B->type == STATION){
-        if((i == 0 && BL[i]->station == B->station) ||
-          (i > 0  && BL[i]->station == BL[i-1]->station)){
+    else if(i >= prevGroup[j]){ // Ready to go to the next group
+      // Should not go to next group if
+      //  - NOSTOP group
+      //  - Station Group
+      if(BL[i]->type == STATION && B->type == STATION &&
+          ((i  > 0 && BL[i]->station != BL[i-1]->station) || 
+           (i == 0 && BL[i]->station != B->station))
+        ){ // Other station
 
-          prevGroup[j]++; // Extend group, same station
-        }
-        else if(i > 0  && BL[i]->station != BL[i-1]->station){
-          // Other station
-          state[1] = RESTRICTED;
-          state[2] = CAUTION;
-          j++;
-        }
-        else
-          j++;
-      }
-      else if(BL[i]->type == NOSTOP){
-        prevGroup[j]++;
-      }
-      else{
+        state[1] = RESTRICTED;
+        state[2] = CAUTION;
         j++;
       }
+      else if(BL[i]->type != NOSTOP)
+        j++;
 
       if(j > 2)
         BL[i]->setState(PROCEED, Dir);
@@ -576,6 +594,8 @@ void train_following(Algor_Blocks * ABs, int debug){
 
       if(T->stopped)
         T->setBlock(B);
+      // else if(T->directionKnown)
+      //   T->moveForward(B);
       else{
         T->dir = 1;
 
@@ -591,118 +611,6 @@ void train_following(Algor_Blocks * ABs, int debug){
       WS_stc_NewTrain(B->train, B->module, B->id);
     }
   }
-
-  // if(!B->blocked && B->train != 0){
-
-  // }
-  // // else if(B->blocked && B->train == 0){
-  // //   Units[B->module]->changed |= Unit_Blocks_changed;
-  // // }
-  // // else if(B->blocked && B->train != 0 && train_link[B->train] && !train_link[B->train]->Block){
-  // //   // Set block of train
-  // //   train_link[B->train]->Block = B;
-  // //   if(debug) printf("SET_BLOCK");
-  // // }
-
-  // // else if(B->blocked && BNN.blocks > 0 && !BN->blocked && !BNN.blocked){
-
-  // // }
-
-  // // Reverse track if block ahead is allready blocked but current is not blocked
-  // if(B->blocked && next > 0){
-  //   //If only current and next blocks are occupied
-  //   // Reverse immediate block
-  //   if(((prev > 0 && !BP[0]->blocked) || prev == 0) && BN[0]->blocked && BN[0]->train && !B->train){
-  //     //REVERSED
-  //     loggerf(WARNING, "REVERSE BLOCK %02i:%02i", B->module, B->id);
-  //     // Block_Reverse(ABs);
-  //     B->reverse();
-
-  //     if(!dircmp(B, BP[0])){
-  //       // B->IOchanged = 1;
-  //     // }
-  //     // else{
-  //       for(uint8_t i = 0; i < prev; i++){
-  //         if(!BP[i])
-  //           continue;
-  //         if(BP[i]->blocked){
-  //           loggerf(INFO, "%02i:%02i", BP[i]->module, BP[i]->id);
-  //         }
-  //         else
-  //           continue;
-
-
-  //         // Block_Reverse(&BP[i]->Alg);
-  //         BP[i]->reverse();
-  //         // BN[i]->IOchanged;
-  //       }
-  //     }
-
-  //     Block_Reverse_To_Next_Switch(B);
-  //     loggerf(INFO, "Done");
-  //   }
-
-  //   for(uint8_t i = 0; i < 4; i++){
-  //     if(next > i+1 && BN[i]->state == RESERVED_SWITCH){
-  //       loggerf(ERROR, "Blocked and next is switch lane %x", (unsigned int)B);
-  //       Block * tB = BN[i+1];
-
-  //       if(!dircmp(B, BN[i])){
-  //         loggerf(WARNING, "REVERSE NEXT SWITCH BLOCK %02i:%02i", BN[i]->module, BN[i]->id);
-  //         BN[i]->reverse();
-  //       }
-
-  //       if(tB->state != RESERVED_SWITCH){
-  //         if(!dircmp(B, tB)){
-  //           loggerf(WARNING, "REVERSE BLOCK %02i:%02i after switchlane", tB->module, tB->id);
-  //           tB->reverse();
-  //           tB->reserve();
-  //           // Block_Reverse(&tB->Alg);
-  //           // Block_reserve(tB);
-  //           //void Block_Reverse(B);
-  //           Block_Reverse_To_Next_Switch(tB);
-  //         }
-  //         else if(tB->state != RESERVED){
-  //           loggerf(WARNING, "RESERVE BLOCK %02i:%02i until switchlane", tB->module, tB->id);
-  //           //reserve untill next switchlane
-  //           tB->reserve();
-  //           // Block_reserve(tB);
-  //           Reserve_To_Next_Switch(tB);
-  //         }
-  //       }
-  //       else if(!dircmp(B, tB)){
-  //         loggerf(WARNING, "REVERSE SWITCH BLOCK %02i:%02i", tB->module, tB->id);
-  //         tB->reverse();
-  //         // Block_Reverse(&tB->Alg);
-  //         continue;
-  //       }
-
-	 //      break;
-  //     }
-  //   }
-  // }
-
-  // // Split train: If current block is unoccupied and surrounding are occupied and have the same train pointer
-  // else if(next > 0 && prev > 0 && BN[0]->blocked && BP[0]->blocked && !B->blocked && BN[0]->train == BP[0]->train){
-  //   //A train has split
-  //   Block * tN = BN[0];
-  //   Block * tP = BP[0];
-  //   WS_stc_TrainSplit(BN[0]->train, tP->module,tP->id,tN->module,tN->id);
-
-  //   loggerf(INFO, "SPLIT_TRAIN");
-  // }
-
-  // // If only current and prev blocks are occupied
-  // // and if next block is reversed
-  // //int dircmp_algor(Algor_Block * A, Algor_Block * B)
-  // if(prev > 0 && next > 0 && B->blocked && BP[0]->blocked && !BN[0]->blocked && !dircmp(B, BN[0])) {
-  //   //Reversed ahead
-  //   loggerf(INFO, "%x Reversed ahead (%02i:%02i)", (unsigned int)B, BN[0]->module, BN[0]->id);
-  //   // Block_Reverse(&BN[0]->Alg);
-  //   BN[0]->reverse();
-  //   // Block_Reverse_To_Next_Switch(BN.B[0]);
-  // }
-
 }
 
 void train_control(RailTrain * T){

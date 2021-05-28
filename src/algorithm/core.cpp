@@ -295,12 +295,12 @@ void Switch_Checker(Algor_Blocks * ABs, int debug){
   if(!B->blocked || (B->train && (B->train->stopped || B->train->B != B)))
     return;
 
-  RailTrain * T = B->train;
+  Train * T = B->train;
   Block * tB;
   uint8_t routeStatus = T->routeStatus;
   int16_t distance = SpeedToDistance_A(T->speed, -10) + B->length;
 
-  if(routeStatus == RAILTRAIN_ROUTE_AT_DESTINATION)
+  if(routeStatus == TRAIN_ROUTE_AT_DESTINATION)
     return;
 
   for(uint8_t i = 0; i < 5; i++){
@@ -329,7 +329,7 @@ void Switch_Checker(Algor_Blocks * ABs, int debug){
     if(routeStatus && (tB == T->route->destinationBlocks[0] || tB == T->route->destinationBlocks[1])){
       routeStatus++;
 
-      if(routeStatus == RAILTRAIN_ROUTE_AT_DESTINATION){
+      if(routeStatus == TRAIN_ROUTE_AT_DESTINATION){
         loggerf(DEBUG, "routeBreak");
         break;
       }
@@ -560,8 +560,18 @@ void train_following(Algor_Blocks * ABs, int debug){
       B->dereserve(B->reservedBy[0]);
     }
 
-    if(B->expectedTrain){
-      // loggerf(INFO, "Copy expectedTrain");
+    if(B->expectedDetectable){
+      loggerf(INFO, "Copy expectedDetectable");
+
+      B->expectedDetectable->stepForward(B);
+      // B->train = B->expectedTrain;
+      // B->train->moveForward(B);
+
+      // if(next > 0)
+      //   BN[0]->expectedTrain = B->train;
+    }
+    else if(B->expectedTrain){
+      loggerf(WARNING, "Copy expectedTrain");
 
       B->train = B->expectedTrain;
       B->train->moveForward(B);
@@ -573,7 +583,7 @@ void train_following(Algor_Blocks * ABs, int debug){
     else if(prev > 0 && BP[0]->blocked && BP[0]->train){
       loggerf(INFO, "Copy train from previous block");
       // Copy train id from previous block
-      RailTrain * T = BP[0]->train;
+      Train * T = BP[0]->train;
 
       if(T->stopped)
         T->setBlock(B);
@@ -590,7 +600,7 @@ void train_following(Algor_Blocks * ABs, int debug){
     else if(next > 0 && BN[0]->blocked && BN[0]->train){
       loggerf(INFO, "Copy train from next block");
       // Copy train id from next block
-      RailTrain * T = BN[0]->train;
+      Train * T = BN[0]->train;
 
       if(T->stopped)
         T->setBlock(B);
@@ -605,7 +615,7 @@ void train_following(Algor_Blocks * ABs, int debug){
     }
     else if( ((prev > 0 && !BP[0]->blocked) || prev == 0) && ((next > 0 && !BN[0]->blocked) || next == 0) ){
       //NEW TRAIN
-      B->train = new RailTrain(B);
+      B->train = new Train(B);
 
       //Create a message for WebSocket
       WS_stc_NewTrain(B->train, B->module, B->id);
@@ -613,7 +623,7 @@ void train_following(Algor_Blocks * ABs, int debug){
   }
 }
 
-void train_control(RailTrain * T){
+void train_control(Train * T){
   char Debug[100];
   sprintf(Debug, "Algor_train_control RT%2i\n", T->id);
 
@@ -622,6 +632,11 @@ void train_control(RailTrain * T){
 
   if(!T->assigned)
     return;
+
+  if(!B){
+    loggerf(ERROR, "Train %i, %x has no block????", T->id, (unsigned int)T);
+    return;
+  }
 
   if(B->Alg.next == 0){
     T->changeSpeed(0, B->length);
@@ -642,7 +657,7 @@ void train_control(RailTrain * T){
   }
   bool accelerate = true;
   
-  if(T->manual || T->changing_speed == RAILTRAIN_SPEED_T_CHANGING || T->changing_speed == RAILTRAIN_SPEED_T_UPDATE)
+  if(T->manual || T->SpeedState == TRAIN_SPEED_CHANGING || T->SpeedState == TRAIN_SPEED_UPDATE)
     accelerate = false;
 
   // Calculate the distances needed to make a full stop
@@ -670,12 +685,12 @@ void train_control(RailTrain * T){
   uint8_t RouteBrake = 0;
 
 
-  if(T->routeStatus == RAILTRAIN_ROUTE_AT_DESTINATION && 
+  if(T->routeStatus == TRAIN_ROUTE_AT_DESTINATION && 
       T->route->routeType == PATHFINDING_ROUTE_STATION){
     speeds[i].speed = 0;
     speeds[i].BrakingDistance = 0.173625 * (T->speed * T->speed) / 20;
     speeds[i].BrakingOffset = length - speeds[i].BrakingDistance;
-    speeds[i].reason = RAILTRAIN_SPEED_R_ROUTE;
+    speeds[i].reason = TRAIN_SPEED_R_ROUTE;
       
     i++;
 
@@ -695,7 +710,7 @@ void train_control(RailTrain * T){
       speeds[i].speed = 0;
       speeds[i].BrakingDistance = length - N[i]->length;
       speeds[i].BrakingOffset = 0;
-      speeds[i].reason = RAILTRAIN_SPEED_R_SIGNAL;
+      speeds[i].reason = TRAIN_SPEED_R_SIGNAL;
       accelerate = false;
       break;
     }
@@ -706,13 +721,13 @@ void train_control(RailTrain * T){
       speeds[i].BrakingOffset = length - speeds[i].BrakingDistance;
 
       if(N[i]->state < PROCEED)
-        speeds[i].reason = RAILTRAIN_SPEED_R_SIGNAL;
+        speeds[i].reason = TRAIN_SPEED_R_SIGNAL;
       else
-        speeds[i].reason = RAILTRAIN_SPEED_R_MAXSPEED;
+        speeds[i].reason = TRAIN_SPEED_R_MAXSPEED;
     }
 
-    if(T->routeStatus != RAILTRAIN_ROUTE_DISABLED && RouteBrake < 2){
-      if(T->routeStatus == RAILTRAIN_ROUTE_ENTERED_DESTINATION)
+    if(T->routeStatus != TRAIN_ROUTE_DISABLED && RouteBrake < 2){
+      if(T->routeStatus == TRAIN_ROUTE_ENTERED_DESTINATION)
         RouteBrake = 1;
 
       if(T->route->routeType == PATHFINDING_ROUTE_STATION){
@@ -721,7 +736,7 @@ void train_control(RailTrain * T){
             speeds[i+1].speed = 0;
             speeds[i+1].BrakingDistance = 0.173625 * (T->speed * T->speed) / 20;
             speeds[i+1].BrakingOffset = N[i]->length + length - speeds[i+1].BrakingDistance;
-            speeds[i+1].reason = RAILTRAIN_SPEED_R_ROUTE;
+            speeds[i+1].reason = TRAIN_SPEED_R_ROUTE;
             
             addI = 2;
           }
@@ -752,7 +767,7 @@ void train_control(RailTrain * T){
         Request.targetSpeed = speeds[j].speed;
         Request.distance = speeds[j].BrakingDistance + speeds[j].BrakingOffset;
         Request.reason = speeds[j].reason;
-        if(Request.reason == RAILTRAIN_SPEED_R_SIGNAL)
+        if(Request.reason == TRAIN_SPEED_R_SIGNAL)
           Request.ptr = (void *)N[j];
       }
       else if(accelerate){
@@ -766,7 +781,7 @@ void train_control(RailTrain * T){
   if(accelerate){
     Request.targetSpeed = AcceleratedSpeed;
     Request.distance = B->length;
-    Request.reason = RAILTRAIN_SPEED_R_MAXSPEED;
+    Request.reason = TRAIN_SPEED_R_MAXSPEED;
   }
 
   T->changeSpeed(Request);

@@ -10,6 +10,8 @@
 #include "switchboard/manager.h"
 #include "switchboard/unit.h"
 
+#include "rollingstock/manager.h"
+
 #include "scheduler/scheduler.h"
 #include "system.h"
 #include "utils/logger.h"
@@ -224,25 +226,25 @@ void Server::newClientCallback(Client * client){
     loggerf(INFO, "Update clients libs %i", client->fd);
     WS_stc_EnginesLib(client);
     WS_stc_CarsLib(client);
-    WS_stc_TrainsLib(client);
+    WS_stc_TrainSetsLib(client);
     WS_stc_TrainCategories(client);
 
     //train_link, train_link_lenlink_id
     // Send all linked trains
-    for(uint8_t i = 0; i < RSManager->RailTrains.size; i++){
-      RailTrain * T = RSManager->RailTrains[i];
+    for(uint8_t i = 0; i < RSManager->Trains.size; i++){
+      Train * T = RSManager->Trains[i];
       if(!T)
         continue;
 
       struct s_opc_LinkTrain msg;
       msg.follow_id = i;
       if(T->type){
-        loggerf(WARNING, "Sending railtrain T %i\t(%i) %s", i, T->p.T->id, T->p.T->name);
+        loggerf(WARNING, "Sending train T %i\t(%i) %s", i, T->p.T->id, T->p.T->name);
         msg.real_id = T->p.T->id;
         msg.type = 0;
       }
       else{
-        loggerf(WARNING, "Sending railtrain E %i\t(%i) %s", i, T->p.E->id, T->p.E->name);
+        loggerf(WARNING, "Sending train E %i\t(%i) %s", i, T->p.E->id, T->p.E->name);
         msg.real_id = T->p.E->id;
         msg.type = 1;
       }

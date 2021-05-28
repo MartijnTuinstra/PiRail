@@ -17,7 +17,7 @@
 #include "sim.h"
 #include "train.h"
 
-#include "rollingstock/railtrain.h"
+#include "rollingstock/train.h"
 
 void init_test(char (* filenames)[30], int nr_files);
 class TestsFixture {

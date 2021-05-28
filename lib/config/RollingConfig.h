@@ -14,14 +14,14 @@ class RollingConfig {
     char filename[100];
     bool parsed;
 
-    struct configStruct_TrainHeader * header;
+    struct configStruct_RollingStockHeader * header;
 
     struct configStruct_Category * P_Cat;
     struct configStruct_Category * C_Cat;
 
     struct configStruct_Engine * Engines;
     struct configStruct_Car * Cars;
-    struct configStruct_Train * Trains;
+    struct configStruct_TrainSet * TrainSets;
 
     char * buffer;
     uint32_t buffer_len;
@@ -30,7 +30,7 @@ class RollingConfig {
     RollingConfig(char * filename);
     ~RollingConfig();
 
-    void addTrain(Train * T);
+    void addTrainSet(TrainSet * T);
     void addEngine(Engine * E);
     void addCar(Car * C);
 
@@ -46,7 +46,7 @@ class RollingConfig {
 
 void print_Cars(struct configStruct_Car car);
 void print_Engines(struct configStruct_Engine engine);
-void print_Trains(struct configStruct_Train train);
+void print_TrainSets(struct configStruct_TrainSet train);
 void print_Catagories(struct configStruct_Category * config);
 
 #endif

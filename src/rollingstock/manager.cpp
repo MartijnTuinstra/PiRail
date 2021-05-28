@@ -16,8 +16,8 @@ Manager::Manager(){
 }
 
 void Manager::initScheduler(){
-  continue_event = scheduler->addEvent("RailTrain_continue", {2, 0});
-  continue_event->function = &RailTrain_ContinueCheck;
+  continue_event = scheduler->addEvent("Train_continue", {2, 0});
+  continue_event->function = &Train_ContinueCheck;
 }
 
 void Manager::clear(){
@@ -33,8 +33,8 @@ void Manager::clear(){
   _free(CargoCatagories);//.clear();
   CargoCatagories_length = 0;
 
-  RailTrains.clear();
   Trains.clear();
+  TrainSets.clear();
   Cars.clear();
   Engines.clear();
 }
@@ -99,8 +99,8 @@ void Manager::loadFile(char * f){
 
   
   loggerf(INFO, "Initialize Trains");
-  for(int i = 0; i < config.header->Trains; i++){
-    newTrain(new Train(config.Trains[i]));
+  for(int i = 0; i < config.header->TrainSets; i++){
+    newTrainSet(new TrainSet(config.TrainSets[i]));
   }
 
   if(SYS)
@@ -120,14 +120,14 @@ Engine * Manager::newEngine(Engine * E){
   return E;
 }
 
-Train * Manager::newTrain(Train * T){
-  T->id = Trains.push_back(T);
+TrainSet * Manager::newTrainSet(TrainSet * T){
+  T->id = TrainSets.push_back(T);
 
   return T;
 }
 
-int Manager::addRailTrain(RailTrain * T){
-  return RailTrains.push_back(T);
+int Manager::addTrain(Train * T){
+  return Trains.push_back(T);
 }
 
 Engine *  Manager::getEngineDCC(uint16_t i){
@@ -228,15 +228,15 @@ void Manager::removeEngine(Engine * E){
   delete E;
 }
 
-void Manager::removeTrain(Train * T){
+void Manager::removeTrainSet(TrainSet * T){
   // Romove Reference from Trains list
-  Trains.remove(T);
+  TrainSets.remove(T);
 
   delete T;
 }
 
-void Manager::removeRailTrain(RailTrain * T){
-  RailTrains.remove(T);
+void Manager::removeTrain(Train * T){
+  Trains.remove(T);
 
   delete T;
 }
@@ -258,11 +258,11 @@ void Manager::writeFile(){
   config.C_Cat = (struct configStruct_Category *)_calloc(config.header->CargoCatagories, struct configStruct_Category);
   memcpy(config.C_Cat, CargoCatagories, config.header->CargoCatagories * sizeof(struct configStruct_Category));
 
-  for(uint8_t i = 0; i < Trains.size; i++){
-    if(!Trains[i])
+  for(uint8_t i = 0; i < TrainSets.size; i++){
+    if(!TrainSets[i])
       continue;
 
-    config.addTrain(Trains[i]);
+    config.addTrainSet(TrainSets[i]);
   }
   for(uint8_t i = 0; i < Engines.size; i++){
     if(!Engines[i])

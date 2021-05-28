@@ -27,7 +27,8 @@
 #include "switchboard/msswitch.h"
 
 #include "rollingstock/manager.h"
-#include "rollingstock/train.h"
+#include "rollingstock/trainset.h"
+// #include "rollingstock/train.h"
 #include "rollingstock/engine.h"
 #include "rollingstock/car.h"
 #include "train.h"
@@ -307,20 +308,20 @@ void WS_cts_LinkTrain(struct s_opc_LinkTrain * msg, Websocket::Client * client){
   // uint8_t tID = data[1]; //TrainID
   // uint16_t mID = ((data[2] & 0x1F) << 8)+data[3];
   char return_value = 0;
-  if(msg->type == RAILTRAIN_ENGINE_TYPE)
+  if(msg->type == TRAIN_ENGINE_TYPE)
     loggerf(INFO, "Linking train %i with E-%s\n",msg->follow_id, RSManager->Engines[msg->real_id]->name);
   else
-    loggerf(INFO, "Linking train %i with T-%s\n",msg->follow_id, RSManager->Trains[msg->real_id]->name);
+    loggerf(INFO, "Linking train %i with T-%s\n",msg->follow_id, RSManager->TrainSets[msg->real_id]->name);
 
-  if(RSManager->RailTrains[msg->follow_id])
-    return_value = RSManager->RailTrains[msg->follow_id]->link(msg->real_id, msg->type);
+  if(RSManager->Trains[msg->follow_id])
+    return_value = RSManager->Trains[msg->follow_id]->link(msg->real_id, msg->type);
 
   if(return_value == 1){
     WS_stc_LinkTrain(msg);
 
     WS_clear_message((msg->message_id_H << 8) + msg->message_id_L, 1);
 
-    Z21_get_train(RSManager->RailTrains[msg->follow_id]);
+    Z21_get_train(RSManager->Trains[msg->follow_id]);
   }
   else{
     loggerf(WARNING, "Failed link_train()\n");
@@ -330,14 +331,14 @@ void WS_cts_LinkTrain(struct s_opc_LinkTrain * msg, Websocket::Client * client){
 
 void WS_cts_TrainControl(struct s_opc_TrainControl * m, Websocket::Client * client){
 
-  if(!RSManager->RailTrains[m->follow_id]){
-    loggerf(WARNING, "Trying to set speed of undefined RailTrain");
+  if(!RSManager->Trains[m->follow_id]){
+    loggerf(WARNING, "Trying to set speed of undefined Train");
     return;
   }
 
   loggerf(INFO, "WS_cts_TrainControl %i -> %i", m->follow_id, m->control);
 
-  RailTrain * T = RSManager->RailTrains[m->follow_id];
+  Train * T = RSManager->Trains[m->follow_id];
 
   T->setControl(m->control);
 }
@@ -345,14 +346,14 @@ void WS_cts_TrainControl(struct s_opc_TrainControl * m, Websocket::Client * clie
 void WS_cts_SetTrainFunction(struct s_opc_SetTrainFunction * m, Websocket::Client * client){
   loggerf(INFO, "WS_cts_SetTrainFunction");
 
-  RailTrain * T = RSManager->RailTrains[m->id];
+  Train * T = RSManager->Trains[m->id];
 
   if(!T){
-    loggerf(WARNING, "No Railtrain %i", m->id);
+    loggerf(WARNING, "No Train %i", m->id);
     return;
   }
 
-  if(T->type == RAILTRAIN_ENGINE_TYPE){
+  if(T->type == TRAIN_ENGINE_TYPE){
     Engine * E = T->p.E;
 
     if(E->function[m->function].button == TRAIN_FUNCTION_TOGGLE){
@@ -370,10 +371,10 @@ void WS_cts_SetTrainFunction(struct s_opc_SetTrainFunction * m, Websocket::Clien
 void WS_cts_SetTrainSpeed(struct s_opc_SetTrainSpeed * m, Websocket::Client * client){
   // uint16_t id = m.follow_id;
   // uint16_t speed = m.speed;
-  RailTrain * T = RSManager->RailTrains[m->follow_id];
+  Train * T = RSManager->Trains[m->follow_id];
 
   if(!T){
-    loggerf(WARNING, "Trying to set speed of undefined RailTrain");
+    loggerf(WARNING, "Trying to set speed of undefined Train");
     return;
   }
 
@@ -381,7 +382,8 @@ void WS_cts_SetTrainSpeed(struct s_opc_SetTrainSpeed * m, Websocket::Client * cl
 
   loggerf(INFO, "WS_cts_SetTrainSpeed %i -> %i", m->follow_id, speed);
 
-  T->changing_speed = RAILTRAIN_SPEED_T_DONE;
+  if(TRAIN_SPEED_CHANGING || TRAIN_SPEED_UPDATE)
+    T->SpeedState = TRAIN_SPEED_DRIVING;
 
   T->speed = speed;
   T->speed_event_data->target_speed = speed;
@@ -399,13 +401,13 @@ void WS_cts_TrainSubscribe(struct s_opc_SubscribeTrain * m, Websocket::Client * 
   client->subscribedTrains[0] = m->followA;
   client->subscribedTrains[1] = m->followB;
 
-  if(client->subscribedTrains[0] < 0xFF && RSManager->RailTrains[client->subscribedTrains[0]]){
-    WS_stc_UpdateTrain(RSManager->RailTrains[client->subscribedTrains[0]]);
-    WS_stc_TrainRouteUpdate(RSManager->RailTrains[client->subscribedTrains[0]]);
+  if(client->subscribedTrains[0] < 0xFF && RSManager->Trains[client->subscribedTrains[0]]){
+    WS_stc_UpdateTrain(RSManager->Trains[client->subscribedTrains[0]]);
+    WS_stc_TrainRouteUpdate(RSManager->Trains[client->subscribedTrains[0]]);
   }
-  if(client->subscribedTrains[1] < 0xFF && RSManager->RailTrains[client->subscribedTrains[1]]){
-    WS_stc_UpdateTrain(RSManager->RailTrains[client->subscribedTrains[1]]);
-    WS_stc_TrainRouteUpdate(RSManager->RailTrains[client->subscribedTrains[1]]);
+  if(client->subscribedTrains[1] < 0xFF && RSManager->Trains[client->subscribedTrains[1]]){
+    WS_stc_UpdateTrain(RSManager->Trains[client->subscribedTrains[1]]);
+    WS_stc_TrainRouteUpdate(RSManager->Trains[client->subscribedTrains[1]]);
   }
 
   loggerf(INFO, "WS_cts_TrainSubscribe client %i = %i, %i", client->fd, client->subscribedTrains[0], client->subscribedTrains[1]);
@@ -434,7 +436,7 @@ void Web_Train_Split(int i,char tID,char B[]){
 
 void WS_cts_TrainRoute(struct s_opc_TrainRoute * data, Websocket::Client * client){
   loggerf(WARNING, "WS_cts_TrainRoute Train %i to Station %2x-%2x", data->train_id, data->RouteHigh, data->RouteLow);
-  RailTrain * T = RSManager->RailTrains[data->train_id];
+  Train * T = RSManager->Trains[data->train_id];
 
   if(!T)
     return;
@@ -807,7 +809,7 @@ void WS_cts_AddTraintoLib(struct s_opc_AddNewTraintolib * data, Websocket::Clien
   // Copy configuration
   memcpy(comps, &data->strings + data->name_len, data->nr_stock*3);
 
-  new Train(name, data->nr_stock, (struct configStruct_TrainComp *)comps, data->catagory, data->save);
+  new TrainSet(name, data->nr_stock, (struct configStruct_TrainSetLink *)comps, data->catagory, data->save);
 
   // Send succes response
   rdata->data.opc_AddNewTraintolib_res.response = 1;
@@ -815,7 +817,7 @@ void WS_cts_AddTraintoLib(struct s_opc_AddNewTraintolib * data, Websocket::Clien
 
   //Update clients Train Library
   RSManager->writeFile();
-  WS_stc_TrainsLib(0);
+  WS_stc_TrainSetsLib(0);
 }
 
 void WS_cts_Edit_Train(struct s_opc_EditTrainlib * data, Websocket::Client * client){
@@ -826,11 +828,11 @@ void WS_cts_Edit_Train(struct s_opc_EditTrainlib * data, Websocket::Client * cli
 
   uint16_t id = data->id_l + (data->id_h << 8);
 
-  Train * T = RSManager->getTrain(id);
+  TrainSet * T = RSManager->getTrainSet(id);
 
   if(data->remove){
     if(T){
-      RSManager->removeTrain(T);
+      RSManager->removeTrainSet(T);
       rdata->data.opc_AddNewTraintolib_res.response = 1;
     }
     else
@@ -845,10 +847,10 @@ void WS_cts_Edit_Train(struct s_opc_EditTrainlib * data, Websocket::Client * cli
   T->name[data->data.name_len] = 0;
 
   // Copy traincomp
-  T->composition = (struct train_comp *)_realloc(T->composition, data->data.nr_stock, struct train_comp);
+  T->composition = (struct RollingStockLink *)_realloc(T->composition, data->data.nr_stock, struct RollingStockLink);
   T->nr_stock = data->data.nr_stock;
 
-  struct train_comp * cdata = (struct train_comp *)((char *)&data->data.strings + data->data.name_len);
+  struct RollingStockLink * cdata = (struct RollingStockLink *)((char *)&data->data.strings + data->data.name_len);
   for(int c = 0; c<T->nr_stock; c++){
     T->composition[c].type = cdata[c].type;
     T->composition[c].id = cdata[c].id;
@@ -865,7 +867,7 @@ void WS_cts_Edit_Train(struct s_opc_EditTrainlib * data, Websocket::Client * cli
   client->send((char *)rdata, WSopc_AddNewTraintolib_res_len, 0xff);
 
   RSManager->writeFile();
-  WS_stc_TrainsLib(0);
+  WS_stc_TrainSetsLib(0);
 }
 
 void WS_cts_TrackLayoutRawData(struct s_opc_TrackLayoutRawData * data, Websocket::Client * client){

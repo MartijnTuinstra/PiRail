@@ -1,72 +1,230 @@
 #ifndef _INCLUDE_ROLLINGSTOCK_TRAIN_H
 #define _INCLUDE_ROLLINGSTOCK_TRAIN_H
 
-#include <stdint.h>
-#include "utils/mem.h"
-#include "utils/logger.h"
+#include <time.h>
+#include <algorithm>
+#include <vector>
 
-#include "switchboard/declares.h"
 #include "rollingstock/declares.h"
-#include "rollingstock/manager.h"
+#include "rollingstock/engine.h"
+#include "rollingstock/trainset.h"
+#include "rollingstock/traindetection.h"
+#include "pathfinding.h"
 
-#include "utils/dynArray.h"
+#define TRAIN_ENGINE_TYPE 0
+#define TRAIN_TRAIN_TYPE 1
 
-#include "config/RollingStructure.h"
+#define TRAIN_MANUAL 0
+#define TRAIN_SEMI_AUTO 1
+#define TRAIN_FULL_AUTO 2
 
+#define TRAIN_ROUTE_DISABLED 0
+#define TRAIN_ROUTE_RUNNING 1
+#define TRAIN_ROUTE_ENTERED_DESTINATION 2
+#define TRAIN_ROUTE_AT_DESTINATION 3
 
-struct __attribute__((__packed__)) train_comp {
-  uint8_t type; //engine or car
-  uint16_t id; //number in list
-  void * p;  //pointer to types struct
+// #define TRAIN_SPEED_T_INIT 0
+// #define TRAIN_SPEED_T_CHANGING 1
+// #define TRAIN_SPEED_T_UPDATE 2
+// #define TRAIN_SPEED_T_DONE 3
+// #define TRAIN_SPEED_T_FAIL 4
+
+#define TRAIN_SPEED_R_NONE     0
+#define TRAIN_SPEED_R_SIGNAL   1
+#define TRAIN_SPEED_R_MAXSPEED 2
+#define TRAIN_SPEED_R_ROUTE    3
+
+#define TRAIN_FORWARD 0
+#define TRAIN_REVERSE 1
+
+struct train_speed_timer {
+  Train * T;
+  uint16_t target_speed;
+  uint16_t length;
 };
 
-struct train_composition {
-  char * name;
-
-  char nr_stock;
-  struct train_comp * composition;
+struct TrainSpeedEventRequest {
+  uint16_t targetSpeed;
+  uint16_t distance;
+  uint8_t reason;
+  void * ptr;
 };
 
+struct TrainSpeedEventData {
+  Train * T;
+
+  uint8_t reason;     // TRAIN_SPEED_R_(NONE / SIGNAL / MAXSPEED / ROUTE)
+  Block * signalBlock;       //  If reason is Signal, the block that has a different state
+  
+  uint16_t target_speed = 0;     // Speed that should be reached at target_distance
+  uint16_t target_distance = 0;
+
+  uint16_t startSpeed;       // The speed the train was going before the SpeedEvent
+  float displacement;        // The displacement the train traveled from the start of the SpeedEvent
+  float startDisplacement;   // The displacement the train traveled before the SpeedEvent
+
+  float acceleration;
+
+  float time;
+  uint16_t steps;
+  uint16_t stepCounter;
+  uint32_t stepTime;
+
+  struct timespec updateTime;
+  struct timespec starttime;
+};
+
+extern char TrainStatesStrings[40][20];
+
+// Train States
+enum _TrainSpeedStates {
+    TRAIN_SPEED_IDLE,                // Parked
+    TRAIN_SPEED_RESUMING,            // Stopped but ready to roll
+    TRAIN_SPEED_STOPPING,            // Stopped but ready to park
+    TRAIN_SPEED_STOPPING_REVERSE,    // Stopped but ready to reverse
+
+    // Stopped train
+    TRAIN_SPEED_STOPPING_WAIT,       // Stopped but ready to wait
+    TRAIN_SPEED_WAITING,             // Train waiting
+
+    TRAIN_SPEED_WAITING_DESTINATION, // Train waiting at destination
+
+    // Moving train
+    TRAIN_SPEED_DRIVING,             
+    TRAIN_SPEED_CHANGING,            
+    TRAIN_SPEED_UPDATE,              
+
+    // Auxiliary states
+    TRAIN_SPEED_INITIALIZING        
+};
 
 class Train {
+  // private:
   public:
-    uint16_t id;
-    char * name;
+    union {
+      Engine   * E;
+      TrainSet * T;
+      void * p;
+    } p;
+    char type = 0;
 
-    dynArray<Engine *> * engines;
+  // public:
+    Block * B; // FrontBlock
+    std::vector<Block *> blocks;         // All blocks that are blocked by the train (detection and virtual)
+    std::vector<Block *> reservedBlocks; // All blocks with switches that are reserved by the train.
 
-    uint8_t nr_stock;
-    struct train_comp * composition; //One block memory for all nr_stocks
+    uint8_t id = 0;
 
-    uint16_t length; //in mm
+    uint16_t speed = 0;        // Real speed
+    uint16_t MaxSpeed = 0;     // Real max speed
 
-    uint16_t max_speed;
-    uint16_t cur_speed;
+    // Event Scheduler for state changes and accelerate/decelerate
+    struct SchedulerEvent * speed_event = 0;
 
-    uint8_t type;
+    // Variables for changing speed along one block
+    struct TrainSpeedEventData * speed_event_data = 0;
+    enum _TrainSpeedStates SpeedState = TRAIN_SPEED_INITIALIZING;
 
-    uint8_t in_use:1;
-    uint8_t control:2;
-    uint8_t dir:1;
-    uint8_t halt:2;
-    uint8_t save:1;
+    bool manual = 1;   // TRAIN_MANUAL
+    bool fullAuto = 0; // TRAIN_FULL_AUTO
+    bool stopped = 1;         // 
+    bool dir = 0;             // TRAIN_FORWARD / TRAIN_REVERSE
+    bool directionKnown = 0;  //  block direction is matched to the Z21 direction
+    bool reverseDirection = 0;  // Train is reversed with respect to the front block
+    uint8_t routeStatus = TRAIN_ROUTE_DISABLED;         // TRAIN_ROUTE - DISABLED / RUNNING / ENTERED_DESTINATION / AT_DESTINATION
 
-    uint8_t detectables:7;
-    uint8_t virtualDetection:1;
+    PathFinding::Route * route = 0;
 
-    Train(struct configStruct_Train);
-    Train(char *);
-    Train(char * name, int nr_stock, struct configStruct_TrainComp * comps, uint8_t catagory, uint8_t save);
+    // Only the engine is detectable, cars added virtually
+    bool virtualLength = 0;
+    uint16_t length = 0;
+
+    bool assigned = 0;
+
+    uint8_t category = 0;
+
+    std::vector<TrainDetectable *> Detectables;
+    // uint8_t Detectables;
+    // struct TrainDetectables * DetectedBlocks;
+
+    // struct pathinstruction * instructions;
+
+    Train(Block * B);
     ~Train();
-    
-    void setName(char *);
-    void setComposition(int, struct configStruct_TrainComp *);
 
-    void setSpeed(uint16_t speed);
-    void calcSpeed();
+    void setBlock(Block *);
+    void releaseBlock(Block *);
 
-    bool enginesUsed();
-    void setEnginesUsed(bool, RailTrain *);
+    void reserveBlock(Block *);
+    void dereserveBlock(Block *);
+    void dereserveAll();
+
+    void initDetectables();
+
+    void initVirtualBlocks();
+    void setVirtualBlocks();
+
+    void initMoveForward(Block *);
+    void moveForwardFree(Block * tB);
+    void moveForward(Block *);
+    void moveFrontForward(Block *);
+
+    // train/speed.cpp ----
+    public:
+    void _setSpeed(uint16_t _speed);
+    void setSpeed(uint16_t _speed);
+
+    void changeSpeed(uint16_t, uint16_t);             // Change speed gradually
+    void changeSpeed(struct TrainSpeedEventRequest);  // Change speed gradually
+    private:
+    void setStopped(bool);
+    void setStationStopped(bool);
+    void applySpeed(uint16_t);
+    // ---------------------
+    public:
+
+    void reverse();    // Reverse all
+    void reverseFromPath(Path * P);
+    void reverseBlocks();
+    void Z21_reverse(); // Reverse simple
+
+    int link(int tid, char type);
+    int link(int tid, char type, uint8_t, Train **);
+    void unlink();
+
+    // train/route.cpp ----
+    void setRoute(Block * dest);
+    void setRoute(Station * dest);
+    void clearRoute();
+    // ---------------------
+
+    bool ContinueCheck(); // Function to check if the train is allowed or able to continue
+    void Continue();      // Function to set switches when granted by ContinueCheck
+
+    uint16_t checkMaxSpeed();
+
+    inline void setControl(uint8_t control){
+      if(control == TRAIN_MANUAL){
+        manual = true;
+        fullAuto = false;
+      }
+      else if(control == TRAIN_SEMI_AUTO){
+        manual = false;
+        fullAuto = false;
+      }
+      else if(control == TRAIN_FULL_AUTO){
+        manual = false;
+        fullAuto = true;
+      }
+    }
+
 };
+
+void Train_ContinueCheck(void * args);
+
+void train_speed_event_create(Train *, struct TrainSpeedEventRequest);
+void train_speed_event_calc(struct TrainSpeedEventData * data);
+void train_speed_event_init(Train * T);
+void train_speed_event_tick(struct TrainSpeedEventData * data);
 
 #endif

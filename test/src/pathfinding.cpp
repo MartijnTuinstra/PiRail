@@ -14,7 +14,7 @@
 #include "switchboard/unit.h"
 #include "switchboard/blockconnector.h"
 
-#include "rollingstock/railtrain.h"
+#include "rollingstock/train.h"
 
 #include "train.h"
 #include "pathfinding.h"

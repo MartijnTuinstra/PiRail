@@ -11,6 +11,9 @@
 #include "utils/mem.h"
 #include "system.h"
 
+
+#include <openssl/sha.h>
+
 void print_hex(char * data, int size);
 
 namespace Websocket {

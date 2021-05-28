@@ -24,8 +24,8 @@ class Path {
     Block * end;
     bool end_direction;
 
-    std::vector<RailTrain *> trains;
-    std::vector<RailTrain *> reservedTrains;
+    std::vector<Train *> trains;
+    std::vector<Train *> reservedTrains;
 
     Path(Block * B);
     ~Path();
@@ -35,16 +35,16 @@ class Path {
     void join(Path * P);
     void find();
 
-    void reserve(RailTrain *);
-    void reserve(RailTrain *, Block *);
-    void dereserve(RailTrain *);
-    void trainAtEnd(RailTrain *);
+    void reserve(Train *);
+    void reserve(Train *, Block *);
+    void dereserve(Train *);
+    void trainAtEnd(Train *);
 
-    void reg(RailTrain *);    // When the train enters the path
-    void unreg(RailTrain *);  // When the train leaves the path
+    void reg(Train *);    // When the train enters the path
+    void unreg(Train *);  // When the train leaves the path
 
     void reverse();
-    void reverse(RailTrain *);
+    void reverse(Train *);
     bool reversable();
 
     void sprint(char * string);

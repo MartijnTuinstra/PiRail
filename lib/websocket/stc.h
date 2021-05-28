@@ -6,7 +6,10 @@
 #include <stdint.h>
 #include "websocket/server.h"
 #include "websocket/client.h"
-#include "train.h"
+
+class Train;
+class Car;
+class Engine;
 
 struct WS_Message {
   uint16_t type;
@@ -31,17 +34,17 @@ struct s_opc_LinkTrain;
 
 void WS_stc_LinkTrain(struct s_opc_LinkTrain * msg);
 // void WS_TrainData(char data[14]);
-void WS_stc_UpdateTrain(RailTrain * T);
-void WS_stc_UpdateTrain(RailTrain * T, Websocket::Client * client); // send to all except client
-void WS_stc_TrainRouteUpdate(RailTrain * T);
+void WS_stc_UpdateTrain(Train * T);
+void WS_stc_UpdateTrain(Train * T, Websocket::Client * client); // send to all except client
+void WS_stc_TrainRouteUpdate(Train * T);
 void WS_stc_DCCEngineUpdate(Engine * E);
 void WS_stc_EnginesLib(Websocket::Client * client);
 void WS_stc_CarsLib(Websocket::Client * client);
-void WS_stc_TrainsLib(Websocket::Client * client);
+void WS_stc_TrainSetsLib(Websocket::Client * client);
 void WS_stc_TrainCategories(Websocket::Client * client);
 
-void WS_stc_NewTrain(RailTrain * T,char M,char B);
-void WS_stc_TrainSplit(RailTrain * T, char M1,char B1,char M2,char B2);
+void WS_stc_NewTrain(Train * T,char M,char B);
+void WS_stc_TrainSplit(Train * T, char M1,char B1,char M2,char B2);
 
 //Track Messages
 void WS_stc_trackUpdate(Websocket::Client * client);

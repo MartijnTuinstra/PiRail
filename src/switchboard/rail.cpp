@@ -5,7 +5,7 @@
 #include "switchboard/msswitch.h"
 #include "switchboard/signals.h"
 
-#include "rollingstock/railtrain.h"
+#include "rollingstock/train.h"
 
 #include "config/LayoutStructure.h"
 
@@ -142,15 +142,21 @@ Block * Block::Next_Block(int flags, int level){
   // Find next (detection) block in direction dir. Could be used recurse for x-levels
   Block * B[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
-  uint8_t blocks = _NextList(this, (Block **)B, 0, flags, 1);
+  uint8_t currentLevel, blocks;
+  do{
+    currentLevel = level >= 10 ? 10 : level;
+    blocks = _NextList(this, (Block **)B, 0, flags | FL_BLOCKS_COUNT, currentLevel);
+    level -= 10;
+  }
+  while(level > 0);
 
   if(!blocks)
     return 0;
   else
-    return B[0];
+    return B[currentLevel-1];
 }
 
-uint8_t Block::_NextList(Block * Origin, Block ** blocks, uint8_t block_counter, int flags, int length){
+uint8_t Block::_NextList(Block * Origin, Block ** blocks, uint8_t block_counter, uint32_t flags, int length){
   // Find next (detection) blocks in direction dir.
   loggerf(TRACE, "NextList(%02i:%02i, %i, %i)", this->module, this->id, block_counter, length);
   int dir = flags & 0x0F;
@@ -164,7 +170,10 @@ uint8_t Block::_NextList(Block * Origin, Block ** blocks, uint8_t block_counter,
     return block_counter;
   }
 
-  length -= this->length;
+  if(flags & FL_BLOCKS_COUNT)
+    length--;
+  else
+    length -= this->length;
 
   // If not Init
   if(flags & FL_NEXT_FIRST_TIME_SKIP){
@@ -296,7 +305,7 @@ void Block::reverse(){
   std::swap(forward_signal, reverse_signal);
 }
 
-void Block::reserve(RailTrain * T){
+void Block::reserve(Train * T){
   loggerf(INFO, "Reserve Block %2i:%2i for train %i (%i, %i)", module, id, T->id, switchReserved, reserved);
   if(type != NOSTOP)
     reserved = true;
@@ -315,7 +324,7 @@ void Block::reserve(RailTrain * T){
   reservedBy.push_back(T);
 }
 
-void Block::dereserve(RailTrain * T){
+void Block::dereserve(Train * T){
 
   reservedBy.erase(std::remove_if(reservedBy.begin(),
                                   reservedBy.end(),
@@ -334,7 +343,7 @@ void Block::dereserve(RailTrain * T){
   }
 }
 
-bool Block::isReservedBy(RailTrain * T){
+bool Block::isReservedBy(Train * T){
   for(auto t: reservedBy){
     if(t == T)
       return true;
@@ -414,8 +423,8 @@ enum Rail_states Block::getPrevState(){
 }
 
 void Block::setDetection(bool d){
-  if(virtualBlocked && d && !detectionBlocked && train){
-    train->moveForward(this);
+  if(virtualBlocked && d && !detectionBlocked && expectedDetectable && train){
+    expectedDetectable->stepForward(this);
   }
 
   bool prevBlocked = detectionBlocked;
@@ -505,26 +514,21 @@ void Block::AlgorClear(){
 
 void Block::AlgorSearch(int debug){
   loggerf(TRACE, "Blocks::AlgorSearch - %02i:%02i", module, id);
-  Block * next = 0;
-  Block * prev = 0;
+  // Block * next = 0;
+  // Block * prev = 0;
 
   AlgorClear();
 
   loggerf(TRACE, "Search blocks %02i:%02i", module, id);
 
-  next = Next_Block(NEXT | FL_SWITCH_CARE, 1);
-  prev = Next_Block(PREV | FL_SWITCH_CARE, 1);
+  // next = Next_Block(NEXT | FL_SWITCH_CARE, 1);
+  // prev = Next_Block(PREV | FL_SWITCH_CARE, 1);
 
-  if(next){
-    Alg.next = _NextList(this, Alg.N, 0, NEXT | FL_SWITCH_CARE, 600);
+  Alg.next = _NextList(this, Alg.N, 0, NEXT | FL_SWITCH_CARE, 600);
+  AlgorSetDepths(NEXT);
 
-    AlgorSetDepths(NEXT);
-  }
-  if(prev){
-    Alg.prev = _NextList(this, Alg.P, 0, PREV | FL_SWITCH_CARE, 600);
-
-    AlgorSetDepths(PREV);
-  }
+  Alg.prev = _NextList(this, Alg.P, 0, PREV | FL_SWITCH_CARE, 600);
+  AlgorSetDepths(PREV);
 }
 
 void Block::AlgorSetDepths(bool Side){
@@ -612,8 +616,8 @@ void Block::AlgorSearchMSSwitch(int debug){
     return;
   }
 
-  next = this->MSSw->Next_Block(RAIL_LINK_TT, NEXT | SWITCH_CARE, 1);
-  prev = this->MSSw->Next_Block(RAIL_LINK_TT, PREV | SWITCH_CARE, 1);
+  next = this->MSSw->Next_Block(RAIL_LINK_TT, NEXT | FL_SWITCH_CARE, 1);
+  prev = this->MSSw->Next_Block(RAIL_LINK_TT, PREV | FL_SWITCH_CARE, 1);
 
   if(next)
     loggerf(WARNING, "%02i:%02i", next->module, next->id);
@@ -630,7 +634,7 @@ void Block::AlgorSearchMSSwitch(int debug){
         tmpB = next;
       }
       else{
-        tmpB = this->MSSw->Next_Block(RAIL_LINK_TT, NEXT | SWITCH_CARE, level);
+        tmpB = this->MSSw->Next_Block(RAIL_LINK_TT, NEXT | FL_SWITCH_CARE, level);
       }
 
       if(!tmpB){
@@ -659,7 +663,7 @@ void Block::AlgorSearchMSSwitch(int debug){
         tmpB = prev;
       }
       else{
-        tmpB = this->MSSw->Next_Block(RAIL_LINK_TT, PREV | SWITCH_CARE, level);
+        tmpB = this->MSSw->Next_Block(RAIL_LINK_TT, PREV | FL_SWITCH_CARE, level);
       }
 
       if(!tmpB){

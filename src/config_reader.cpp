@@ -1423,7 +1423,7 @@ void modify_Engine(struct RollingConfig * config, char ** cmds, uint8_t cmd_len)
   //   //   &tmp.IO_Out.Node, &tmp.IO_Out.Port);
 }
 
-void modify_Train(struct RollingConfig * config, char cmd){
+void modify_TrainSet(struct RollingConfig * config, char cmd){
   int id;
   char _cmd[20];
   int tmp, tmp1;//, tmp2;
@@ -1436,25 +1436,25 @@ void modify_Train(struct RollingConfig * config, char cmd){
     printf("Editing Train %i\n", id);
   }
   else if(cmd == 'a'){
-    printf("Train ID: (%i)\n", config->header->Trains);
+    printf("Train ID: (%i)\n", config->header->TrainSets);
     fgets(_cmd, 20, stdin); // Clear stdin
 
-    if(config->header->Trains == 0){
+    if(config->header->TrainSets == 0){
       printf("Calloc");
-      config->Trains = (struct configStruct_Train *)_calloc(1, struct configStruct_Train);
+      config->TrainSets = (struct configStruct_TrainSet *)_calloc(1, struct configStruct_TrainSet);
     }
     else{
       printf("Realloc");
-      config->Trains = (struct configStruct_Train *)_realloc(config->Trains, config->header->Trains+1, struct configStruct_Train);
+      config->TrainSets = (struct configStruct_TrainSet *)_realloc(config->TrainSets, config->header->TrainSets+1, struct configStruct_TrainSet);
     }
-    memset(&config->Trains[config->header->Trains], 0, sizeof(struct configStruct_Train));
-    id = config->header->Trains++;
+    memset(&config->TrainSets[config->header->TrainSets], 0, sizeof(struct configStruct_TrainSet));
+    id = config->header->TrainSets++;
 
     //Set child pointers
-    config->Trains[id].name_len = 1;
-    config->Trains[id].name = (char *)_calloc(1, char);
-    config->Trains[id].nr_stock = 1;
-    config->Trains[id].composition = (struct configStruct_TrainComp *)_calloc(1, struct configStruct_TrainComp);
+    config->TrainSets[id].name_len = 1;
+    config->TrainSets[id].name = (char *)_calloc(1, char);
+    config->TrainSets[id].nr_stock = 1;
+    config->TrainSets[id].composition = (struct configStruct_TrainSetLink *)_calloc(1, struct configStruct_TrainSetLink);
   }
   else if(cmd == 'r'){
     printf("Remove Train ID: ");
@@ -1463,11 +1463,11 @@ void modify_Train(struct RollingConfig * config, char cmd){
     if(sscanf(_cmd, "%i", &id) < 1)
       return;
 
-    if(id == (config->header->Trains - 1) && id >= 0){
-      _free(config->Trains[config->header->Trains - 1].name);
+    if(id == (config->header->TrainSets - 1) && id >= 0){
+      _free(config->TrainSets[config->header->TrainSets - 1].name);
 
-      memset(&config->Engines[config->header->Trains - 1], 0, sizeof(struct configStruct_Train));
-      config->Trains = (struct configStruct_Train *)_realloc(config->Trains, --config->header->Trains, struct configStruct_Train);
+      memset(&config->Engines[config->header->TrainSets - 1], 0, sizeof(struct configStruct_TrainSet));
+      config->TrainSets = (struct configStruct_TrainSet *)_realloc(config->TrainSets, --config->header->TrainSets, struct configStruct_TrainSet);
     }
     else{
       printf("Only last engine can be removed\n");
@@ -1476,34 +1476,34 @@ void modify_Train(struct RollingConfig * config, char cmd){
 
 
   if(cmd == 'e' || cmd == 'a'){
-    printf("Nr stock (%i)         | ", config->Trains[id].nr_stock);
+    printf("Nr stock (%i)         | ", config->TrainSets[id].nr_stock);
     fgets(_cmd, 20, stdin);
     if(sscanf(_cmd, "%i", &tmp) > 0){
-      config->Trains[id].nr_stock = tmp;
-      config->Trains[id].composition = (struct configStruct_TrainComp *)_realloc(config->Trains[id].composition, tmp, struct configStruct_TrainComp);
+      config->TrainSets[id].nr_stock = tmp;
+      config->TrainSets[id].composition = (struct configStruct_TrainSetLink *)_realloc(config->TrainSets[id].composition, tmp, struct configStruct_TrainSetLink);
     }
 
-    printf("Name      (%s) | ", config->Trains[id].name);
+    printf("Name      (%s) | ", config->TrainSets[id].name);
     fgets(_cmd, 20, stdin);
     if(sscanf(_cmd, "%s", _cmd) > 0){
       tmp = strlen(_cmd);
-      config->Trains[id].name = (char *)_realloc(config->Trains[id].name, tmp, char);
-      memcpy(config->Trains[id].name, _cmd, tmp);
-      config->Trains[id].name[tmp] = 0;
-      config->Trains[id].name_len = tmp;
+      config->TrainSets[id].name = (char *)_realloc(config->TrainSets[id].name, tmp, char);
+      memcpy(config->TrainSets[id].name, _cmd, tmp);
+      config->TrainSets[id].name[tmp] = 0;
+      config->TrainSets[id].name_len = tmp;
     }
 
-    printf("Catagory  (%i) | ", config->Trains[id].category);
+    printf("Catagory  (%i) | ", config->TrainSets[id].category);
     fgets(_cmd, 20, stdin);
     if(sscanf(_cmd, "%i", &tmp) > 0)
-      config->Trains[id].category = tmp;
+      config->TrainSets[id].category = tmp;
 
-    for(int i = 0; i < config->Trains[id].nr_stock; i++){
-      printf(" - Step %i   (%02i, %04i) | ", i, config->Trains[id].composition[i].type, config->Trains[id].composition[i].id);
+    for(int i = 0; i < config->TrainSets[id].nr_stock; i++){
+      printf(" - Step %i   (%02i, %04i) | ", i, config->TrainSets[id].composition[i].type, config->TrainSets[id].composition[i].id);
       fgets(_cmd, 20, stdin);
       if(sscanf(_cmd, "%i %i", &tmp, &tmp1) > 1){
-        config->Trains[id].composition[i].type = tmp;
-        config->Trains[id].composition[i].id = tmp1;
+        config->TrainSets[id].composition[i].type = tmp;
+        config->TrainSets[id].composition[i].id = tmp1;
       }
     }
 
@@ -1912,7 +1912,7 @@ int edit_rolling_stock(char * filename, bool update){
         modify_Engine(&config, cmds, cmds_len);
       }
       else if(strcmp(cmds[1], "T") == 0){
-        modify_Train(&config, cmds[0][0]);
+        modify_TrainSet(&config, cmds[0][0]);
       }
       else if(strcmp(cmds[1], "P_Cat") == 0){
         modify_Catagory(&config, 'P', cmds[0][0]);

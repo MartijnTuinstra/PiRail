@@ -14,7 +14,7 @@ AlgorQueue AlQueue = AlgorQueue();
 AlgorQueue::AlgorQueue(){
   queue = new Queue<Block *>(500);
   tempQueue = new Queue<Block *>(25);
-  TrainQueue = new Queue<RailTrain *>(50);
+  TrainQueue = new Queue<Train *>(50);
 }
 
 AlgorQueue::~AlgorQueue(){

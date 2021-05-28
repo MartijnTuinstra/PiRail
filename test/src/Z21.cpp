@@ -14,7 +14,7 @@
 #include "switchboard/unit.h"
 #include "switchboard/blockconnector.h"
 
-#include "rollingstock/railtrain.h"
+#include "rollingstock/train.h"
 
 #include "train.h"
 #include "sim.h"
@@ -39,7 +39,7 @@ public:
   ~TestsFixture();
 };
 
-TEST_CASE_METHOD(TestsFixture, "RailTrain Z21", "[Z21]"){
+TEST_CASE_METHOD(TestsFixture, "Train Z21", "[Z21]"){
   char filenames[1][30] = {"./testconfigs/RT-Z21.bin"};
   loadSwitchboard(filenames, 1);
   loadStock();
@@ -60,10 +60,10 @@ TEST_CASE_METHOD(TestsFixture, "RailTrain Z21", "[Z21]"){
     U->B[1]->setDetection(1);
     Algorithm::process(U->B[1], _FORCE);
 
-    RailTrain * T = U->B[1]->train;
+    Train * T = U->B[1]->train;
     REQUIRE(T);
 
-    T->link(0, RAILTRAIN_ENGINE_TYPE);
+    T->link(0, TRAIN_ENGINE_TYPE);
     T->setSpeed(50);
 
     U->B[2]->setDetection(1);
@@ -88,10 +88,10 @@ TEST_CASE_METHOD(TestsFixture, "RailTrain Z21", "[Z21]"){
     U->B[1]->setDetection(1);
     Algorithm::process(U->B[1], _FORCE);
 
-    RailTrain * T = U->B[1]->train;
+    Train * T = U->B[1]->train;
     REQUIRE(T);
 
-    T->link(2, RAILTRAIN_TRAIN_TYPE);
+    T->link(2, TRAIN_TRAIN_TYPE);
     T->setSpeed(50);
 
     U->B[2]->setDetection(1);

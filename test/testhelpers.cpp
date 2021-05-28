@@ -17,7 +17,7 @@
 #include "switchboard/unit.h"
 #include "switchboard/blockconnector.h"
 
-#include "rollingstock/railtrain.h"
+#include "rollingstock/train.h"
 
 #include "algorithm/queue.h"
 #include "algorithm/core.h"
@@ -40,6 +40,8 @@ void init_test(char (* filenames)[30], int nr_files){
   RSManager->clear();
   loggerf(CRITICAL, "Queue::clear");
   AlQueue.clear();
+  AlQueue.cleartmp();
+  AlQueue.clearTrain();
   loggerf(CRITICAL, "Pathlist::clear");
   pathlist.clear();
 
@@ -102,6 +104,7 @@ TestsFixture::~TestsFixture(){
   pathlist.clear();
   AlQueue.clear();
   AlQueue.cleartmp();
+  AlQueue.clearTrain();
 
   RSManager->clear();
   switchboard::SwManager->clear();

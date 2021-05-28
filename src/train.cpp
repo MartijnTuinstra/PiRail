@@ -22,4 +22,4 @@ int train_P_cat_len = 0;
 struct configStruct_Category * train_C_cat;
 int train_C_cat_len = 0;
 
-struct SchedulerEvent * railtraincontinue_event;
+struct SchedulerEvent * traincontinue_event;

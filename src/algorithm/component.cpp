@@ -165,7 +165,7 @@ void BlockTick(void){
 }
 
 void TrainTick(void){
-  RailTrain * T = 0;
+  Train * T = 0;
 
   while( (T = AlQueue.getTrain()) ){
     train_control(T);

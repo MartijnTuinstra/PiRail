@@ -1,7 +1,11 @@
 #include "utils/logger.h"
 #include "utils/mem.h"
 
-#include "train.h"
+#include "rollingstock/car.h"
+#include "rollingstock/engine.h"
+#include "rollingstock/train.h"
+
+
 #include "websocket/stc.h"
 #include "Z21.h"
 #include "Z21_msg.h"
@@ -48,7 +52,7 @@ void Z21_Set_Loco_Drive_Engine(Engine * E){
     Z21->send(10, data);
 }
 
-void Z21_Set_Loco_Drive_Train(Train * T){
+void Z21_Set_Loco_Drive_TrainSet(TrainSet * T){
   loggerf(TRACE, "Z21_Set_Loco_Drive_Train %s", T->name);
   for(int e = 0; e < T->engines->items; e++){
     Z21_Set_Loco_Drive_Engine(T->engines->operator[](e));
@@ -77,12 +81,12 @@ void Z21_LAN_X_LOCO_INFO(uint8_t length, char * data){
   E->Z21_setSpeedDir(speed, dir);
 }
 
-void Z21_get_train(RailTrain * RT){
-  if(RT->type == RAILTRAIN_ENGINE_TYPE){
-    Z21_get_loco_info(RT->p.E->DCC_ID);
+void Z21_get_train(Train * T){
+  if(T->type == TRAIN_ENGINE_TYPE){
+    Z21_get_loco_info(T->p.E->DCC_ID);
   }
   else{
-    auto TrainEngines = RT->p.T->engines;
+    auto TrainEngines = T->p.T->engines;
     for(uint8_t i = 0; i < TrainEngines->items; i++){
       Z21_get_loco_info((*TrainEngines)[i]->DCC_ID);
     }

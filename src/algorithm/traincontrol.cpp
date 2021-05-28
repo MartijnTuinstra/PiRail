@@ -31,7 +31,7 @@ void TrainControl::stop(){
 }
 
 void TrainControl::tick(){
-  loggerf(CRITICAL, "TrainControl::tick %x %x", this, randomWait);
+  loggerf(DEBUG, "TrainControl::tick %x %x", this, randomWait);
 
   if(randomWait-- == 0){
     // Spawn train if allowed

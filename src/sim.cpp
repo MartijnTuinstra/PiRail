@@ -163,7 +163,7 @@ void *TRAIN_SIMA(void * args){
   while(!B->Alg.N[0] || !B->Alg.P[0]){usleep(10000);}
   while(B->Alg.N[0]->blocked || B->blocked || B->Alg.P[0]->blocked){usleep(10000);} // Wait for space
 
-  // B->train = new RailTrain(B);
+  // B->train = new Train(B);
 
   change_Block(B, BLOCKED);
   // algor_queue_enable(1);
@@ -177,19 +177,19 @@ void *TRAIN_SIMA(void * args){
     usleep(10000);
   }
 
-  // B->train = new RailTrain(B);
+  // B->train = new Train(B);
 
-  B->train->link(0, RAILTRAIN_ENGINE_TYPE);
+  B->train->link(0, TRAIN_ENGINE_TYPE);
   struct s_opc_LinkTrain msg = {
     .follow_id=B->train->id,
     .real_id=0,
     .message_id_H=0,
-    .type=RAILTRAIN_ENGINE_TYPE,
+    .type=TRAIN_ENGINE_TYPE,
     .message_id_L=0
   };
   WS_stc_LinkTrain(&msg);
 
-  if(B->train->type == RAILTRAIN_TRAIN_TYPE)
+  if(B->train->type == TRAIN_TRAIN_TYPE)
     loggerf(INFO, "SIMTrain linked %s", B->train->p.T->name);
   else
     loggerf(INFO, "SIMTrain linked %s", B->train->p.E->name);
@@ -204,7 +204,7 @@ void *TRAIN_SIMA(void * args){
  
   AlQueue.put(B);
 
-  if(train.T->type == RAILTRAIN_ENGINE_TYPE){
+  if(train.T->type == TRAIN_ENGINE_TYPE){
     //Engine only
     train.train_length = train.T->p.E->length / 10;
 
@@ -281,7 +281,7 @@ void *TRAIN_SIMB(void * args){
   while(!B->Alg.N[0] || !B->Alg.P[0]){usleep(10000);}
   while(B->Alg.N[0]->blocked || B->blocked || B->Alg.P[0]->blocked){usleep(10000);} // Wait for space
 
-  // B->train = new RailTrain(B);
+  // B->train = new Train(B);
 
   change_Block(B, BLOCKED);
   // algor_queue_enable(1);
@@ -295,19 +295,19 @@ void *TRAIN_SIMB(void * args){
     usleep(10000);
   }
 
-  // B->train = new RailTrain(B);
+  // B->train = new Train(B);
 
-  B->train->link(1, RAILTRAIN_ENGINE_TYPE);
+  B->train->link(1, TRAIN_ENGINE_TYPE);
   struct s_opc_LinkTrain msg = {
     .follow_id=B->train->id,
     .real_id=1,
     .message_id_H=0,
-    .type=RAILTRAIN_ENGINE_TYPE,
+    .type=TRAIN_ENGINE_TYPE,
     .message_id_L=1
   };
   WS_stc_LinkTrain(&msg);
 
-  if(B->train->type == RAILTRAIN_TRAIN_TYPE)
+  if(B->train->type == TRAIN_TRAIN_TYPE)
     loggerf(INFO, "SIMTrain linked %s", B->train->p.T->name);
   else
     loggerf(INFO, "SIMTrain linked %s", B->train->p.E->name);
@@ -322,7 +322,7 @@ void *TRAIN_SIMB(void * args){
  
   AlQueue.put(B);
 
-  if(train.T->type == RAILTRAIN_ENGINE_TYPE){
+  if(train.T->type == TRAIN_ENGINE_TYPE){
     //Engine only
     train.train_length = train.T->p.E->length / 10;
 

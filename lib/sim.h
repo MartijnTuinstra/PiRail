@@ -14,7 +14,7 @@ struct engine_sim {
 struct train_sim {
   char sim;
 
-  RailTrain * T;
+  Train * T;
   uint16_t train_length;
 
   uint8_t dir;

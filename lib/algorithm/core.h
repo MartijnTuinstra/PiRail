@@ -36,7 +36,7 @@ void train_following(Algor_Blocks * ABs, int debug);
 // void GetBlocked_Blocks(struct algor_blocks AllBlocks);
 // void apply_rail_state(Algor_Block blocks, enum Rail_states state);
 
-void train_control(RailTrain *);
+void train_control(Train *);
 
 void Connect_Rails();
 

@@ -180,10 +180,10 @@ void WS_stc_LinkTrain(struct s_opc_LinkTrain * msg){
   WSServer->send_all((char *)&return_msg, 5, 0xFF);
 }
 
-void WS_stc_UpdateTrain(RailTrain * T){
+void WS_stc_UpdateTrain(Train * T){
   WS_stc_UpdateTrain(T, 0);
 }
-void WS_stc_UpdateTrain(RailTrain * T, Websocket::Client * client){
+void WS_stc_UpdateTrain(Train * T, Websocket::Client * client){
   // send to all except client
 
   if(!T)
@@ -200,7 +200,9 @@ void WS_stc_UpdateTrain(RailTrain * T, Websocket::Client * client){
   msg->speed_high = (T->speed & 0x0F00) >> 8;
   msg->speed_low  = (T->speed & 0xFF);
 
-  if(T->type == RAILTRAIN_ENGINE_TYPE){
+  // T->exportFunctions(msg->functions);
+
+  if(T->type == TRAIN_ENGINE_TYPE){
     for(uint8_t i = 0; i < 29; i++){
       if(T->p.E->function[i].state){
         msg->functions[i / 8] |= (0x80 >> (i % 8));
@@ -215,7 +217,7 @@ void WS_stc_UpdateTrain(RailTrain * T, Websocket::Client * client){
     msg->functions[3] = 0;
   }
 
-  loggerf(DEBUG, "train Update_Train id: %i, d: %i, c: %i, sp: %x%02x", msg->follow_id, msg->dir, msg->control, msg->speed_high, msg->speed_low);
+  loggerf(TRACE, "train Update_Train id: %i, d: %i, c: %i, sp: %x%02x", msg->follow_id, msg->dir, msg->control, msg->speed_high, msg->speed_low);
 
   if(!WSServer)
     return;
@@ -230,7 +232,7 @@ void WS_stc_UpdateTrain(RailTrain * T, Websocket::Client * client){
   }
 }
 
-void WS_stc_TrainRouteUpdate(RailTrain * T){
+void WS_stc_TrainRouteUpdate(Train * T){
   if(!T)
     return;
 
@@ -402,8 +404,8 @@ void WS_stc_CarsLib(Websocket::Client * client){
   _free(data);
 }
 
-void WS_stc_TrainsLib(Websocket::Client * client){
-  loggerf(INFO, "TrainsLib for client %i", client);
+void WS_stc_TrainSetsLib(Websocket::Client * client){
+  loggerf(INFO, "TrainSetsLib for client %i", client);
   int buffer_size = 1024;
 
   char * data = (char *)_calloc(buffer_size, char);
@@ -412,12 +414,12 @@ void WS_stc_TrainsLib(Websocket::Client * client){
 
   data[len++] = WSopc_TrainsLibrary;
 
-  for(int i = 0; i < RSManager->Trains.items; i++){
+  for(int i = 0; i < RSManager->TrainSets.items; i++){
     if(buffer_size < (len + 100)){
       buffer_size += 1024;
       data = (char *)_realloc(data, buffer_size, char);
     }
-    Train * T = RSManager->getTrain(i);
+    TrainSet * T = RSManager->getTrainSet(i);
     if(!T)
       continue;
     
@@ -498,7 +500,7 @@ void WS_stc_TrainCategories(Websocket::Client * client){
   _free(data);
 }
 
-void WS_stc_NewTrain(RailTrain * T,char M,char B){
+void WS_stc_NewTrain(Train * T,char M,char B){
   //Nr:   follow id of train
   //M,B:  module nr and block nr
   uint16_t msg_ID = WS_init_Message(0);
@@ -516,7 +518,7 @@ void WS_stc_NewTrain(RailTrain * T,char M,char B){
   WS_add_Message(msg_ID,6,data);
 }
 
-void WS_stc_TrainSplit(RailTrain * T, char M1,char B1,char M2,char B2){
+void WS_stc_TrainSplit(Train * T, char M1,char B1,char M2,char B2){
   //Nr:   follow id of train
   //M,B:  module nr and block nr
   uint16_t msg_ID = WS_init_Message(1);
@@ -848,10 +850,10 @@ void WS_stc_NewClient_track_Switch_Update(Websocket::Client * client){
   memset(buf,0,4096);
 
   loggerf(INFO, "Z21_GET_LOCO_INFO check");
-  for(int i = 1; i < RSManager->RailTrains.size;i++){
-    RailTrain * T = RSManager->getRailTrain(i);
+  for(int i = 1; i < RSManager->Trains.size;i++){
+    Train * T = RSManager->getTrain(i);
     if(T){
-      //TODO fix for RailTrain
+      //TODO fix for Train
       //for(int j = 0; j < T->nr_engines; j++){
       //  Z21_get_engine(T->engines[j]->DCC_ID);
       //}

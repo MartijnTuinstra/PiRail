@@ -12,7 +12,7 @@
 #include "switchboard/station.h"
 #include "switchboard/unit.h"
 
-#include "rollingstock/railtrain.h"
+#include "rollingstock/train.h"
 
 #include "algorithm/core.h"
 
@@ -69,8 +69,8 @@ TEST_CASE_METHOD(TestsFixture, "Path Construction", "[PATH][PATH-1]" ) {
   //
   // VI
   //  1.37-> 1.21-> <-\
-  //                   |1.22
-  //  <-1.38 <-1.23 <-/
+  //                   |1.22 <==> 1.37> 1.21> <1.22> <1.23 <1.38
+  //  1.38-> 1.23-> <-/
   //
   // VII
   //  1.24-> -1.25-> -1.26-> -1.27-> -1.28-> -1.29->
@@ -231,6 +231,12 @@ TEST_CASE_METHOD(TestsFixture, "Path Construction", "[PATH][PATH-1]" ) {
       }
     }
 
+    logger.setlevel_stdout(INFO);
+    U->B[21]->AlgorSearch(0);
+    U->B[23]->AlgorSearch(0);
+    Algorithm::print_block_debug(U->B[21]);
+    Algorithm::print_block_debug(U->B[23]);
+
     CHECK(U->B[23] == U->B[21]->Next_Block(NEXT, 2));
     CHECK(U->B[21] == U->B[23]->Next_Block(PREV, 2));
   }
@@ -332,7 +338,7 @@ TEST_CASE_METHOD(TestsFixture, "Path Reverse", "[PATH][PATH-2]") {
 
     REQUIRE(U->B[5]->train);
 
-    U->B[5]->train->link(0, RAILTRAIN_ENGINE_TYPE);
+    U->B[5]->train->link(0, TRAIN_ENGINE_TYPE);
     U->B[5]->train->setSpeed(10);
 
     U->B[6]->setDetection(1);
@@ -370,9 +376,9 @@ TEST_CASE_METHOD(TestsFixture, "Path Reverse", "[PATH][PATH-2]") {
     REQUIRE(U->B[8]->train);
 
     U->B[4]->train->setSpeed(10);
-    U->B[4]->train->link(0, RAILTRAIN_ENGINE_TYPE);
+    U->B[4]->train->link(0, TRAIN_ENGINE_TYPE);
     U->B[8]->train->setSpeed(10);
-    U->B[8]->train->link(1, RAILTRAIN_ENGINE_TYPE);
+    U->B[8]->train->link(1, TRAIN_ENGINE_TYPE);
 
     U->B[5]->setDetection(1);
     Algorithm::process(U->B[5], _FORCE);
@@ -418,7 +424,7 @@ TEST_CASE_METHOD(TestsFixture, "Path Reserve", "[PATH][PATH-3]") {
   Path * P = U->B[3]->path;
 
   SECTION("I - Normal block at the end"){    
-    RailTrain * RT = new RailTrain(U->B[3]);
+    Train * RT = new Train(U->B[3]);
 
     P->reserve(RT);
 
@@ -441,7 +447,7 @@ TEST_CASE_METHOD(TestsFixture, "Path Reserve", "[PATH][PATH-3]") {
     CHECK(U->B[11]->state == PROCEED);
     CHECK(U->B[12]->state == PROCEED);
 
-    RailTrain * RT = new RailTrain(U->B[3]);
+    Train * RT = new Train(U->B[3]);
 
     P->reserve(RT);
 
@@ -458,7 +464,7 @@ TEST_CASE_METHOD(TestsFixture, "Path Reserve", "[PATH][PATH-3]") {
   }
 
   SECTION("III - Partial Reserve"){   
-    RailTrain * RT = new RailTrain(U->B[5]);
+    Train * RT = new Train(U->B[5]);
 
     P->reserve(RT, U->B[5]);
 

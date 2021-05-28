@@ -3,8 +3,10 @@
 
 class Car;
 class Engine;
+class TrainSet;
 class Train;
-class RailTrain;
+
+class TrainDetectable;
 
 #define F_CAR_DETECTABLE 0x01
 

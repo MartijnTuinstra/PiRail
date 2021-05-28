@@ -15,21 +15,21 @@
 
 namespace SwitchSolver {
 
-int solve(RailTrain *, Block *, Block *, struct rail_link, int);
+int solve(Train *, Block *, Block *, struct rail_link, int);
 
 struct find {
   int possible;
   int allreadyCorrect;
 };
 
-struct find findPath(RailTrain *, PathFinding::Route *, void *, struct rail_link, int);
+struct find findPath(Train *, PathFinding::Route *, void *, struct rail_link, int);
 
-int setPath(RailTrain *, PathFinding::Route *, void *, struct rail_link, int);
+int setPath(Train *, PathFinding::Route *, void *, struct rail_link, int);
 
 void setWrong(PathFinding::Route *, void *, struct rail_link, int);
 
-void dereservePath(RailTrain * T, PathFinding::Route * r, void * p, struct rail_link link, int flags);
-int reservePath(RailTrain *, PathFinding::Route *, void *, struct rail_link, int);
+void dereservePath(Train * T, PathFinding::Route * r, void * p, struct rail_link link, int flags);
+int reservePath(Train *, PathFinding::Route *, void *, struct rail_link, int);
 
 };
 

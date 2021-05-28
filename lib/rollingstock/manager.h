@@ -4,8 +4,8 @@
 #include <stdint.h>
 #include "rollingstock/car.h"
 #include "rollingstock/engine.h"
+#include "rollingstock/trainset.h"
 #include "rollingstock/train.h"
-#include "rollingstock/railtrain.h"
 
 #include "utils/mem.h"
 
@@ -31,8 +31,8 @@ public:
 
   ::dynArray<Car *>       Cars;
   ::dynArray<Engine *>    Engines;
+  ::dynArray<TrainSet *>  TrainSets;
   ::dynArray<Train *>     Trains;
-  ::dynArray<RailTrain *> RailTrains;
 
   DCCEngine DCC[10000];
 
@@ -46,9 +46,9 @@ public:
 
   Car *       newCar(Car *);
   Engine *    newEngine(Engine *);
-  Train *     newTrain(Train *);
+  TrainSet *  newTrainSet(TrainSet *);
 
-  int addRailTrain(RailTrain *);
+  int addTrain(Train *);
 
   inline Car *       getCar(uint16_t i){
     return Cars[i];
@@ -56,11 +56,11 @@ public:
   inline Engine *    getEngine(uint16_t i){
     return Engines[i];
   }
-  inline Train *     getTrain(uint16_t i){
-    return Trains[i];
+  inline TrainSet *  getTrainSet(uint16_t i){
+    return TrainSets[i];
   }
-  inline RailTrain * getRailTrain(uint16_t i){
-    return RailTrains[i];
+  inline Train * getTrain(uint16_t i){
+    return Trains[i];
   }
   Engine *  getEngineDCC(uint16_t i);
 
@@ -69,12 +69,12 @@ public:
   void addDCC(Engine * E);
   void removeDCC(Engine * E);
 
-  RailTrain * getRailTrainDCC(uint16_t);
+  Train * getTrainDCC(uint16_t);
 
   void removeCar(Car *);
   void removeEngine(Engine *);
+  void removeTrainSet(TrainSet *);
   void removeTrain(Train *);
-  void removeRailTrain(RailTrain *);
 
   void moveEngine(Engine *, uint16_t);
 

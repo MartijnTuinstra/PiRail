@@ -16,7 +16,7 @@
 
 #include "train.h"
 
-#include "rollingstock/railtrain.h"
+#include "rollingstock/train.h"
 
 void init_test(char (* filenames)[30], int nr_files);
 class TestsFixture {
@@ -94,7 +94,7 @@ TEST_CASE_METHOD(TestsFixture, "Station Stating", "[SB][SB-5][SB-5.1]" ) {
     Algorithm::process(U->B[28], _FORCE);
     Algorithm::print_block_debug(U->B[28]);
 
-    U->B[28]->train->link(0, RAILTRAIN_ENGINE_TYPE);
+    U->B[28]->train->link(0, TRAIN_ENGINE_TYPE);
     U->B[28]->train->setSpeed(0);
 
     CHECK(U->St[0]->occupied);
@@ -132,17 +132,18 @@ TEST_CASE_METHOD(TestsFixture, "Station Stating", "[SB][SB-5][SB-5.1]" ) {
     Algorithm::process(U->B[32], _FORCE);
     Algorithm::print_block_debug(U->B[32]);
 
-    U->B[32]->train->link(0, RAILTRAIN_ENGINE_TYPE);
+    U->B[32]->train->link(0, TRAIN_ENGINE_TYPE);
     U->B[32]->train->setSpeed(0);
 
-    CHECK(U->St[2]->occupied);
-    CHECK(U->St[2]->stoppedTrain);
-    CHECK(!U->St[3]->occupied);
-    CHECK(!U->St[3]->stoppedTrain);
+    CHECK(U->St[2]->occupied);     // Directly occupied
+    CHECK(U->St[2]->stoppedTrain); //  and stopped
 
-    CHECK(!U->St[1]->occupied);
-    CHECK(U->St[1]->stoppedTrain);
-    CHECK(U->St[1]->occupiedChild);
+    CHECK(!U->St[3]->occupied);     // Train is not in this station
+    CHECK(!U->St[3]->stoppedTrain); //  therefore also not stopped
+
+    CHECK(!U->St[1]->occupied);     // Train is in the parent station
+    CHECK(U->St[1]->occupiedChild); //
+    CHECK(U->St[1]->stoppedTrain);  //  and stopped
 
     U->B[32]->train->setSpeed(10);
 

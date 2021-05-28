@@ -2,14 +2,17 @@
 #define _INCLUDE_ALGORITHM_QUEUE_H
 
 #include "utils/queue.h"
+#include "utils/logger.h"
 #include "switchboard/rail.h"
-#include "rollingstock/railtrain.h"
+#include "rollingstock/train.h"
 
 class AlgorQueue {
   public:
     Queue<Block *> * queue;
     Queue<Block *> * tempQueue;
-    Queue<RailTrain *> * TrainQueue;
+  private:
+    Queue<Train *> * TrainQueue;
+  public:
 
     AlgorQueue();
     ~AlgorQueue();
@@ -19,7 +22,7 @@ class AlgorQueue {
     }
     void put(Algor_Blocks * ABs);
 
-    inline void put(RailTrain * T){
+    inline void put(Train * T){
       TrainQueue->AddOnce(T);
     }
 
@@ -37,7 +40,7 @@ class AlgorQueue {
       return queue->waitGet();
     }
 
-    inline RailTrain * getTrain(){
+    inline Train * getTrain(){
       return TrainQueue->Get();
     }
 

@@ -7,7 +7,7 @@
 #include "config/RollingStructure.h"
 #include "config/configReader.h"
 
-#include "rollingstock/train.h"
+#include "rollingstock/trainset.h"
 #include "rollingstock/engine.h"
 #include "rollingstock/car.h"
 
@@ -113,16 +113,16 @@ RollingConfig::RollingConfig(const char * _filename){
 //   }
 // }
 
-void RollingConfig::addTrain(Train * T){
+void RollingConfig::addTrainSet(TrainSet * T){
   if(!T)
     return;
 
-  if(!Trains)
-    Trains = (struct configStruct_Train *)_calloc(header->Trains + 1, struct configStruct_Train);
+  if(!TrainSets)
+    TrainSets = (struct configStruct_TrainSet *)_calloc(header->TrainSets + 1, struct configStruct_TrainSet);
   else
-    Trains = (struct configStruct_Train *)_realloc(Trains, header->Trains + 1, struct configStruct_Train);
+    TrainSets = (struct configStruct_TrainSet *)_realloc(TrainSets, header->TrainSets + 1, struct configStruct_TrainSet);
 
-  struct configStruct_Train * cT = &Trains[header->Trains++];
+  struct configStruct_TrainSet * cT = &TrainSets[header->TrainSets++];
 
   cT->name_len = strlen(T->name);
   cT->name = (char *)_calloc(cT->name_len, char);
@@ -131,7 +131,7 @@ void RollingConfig::addTrain(Train * T){
   cT->nr_stock = T->nr_stock;
   cT->category = T->type;
 
-  cT->composition = (struct configStruct_TrainComp *)_calloc(T->nr_stock, struct configStruct_TrainComp);
+  cT->composition = (struct configStruct_TrainSetLink *)_calloc(T->nr_stock, struct configStruct_TrainSetLink);
 
   for(int i = 0; i < T->nr_stock; i++){
     cT->composition[i].type = T->composition[i].type;
@@ -226,11 +226,11 @@ RollingConfig::~RollingConfig(){
   }
   _free(Cars);
 
-  for(uint8_t i = 0; i < header->Trains; i++){
-    _free(Trains[i].name);
-    _free(Trains[i].composition);
+  for(uint8_t i = 0; i < header->TrainSets; i++){
+    _free(TrainSets[i].name);
+    _free(TrainSets[i].composition);
   }
-  _free(Trains);
+  _free(TrainSets);
 
   _free(header);
   _free(buffer);
@@ -270,17 +270,17 @@ int RollingConfig::read(){
     return -1;
   }
 
-  header = (struct configStruct_TrainHeader *)_calloc(1, struct configStruct_TrainHeader);
+  header = (struct configStruct_RollingStockHeader *)_calloc(1, struct configStruct_RollingStockHeader);
 
-  Config_read_TrainHeader(fileVersion, header, buf_ptr);
+  Config_read_RollingStockHeader(fileVersion, header, buf_ptr);
 
-  loggerf(INFO, "RollingConfig: %i %i %i %i %i", header->PersonCatagories, header->CargoCatagories, header->Engines, header->Cars, header->Trains);
+  loggerf(INFO, "RollingConfig: %i %i %i %i %i", header->PersonCatagories, header->CargoCatagories, header->Engines, header->Cars, header->TrainSets);
 
-  P_Cat   = (struct configStruct_Category *)_calloc(header->PersonCatagories, struct configStruct_Category);
-  C_Cat   = (struct configStruct_Category *)_calloc(header->CargoCatagories, struct configStruct_Category);
-  Engines = (struct configStruct_Engine *)_calloc(header->Engines, struct configStruct_Engine);
-  Cars    = (struct configStruct_Car *)_calloc(header->Cars, struct configStruct_Car);
-  Trains  = (struct configStruct_Train *)_calloc(header->Trains, struct configStruct_Train);
+  P_Cat     = (struct configStruct_Category *)_calloc(header->PersonCatagories, struct configStruct_Category);
+  C_Cat     = (struct configStruct_Category *)_calloc(header->CargoCatagories, struct configStruct_Category);
+  Engines   = (struct configStruct_Engine *)_calloc(header->Engines, struct configStruct_Engine);
+  Cars      = (struct configStruct_Car *)_calloc(header->Cars, struct configStruct_Car);
+  TrainSets = (struct configStruct_TrainSet *)_calloc(header->TrainSets, struct configStruct_TrainSet);
   
   for(int i = 0; i < header->PersonCatagories; i++){
     Config_read_Category(fileVersion, &P_Cat[i], buf_ptr);
@@ -298,8 +298,8 @@ int RollingConfig::read(){
     Config_read_Car(fileVersion, &Cars[i], buf_ptr);
   }
   
-  for(int i = 0; i < header->Trains; i++){
-    Config_read_Train(fileVersion, &Trains[i], buf_ptr);
+  for(int i = 0; i < header->TrainSets; i++){
+    Config_read_TrainSet(fileVersion, &TrainSets[i], buf_ptr);
   }
 
   parsed = true;
@@ -311,7 +311,7 @@ int RollingConfig::read(){
 }
 
 int RollingConfig::calc_size(){
-  int size = 1 + Config_write_size_TrainHeader(header);
+  int size = 1 + Config_write_size_RollingStockHeader(header);
 
   //Catagories
   for(int i = 0; i < header->PersonCatagories; i++){
@@ -332,8 +332,8 @@ int RollingConfig::calc_size(){
   }
 
   //Trains
-  for(int i = 0; i < header->Trains; i++){
-    size += Config_write_size_Train(&Trains[i]);
+  for(int i = 0; i < header->TrainSets; i++){
+    size += Config_write_size_TrainSet(&TrainSets[i]);
   }
 
   return size;
@@ -361,7 +361,7 @@ void RollingConfig::write(){
   }
 
   //Copy header
-  Config_write_TrainHeader(header, &p);
+  Config_write_RollingStockHeader(header, &p);
 
   //Copy Catagories
   for(int i = 0; i < header->PersonCatagories; i++){
@@ -382,8 +382,8 @@ void RollingConfig::write(){
   }
 
   //Copy trains
-  for(int i =0; i < header->Trains; i++){
-    Config_write_Train(&Trains[i], &p);
+  for(int i =0; i < header->TrainSets; i++){
+    Config_write_TrainSet(&TrainSets[i], &p);
   }
 
   FILE * fp = fopen(filename, "wb");
@@ -426,7 +426,7 @@ void print_Engines(struct configStruct_Engine engine){
   printf( "%s\n", debug);
 }
 
-void print_Trains(struct configStruct_Train train){
+void print_TrainSets(struct configStruct_TrainSet train){
   char debug[220];
   char * debugptr = debug;
 
@@ -476,7 +476,7 @@ void RollingConfig::print(char ** cmds, uint8_t cmd_len){
 
   printf( "Cars:    %i\n", this->header->Cars);
   printf( "Engines: %i\n", this->header->Engines);
-  printf( "Trains:  %i\n", this->header->Trains);
+  printf( "Trains:  %i\n", this->header->TrainSets);
 
   printf("\nCatagories\n");
   print_Catagories(this);
@@ -498,8 +498,8 @@ void RollingConfig::print(char ** cmds, uint8_t cmd_len){
 
   printf( "Trains\n");
   printf( "id\tName\t\t\tRolling Stock\t...\n");
-  for(int i = 0; i < this->header->Trains; i++){
+  for(int i = 0; i < this->header->TrainSets; i++){
     printf("%i\t", i);
-    print_Trains(this->Trains[i]);
+    print_TrainSets(this->TrainSets[i]);
   }
 }

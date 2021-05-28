@@ -71,34 +71,34 @@ TEST_CASE_METHOD(TestsFixture, "MSSwitch Link", "[SB][SB-3][SB-3.1]" ) {
   }
 
   SECTION( "NextBlock MSSwitch A side" ) {
-    REQUIRE(U->B[0]->Next_Block(NEXT | SWITCH_CARE, 1) == 0);
-    REQUIRE(U->B[0]->Next_Block(NEXT | SWITCH_CARE, 2) == 0);
+    REQUIRE(U->B[0]->Next_Block(NEXT | FL_SWITCH_CARE, 1) == 0);
+    REQUIRE(U->B[0]->Next_Block(NEXT | FL_SWITCH_CARE, 2) == 0);
 
-    REQUIRE(U->B[1]->Next_Block(NEXT | SWITCH_CARE, 1) == U->B[2]);
-    REQUIRE(U->B[1]->Next_Block(NEXT | SWITCH_CARE, 2) == U->B[3]);
+    REQUIRE(U->B[1]->Next_Block(NEXT | FL_SWITCH_CARE, 1) == U->B[2]);
+    REQUIRE(U->B[1]->Next_Block(NEXT | FL_SWITCH_CARE, 2) == U->B[3]);
 
     U->MSSw[0]->state = 1;
 
-    REQUIRE(U->B[0]->Next_Block(NEXT | SWITCH_CARE, 1) == U->B[2]);
-    REQUIRE(U->B[0]->Next_Block(NEXT | SWITCH_CARE, 2) == U->B[4]);
+    REQUIRE(U->B[0]->Next_Block(NEXT | FL_SWITCH_CARE, 1) == U->B[2]);
+    REQUIRE(U->B[0]->Next_Block(NEXT | FL_SWITCH_CARE, 2) == U->B[4]);
 
-    REQUIRE(U->B[1]->Next_Block(NEXT | SWITCH_CARE, 1) == 0);
-    REQUIRE(U->B[1]->Next_Block(NEXT | SWITCH_CARE, 2) == 0);
+    REQUIRE(U->B[1]->Next_Block(NEXT | FL_SWITCH_CARE, 1) == 0);
+    REQUIRE(U->B[1]->Next_Block(NEXT | FL_SWITCH_CARE, 2) == 0);
   }
 
   SECTION( "NextBlock MSSwitch B side" ) {
-    REQUIRE(U->B[4]->Next_Block(PREV | SWITCH_CARE, 1) == 0);
-    REQUIRE(U->B[4]->Next_Block(PREV | SWITCH_CARE, 2) == 0);
+    REQUIRE(U->B[4]->Next_Block(PREV | FL_SWITCH_CARE, 1) == 0);
+    REQUIRE(U->B[4]->Next_Block(PREV | FL_SWITCH_CARE, 2) == 0);
 
-    REQUIRE(U->B[3]->Next_Block(PREV | SWITCH_CARE, 1) == U->B[2]);
-    REQUIRE(U->B[3]->Next_Block(PREV | SWITCH_CARE, 2) == U->B[1]);
+    REQUIRE(U->B[3]->Next_Block(PREV | FL_SWITCH_CARE, 1) == U->B[2]);
+    REQUIRE(U->B[3]->Next_Block(PREV | FL_SWITCH_CARE, 2) == U->B[1]);
 
     U->MSSw[0]->state = 1;
 
-    REQUIRE(U->B[4]->Next_Block(PREV | SWITCH_CARE, 1) == U->B[2]);
-    REQUIRE(U->B[4]->Next_Block(PREV | SWITCH_CARE, 2) == U->B[0]);
+    REQUIRE(U->B[4]->Next_Block(PREV | FL_SWITCH_CARE, 1) == U->B[2]);
+    REQUIRE(U->B[4]->Next_Block(PREV | FL_SWITCH_CARE, 2) == U->B[0]);
 
-    REQUIRE(U->B[3]->Next_Block(PREV | SWITCH_CARE, 1) == 0);
-    REQUIRE(U->B[3]->Next_Block(PREV | SWITCH_CARE, 2) == 0);
+    REQUIRE(U->B[3]->Next_Block(PREV | FL_SWITCH_CARE, 1) == 0);
+    REQUIRE(U->B[3]->Next_Block(PREV | FL_SWITCH_CARE, 2) == 0);
   }
 }

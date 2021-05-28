@@ -66,22 +66,22 @@ TEST_CASE_METHOD(TestsFixture, "Switch Link", "[SB][SB-2][SB-2.1]" ) {
 
   SECTION( "III - NextBlock Switch Straight" ) {
     REQUIRE(U->B[2]->Next_Block(PREV, 1) == U->B[1]);
-    REQUIRE(U->B[2]->Next_Block(PREV | SWITCH_CARE, 1) == U->B[1]);
+    REQUIRE(U->B[2]->Next_Block(PREV | FL_SWITCH_CARE, 1) == U->B[1]);
 
     U->Sw[0]->state = 1;
 
     REQUIRE(U->B[2]->Next_Block(PREV, 1) == U->B[1]);
-    REQUIRE(U->B[2]->Next_Block(PREV | SWITCH_CARE, 1) == 0);
+    REQUIRE(U->B[2]->Next_Block(PREV | FL_SWITCH_CARE, 1) == 0);
   }
 
   SECTION( "IV - NextBlock Switch Diverging" ) {
     REQUIRE(U->B[3]->Next_Block(PREV, 1) == U->B[1]);
-    REQUIRE(U->B[3]->Next_Block(PREV | SWITCH_CARE, 1) == 0);
+    REQUIRE(U->B[3]->Next_Block(PREV | FL_SWITCH_CARE, 1) == 0);
 
     U->Sw[0]->state = 1;
 
     REQUIRE(U->B[3]->Next_Block(PREV, 1) == U->B[1]);
-    REQUIRE(U->B[3]->Next_Block(PREV | SWITCH_CARE, 1) == U->B[1]);
+    REQUIRE(U->B[3]->Next_Block(PREV | FL_SWITCH_CARE, 1) == U->B[1]);
   }
 
   SECTION( "V - Search Check"){

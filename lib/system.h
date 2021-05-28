@@ -10,7 +10,6 @@
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <netinet/in.h>
-#include <openssl/sha.h>
 
 #include <signal.h>
 #include <errno.h>

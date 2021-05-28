@@ -5,6 +5,8 @@
 #define packedstruct struct __attribute__((__packed__))
 #endif
 
+#include "rollingstock/declares.h"
+
 // packedstruct Z21_LAN_GET_SERIAL_NUMBER {
 //   uint32_t serialnumber;
 // };
@@ -48,13 +50,13 @@ void Z21_Set_EmergencyStop();
 void Z21_Release_EmergencyStop();
 
 void Z21_Set_Loco_Drive_Engine(Engine * E);
-void Z21_Set_Loco_Drive_Train(Train * T);
+void Z21_Set_Loco_Drive_TrainSet(TrainSet * T);
 
 void Z21_Set_Emergency();
 
 void Z21_LAN_X_LOCO_INFO(uint8_t length, char * data);
 
-void Z21_get_train(RailTrain * RT);
+void Z21_get_train(Train *);
 void Z21_get_loco_info(uint16_t DCC_id);
 
 void Z21_setLocoFunction(Engine * E, uint8_t function, uint8_t type);

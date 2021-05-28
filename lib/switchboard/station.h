@@ -5,7 +5,7 @@
 #include "switchboard/switch.h"
 #include "switchboard/msswitch.h"
 
-#include "rollingstock/railtrain.h"
+#include "rollingstock/train.h"
 
 #include "config/LayoutStructure.h"
 
@@ -34,7 +34,7 @@ class Station {
     bool occupiedChild;  // There is a child station which is occupied
     bool stoppedTrain;   // There is a train stopped on the station blocks
 
-    RailTrain * train;
+    Train * train;
 
     Block ** blocks;
     uint8_t blocks_len;
@@ -54,7 +54,7 @@ class Station {
 
     void exportConfig(struct configStruct_Station *);
 
-    void occupy(RailTrain * T);
+    void occupy(Train * T);
     void release();
     void releaseParent();
 

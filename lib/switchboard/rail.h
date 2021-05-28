@@ -8,6 +8,7 @@
 #include <string.h>
 
 #include "switchboard/declares.h"
+#include "rollingstock/declares.h"
 #include "path.h"
 #include "flags.h"
 
@@ -16,9 +17,6 @@
 // IO.h
 class IO_Port;
 typedef struct s_node_adr Node_adr;
-
-// Train.h
-class RailTrain;
 
 #define U_B(U, A) Units(U)->B[A]
 #define RESTRICTED_SPEED 40
@@ -109,11 +107,12 @@ class Block {
     Station * station = 0;     // The station that
     Path * path = 0;           // The path this block is part off
 
-    RailTrain * train;         // The train that is in this block
-    RailTrain * expectedTrain; // The train that is expected to be in this block
+    Train * train;         // The train that is in this block
+    Train * expectedTrain; // The train that is expected to be in this block
+    TrainDetectable * expectedDetectable;
 
-    std::vector<RailTrain *> reservedBy;    // The train that has reserved this block in a whole path 
-                                            //  A block with switches can be SWITCH_RESERVED. 
+    std::vector<Train *> reservedBy;    // The train that has reserved this block in a whole path 
+                                        //  A block with switches can be SWITCH_RESERVED. 
 
     std::vector<Signal *> * forward_signal;
     std::vector<Signal *> * reverse_signal;
@@ -152,13 +151,13 @@ class Block {
     struct rail_link * NextLink(int flags);
     Block * Next_Block(int flags, int level);
 
-    uint8_t _NextList(Block * Origin, Block ** blocks, uint8_t block_counter, int flags, int length);
+    uint8_t _NextList(Block * Origin, Block ** blocks, uint8_t block_counter, uint32_t flags, int length);
 
     void reverse();
 
-    void reserve(RailTrain *);
-    void dereserve(RailTrain *);
-    bool isReservedBy(RailTrain *);
+    void reserve(Train *);
+    void dereserve(Train *);
+    bool isReservedBy(Train *);
 
     void setState(enum Rail_states, bool);
     void setState(enum Rail_states);

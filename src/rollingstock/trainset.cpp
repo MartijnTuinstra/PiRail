@@ -1,4 +1,4 @@
-#include "rollingstock/train.h"
+#include "rollingstock/trainset.h"
 #include "train.h"
 
 #include "utils/mem.h"
@@ -9,9 +9,9 @@
 struct train_composition ** trains_comp;
 int trains_comp_len = 0;
 
-Train::Train(struct configStruct_Train conf){
+TrainSet::TrainSet(struct configStruct_TrainSet conf){
   loggerf(TRACE, "Create Train %s", conf.name);
-  memset(this, 0, sizeof(Train));
+  memset(this, 0, sizeof(TrainSet));
 
   engines = new dynArray<Engine *>(5);
 
@@ -22,8 +22,8 @@ Train::Train(struct configStruct_Train conf){
 
   setComposition(conf.nr_stock, conf.composition);
 }
-Train::Train(char * Name){
-  memset(this, 0, sizeof(Train));
+TrainSet::TrainSet(char * Name){
+  memset(this, 0, sizeof(TrainSet));
 
   engines = new dynArray<Engine *>(5);
   setName(Name);
@@ -33,10 +33,10 @@ Train::Train(char * Name){
   save = false;
 }
 
-Train::Train(char * Name, int Stock, struct configStruct_TrainComp * comps, uint8_t category, uint8_t Save){
+TrainSet::TrainSet(char * Name, int Stock, struct configStruct_TrainSetLink * comps, uint8_t category, uint8_t Save){
   loggerf(TRACE, "Create Train %s", Name);
 
-  memset(this, 0, sizeof(Train));
+  memset(this, 0, sizeof(TrainSet));
 
   engines = new dynArray<Engine *>(5);
 
@@ -50,7 +50,7 @@ Train::Train(char * Name, int Stock, struct configStruct_TrainComp * comps, uint
   setComposition(nr_stock, comps);
 }
 
-Train::~Train(){
+TrainSet::~TrainSet(){
   loggerf(TRACE, "Destroy Train %s", name);
   engines->empty();
 
@@ -64,7 +64,7 @@ Train::~Train(){
 }
 
 
-void Train::setName(char * new_name){
+void TrainSet::setName(char * new_name){
   if(name)
     _free(name);
 
@@ -73,14 +73,14 @@ void Train::setName(char * new_name){
   memcpy(name, new_name, len);
 }
 
-void Train::setComposition(int stock, struct configStruct_TrainComp * comps){
+void TrainSet::setComposition(int stock, struct configStruct_TrainSetLink * comps){
   if(composition)
     _free(composition);
 
   engines->empty();
 
   nr_stock = stock;
-  composition = (struct train_comp *)_calloc(nr_stock, struct train_comp);
+  composition = (struct RollingStockLink *)_calloc(nr_stock, struct RollingStockLink);
   bool splitdetectables = true;
 
   for(int i = 0;i<nr_stock;i++){
@@ -137,7 +137,7 @@ void Train::setComposition(int stock, struct configStruct_TrainComp * comps){
   }
 }
 
-void Train::setSpeed(uint16_t speed){
+void TrainSet::setSpeed(uint16_t speed){
   cur_speed = speed;
 
   for(int i = 0; i < engines->items; i++){
@@ -146,14 +146,14 @@ void Train::setSpeed(uint16_t speed){
   }
 }
 
-void Train::calcSpeed(){
+void TrainSet::calcSpeed(){
   for(int i = 0; i < engines->items; i++){
     if((*engines)[i])
       (*engines)[i]->setSpeed(cur_speed);
   }
 }
 
-bool Train::enginesUsed(){
+bool TrainSet::enginesUsed(){
   for(int  i = 0; i < engines->items; i++){
     if((*engines)[i]->use || RSManager->getEngineDCC((*engines)[i]->DCC_ID) != nullptr){
       return true;
@@ -163,7 +163,7 @@ bool Train::enginesUsed(){
   return false;
 }
 
-void Train::setEnginesUsed(bool used, RailTrain * T){
+void TrainSet::setEnginesUsed(bool used, Train * T){
   for(int  i = 0; i < engines->items; i++){
     if(used)
       RSManager->subDCCEngine((*engines)[i]->id);

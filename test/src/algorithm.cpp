@@ -15,7 +15,7 @@
 #include "switchboard/unit.h"
 #include "switchboard/blockconnector.h"
 
-#include "rollingstock/railtrain.h"
+#include "rollingstock/train.h"
 
 #include "train.h"
 #include "sim.h"
@@ -176,7 +176,7 @@ TEST_CASE_METHOD(TestsFixture, "Train Following", "[Alg][Alg-2]"){
 
     CHECK(U->B[0]->train != 0);
 
-    RailTrain * T = U->B[0]->train;
+    Train * T = U->B[0]->train;
     CHECK(U->B[0] == T->B);
 
     // Step Forward
@@ -219,7 +219,7 @@ TEST_CASE_METHOD(TestsFixture, "Train Following", "[Alg][Alg-2]"){
     Algorithm::process(U->B[0], _FORCE);
 
     REQUIRE(U->B[0]->train != 0);
-    RailTrain * T = U->B[0]->train;
+    Train * T = U->B[0]->train;
     CHECK(U->B[0] == T->B);
 
     // Step Forward
@@ -229,7 +229,7 @@ TEST_CASE_METHOD(TestsFixture, "Train Following", "[Alg][Alg-2]"){
     CHECK(U->B[1]->train == T);
 
     // Link engine
-    T->link(0, RAILTRAIN_ENGINE_TYPE);
+    T->link(0, TRAIN_ENGINE_TYPE);
 
     for(auto b: T->blocks){
       CHECK((b == U->B[0] || b == U->B[1]));
@@ -309,10 +309,10 @@ TEST_CASE_METHOD(TestsFixture, "Train Following", "[Alg][Alg-2]"){
     Algorithm::process(U->B[1], _FORCE);
 
     REQUIRE(U->B[1]->train != 0);
-    RailTrain * T = U->B[1]->train;
+    Train * T = U->B[1]->train;
 
     // Link engine
-    T->link(0, RAILTRAIN_ENGINE_TYPE);
+    T->link(0, TRAIN_ENGINE_TYPE);
 
     // Add extra detected block at wrong side
     U->B[0]->setDetection(1);
@@ -342,9 +342,9 @@ TEST_CASE_METHOD(TestsFixture, "Train Following", "[Alg][Alg-2]"){
     Algorithm::process(U->B[0], _FORCE);
 
     REQUIRE(U->B[0]->train != 0);
-    RailTrain * T = U->B[0]->train;
+    Train * T = U->B[0]->train;
 
-    T->link(1, RAILTRAIN_TRAIN_TYPE);
+    T->link(1, TRAIN_TRAIN_TYPE);
     T->setSpeed(10);
 
     // Step Forward
@@ -417,12 +417,13 @@ TEST_CASE_METHOD(TestsFixture, "Train Following", "[Alg][Alg-2]"){
     Algorithm::BlockTick();
 
     REQUIRE(U->B[3]->train != 0);
-    RailTrain * T = U->B[3]->train;
+    Train * T = U->B[3]->train;
 
     // Link engine
-    T->link(0, RAILTRAIN_TRAIN_TYPE);
+    T->link(0, TRAIN_TRAIN_TYPE);
 
     // Train direction is unknown
+    REQUIRE(!T->directionKnown);
     CHECK(!U->B[1]->virtualBlocked);
     CHECK(!U->B[2]->virtualBlocked);
 
@@ -512,16 +513,16 @@ TEST_CASE_METHOD(TestsFixture, "Train Following", "[Alg][Alg-2]"){
     Algorithm::process(U->B[3], _FORCE);
 
     REQUIRE(U->B[3]->train != 0);
-    RailTrain * T = U->B[3]->train;
+    Train * T = U->B[3]->train;
 
     U->B[0]->setDetection(1);
     Algorithm::process(U->B[0], _FORCE);
     REQUIRE(U->B[0]->train != 0);
 
-    RailTrain * tmp_RT[1] = {U->B[0]->train};
+    Train * tmp_RT[1] = {U->B[0]->train};
 
     // Link engine
-    T->link(2, RAILTRAIN_TRAIN_TYPE, 1, (RailTrain **)&tmp_RT);
+    T->link(2, TRAIN_TRAIN_TYPE, 1, (Train **)&tmp_RT);
 
     CHECK(U->B[0]->train == T);
 
@@ -614,9 +615,9 @@ TEST_CASE_METHOD(TestsFixture, "Train Following", "[Alg][Alg-2]"){
     REQUIRE(U->B[3]->train != 0);
     REQUIRE(U->B[4]->train != 0);
     REQUIRE(U->B[4]->train == U->B[3]->train);
-    RailTrain * T = U->B[4]->train;
+    Train * T = U->B[4]->train;
 
-    T->link(1, RAILTRAIN_TRAIN_TYPE);
+    T->link(1, TRAIN_TRAIN_TYPE);
     T->setSpeed(10);
 
     // Step Forward
@@ -633,15 +634,23 @@ TEST_CASE_METHOD(TestsFixture, "Train Following", "[Alg][Alg-2]"){
     CHECK(U->B[5]->expectedTrain == T);
     CHECK(U->B[6]->expectedTrain == T);
 
+    CHECK(!T->dir);
+
     T->setSpeed(0);
     T->reverse();
 
+    CHECK(!T->dir);
+
+    train_speed_event_tick(T->speed_event_data);
+
+    CHECK(T->dir);
+
     CHECK(T->B == U->B[3]);
 
-    CHECK(U->B[2]->expectedTrain == T);
+    CHECK(U->B[2]->expectedTrain == 0);
     CHECK(U->B[3]->expectedTrain == T);
     CHECK(U->B[4]->expectedTrain == T);
-    CHECK(U->B[5]->expectedTrain == 0);
+    CHECK(U->B[5]->expectedTrain == T);
     CHECK(U->B[6]->expectedTrain == 0);
 
     for(uint8_t i = 0; i < 8; i++){
@@ -649,6 +658,12 @@ TEST_CASE_METHOD(TestsFixture, "Train Following", "[Alg][Alg-2]"){
     }
 
     T->setSpeed(10);
+
+    CHECK(U->B[2]->expectedTrain == T);
+    CHECK(U->B[3]->expectedTrain == T);
+    CHECK(U->B[4]->expectedTrain == T);
+    CHECK(U->B[5]->expectedTrain == 0);
+    CHECK(U->B[6]->expectedTrain == 0);
 
     U->B[5]->setDetection(0);
     Algorithm::process(U->B[5], _FORCE);
@@ -670,9 +685,9 @@ TEST_CASE_METHOD(TestsFixture, "Train Following", "[Alg][Alg-2]"){
     Algorithm::process(U->B[4], _FORCE);
 
     REQUIRE(U->B[4]->train != 0);
-    RailTrain * T = U->B[4]->train;
+    Train * T = U->B[4]->train;
 
-    T->link(0, RAILTRAIN_TRAIN_TYPE);
+    T->link(0, TRAIN_TRAIN_TYPE);
     T->setSpeed(10);
 
     // Step Forward
@@ -693,11 +708,14 @@ TEST_CASE_METHOD(TestsFixture, "Train Following", "[Alg][Alg-2]"){
     T->setSpeed(0);
     T->reverse();
 
+    train_speed_event_tick(T->speed_event_data);
+
+
     CHECK(U->B[3]->virtualBlocked);
 
-    CHECK(U->B[3]->expectedTrain == T);
+    CHECK(U->B[3]->expectedTrain == 0);
     CHECK(U->B[4]->expectedTrain == T);
-    CHECK(U->B[5]->expectedTrain == 0);
+    CHECK(U->B[5]->expectedTrain == T);
     CHECK(U->B[6]->expectedTrain == 0);
 
     for(uint8_t i = 0; i < 8; i++){
@@ -705,6 +723,11 @@ TEST_CASE_METHOD(TestsFixture, "Train Following", "[Alg][Alg-2]"){
     }
 
     T->setSpeed(10);
+
+    CHECK(U->B[3]->expectedTrain == T);
+    CHECK(U->B[4]->expectedTrain == T);
+    CHECK(U->B[5]->expectedTrain == 0);
+    CHECK(U->B[6]->expectedTrain == 0);
 
     U->B[5]->setDetection(0);
     Algorithm::process(U->B[5], _FORCE);
@@ -729,16 +752,16 @@ TEST_CASE_METHOD(TestsFixture, "Train Following", "[Alg][Alg-2]"){
     Algorithm::process(U->B[5], _FORCE);
 
     REQUIRE(U->B[5]->train != 0);
-    RailTrain * T = U->B[5]->train;
+    Train * T = U->B[5]->train;
 
     U->B[2]->setDetection(1);
     Algorithm::process(U->B[2], _FORCE);
     REQUIRE(U->B[2]->train != 0);
 
-    RailTrain * tmp_RT[1] = {U->B[2]->train};
+    Train * tmp_RT[1] = {U->B[2]->train};
 
     // Link engine
-    T->link(2, RAILTRAIN_TRAIN_TYPE, 1, (RailTrain **)&tmp_RT);
+    T->link(2, TRAIN_TRAIN_TYPE, 1, (Train **)&tmp_RT);
     CHECK(U->B[2]->train == T);
 
     T->setSpeed(10);
@@ -759,7 +782,23 @@ TEST_CASE_METHOD(TestsFixture, "Train Following", "[Alg][Alg-2]"){
     T->setSpeed(0);
     T->reverse();
 
+    train_speed_event_tick(T->speed_event_data);
+
     CHECK(T->B == U->B[2]);
+
+    CHECK(U->B[1]->expectedTrain == 0);
+    CHECK(U->B[2]->expectedTrain == T);
+    CHECK(U->B[3]->expectedTrain == 0);
+    CHECK(U->B[4]->expectedTrain == 0);
+    CHECK(U->B[5]->expectedTrain == T);
+    CHECK(U->B[6]->expectedTrain == T);
+    CHECK(U->B[7]->expectedTrain == 0);
+
+    for(uint8_t i = 0; i < 8; i++){
+      CHECK(U->B[i]->dir == 0b100);
+    }
+
+    T->setSpeed(10);
 
     CHECK(U->B[1]->expectedTrain == T);
     CHECK(U->B[2]->expectedTrain == T);
@@ -768,12 +807,6 @@ TEST_CASE_METHOD(TestsFixture, "Train Following", "[Alg][Alg-2]"){
     CHECK(U->B[5]->expectedTrain == T);
     CHECK(U->B[6]->expectedTrain == 0);
     CHECK(U->B[7]->expectedTrain == 0);
-
-    for(uint8_t i = 0; i < 8; i++){
-      CHECK(U->B[i]->dir == 0b100);
-    }
-
-    T->setSpeed(10);
 
     U->B[6]->setDetection(0);
     Algorithm::process(U->B[6], _FORCE);
@@ -897,10 +930,10 @@ TEST_CASE_METHOD(TestsFixture, "Algorithm Switch Setter", "[Alg][Alg-3]"){
 
     auto T = U->B[0]->train;
     REQUIRE(T != nullptr);
-    REQUIRE(T == RSManager->getRailTrain(0));
+    REQUIRE(T == RSManager->getTrain(0));
     
     // Force Switchsolver, since train is stopped
-    SwitchSolver::solve(T, U->B[0], U->B[2], U->B[2]->next, NEXT | SWITCH_CARE);
+    SwitchSolver::solve(T, U->B[0], U->B[2], U->B[2]->next, NEXT | FL_SWITCH_CARE);
 
     CHECK(U->Sw[0]->state == 0);
     CHECK(U->Sw[0]->Detection->state == CAUTION);
@@ -916,7 +949,7 @@ TEST_CASE_METHOD(TestsFixture, "Algorithm Switch Setter", "[Alg][Alg-3]"){
     Algorithm::BlockTick();
 
     // Force Switchsolver, since train is stopped
-    SwitchSolver::solve(T, U->B[0], U->B[2], U->B[2]->next, NEXT | SWITCH_CARE);
+    SwitchSolver::solve(T, U->B[0], U->B[2], U->B[2]->next, NEXT | FL_SWITCH_CARE);
 
     CHECK(U->Sw[0]->state == 0);
     CHECK(U->Sw[0]->Detection->state == RESERVED_SWITCH);
@@ -937,10 +970,10 @@ TEST_CASE_METHOD(TestsFixture, "Algorithm Switch Setter", "[Alg][Alg-3]"){
 
     auto T = U->B[4]->train;
     CHECK(T != nullptr);
-    CHECK(T == RSManager->getRailTrain(0));
+    CHECK(T == RSManager->getTrain(0));
 
     // Force SwitchSolver, since no speed
-    SwitchSolver::solve(T, U->B[4], U->B[5], U->B[5]->next, NEXT | SWITCH_CARE);
+    SwitchSolver::solve(T, U->B[4], U->B[5], U->B[5]->next, NEXT | FL_SWITCH_CARE);
 
     CHECK(U->Sw[1]->state == 0);
     CHECK(U->Sw[1]->Detection->state == CAUTION);
@@ -955,7 +988,7 @@ TEST_CASE_METHOD(TestsFixture, "Algorithm Switch Setter", "[Alg][Alg-3]"){
     Algorithm::BlockTick();
 
     // Force SwitchSolver, since no speed
-    SwitchSolver::solve(T, U->B[4], U->B[5], U->B[5]->next, NEXT | SWITCH_CARE);
+    SwitchSolver::solve(T, U->B[4], U->B[5], U->B[5]->next, NEXT | FL_SWITCH_CARE);
 
     CHECK(U->Sw[1]->state == 0);
     CHECK(U->Sw[1]->Detection->state == RESERVED_SWITCH);
@@ -979,14 +1012,15 @@ TEST_CASE_METHOD(TestsFixture, "Algorithm Switch Setter", "[Alg][Alg-3]"){
 
     auto T = U->B[8]->train;
     REQUIRE(T != nullptr);
-    REQUIRE(T == RSManager->getRailTrain(0));
-    CHECK(U->B[14]->train == RSManager->getRailTrain(1));
+    REQUIRE(T == RSManager->getTrain(0));
+    CHECK(U->B[14]->train == RSManager->getTrain(1));
     CHECK(U->B[14]->train->stopped);
+    CHECK(U->B[14]->station->stoppedTrain);
 
-    RSManager->getRailTrain(0)->setSpeed(10);
-    
+    RSManager->getTrain(0)->setSpeed(10);
+
     // Force switchsolver, since speed is too low
-    SwitchSolver::solve(T, U->B[8], U->B[10], U->B[10]->next, NEXT | SWITCH_CARE);
+    SwitchSolver::solve(T, U->B[8], U->B[10], U->B[10]->next, NEXT | FL_SWITCH_CARE);
 
     CHECK(U->Sw[2]->state == 1);
     CHECK(U->Sw[2]->Detection->state == RESERVED_SWITCH);
@@ -1004,12 +1038,12 @@ TEST_CASE_METHOD(TestsFixture, "Algorithm Switch Setter", "[Alg][Alg-3]"){
     Algorithm::process(U->B[8], _FORCE);
     
     auto T = U->B[8]->train;
-    REQUIRE(T == RSManager->getRailTrain(0));
+    REQUIRE(T == RSManager->getTrain(0));
 
-    RSManager->getRailTrain(0)->setSpeed(10);
+    RSManager->getTrain(0)->setSpeed(10);
     
     // Force switchsolver, since speed is too low
-    SwitchSolver::solve(T, U->B[8], U->B[10], U->B[10]->next, NEXT | SWITCH_CARE);
+    SwitchSolver::solve(T, U->B[8], U->B[10], U->B[10]->next, NEXT | FL_SWITCH_CARE);
     
     CHECK(U->Sw[2]->state == 0);
     CHECK(U->Sw[2]->Detection->state == CAUTION);
@@ -1020,10 +1054,11 @@ TEST_CASE_METHOD(TestsFixture, "Algorithm Switch Setter", "[Alg][Alg-3]"){
     U->B[14]->setDetection(1);
     Algorithm::process(U->B[14], _FORCE);
 
-    CHECK(U->B[14]->train == RSManager->getRailTrain(1));
+    CHECK(U->B[14]->train == RSManager->getTrain(1));
+    CHECK(U->B[14]->station->occupied);
 
     // Force switchsolver, since speed is too low
-    SwitchSolver::solve(T, U->B[8], U->B[10], U->B[10]->next, NEXT | SWITCH_CARE);
+    SwitchSolver::solve(T, U->B[8], U->B[10], U->B[10]->next, NEXT | FL_SWITCH_CARE);
     
     CHECK(U->Sw[2]->state == 1);
   }
@@ -1042,12 +1077,12 @@ TEST_CASE_METHOD(TestsFixture, "Algorithm Switch Setter", "[Alg][Alg-3]"){
     U->B[8]->setDetection(1);
     Algorithm::process(U->B[8], _FORCE);
     
-    CHECK(U->B[8]->train == RSManager->getRailTrain(0));
+    CHECK(U->B[8]->train == RSManager->getTrain(0));
 
-    RSManager->getRailTrain(0)->setSpeed(10);
+    RSManager->getTrain(0)->setSpeed(10);
     
     // Force switchsolver, since speed is too low
-    SwitchSolver::solve(U->B[8]->train, U->B[8], U->B[10], U->B[10]->next, NEXT | SWITCH_CARE);
+    SwitchSolver::solve(U->B[8]->train, U->B[8], U->B[10], U->B[10]->next, NEXT | FL_SWITCH_CARE);
     
     CHECK(U->Sw[2]->state == 0);
     CHECK(U->Sw[2]->Detection->state == CAUTION);
@@ -1067,7 +1102,7 @@ TEST_CASE_METHOD(TestsFixture, "Algorithm Switch Setter", "[Alg][Alg-3]"){
 
     U->B[11]->path->reverse();
     U->B[13]->path->reverse();
-    U->B[13]->path->reserve(new RailTrain(U->B[0]));
+    U->B[13]->path->reserve(new Train(U->B[0]));
 
     CHECK(U->B[11]->dir == 4);
     CHECK(U->B[13]->dir == 4);
@@ -1076,12 +1111,12 @@ TEST_CASE_METHOD(TestsFixture, "Algorithm Switch Setter", "[Alg][Alg-3]"){
     Algorithm::process(U->B[8], _FORCE);
     
     auto T = U->B[8]->train;
-    CHECK(T == RSManager->getRailTrain(1));
+    CHECK(T == RSManager->getTrain(1));
 
     T->setSpeed(10);
     
     // Force switchsolver, since speed is too low
-    SwitchSolver::solve(U->B[8]->train, U->B[8], U->B[10], U->B[10]->next, NEXT | SWITCH_CARE);
+    SwitchSolver::solve(U->B[8]->train, U->B[8], U->B[10], U->B[10]->next, NEXT | FL_SWITCH_CARE);
     
     CHECK(U->Sw[2]->state == 1);
     CHECK(U->Sw[2]->Detection->state == RESERVED_SWITCH);
@@ -1107,12 +1142,12 @@ TEST_CASE_METHOD(TestsFixture, "Algorithm Switch Setter", "[Alg][Alg-3]"){
     Algorithm::process(U->B[14], _FORCE);
 
     CHECK(U->B[8]->train != nullptr);
-    CHECK(U->B[8]->train == RSManager->getRailTrain(0));
+    CHECK(U->B[8]->train == RSManager->getTrain(0));
 
-    RSManager->getRailTrain(0)->setSpeed(10);
+    RSManager->getTrain(0)->setSpeed(10);
 
     // Force SwitchSolver, since speed is too low
-    SwitchSolver::solve(U->B[8]->train, U->B[8], U->B[10], U->B[10]->next, NEXT | SWITCH_CARE);
+    SwitchSolver::solve(U->B[8]->train, U->B[8], U->B[10], U->B[10]->next, NEXT | FL_SWITCH_CARE);
 
     CHECK(U->Sw[2]->state == 0);
     CHECK(U->Sw[2]->Detection->state == DANGER);
@@ -1142,12 +1177,12 @@ TEST_CASE_METHOD(TestsFixture, "Algorithm Switch Setter", "[Alg][Alg-3]"){
     U->B[19]->train->setSpeed(0);
 
     CHECK(U->B[15]->train != nullptr);
-    CHECK(U->B[15]->train == RSManager->getRailTrain(0));
+    CHECK(U->B[15]->train == RSManager->getTrain(0));
 
-    RSManager->getRailTrain(0)->setSpeed(10);
+    RSManager->getTrain(0)->setSpeed(10);
     
     // Force SwitchSolver, since speed is too low
-    SwitchSolver::solve(U->B[15]->train, U->B[15], U->B[16], U->B[16]->next, NEXT | SWITCH_CARE);
+    SwitchSolver::solve(U->B[15]->train, U->B[15], U->B[16], U->B[16]->next, NEXT | FL_SWITCH_CARE);
 
     CHECK(U->Sw[4]->state == 0);
     CHECK(U->Sw[5]->state == 1);
@@ -1183,12 +1218,12 @@ TEST_CASE_METHOD(TestsFixture, "Algorithm Switch Setter", "[Alg][Alg-3]"){
     CHECK(U->Sw[5]->state == 0);
 
     CHECK(U->B[15]->train != nullptr);
-    CHECK(U->B[15]->train == RSManager->getRailTrain(0));
+    CHECK(U->B[15]->train == RSManager->getTrain(0));
 
-    RSManager->getRailTrain(0)->setSpeed(10);
+    RSManager->getTrain(0)->setSpeed(10);
         
     // Force SwitchSolver, since speed is too low
-    SwitchSolver::solve(U->B[15]->train, U->B[15], U->B[16], U->B[16]->next, NEXT | SWITCH_CARE);
+    SwitchSolver::solve(U->B[15]->train, U->B[15], U->B[16], U->B[16]->next, NEXT | FL_SWITCH_CARE);
 
     CHECK(U->Sw[4]->state == 1);
     CHECK(U->Sw[5]->state == 0);
@@ -1213,12 +1248,12 @@ TEST_CASE_METHOD(TestsFixture, "Algorithm Switch Setter", "[Alg][Alg-3]"){
     REQUIRE(T->route->found_forward);
 
     CHECK(T != nullptr);
-    CHECK(T == RSManager->getRailTrain(0));
+    CHECK(T == RSManager->getTrain(0));
 
-    RSManager->getRailTrain(0)->setSpeed(10);
+    RSManager->getTrain(0)->setSpeed(10);
 
     // Force SwitchSolver, since speed is too low
-    SwitchSolver::solve(U->B[22]->train, U->B[22], U->B[24], U->B[24]->next, NEXT | SWITCH_CARE);
+    SwitchSolver::solve(U->B[22]->train, U->B[22], U->B[24], U->B[24]->next, NEXT | FL_SWITCH_CARE);
 
 
     CHECK(U->Sw[3]->state == 1);
@@ -1241,12 +1276,12 @@ TEST_CASE_METHOD(TestsFixture, "Algorithm Switch Setter", "[Alg][Alg-3]"){
     REQUIRE(T->route);
     REQUIRE(T->route->found_forward);
 
-    CHECK(T == RSManager->getRailTrain(0));
+    CHECK(T == RSManager->getTrain(0));
 
-    RSManager->getRailTrain(0)->setSpeed(10);
+    RSManager->getTrain(0)->setSpeed(10);
 
     // Force SwitchSolver, since speed is too low
-    SwitchSolver::solve(U->B[22]->train, U->B[22], U->B[24], U->B[24]->next, NEXT | SWITCH_CARE);
+    SwitchSolver::solve(U->B[22]->train, U->B[22], U->B[24], U->B[24]->next, NEXT | FL_SWITCH_CARE);
 
     CHECK(U->Sw[3]->state == 0);
     CHECK(U->Sw[4]->state == 0);
@@ -1264,19 +1299,19 @@ TEST_CASE_METHOD(TestsFixture, "Algorithm Switch Setter", "[Alg][Alg-3]"){
     auto T = U->B[22]->train;
 
     REQUIRE(T);
-    CHECK(T == RSManager->getRailTrain(0));
+    CHECK(T == RSManager->getTrain(0));
     REQUIRE(U->B[26]->train);
-    CHECK(U->B[26]->train == RSManager->getRailTrain(1));
+    CHECK(U->B[26]->train == RSManager->getTrain(1));
 
     T->setRoute(U->B[33]);
 
     REQUIRE(T->route);
     REQUIRE(T->route->found_forward);
 
-    RSManager->getRailTrain(0)->setSpeed(10);
+    RSManager->getTrain(0)->setSpeed(10);
 
     // Force SwitchSolver, since speed is too low
-    SwitchSolver::solve(U->B[22]->train, U->B[22], U->B[24], U->B[24]->next, NEXT | SWITCH_CARE);
+    SwitchSolver::solve(U->B[22]->train, U->B[22], U->B[24], U->B[24]->next, NEXT | FL_SWITCH_CARE);
 
     CHECK(U->Sw[3]->state == 1);
     CHECK(U->Sw[4]->state == 1);
@@ -1287,7 +1322,7 @@ TEST_CASE_METHOD(TestsFixture, "Algorithm Switch Setter", "[Alg][Alg-3]"){
   }
 
   SECTION("X - Approaching S with reserved switches"){
-    RailTrain * tmpRT = new RailTrain(U->B[17]);
+    Train * tmpRT = new Train(U->B[17]);
     U->B[17]->reserve(tmpRT);
 
     U->Sw[3]->setState(1);
@@ -1300,7 +1335,7 @@ TEST_CASE_METHOD(TestsFixture, "Algorithm Switch Setter", "[Alg][Alg-3]"){
     U->B[22]->train->setSpeed(10);
 
     // Force SwitchSolver, since speed is too low
-    SwitchSolver::solve(U->B[22]->train, U->B[22], U->B[24], U->B[24]->next, NEXT | SWITCH_CARE);
+    SwitchSolver::solve(U->B[22]->train, U->B[22], U->B[24], U->B[24]->next, NEXT | FL_SWITCH_CARE);
 
     CHECK(U->Sw[3]->state == 0);
     CHECK(U->Sw[4]->state == 0);
@@ -1324,7 +1359,7 @@ TEST_CASE_METHOD(TestsFixture, "Algorithm Switch Setter", "[Alg][Alg-3]"){
     U->B[22]->train->setSpeed(10);
 
     // Force SwitchSolver, since speed is too low
-    SwitchSolver::solve(U->B[22]->train, U->B[22], U->B[24], U->B[24]->next, NEXT | SWITCH_CARE);
+    SwitchSolver::solve(U->B[22]->train, U->B[22], U->B[24], U->B[24]->next, NEXT | FL_SWITCH_CARE);
 
     CHECK(U->Sw[3]->state == 0);
     CHECK(U->Sw[9]->state == 1);
@@ -1341,7 +1376,7 @@ TEST_CASE_METHOD(TestsFixture, "Algorithm Switch Setter", "[Alg][Alg-3]"){
     REQUIRE(U->B[36]->path != U->B[37]->path);
     REQUIRE(U->B[37]->path->Entrance != U->B[37]);
 
-    RailTrain * tmpRT = new RailTrain(U->B[37]);
+    Train * tmpRT = new Train(U->B[37]);
     U->B[37]->path->reserve(tmpRT);
 
     U->B[22]->setDetection(1);
@@ -1355,7 +1390,7 @@ TEST_CASE_METHOD(TestsFixture, "Algorithm Switch Setter", "[Alg][Alg-3]"){
     U->B[22]->train->setSpeed(10);
 
     // Force SwitchSolver, since speed is too low
-    SwitchSolver::solve(U->B[22]->train, U->B[22], U->B[24], U->B[24]->next, NEXT | SWITCH_CARE);
+    SwitchSolver::solve(U->B[22]->train, U->B[22], U->B[24], U->B[24]->next, NEXT | FL_SWITCH_CARE);
 
     CHECK(U->B[24]->switchWrongState);
     CHECK(!U->B[24]->reserved);
@@ -1372,7 +1407,7 @@ TEST_CASE_METHOD(TestsFixture, "Algorithm Switch Setter", "[Alg][Alg-3]"){
 
     Algorithm::BlockTick();
 
-    auto T = new RailTrain(U->B[45]);
+    auto T = new Train(U->B[45]);
     U->B[45]->path->reserve(T);
 
     CHECK(U->B[42]->state == DANGER);
@@ -1382,7 +1417,7 @@ TEST_CASE_METHOD(TestsFixture, "Algorithm Switch Setter", "[Alg][Alg-3]"){
     Algorithm::process(U->B[45], _FORCE);
     
     // Force SwitchSolver, since speed is too low
-    SwitchSolver::solve(T, U->B[45], U->B[47], U->B[47]->next, NEXT | SWITCH_CARE);
+    SwitchSolver::solve(T, U->B[45], U->B[47], U->B[47]->next, NEXT | FL_SWITCH_CARE);
 
     CHECK(U->B[42]->dir == 0b101);
     CHECK(U->B[43]->dir == 0b101);
@@ -1487,7 +1522,7 @@ TEST_CASE_METHOD(TestsFixture, "Train Speed Control", "[Alg][Alg-Sp]"){
   
   Algorithm::BlockTick();
 
-  B->train->link(0, RAILTRAIN_ENGINE_TYPE);
+  B->train->link(0, TRAIN_ENGINE_TYPE);
   B->train->setControl(TRAIN_SEMI_AUTO);
 
   train.train_length = B->train->length;
@@ -1526,27 +1561,27 @@ TEST_CASE_METHOD(TestsFixture, "Train Speed Control", "[Alg][Alg-Sp]"){
 
     REQUIRE(U->B[5]->blocked);
     CHECK(T->speed == 180);
-    CHECK(T->changing_speed == RAILTRAIN_SPEED_T_CHANGING);
+    CHECK(T->SpeedState == TRAIN_SPEED_CHANGING);
     CHECK(ED->target_speed == CAUTION_SPEED);
     CHECK(ED->target_distance == 300);
-    CHECK(ED->reason == RAILTRAIN_SPEED_R_SIGNAL);
+    CHECK(ED->reason == TRAIN_SPEED_R_SIGNAL);
 
     while(!U->B[6]->blocked && maxIterations > 0){
       train_testSim_tick(&train, &maxIterations);
     }
 
     REQUIRE(U->B[6]->blocked);
-    CHECK(T->changing_speed == RAILTRAIN_SPEED_T_UPDATE);
+    CHECK(T->SpeedState == TRAIN_SPEED_UPDATE);
 
     while(T->speed_event_data->stepCounter > 1)
       train_testSim_tick(&train, &maxIterations);
 
     CHECK(T->speed < 180);
     CHECK(T->speed >= T->speed_event_data->startSpeed);
-    CHECK(T->changing_speed == RAILTRAIN_SPEED_T_CHANGING);
+    CHECK(T->SpeedState == TRAIN_SPEED_CHANGING);
     CHECK(ED->target_speed == CAUTION_SPEED);
     CHECK(ED->target_distance == 200);
-    CHECK(ED->reason == RAILTRAIN_SPEED_R_SIGNAL);
+    CHECK(ED->reason == TRAIN_SPEED_R_SIGNAL);
 
     while(!U->B[7]->blocked && maxIterations > 0){
       train_testSim_tick(&train, &maxIterations);
@@ -1557,12 +1592,12 @@ TEST_CASE_METHOD(TestsFixture, "Train Speed Control", "[Alg][Alg-Sp]"){
     while(T->speed_event_data->stepCounter > 1)
       train_testSim_tick(&train, &maxIterations);
 
-    CHECK(T->changing_speed == RAILTRAIN_SPEED_T_CHANGING);
+    CHECK(T->SpeedState == TRAIN_SPEED_CHANGING);
     CHECK(T->speed < 180);
     CHECK(T->speed >= T->speed_event_data->startSpeed);
     CHECK(ED->target_speed == CAUTION_SPEED);
     CHECK(ED->target_distance == 100);
-    CHECK(ED->reason == RAILTRAIN_SPEED_R_SIGNAL);
+    CHECK(ED->reason == TRAIN_SPEED_R_SIGNAL);
 
     while(!U->B[8]->blocked && maxIterations > 0){
       train_testSim_tick(&train, &maxIterations);
@@ -1578,7 +1613,7 @@ TEST_CASE_METHOD(TestsFixture, "Train Speed Control", "[Alg][Alg-Sp]"){
       U->B[i]->state = CAUTION;
     for(uint8_t i = 8; i < 12; i++)
       U->B[i]->state = DANGER;
-    
+
     maxIterations = 2000;
 
     while(!U->B[6]->blocked && maxIterations > 0){
@@ -1586,24 +1621,32 @@ TEST_CASE_METHOD(TestsFixture, "Train Speed Control", "[Alg][Alg-Sp]"){
     }
 
     REQUIRE(U->B[6]->blocked);
-    CHECK(T->changing_speed == RAILTRAIN_SPEED_T_DONE);
-    CHECK(ED->reason == RAILTRAIN_SPEED_R_NONE);
+    CHECK(T->SpeedState == TRAIN_SPEED_DRIVING);
+    CHECK(ED->reason == TRAIN_SPEED_R_NONE);
 
     while(!U->B[7]->blocked && maxIterations > 0){
       train_testSim_tick(&train, &maxIterations);
     }
 
     REQUIRE(U->B[7]->blocked);
-    CHECK(T->changing_speed == RAILTRAIN_SPEED_T_CHANGING);
+    CHECK(T->SpeedState == TRAIN_SPEED_CHANGING);
     CHECK(ED->target_speed == 0);
     CHECK(ED->target_distance == 100);
-    CHECK(ED->reason == RAILTRAIN_SPEED_R_SIGNAL);
+    CHECK(ED->reason == TRAIN_SPEED_R_SIGNAL);
 
-    while(!U->B[8]->blocked && T->speed != 0 && maxIterations > 0){
+    while(!U->B[8]->blocked && T->speed > 0 && maxIterations > 0){
       train_testSim_tick(&train, &maxIterations);
     }
 
     CHECK(!U->B[8]->blocked);
+    CHECK(U->B[7]->train->speed == 0);
+    CHECK(U->B[7]->train->SpeedState == TRAIN_SPEED_STOPPING_WAIT);
+
+    while(!U->B[8]->blocked && !T->speed_event->disabled && maxIterations > 0){
+      train_testSim_tick(&train, &maxIterations);
+    }
+
+    CHECK(U->B[7]->train->SpeedState == TRAIN_SPEED_WAITING);
   }
   
   SECTION("III - CAUTION changing to PROCEED"){
@@ -1618,10 +1661,10 @@ TEST_CASE_METHOD(TestsFixture, "Train Speed Control", "[Alg][Alg-Sp]"){
     }
 
     REQUIRE(U->B[5]->blocked);
-    CHECK(T->changing_speed == RAILTRAIN_SPEED_T_CHANGING);
+    CHECK(T->SpeedState == TRAIN_SPEED_CHANGING);
     CHECK(ED->target_speed == CAUTION_SPEED);
     CHECK(ED->target_distance == 300);
-    CHECK(ED->reason == RAILTRAIN_SPEED_R_SIGNAL);
+    CHECK(ED->reason == TRAIN_SPEED_R_SIGNAL);
     CHECK(T->speed == 180);
 
     while(T->speed_event_data->stepCounter != 4 && maxIterations > 0){
@@ -1635,38 +1678,38 @@ TEST_CASE_METHOD(TestsFixture, "Train Speed Control", "[Alg][Alg-Sp]"){
       train_testSim_tick(&train, &maxIterations);
     }
 
-    CHECK(T->changing_speed == RAILTRAIN_SPEED_T_DONE);
-    CHECK(ED->reason == RAILTRAIN_SPEED_R_NONE);
+    CHECK(T->SpeedState == TRAIN_SPEED_DRIVING);
+    CHECK(ED->reason == TRAIN_SPEED_R_NONE);
 
     while(!U->B[7]->blocked && maxIterations > 0){
       train_testSim_tick(&train, &maxIterations);
     }
 
     REQUIRE(U->B[7]->blocked);
-    CHECK(T->changing_speed == RAILTRAIN_SPEED_T_CHANGING);
+    CHECK(T->SpeedState == TRAIN_SPEED_CHANGING);
     CHECK(ED->target_speed == CAUTION_SPEED);
     CHECK(ED->target_distance == 200);
-    CHECK(ED->reason == RAILTRAIN_SPEED_R_SIGNAL);
+    CHECK(ED->reason == TRAIN_SPEED_R_SIGNAL);
 
     while(!U->B[8]->blocked && maxIterations > 0){
       train_testSim_tick(&train, &maxIterations);
     }
 
     REQUIRE(U->B[8]->blocked);
-    CHECK(T->changing_speed == RAILTRAIN_SPEED_T_UPDATE);
+    CHECK(T->SpeedState == TRAIN_SPEED_UPDATE);
     CHECK(ED->target_speed == CAUTION_SPEED);
     CHECK(ED->target_distance == 100);
-    CHECK(ED->reason == RAILTRAIN_SPEED_R_SIGNAL);
+    CHECK(ED->reason == TRAIN_SPEED_R_SIGNAL);
 
     while(!U->B[8]->blocked && maxIterations > 0){
       train_testSim_tick(&train, &maxIterations);
     }
 
     REQUIRE(U->B[8]->blocked);
-    CHECK(T->changing_speed == RAILTRAIN_SPEED_T_UPDATE);
+    CHECK(T->SpeedState == TRAIN_SPEED_UPDATE);
     CHECK(ED->target_speed == CAUTION_SPEED);
     CHECK(ED->target_distance == 100);
-    CHECK(ED->reason == RAILTRAIN_SPEED_R_SIGNAL);
+    CHECK(ED->reason == TRAIN_SPEED_R_SIGNAL);
   }
 
   SECTION("IV - Speed"){
@@ -1682,30 +1725,30 @@ TEST_CASE_METHOD(TestsFixture, "Train Speed Control", "[Alg][Alg-Sp]"){
     }
 
     REQUIRE(U->B[7]->blocked);
-    CHECK(T->changing_speed == RAILTRAIN_SPEED_T_CHANGING);
+    CHECK(T->SpeedState == TRAIN_SPEED_CHANGING);
     CHECK(ED->target_speed == 100);
     CHECK(ED->target_distance == 300);
-    CHECK(ED->reason == RAILTRAIN_SPEED_R_MAXSPEED);
+    CHECK(ED->reason == TRAIN_SPEED_R_MAXSPEED);
 
     while(!U->B[8]->blocked && maxIterations > 0){
       train_testSim_tick(&train, &maxIterations);
     }
 
     REQUIRE(U->B[8]->blocked);
-    CHECK(T->changing_speed == RAILTRAIN_SPEED_T_UPDATE);
+    CHECK(T->SpeedState == TRAIN_SPEED_UPDATE);
     CHECK(ED->target_speed == 100);
     CHECK(ED->target_distance == 200);
-    CHECK(ED->reason == RAILTRAIN_SPEED_R_MAXSPEED);
+    CHECK(ED->reason == TRAIN_SPEED_R_MAXSPEED);
 
     while(!U->B[9]->blocked && maxIterations > 0){
       train_testSim_tick(&train, &maxIterations);
     }
 
     REQUIRE(U->B[9]->blocked);
-    CHECK(T->changing_speed == RAILTRAIN_SPEED_T_UPDATE);
+    CHECK(T->SpeedState == TRAIN_SPEED_UPDATE);
     CHECK(ED->target_speed == 100);
     CHECK(ED->target_distance == 100);
-    CHECK(ED->reason == RAILTRAIN_SPEED_R_MAXSPEED);
+    CHECK(ED->reason == TRAIN_SPEED_R_MAXSPEED);
 
     while(!U->B[12]->blocked && maxIterations > 0){
       Block * trainBlock = T->B;
@@ -1714,12 +1757,12 @@ TEST_CASE_METHOD(TestsFixture, "Train Speed Control", "[Alg][Alg-Sp]"){
         train_testSim_tick(&train, &maxIterations);
       }
 
-      CHECK(T->changing_speed != RAILTRAIN_SPEED_T_CHANGING);
+      CHECK(T->SpeedState != TRAIN_SPEED_CHANGING);
       CHECK(T->speed == 100);
     }
 
     REQUIRE(U->B[12]->blocked);
-    CHECK(T->changing_speed != RAILTRAIN_SPEED_T_CHANGING);
+    CHECK(T->SpeedState != TRAIN_SPEED_CHANGING);
     CHECK(T->speed == 100);
 
     while(U->B[12]->blocked && maxIterations > 0){
@@ -1727,21 +1770,21 @@ TEST_CASE_METHOD(TestsFixture, "Train Speed Control", "[Alg][Alg-Sp]"){
     }
 
     REQUIRE(!U->B[12]->blocked);
-    CHECK(T->changing_speed == RAILTRAIN_SPEED_T_CHANGING);
+    CHECK(T->SpeedState == TRAIN_SPEED_CHANGING);
     CHECK(ED->target_speed > 100);
     CHECK(ED->target_distance == 100);
-    CHECK(ED->reason == RAILTRAIN_SPEED_R_MAXSPEED);
+    CHECK(ED->reason == TRAIN_SPEED_R_MAXSPEED);
 
     while(!U->B[14]->blocked && maxIterations > 0){
       train_testSim_tick(&train, &maxIterations);
     }
 
     REQUIRE(U->B[14]->blocked);
-    CHECK(T->changing_speed == RAILTRAIN_SPEED_T_CHANGING); // FIXME, train could allready be accelerating because it left B[13]
+    CHECK(T->SpeedState == TRAIN_SPEED_CHANGING); // FIXME, train could allready be accelerating because it left B[13]
     CHECK(ED->target_speed > 100);
     CHECK(ED->target_speed <= 180);
     CHECK(ED->target_distance == 100);
-    CHECK(ED->reason == RAILTRAIN_SPEED_R_MAXSPEED);
+    CHECK(ED->reason == TRAIN_SPEED_R_MAXSPEED);
   }
 
   SECTION("V - End of route"){
@@ -1750,7 +1793,7 @@ TEST_CASE_METHOD(TestsFixture, "Train Speed Control", "[Alg][Alg-Sp]"){
     T->setRoute(U->St[0]);
 
     REQUIRE(T->route);
-    REQUIRE(T->routeStatus == RAILTRAIN_ROUTE_RUNNING);
+    REQUIRE(T->routeStatus == TRAIN_ROUTE_RUNNING);
     REQUIRE(T->route->destination == U->St[0]->uid);
 
     while(!U->B[7]->blocked && maxIterations > 0){
@@ -1761,14 +1804,14 @@ TEST_CASE_METHOD(TestsFixture, "Train Speed Control", "[Alg][Alg-Sp]"){
       train_testSim_tick(&train, &maxIterations);
     }
 
-    CHECK(T->routeStatus == RAILTRAIN_ROUTE_ENTERED_DESTINATION);
+    CHECK(T->routeStatus == TRAIN_ROUTE_ENTERED_DESTINATION);
 
     while(!U->B[13]->blocked && T->speed > 90 && maxIterations > 0){
       train_testSim_tick(&train, &maxIterations);
     }
 
-    CHECK(T->routeStatus == RAILTRAIN_ROUTE_AT_DESTINATION);
-    CHECK(ED->reason == RAILTRAIN_SPEED_R_ROUTE);
+    CHECK(T->routeStatus == TRAIN_ROUTE_AT_DESTINATION);
+    CHECK(ED->reason == TRAIN_SPEED_R_ROUTE);
 
     while(!U->B[13]->blocked && T->speed != 0 && maxIterations > 0){
       train_testSim_tick(&train, &maxIterations);
@@ -1778,7 +1821,15 @@ TEST_CASE_METHOD(TestsFixture, "Train Speed Control", "[Alg][Alg-Sp]"){
     CHECK(!U->B[13]->blocked);
     CHECK(U->B[12]->blocked);
     CHECK(!U->B[10]->blocked);
-    CHECK(ED->reason == RAILTRAIN_SPEED_R_NONE);
+    CHECK(ED->reason == TRAIN_SPEED_R_NONE);
+    
+    CHECK(T->SpeedState == TRAIN_SPEED_STOPPING_WAIT);
+
+    while(!U->B[13]->blocked && !T->speed_event->disabled && maxIterations > 0){
+      train_testSim_tick(&train, &maxIterations);
+    }
+    
+    CHECK(T->SpeedState == TRAIN_SPEED_WAITING_DESTINATION);
 
   }
 
@@ -1786,14 +1837,14 @@ TEST_CASE_METHOD(TestsFixture, "Train Speed Control", "[Alg][Alg-Sp]"){
     T->setRoute(U->B[10]);
 
     REQUIRE(T->route);
-    REQUIRE(T->routeStatus == RAILTRAIN_ROUTE_RUNNING);
+    REQUIRE(T->routeStatus == TRAIN_ROUTE_RUNNING);
     REQUIRE(T->route->destination == 0x010A); // Unit 1 Block 10
 
     while(!U->B[10]->blocked && maxIterations > 0){
       train_testSim_tick(&train, &maxIterations);
     }
 
-    CHECK(T->routeStatus == RAILTRAIN_ROUTE_AT_DESTINATION);
+    CHECK(T->routeStatus == TRAIN_ROUTE_AT_DESTINATION);
 
     while(!U->B[13]->blocked && T->speed != 0 && maxIterations > 0){
       train_testSim_tick(&train, &maxIterations);
@@ -1802,6 +1853,52 @@ TEST_CASE_METHOD(TestsFixture, "Train Speed Control", "[Alg][Alg-Sp]"){
     CHECK(T->speed != 0);
     CHECK(U->B[13]->blocked);
 
+  }
+
+  SECTION("VII - User Stop change speed"){
+    while(!U->B[5]->blocked && maxIterations > 0){
+      train_testSim_tick(&train, &maxIterations);
+    }
+
+    CHECK(T->speed == 180);
+    T->changeSpeed(0, 300);
+
+    CHECK(T->SpeedState == TRAIN_SPEED_CHANGING);
+    CHECK(ED->target_speed == 0);
+    CHECK(ED->target_distance == 300);
+    CHECK(ED->reason == TRAIN_SPEED_R_MAXSPEED);
+
+    while(!U->B[8]->blocked && T->speed && maxIterations > 0){
+      train_testSim_tick(&train, &maxIterations);
+    }
+
+    CHECK(T->speed == 0);
+    CHECK(T->SpeedState == TRAIN_SPEED_STOPPING);
+
+    while(!T->speed_event->disabled && maxIterations > 0){
+      train_testSim_tick(&train, &maxIterations);
+    }
+
+    CHECK(T->SpeedState == TRAIN_SPEED_IDLE);
+  }
+
+  SECTION("VIII - User Stop set speed"){
+    while(!U->B[2]->blocked && maxIterations > 0){
+      train_testSim_tick(&train, &maxIterations);
+    }
+
+    CHECK(T->speed == 180);
+    T->setSpeed(0);
+    CHECK(T->speed == 0);
+    CHECK(T->SpeedState == TRAIN_SPEED_STOPPING);
+
+    maxIterations = 50;
+
+    while(!T->speed_event->disabled && maxIterations > 0){
+      train_testSim_tick(&train, &maxIterations);
+    }
+
+    CHECK(T->SpeedState == TRAIN_SPEED_IDLE);
   }
 
   scheduler->stop();
@@ -1872,7 +1969,7 @@ TEST_CASE_METHOD(TestsFixture, "Train Route Following", "[Alg][Alg-R]"){
   
   Algorithm::BlockTick();
 
-  B->train->link(0, RAILTRAIN_ENGINE_TYPE);
+  B->train->link(0, TRAIN_ENGINE_TYPE);
   B->train->setControl(TRAIN_MANUAL);
 
   train.train_length = B->train->length;

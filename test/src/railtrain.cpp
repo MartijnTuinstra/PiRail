@@ -14,7 +14,7 @@
 #include "switchboard/unit.h"
 #include "switchboard/blockconnector.h"
 
-#include "rollingstock/railtrain.h"
+#include "rollingstock/train.h"
 
 #include "train.h"
 
@@ -35,7 +35,7 @@ public:
   ~TestsFixture();
 };
 
-TEST_CASE_METHOD(TestsFixture, "RailTrain Continue Check", "[RT][RT-CC]"){
+TEST_CASE_METHOD(TestsFixture, "Train Continue Check", "[RT][RT-CC]"){
   char filenames[4][30] = {"./testconfigs/Alg-R-1.bin",
                            "./testconfigs/Alg-R-2.bin",
                            "./testconfigs/Alg-R-3.bin",
@@ -80,9 +80,7 @@ TEST_CASE_METHOD(TestsFixture, "RailTrain Continue Check", "[RT][RT-CC]"){
     }
   }
 
-  logger.setlevel_stdout(INFO);
   Algorithm::BlockTick();
-  logger.setlevel_stdout(WARNING);
 
   SECTION("I - Blocked Switch"){
     // Initialize Detection and trains
@@ -91,12 +89,12 @@ TEST_CASE_METHOD(TestsFixture, "RailTrain Continue Check", "[RT][RT-CC]"){
     U[3]->B[1]->setDetection(1);
     Algorithm::process(U[3]->B[1], _FORCE);
 
-    RailTrain * T = U[3]->B[1]->train;
-    T->link(0, RAILTRAIN_ENGINE_TYPE);
+    Train * T = U[3]->B[1]->train;
+    T->link(0, TRAIN_ENGINE_TYPE);
     T->setSpeed(10);
     T->setRoute(U[1]->B[12]);
     
-    U[1]->B[11]->train->link(1, RAILTRAIN_ENGINE_TYPE);
+    U[1]->B[11]->train->link(1, TRAIN_ENGINE_TYPE);
     U[1]->B[11]->train->setSpeed(10);
 
 
@@ -153,11 +151,11 @@ TEST_CASE_METHOD(TestsFixture, "RailTrain Continue Check", "[RT][RT-CC]"){
     U[3]->B[1]->setDetection(1);
     Algorithm::process(U[3]->B[1], _FORCE);
 
-    RailTrain * T = U[3]->B[1]->train;
-    T->link(0, RAILTRAIN_ENGINE_TYPE);
+    Train * T = U[3]->B[1]->train;
+    T->link(0, TRAIN_ENGINE_TYPE);
     T->setSpeed(10);
     
-    U[1]->B[2]->train->link(1, RAILTRAIN_ENGINE_TYPE);
+    U[1]->B[2]->train->link(1, TRAIN_ENGINE_TYPE);
     U[1]->B[2]->train->setSpeed(10);
     U[1]->B[2]->train->setSpeed(0);
     // Train must be stopped and occupy the station

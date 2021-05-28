@@ -30,7 +30,7 @@ class Engine {
 
     bool use;
     Train * train;
-    RailTrain * RT;
+    Train * RT; // TODO rename
 
     bool dirZ21; // Z21 Direction
     bool dir;    // Disired Direction for the Z21

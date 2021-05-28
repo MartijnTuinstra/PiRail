@@ -84,7 +84,7 @@ void Station::exportConfig(struct configStruct_Station * cfg){
   strcpy(cfg->name, name);
 }
 
-void Station::occupy(RailTrain * T){
+void Station::occupy(Train * T){
   if(parent)
     parent->occupiedChild = true;
 
@@ -120,6 +120,7 @@ void Station::releaseParent(){
 }
 
 void Station::setStoppedTrain(bool stop){
+  loggerf(TRACE, "Station %s setStoppedTrain %i", name, stop);
   stoppedTrain = stop;
 
   if(!parent)

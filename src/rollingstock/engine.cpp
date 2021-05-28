@@ -206,7 +206,7 @@ void Engine::Z21_setSpeedDir(char _speed, bool _dir){
 
   loggerf(DEBUG, "Engine Z21_setSpeedDir %i %i -> %i %i", _speed, _dir, Z21_get_speed, cur_speed);
 
-  // If linked to a RailTrain
+  // If linked to a Train
   if(use){
     if(!samedir && RT->dir != dir){
       RT->Z21_reverse();

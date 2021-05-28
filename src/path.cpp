@@ -10,7 +10,7 @@
 
 #include "algorithm/core.h"
 
-#include "rollingstock/railtrain.h"
+#include "rollingstock/train.h"
 
 std::vector<Path *> pathlist;
 
@@ -321,7 +321,7 @@ void Path::print(){
 }
 
 bool Path::reversable(){
-  for(RailTrain * T: trains){
+  for(Train * T: trains){
     if(T->speed){
       loggerf(INFO, "Path has a moving train");
       return false;
@@ -332,10 +332,10 @@ bool Path::reversable(){
 }
 
 void Path::reverse(){
-  return reverse((RailTrain *)0);
+  return reverse((Train *)0);
 }
 
-void Path::reverse(RailTrain * RT){
+void Path::reverse(Train * T){
   loggerf(INFO, "Path::reverse");
 
   if(!reversable())
@@ -347,19 +347,19 @@ void Path::reverse(RailTrain * RT){
     B->reverse();
   }
 
-  for(RailTrain * T: trains){
-    if(RT == T)
+  for(Train * t: trains){
+    if(T == t)
       continue;
 
     loggerf(INFO, "Reverse Train");
-    T->reverseFromPath(this);
+    t->reverseFromPath(this);
   }
 
   std::swap(next, prev);
   std::swap(Entrance, Exit);
 }
 
-void Path::reserve(RailTrain * T){
+void Path::reserve(Train * T){
   reserved = true;
   reservedTrains.push_back(T);
 
@@ -373,7 +373,7 @@ void Path::reserve(RailTrain * T){
   }
 }
 
-void Path::reserve(RailTrain * T, Block * B){
+void Path::reserve(Train * T, Block * B){
   reserved = true;
   reservedTrains.push_back(T);
 
@@ -397,24 +397,24 @@ void Path::reserve(RailTrain * T, Block * B){
   }
 }
 
-void Path::dereserve(RailTrain * RT){
+void Path::dereserve(Train * T){
   reservedTrains.erase(std::remove_if(reservedTrains.begin(),
                                      reservedTrains.end(),
-                                     [RT](const auto & o) { return (o == RT); }),
+                                     [T](const auto & o) { return (o == T); }),
                                      reservedTrains.end()
                                     );
 
   for(auto B: Blocks){
-    RT->dereserveBlock(B);
+    T->dereserveBlock(B);
   }
 
   if(reservedTrains.size() == 0)
     reserved = false;
 }
-void Path::trainAtEnd(RailTrain * RT){
+void Path::trainAtEnd(Train * T){
   reservedTrains.erase(std::remove_if(reservedTrains.begin(),
                                      reservedTrains.end(),
-                                     [RT](const auto & o) { return (o == RT); }),
+                                     [T](const auto & o) { return (o == T); }),
                                      reservedTrains.end()
                                     );
 
@@ -424,13 +424,13 @@ void Path::trainAtEnd(RailTrain * RT){
 
 
 
-void Path::reg(RailTrain * RT){
-  trains.push_back(RT);
+void Path::reg(Train * T){
+  trains.push_back(T);
 }
-void Path::unreg(RailTrain * RT){
+void Path::unreg(Train * T){
   trains.erase(std::remove_if(trains.begin(),
                               trains.end(),
-                             [RT](const auto & o) { return (o == RT); }),
+                             [T](const auto & o) { return (o == T); }),
                              trains.end()
                             );
 }

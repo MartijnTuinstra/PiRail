@@ -13,6 +13,8 @@
 #include "switchboard/signals.h"
 #include "switchboard/unit.h"
 
+#include "path.h"
+
 Unit::Unit(ModuleConfig * Config){
   memset(this, 0, sizeof(Unit));
 
@@ -98,27 +100,27 @@ Unit::Unit(uint16_t M, uint8_t Nodes, char points){
 
   switchboard::SwManager->addUnit(this);
 
-  this->module = M;
+  module = M;
 
-  this->connections_len = points;
+  connections_len = points;
 
-  this->IO_Nodes = Nodes;
-  this->Node = (IO_Node **)_calloc(this->IO_Nodes, IO_Node *);
+  IO_Nodes = Nodes;
+  Node = (IO_Node **)_calloc(IO_Nodes, IO_Node *);
 
-  this->block_len = 8;
-  this->B = (Block **)_calloc(this->block_len, Block*);
+  block_len = 8;
+  B = (Block **)_calloc(block_len, Block*);
 
-  this->switch_len = 8;
-  this->Sw = (Switch **)_calloc(this->switch_len, Switch*);
+  switch_len = 8;
+  Sw = (Switch **)_calloc(switch_len, Switch*);
 
-  this->msswitch_len = 8;
-  this->MSSw = (MSSwitch **)_calloc(this->switch_len, MSSwitch*);
+  msswitch_len = 8;
+  MSSw = (MSSwitch **)_calloc(switch_len, MSSwitch*);
 
-  this->signal_len = 8;
-  this->Sig = (Signal **)_calloc(this->signal_len, Signal*);
+  signal_len = 8;
+  Sig = (Signal **)_calloc(signal_len, Signal*);
 
-  this->station_len = 8;
-  this->St = (Station **)_calloc(this->station_len, Station*);
+  station_len = 8;
+  St = (Station **)_calloc(station_len, Station*);
 }
 
 Unit::~Unit(){
@@ -131,14 +133,14 @@ Unit::~Unit(){
   _free(this->Node);
 
   //clear Segments
-  for(int j = 0; j < this->block_len; j++){
-    if(!this->B[j])
+  for(int j = 0; j < block_len; j++){
+    if(!B[j])
       continue;
 
-    delete this->B[j];
-    this->B[j] = 0;
+    delete B[j];
+    B[j] = 0;
   }
-  _free(this->B);
+  _free(B);
 
   //clear Switches
   for(int j = 0; j < this->switch_len; j++){
@@ -185,7 +187,7 @@ Unit::~Unit(){
 }
 
 void Unit::insertBlock(Block * B){
-  if(this->block_len <= B->id){
+  if(block_len <= B->id){
     // loggerf(INFO, "Expand block len %i", block_len+8);
     this->B = (Block **)_realloc(this->B, (block_len + 8), Block *);
 
@@ -361,6 +363,14 @@ void Unit::link_all(){
       if(St[i]->blocks[0])
         if(!St[i]->blocks[0]->path)
           new Path(St[i]->blocks[0]);
+  }
+}
+
+void Unit::map_all(){
+  for(uint8_t i = 0; i < block_len; i++){
+    loggerf(TRACE, "mapping %2i:%2i", B[i]->module, B[i]->id);
+    B[i]->next.mapPolarity(B[i], NEXT);
+    B[i]->prev.mapPolarity(B[i], PREV);
   }
 }
 

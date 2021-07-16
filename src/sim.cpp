@@ -16,7 +16,7 @@
 
 #include "submodule.h"
 #include "websocket/stc.h"
-// #include "pathfinding.h"
+#include "path.h"
 
 #include "websocket/message_structure.h"
 
@@ -60,8 +60,8 @@ void train_sim_tick(struct train_sim * t){
     }
     t->blocks++;
 
-    if(t->blocks > 1 && t->B[1]->Alg.next){
-      t->B[0] = t->B[1]->Alg.N[0];
+    if(t->blocks > 1 && t->B[1]->Alg.N->group[3]){
+      t->B[0] = t->B[1]->Alg.N->B[0];
     }
     else{
       SYS_set_state(&SYS->SimA.state, Module_Fail);
@@ -147,7 +147,7 @@ void *TRAIN_SIMA(void * args){
 
   usleep(100000);
 
-  Block *B = Units(25)->B[3];
+  Block *B = Units(25)->B[6];
 
   struct train_sim train = {
     .sim = 'A',
@@ -160,8 +160,8 @@ void *TRAIN_SIMA(void * args){
   };
   train.B[0] = B;
 
-  while(!B->Alg.N[0] || !B->Alg.P[0]){usleep(10000);}
-  while(B->Alg.N[0]->blocked || B->blocked || B->Alg.P[0]->blocked){usleep(10000);} // Wait for space
+  while(!B->Alg.N->B[0] || !B->Alg.P->B[0]){usleep(10000);}
+  while(B->Alg.N->B[0]->blocked || B->blocked || B->Alg.P->B[0]->blocked){usleep(10000);} // Wait for space
 
   // B->train = new Train(B);
 
@@ -278,8 +278,8 @@ void *TRAIN_SIMB(void * args){
   };
   train.B[0] = B;
 
-  while(!B->Alg.N[0] || !B->Alg.P[0]){usleep(10000);}
-  while(B->Alg.N[0]->blocked || B->blocked || B->Alg.P[0]->blocked){usleep(10000);} // Wait for space
+  while(!B->Alg.N->B[0] || !B->Alg.P->B[0]){usleep(10000);}
+  while(B->Alg.N->B[0]->blocked || B->blocked || B->Alg.P->B[0]->blocked){usleep(10000);} // Wait for space
 
   // B->train = new Train(B);
 
@@ -542,17 +542,8 @@ void SIM_JoinModules(){
 
 void SIM_Connect_Rail_links(){
   // add pointer to the rail_link
-  pathlist.clear();
 
-  for(int m = 0; m< SwManager->Units.size; m++){
-    if(!Units(m)){
-      continue;
-    }
-
-    loggerf(INFO, "LINKING UNIT %i", m);
-
-    Units(m)->link_all();
-  }
+  switchboard::SwManager->LinkAndMap();
 
   pathlist_find();
 }

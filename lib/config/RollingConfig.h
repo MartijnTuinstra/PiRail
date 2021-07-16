@@ -1,6 +1,8 @@
 #ifndef INCLUDE_CONFIG_ROLLINGCONFIG_H
 #define INCLUDE_CONFIG_ROLLINGCONFIG_H
 
+#include <stdint.h>
+
 #include "rollingstock/declares.h"
 
 struct configStruct_TrainHeader;

@@ -18,16 +18,7 @@
 
 #include "train.h"
 #include "path.h"
-
-void init_test(char (* filenames)[30], int nr_files);
-
-class TestsFixture {
-public:
-  TestsFixture();
-  void loadSwitchboard(char (* filenames)[30], int nr_files);
-  void loadStock();
-  ~TestsFixture();
-};
+#include "testhelpers.h"
 
 TEST_CASE_METHOD(TestsFixture, "Path Construction", "[PATH][PATH-1]" ) {
   char filenames[2][30] = {"./testconfigs/PATH-1.bin"};
@@ -38,14 +29,16 @@ TEST_CASE_METHOD(TestsFixture, "Path Construction", "[PATH][PATH-1]" ) {
   REQUIRE(U);
 
   U->on_layout = true;
-  U->link_all();
 
+  switchboard::SwManager->LinkAndMap();
+
+  // logger.setlevel_stdout(TRACE);
   pathlist_find();
 
   /*
   // I
-  //  1.0->  --1.1->  --1.2->
-  //  <1.39 <-1.40-- <-1.41--
+  //  1.0->  --1.1->  --1.2-> --1.48>
+  //  <1.39 <-1.40-- <-1.41-- <-1.49-
   //
   // II
   //                    /Sw1:0
@@ -65,7 +58,7 @@ TEST_CASE_METHOD(TestsFixture, "Path Construction", "[PATH][PATH-1]" ) {
   //
   // V
   //  1.17-> -1.18-> <-1.19- <-1.20-
-  //  1.42-> -1.43-> <-1.44-> <-1.45- <-1.46-
+  //  1.42-> -1.43-> -<1.44>> -<1.45>> <-1.46- <-1.47-
   //
   // VI
   //  1.37-> 1.21-> <-\
@@ -91,28 +84,26 @@ TEST_CASE_METHOD(TestsFixture, "Path Construction", "[PATH][PATH-1]" ) {
     P[0] = U->B[0]->path;
     CHECK(P[0] == U->B[1]->path);
     CHECK(P[0] == U->B[2]->path);
+    CHECK(P[0] == U->B[48]->path);
 
-    CHECK(P[0]->front == U->B[2]);
+    CHECK(P[0]->front == U->B[48]);
     CHECK(P[0]->end == U->B[0]);
     CHECK(P[0]->Entrance == U->B[0]);
-    CHECK(P[0]->Exit == U->B[2]);
-    CHECK(P[0]->next == &U->B[2]->next);
+    CHECK(P[0]->Exit == U->B[48]);
+    CHECK(P[0]->next == &U->B[48]->next);
     CHECK(P[0]->prev == &U->B[0]->prev);
 
     P[1] = U->B[39]->path;
     CHECK(P[1] == U->B[40]->path);
     CHECK(P[1] == U->B[41]->path);
+    CHECK(P[1] == U->B[49]->path);
 
     CHECK(P[1]->front == U->B[39]);
-    CHECK(P[1]->end   == U->B[41]);
-    CHECK(P[1]->Entrance == U->B[41]);
+    CHECK(P[1]->end   == U->B[49]);
+    CHECK(P[1]->Entrance == U->B[49]);
     CHECK(P[1]->Exit     == U->B[39]);
-    CHECK(P[1]->next == &U->B[39]->prev);
-    CHECK(P[1]->prev == &U->B[41]->next);
-
-    CHECK(U->B[39]->dir == 1);
-    CHECK(U->B[40]->dir == 1);
-    CHECK(U->B[41]->dir == 1);
+    CHECK(P[1]->next == &U->B[39]->next);
+    CHECK(P[1]->prev == &U->B[49]->prev);
   }
 
   SECTION("II - Blocks arround switch"){
@@ -167,78 +158,66 @@ TEST_CASE_METHOD(TestsFixture, "Path Construction", "[PATH][PATH-1]" ) {
     CHECK(P[2] == P[3]);
   }
 
-
   SECTION("V - Blocks with direction change"){
+    // Paths must be end when polarity changes.
+
     // Sudden change
     P[0] = U->B[17]->path;
     P[1] = U->B[18]->path;
     P[2] = U->B[19]->path;
     P[3] = U->B[20]->path;
-    for(int i = 0; i < 4; i++){
-      for(int j = 0; j < 4; j++){
-        if(i == j)
-          continue;
-
-        CHECK(P[i] == P[j]);
-      }
-    }
+    CHECK(P[0] == P[1]);
+    CHECK(P[1] != P[2]);
+    CHECK(P[2] == P[3]);
 
     CHECK(P[0]->Entrance == U->B[17]);
-    CHECK(P[0]->Exit == U->B[20]);
+    CHECK(P[0]->Exit     == U->B[18]);
+    CHECK(P[2]->Entrance == U->B[20]);
+    CHECK(P[2]->Exit     == U->B[19]);
 
-    CHECK(U->B[17]->dir == 0);
-    CHECK(U->B[18]->dir == 0);
-    CHECK(U->B[19]->dir == 5);
-    CHECK(U->B[20]->dir == 5);
-
-    // Change over to opposite direction
+    // Change over to opposite polarity
     P[0] = U->B[42]->path;
     P[1] = U->B[43]->path;
     P[2] = U->B[44]->path;
     P[3] = U->B[45]->path;
     P[4] = U->B[46]->path;
-    for(int i = 0; i < 5; i++){
-      for(int j = 0; j < 5; j++){
-        if(i == j)
-          continue;
-
-        CHECK(P[i] == P[j]);
-      }
-    }
+    P[5] = U->B[47]->path;
+    CHECK(P[0] == P[1]);
+    CHECK(P[1] != P[2]);
+    CHECK(P[2] == P[3]);
+    CHECK(P[3] != P[4]);
+    CHECK(P[4] == P[5]);
 
     CHECK(P[0]->Entrance == U->B[42]);
-    CHECK(P[0]->Exit == U->B[46]);
-
-    CHECK(U->B[42]->dir == 0);
-    CHECK(U->B[43]->dir == 0);
-    CHECK(U->B[44]->dir == 2);
-    CHECK(U->B[45]->dir == 5);
-    CHECK(U->B[46]->dir == 5);
+    CHECK(P[0]->Exit     == U->B[43]);
+    CHECK(P[2]->Entrance == U->B[44]);
+    CHECK(P[2]->Exit     == U->B[45]);
+    CHECK(P[4]->Entrance == U->B[47]);
+    CHECK(P[4]->Exit     == U->B[46]);
   }
 
   SECTION("VI - Blocks with direction change"){
-    P[0] = U->B[37]->path;
-    P[1] = U->B[21]->path;
-    P[2] = U->B[22]->path;
-    P[3] = U->B[23]->path;
-    P[4] = U->B[38]->path;
-    for(int i = 0; i < 5; i++){
-      for(int j = 0; j < 5; j++){
-        if(i == j)
-          continue;
+    // P[0] = U->B[37]->path;
+    // P[1] = U->B[21]->path;
+    // P[2] = U->B[22]->path;
+    // P[3] = U->B[23]->path;
+    // P[4] = U->B[38]->path;
+    // for(int i = 0; i < 5; i++){
+    //   for(int j = 0; j < 5; j++){
+    //     if(i == j)
+    //       continue;
 
-        CHECK(P[i] == P[j]);
-      }
-    }
+    //     CHECK(P[i] == P[j]);
+    //   }
+    // }
 
-    logger.setlevel_stdout(INFO);
-    U->B[21]->AlgorSearch(0);
-    U->B[23]->AlgorSearch(0);
-    Algorithm::print_block_debug(U->B[21]);
-    Algorithm::print_block_debug(U->B[23]);
+    // U->B[21]->AlgorSearch(0);
+    // U->B[23]->AlgorSearch(0);
+    // Algorithm::print_block_debug(U->B[21]);
+    // Algorithm::print_block_debug(U->B[23]);
 
-    CHECK(U->B[23] == U->B[21]->Next_Block(NEXT, 2));
-    CHECK(U->B[21] == U->B[23]->Next_Block(PREV, 2));
+    // CHECK(U->B[23] == U->B[21]->Next_Block(NEXT, 2));
+    // CHECK(U->B[21] == U->B[23]->Next_Block(PREV, 2));
   }
 
   SECTION("Station with substations"){
@@ -293,7 +272,8 @@ TEST_CASE_METHOD(TestsFixture, "Path Reverse", "[PATH][PATH-2]") {
   REQUIRE(U);
 
   U->on_layout = true;
-  U->link_all();
+
+  switchboard::SwManager->LinkAndMap();
 
   pathlist_find();
 
@@ -316,7 +296,7 @@ TEST_CASE_METHOD(TestsFixture, "Path Reverse", "[PATH][PATH-2]") {
     CHECK(P->direction == 1);
 
     for(uint8_t i = 3; i < 11; i++)
-      CHECK(U->B[i]->dir == 0b100);
+      CHECK(U->B[i]->dir == 1);
 
     P->reverse();
 
@@ -329,7 +309,7 @@ TEST_CASE_METHOD(TestsFixture, "Path Reverse", "[PATH][PATH-2]") {
     CHECK(P->direction == 0);
 
     for(uint8_t i = 3; i < 11; i++)
-      CHECK(U->B[i]->dir == 0b000);
+      CHECK(U->B[i]->dir == 0);
   }
 
   SECTION("II - One Train on the path"){
@@ -413,7 +393,8 @@ TEST_CASE_METHOD(TestsFixture, "Path Reserve", "[PATH][PATH-3]") {
   REQUIRE(U);
 
   U->on_layout = true;
-  U->link_all();
+
+  switchboard::SwManager->LinkAndMap();
   pathlist_find();
 
   for(uint8_t i = 0; i < 14; i++){

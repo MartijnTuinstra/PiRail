@@ -81,6 +81,7 @@ class Unit {
     void updateIO();
 
     void link_all();
+    void map_all();
 };
 
 #endif

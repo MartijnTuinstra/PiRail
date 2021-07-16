@@ -17,23 +17,14 @@
 #include "rollingstock/train.h"
 
 #include "train.h"
+#include "path.h"
 
 #include "algorithm/queue.h"
 #include "algorithm/core.h"
 #include "algorithm/component.h"
 #include "algorithm/blockconnector.h"
 
-void init_test(char (* filenames)[30], int nr_files);
-void train_testSim_tick(struct train_sim * t, int32_t * i);
-void train_test_tick(struct train_sim * t, int32_t * i);
-
-class TestsFixture {
-public:
-  TestsFixture();
-  void loadSwitchboard(char (* filenames)[30], int nr_files);
-  void loadStock();
-  ~TestsFixture();
-};
+#include "testhelpers.h"
 
 TEST_CASE_METHOD(TestsFixture, "Train Continue Check", "[RT][RT-CC]"){
   char filenames[4][30] = {"./testconfigs/Alg-R-1.bin",
@@ -57,9 +48,8 @@ TEST_CASE_METHOD(TestsFixture, "Train Continue Check", "[RT][RT-CC]"){
   REQUIRE(ret > 0);
   REQUIRE(connectors.size() == 0);
 
-  for(uint8_t i = 1; i <= 4; i++){
-    U[i]->link_all();
-  }
+  switchboard::SwManager->LinkAndMap();
+
   for(uint8_t i = 1; i <= 4; i++){
     for(uint8_t j = 0; j < U[i]->block_len; j++){
       if(U[i]->B[j]){
@@ -127,7 +117,7 @@ TEST_CASE_METHOD(TestsFixture, "Train Continue Check", "[RT][RT-CC]"){
 
     REQUIRE( U[1]->B[11]->state != BLOCKED);
     REQUIRE(!U[1]->B[11]->reserved);
-    REQUIRE(!U[1]->B[11]->switchReserved);
+    REQUIRE(!U[1]->B[11]->reserved);
     REQUIRE(!U[1]->B[11]->blocked);
 
     // Path is clear so it should pass
@@ -136,8 +126,8 @@ TEST_CASE_METHOD(TestsFixture, "Train Continue Check", "[RT][RT-CC]"){
     T->setSpeed(10);
 
     CHECK(T->speed > 0);
-    CHECK(U[1]->B[5]->switchReserved);
-    CHECK(U[1]->B[11]->switchReserved);
+    CHECK(U[1]->B[5]->reserved);
+    CHECK(U[1]->B[11]->reserved);
     CHECK(U[1]->B[12]->path->reserved);
 
     CHECK(U[1]->B[11]->dir == 0b101);
@@ -174,10 +164,10 @@ TEST_CASE_METHOD(TestsFixture, "Train Continue Check", "[RT][RT-CC]"){
     }
 
     CHECK(U[1]->Sw[6]->state);
-    CHECK(U[1]->B[5]->switchReserved);
+    CHECK(U[1]->B[5]->reserved);
     T->setSpeed(0);
 
-    REQUIRE(!U[1]->B[5]->switchReserved);
+    REQUIRE(!U[1]->B[5]->reserved);
 
     U[1]->Sw[6]->setState(0);
     Algorithm::BlockTick();
@@ -194,8 +184,8 @@ TEST_CASE_METHOD(TestsFixture, "Train Continue Check", "[RT][RT-CC]"){
     // Also the switch is thrown to the alternative path
     CHECK(U[1]->Sw[6]->state);
     CHECK(U[1]->Sw[5]->state);
-    CHECK(U[1]->B[ 5]->switchReserved);
-    CHECK(U[1]->B[11]->switchReserved);
+    CHECK(U[1]->B[ 5]->reserved);
+    CHECK(U[1]->B[11]->reserved);
     CHECK(U[1]->B[11]->dir & 0b100);    // reversed
     CHECK(U[1]->B[10]->reserved);
     CHECK(U[1]->B[10]->path->Entrance == U[1]->B[10]);
@@ -208,7 +198,7 @@ TEST_CASE_METHOD(TestsFixture, "Train Continue Check", "[RT][RT-CC]"){
 
     // REQUIRE( U[1]->B[11]->state != BLOCKED);
     // REQUIRE(!U[1]->B[11]->reserved);
-    // REQUIRE(!U[1]->B[11]->switchReserved);
+    // REQUIRE(!U[1]->B[11]->reserved);
     // REQUIRE(!U[1]->B[11]->blocked);
 
     // // Path is clear so it should pass
@@ -217,8 +207,8 @@ TEST_CASE_METHOD(TestsFixture, "Train Continue Check", "[RT][RT-CC]"){
     // T->setSpeed(10);
 
     // CHECK(T->speed > 0);
-    // CHECK(U[1]->B[5]->switchReserved);
-    // CHECK(U[1]->B[11]->switchReserved);
+    // CHECK(U[1]->B[5]->reserved);
+    // CHECK(U[1]->B[11]->reserved);
     // CHECK(U[1]->B[12]->path->reserved);
 
     // CHECK(U[1]->B[11]->dir == 0b101);

@@ -54,7 +54,7 @@ void TrainDetectable::stepForward(Block * tB){
 
   Block * _B = B[0];
 
-  if(_B->Alg.next > 0 && _B->Alg.N[0] == tB){
+  if(_B->Alg.N->group[3] > 0 && _B->Alg.N->B[0] == tB){
     // FIXME
     if(T->Detectables[0] == this)
       T->moveFrontForward(tB);
@@ -98,9 +98,11 @@ void TrainDetectable::setExpectedTrain(){
     B[B.size() - 1]->expectedTrain = 0; // Clear expectedTrain
 
   // Block * tmpBlock = B[0]->Next_Block(T->dir ? PREV : NEXT, 1);
-  Block * tmpBlock = B[0]->Next_Block(NEXT, 1);  
-  loggerf(WARNING, "Detectable setExpectedTrain %2i:%2i / %2i:%2i", size > 1 ? B[size - 1]->module : 0, size > 1 ? B[size - 1]->id : 0,
-                                                                    tmpBlock ? tmpBlock->module : 0, tmpBlock ? tmpBlock->id : 0);
+  Block * tmpBlock = B[0]->getBlock(NEXT, 0);
+  if(!tmpBlock)
+    tmpBlock = B[0]->Next_Block(NEXT | FL_SWITCH_CARE, 1);
+  loggerf(DEBUG, "Detectable setExpectedTrain %2i:%2i / %2i:%2i", size > 1 ? B[size - 1]->module : 0, size > 1 ? B[size - 1]->id : 0,
+                                                                  tmpBlock ? tmpBlock->module : 0, tmpBlock ? tmpBlock->id : 0);
 
   if(tmpBlock){ // Set new expectedTrain
     tmpBlock->expectedTrain = T;

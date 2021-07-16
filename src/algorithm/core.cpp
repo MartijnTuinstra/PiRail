@@ -20,12 +20,14 @@
 #include "switchboard/rail.h"
 #include "switchboard/switch.h"
 #include "switchboard/switchsolver.h"
+#include "switchboard/polaritysolver.h"
 #include "switchboard/msswitch.h"
 #include "switchboard/signals.h"
 #include "switchboard/station.h"
 #include "switchboard/blockconnector.h"
 #include "train.h"
 #include "flags.h"
+#include "pathfinding.h"
 
 #include "uart/uart.h"
 #include "websocket/stc.h"
@@ -40,6 +42,110 @@ namespace Algorithm {
 std::mutex processMutex;
 
 using namespace switchboard;
+
+#define ALGORITHM_SUCESS_CODE 1
+#define ALGORITHM_FAILED_CODE 2
+
+void processBlock(blockAlgorithm * BA, int flags){
+  loggerf(DEBUG, "processBA %02i:%02i, flags %x", BA->B->module, BA->B->id, flags);
+  print_block_debug(BA->B);
+
+  if(BA->doneAll && !(flags & _FORCE)){
+    loggerf(WARNING, "  allreadyDone");
+    return;
+  }
+
+  // Lock the processMutex.
+  //   now clients cannot manipulate switches
+  const std::lock_guard<std::mutex> lock(processMutex);
+
+  // set scope variables
+  Block * B = BA->B;
+  BA->doneAll = 0;
+
+  if(!B){
+    loggerf(WARNING, "process Failed. Cannot find block (blockAlgorithm 0x%x)", (unsigned int)BA);
+    BA->doneAll = ALGORITHM_FAILED_CODE;
+    return;
+  }
+
+  if(!BA->algorBlockSearched){
+    loggerf(DEBUG, "  AlgorSearch");
+    B->AlgorSearch(flags);
+  }
+
+  // Add neighbouring blocks for state
+  uint8_t prev = BA->P->group[3];
+  uint8_t next = BA->N->group[3];
+  Block ** PB = BA->P->B;
+  Block ** NB = BA->N->B;
+
+  if(!B->blocked && B->state == BLOCKED){
+    if(next > 0 && NB[0]->blocked){
+      // NB[0]->algorchanged = 1;
+      loggerf(DEBUG, "  add block for state check %2i:%2i", NB[0]->module, NB[0]->id);
+      NB[0]->Alg.statesChecked = false;
+      NB[0]->Alg.doneAll = false;
+      AlQueue.put(NB[0]);
+    }
+    else if(prev > 0 && PB[0]->blocked){
+      // PB[0]->algorchanged = 1;
+      PB[0]->Alg.statesChecked = false;
+      PB[0]->Alg.doneAll = false;
+      loggerf(DEBUG, "  add block for state check %2i:%2i", PB[0]->module, PB[0]->id);
+      AlQueue.put(PB[0]);
+    }
+  }
+
+  //Follow the train arround the layout
+  if(!BA->trainFollowingChecked){
+    loggerf(DEBUG, "  TrainFollowing");
+    if(train_following(BA, flags)){
+      BA->switchChecked   = false;
+      BA->polarityChecked = false;
+      BA->doneAll = false;
+    };
+    BA->trainFollowingChecked = true;
+  }
+
+  //Set oncomming switch to correct state
+  if(!BA->switchChecked){
+    loggerf(DEBUG, "  SwitchChecked");
+    if(Switch_Checker(BA, flags))
+      return;
+    BA->switchChecked = true;
+  }
+
+  // Set paths to right direction
+  if(!BA->polarityChecked){
+    loggerf(DEBUG, "  PolarityChecked");
+    if(Polarity_Checker(BA, flags))
+      return;
+    BA->polarityChecked = true;
+  }
+  
+  // Print all found blocks
+  // if(flags & _DEBUG)
+    print_block_debug(B);
+
+  // Station Stating
+  if(B->station){
+    if(B->blocked && B->state != BLOCKED)
+      B->station->occupy(B->train);
+    else if(!B->blocked && B->state == BLOCKED)
+      B->station->release();
+  }
+
+  //Apply block stating
+  if(!BA->statesChecked){
+    loggerf(DEBUG, "  StatesChecked");
+    rail_state(&B->Alg, flags);
+  }
+
+  BA->doneAll = ALGORITHM_SUCESS_CODE;
+
+  loggerf(TRACE, "Done");
+}
 
 void process(Block * B, int flags){
   loggerf(TRACE, "process %02i:%02i, flags %x", B->module, B->id, flags);
@@ -61,14 +167,20 @@ void process(Block * B, int flags){
   B->IOchanged = 0;
   B->algorchanged = 0;
 
+  uint8_t prev = B->Alg.P->group[3];
+  uint8_t next = B->Alg.N->group[3];
+  Block ** PB = B->Alg.P->B;
+  Block ** NB = B->Alg.N->B;
+
+
   if(!B->blocked && B->state == BLOCKED){
-    if(B->Alg.next > 0 && B->Alg.N[0]->blocked){
-      B->Alg.N[0]->algorchanged = 1;
-      AlQueue.put(B->Alg.N[0]);
+    if(next > 0 && NB[0]->blocked){
+      NB[0]->algorchanged = 1;
+      AlQueue.put(NB[0]);
     }
-    else if(B->Alg.prev > 0 && B->Alg.P[0]->blocked){
-      B->Alg.P[0]->algorchanged = 1;
-      AlQueue.put(B->Alg.P[0]);
+    else if(prev > 0 && PB[0]->blocked){
+      PB[0]->algorchanged = 1;
+      AlQueue.put(PB[0]);
     }
   }
 
@@ -114,39 +226,41 @@ void process(Block * B, int flags){
 }
 
 
-void Set_Changed(Algor_Blocks * ABs){
+void Set_Changed(struct blockAlgorithm * ABs){
   loggerf(TRACE, "Algor_Set_Changed");
   //Scroll through all the pointers of allblocks
-  uint8_t prev = ABs->prev;
-  uint8_t next = ABs->next;
+  uint8_t prev = ABs->P->group[3];
+  uint8_t next = ABs->N->group[3];
+  Block ** PB = ABs->P->B;
+  Block ** NB = ABs->N->B;
 
   for(int i = 0; i < prev; i++){
-    if(!ABs->P[i])
+    if(!PB[i])
       continue;
 
-    if(ABs->P[i] == ABs->B)
+    if(PB[i] == ABs->B)
       continue;
 
-    ABs->P[i]->algorchanged = 1;
-    ABs->P[i]->IOchanged = 1;
-    ABs->P[i]->AlgorClear();
+    PB[i]->algorchanged = 1;
+    PB[i]->IOchanged = 1;
+    PB[i]->AlgorClear();
 
-    if(!ABs->P[i]->blocked)
-      ABs->P[i]->setState(PROCEED);
+    if(!PB[i]->blocked)
+      PB[i]->setState(PROCEED);
   }
   for(int i = 0; i < next; i++){
-    if(!ABs->N[i])
+    if(!NB[i])
       continue;
 
-    if(ABs->N[i] == ABs->B)
+    if(NB[i] == ABs->B)
       continue;
 
-    ABs->N[i]->algorchanged = 1;
-    ABs->N[i]->IOchanged = 1;
-    ABs->N[i]->AlgorClear();
+    NB[i]->algorchanged = 1;
+    NB[i]->IOchanged = 1;
+    NB[i]->AlgorClear();
 
-    if(!ABs->N[i]->blocked)
-      ABs->N[i]->setState(PROCEED);
+    if(!NB[i]->blocked)
+      NB[i]->setState(PROCEED);
   }
 
   if(ABs->B){
@@ -157,7 +271,7 @@ void Set_Changed(Algor_Blocks * ABs){
 }
 
 int Switch_to_rail(Block ** B, void * Sw, enum link_types type, uint8_t counter){
-  struct rail_link next;
+  RailLink next;
 
   //if(type == RAIL_LINK_S || type == RAIL_LINK_s){
   //  printf("Sw %i:%i\t%x\n", ((Switch *)Sw)->module, ((Switch *)Sw)->id, type);
@@ -217,28 +331,32 @@ void print_block_debug(Block * B){
   char output[300] = "";
   char * ptr = output;
 
-  Algor_Blocks * ABs = &B->Alg;
+  struct blockAlgorithm * ABs = &B->Alg;
+  uint8_t prev = ABs->P->group[3];
+  Block ** BP = ABs->P->B;
+  Block ** BN = ABs->N->B;
+  uint8_t next = ABs->N->group[3];
 
   char blockstates[10] = "BDRC rsU";
 
   for(int i = 7; i >= 0; i--){
-    if(ABs->prev <= i){
+    if(prev <= i){
       ptr += sprintf(ptr, "       ");
       continue;
     }
 
-    if(ABs->prev > 8 && i == 7){
-      ptr += sprintf(ptr, "<<<-%2d ", ABs->prev);
+    if(prev > 8 && i == 7){
+      ptr += sprintf(ptr, "<<<-%2d ", prev);
       continue;
     }
 
-    if(ABs->P[i]){
-      char state = blockstates[ABs->P[i]->state];
-      if(ABs->P[i]->virtualBlocked && !ABs->P[i]->detectionBlocked)
+    if(BP[i]){
+      char state = blockstates[BP[i]->state];
+      if(BP[i]->virtualBlocked && !BP[i]->detectionBlocked)
         state = 'V';
 
-      ptr += sprintf(ptr, "%02i:%02i%c%c", ABs->P[i]->module, ABs->P[i]->id, state,
-                                           (i == ABs->prev1 || i == ABs->prev2 || i == ABs->prev3) ? '|' : ' ');
+      ptr += sprintf(ptr, "%02i:%02i%c%c", BP[i]->module, BP[i]->id, state,
+                                           (i == ABs->P->group[0] || i == ABs->P->group[1] || i == ABs->P->group[2]) ? '|' : ' ');
     }
     else
       ptr += sprintf(ptr, "------ ");
@@ -258,21 +376,21 @@ void print_block_debug(Block * B){
 
 
   for(uint8_t i = 0; i < 8; i++){
-    if(ABs->next <= i){
+    if(next <= i){
       break;
     }
 
-    if(ABs->next > 8 && i == 7){
-      ptr += sprintf(ptr, "%-2d->>>", ABs->next);
+    if(next > 8 && i == 7){
+      ptr += sprintf(ptr, "%-2d->>>", next);
       break;
     }
 
-    if(ABs->N[i]){
-      char state = blockstates[ABs->N[i]->state];
-      if(ABs->N[i]->virtualBlocked && !ABs->N[i]->detectionBlocked)
+    if(BN[i]){
+      char state = blockstates[BN[i]->state];
+      if(BN[i]->virtualBlocked && !BN[i]->detectionBlocked)
         state = 'V';
 
-      ptr += sprintf(ptr, "%02i:%02i%c ", ABs->N[i]->module, ABs->N[i]->id, state);
+      ptr += sprintf(ptr, "%02i:%02i%c ", BN[i]->module, BN[i]->id, state);
     }
     else
       ptr += sprintf(ptr, "------ ");
@@ -282,36 +400,39 @@ void print_block_debug(Block * B){
   loggerf((enum logging_levels)debug, "%s", output);
 }
 
-void Switch_Checker(Algor_Blocks * ABs, int debug){
+bool Switch_Checker(struct blockAlgorithm * ABs, int debug){
   //Unpack AllBlocks
-  //Algor_Block BPPP = *AllBlocks.BPPP;
-  //Algor_Block BPP  = *AllBlocks.BPP;
-  //Algor_Block BP   = *AllBlocks.BP;
-  Block * B = ABs->B;
-  Block **N = ABs->N;
-  uint8_t next = ABs->next;
+  Block *  B  = ABs->B;
+  Block ** BN = ABs->N->B;
+  uint8_t next = ABs->N->group[3];
   //Block BNNN = *AllBlocks.BNNN;
 
   if(!B->blocked || (B->train && (B->train->stopped || B->train->B != B)))
-    return;
+    return false;
 
   Train * T = B->train;
   Block * tB;
   uint8_t routeStatus = T->routeStatus;
   int16_t distance = SpeedToDistance_A(T->speed, -10) + B->length;
+  bool nostopDone = (B->type != NOSTOP);
+  bool dir = NEXT;
 
   if(routeStatus == TRAIN_ROUTE_AT_DESTINATION)
-    return;
+    return false;
 
+  // Search a maximum of five blocks even if the breaking distance is larger
   for(uint8_t i = 0; i < 5; i++){
     if(i > next)
       break;
 
+    // Get block
     if(i == 0) tB = B;
-    else tB = N[i-1];
+    else tB = BN[i-1];
 
-    if(tB->type != NOSTOP)
+    if(tB->type != NOSTOP){
       distance -= tB->length;
+      nostopDone = true;
+    }
 
     if(distance < 0){
       loggerf(DEBUG, "distanceBreak");
@@ -335,43 +456,126 @@ void Switch_Checker(Algor_Blocks * ABs, int debug){
       }
     }
 
-    uint8_t flags = 0;
-    if     (i == 0) flags = NEXT;
-    else if(i == 1) flags = dircmp(B, tB)      ? NEXT : PREV;
-    else            flags = dircmp(N[i-2], tB) ? NEXT : PREV;
+    if(i == 1)     dir ^= (dircmp(B, tB)       != B->cmpPolarity(tB));
+    else if(i > 1) dir ^= (dircmp(BN[i-2], tB) != BN[i-2]->cmpPolarity(tB));
 
-    struct rail_link * link = tB->NextLink(flags);
-    loggerf(DEBUG, "Switch_Checker scan block (%2i:%2i) f:%x, d:%i, %i - %i", tB->module, tB->id, flags, tB->dir, link->type, routeStatus);
+    RailLink * link = tB->NextLink(dir);
+    loggerf(DEBUG, "Switch_Checker scan block (%2i:%2i) f:%x, d:%i, %i - %i", tB->module, tB->id, dir, tB->dir, link->type, routeStatus);
 
     if(tB->type == NOSTOP){
-      tB = (i > 2) ? N[i-2] : B;
+      tB = (i > 1) ? BN[i-1] : B;
     }
 
-    if((i >  0 && link->type == RAIL_LINK_S) || (link->type >= RAIL_LINK_s && link->type <= RAIL_LINK_MB_inside)){
+    if(nostopDone && ((i >  0 && link->type == RAIL_LINK_S) || (link->type >= RAIL_LINK_s && link->type <= RAIL_LINK_MB_inside))){
       if(SwitchSolver::solve(T, B, tB, *link, NEXT | FL_SWITCH_CARE)){ // Returns true if path is changed
-        return;
+        return true; // Should reprocess
       }
+      nostopDone = false;
     }
   }
+
+  return false;
 }
 
+bool Polarity_Checker(struct blockAlgorithm * ABs, int debug){
+  //Unpack Algorithm Blocks,
+  Block *  B  = ABs->B;
+  Block ** BN = ABs->N->B;
+  uint8_t next = ABs->N->group[3];
 
-void rail_state(Algor_Blocks * ABs, int debug){
+  if(!B->blocked || (B->train && (B->train->stopped || B->train->B != B)))
+    return false;
+
+  Train * T = B->train;
+  Block * tB;
+  // Path * P = B->path;
+  uint8_t routeStatus = T->routeStatus;
+  int16_t distance = SpeedToDistance_A(T->speed, -10) + B->length;
+  bool nostopDone = (B->type != NOSTOP);
+  bool dir = NEXT;
+  // bool polarity = 0;
+
+  // Search a maximum of five blocks even if the breaking distance is larger
+  for(uint8_t i = 0; i < 5; i++){
+    if(i >= next){
+      loggerf(DEBUG, "Next break");
+      break;
+    }
+
+    // Get block
+    tB = BN[i];
+
+    if(tB->type != NOSTOP){
+      distance -= tB->length;
+      nostopDone = true;
+    }
+
+    // if(distance < 0){
+    //   loggerf(DEBUG, "distanceBreak");
+    //   break;
+    // }
+
+  //   if(tB->type == NOSTOP)
+  //     distance -= tB->length;
+
+    if(tB->blocked && tB != B){
+      loggerf(DEBUG, "blockedBreak");
+      break;
+    }
+
+    if(routeStatus && (tB == T->route->destinationBlocks[0] || tB == T->route->destinationBlocks[1])){
+      routeStatus++;
+
+      if(routeStatus == TRAIN_ROUTE_AT_DESTINATION){
+        loggerf(DEBUG, "routeBreak");
+        break;
+      }
+    }
+
+    Block * prevBlock = (i == 0) ? B : BN[i-1];
+    dir ^= (dircmp(prevBlock, tB) != prevBlock->cmpPolarity(tB));
+
+    loggerf(WARNING, "Polarity Search %02i:%02i -> %02i:%02i, dir:%i, polarity:%i", prevBlock->module, prevBlock->id, tB->module, tB->id, dir, prevBlock->checkPolarity(tB));
+
+    if(!prevBlock->checkPolarity(tB)){
+      loggerf(WARNING, "POLARITY FLIP NEEDED %02i:%02i", tB->module, tB->id);
+      PolaritySolver::solve(T, prevBlock->path, tB->path);
+    }
+
+  //   RailLink * link = tB->NextLink(dir);
+  //   loggerf(DEBUG, "Switch_Checker scan block (%2i:%2i) f:%x, d:%i, %i - %i", tB->module, tB->id, dir, tB->dir, link->type, routeStatus);
+
+  //   if(tB->type == NOSTOP){
+  //     tB = (i > 1) ? BN[i-1] : B;
+  //   }
+
+  //   if(nostopDone && ((i >  0 && link->type == RAIL_LINK_S) || (link->type >= RAIL_LINK_s && link->type <= RAIL_LINK_MB_inside))){
+  //     if(SwitchSolver::solve(T, B, tB, *link, NEXT | FL_SWITCH_CARE)){ // Returns true if path is changed
+  //       return true; // Should reprocess
+  //     }
+  //     nostopDone = false;
+  //   }
+  }
+
+  return false;
+}
+
+void rail_state(struct blockAlgorithm * ABs, int debug){
   loggerf(TRACE, "Algor_rail_state %02d:%02d", ABs->B->module, ABs->B->id);
   //Unpack ABs
-  // uint8_t prev  = ABs->prev;
-  Block ** BP   = ABs->P;
+  uint8_t prev  = ABs->P->group[3];
+  Block ** BP   = ABs->P->B;
   Block *  B    = ABs->B;
-  Block ** BN   = ABs->N;
-  // uint8_t next  = ABs->next;
+  Block ** BN   = ABs->N->B;
+  uint8_t next  = ABs->N->group[3];
   
   bool Dir = 0; // 0 = setState
                 // 1 = setReversedState
   
   enum Rail_states state[3]     = {PROCEED, PROCEED, PROCEED};
   enum Rail_states Rev_state[3] = {PROCEED, PROCEED, PROCEED};
-  uint8_t prevGroup[3] = {ABs->prev1, ABs->prev2, ABs->prev3};
-  uint8_t nextGroup[3] = {ABs->next1, ABs->next2, ABs->next3};
+  uint8_t prevGroup[3] = {ABs->P->group[0], ABs->P->group[1], ABs->P->group[2]};
+  uint8_t nextGroup[3] = {ABs->N->group[0], ABs->N->group[1], ABs->N->group[2]};
   uint8_t j = 0;
   uint8_t Rev_j = 0;
 
@@ -387,8 +591,8 @@ void rail_state(Algor_Blocks * ABs, int debug){
     if(B->type == STATION && B->station->type >= STATION_YARD)
       state[0] = RESTRICTED;
   }
-  else if(B->type == NOSTOP && ABs->prev
-           && ((ABs->next && B->Alg.N[0]->type != NOSTOP) || ABs->next == 0)
+  else if(B->type == NOSTOP && prev
+           && ((next && BN[0]->type != NOSTOP) || next == 0)
            && (B->getNextState() == DANGER || B->switchWrongState || B->switchWrongFeedback)
           ){
     B->setState(DANGER);
@@ -396,34 +600,34 @@ void rail_state(Algor_Blocks * ABs, int debug){
     state[1] = CAUTION;
 
     uint8_t i = 0;
-    while(BP[i]->type == NOSTOP && i++ < ABs->prev);
+    while(BP[i]->type == NOSTOP && i++ < prev);
 
     if(i == 0)
       j++;
-    else if(i != ABs->prev){
+    else if(i != prev){
       i = prevGroup[0] - i;
       prevGroup[0] -= i;
       prevGroup[1] -= i;
       prevGroup[2] -= i;
     }
   }
-  else if(ABs->next == 0){
+  else if(next == 0){
     B->setState(CAUTION);
 
     state[0] = CAUTION;
   }
 
-  if(B->type == NOSTOP && ABs->next && ABs->prev && B->Alg.P[0]->type != NOSTOP && B->getPrevState() == DANGER){
+  if(B->type == NOSTOP && next && prev && BP[0]->type != NOSTOP && B->getPrevState() == DANGER){
     B->setReversedState(DANGER);
     Rev_state[0] = DANGER;
     Rev_state[1] = CAUTION;
 
     uint8_t i = 0;
-    while(BN[i]->type == NOSTOP && i++ < ABs->next);
+    while(BN[i]->type == NOSTOP && i++ < next);
 
     if(i == 0)
       Rev_j++;
-    else if(i != ABs->next){
+    else if(i != next){
       i = nextGroup[0] - i;
       nextGroup[0] -= i;
       nextGroup[1] -= i;
@@ -431,18 +635,18 @@ void rail_state(Algor_Blocks * ABs, int debug){
     }
   }
   else if(!B->blocked){
-    if(!B->reserved && !B->switchReserved)
+    if(!B->reserved)
       B->setReversedState(PROCEED);
     else
       B->setReversedState(DANGER);
   }
 
   if(state[0] != PROCEED){
-    ApplyRailState(ABs->prev, B, BP, state, prevGroup, j, Dir);
+    ApplyRailState(prev, B, BP, state, prevGroup, j, Dir);
   }
 
   if(Rev_state[0] != PROCEED){
-    ApplyRailState(ABs->next, B, BN, Rev_state, nextGroup, Rev_j, Dir^1);
+    ApplyRailState(next, B, BN, Rev_state, nextGroup, Rev_j, Dir^1);
   }
   // else{
   //   bool blocked = false;
@@ -459,15 +663,25 @@ void rail_state(Algor_Blocks * ABs, int debug){
 }
 
 void ApplyRailState(uint8_t blocks, Block * B, Block * BL[10], enum Rail_states state[3], uint8_t prevGroup[3], uint8_t j, bool Dir){
+  loggerf(INFO, "ApplyRailState -- %02i:%02i  d%i", B->module, B->id, Dir);
   for(uint8_t i = 0; i < blocks; i++){
     if(!BL[i])
       break;
-
     // Set Dir for state/reversed_state
-    if(i > 0)
-      Dir ^= !dircmp(BL[i-1], BL[i]);
-    else
-      Dir ^= !dircmp(B, BL[i]);
+    bool a, b;
+    if(i > 0){
+      a = dircmp(BL[i-1], BL[i]);
+      b = BL[i-1]->cmpPolarity(BL[i]);
+      Dir ^= (a != b);
+    }
+    else{
+      a = dircmp(B, BL[i]);
+      b = B->cmpPolarity(BL[i]);
+      Dir ^= (a != b);
+    }
+
+    loggerf(INFO, "           %2i: %02i:%02i  d%i, dir %i, pol %i", i, BL[i]->module, BL[i]->id, Dir, a, b);
+
     
     // Apply railstate
     if(BL[i]->blocked)
@@ -504,14 +718,14 @@ void ApplyRailState(uint8_t blocks, Block * B, Block * BL[10], enum Rail_states 
   }
 }
 
-void train_following(Algor_Blocks * ABs, int debug){
+bool train_following(struct blockAlgorithm * ABs, int debug){
   loggerf(TRACE, "Algor_train_following");
   //Unpack AllBlocks
-  uint8_t prev = ABs->prev;
-  Block ** BP = ABs->P;
+  uint8_t prev = ABs->P->group[3];
+  Block ** BP = ABs->P->B;
   Block *  B  = ABs->B;
-  Block ** BN = ABs->N;
-  uint8_t next = ABs->next;
+  Block ** BN = ABs->N->B;
+  uint8_t next = ABs->N->group[3];
 
   // If block is not blocked but still containing a train
   if(B->train){
@@ -556,7 +770,7 @@ void train_following(Algor_Blocks * ABs, int debug){
 
     // loggerf(INFO, "%s", debugmsg);
 
-    if(B->reserved || B->switchReserved){
+    if(B->reserved){
       B->dereserve(B->reservedBy[0]);
     }
 
@@ -569,6 +783,7 @@ void train_following(Algor_Blocks * ABs, int debug){
 
       // if(next > 0)
       //   BN[0]->expectedTrain = B->train;
+      return true;
     }
     else if(B->expectedTrain){
       loggerf(WARNING, "Copy expectedTrain");
@@ -578,6 +793,8 @@ void train_following(Algor_Blocks * ABs, int debug){
 
       if(next > 0)
         BN[0]->expectedTrain = B->train;
+
+      return true;
     }
     // Train moved forward
     else if(prev > 0 && BP[0]->blocked && BP[0]->train){
@@ -591,6 +808,8 @@ void train_following(Algor_Blocks * ABs, int debug){
         T->dir = 0;
 
         T->initMoveForward(B);
+
+        return true;
       }
       // if(train_link[B->train])
       //   train_link[B->train]->Block = B;
@@ -611,6 +830,8 @@ void train_following(Algor_Blocks * ABs, int debug){
 
         T->initMoveForward(B);
         //FIXME T->reverseZ21(); // Set Train in right direction
+
+        return true;
       }
     }
     else if( ((prev > 0 && !BP[0]->blocked) || prev == 0) && ((next > 0 && !BN[0]->blocked) || next == 0) ){
@@ -621,6 +842,8 @@ void train_following(Algor_Blocks * ABs, int debug){
       WS_stc_NewTrain(B->train, B->module, B->id);
     }
   }
+
+  return false;
 }
 
 void train_control(Train * T){
@@ -628,7 +851,7 @@ void train_control(Train * T){
   sprintf(Debug, "Algor_train_control RT%2i\n", T->id);
 
   Block * B = T->B;
-  Block ** N = B->Alg.N;
+  Block ** N = B->Alg.N->B;
 
   if(!T->assigned)
     return;
@@ -638,7 +861,7 @@ void train_control(Train * T){
     return;
   }
 
-  if(B->Alg.next == 0){
+  if(B->Alg.N->group[3] == 0){
     T->changeSpeed(0, B->length);
     return;
   }
@@ -698,13 +921,13 @@ void train_control(Train * T){
   }
 
   // Fill in all brake points
-  while(B->Alg.next > i){
+  while(B->Alg.N->group[3] > i){
     addI = 1;
     
     if(i > 0)
-      Dir ^= !dircmp(N[i-1], N[i]);
+      Dir ^= (dircmp(N[i-1], N[i]) != N[i-1]->cmpPolarity(N[i]));
     else
-      Dir ^= !dircmp(B, N[i]);
+      Dir ^= (dircmp(B, N[i]) != B->cmpPolarity(N[i]));
 
     if(N[i]->blocked){
       speeds[i].speed = 0;

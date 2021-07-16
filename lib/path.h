@@ -4,6 +4,7 @@
 #include <vector>
 #include "switchboard/rail.h"
 #include "rollingstock/declares.h"
+#include "flags.h"
 
 class Path {
   public:
@@ -12,11 +13,16 @@ class Path {
     bool direction = false;
     bool reserved  = false;
 
+    bool    polarity      = POLARITY_NORMAL;
+    uint8_t polarity_type = BLOCK_FL_POLARITY_DISABLED;
+    uint16_t maxLength    = 0; // Maximum train length allowed through this path
+    uint16_t length       = 0; // Lenght of this path
+
     Block * Entrance;
-    struct rail_link * prev; // Link to block before Entrance
+    RailLink * prev; // Link to block before Entrance
 
     Block * Exit;
-    struct rail_link * next; // Link to block after Exit
+    RailLink * next; // Link to block after Exit
 
     Block * front;
     bool front_direction;
@@ -33,7 +39,11 @@ class Path {
     void updateEntranceExit();
     void add(Block * B, bool side);
     void join(Path * P);
+    void join(Path * P, Block ** side, Block * Pside, bool * sideDirection, bool PsideDirection, RailLink ** link, RailLink * Plink);
     void find();
+    void find(RailLink ** link, Block ** side, uint8_t SearchDir);
+
+    void setMaxLength();
 
     void reserve(Train *);
     void reserve(Train *, Block *);
@@ -47,7 +57,11 @@ class Path {
     void reverse(Train *);
     bool reversable();
 
-    void sprint(char * string);
+    inline void flipPolarity(){ flipPolarity(0); };
+    void flipPolarity(bool _reverse);
+    bool polarityFlippable();
+
+    void sprint(uint8_t detail, char * string);
     void print();
 };
 

@@ -83,6 +83,7 @@ struct s_systemState{
 };
 
 void sigint_func(int sig);
+void sigint_crash_func(int sig);
 
 #define find_free_index(list, length) _find_free_index((void ***)&list, (int *)&length)
 

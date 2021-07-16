@@ -1,7 +1,14 @@
-#include "switchboard/manager.h"
-#include "switchboard/blockconnector.h"
+
 #include "utils/logger.h"
 #include "utils/mem.h"
+
+#include "switchboard/blockconnector.h"
+#include "switchboard/manager.h"
+#include "switchboard/rail.h"
+#include "switchboard/switch.h"
+#include "switchboard/msswitch.h"
+#include "switchboard/signals.h"
+#include "switchboard/unit.h"
 
 #include "websocket/stc.h"
 
@@ -133,8 +140,8 @@ void BlockConnectSwitchSwitch(BlockConnector * A, BlockConnector * B, uint8_t po
   Switch * bA = A->Sw[portA];
   Switch * bB = B->Sw[portB];
 
-  struct rail_link * linkA;
-  struct rail_link * linkB;
+  RailLink * linkA;
+  RailLink * linkB;
 
   enum link_types switchsideA;
   enum link_types switchsideB;

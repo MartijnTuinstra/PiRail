@@ -23,25 +23,25 @@ AlgorQueue::~AlgorQueue(){
   delete TrainQueue;
 }
 
-void AlgorQueue::put(Algor_Blocks * ABs){
+void AlgorQueue::put(struct blockAlgorithm * ABs){
   put(ABs->B);
 
-  for(int i = 0; i < ABs->prev; i++){
-    put(ABs->P[i]);
+  for(int i = 0; i < ABs->P->group[3]; i++){
+    put(ABs->P->B[i]);
   }
-  for(int i = 0; i < ABs->next; i++){
-    put(ABs->N[i]);
+  for(int i = 0; i < ABs->N->group[3]; i++){
+    put(ABs->N->B[i]);
   }
 }
 
-void AlgorQueue::puttemp(Algor_Blocks * ABs){
+void AlgorQueue::puttemp(struct blockAlgorithm * ABs){
   puttemp(ABs->B);
 
-  for(int i = 0; i < ABs->prev; i++){
-    puttemp(ABs->P[i]);
+  for(int i = 0; i < ABs->P->group[3]; i++){
+    puttemp(ABs->P->B[i]);
   }
-  for(int i = 0; i < ABs->next; i++){
-    puttemp(ABs->N[i]);
+  for(int i = 0; i < ABs->N->group[3]; i++){
+    puttemp(ABs->N->B[i]);
   }
 }
 

@@ -37,6 +37,8 @@
 #include "Z21.h"
 #include "Z21_msg.h"
 
+#include "pathfinding.h"
+
 #include "submodule.h"
 
 
@@ -211,7 +213,8 @@ void WS_cts_SetSwitch(struct s_opc_SetSwitch * data, Websocket::Client * client)
       loggerf(INFO, "throw switch %i:%i to state: \t%i->%i",
               data->module, data->id, U->Sw[data->id]->state, !U->Sw[data->id]->state);
 
-      U->Sw[data->id]->setState(data->state, 1);
+      // TODO/FIXME: add override flag/option
+      U->Sw[data->id]->setState(data->state, false, 1);
     }
   }
   // FIXME unlock_Algor_process();

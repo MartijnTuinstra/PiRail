@@ -4,6 +4,8 @@
 #include "switchboard/switchsolver.h"
 #include "rollingstock/train.h"
 #include "train.h"
+#include "path.h"
+#include "pathfinding.h"
 
 #include "utils/mem.h"
 #include "utils/logger.h"
@@ -139,14 +141,14 @@ void Train::initVirtualBlocks(){
 
     // loggerf(INFO, "  block %2i:%2i   %i  %i  %i", tB->module, tB->id, B->Alg.prev, offset, len);
 
-    if(B->Alg.prev > offset){
-      tB = B->Alg.P[offset++];
+    if(B->Alg.P->group[3] > offset){
+      tB = B->Alg.P->B[offset++];
     }
     else
       break;
   }
 
-  if(B->Alg.prev > offset){
+  if(B->Alg.P->group[3] > offset){
     tB->setVirtualDetection(0);
     if(tB->train && !tB->detectionBlocked)
       tB->train->releaseBlock(tB);
@@ -157,12 +159,12 @@ void Train::initVirtualBlocks(){
 }
 
 void Train::setVirtualBlocks(){
-  loggerf(INFO, "setVirtualBlocks (T: %i, prev: %i, lenght: %icm)", id, B->Alg.prev, length/10);
+  loggerf(INFO, "setVirtualBlocks (T: %i, prev: %i, lenght: %icm)", id, B->Alg.P->group[3], length/10);
 
   if(!directionKnown)
     return;
 
-  Block * tB = B->Alg.P[0];
+  Block * tB = B->Alg.P->B[0];
   uint8_t offset = 1;
   int16_t len = length / 10;
   while(len > 0){
@@ -176,10 +178,10 @@ void Train::setVirtualBlocks(){
     }
     AlQueue.puttemp(tB);
 
-    loggerf(INFO, "  block %2i:%2i   %i  %i  %i", tB->module, tB->id, B->Alg.prev, offset, len);
+    loggerf(INFO, "  block %2i:%2i   %i  %i  %i", tB->module, tB->id, B->Alg.P->group[3], offset, len);
 
-    if(B->Alg.prev > offset){
-      tB = B->Alg.P[offset++];
+    if(B->Alg.P->group[3] > offset){
+      tB = B->Alg.P->B[offset++];
     }
     else
       break;
@@ -190,7 +192,7 @@ void Train::setVirtualBlocks(){
   uint8_t BlocksToRelease = 0;
 
   // Find blocks to be released
-  while(B->Alg.prev > offset){
+  while(B->Alg.P->group[3] > offset){
     if(tB->train != this)
       break;
 
@@ -200,8 +202,8 @@ void Train::setVirtualBlocks(){
 
     ReleaseBlocks[BlocksToRelease++] = tB;
 
-    if(B->Alg.prev > offset)
-      tB = B->Alg.P[offset++];
+    if(B->Alg.P->group[3] > offset)
+      tB = B->Alg.P->B[offset++];
     // loggerf(INFO, "f block %2i:%2i", tB->module, tB->id);
   }
 
@@ -598,19 +600,19 @@ bool Train::ContinueCheck(){
   const std::lock_guard<std::mutex> lock(Algorithm::processMutex);
 
   // If a block is available
-  if(B->Alg.next > 0){
+  if(B->Alg.N->group[3] > 0){
     //if(this->Route && Switch_Check_Path(this->B)){
     //  return true;
     //}
 
     // If it is blocked by another train dont accelerate
-    if(B->Alg.N[0]->blocked && B->Alg.N[0]->train != this){
+    if(B->Alg.N->B[0]->blocked && B->Alg.N->B[0]->train != this){
       loggerf(TRACE, "Train %i: ContinueCheck - false", id);
       return false;
     }
 
     // If it is not DANGER/BLOCKED then accelerate
-    else if(B->Alg.N[0]->state > DANGER){
+    else if(B->Alg.N->B[0]->state > DANGER){
       loggerf(TRACE, "Train %i: ContinueCheck - true", id);
       return true;
     }
@@ -618,40 +620,58 @@ bool Train::ContinueCheck(){
 
   loggerf(WARNING, "NEW TRAIN::CONTINUECHECK");
   struct SwitchSolver::find f = {0, 0};
-  struct rail_link * next = B->NextLink(NEXT);
+  RailLink * next = B->NextLink(NEXT);
   Block * nextBlock  = B->Next_Block(NEXT, 1);
   Block * next2Block = B->Next_Block(NEXT, 2);
 
   if(next->type != RAIL_LINK_E && next->type != RAIL_LINK_R){
     // Next is a (ms)switch
     //  solve it
-    f = SwitchSolver::findPath(this, route, B, *next, NEXT | FL_SWITCH_CARE | FL_CONTINUEDANGER);
+    struct SwitchSolver::SwSolve SolveControl = {
+      .train = this,
+      .route = route,
+      .prevBlock = B,
+      .prevPtr   = B,
+      .link  = next,
+      .flags = NEXT | FL_SWITCH_CARE | FL_CONTINUEDANGER
+    };
+
+    f = SwitchSolver::findPath(SolveControl);
     loggerf(INFO, "First %i", f.possible);
     if(!f.possible || (nextBlock && nextBlock->state <= DANGER))
       return false;
   }
 
-  if(!B->Alg.next)
+  if(!B->Alg.N->group[3])
     return f.possible;
-  else if(B->Alg.N[0]->type != NOSTOP)
+  else if(B->Alg.N->B[0]->type != NOSTOP)
     return true;
 
-  next = B->Alg.N[0]->NextLink(NEXT);
+  next = B->Alg.N->B[0]->NextLink(NEXT);
 
   if(next->type != RAIL_LINK_E && next->type != RAIL_LINK_R){
     // Next is a (ms)switch
     //  solve it
-    f = SwitchSolver::findPath(this, route, B->Alg.N[0], *next, NEXT | FL_SWITCH_CARE | FL_CONTINUEDANGER);
+    struct SwitchSolver::SwSolve SolveControl = {
+      .train = this,
+      .route = route,
+      .prevBlock = B->Alg.N->B[0],
+      .prevPtr   = B->Alg.N->B[0],
+      .link  = next,
+      .flags = NEXT | FL_SWITCH_CARE | FL_CONTINUEDANGER
+    };
+
+    f = SwitchSolver::findPath(SolveControl);
     loggerf(INFO, "Second %i", f.possible);
     return f.possible && (next2Block && next2Block->state > DANGER);
   }
 }
 
 void Train::Continue(){
-  struct rail_link * next = B->NextLink(NEXT);
+  RailLink * next = B->NextLink(NEXT);
 
-  uint8_t nextLen = B->Alg.next;
-  Block * NextBlock = B->Alg.N[0];
+  uint8_t nextLen = B->Alg.N->group[3];
+  Block * NextBlock = B->Alg.N->B[0];
 
   if(next->type != RAIL_LINK_E && next->type != RAIL_LINK_R){
     // Next is a (ms)switch
@@ -668,7 +688,7 @@ void Train::Continue(){
   if(next->type != RAIL_LINK_E && next->type != RAIL_LINK_R){
     // Next is a (ms)switch
     //  solve it
-    SwitchSolver::solve(this, B, B->Alg.N[0], *next, NEXT | FL_SWITCH_CARE | FL_CONTINUEDANGER);
+    SwitchSolver::solve(this, B, B->Alg.N->B[0], *next, NEXT | FL_SWITCH_CARE | FL_CONTINUEDANGER);
   }
 }
 

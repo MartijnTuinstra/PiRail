@@ -8,6 +8,8 @@
 #include "switchboard/msswitch.h"
 #include "switchboard/station.h"
 
+#include "flags.h"
+
 #include "algorithm/core.h"
 
 #include "rollingstock/train.h"
@@ -18,11 +20,11 @@ Path::Path(Block * B){
   loggerf(DEBUG, "NEW PATH %02i:%02i    %x", B->module, B->id, (unsigned int)this);
 
   if(B->path)
-    loggerf(CRITICAL, "Block has allready a path");
+    loggerf(WARNING, "Block has allready a path");
 
-  direction = B->dir & 0b1;
+  direction = B->dir & FL_DIRECTION_MASK;
 
-  if(direction == 0){
+  if(direction == NEXT){
     next = &B->next;
     prev = &B->prev;
   }
@@ -37,18 +39,24 @@ Path::Path(Block * B){
   end = B;
   end_direction = direction;
 
+  polarity_type = B->polarity_type;
+
   Blocks.clear();
   Blocks.push_back(B);
 
+  loggerf(DEBUG, "Path intialized %02d:%02d", this->Blocks[0]->module, this->Blocks[0]->id);
+
   B->path = this;
   pathlist.push_back(this);
+
+  length = B->length;
 
   updateEntranceExit();
 }
 
 Path::~Path(){
   char buffer[400];
-  sprint(buffer);
+  sprint(1, buffer);
 
   Blocks.clear();
   trains.clear();
@@ -87,6 +95,7 @@ void Path::add(Block * B, bool side){
 
   // Add block to block list
   Blocks.push_back(B);
+  length += B->length;
 
   // Add block to the right side
   if(side == NEXT){
@@ -103,220 +112,201 @@ void Path::add(Block * B, bool side){
   updateEntranceExit();
 }
 
+void Path::join(Path * P, Block ** side, Block * Pside, bool * sideDirection, bool PsideDirection, RailLink ** link, RailLink * Plink){
+  *side = Pside;
+  *sideDirection = PsideDirection;
+  *link = Plink;
+
+  for(auto b: P->Blocks){
+    if (!b)
+      continue;
+
+    Blocks.push_back(b);
+    b->path = this;
+  }
+
+  pathlist.erase(std::remove_if(pathlist.begin(),
+                                pathlist.end(),
+                                [P](const auto & o) { return (o == P); }),
+                 pathlist.end());
+
+  length += P->length;
+
+  delete P;
+}
+
 void Path::join(Path * P){
   loggerf(DEBUG, "Join path %02d<>%02d", this->direction, P->direction);
   if(this->direction == P->direction){
     if(this->next->p.B == P->end){
-      char buffer[200];
-      P->sprint(buffer);
-      loggerf(DEBUG, buffer);
-      this->front = P->front;
-      this->front_direction = P->front_direction;
-      this->next = P->next;
-
-      for(auto i: P->Blocks){
-        if (!i)
-          continue;
-
-        this->Blocks.push_back(i);
-        i->path = this;
-      }
-
-      uint8_t j = 0;
-      for(auto i: pathlist){
-        if(i == P)
-          break;
-        j++;
-      }
-
-      if (j < pathlist.size()){
-        pathlist.erase(pathlist.begin() + j);
-        delete P;
-      }
+      join(P, &front, P->front, &front_direction, P->front_direction, &next, P->next);
       return;
     }
 
     if(this->prev->p.B == P->front){
-      char buffer[200];
-      P->sprint(buffer);
-      loggerf(DEBUG, buffer);
-      this->end = P->end;
-      this->end_direction = P->end_direction;
-      this->prev = P->prev;
-
-      for(auto i: P->Blocks){
-        if (!i)
-          continue;
-
-        this->Blocks.push_back(i);
-        i->path = this;
-      }
-
-      uint8_t j = 0;
-      for(auto i: pathlist){
-        if(i == P)
-          break;
-        j++;
-      }
-
-      if (j < pathlist.size()){
-        pathlist.erase(pathlist.begin() + j);
-        delete P;
-      }
-
+      join(P, &end, P->end, &end_direction, P->end_direction, &prev, P->prev);
       return;
     }
   }
   else if(this->direction != P->direction){
     if(this->next->p.B == P->front){
-      char buffer[200];
-      P->sprint(buffer);
-      loggerf(DEBUG, buffer);
-      this->front = P->end;
-      this->front_direction = P->end_direction ^ 0b100;
-      this->next = P->prev;
-
-      for(auto i: P->Blocks){
-        this->Blocks.push_back(i);
-        i->path = this;
-      }
-
-      uint8_t j = 0;
-      for(auto i: pathlist){
-        if(i == P)
-          break;
-        j++;
-      }
-
-      if (j < pathlist.size()){
-        pathlist.erase(pathlist.begin() + j);
-        delete P;
-      }
+      join(P, &front, P->end, &front_direction, P->end_direction, &next, P->prev);
       return;
     }
 
     else if(this->prev->p.B == P->end){
-      char buffer[200];
-      P->sprint(buffer);
-      loggerf(DEBUG, buffer);
-      this->end = P->front;
-      this->end_direction = P->front_direction ^ 0b100;
-      this->prev = P->next;
-
-      for(auto i: P->Blocks){
-        this->Blocks.push_back(i);
-        i->path = this;
-      }
-
-      uint8_t j = 0;
-      for(auto i: pathlist){
-        if(i == P)
-          break;
-        j++;
-      }
-
-      if (j < pathlist.size()){
-        pathlist.erase(pathlist.begin() + j);
-        delete P;
-      }
-
+      join(P, &end, P->front, &end_direction, P->front_direction, &prev, P->next);
       return;
     }
   }
 }
 
 void Path::find(){
-  loggerf(DEBUG, "Path Find %02d:%02d", this->Blocks[0]->module, this->Blocks[0]->id);
-  uint8_t i = 0;
-  Block * B = 0;
-  uint8_t dir = 0;
-  do{
-    B = 0;
-    if(this->next->type == RAIL_LINK_R){
-      if(this->next->p.B->type != NOSTOP)
-        B = this->next->p.B;
+  loggerf(DEBUG, "Path Find %02d:%02d / %x", this->Blocks[0]->module, this->Blocks[0]->id, (unsigned int)this);
 
-      if(B && !((B->type == STATION && this->front->type == STATION && this->front->station == B->station) || (B->type != STATION && this->front->type != STATION)))
-        B = 0;
+  find(&next, &front, NEXT);
+  find(&prev, &end,   PREV);
+}
+
+void Path::find(RailLink ** linkPtr, Block ** ptr_side, uint8_t SearchDir){
+  Block * B = 0;
+  uint8_t i = 0;
+  RailLink * link = *linkPtr;
+  do{
+    Block * side = *ptr_side;
+
+    B = 0;
+    if(link->type == RAIL_LINK_R){
+      if(link->p.B->type != NOSTOP)
+        B = link->p.B;
+
+      if(!B)
+        break;
+
+      if(!((B->type == STATION && side->type == STATION && side->station == B->station) || (B->type != STATION && side->type != STATION)))
+        break;
+
+      loggerf(INFO, "Block has a polarity type %i", B->polarity_type);
+      if(B->polarity_type == BLOCK_FL_POLARITY_LINKED_BLOCK){
+        loggerf(INFO, "Block has a linked block %x == %x", B->polarity_link, Blocks[0]);
+        if(B->polarity_link != Blocks[0])
+          break;
+      }
+      
+      else if(B->polarity_type != polarity_type){
+        if(!B->path) new Path(B);
+        break;
+      }
     }
 
     if(!B)
       break;
 
-    loggerf(DEBUG, "Next Block %02d:%02d,  front %02d:%02d", B->module, B->id, this->front->module, this->front->id);
+    loggerf(DEBUG, "Next Block %02d:%02d,  side %02d:%02d", B->module, B->id, side->module, side->id);
 
-    struct rail_link * link = B->NextLink(NEXT);
+    if(!side->cmpPolarity(B)){
+      loggerf(DEBUG, "  wrong polarity, breaking path B->%2i:%2i:%i," \
+                     "  side->%2i:%2i:%i", B->next.module, B->next.id, B->next.type,
+                                            side->next.module, side->next.id, side->next.type);
+      if(!B->path)
+        B->path = new Path(B);
+      break;
+    }
+
+    link = B->NextLink(SearchDir);
 
     loggerf(DEBUG, "                 -> link %02d:%02d:%02x", link->module, link->id, link->type);
 
-    if(link->p.B == this->front){
-      loggerf(DEBUG, "FLIP");
-      // dir ^= 0b1;
+    if(link->p.B == side){
       B->reverse();
-      link = B->NextLink(NEXT);
+      link = B->NextLink(SearchDir);
     }
 
     loggerf(DEBUG, "                 -> link %02d:%02d:%02x\n", link->module, link->id, link->type);
 
-    this->add(B, NEXT);
-    this->next = link;
-
-    i++;
-  }
-  while (B && i < 10);
-
-  dir = 0;
-  i = 0;
-  do{
-    B = 0;
-    if(this->prev->type == RAIL_LINK_R){
-      if(this->prev->p.B->type != NOSTOP)
-        B = this->prev->p.B;
-
-      if (B && !((B->type == STATION && this->end->type == STATION && this->end->station == B->station) || (B->type != STATION && this->end->type != STATION)))
-        B = 0;
-    }
-
-    if(!B)
-      break;
-
-    struct rail_link * link = B->NextLink(PREV);
-
-    // loggerf(INFO, "                 -> link %02d:%02d:%02x", link->module, link->id, link->type);
-
-    if(link->p.B == this->front){
-      // loggerf(WARNING, "FLIP");
-      B->reverse();
-      link = B->NextLink(PREV);
-    }
-
-    // loggerf(INFO, "Prev Block %02d:%02d -> link %02d:%02d:%02x", B->module, B->id, link->module, link->id, link->type);
-
-    this->add(B, PREV);
-    this->prev = link;
+    add(B, SearchDir);
+    *linkPtr = link;
 
     i++;
   }
   while (B && i < 10);
 }
 
-void Path::sprint(char * string){
+void Path::setMaxLength(){
+  Path * adjacentPath = this;
+
+  maxLength = length;
+
+  if(Blocks[0]->type == NOSTOP)
+    return;
+
+  // Find the two surrounding paths and add there length
+  if(next->type == RAIL_LINK_R){
+    adjacentPath = next->p.B->path;
+    
+    if(adjacentPath && adjacentPath->polarity_type != BLOCK_FL_POLARITY_DISABLED && next->p.B->type != NOSTOP)
+      maxLength += adjacentPath->length;
+  }
+
+  if(prev->type == RAIL_LINK_R){
+    adjacentPath = prev->p.B->path;
+    
+    if(adjacentPath && adjacentPath->polarity_type != BLOCK_FL_POLARITY_DISABLED && prev->p.B->type != NOSTOP)
+      maxLength += adjacentPath->length;
+  }
+
+  loggerf(INFO, "PATH length: %i cm", maxLength);
+}
+
+void Path::sprint(uint8_t detail, char * string){
   char buffer[200];
   char * bufferptr = &buffer[0];
   for(auto b: this->Blocks){
     bufferptr += sprintf(bufferptr, "%02d:%02d ", b->module, b->id);
   }
 
-  string += sprintf(string, "%2i:%2i ---%02d->> %2i:%2i\n", Entrance->module, Entrance->id, Blocks.size(), Exit->module, Exit->id);
+  char l[4] = "---";
+  char r[4] = "---";
+  
+  if(direction)
+    l[1] = l[0] = '<';
+  else
+    r[2] = r[1] = '>';
 
-  string += sprintf(string, "%02d:%02d:%02x ", prev->module, prev->id, prev->type);
-  string += sprintf(string, "[%02d:%02d {%s} %02d:%02d]", end->module, end->id, buffer, front->module, front->id);
-  string += sprintf(string, " %02d:%02d:%02x", next->module, next->id, next->type);
+  if(polarity)
+    l[2] = '<';
+  else
+    r[0] = '>';
+
+  switch(detail){
+    case 0:
+      string += sprintf(string, "%2i:%2i %s%02d%s %2i:%2i", Entrance->module, Entrance->id, l, Blocks.size(), r, Exit->module, Exit->id);
+      break;
+    
+    case 1:
+      string += sprintf(string, "%2i:%2i %s%02d/%4dcm/M:%4dcm%s %2i:%2i", Entrance->module, Entrance->id, l, Blocks.size(), length, maxLength, r, Exit->module, Exit->id);
+      break;
+
+    case 2:
+      string += sprintf(string, "%02d:%02d:%02x %s[%02d:%02d {%s} %02d:%02d]%s %02d:%02d:%02x",
+                        prev->module, prev->id, prev->type,
+                        l, end->module, end->id, buffer, front->module, front->id, r,
+                        next->module, next->id, next->type);
+      break;
+
+    case 3:
+      string += sprintf(string, "%2i:%2i %s%02d/%4dcm/M:%4dcm%s %2i:%2i\n", Entrance->module, Entrance->id, l, Blocks.size(), length, maxLength, r, Exit->module, Exit->id);
+      string += sprintf(string, "%02d:%02d:%02x %s[%02d:%02d {%s} %02d:%02d]%s %02d:%02d:%02x",
+                        prev->module, prev->id, prev->type,
+                        l, end->module, end->id, buffer, front->module, front->id, r,
+                        next->module, next->id, next->type);
+      break;
+  }
 }
 
 void Path::print(){
   char buffer[200];
-  sprint(buffer);
+  sprint(3, buffer);
   printf("%s\n", buffer);
 }
 
@@ -359,6 +349,58 @@ void Path::reverse(Train * T){
   std::swap(Entrance, Exit);
 }
 
+
+void Path::flipPolarity(bool _reverse){
+  if(_reverse && !reversable())
+    return;
+
+  if(!polarityFlippable())
+    return;
+
+  polarity ^= 1;
+
+  for(Block * B: Blocks){
+    B->flipPolarity();
+  }
+
+  if(_reverse)
+    reverse();
+}
+bool Path::polarityFlippable(){
+  if(polarity_type == BLOCK_FL_POLARITY_DISABLED)
+    return 0;
+
+  if(Entrance->blocked){
+    Block * B = 0;
+    if(prev->type == RAIL_LINK_R)
+      B = prev->p.B;
+    else if(prev->type == RAIL_LINK_S || prev->type == RAIL_LINK_s)
+      B = prev->p.Sw->Detection;
+    else if(prev->type >= RAIL_LINK_MA || prev->type == RAIL_LINK_MB_inside)
+      B = prev->p.MSSw->Detection;
+
+    if(B && B->blocked && Entrance->train == B->train){
+      return 0;
+    }
+  }
+  
+  if(Exit->blocked){
+    Block * B = 0;
+    if(next->type == RAIL_LINK_R)
+      B = next->p.B;
+    else if(next->type == RAIL_LINK_S || next->type == RAIL_LINK_s)
+      B = next->p.Sw->Detection;
+    else if(next->type >= RAIL_LINK_MA || next->type == RAIL_LINK_MB_inside)
+      B = next->p.MSSw->Detection;
+
+    if(B && B->blocked && Entrance->train == B->train){
+      return 0;
+    }
+  }
+  return 1;
+}
+
+
 void Path::reserve(Train * T){
   reserved = true;
   reservedTrains.push_back(T);
@@ -367,9 +409,9 @@ void Path::reserve(Train * T){
     T->reserveBlock(B);
   }
 
-  if(Exit->Alg.next){
-    Algorithm::print_block_debug(Exit->Alg.N[0]);
-    Algorithm::rail_state(&Exit->Alg.N[0]->Alg, 0);
+  if(Exit->Alg.N->group[3]){
+    Algorithm::print_block_debug(Exit->Alg.N->B[0]);
+    Algorithm::rail_state(&Exit->Alg.N->B[0]->Alg, 0);
   }
 }
 
@@ -377,23 +419,23 @@ void Path::reserve(Train * T, Block * B){
   reserved = true;
   reservedTrains.push_back(T);
 
-  if(B->Alg.next > 0)
-    B = B->Alg.N[0];
+  if(B->Alg.N->group[3] > 0)
+    B = B->Alg.N->B[0];
   else
     B = 0;
 
   while(B && B->path == this){
     T->reserveBlock(B);
 
-    if(B->Alg.next > 0)
-      B = B->Alg.N[0];
+    if(B->Alg.N->group[3] > 0)
+      B = B->Alg.N->B[0];
     else
       B = 0;
   }
 
-  if(Exit->Alg.next){
-    Algorithm::print_block_debug(Exit->Alg.N[0]);
-    Algorithm::rail_state(&Exit->Alg.N[0]->Alg, 0);
+  if(Exit->Alg.N->group[3]){
+    Algorithm::print_block_debug(Exit->Alg.N->B[0]);
+    Algorithm::rail_state(&Exit->Alg.N->B[0]->Alg, 0);
   }
 }
 
@@ -436,19 +478,31 @@ void Path::unreg(Train * T){
 }
 
 void pathlist_find(){
-  uint8_t i = 0;
-  uint8_t j = pathlist.size();
-  do{
-    pathlist[i]->find();
+  if(pathlist.size() == 0){
+    loggerf(INFO, "No paths to find!!!");
+    return;
+  }
 
-    if(j == pathlist.size()){
+  uint8_t i = 0;
+  Path * P;
+  do{
+    loggerf(INFO, "Finding path %i", i);
+    P = pathlist[i];
+    P->find();
+
+    if(P == pathlist[i])
       i++;
-    }
-    else{
-      j = pathlist.size();
-    }
   }
   while(i < pathlist.size());
+
+  i = 0;
+  for(auto p: pathlist){
+    p->setMaxLength();
+    
+    char buffer[400];
+    p->sprint(2, buffer);
+    loggerf(DEBUG, "Path %2d/%x: %s\n", i++, (unsigned int)p, buffer);
+  }
 
   i = 0;
   // for(auto k: pathlist){

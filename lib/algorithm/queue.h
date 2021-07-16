@@ -20,7 +20,7 @@ class AlgorQueue {
     inline void put(Block * B){
       queue->AddOnce(B);
     }
-    void put(Algor_Blocks * ABs);
+    void put(struct blockAlgorithm * ABs);
 
     inline void put(Train * T){
       TrainQueue->AddOnce(T);
@@ -29,7 +29,7 @@ class AlgorQueue {
     inline void puttemp(Block * B){
       tempQueue->AddOnce(B);
     }
-    void puttemp(Algor_Blocks * ABs);
+    void puttemp(struct blockAlgorithm * ABs);
 
     void cpytmp(); // Copies temp to queue
 

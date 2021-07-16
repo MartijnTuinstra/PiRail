@@ -39,16 +39,16 @@ class Signal {
 
     bool direction;         // Forward?
 
-    struct rail_link block_link;
-    Block * B;              // Parent block
-    enum Rail_states state; // State of the signal
+    RailLink block_link;
+    Block * B = 0;              // Parent block
+    enum Rail_states state = BLOCKED; // State of the signal
 
-    uint8_t output_len;     // Number of IO outputs
+    uint8_t output_len = 0;     // Number of IO outputs
 
-    IO_Port ** output;      // List of IO_port pointers
-    struct s_signal_stating * output_stating;
+    IO_Port ** output = 0;      // List of IO_port pointers
+    struct s_signal_stating * output_stating = 0;
 
-    bool switchDanger;
+    bool switchDanger = 0;
     std::vector<struct SignalSwitchLink *> Switches;
 
     Signal(uint8_t, struct configStruct_Signal *);

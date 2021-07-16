@@ -28,6 +28,7 @@
 #include "train.h"
 #include "path.h"
 #include "sim.h"
+#include "testhelpers.h"
 
 void init_test(char (* filenames)[30], int nr_files){
   logger.setlevel_stdout(INFO);
@@ -63,14 +64,6 @@ void init_test(char (* filenames)[30], int nr_files){
   logger.setlevel_stdout(TRACE);
 }
 
-class TestsFixture {
-public:
-  TestsFixture();
-  void loadSwitchboard(char (* filenames)[30], int nr_files);
-  void loadStock();
-  ~TestsFixture();
-};
-
 TestsFixture::TestsFixture(){
   printf("====================================================================================================\n");
   auto TestName = Catch::getResultCapture().getCurrentTestName();
@@ -80,6 +73,8 @@ TestsFixture::TestsFixture(){
   scheduler = new Scheduler();
   RSManager = new RollingStock::Manager();
   switchboard::SwManager = new switchboard::Manager();
+
+  pathlist.clear();
 
   // logger.setlevel_stdout(WARNING);
   init_main();

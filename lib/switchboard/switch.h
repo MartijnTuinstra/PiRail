@@ -7,12 +7,11 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <string.h>
+#include <vector>
 
-#include "switch.h"
-#include "switchboard/unit.h"
-#include "switchboard/rail.h"
+#include "switchboard/declares.h"
+#include "switchboard/links.h"
 #include "IO.h"
-#include "pathfinding.h"
 
 #include "config/LayoutStructure.h"
 
@@ -48,9 +47,9 @@ struct s_switch_connect {
   uint8_t  module;
   uint16_t id;
 
-  struct rail_link app;
-  struct rail_link str;
-  struct rail_link div;
+  RailLink app;
+  RailLink str;
+  RailLink div;
 };
 
 struct configStruct_Switch;
@@ -68,37 +67,38 @@ class Switch {
     uint16_t uid;
     Unit * U;
 
-    bool hold;
-    bool updatedState;
-    bool feedbackWrongState;
+    bool lockout = 0; // Controller has locked the switch
 
-    bool feedback_en;
-    uint8_t feedback_len;
-    IO_Port ** feedback;
-    union u_IO_event * feedback_events[2];
+    bool updatedState = 0;
+    bool feedbackWrongState = 0;
 
-    uint8_t IO_len;
-    IO_Port ** IO;
-    union u_IO_event * IO_events[2];
+    bool feedback_en = 0;
+    uint8_t feedback_len = 0;
+    IO_Port ** feedback = 0;
+    union u_IO_event * feedback_events[2] = {0, 0};
+
+    uint8_t IO_len = 0;
+    IO_Port ** IO = 0;
+    union u_IO_event * IO_events[2] = {0, 0};
 
     std::vector<Signal *> Signals;
 
-    struct rail_link div;
-    struct rail_link str;
-    struct rail_link app;
+    RailLink div;
+    RailLink str;
+    RailLink app;
 
-    uint8_t state;
-    uint8_t default_state;
+    uint8_t state = 0;
+    uint8_t default_state = 0;
 
     uint16_t MaxSpeed[2] = {0, 0};
 
-    Block * Detection;
+    Block * Detection = 0;
 
-    uint8_t links_len;
-    struct CoupledSwitch * coupled;
+    uint8_t links_len = 0;
+    struct CoupledSwitch * coupled = 0;
 
-    uint8_t pref_len;
-    struct switch_preference * preferences;
+    uint8_t pref_len = 0;
+    struct switch_preference * preferences = 0;
 
     Switch(uint8_t, struct configStruct_Switch *);
     ~Switch();
@@ -112,7 +112,8 @@ class Switch {
     uint NextList_Block(Block * Origin, Block ** blocks, uint8_t block_counter, enum link_types type, int flags, int length);
 
     void setState(uint8_t _state);
-    void setState(uint8_t _state, uint8_t lock);
+    void setState(uint8_t _state, bool overrideLockout);
+    void setState(uint8_t _state, bool overrideLockout, bool mutexLock);
     void updateState(uint8_t _state);
 
     void updateFeedback();
@@ -121,14 +122,14 @@ class Switch {
 
 int throw_multiple_switches(uint8_t len, char * data);
 
-// int Switch_Check_Path(void * p, struct rail_link link, int flags);
-// int Switch_Check_Path(PathFinding::Route * r, void * p, struct rail_link link, int flags);
+// int Switch_Check_Path(void * p, RailLink link, int flags);
+// int Switch_Check_Path(PathFinding::Route * r, void * p, RailLink link, int flags);
 
-// int Switch_Reserve_Path(RailTrain * T, void * p, struct rail_link link, int flags);
-// int Switch_Set_Free_Path(void * p, struct rail_link link, int flags);
-// int Switch_Set_Free_Path(PathFinding::Route * r, void * p, struct rail_link link, int flags);
+// int Switch_Reserve_Path(Train * T, void * p, RailLink link, int flags);
+// int Switch_Set_Free_Path(void * p, RailLink link, int flags);
+// int Switch_Set_Free_Path(PathFinding::Route * r, void * p, RailLink link, int flags);
 
-// int Switch_Set_Wrong_Route(PathFinding::Route * r, void * p, struct rail_link link, int flags);
+// int Switch_Set_Wrong_Route(PathFinding::Route * r, void * p, RailLink link, int flags);
 
 
 #endif

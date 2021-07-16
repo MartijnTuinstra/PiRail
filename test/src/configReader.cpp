@@ -91,11 +91,18 @@ TEST_CASE("ConfigReader Same Version", "[CR]"){
 	CHECK(Block0Read.prev.id == Block0.prev.id);
 	CHECK(Block0Read.prev.type == Block0.prev.type);
 
-	CHECK(Block0Read.IO_In.Node == Block0.IO_In.Node);
-	CHECK(Block0Read.IO_In.Port == Block0.IO_In.Port);
+	CHECK(Block0Read.IOdetection.Node == Block0.IOdetection.Node);
+	CHECK(Block0Read.IOdetection.Port == Block0.IOdetection.Port);
 
-	CHECK(Block0Read.IO_Out.Node == Block0.IO_Out.Node);
-	CHECK(Block0Read.IO_Out.Port == Block0.IO_Out.Port);
+	CHECK(Block0Read.IOpolarity.Node == Block0.IOpolarity.Node);
+	CHECK(Block0Read.IOpolarity.Port == Block0.IOpolarity.Port);
+
+	CHECK(Block0Read.Polarity == Block0.Polarity);
+	CHECK(Block0Read.Polarity_IO[0].Node == Block0.Polarity_IO[0].Node);
+	CHECK(Block0Read.Polarity_IO[0].Port == Block0.Polarity_IO[0].Port);
+
+	CHECK(Block0Read.Polarity_IO[1].Node == Block0.Polarity_IO[1].Node);
+	CHECK(Block0Read.Polarity_IO[1].Port == Block0.Polarity_IO[1].Port);
 
 	CHECK(Block0Read.speed == Block0.speed);
 	CHECK(Block0Read.length	 == Block0.length);

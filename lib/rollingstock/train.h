@@ -9,7 +9,9 @@
 #include "rollingstock/engine.h"
 #include "rollingstock/trainset.h"
 #include "rollingstock/traindetection.h"
-#include "pathfinding.h"
+
+// Pathfinding declares
+namespace PathFinding {class Route; };
 
 #define TRAIN_ENGINE_TYPE 0
 #define TRAIN_TRAIN_TYPE 1

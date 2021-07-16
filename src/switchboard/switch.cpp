@@ -1,5 +1,6 @@
 #include "switchboard/manager.h"
 #include "switchboard/switch.h"
+#include "switchboard/switchsolver.h"
 #include "switchboard/msswitch.h"
 #include "switchboard/signals.h"
 #include "switchboard/station.h"
@@ -17,33 +18,23 @@
 
 using namespace switchboard;
 
-Switch::Switch(uint8_t Module, struct configStruct_Switch * s){
-  // struct switch_conf s = read_s_switch_conf(buf_ptr);
-  struct s_switch_connect connect;
+Switch::Switch(uint8_t Module, struct configStruct_Switch * s):
+  div(s->Div), str(s->Str), app(s->App)
+{
+  loggerf(TRACE, "Create Sw %i:%i", Module, s->id);
 
-  connect.module = Module;
-  connect.id = s->id;
-  connect.app.module = s->App.module; connect.app.id = s->App.id; connect.app.type = (enum link_types)s->App.type;
-  connect.str.module = s->Str.module; connect.str.id = s->Str.id; connect.str.type = (enum link_types)s->Str.type;
-  connect.div.module = s->Div.module; connect.div.id = s->Div.id; connect.div.type = (enum link_types)s->Div.type;
-
-  // new Switch(connect, s->det_block, s->IO & 0x0f, Adrs, States);
-  loggerf(TRACE, "Create Sw %i:%i", connect.module, connect.id);
-  // Switch * Z = (Switch *)_calloc(1, Switch);
-  memset(this, 0, sizeof(Switch));
-
-  module = connect.module;
-  id = connect.id;
+  module = Module;
+  id = s->id;
   uid = SwManager->addSwitch(this);
 
-  div = connect.div;
-  str = connect.str;
-  app = connect.app;
+  // div = connect.div;
+  // str = connect.str;
+  // app = connect.app;
 
   MaxSpeed[0] = s->speed_Str;
   MaxSpeed[1] = s->speed_Div;
 
-  U = Units(connect.module);
+  U = Units(Module);
   U->insertSwitch(this);
 
   IO_len = s->IO_length;
@@ -180,7 +171,7 @@ bool Switch::approachable(void * p, int flags){
 }
 
 Block * Switch::Next_Block(enum link_types type, int flags, int level){
-  struct rail_link * next;
+  RailLink * next;
 
   loggerf(TRACE, "Next_Switch_Block %i:%i\t%i", this->module, this->id, level);
 
@@ -239,18 +230,18 @@ Block * Switch::Next_Block(enum link_types type, int flags, int level){
 }
 
 uint Switch::NextList_Block(Block * Origin, Block ** blocks, uint8_t block_counter, enum link_types type, int flags, int length){
-  loggerf(TRACE, "Switch::NextList_Block(%02i:%02i, %i, %2x)", this->module, this->id, block_counter, flags);
-  struct rail_link * next;
+  loggerf(TRACE, "Switch::NextList_Block(%02i:%02i, %i, %2x)", module, id, block_counter, flags);
+  RailLink * nextLink;
 
   if(type == RAIL_LINK_s){
-    next = &this->app;
+    nextLink = &app;
   }
   else{
-    if(this->state == 0){
-      next = &this->str;
+    if(state == 0){
+      nextLink = &str;
     }
     else{
-      next = &this->div;
+      nextLink = &div;
     }
   }
 
@@ -264,68 +255,46 @@ uint Switch::NextList_Block(Block * Origin, Block ** blocks, uint8_t block_count
 
   // printf("N%cL%i\t",next.type,level);
 
-  if(next->type == RAIL_LINK_E || next->type == RAIL_LINK_C){
+  if(nextLink->type == RAIL_LINK_E || nextLink->type == RAIL_LINK_C){
     return block_counter;
   }
 
-  if(!next->p.p){
+  if(!nextLink->p.p){
     loggerf(ERROR, "NO POINTERS");
     return block_counter;
   }
 
-  if(next->type == RAIL_LINK_R){
-    return next->p.B->_NextList(Origin, blocks, block_counter, flags, length);
-  }
-  else if(next->type == RAIL_LINK_S){
-    return next->p.Sw->NextList_Block(Origin, blocks, block_counter, next->type, flags, length);
-  }
-  else if(next->type == RAIL_LINK_s && next->p.Sw->approachable(this, flags)){
-
-    return next->p.Sw->NextList_Block(Origin, blocks, block_counter, next->type, flags, length);
-  }
-  else if(next->type == RAIL_LINK_MA && next->p.MSSw->approachableA(this, flags)){
-    return next->p.MSSw->NextList_Block(Origin, blocks, block_counter, next->type, flags, length);
-  }
-  else if(next->type == RAIL_LINK_MB && next->p.MSSw->approachableB(this, flags)){
-    return next->p.MSSw->NextList_Block(Origin, blocks, block_counter, next->type, flags, length);
-  }
-  else if(next->type == RAIL_LINK_TT){
-    if(next->p.MSSw->approachableA(this, flags)){
-      next->type = RAIL_LINK_MA;
-
-      // If turntable is turned around
-      if(next->p.MSSw->NextLink(flags)->p.p != this){
-        flags ^= 0b10;
-      }
-    }
-    else if(next->p.MSSw->approachableB(this, flags)){
-      next->type = RAIL_LINK_MB;
-
-      // If turntable is turned around
-      if(next->p.MSSw->NextLink(flags)->p.p != this){
-        flags ^= 0b10;
-      }
-    }
-    return next->p.MSSw->NextList_Block(Origin, blocks, block_counter, next->type, flags, length);
-  }
-  // else if(next->type == RAIL_LINK_E){
-  //   return 0;
-  // }
-  // printf("RET END\n");
-  return block_counter;
+  return _NextList_NextIteration(nextLink, this, Origin, blocks, block_counter, flags, length);
 }
 
 void Switch::setState(uint8_t _state){
-  loggerf(DEBUG, "Switch setState(%i->%i)", state, _state);
-  setState(_state, 1);
+  setState(_state, false, true);
 }
 
-void Switch::setState(uint8_t _state, uint8_t _lock){
-  loggerf(WARNING, "Switch::setState (%x, %i, %i)", (unsigned int)this, _state, _lock);
+void Switch::setState(uint8_t _state, bool overrideLockout){
+  setState(_state, overrideLockout, true);
+}
 
-  if(Detection && (Detection->state == BLOCKED || Detection->reserved || Detection->switchReserved)){
-    loggerf(WARNING, "Failed to setState switch %i to state %i", id, _state);
+void Switch::setState(uint8_t _state, bool overrideLockout, bool _mutexLock){
+  loggerf(WARNING, "Switch::setState (%2i:%2i, %i->%i, %i)", module, id, state, _state, overrideLockout, _mutexLock);
+
+  if(overrideLockout && Detection->blocked && Detection->train && Detection->train->speed){
+    loggerf(WARNING, "Failed to setState switch %i to state %i, train still moving!!", id, _state);
     return; // Switch is blocked
+  }
+  else if(!overrideLockout && Detection && (Detection->blocked || Detection->reserved)){
+    loggerf(WARNING, "Failed to setState switch %i to state %i, is blocked/reserved.", id, _state);
+    return; // Switch is blocked
+  }
+
+  if(overrideLockout){
+    loggerf(WARNING, "Overriding switch %i state -> %i", id, _state);
+
+    if(Detection->reserved){      
+      Train * T = Detection->reservedBy[0];
+      SwitchSolver::dereservePath(T, T->route, Detection, Detection->next, 0);
+      SwitchSolver::dereservePath(T, T->route, Detection, Detection->prev, 0);
+    }
   }
 
   if(_state == state){
@@ -334,7 +303,7 @@ void Switch::setState(uint8_t _state, uint8_t _lock){
   }
 
   std::mutex localMutex;
-  std::mutex * scopeMutex = _lock ? &Algorithm::processMutex : &localMutex;
+  std::mutex * scopeMutex = _mutexLock ? &Algorithm::processMutex : &localMutex;
 
   { // Mutex Scope
     const std::lock_guard<std::mutex> lock(*scopeMutex);
@@ -440,7 +409,7 @@ int throw_multiple_switches(uint8_t len, char * msg){
     p.state = data[2];
 
     if(p.type == 0){
-      U_Sw(p.module, p.id)->setState(p.state, 0);
+      U_Sw(p.module, p.id)->setState(p.state, false, false);
     }
     else if(p.type == 1){
       U_MSSw(p.module, p.id)->setState(p.state, 0);

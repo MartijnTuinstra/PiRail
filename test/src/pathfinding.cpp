@@ -16,18 +16,11 @@
 
 #include "rollingstock/train.h"
 
+#include "algorithm/core.h"
+
 #include "train.h"
 #include "pathfinding.h"
-
-void init_test(char (* filenames)[30], int nr_files);
-
-class TestsFixture {
-public:
-  TestsFixture();
-  void loadSwitchboard(char (* filenames)[30], int nr_files);
-  void loadStock();
-  ~TestsFixture();
-};
+#include "testhelpers.h"
 
 TEST_CASE_METHOD(TestsFixture, "Path Finding WayPoints", "[PF][PF-1]"){
   char filenames[1][30] = {"./testconfigs/PF-1.bin"};
@@ -38,7 +31,8 @@ TEST_CASE_METHOD(TestsFixture, "Path Finding WayPoints", "[PF][PF-1]"){
   REQUIRE(U);
 
   U->on_layout = true;
-  U->link_all();
+
+  switchboard::SwManager->LinkAndMap();
 
   /*
   //          1.0> --\Sw0                      Sw1/-> 1.8>
@@ -115,6 +109,7 @@ TEST_CASE_METHOD(TestsFixture, "Path Finding WayPoints", "[PF][PF-1]"){
   }
 
   SECTION("IV - Find Circle with OneWay"){
+    // FIXME, pathfinding goes through the one way
     U->B[36]->oneWay = true;
     auto route = PathFinding::find(U->B[16], U->B[13]);
     // struct paths path = pathfinding(U->B[3], U->B[6]);
@@ -162,7 +157,7 @@ TEST_CASE_METHOD(TestsFixture, "Path Finding WayPoints", "[PF][PF-1]"){
 
   SECTION("VI - One Way"){
     REQUIRE(U->B[56]->oneWay);
-    REQUIRE(U->B[57]->oneWay);
+    REQUIRE(!U->B[57]->cmpPolarity(U->B[55]));
 
     auto route1 = PathFinding::find(U->B[54], U->B[56]);
     auto route2 = PathFinding::find(U->B[54], U->B[57]);
@@ -186,7 +181,8 @@ TEST_CASE_METHOD(TestsFixture, "Path Finding Stations", "[PF][PF-2]"){
   REQUIRE(U);
 
   U->on_layout = true;
-  U->link_all();
+
+  switchboard::SwManager->LinkAndMap();
 
   /*                |--             Station 1             --|
   //         Sw0/-> 1.2>              1.3>              1.4->

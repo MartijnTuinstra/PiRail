@@ -6,10 +6,13 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <string.h>
+#include <vector>
 
 #include "switchboard/declares.h"
+#include "switchboard/links.h"
+
 #include "rollingstock/declares.h"
-#include "path.h"
+// #include "path.h"
 #include "flags.h"
 
 #include "config/LayoutStructure.h"
@@ -22,21 +25,28 @@ typedef struct s_node_adr Node_adr;
 #define RESTRICTED_SPEED 40
 #define CAUTION_SPEED 90
 
-#include "switchboard/links.h"
-
 typedef struct algor_blocks {
-  uint8_t prev;
-  uint8_t prev3;
-  uint8_t prev2;
-  uint8_t prev1;
-  Block * P[10];
-  Block * B;
-  Block * N[10];
-  uint8_t next1;
-  uint8_t next2;
-  uint8_t next3;
-  uint8_t next;
+  Block * B[10];
+  uint8_t dir[10];
+
+  uint8_t group[4];
 } Algor_Blocks;
+
+struct blockAlgorithm {
+  struct algor_blocks * N;
+  struct algor_blocks * P;
+
+  struct algor_blocks AlgorBlocks[2];
+  
+  Block * B;
+
+  bool algorBlockSearched;
+  bool trainFollowingChecked;
+  bool switchChecked;
+  bool polarityChecked;
+  bool statesChecked;
+  uint8_t doneAll;
+};
 
 enum Rail_types {
   MAIN,
@@ -64,8 +74,8 @@ struct block_connect {
   int id;
   enum Rail_types type;
 
-  struct rail_link next;
-  struct rail_link prev;
+  RailLink next;
+  RailLink prev;
 };
 
 struct configStruct_Block;
@@ -93,23 +103,21 @@ class Block {
     enum Rail_states reverse_state;
 
     // -- IO --
-    //   Input
-    IO_Port * In;
-
-    //   Output Direction
-    IO_Port * dir_Out;
+    // std::vector<IO_Port *> In_detection; //   Input
+    IO_Port * In_detection;
+    std::vector<IO_Port *> Out_polarity; //   Output Direction
 
     // -- Links --
-    struct rail_link next;
-    struct rail_link prev;
+    struct BlockLink next;
+    struct BlockLink prev;
 
     // -- Pointers --
     Station * station = 0;     // The station that
     Path * path = 0;           // The path this block is part off
 
-    Train * train;         // The train that is in this block
-    Train * expectedTrain; // The train that is expected to be in this block
-    TrainDetectable * expectedDetectable;
+    Train * train = 0;         // The train that is in this block
+    Train * expectedTrain = 0; // The train that is expected to be in this block
+    TrainDetectable * expectedDetectable = 0;
 
     std::vector<Train *> reservedBy;    // The train that has reserved this block in a whole path 
                                         //  A block with switches can be SWITCH_RESERVED. 
@@ -117,17 +125,19 @@ class Block {
     std::vector<Signal *> * forward_signal;
     std::vector<Signal *> * reverse_signal;
 
-    int switch_len;
-    Switch ** Sw;
-    MSSwitch * MSSw;
+    int switch_len = 0;
+    Switch ** Sw = 0;
+    MSSwitch * MSSw = 0;
 
-    bool reserved;       // If the block is reserved
-    bool switchReserved; // If the block and switches are reserved
+    bool reserved = 0;       // If the block is reserved, if reserved no switches can be thrown
 
-    bool blocked;           // If either virtual or detection blocked
-    bool virtualBlocked;    // if virtual blocked
-    bool detectionBlocked;  // if blocked by detection
+    bool blocked = 0;           // If either virtual or detection blocked
+    bool virtualBlocked = 0;    // if virtual blocked
+    bool detectionBlocked = 0;  // if blocked by detection
 
+    uint8_t polarity_status:4;
+    uint8_t polarity_type:4;
+    void * polarity_link = 0;
 
     uint8_t IOchanged:1;
     uint8_t statechanged:1;
@@ -139,7 +149,7 @@ class Block {
     uint8_t switchWrongFeedback:1; // Set block to DANGER/CAUTION if switch is still moving
 
     //Algorithm selected blocks
-    Algor_Blocks Alg;
+    struct blockAlgorithm Alg;
 
     Block(uint8_t, struct configStruct_Block *);
     ~Block(); // Destructor
@@ -148,10 +158,18 @@ class Block {
 
     void addSwitch(Switch * Sw);
 
-    struct rail_link * NextLink(int flags);
+    RailLink * NextLink(int flags);
     Block * Next_Block(int flags, int level);
 
     uint8_t _NextList(Block * Origin, Block ** blocks, uint8_t block_counter, uint32_t flags, int length);
+
+    inline Block * getBlock(uint8_t side, uint8_t i){
+      struct algor_blocks * A = (&Alg.N)[side];
+      if(i > A->group[3])
+        return 0;
+      else
+        return A->B[i];
+    };
 
     void reverse();
 
@@ -159,6 +177,9 @@ class Block {
     void dereserve(Train *);
     bool isReservedBy(Train *);
 
+    private:
+    void setState(enum Rail_states *, enum Rail_states, std::vector<Signal *> *);
+    public:
     void setState(enum Rail_states, bool);
     void setState(enum Rail_states);
     void setReversedState(enum Rail_states);
@@ -180,8 +201,14 @@ class Block {
     void AlgorSetDepths(bool Side);
 
     void checkSwitchFeedback(bool);
+
+    bool checkPolarity(Block * B); // Check if there is a continuous path of the same polarity
+    bool cmpPolarity(Block * B);   // Check if block has same default polarity
+    void flipPolarity();
+    void flipPolarity(bool reverse);
 };
 
+uint8_t _NextList_NextIteration(RailLink * nextLink, void * p, Block * Origin, Block ** blocks, uint8_t block_counter, uint64_t flags, int length);
 
 int dircmp(Block *A, Block *B);
 int dircmp(uint8_t A, uint8_t B);

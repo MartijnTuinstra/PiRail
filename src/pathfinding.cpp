@@ -189,11 +189,22 @@ struct step findStep(struct control c){
     if(!dircmp(c.prev, B)){
       c.dir ^= PREV;
     }
+    if((!c.prev->MSSw && !B->cmpPolarity(c.prev)) ||
+      (( c.prev->MSSw && !c.prev->MSSw->cmpPolarity(B, c.prevMSSwState)))
+    ){
+      c.dir ^= PREV;
+
+      if(B->polarity_type == 0 && c.prev->polarity_type == 0){
+        loggerf(WARNING, "Failed - wrong polarity");
+        return s; // failed no way to toggle polarity
+      }
+    }
     uint16_t length = B->length;
     c.link = B->NextLink(c.dir);
     c.prev = B;
     
     if(c.dir == PREV && B->oneWay){
+      loggerf(WARNING, "Failed - wrongway");
       return s; // failed - Wrongway
     }
     
@@ -386,10 +397,10 @@ struct step findStep(struct control c){
     // Check solution for each side
     struct step * steps = (struct step *)_calloc(Sw->state_len, struct step);
 
-    struct rail_link * tmpLink = c.link;
+    RailLink * tmpLink = c.link;
 
     for(uint8_t i = 0; i < Sw->state_len; i++){
-      struct rail_link * opposite;
+      RailLink * opposite;
       if(tmpLink->type == RAIL_LINK_MA){
         c.link = &Sw->sideB[i];
         opposite = &Sw->sideA[i];
@@ -398,8 +409,10 @@ struct step findStep(struct control c){
         c.link = &Sw->sideA[i];
         opposite = &Sw->sideB[i];
       }
-    
-      // loggerf(INFO, " MSSw%c %2i:%2i state %i", tmpLink->type == RAIL_LINK_MA ? 'A':'B', Sw->module, Sw->id, i);
+
+      c.prev = Sw->Detection;
+      c.prevMSSwState = i;
+
 
       steps[i] = findStep(c);
 

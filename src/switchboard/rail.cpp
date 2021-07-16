@@ -13,6 +13,9 @@
 #include "utils/mem.h"
 #include "utils/logger.h"
 #include "IO.h"
+#include "path.h"
+
+#include <algorithm>
 
 #include "algorithm/core.h"
 #include "algorithm/queue.h"
@@ -28,24 +31,34 @@ const char * rail_states_string[8] = {
   "UNKNOWN" 
 };
 
-Block::Block(uint8_t _module, struct configStruct_Block * block){
+Block::Block(uint8_t _module, struct configStruct_Block * block):
+  next(block->next), prev(block->prev)
+{
   loggerf(DEBUG, "Block Constructor %02i:%02i", _module, block->id);
-  memset(this, 0, sizeof(Block));
   module = _module;
   id = block->id;
   type = (enum Rail_types)block->type;
 
   uid = switchboard::SwManager->addBlock(this);
 
-  next.module = block->next.module;
-  next.id = block->next.id;
-  next.type = (enum link_types)block->next.type;
-  prev.module = block->prev.module;
-  prev.id = block->prev.id;
-  prev.type = (enum link_types)block->prev.type;
+  // Algor Init
+  Alg.N = &Alg.AlgorBlocks[0];
+  Alg.P = &Alg.AlgorBlocks[1];
+  Alg.trainFollowingChecked = true;
+  Alg.switchChecked = true;
+  Alg.polarityChecked = true;
+  Alg.statesChecked = false;
+
+  AlgorClear();
+  
+  statechanged = 0;
+  recalculate = 0;
+  switchWrongState = 0;
+  switchWrongFeedback = 0;
 
   BlockMaxSpeed = block->speed;
-  dir = (block->fl & 0x6) >> 1;
+  // dir = (block->fl & 0x6) >> 1;
+  dir = 0;
   length = block->length;
   oneWay = block->fl & 0x1;
 
@@ -62,12 +75,40 @@ Block::Block(uint8_t _module, struct configStruct_Block * block){
 
   U = switchboard::Units(module);
 
-  if(U->IO(block->IO_In))
-    In = U->linkIO(block->IO_In, this, IO_Input_Block);
+  if(U->IO(block->IOdetection))
+    In_detection = U->linkIO(block->IOdetection, this, IO_Input_Block);
 
-  if(block->fl & 0x8 && U->IO(block->IO_Out)){
-    dir_Out = U->linkIO(block->IO_Out, this, IO_Output);
+  // if(block->fl & 0x8 && U->IO(block->IOpolarity)){
+  //   Out_polarity.push_back(U->linkIO(block->IOpolarity, this, IO_Output));
+  // }
+
+  // Polarity
+  polarity_type   = block->Polarity;
+  polarity_status = POLARITY_NORMAL;
+
+  if(polarity_type && polarity_type < BLOCK_FL_POLARITY_LINKED_BLOCK)
+    new Path(this);
+
+  switch(polarity_type){
+    case BLOCK_FL_POLARITY_SINGLE_IO:
+      Out_polarity.push_back(U->linkIO(block->Polarity_IO[0], this, IO_Output));
+      break;
+    case BLOCK_FL_POLARITY_DOUBLE_IO:
+      Out_polarity.push_back(U->linkIO(block->Polarity_IO[0], this, IO_Output));
+      Out_polarity.push_back(U->linkIO(block->Polarity_IO[1], this, IO_Output));
+      break;
+    case BLOCK_FL_POLARITY_LINKED_BLOCK:
+      if(block->Polarity_IO[0].Port >= U->block_len){
+        loggerf(WARNING, "Link polarity block out of bounds");
+        break;
+      }
+
+      polarity_link = U->B[block->Polarity_IO[0].Port];
+      break;
   }
+
+
+  
 
   // Insert block into Unit
   U->insertBlock(this);
@@ -92,12 +133,15 @@ void Block::exportConfig(struct configStruct_Block * cfg){
 
   cfg->fl = 0;
 
-  if (In)
-    In->exportConfig(&cfg->IO_In);
-  if (dir_Out){
-    dir_Out->exportConfig(&cfg->IO_Out);
-    cfg->fl |= 0x8;
-  }
+  if (In_detection)
+    In_detection->exportConfig(&cfg->IOdetection);
+
+  if(polarity_type > 1)
+    Out_polarity[0]->exportConfig(&cfg->Polarity_IO[0]);
+  if(polarity_type == 3)
+    Out_polarity[1]->exportConfig(&cfg->Polarity_IO[1]);
+
+  cfg->Polarity = polarity_type;
 
   cfg->speed = BlockMaxSpeed;
   cfg->length = length;
@@ -115,31 +159,25 @@ void Block::addSwitch(Switch * Sw){
 }
 
 // Get next block, or i-th next block
-struct rail_link * Block::NextLink(int flags){
-  // dir: 0 next, 1 prev
-  int dir = flags & 0x01;
+RailLink * Block::NextLink(int flags){
+  int LinkDir = flags & FL_DIRECTION_MASK;
 
-  struct rail_link * next = 0;
+  RailLink * nextLink = 0;
 
-  if((dir == NEXT && (this->dir == 1 || this->dir == 4 || this->dir == 6)) ||
-     (dir == PREV && (this->dir == 0 || this->dir == 2 || this->dir == 5))) {
-    // If next + reversed direction / flipped normal / flipped switching
-    // Or prev + normal direction / switching direction (normal) / flipped reversed direction
-    next = &this->prev;
-  }
-  else{
-    // If next + normal direction / switching direction (normal) / flipped reversed
-    // or prev + reversed direction / flipped normal / flipped switching
-    next = &this->next;
-  }
+  if(dir == NEXT)
+    nextLink = (LinkDir == NEXT) ? &this->next : &this->prev;
+  else
+    nextLink = (LinkDir == NEXT) ? &this->prev : &this->next;
 
-  if(!next)
+  if(!nextLink)
     loggerf(ERROR, "Empty next Link");
-  return next;
+
+  return nextLink;
 }
 
 Block * Block::Next_Block(int flags, int level){
   // Find next (detection) block in direction dir. Could be used recurse for x-levels
+  loggerf(TRACE, "Next Block(%02i:%02i, %x, %i)", module, id, flags, length);
   Block * B[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
   uint8_t currentLevel, blocks;
@@ -158,13 +196,9 @@ Block * Block::Next_Block(int flags, int level){
 
 uint8_t Block::_NextList(Block * Origin, Block ** blocks, uint8_t block_counter, uint32_t flags, int length){
   // Find next (detection) blocks in direction dir.
-  loggerf(TRACE, "NextList(%02i:%02i, %i, %i)", this->module, this->id, block_counter, length);
-  int dir = flags & 0x0F;
-  // dir: 0 next, 1 prev
+  loggerf(TRACE, "NextList(%02i:%02i, %i, %4x, %i)", module, id, block_counter, flags, length);
 
-  struct rail_link * next;
-
-  uint8_t pdir = (dir >> 1);
+  RailLink * nextLink;
 
   if(length < 0){
     return block_counter;
@@ -178,148 +212,121 @@ uint8_t Block::_NextList(Block * Origin, Block ** blocks, uint8_t block_counter,
   // If not Init
   if(flags & FL_NEXT_FIRST_TIME_SKIP){
     // If toggle request
-    if(!dircmp(pdir, this->dir)){
-      dir ^= 0b1;
+    Block * prevBlock;
 
-      if(!((pdir & 0b010) || (this->dir & 0b010)) && flags & FL_DIRECTION_CARE){
+    if(block_counter > 0)
+      prevBlock = blocks[block_counter-1];
+    else
+      prevBlock = Origin;
+
+    char buffer[100];
+
+    sprintf(buffer, " %c (%i %i)? =>", (flags & FL_DIRECTION_MASK) ? 'P' : 'N', dircmp(prevBlock->dir, dir), cmpPolarity(prevBlock));
+
+    if(!dircmp(prevBlock->dir, dir)){
+      flags ^= FL_DIRECTION_MASK;
+
+      if(flags & FL_DIRECTION_CARE)
         return block_counter;
-      }
     }
-    else if((pdir == 2 && this->dir == 1) || (pdir == 6 && this->dir == 5) || 
-            (pdir == 1 && this->dir == 2) || (pdir == 5 && this->dir == 6)){
-      dir ^= 0b1;
+
+    if(!cmpPolarity(prevBlock)){
+      flags ^= FL_DIRECTION_MASK;
     }
+
+    loggerf(TRACE, "%s %c", buffer, (flags & FL_DIRECTION_MASK) ? 'P' : 'N');
     
     blocks[block_counter++] = this;
   }
   else{
     flags |= FL_NEXT_FIRST_TIME_SKIP;
-    length += this->length;
+    if((flags & FL_BLOCKS_COUNT) == 0)
+      length += this->length;
   }
 
   if(block_counter >= 10)
     return block_counter;
 
-  loggerf(TRACE, "dir: %i:%i-%x %x\t%i", this->module, this->id, dir, this->dir, pdir);
-  //NEXT == 0
-  //PREV == 1
-  next = this->NextLink(dir & 1);
+  nextLink = this->NextLink(flags & FL_DIRECTION_MASK);
 
-  dir = (dir & 1) + (this->dir << 1);
-
-  flags = (flags & 0xF0) + (dir & 0x0F);
-
-  loggerf(TRACE, "Next     : dir:%i/%x\t%i:%i => %i:%i:%i\t%i", this->dir, dir, this->module, this->id, next->module, next->id, next->type, block_counter);
-
-  if(!next->p.p){
-    if(next->type != RAIL_LINK_E && next->type != RAIL_LINK_C)
+  if(!nextLink->p.p){
+    if(nextLink->type != RAIL_LINK_E && nextLink->type != RAIL_LINK_C)
       loggerf(ERROR, "NO POINTERS %i:%i", this->module, this->id);
     return block_counter;
   }
 
-  if(next->type == RAIL_LINK_R){
-    return next->p.B->_NextList(Origin, blocks, block_counter, flags, length);
+  return _NextList_NextIteration(nextLink, this, Origin, blocks, block_counter, flags, length);
+}
+
+uint8_t _NextList_NextIteration(RailLink * nextLink, void * p, Block * Origin, Block ** blocks, uint8_t block_counter, uint64_t flags, int length){
+  if(nextLink->type == RAIL_LINK_R){
+    return nextLink->p.B->_NextList(Origin, blocks, block_counter, flags, length);
   }
-  else if(next->type == RAIL_LINK_S){
-    return next->p.Sw->NextList_Block(Origin, blocks, block_counter, next->type, flags, length);
+  else if(nextLink->type == RAIL_LINK_S){
+    return nextLink->p.Sw->NextList_Block(Origin, blocks, block_counter, nextLink->type, flags, length);
   }
-  else if(next->type == RAIL_LINK_s && next->p.Sw->approachable(this, flags)){
-    return next->p.Sw->NextList_Block(Origin, blocks, block_counter, next->type, flags, length);
+  else if(nextLink->type == RAIL_LINK_s && nextLink->p.Sw->approachable(p, flags)){
+    return nextLink->p.Sw->NextList_Block(Origin, blocks, block_counter, nextLink->type, flags, length);
   }
-  else if(next->type == RAIL_LINK_MA && next->p.MSSw->approachableA(this, flags)){
-    return next->p.MSSw->NextList_Block(Origin, blocks, block_counter, next->type, flags, length);
+  else if(nextLink->type == RAIL_LINK_MA && nextLink->p.MSSw->approachableA(p, flags)){
+    return nextLink->p.MSSw->NextList_Block(Origin, blocks, block_counter, nextLink->type, flags, length);
   }
-  else if(next->type == RAIL_LINK_MB && next->p.MSSw->approachableB(this, flags)){
-    return next->p.MSSw->NextList_Block(Origin, blocks, block_counter, next->type, flags, length);
+  else if(nextLink->type == RAIL_LINK_MB && nextLink->p.MSSw->approachableB(p, flags)){
+    return nextLink->p.MSSw->NextList_Block(Origin, blocks, block_counter, nextLink->type, flags, length);
   }
-  else if(next->type == RAIL_LINK_MA_inside || next->type == RAIL_LINK_MB_inside){
-    return next->p.MSSw->NextList_Block(Origin, blocks, block_counter, next->type, flags, length);
+  else if(nextLink->type == RAIL_LINK_MA_inside || nextLink->type == RAIL_LINK_MB_inside){
+    flags &= ~FL_NEXT_FIRST_TIME_SKIP;
+    return nextLink->p.MSSw->NextList_Block(Origin, blocks, block_counter, nextLink->type, flags, length);
   }
-  else if(next->type == RAIL_LINK_TT){
-    if(next->p.MSSw->approachableA(this, flags)){
-      next->type = RAIL_LINK_MA;
+  else if(nextLink->type == RAIL_LINK_TT){
+    if(nextLink->p.MSSw->approachableA(p, flags)){
+      nextLink->type = RAIL_LINK_MA;
 
       // If turntable is turned around
-      if(next->p.MSSw->NextLink(flags)->p.p != this){
+      if(nextLink->p.MSSw->NextLink(flags)->p.p != p){
         flags ^= 0b1;
       }
     }
-    else if(next->p.MSSw->approachableB(this, flags)){
-      next->type = RAIL_LINK_MB;
+    else if(nextLink->p.MSSw->approachableB(p, flags)){
+      nextLink->type = RAIL_LINK_MB;
 
       // If turntable is turned around
-      if(next->p.MSSw->NextLink(flags)->p.p != this){
+      if(nextLink->p.MSSw->NextLink(flags)->p.p != p){
         flags ^= 0b1;
       }
     }
-    return next->p.MSSw->NextList_Block(Origin, blocks, block_counter, next->type, flags, length);
+    return nextLink->p.MSSw->NextList_Block(Origin, blocks, block_counter, nextLink->type, flags, length);
   }
-  //   // if(Next_check_Switch(this, *next, flags)){
-  //     // if(level <= 0 && (next->p.MSSw)->Detection != B){
-  //     //   // printf("Detection block\n");
-  //     //   return (next->p.MSSw)->Detection;
-  //     // }
-  //     // else{
-  //       // return Next_MSSwitch_Block(next->p.MSSw, next->type, flags, level);
-  //     // }
-  //   // }
-  // // }
-  // else if(next->type == RAIL_LINK_E && next->module == 0 && next->id == 0){
-  //   return 0;
-  // }
 
   return block_counter;
 }
 
 void Block::reverse(){
-  loggerf(INFO, "Block_Reverse %02i:%02i %i -> %i", module, id, dir, dir ^ 0b100);
+  loggerf(INFO, "Block_Reverse %02i:%02i %i -> %i", module, id, dir, dir ^ 1);
 
   //_ALGOR_BLOCK_APPLY(_ABl, _A, _B, _C) if(_ABl->len == 0){_A}else{_B;for(uint8_t i = 0; i < _ABl->len; i++){_C}}
-  dir ^= 0b100;
+  dir ^= 1;
 
   // Swap states
-
   if(state != RESERVED_SWITCH)
     std::swap(state, reverse_state);
 
   // Swap block lists
-
-  uint8_t len = 0;
-  if(Alg.next > Alg.prev)
-    len = Alg.next;
-  else
-    len = Alg.prev;
-
-  std::swap(Alg.prev,  Alg.next);
-  std::swap(Alg.prev1, Alg.next1);
-  std::swap(Alg.prev2, Alg.next2);
-  std::swap(Alg.prev3, Alg.next3);
-
-  for(uint8_t i = 0; i < len; i++)
-    std::swap(Alg.N[i], Alg.P[i]);
-
+  std::swap(Alg.N, Alg.P);
   Algorithm::print_block_debug(this);
 
   // Swap Signals
-
   std::swap(forward_signal, reverse_signal);
 }
 
 void Block::reserve(Train * T){
-  loggerf(INFO, "Reserve Block %2i:%2i for train %i (%i, %i)", module, id, T->id, switchReserved, reserved);
-  if(type != NOSTOP)
-    reserved = true;
+  loggerf(INFO, "Reserve Block %2i:%2i for train %i (%i)", module, id, T->id, reserved);
+  reserved = true;
 
-  if(switchReserved || reserved){
-    if(!blocked && state >= PROCEED){
-      if(switchReserved)
-        setState(RESERVED_SWITCH);
-      else
-        setState(RESERVED);
-    }
+  if(!blocked && state >= PROCEED)
+    setState(RESERVED);
 
-    setReversedState(DANGER);
-  }
+  setReversedState(DANGER);
 
   reservedBy.push_back(T);
 }
@@ -339,7 +346,6 @@ void Block::dereserve(Train * T){
     }
 
     reserved = false;
-    switchReserved = false;
   }
 }
 
@@ -364,32 +370,25 @@ void Block::setState(enum Rail_states _state, bool reversed){
 }
 
 void Block::setState(enum Rail_states _state){
-  loggerf(TRACE, "Block %2i:%2i setState %s", module, id, rail_states_string[_state]);
-  if(_state == PROCEED){
-    if(reserved)
-      _state = RESERVED;
-    else if(switchReserved)
-      _state = RESERVED_SWITCH;
-  }
+  loggerf(DEBUG, "Block %2i:%2i setState %s", module, id, rail_states_string[_state]);
+  if(_state == PROCEED && reserved)
+    _state = RESERVED;
 
-  state = _state;
-
-  uint8_t signalsize = forward_signal->size();
-  for(uint8_t i = 0; i < signalsize; i++){
-    forward_signal->operator[](i)->set(state);
-  }
-
-  statechanged = 1;
-  U->block_state_changed |= 1;
+  setState(&state, _state, forward_signal);
 }
 
 void Block::setReversedState(enum Rail_states _state){
-  loggerf(TRACE, "Block %2i:%2i setReversedState %s", module, id, rail_states_string[_state]);
-  reverse_state = _state;
+  loggerf(DEBUG, "Block %2i:%2i setReversedState %s", module, id, rail_states_string[_state]);
 
-  uint8_t signalsize = reverse_signal->size();
+  setState(&reverse_state, _state, reverse_signal);
+}
+
+void Block::setState(enum Rail_states * statePtr, enum Rail_states _state, std::vector<Signal *> * Signals){
+  *statePtr = _state;
+
+  uint8_t signalsize = Signals->size();
   for(uint8_t i = 0; i < signalsize; i++){
-    reverse_signal->operator[](i)->set(reverse_state);
+    Signals->operator[](i)->set(_state);
   }
 
   statechanged = 1;
@@ -398,8 +397,8 @@ void Block::setReversedState(enum Rail_states _state){
 
 enum Rail_states Block::getNextState(){
   Block * Next = 0;
-  if(Alg.next > 0)
-    Next = Alg.N[0];
+  if(Alg.N->group[3] > 0)
+    Next = Alg.N->B[0];
   else
     return DANGER;
 
@@ -411,8 +410,8 @@ enum Rail_states Block::getNextState(){
 
 enum Rail_states Block::getPrevState(){
   Block * Prev = 0;
-  if(Alg.prev > 0)
-    Prev = Alg.P[0];
+  if(Alg.P->group[3] > 0)
+    Prev = Alg.P->B[0];
   else
     return DANGER;
 
@@ -423,6 +422,9 @@ enum Rail_states Block::getPrevState(){
 }
 
 void Block::setDetection(bool d){
+  Alg.trainFollowingChecked = false;
+  Alg.doneAll = false;
+
   if(virtualBlocked && d && !detectionBlocked && expectedDetectable && train){
     expectedDetectable->stepForward(this);
   }
@@ -437,6 +439,9 @@ void Block::setDetection(bool d){
 }
 
 void Block::setVirtualDetection(bool d){
+  Alg.trainFollowingChecked = false;
+  Alg.doneAll = false;
+
   bool prevBlocked = virtualBlocked;
 
   virtualBlocked = d;
@@ -504,9 +509,12 @@ uint16_t Block::getSpeed(uint8_t Dir){
 
 void Block::AlgorClear(){
   loggerf(TRACE, "Block %02i:%02i AlgorClear", module, id);
-  memset(&Alg, 0, sizeof(struct algor_blocks));
+  memset(Alg.P, 0, sizeof(struct algor_blocks));
+  memset(Alg.N, 0, sizeof(struct algor_blocks));
 
   Alg.B = this;
+  Alg.algorBlockSearched = 0;
+  Alg.doneAll = 0;
 
   MaxSpeed = BlockMaxSpeed;
 }
@@ -524,40 +532,38 @@ void Block::AlgorSearch(int debug){
   // next = Next_Block(NEXT | FL_SWITCH_CARE, 1);
   // prev = Next_Block(PREV | FL_SWITCH_CARE, 1);
 
-  Alg.next = _NextList(this, Alg.N, 0, NEXT | FL_SWITCH_CARE, 600);
+  Alg.N->group[3] = _NextList(this, Alg.N->B, 0, NEXT | FL_SWITCH_CARE, 600);
   AlgorSetDepths(NEXT);
 
-  Alg.prev = _NextList(this, Alg.P, 0, PREV | FL_SWITCH_CARE, 600);
+  Alg.P->group[3] = _NextList(this, Alg.P->B, 0, PREV | FL_SWITCH_CARE, 600);
   AlgorSetDepths(PREV);
+
+  Alg.algorBlockSearched = true;
 }
 
 void Block::AlgorSetDepths(bool Side){
   struct {
     uint8_t * n;
-    uint8_t * nx[3];// = {D1, D2, D3};
+    uint8_t * nx;// = {D1, D2, D3};
     Block ** B;
   } data;
 
   switch(Side){
     case NEXT:
-      data.nx[0] = &Alg.next1;
-      data.nx[1] = &Alg.next2;
-      data.nx[2] = &Alg.next3;
-      data.n     = &Alg.next;
-      data.B    = (Block **)&Alg.N;
+      data.nx = &Alg.N->group[0];
+      data.n  = &Alg.N->group[3];
+      data.B  = (Block **)&Alg.N->B;
       break;
     case PREV:
-      data.nx[0] = &Alg.prev1;
-      data.nx[1] = &Alg.prev2;
-      data.nx[2] = &Alg.prev3;
-      data.n     = &Alg.prev;
-      data.B    = (Block **)&Alg.P;
+      data.nx = &Alg.P->group[0];
+      data.n  = &Alg.P->group[3];
+      data.B  = (Block **)&Alg.P->B;
       break;
   }
 
-  *data.nx[0] = *data.n;
-  *data.nx[1] = *data.n;
-  *data.nx[2] = *data.n;
+  data.nx[0] = *data.n;
+  data.nx[1] = *data.n;
+  data.nx[2] = *data.n;
 
   uint16_t length = 0;
   uint8_t j = 0;
@@ -572,7 +578,7 @@ void Block::AlgorSetDepths(bool Side){
          sameStation |= data.B[i-1]->type == NOSTOP;
 
     if(length >= ALGORLENGTH && j < 3 && data.B[i]->type != NOSTOP && sameStation){
-      *(data.nx[j++]) = i;
+      data.nx[j++] = i;
       length = 0;
     }
 
@@ -600,97 +606,63 @@ void Block::checkSwitchFeedback(bool value){
   AlQueue.put(this);
 }
 
-/*
-void Block::AlgorSearchMSSwitch(int debug){
-  loggerf(WARNING, "Algor_turntable_search_Blocks - %02i:%02i", this->module, this->id);
-  Block * next = 0;
-  Block * prev = 0;
-
-  Algor_Blocks * ABs = &this->Alg;
-  Block * tmpB = this;
-
-  AlgorClear();
-
-  if(!this->MSSw){
-    loggerf(ERROR, "Turntable has more than no msswitch");
-    return;
+// Polarity
+bool Block::checkPolarity(Block * B){
+  if(B == this)
+    return 1;
+  // if(Alg.next == 0 || Alg.prev == 0 || B->Alg.next == 0 || B->Alg.prev == 0)
+  //   return 0;
+  // loggerf(WARNING, "%x == %x\t%i %i, %i %i\t%x %x, %x %x", (unsigned int) this, (unsigned int) B, Alg.next, Alg.prev, B->Alg.next, B->Alg.prev, (unsigned int) Alg.N[0], (unsigned int) Alg.P[0], (unsigned int) B->Alg.N[0], (unsigned int) B->Alg.P[0]);
+  if(MSSw && B->MSSw){
+    loggerf(ERROR, "FIXME");
   }
+  else if(MSSw)
+    return MSSw->checkPolarity(B);
+  else if(B->MSSw)
+    return B->MSSw->checkPolarity(this);
 
-  next = this->MSSw->Next_Block(RAIL_LINK_TT, NEXT | FL_SWITCH_CARE, 1);
-  prev = this->MSSw->Next_Block(RAIL_LINK_TT, PREV | FL_SWITCH_CARE, 1);
-
-  if(next)
-    loggerf(WARNING, "%02i:%02i", next->module, next->id);
-  if(prev)
-    loggerf(WARNING, "%02i:%02i", prev->module, prev->id);
-
-  //Select all surrounding blocks
-  uint8_t i = 0;
-  uint8_t level = 1;
-  uint16_t length = 0;
-  if(next){
-    do{
-      if(i == 0 && ABs->next == 0){
-        tmpB = next;
-      }
-      else{
-        tmpB = this->MSSw->Next_Block(RAIL_LINK_TT, NEXT | FL_SWITCH_CARE, level);
-      }
-
-      if(!tmpB){
-        break;
-      }
-
-      ABs->N[i] = tmpB;
-
-      length += tmpB->length;
-
-      ABs->next += 1;
-
-      i++;
-      level++;
-    }
-    while(length < 3*Block_Minimum_Size && level < 10 && i < 10);
+  if(std::any_of(next.Polarity.begin(), next.Polarity.end(), [this, B](auto i){ return i.first == B && (i.second ^ this->polarity_status ^ B->polarity_status); } ) ||
+     std::any_of(prev.Polarity.begin(), prev.Polarity.end(), [this, B](auto i){ return i.first == B && (i.second ^ this->polarity_status ^ B->polarity_status); } )    ){
+       return 1;
   }
-
-  i = 0;
-  level = 1;
-  length = 0;
-
-  if(prev){
-    do{
-      if(i == 0 && ABs->prev == 0){
-        tmpB = prev;
-      }
-      else{
-        tmpB = this->MSSw->Next_Block(RAIL_LINK_TT, PREV | FL_SWITCH_CARE, level);
-      }
-
-      if(!tmpB){
-        break;
-      }
-
-      ABs->P[i] = tmpB;
-
-      length += tmpB->length;
-
-      ABs->prev += 1;
-
-      i++;
-      level++;
-    }
-    while(length < 3*Block_Minimum_Size && level < 10 && i < 10);
-  }
+  return 0;
 }
-*/
-// int main(void){
-//     C_Block B = C_Block(1, {0, 0, {0, 0, 255}, {0, 0, 255}, {0, 0}, {0, 1}, 90, 100, 0});
-  
-//     printf("Block %i\n", B.id);
 
-//     // delete B;
-//     return 1;
-// }
+bool Block::cmpPolarity(Block * B){
+  if(B == this)
+    return 1;
+  // if(Alg.next == 0 || Alg.prev == 0 || B->Alg.next == 0 || B->Alg.prev == 0)
+  //   return 0;
+  // loggerf(WARNING, "%x == %x\t%i %i, %i %i\t%x %x, %x %x", (unsigned int) this, (unsigned int) B, Alg.next, Alg.prev, B->Alg.next, B->Alg.prev, (unsigned int) Alg.N[0], (unsigned int) Alg.P[0], (unsigned int) B->Alg.N[0], (unsigned int) B->Alg.P[0]);
+  if(MSSw && B->MSSw){
+    loggerf(ERROR, "FIXME");
+  }
+  else if(MSSw)
+    return MSSw->cmpPolarity(B);
+  else if(B->MSSw)
+    return B->MSSw->cmpPolarity(this);
+
+  if(std::any_of(next.Polarity.begin(), next.Polarity.end(), [this, B](auto i){ return i.first == B && i.second; } ) ||
+     std::any_of(prev.Polarity.begin(), prev.Polarity.end(), [this, B](auto i){ return i.first == B && i.second; } )    ){
+       return 1;
+  }
+  return 0;
+}
+
+void Block::flipPolarity(){
+  flipPolarity(0);
+}
+void Block::flipPolarity(bool _reverse){
+  loggerf(WARNING, "flipPolarity %2i:%2i  %i", module, id, polarity_type);
+
+  if(polarity_type == BLOCK_FL_POLARITY_DISABLED)
+    return;
+
+  polarity_status ^= 1;
+
+  if(_reverse)
+    reverse();
+}
 
 
 int dircmp(Block *A, Block *B){
@@ -698,18 +670,7 @@ int dircmp(Block *A, Block *B){
 }
 
 int dircmp(uint8_t A, uint8_t B){
-  uint8_t returnMatrix[8*8] = {
-    //    A   / 0  1  2  3  4  5  6  7
-    /*    B 0*/ 1, 0, 1, 0, 0, 1, 0, 0,
-    /*      1*/ 0, 1, 0, 0, 1, 0, 1, 0,
-    /*      2*/ 1, 0, 1, 0, 0, 1, 0, 0,
-    /*      3*/ 0, 0, 0, 0, 0, 0, 0, 0,
-    /*      4*/ 0, 1, 0, 0, 1, 0, 1, 0,
-    /*      5*/ 1, 0, 1, 0, 0, 1, 0, 0,
-    /*      6*/ 0, 1, 0, 0, 1, 0, 1, 0,
-    /*      7*/ 0, 0, 0, 0, 0, 0, 0, 0
-  };
-  return returnMatrix[A + (B<<3)];
+  return A == B;
 }
 
 

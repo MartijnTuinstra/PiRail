@@ -7,29 +7,73 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <string.h>
+#include <vector>
 
 #include "switch.h"
 #include "switchboard/unit.h"
 #include "switchboard/rail.h"
-#include "pathfinding.h"
+namespace PathFinding { class Route; };
 
 namespace SwitchSolver {
 
-int solve(Train *, Block *, Block *, struct rail_link, int);
+void init();
+void free();
 
-struct find {
-  int possible;
-  int allreadyCorrect;
+int solve(Train *, Block *, Block *, RailLink, int);
+
+struct instruction {
+  uint8_t type;
+  union {
+    void * p;
+    Switch * Sw;
+    MSSwitch * MSSw;
+  } p;
+
+  uint8_t nrOptions;
+  uint8_t * options;
+  uint16_t * length;
+  uint8_t * possible;
+
+  struct instruction ** next;
 };
 
-struct find findPath(Train *, PathFinding::Route *, void *, struct rail_link, int);
+struct find {
+  bool possible;
+  bool allreadyCorrect;
+  bool polarityWrong;
+};
 
-int setPath(Train *, PathFinding::Route *, void *, struct rail_link, int);
+struct switchFind {
+  struct find f[2];
+};
 
-void setWrong(PathFinding::Route *, void *, struct rail_link, int);
+struct msswitchFind {
+  struct find f[64];
+};
 
-void dereservePath(Train * T, PathFinding::Route * r, void * p, struct rail_link link, int flags);
-int reservePath(Train *, PathFinding::Route *, void *, struct rail_link, int);
+extern struct switchFind * switches;
+extern struct msswitchFind * msswitches;
+
+struct SwSolve {
+  Train * train;
+  int16_t trainLength;
+  PathFinding::Route * route;
+  Block * prevBlock;
+  void * prevPtr;
+  RailLink * link;
+  int flags;
+
+  std::vector<struct instruction> * Instructions;
+};
+
+struct find findPath(struct SwSolve);
+
+int setPath(struct SwSolve);
+
+void setWrong(PathFinding::Route *, void *, RailLink, int);
+
+void dereservePath(Train * T, PathFinding::Route * r, void * p, RailLink link, int flags);
+int reservePath(struct SwSolve);
 
 };
 

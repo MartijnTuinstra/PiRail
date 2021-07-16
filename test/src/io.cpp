@@ -15,16 +15,7 @@
 
 #include "IO.h"
 #include "train.h"
-
-void init_test(char (* filenames)[30], int nr_files);
-
-class TestsFixture {
-public:
-  TestsFixture();
-  void loadSwitchboard(char (* filenames)[30], int nr_files);
-  void loadStock();
-  ~TestsFixture();
-};
+#include "testhelpers.h"
 
 TEST_CASE_METHOD(TestsFixture, "IO  Creation and linking", "[IO][IO-1]" ) {
   char filenames[1][30] = {"./testconfigs/IO-1.bin"};
@@ -35,7 +26,8 @@ TEST_CASE_METHOD(TestsFixture, "IO  Creation and linking", "[IO][IO-1]" ) {
   REQUIRE(U);
 
   U->on_layout = true;
-  U->link_all();
+
+  switchboard::SwManager->LinkAndMap();
 
   SECTION("I - Size and type"){
     REQUIRE(U->IO_Nodes == 1);
@@ -53,9 +45,9 @@ TEST_CASE_METHOD(TestsFixture, "IO  Creation and linking", "[IO][IO-1]" ) {
   }
 
   SECTION("II - linking"){
-    CHECK(U->B[0]->In  == U->Node[0]->io[9]);
-    CHECK(U->B[1]->In  == U->Node[0]->io[10]);
-    CHECK(U->B[1]->dir_Out == U->Node[0]->io[11]);
+    CHECK(U->B[0]->In_detection  == U->Node[0]->io[9]);
+    CHECK(U->B[1]->In_detection  == U->Node[0]->io[10]);
+    CHECK(U->B[1]->Out_polarity[0] == U->Node[0]->io[11]);
 
     // ======== SWITCHES ========
     CHECK(U->Sw[0]->IO[0] == U->Node[0]->io[12]);
@@ -86,7 +78,8 @@ TEST_CASE_METHOD(TestsFixture, "IO Output", "[IO][IO-2]"){
   REQUIRE(U);
 
   U->on_layout = true;
-  U->link_all();
+
+  switchboard::SwManager->LinkAndMap();
 
 
   U->Node[0]->io[22]->setOutput(IO_event_High);
@@ -109,10 +102,11 @@ TEST_CASE_METHOD(TestsFixture, "IO and Switchboard object", "[IO][IO-3]"){
   REQUIRE(U);
 
   U->on_layout = true;
-  U->link_all();
+
+  switchboard::SwManager->LinkAndMap();
 
   SECTION("I - Blocks"){
-    U->B[0]->In->setInput(IO_event_High);
+    U->B[0]->In_detection->setInput(IO_event_High);
 
     CHECK(U->B[0]->detectionBlocked);
   }

@@ -2,6 +2,8 @@
 #define _INCLUDE_SWITCHBOARD_LINK_H
 
 #include <stdint.h>
+#include <map>
+
 #include "switchboard/declares.h"
 
 enum link_types {
@@ -17,24 +19,41 @@ enum link_types {
   RAIL_LINK_E  = 0xff
 };
 
-struct rail_link {
-  uint8_t  module;
-  uint16_t id;
-  enum link_types type;
+class RailLink {
+  public:
+    uint8_t  module;
+    uint16_t id;
+    enum link_types type;
 
-  union {
-      Block * B;
-      Switch * Sw;
-      MSSwitch * MSSw;
-      void * p;
-  } p;
+    union {
+        Block * B;
+        Switch * Sw;
+        MSSwitch * MSSw;
+        void * p;
+    } p;
+
+    RailLink();
+    RailLink(struct configStruct_RailLink link);
+};
+
+class Block;
+class BlockLink : public RailLink {
+  public:
+    std::map<Block *, uint8_t> Polarity;
+    // std::vector<Block * [10]> Polarity;
+
+    BlockLink(struct configStruct_RailLink link);
+
+    void link();
+    void mapPolarity(void *, uint64_t);
+    void mapPolarity(void *, RailLink, uint64_t);
 };
 
 struct configStruct_RailLink;
 
-void railLinkExport(struct configStruct_RailLink * cfg, struct rail_link link);
+void railLinkExport(struct configStruct_RailLink * cfg, RailLink link);
 
-void * rail_link_pointer(struct rail_link link);
+void * rail_link_pointer(RailLink link);
 void link_all_blocks(Unit * U);
 void link_all_switches(Unit * U);
 void link_all_msswitches(Unit * U);

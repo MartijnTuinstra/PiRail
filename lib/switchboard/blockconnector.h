@@ -1,11 +1,10 @@
 #ifndef _INCLUDE_SWITCHBOARD_BLOCKCONNECTOR_H
 #define _INCLUDE_SWITCHBOARD_BLOCKCONNECTOR_H
 
-#include "switchboard/rail.h"
+#include <vector>
+#include "switchboard/declares.h"
 #include "switchboard/switch.h"
 #include "switchboard/msswitch.h"
-#include "switchboard/signals.h"
-#include "switchboard/unit.h"
 
 class BlockConnector {
   public:

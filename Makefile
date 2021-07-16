@@ -9,7 +9,7 @@ GCC_ERROR_FLAGS = -Werror=unused-variable -Wno-packed-bitfield-compat -Wno-unuse
 GCC_LIBS = -pthread -lssl -lcrypto -lm
 GCC_FLAGS = -D _DEFAULT_SOURCE -D _POSIX_C_SOURCE=600 -D CB_NON_AVR
 
-GCC = g++ -std=c++14 -g3 $(GCC_INCLUDE) $(GCC_ERROR_FLAGS) $(GCC_LIBS) $(GCC_FLAGS)
+GCC = g++ -std=c++14 -g3 -rdynamic $(GCC_INCLUDE) $(GCC_ERROR_FLAGS) $(GCC_LIBS) $(GCC_FLAGS)
 
 GENERATED = config/LayoutStructure config/RollingStructure
 GENERATED_OBJS =  $(addprefix $(BIN)/,$(addsuffix .o,$(GENERATED)))
@@ -20,9 +20,9 @@ SHARED_FILES = circularbuffer
 SHARED_OBJ = $(addprefix $(BIN)/shared/,$(addsuffix .o,$(SHARED_FILES)))
 
 FILES_CONFIG = $(addprefix config/,LayoutStructure RollingStructure ModuleConfig RollingConfig configReader)
-FILES_SWITCHBOARD = $(addprefix switchboard/,blockconnector links rail switch switchsolver msswitch unit station signals manager)
+FILES_SWITCHBOARD = $(addprefix switchboard/,blockconnector links rail switch switchsolver msswitch polaritysolver unit station signals manager)
 FILES_WEBSOCKET = $(addprefix websocket/,server client stc cts message)
-FILES_ROLLING = $(addprefix rollingstock/,manager train engine car railtrain)
+FILES_ROLLING = $(addprefix rollingstock/,manager trainset engine car traindetection train/general train/route train/speed)
 FILES_UTILS = $(addprefix utils/,logger mem encryption utils)
 FILES_ALGORITHM = $(addprefix algorithm/,core component queue blockconnector traincontrol)
 FILES_UART = $(addprefix uart/,uart RNetRX RNetTX)
@@ -43,7 +43,10 @@ CONFIG_READER_FILES = $(FILES_CONFIG) $(FILES_UTILS) $(FILES_UTILS) \
 CONFIG_OBJS         = $(addprefix $(BIN)/,$(addsuffix .o, $(CONFIG_READER_FILES))) $(GENERATED_OBJS) $(SHARED_OBJ)
 
 BAAN_CONFIGS = 1 2 3 4 10 20 21 22 23 25 26
-TEST_CONFIGS = Alg-1-1 Alg-1-2 Alg-1-3 Alg-3 Alg-1-4 Alg-2 Alg-R-1 Alg-R-2 Alg-R-3 Alg-R-4 Alg-Sp IO-1 IO-3 PATH-1 PATH-2 PF-1 PF-2 RT-Z21 SB-1.1 SB-1.2 SB-1.3 SB-1.4 SB-2.1 SB-3.1 SB-4.1 SB-4.2-1 SB-4.2-2
+TEST_CONFIGS  = Alg-1-1 Alg-1-2 Alg-1-3 Alg-1-4 Alg-2 Alg-R-1 Alg-R-2 Alg-R-3 Alg-R-4 Alg-Sp
+TEST_CONFIGS += PS-1 SwS-1
+TEST_CONFIGS += IO-1 IO-3 PATH-1 PATH-2 PF-1 PF-2 RT-Z21
+TEST_CONFIGS += SB-1.1 SB-1.2 SB-1.3 SB-1.4 SB-1.5 SB-2.1 SB-3.1 SB-4.1 SB-4.2-1 SB-4.2-2
 
 TEST_STOCK_CONFIGS =
 
@@ -53,6 +56,7 @@ TEST_STOCK_CONFIGS =
 -include $(BIN)/algorithm/*.d
 -include $(BIN)/config/*.d
 -include $(BIN)/rollingstock/*.d
+-include $(BIN)/rollingstock/train/*.d
 -include $(BIN)/scheduler/*.d
 -include $(BIN)/switchboard/*.d
 -include $(BIN)/utils/*.d
@@ -105,7 +109,7 @@ generated/lib/config/%.h: $(addprefix generated/, %.py $(GENERATOR))
 	cp $^ $@
 
 update_modules_config: $(addprefix configs/units/,$(addsuffix .bin_bu_MKFL,$(BAAN_CONFIGS))) $(addprefix test/testconfigs/,$(addsuffix .bin_bu_MKFL,$(TEST_CONFIGS)))
-	./config_reader --update --module $^
+	./config_reader --update --module $(addprefix configs/units/,$(addsuffix .bin,$(BAAN_CONFIGS))) $(addprefix test/testconfigs/,$(addsuffix .bin,$(TEST_CONFIGS)))
 
 update_rolling_config: configs/stock.bin $(addprefix test/testconfigs/,$(addsuffix .bin,$(TEST_STOCK_CONFIGS)))
 	./config_reader --update --rollingediting $^
@@ -131,7 +135,7 @@ baan: $(BAAN_OBJS)
 	@echo '( GCCLD ) $@'
 	@echo $^
 	@$(GCC) -o $@ $^ -D CB_NON_AVR
-	@$(GCC) -shared -o $@.so $^ -D CB_NON_AVR
+	@$(GCC) -shared -o lib$@.so $^ -D CB_NON_AVR
 
 config_reader: $(CONFIG_OBJS)
 	@echo '( GCCLD ) $@'

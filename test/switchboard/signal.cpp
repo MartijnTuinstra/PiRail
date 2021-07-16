@@ -36,7 +36,7 @@ TEST_CASE_METHOD(TestsFixture, "Signal 1", "[SB][SB-4][SB-4.1]" ) {
   Unit * U = switchboard::Units(1);
   REQUIRE(U);
 
-  U->link_all();
+  switchboard::SwManager->LinkAndMap();
 
   /*       o>        <o
   //       |          |
@@ -139,8 +139,7 @@ TEST_CASE_METHOD(TestsFixture, "Signal 2", "[SB][SB-4][SB-4.2]" ) {
 
   loggerf(INFO, "Have %i connectors", connectors.size());
 
-  link_all_blocks(U1);
-  link_all_blocks(U2);
+  switchboard::SwManager->LinkAndMap();
 
   U1->B[0]->setDetection(0);
   U2->B[0]->setDetection(0);

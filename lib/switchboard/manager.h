@@ -7,8 +7,9 @@
 #include "utils/mem.h"
 #include "utils/dynArray.h"
 
-#include "config/ModuleConfig.h"
 #include "switchboard/declares.h"
+
+class ModuleConfig;
 
 namespace switchboard {
 
@@ -66,9 +67,9 @@ class Manager {
     void openFile(char *);
 
     void clear();
-};
 
-void linkAll();
+    void LinkAndMap();
+};
 
 extern Manager * SwManager;
 }; //namespace

@@ -14,7 +14,7 @@
 // #include "algorithm/queue.h"
 
 #include "websocket/stc.h"
-// #include "Z21_msg.h"
+#include "pathfinding.h"
 
 
 void Train::setRoute(Block * dest){

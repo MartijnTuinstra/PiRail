@@ -27,8 +27,8 @@ struct s_msswitch_connect {
 
   uint8_t states;
 
-  struct rail_link * sideA;
-  struct rail_link * sideB;
+  RailLink * sideA;
+  RailLink * sideB;
   uint8_t * dir;
 };
 
@@ -56,26 +56,26 @@ class MSSwitch {
     bool updatedState;
     bool feedbackWrongState;
 
-    bool feedback_en;
-    uint8_t feedback_len;
-    IO_Port ** feedback;
-    union u_IO_event ** feedback_events;
-    char * feedback_states;
+    bool feedback_en = 0;
+    uint8_t feedback_len = 0;
+    IO_Port ** feedback = 0;
+    union u_IO_event ** feedback_events = 0;
+    char * feedback_states = 0;
 
     uint8_t IO_len;
     IO_Port ** IO;
 
     std::vector<Signal *> Signals;
 
-    uint8_t state_len;      // Total number of states
+    uint8_t state_len = 0; // Total number of states
     uint8_t defaultState;  // Default state
-    uint8_t state;          // Current state
-    uint16_t maxSpeed;      // Current maximum Speed
+    uint8_t state;         // Current state
+    uint16_t maxSpeed;     // Current maximum Speed
 
-    struct rail_link * sideA;      // Rail Link for each state
-    struct rail_link * sideB;      // Rail Link for each state
-    uint8_t * state_direction;     // Direction for each state
-    union u_IO_event ** IO_states; // [State][IO_Port]
+    BlockLink * sideA = 0;      // Rail Link for each state
+    BlockLink * sideB = 0;      // Rail Link for each state
+    uint8_t * state_direction = 0;     // Direction for each state
+    union u_IO_event ** IO_states = 0; // [State][IO_Port]
     uint16_t * stateMaxSpeed;      // Maximum Speed for each state
 
     Block * Detection;
@@ -93,7 +93,7 @@ class MSSwitch {
 
     void addSignal(Signal * Sig);
 
-    struct rail_link * NextLink(int flags);
+    RailLink * NextLink(int flags);
 
     bool approachableA(void * p, int flags);
     bool approachableB(void * p, int flags);
@@ -103,6 +103,11 @@ class MSSwitch {
     void setState(uint8_t _state);
     void setState(uint8_t _state, uint8_t lock);
     void updateState(uint8_t _state);
+
+    bool checkPolarity(Block * B);
+    bool checkPolarity(Block * B, uint8_t state);
+    bool cmpPolarity(Block * B);
+    bool cmpPolarity(Block * B, uint8_t state);
 };
 
 #endif

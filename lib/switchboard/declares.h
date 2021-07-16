@@ -9,6 +9,9 @@ class MSSwitch;
 class Signal;
 class Station;
 
+class RailLink;
+class BlockLink;
+
 class Path;
 
 

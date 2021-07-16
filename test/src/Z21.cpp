@@ -25,19 +25,8 @@
 #include "algorithm/blockconnector.h"
 
 #include "pathfinding.h"
-
-void init_test(char (* filenames)[30], int nr_files);
-void train_testSim_tick(struct train_sim * t, int32_t * i);
-void train_test_tick(struct train_sim * t, int32_t * i);
-void test_Algorithm_tick();
-
-class TestsFixture {
-public:
-  TestsFixture();
-  void loadSwitchboard(char (* filenames)[30], int nr_files);
-  void loadStock();
-  ~TestsFixture();
-};
+#include "path.h"
+#include "testhelpers.h"
 
 TEST_CASE_METHOD(TestsFixture, "Train Z21", "[Z21]"){
   char filenames[1][30] = {"./testconfigs/RT-Z21.bin"};
@@ -48,7 +37,8 @@ TEST_CASE_METHOD(TestsFixture, "Train Z21", "[Z21]"){
 
   REQUIRE(U);
   U->on_layout = true;
-  U->link_all();
+
+  switchboard::SwManager->LinkAndMap();
 
   pathlist_find();
 

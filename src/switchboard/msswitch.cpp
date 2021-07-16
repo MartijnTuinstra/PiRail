@@ -25,20 +25,15 @@ MSSwitch::MSSwitch(uint8_t _module, struct configStruct_MSSwitch * conf){
 
   uid = SwManager->addMSSwitch(this);
 
-  sideA = (struct rail_link *)_calloc(conf->nr_states, struct rail_link);
-  sideB = (struct rail_link *)_calloc(conf->nr_states, struct rail_link);
+  sideA = (BlockLink *)_calloc(conf->nr_states, BlockLink);
+  sideB = (BlockLink *)_calloc(conf->nr_states, BlockLink);
   stateMaxSpeed = (uint16_t *)_calloc(conf->nr_states, uint16_t);
   state_direction = (uint8_t *)_calloc(conf->nr_states, uint8_t);
   IO_states = (union u_IO_event **)_calloc(conf->nr_states, union u_IO_event *);
 
   for(uint8_t i = 0; i < conf->nr_states; i++){
-    sideA[i].module = conf->states[i].sideA.module;
-    sideA[i].id = conf->states[i].sideA.id;
-    sideA[i].type = (enum link_types)conf->states[i].sideA.type;
-    
-    sideB[i].module = conf->states[i].sideB.module;
-    sideB[i].id = conf->states[i].sideB.id;
-    sideB[i].type = (enum link_types)conf->states[i].sideB.type;
+    sideA[i] = BlockLink(conf->states[i].sideA);
+    sideB[i] = BlockLink(conf->states[i].sideB);
 
     stateMaxSpeed[i]   = conf->states[i].speed;
     state_direction[i] = conf->states[i].dir;
@@ -164,8 +159,8 @@ bool MSSwitch::approachableB(void * p, int flags){
   return 0;
 }
 
-struct rail_link * MSSwitch::NextLink(int flags){
-  struct rail_link * next = 0;
+RailLink * MSSwitch::NextLink(int flags){
+  RailLink * next = 0;
 
   Block * B = this->Detection;
 
@@ -180,7 +175,7 @@ struct rail_link * MSSwitch::NextLink(int flags){
 }
 
 Block * MSSwitch::Next_Block(enum link_types type, int flags, int level){
-  struct rail_link * next;
+  RailLink * next;
 
   if(type == RAIL_LINK_TT){
     return 0;
@@ -245,36 +240,59 @@ Block * MSSwitch::Next_Block(enum link_types type, int flags, int level){
 }
 
 uint MSSwitch::NextList_Block(Block * Origin, Block ** blocks, uint8_t block_counter, enum link_types type, int flags, int length){
-  loggerf(TRACE, "MSSwitch::NextList_Block(%02i:%02i, %i, %2x)", this->module, this->id, block_counter, flags);
-  struct rail_link * next;
+  loggerf(TRACE, "MSSwitch::NextList_Block(%02i:%02i, %i, %2x)", module, id, block_counter, flags);
+  RailLink * nextLink;
 
   if(type == RAIL_LINK_TT){
     return block_counter;
   }
+
+  if(flags & FL_BLOCKS_COUNT)
+    length--;
+  else
+    length -= Detection->length;
+
+  if(flags & FL_NEXT_FIRST_TIME_SKIP){
+    // If toggle request
+    Block * prevBlock;
+
+    if(block_counter > 0)
+      prevBlock = blocks[block_counter-1];
+    else
+      prevBlock = Origin;
+
+    char buffer[100];
+
+    sprintf(buffer, " %c (%i %i)? =>", (flags & FL_DIRECTION_MASK) ? 'P' : 'N', dircmp(prevBlock->dir, Detection->dir), cmpPolarity(prevBlock));
+
+    if(!dircmp(prevBlock->dir, Detection->dir)){
+      loggerf(INFO, "flip Direction");
+      flags ^= FL_DIRECTION_MASK;
+
+      if(flags & FL_DIRECTION_CARE)
+        return block_counter;
+    }
+
+    if(!cmpPolarity(prevBlock)){
+      loggerf(INFO, "flip Diretion polarity");
+      flags ^= FL_DIRECTION_MASK;
+    }
+
+    loggerf(TRACE, "%s %c", buffer, (flags & FL_DIRECTION_MASK) ? 'P' : 'N');
+    
+    blocks[block_counter++] = Detection;
+  }
+  else{
+    flags |= FL_NEXT_FIRST_TIME_SKIP;
+    if((flags & FL_BLOCKS_COUNT) == 0)
+      length += Detection->length;
+  }
   
   
-  if(type == RAIL_LINK_MA){
-    blocks[block_counter++] = this->Detection;
-    next = &this->sideB[this->state];
-    // return this->Detection->Next_BlockList(Origin, blocks, block_counter, flags, length);
-  }else if(type == RAIL_LINK_MB_inside){
-    next = &this->sideB[this->state];
-    flags |= FL_NEXT_FIRST_TIME_SKIP;
-
-    uint8_t dir = (flags & 1) + (this->Detection->dir << 1);
-    flags = (flags & 0xF0) + (dir & 0x0F);
-  }
-  else if(type == RAIL_LINK_MB){
-    blocks[block_counter++] = this->Detection;
-    next = &this->sideA[this->state];
-    // return this->Detection->Next_BlockList(Origin, blocks, block_counter, flags, length);
-  }else if(type == RAIL_LINK_MA_inside){
-    next = &this->sideA[this->state];
-    flags |= FL_NEXT_FIRST_TIME_SKIP;
-
-    uint8_t dir = (flags & 1) + (this->Detection->dir << 1);
-    flags = (flags & 0xF0) + (dir & 0x0F);
-  }
+  if(type == RAIL_LINK_MA || type == RAIL_LINK_MB_inside)
+    nextLink = &sideB[state];
+  else if(type == RAIL_LINK_MB || type == RAIL_LINK_MA_inside)
+    nextLink = &sideA[state];
 
   if(Detection == Origin){
     uint16_t speed = stateMaxSpeed[state];
@@ -282,8 +300,8 @@ uint MSSwitch::NextList_Block(Block * Origin, Block ** blocks, uint8_t block_cou
       Origin->MaxSpeed = speed;
   }
 
-  if(!next->p.p){
-    if(next->type != RAIL_LINK_E)
+  if(!nextLink->p.p){
+    if(nextLink->type != RAIL_LINK_E)
       loggerf(ERROR, "NO POINTERS");
     return block_counter;
   }
@@ -291,58 +309,18 @@ uint MSSwitch::NextList_Block(Block * Origin, Block ** blocks, uint8_t block_cou
   if(block_counter >= 10)
     return block_counter;
 
-  loggerf(TRACE, "Next     :        \t%i:%i => %i:%i:%i\t%i", this->module, this->id, next->module, next->id, next->type, block_counter);
+  loggerf(TRACE, "Next     :        \t%i:%i => %i:%i:%i\t%i", module, id, nextLink->module, nextLink->id, nextLink->type, block_counter);
 
-  if(next->type == RAIL_LINK_R){
-    return next->p.B->_NextList(Origin, blocks, block_counter, flags, length);
-  }
-  else if(next->type == RAIL_LINK_S){
-    return next->p.Sw->NextList_Block(Origin, blocks, block_counter, next->type, flags, length);
-  }
-  else if(next->type == RAIL_LINK_s && next->p.Sw->approachable(this, flags)){
-    return next->p.Sw->NextList_Block(Origin, blocks, block_counter, next->type, flags, length);
-  }
-  else if(next->type == RAIL_LINK_MA && next->p.MSSw->approachableA(this, flags)){
-    return next->p.MSSw->NextList_Block(Origin, blocks, block_counter, next->type, flags, length);
-  }
-  else if(next->type == RAIL_LINK_MB && next->p.MSSw->approachableB(this, flags)){
-    return next->p.MSSw->NextList_Block(Origin, blocks, block_counter, next->type, flags, length);
-  }
-  else if(next->type == RAIL_LINK_MA_inside || next->type == RAIL_LINK_MB_inside){
-    return next->p.MSSw->NextList_Block(Origin, blocks, block_counter, next->type, flags, length);
-  }
-  else if(next->type == RAIL_LINK_TT){
-    if(next->p.MSSw->approachableA(this, flags)){
-      next->type = RAIL_LINK_MA;
-
-      // If turntable is turned around
-      if(next->p.MSSw->NextLink(flags)->p.p != this){
-        flags ^= 0b10;
-      }
-    }
-    else if(next->p.MSSw->approachableB(this, flags)){
-      next->type = RAIL_LINK_MB;
-
-      // If turntable is turned around
-      if(next->p.MSSw->NextLink(flags)->p.p != this){
-        flags ^= 0b10;
-      }
-    }
-    return next->p.MSSw->NextList_Block(Origin, blocks, block_counter, next->type, flags, length);
-  }
-  // else if(next->type == RAIL_LINK_E){
-  //   return 0;
-  // }
-
-  return block_counter;
+  return _NextList_NextIteration(nextLink, this, Origin, blocks, block_counter, flags, length);
 }
 
 void MSSwitch::setState(uint8_t _state){
   setState(_state, 1);
 }
 
-void MSSwitch::setState(uint8_t _state, uint8_t lock){
-  loggerf(TRACE, "throw_msswitch");
+void MSSwitch::setState(uint8_t _state, uint8_t _mutexLock){
+  bool overrideLockout = false;
+  loggerf(WARNING, "MSSwitch::setState (%2i:%2i, %i->%i, %i)", module, id, state, _state, overrideLockout, _mutexLock);
 
   if(Detection && (Detection->state == BLOCKED || Detection->state == RESERVED_SWITCH))
     return; // Switch is blocked
@@ -392,3 +370,43 @@ void MSSwitch::updateState(uint8_t _state){
   U->switch_state_changed |= 1;
 }
 
+bool MSSwitch::checkPolarity(Block * B){
+  return checkPolarity(B, state);
+}
+
+bool MSSwitch::checkPolarity(Block * B, uint8_t _state){
+  // if(Alg.next == 0 || Alg.prev == 0 || B->Alg.next == 0 || B->Alg.prev == 0)
+  //   return 0;
+  // loggerf(WARNING, "%x == %x\t%i %i, %i %i\t%x %x, %x %x", (unsigned int) this, (unsigned int) B, Alg.next, Alg.prev, B->Alg.next, B->Alg.prev, (unsigned int) Alg.N[0], (unsigned int) Alg.P[0], (unsigned int) B->Alg.N[0], (unsigned int) B->Alg.P[0]);
+
+  if(std::any_of(sideA[_state].Polarity.begin(), sideA[_state].Polarity.end(), [this, B](auto i){ return i.first == B && (i.second ^ this->Detection->polarity_status ^ B->polarity_status); } ) ||
+     std::any_of(sideB[_state].Polarity.begin(), sideB[_state].Polarity.end(), [this, B](auto i){ return i.first == B && (i.second ^ this->Detection->polarity_status ^ B->polarity_status); } )    ){
+       return 1;
+  }
+  return 0;
+}
+
+bool MSSwitch::cmpPolarity(Block * B){
+  return cmpPolarity(B, state);
+}
+
+bool MSSwitch::cmpPolarity(Block * B, uint8_t _state){
+  // if(Alg.next == 0 || Alg.prev == 0 || B->Alg.next == 0 || B->Alg.prev == 0)
+  //   return 0;
+  // uint8_t i = 0;
+  // loggerf(TRACE, "%x", B);
+  // for(auto P: sideA[state].Polarity){
+  //   loggerf(TRACE, "A%i  %x %i", i++, P.first, P.second);
+  // }
+  // i = 0;
+  // loggerf(TRACE, "%x", B);
+  // for(auto P: sideB[state].Polarity){
+  //   loggerf(TRACE, "B%i  %x %i", i++, P.first, P.second);
+  // }
+
+  if(std::any_of(sideA[_state].Polarity.begin(), sideA[_state].Polarity.end(), [B](auto i){ return i.first == B && i.second; } ) ||
+     std::any_of(sideB[_state].Polarity.begin(), sideB[_state].Polarity.end(), [B](auto i){ return i.first == B && i.second; } )    ){
+       return 1;
+  }
+  return 0;
+}

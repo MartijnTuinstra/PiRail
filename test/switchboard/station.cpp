@@ -35,7 +35,7 @@ TEST_CASE_METHOD(TestsFixture, "Station Stating", "[SB][SB-5][SB-5.1]" ) {
   Unit * U = switchboard::Units(1);
   REQUIRE(U);
 
-  U->link_all();
+  switchboard::SwManager->LinkAndMap();
 
   for(uint8_t i = 0; i < U->block_len; i++){
     U->B[i]->AlgorSearch(0);

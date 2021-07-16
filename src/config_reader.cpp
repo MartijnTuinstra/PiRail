@@ -9,6 +9,7 @@
 #include "uart/uart.h"
 #include "RNet_msg.h"
 #include "system.h"
+#include "flags.h"
 
 #include "switchboard/links.h"
 
@@ -30,6 +31,16 @@ const char * rail_states_string[8] = {
   "RESERVED_SWITCH",
   "UNKNOWN" 
 };
+
+
+const char * block_polarity_string[5] = {
+  "DISABLED",
+  "NO IO",
+  "SINGLE IO",
+  "DOUBLE IO",
+  "B LINKED"
+};
+
 
 
 void UART_ACK(uint8_t device){
@@ -232,6 +243,36 @@ void modify_Node(struct ModuleConfig * config, char ** cmds, uint8_t cmd_len){
   }
 }
 
+int8_t fgetScanf(const char * format, ...){
+  char buffer[100];
+
+  fgets(buffer, 100, stdin);
+
+  va_list args;
+  va_start (args, format);
+  int8_t length = vsscanf(buffer, format, args);
+  va_end (args);
+
+  return length;
+}
+
+void scan_IO_Node(struct configStruct_IOport * port){
+  int tmpNode, tmpPort;
+  if(fgetScanf("%i%*c%i", &tmpNode, &tmpPort) > 1){
+    port->Node = tmpNode;
+    port->Port = tmpPort;
+  }
+}
+
+void scan_RailLink(struct configStruct_RailLink * link){
+  int tmp[3];
+  if(fgetScanf("%i%*c%i%*c%i", &tmp[0], &tmp[1], &tmp[2]) > 2){
+    link->module = tmp[0];
+    link->id = tmp[1];
+    link->type = tmp[2];
+  }
+}
+
 void modify_Block(struct ModuleConfig * config, char ** cmds, uint8_t cmd_len){
   if(!cmds)
     return;
@@ -290,85 +331,65 @@ void modify_Block(struct ModuleConfig * config, char ** cmds, uint8_t cmd_len){
 
 
   if((mode == 'e' && cmd_len <= 3) || (mode == 'a' && cmd_len <= 2)){
-    char _cmd[20];
-    int tmp, tmp1, tmp2;
+    struct configStruct_Block * B = &config->Blocks[id];
+
+    int tmp;
     char tmpc;
-    printf("Block Type      (%i)         | ", config->Blocks[id].type);
-    fgets(_cmd, 20, stdin);
-    if(sscanf(_cmd, "%i", &tmp) > 0)
-      config->Blocks[id].type = tmp;
+    printf(" Block Type      (%i)         | ", B->type);
+    if(fgetScanf("%i", &tmp) > 0)
+      B->type = tmp;
 
-    printf("Block Link Next (%2i:%2i:%2x)  | ", config->Blocks[id].next.module, config->Blocks[id].next.id, config->Blocks[id].next.type);
-    fgets(_cmd, 20, stdin);
-    if(sscanf(_cmd, "%i%*c%i%*c%i", &tmp, &tmp1, &tmp2) > 2){
-      config->Blocks[id].next.module = tmp;
-      config->Blocks[id].next.id = tmp1;
-      config->Blocks[id].next.type = tmp2;
-    }
+    printf(" Block Link Next (%2i:%2i:%2x)  | ", B->next.module, B->next.id, B->next.type);
+    scan_RailLink(&B->next);
 
-    printf("Block Link Prev (%2i:%2i:%2x)  | ", config->Blocks[id].prev.module, config->Blocks[id].prev.id, config->Blocks[id].prev.type);
-    fgets(_cmd, 20, stdin);
-    if(sscanf(_cmd, "%i%*c%i%*c%i", &tmp, &tmp1, &tmp2) > 2){
-      config->Blocks[id].prev.module = tmp;
-      config->Blocks[id].prev.id = tmp1;
-      config->Blocks[id].prev.type = tmp2;
-    }
+    printf(" Block Link Prev (%2i:%2i:%2x)  | ", B->prev.module, B->prev.id, B->prev.type);
+    scan_RailLink(&B->prev);
 
-    printf("Block Speed     (%3i)       | ", config->Blocks[id].speed);
-    fgets(_cmd, 20, stdin);
-    if(sscanf(_cmd, "%i", &tmp) > 0)
-      config->Blocks[id].speed = tmp;
+    printf(" Block Speed     (%3i)       | ", B->speed);
+    if(fgetScanf("%i", &tmp) > 0)
+      B->speed = tmp;
 
-    printf("Block Length    (%3i)       | ", config->Blocks[id].length);
-    fgets(_cmd, 20, stdin);
-    if(sscanf(_cmd, "%i", &tmp) > 0)
-      config->Blocks[id].length = tmp;
+    printf(" Block Length    (%3i)       | ", B->length);
+    if(fgetScanf("%i", &tmp) > 0)
+      B->length = tmp;
 
-    printf("Block Oneway    (%c)         | ",(config->Blocks[id].fl & 1)?'Y':'N');
-
-    fgets(_cmd, 20, stdin);
-    if(sscanf(_cmd, "%c", &tmpc) > 0){
+    printf(" Block Oneway    (%c)         | ",(B->fl & 1)?'Y':'N');
+    if(fgetScanf("%c", &tmpc) > 0){
       if(tmpc == 'Y' || tmpc == 'y')
-        config->Blocks[id].fl |= 0x1;
+        B->fl |= 0x1;
       else
-        config->Blocks[id].fl &= ~0x1;
+        B->fl &= ~0x1;
     }
 
-    printf("Block Direction (%i)         | ", (config->Blocks[id].fl & 0x6) >> 1);
-    fgets(_cmd, 20, stdin);
-    if(sscanf(_cmd, "%i", &tmp) > 0)
-      config->Blocks[id].fl = ((tmp & 0x3) << 1) + (~0x6 & config->Blocks[id].fl);
+    printf(" Block Direction (%i)         | ", (B->fl & 0x6) >> 1);
+    if(fgetScanf("%i", &tmp) > 0)
+      B->fl = ((tmp & 0x3) << 1) + (~0x6 & B->fl);
 
-    printf("Block IO out en (");
-    if(config->Blocks[id].fl & 8)
-      printf("Y)         | ");
-    else
-      printf("N)         | ");
-    fgets(_cmd, 20, stdin);
-    if(sscanf(_cmd, "%c", &tmpc) > 0){
-      if(tmpc == 'Y' || tmpc == 'y')
-        config->Blocks[id].fl |= 0x8;
-      else
-        config->Blocks[id].fl &= ~0x8;
-    }
+    printf(" Block IO In     (%2i:%2i)     | ", B->IOdetection.Node, B->IOdetection.Port);
+    scan_IO_Node(&B->IOdetection);
 
-    printf("Block IO In     (%2i:%2i)      | ", config->Blocks[id].IO_In.Node, config->Blocks[id].IO_In.Port);
-    fgets(_cmd, 20, stdin);
-    if(sscanf(_cmd, "%i%*c%i", &tmp, &tmp1) > 0){
-      config->Blocks[id].IO_In.Node = tmp;
-      config->Blocks[id].IO_In.Port = tmp1;
-    }
+    printf(" Block polarity  (%9s) | ", block_polarity_string[B->Polarity]);
+    if(fgetScanf("%i", &tmp) > 0)
+      B->Polarity = (tmp >= 0 && tmp < 5) ? tmp : 0;
 
-    if(config->Blocks[id].fl & 0x8){
-      printf("Block IO Out    (%2i:%2i)       | ", config->Blocks[id].IO_Out.Node, config->Blocks[id].IO_Out.Port);
-      fgets(_cmd, 20, stdin);
-      if(sscanf(_cmd, "%i%*c%i", &tmp, &tmp1) > 0){
-        config->Blocks[id].IO_Out.Node = tmp;
-        config->Blocks[id].IO_Out.Port = tmp1;
+    if(B->Polarity < BLOCK_FL_POLARITY_LINKED_BLOCK){
+      if(B->Polarity > 1){
+        printf(" Block Polarity Out1 (%2i:%2i) | ", B->Polarity_IO[0].Node, B->Polarity_IO[0].Port);
+        scan_IO_Node(&B->Polarity_IO[0]);
+      }
+
+      if(B->Polarity > 2){
+        printf(" Block Polarity Out2 (%2i:%2i) | ", B->Polarity_IO[1].Node, B->Polarity_IO[1].Port);
+        scan_IO_Node(&B->Polarity_IO[1]);
       }
     }
+    else{
+      printf(" Block Polarity Block(%2i:%2i) | ", B->Polarity_IO[0].Node, B->Polarity_IO[0].Port);
+      scan_IO_Node(&B->Polarity_IO[0]);
+    }
+
     printf("New:      \t");
-    print_Block(config->Blocks[id]);
+    print_Block(*B);
   }
   else if(mode == 'e'){
     printf("Argment mode\n");
@@ -387,6 +408,9 @@ void modify_Block(struct ModuleConfig * config, char ** cmds, uint8_t cmd_len){
         printf("\t-l\tLength\n");
         printf("\t--OW\tOneWay\n");
         printf("\t-d\tDirection\n");
+        printf("\t-r\tSwitch next and prev around\n");
+        printf("\t-p\tPolarity type (0/1/2/3)\n");
+        printf("\t--PIO [n] [IOPort:n] \tPolarity IO either 1 or 2 IO Ports\n");
         // printf("\t--IOIn\tIO Input Address\n");
         // printf("\t--IOOut\tIO Output Address\n");
         return;
@@ -438,9 +462,19 @@ void modify_Block(struct ModuleConfig * config, char ** cmds, uint8_t cmd_len){
         config->Blocks[id].fl |= (atoi(cmds[i+1]) & 0x3) << 1;
         i++;
       }
+      else if(strcmp(cmds[i], "-r") == 0){
+        std::swap(config->Blocks[id].next, config->Blocks[id].prev);
+      }
+      else if(strcmp(cmds[i], "-p") == 0){
+        config->Blocks[id].Polarity = atoi(cmds[++i]);
+      }
+      // else if(strcmp(cmds[i], "--PIO") == 0){
+      //   uint8_t n = atoi(cmds[++i]);
+      // }
       i++;
     }
-    printf("\n");
+    printf("\nNew:      \t");
+    print_Block(config->Blocks[id]);
   }
   else{
     printf("Mode not supported");
@@ -1609,6 +1643,7 @@ void modify_Catagory(struct RollingConfig * config, char type, char cmd){
 
 int edit_module(char * filename, bool update){
   auto config = ModuleConfig(filename);
+  int exit = 1;
 
   config.read();
 
@@ -1629,6 +1664,7 @@ int edit_module(char * filename, bool update){
   if(update){
     // uint8_t len = strlen(config.filename);
     config.write();
+    return exit;
   }
 
   config.print(0, 0);
@@ -1803,8 +1839,6 @@ int edit_module(char * filename, bool update){
   //   else
   //     printf("Not a command\n");
   }
-
-  int exit = 1;
 
 
   if(cmds_len > 1 && strcmp(cmds[1], "-r") == 0){

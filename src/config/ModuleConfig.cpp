@@ -545,8 +545,8 @@ void print_Block(struct configStruct_Block block){
                 block.length,
                 block.fl & 0x1,
                 (block.fl & 0x8) >> 3,
-                block.IO_In.Node, block.IO_In.Port,
-                block.IO_Out.Node, block.IO_Out.Port);
+                block.IOdetection.Node, block.IOdetection.Port,
+                block.IOpolarity.Node, block.IOpolarity.Port);
 
   printf( "%s\n", debug);
 }

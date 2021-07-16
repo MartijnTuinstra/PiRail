@@ -12,14 +12,9 @@
 
 using namespace switchboard;
 
-Signal::Signal(uint8_t _module, struct configStruct_Signal * conf){
-  memset(this, 0, sizeof(Signal));
-
-  // this->B = U_B(module, conf.blockId);
-  block_link.module = conf->block.module;
-  block_link.id = conf->block.id;
-  block_link.type = (enum link_types)conf->block.type;
-
+Signal::Signal(uint8_t _module, struct configStruct_Signal * conf):
+  block_link(conf->block)
+{
   direction = conf->direction;
 
   module = _module;
@@ -195,13 +190,11 @@ void Signal::switchUpdate(){
 
 void Signal::setIO(){
   //Update IO
-  enum Rail_states state = this->state;
-
-  if(this->switchDanger)
+  if(switchDanger)
     state = DANGER;
 
-  for(int i = 0; i < this->output_len; i++){
-    this->output[i]->setOutput(this->output_stating[i].state[state]);
+  for(int i = 0; i < output_len; i++){
+    output[i]->setOutput(output_stating[i].state[state]);
   }
 }
 

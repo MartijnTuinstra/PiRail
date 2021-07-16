@@ -46,10 +46,11 @@ struct control {
   Station ** endStations;
 
   Block * prev;
+  uint8_t prevMSSwState;
   void * prevPtr;
 
   uint8_t dir;
-  struct rail_link * link;
+  RailLink * link;
 
   uint8_t searchDepth;
 
@@ -102,7 +103,7 @@ struct pathfindingconfig {
   Block * end;
 
   Block * current;
-  struct rail_link * link;
+  RailLink * link;
 
   struct pathinstruction ** final_instruction;
 
@@ -142,6 +143,6 @@ struct paths pathfinding(Block * start, Block * end);
 struct pathfindingstep _pathfinding_step(struct pathfindingconfig c);
 void pathfinding_print(struct pathinstruction * instr, uint8_t level);
 void free_pathinstructions(struct pathinstruction * instr);
-void remove_pathinstructions(struct rail_link link, struct pathinstruction * instr);
+void remove_pathinstructions(RailLink link, struct pathinstruction * instr);
 
 #endif

@@ -24,6 +24,7 @@
 #include "switchboard/switch.h"
 #include "switchboard/msswitch.h"
 #include "train.h"
+#include "pathfinding.h"
 
 #include "Z21.h"
 
@@ -579,6 +580,9 @@ void WS_stc_TrainRoute(){}
 
 //Track Messages
 void WS_stc_trackUpdate(Websocket::Client * client){
+  // 0x26 - Broadcast track occupation
+  //         and block status
+
   loggerf(TRACE, "WS_trackUpdate");
   mutex_lock(&mutex_lockB, "Lock Mutex B");
   char data[4096];
@@ -604,8 +608,8 @@ void WS_stc_trackUpdate(Websocket::Client * client){
 
         data[(q-1)*4+1] = B->module;
         data[(q-1)*4+2] = B->id;
-        data[(q-1)*4+3] = (B->dir << 7) + B->state;
-        data[(q-1)*4+4] = 0;//B->train;
+        data[(q-1)*4+3] = (B->dir << 7) | (B->polarity_status << 6) | (B->state & 0x3F);
+        data[(q-1)*4+4] = 0; //B->train;
         q++;
 
         B->statechanged = 0;

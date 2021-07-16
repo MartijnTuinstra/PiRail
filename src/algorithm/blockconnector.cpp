@@ -1,6 +1,7 @@
 #include "algorithm/blockconnector.h"
 #include "switchboard/manager.h"
 #include "switchboard/rail.h"
+#include "switchboard/signals.h"
 
 #include "utils/logger.h"
 

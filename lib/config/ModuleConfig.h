@@ -1,6 +1,8 @@
 #ifndef INCLUDE_CONFIG_MODULECONFIG_H
 #define INCLUDE_CONFIG_MODULECONFIG_H
 
+#include <stdint.h>
+
 #define ModuleConfigBasePath "./configs/units/"
 
 struct configStruct_Unit;

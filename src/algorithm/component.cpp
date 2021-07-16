@@ -154,11 +154,11 @@ void BlockTick(void){
   do
   {
     loggerf(TRACE, "Process %i:%i, %x, %x", B->module, B->id, B->IOchanged + (B->statechanged << 1) + (B->algorchanged << 2), B->state);
-    process(B, 0);
+    processBlock(&B->Alg, 0);
      while(B->recalculate){
       loggerf(INFO, "ReProcess");
       B->recalculate = 0;
-      process(B, 0);
+      processBlock(&B->Alg, 0);
     }
   }
   while( (B = AlQueue.get()) );

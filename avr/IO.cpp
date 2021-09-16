@@ -127,6 +127,11 @@ void IO::init(){
 
 	memset(invertedMask, 0x00, MAX_PORTS);
 
+	memset(HoldStates,    0, sizeof(HoldStates));
+	memset(RepressStates, 0, sizeof(RepressStates));
+	holdState = 0;
+	repressState = 0;
+
 	#ifndef IO_SPI
 	memset(readMask, 0, MAX_PORTS);
 	#endif
@@ -233,8 +238,11 @@ void IO::initPin(uint8_t pin){
 
 	typelist[pin] = (enum e_IO_type)type;
 
-	if(type == IO_Undefined)
+	if(type == IO_Undefined){
+		// Set as input with pull up
 		in(pin);
+		high(pin);
+	}
 	else if(type <= IO_Output_PWM){
 		#ifdef IO_SPI
 		out(pin - 48);
@@ -413,6 +421,10 @@ void IO::readwrite(){
 }
 
 void IO::readInput(){
+	readInput(readData);
+}
+
+void IO::readInput(uint8_t * data){
 	IN_LOAD;
 	_delay_us(10);
 	LATCH_IN_ENABLE;
@@ -424,7 +436,7 @@ void IO::readInput(){
 		/* Wait for transmission complete */
 		while(!(SPSR & (1<<SPIF)));
 
-		readData[i] = SPDR ^ invertedMask[i]; 
+		data[i] = SPDR ^ invertedMask[i]; 
 	}
 
 	LATCH_IN_DISABLE;
@@ -433,28 +445,87 @@ void IO::readInput(){
 #else
 
 void IO::readInput(){
+	readInput(readData);
+}
+
+void IO::readInput(uint8_t * data){
 	for(uint8_t i = 0; i < MAX_PORTS; i++){
-		readData[i] = 0;
+		data[i] = 0;
 	}
 	for(uint8_t i = 0; i < MAX_PINS; i++){
-		readData[i/8] |= (read(i) << (i % 8));
+		data[i/8] |= (read(i) << (i % 8));
 	}
 	for(uint8_t i = 0; i < (MAX_PINS + 7)/8; i++){
-		readData[i] = (readData[i] ^ invertedMask[i]) & readMask[i];
+		data[i] = (data[i] ^ invertedMask[i]) & readMask[i];
 	}
 }
 
 #endif
 
 void IO::copyInput(){
+	copyInput(readData);
+}
+
+void IO::copyInput(uint8_t * data){
 	for(int i = 0; i < MAX_PORTS; i++){
-		oldreadData[i] = readData[i];
+		oldreadData[i] = data[i];
 	}
+}
+
+uint8_t IO::debounce(uint8_t * data, uint8_t * debounced){
+  uint8_t diff = 0;
+  
+  // uart.transmit("DB: ", 4);
+  // uart.transmit(MAX_PORTS, HEX,2);
+
+  for(int i = 0; i < MAX_PORTS; i++){
+    uint8_t HoldDelay = 0;
+    uint8_t RepressDelay = 0;
+
+    uint8_t prevData = debounced[i];
+
+	// A bit can only be set if all of the states do not have the bit set
+	// A bit can be un-set if non of the states have the bit set
+	
+  	// uart.transmit(data[i], HEX,2);
+
+    for(int j = 0; j < REPRESSDELAY; j++){
+  		// uart.transmit(RepressStates[i][j], HEX,2);
+      RepressDelay |= RepressStates[i][j];
+    }
+    RepressDelay ^= 0xFF;
+
+    debounced[i] |= data[i] & RepressDelay;
+
+    RepressStates[i][repressState] = debounced[i];
+    HoldStates[i][holdState] = data[i];
+
+    for(int j = 0; j < HOLDDELAY; j++){
+  		// uart.transmit(HoldStates[i][j], HEX,2);
+      HoldDelay |= HoldStates[i][j];
+    }
+
+    debounced[i] &= HoldDelay;
+
+    diff |= debounced[i] ^ prevData;
+  	// uart.transmit(debounced[i] ^ prevData, HEX,2);
+    // uart.transmit(':');
+  }
+  // uart.transmit("\r\n", 2);
+
+  holdState    = (holdState    + 1) % HOLDDELAY;
+  repressState = (repressState + 1) % REPRESSDELAY;
+
+  return diff;
 }
 
 
 void IO::set(uint8_t pin, union u_IO_event func){
+  #ifdef IO_SPI
 	enum e_IO_type type = typelist[pin + 48];
+  #else
+  enum e_IO_type type = typelist[pin];
+  #endif
 
 	uart.transmit("SetIO ", 6);
 	uart.transmit(pin, HEX, 2);

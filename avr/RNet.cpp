@@ -7,6 +7,7 @@
 #include "IO.h"
 #include "RNet.h"
 #include "RNet_msg.h"
+#include "RNet_messages.h"
 #include "uart.h"
 #include "eeprom_layout.h"
 
@@ -17,21 +18,27 @@ struct _RNet_buffer RNet_tx_buffer;
 uint8_t tmp_rx_msg[RNET_MAX_BUFFER];
 
 // #define RNET_DEBUG
-// #define RNET_MASTER
 
 bool RNet::available(){
+  if (state != IDLE)
+    return;
+
   if (rx.read_index != rx.write_index){;
     uint8_t size = getMsgSize(&rx);
 
+#ifdef DEBUG
     uart.transmit(rx.read_index, HEX, 2);
     uart.transmit("->", 2);
     uart.transmit(rx.write_index, HEX, 2);
     uart.transmit('\t');
     uart.transmit(size, HEX, 2);
     uart.transmit('\n');
+#endif
 
     if(size == 0){
+      #ifdef DEBUG
       uart.transmit("NOPC\n", 5);
+      #endif
       rx.read_index++;
       return false;
     }
@@ -46,19 +53,25 @@ bool RNet::available(){
       uint8_t i = 0;
       while(rx.read_index != rx.write_index && i != size){
         tmp_rx_msg[i] = rx.read();
+        #ifdef DEBUG
         uart.transmit(checksum, HEX, 2);
         uart.transmit(tmp_rx_msg[i], HEX, 2);
         uart.transmit(' ');
+        #endif
 
         checksum ^= tmp_rx_msg[i++];
       }
 
+      #ifdef DEBUG
       uart.transmit(checksum, HEX, 2);
+      #endif
 
       // If wrong checksum discard message
       // checksum XOR checksum == 0
       if(checksum && size != 1){
+        #ifdef DEBUG
         uart.transmit("WCS\n", 4);
+        #endif
         return false;
       }
 
@@ -125,23 +138,7 @@ void RNet::read(){
 
   else if(tmp_rx_msg[0] == RNet_OPC_ReqReadInput){
     uart.transmit("RQRI\n", 5);
-    net.tx.write(RNet_OPC_ReadInput);
-    net.tx.write(net.node_id);
-    net.tx.write(MAX_PORTS);
-
-    uint8_t checksum = RNET_CHECKSUM_SEED ^ RNet_OPC_ReadInput ^ MAX_PORTS ^ net.node_id;
-
-    for(uint8_t i = 0; i < MAX_PORTS; i++){
-      net.tx.write(io.readData[i]);
-      // net.tx.buf[(net.tx.write_index+(x++))%RNET_MAX_BUFFER] = io.readData[i];
-      checksum ^= io.readData[i];
-    }
-
-    net.tx.write(checksum);
-    // net.tx.buf[(net.tx.write_index+(x++))%RNET_MAX_BUFFER] = checksum;
-    // net.tx.write_index = (net.tx.write_index+x)%RNET_MAX_BUFFER;
-    net.txdata++;
-
+    NotifyInputChange();
     return;
   }
 
@@ -1078,7 +1075,9 @@ ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
       return;
     }
     else if(cBi == 9){ // R/W bit
-      if(cAddr != net.dev_id && cAddr != RNET_BROADCAST_MODULE){
+      bool forThisNode  = (cAddr == net.dev_id) || (cAddr == RNET_BROADCAST_ID);
+
+      if(!forThisNode){
         if(RNET_READ_RX){
           #ifdef RNET_DEBUG
           uart.transmit('w');
@@ -1101,6 +1100,8 @@ ISR(RNET_TIMER_ISR_vect){ //TIMER1_COMPA_vect
         net.state = OTHER;
         return;
       }
+
+      // For this node
       if(RNET_READ_RX){ // Master writing to node
         #ifdef RNET_DEBUG
         uart.transmit('W');

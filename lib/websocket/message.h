@@ -54,6 +54,7 @@ extern const char websocket_magic_string[];
 #define WSopc_Track_Scan_Progress 0x82
 #define WSopc_Track_Layout_Update 0x83
 #define WSopc_Track_Layout_Config 0x84
+#define WSopc_Track_Layout_Load   0x85
 #define WSopc_Track_Info          0x86
 #define WSopc_Z21_Settings        0x87
 #define WSopc_Reset_Switches      0x8C

@@ -8,6 +8,11 @@
 #include "uart/RNetTX.h"
 #include "system.h"
 
+#include "switchboard/rail.h"
+#include "switchboard/switch.h"
+#include "switchboard/msswitch.h"
+#include "switchboard/signals.h"
+
 #include "switchboard/manager.h"
 #include "switchboard/unit.h"
 
@@ -20,6 +25,9 @@ pthread_t thread;
 
 int main(int argc, char *argv[]){
 
+  logger.setfilename("comtest.txt");
+  logger.setlevel(DEBUG);
+  logger.setlevel_stdout(TRACE);
 
   // scheduler = new Scheduler();
   // RSManager = new RollingStock::Manager();
@@ -35,10 +43,6 @@ int main(int argc, char *argv[]){
 
   init_main();
   init_allocs();
-
-  logger.setfilename("uartlog.txt");
-  logger.setlevel(DEBUG);
-  logger.setlevel_stdout(NONE);
 
   switchboard::SwManager->openDir(ModuleConfigBasePath);
   switchboard::SwManager->loadFiles();
@@ -83,14 +87,20 @@ int main(int argc, char *argv[]){
     }
     else if(cmd[0] == 'h'){
       printf("Help:\n");
-      printf("\ta [Item]            \tAdd an Item with ID\n");
-      printf("\te [Item] [ID] {args}\tEdit an Item with ID\n");
-      printf("\td [Item] [ID] {args}\tRemove an Item with ID\n");
-      printf("\tp                   \tPrint configuration\n");
-      printf("\tim [path]           \tImport web layout from path\n");
-      printf("\tex {path}           \tExport web layout to path, defaults to Layout_export.txt\n");
-      printf("\tpl                  \tPrint current web layout\n");
-      printf("\ts                   \tSave configuration\n");
+      printf("\tDEVID                         \tDiscover all nodes\n");
+      printf("\tSETOUT [node] {[adr] [state]}*\tSet a particular Output to a state\n");
+      printf("\tSETALLOUT [node]              \tSet all outputs to the default state\n");
+      printf("\tREQIN [node]                  \tRequest all input states\n");
+      printf("\n");
+      printf("\tEMEGSTOP  \tEnable Emergency Stop\n");
+      printf("\tEMEGGO    \tRelease the Emergency Stop\n");
+      printf("\tPOWERON   \tEnable power\n");
+      printf("\tPOWEROFF  \tDisable power\n");
+      printf("\n");
+      printf("\tCHANGENODE\tReconfigure the nodes address\n");
+      printf("\tRESET     \tReset master\n");
+      printf("\tPI [node]\n");
+      printf("\tPO [node]\n");
     }
     else if(strcmp(cmds[0], "DEVID") == 0){
       COM_DevReset();
@@ -121,15 +131,7 @@ int main(int argc, char *argv[]){
       if(cmds_len <= 1)
         continue;
 
-      int M = atoi(cmds[1]);
-
-      struct COM_t data;
-      data.data[0] = M;
-      data.data[1] = RNet_OPC_ReqReadInput;
-
-      data.length = 2;
-
-      uart.send(&data);
+      COM_request_Inputs(atoi(cmds[1]));
     }
     else if(strcmp(cmds[0], "EMEGSTOP") == 0){
       loggerf(INFO, "Set Emergency Stop");
@@ -201,6 +203,82 @@ int main(int argc, char *argv[]){
     else if(strcmp(cmds[0], "RESET") == 0){
       loggerf(INFO, "RESET UART with DTS signal");
       uart.resetDevice();
+    }
+    else if(strcmp(cmds[0], "PI") == 0){
+      if(cmds_len <= 1)
+        continue;
+
+      int M = atoi(cmds[1]);
+      Unit * U = switchboard::Units(M);
+
+      printf("Inputs node %i\n", M);
+
+      for(uint i = 0; i < U->IO_Nodes; i++){
+        IO_Node * N = U->Node[i];
+        for(uint j = 0; j < N->io_ports; j++){
+          IO_Port * P = N->io[j];
+
+          switch(P->type){
+            case IO_Undefined:
+              break;
+            case IO_Input_Block:
+              printf("%2i/%3i %20s\t%02i:%02i\n", i, j, IO_enum_type_string[P->type], P->p.B->module, P->p.B->id);
+              break;
+            case IO_Input_Switch:
+              printf("%2i/%3i %20s\t%02i:%02i\n", i, j, IO_enum_type_string[P->type], P->p.Sw->module, P->p.Sw->id);
+              break;
+            case IO_Input_MSSwitch:
+              printf("%2i/%3i %20s\t%02i:%02i\n", i, j, IO_enum_type_string[P->type], P->p.MSSw->module, P->p.MSSw->id);
+              break;
+            default:
+              break;
+          }
+        }
+      }
+    }
+    else if(strcmp(cmds[0], "PO") == 0){
+      if(cmds_len <= 1)
+        continue;
+
+      int M = atoi(cmds[1]);
+      Unit * U = switchboard::Units(M);
+
+      printf("Outputs node %i\n", M);
+
+      for(uint i = 0; i < U->block_len; i++){
+        Block * B = U->B[i];
+        if(B->Out_polarity.size() == 0)
+          continue;
+
+        const char * BlockPolarityString[2][2] = {{"      ", ""}, {"normal", "reverse"}};
+        uint8_t j = 0;
+        for(auto P: B->Out_polarity){
+          
+          printf("%2i/%3i Block Polarity %s\t%02i:%02i\n", P->Node->id, P->id, BlockPolarityString[B->polarity_type - 2][j++], B->module, B->id);
+        }
+      }
+      for(uint i = 0; i < U->switch_len; i++){
+        Switch * Sw = U->Sw[i];
+        if(Sw->IO_len == 0)
+          continue;
+
+        for(uint j = 0; j < Sw->IO_len; j++){
+          IO_Port * P = Sw->IO[j];
+          
+          printf("%2i/%3i Switch Output\t%02i:%02i\n", P->Node->id, P->id, Sw->module, Sw->id);
+        }
+      }
+      for(uint i = 0; i < U->signal_len; i++){
+        Signal * Sig = U->Sig[i];
+        if(Sig->output_len == 0)
+          continue;
+
+        for(uint j = 0; j < Sig->output_len; j++){
+          IO_Port * P = Sig->output[j];
+          
+          printf("%2i/%3i Signal Output\t\t%02i:%02i\n", P->Node->id, P->id, Sig->module, Sig->id);
+        }
+      }
     }
     // else if(strcmp(cmds[0], "ex") == 0 || strcmp(cmds[0], "Ex") == 0){
     //   export_Layout(&config, cmds[1]);

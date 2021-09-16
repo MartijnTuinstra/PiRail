@@ -190,6 +190,11 @@ packedstruct s_opc_EditTrainlib {
   struct s_opc_AddNewTraintolib data;
 };
 
+// 0x85 - WSopc_Track_Layout_Load
+struct s_opc_Track_Layout_Load {
+  uint8_t id:7;
+  uint8_t request:1;
+};
 
 // 0x90 0x91
 packedstruct s_opc_enabledisableSubmoduleState {
@@ -238,6 +243,8 @@ struct s_WS_Data {
     struct s_opc_AddNewTraintolib            opc_AddNewTraintolib;
     struct s_opc_AddNewTraintolib_res        opc_AddNewTraintolib_res;
     struct s_opc_EditTrainlib                opc_EditTrainlib;
+
+    struct s_opc_Track_Layout_Load           opc_Track_Layout_Load;
 
     struct s_opc_enabledisableSubmoduleState opc_EnableSubModule;
     struct s_opc_enabledisableSubmoduleState opc_DisableSubModule;

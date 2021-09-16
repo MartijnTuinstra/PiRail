@@ -421,17 +421,17 @@ enum Rail_states Block::getPrevState(){
     return Prev->state;
 }
 
-void Block::setDetection(bool d){
+void Block::setDetection(bool detected){
   Alg.trainFollowingChecked = false;
   Alg.doneAll = false;
 
-  if(virtualBlocked && d && !detectionBlocked && expectedDetectable && train){
+  if(virtualBlocked && detected && !detectionBlocked && expectedDetectable && train){
     expectedDetectable->stepForward(this);
   }
 
   bool prevBlocked = detectionBlocked;
 
-  detectionBlocked = d;
+  detectionBlocked = detected;
   blocked = (detectionBlocked || virtualBlocked);
 
   if(prevBlocked != detectionBlocked)
@@ -659,6 +659,18 @@ void Block::flipPolarity(bool _reverse){
     return;
 
   polarity_status ^= 1;
+
+  switch(polarity_type){
+    case BLOCK_FL_POLARITY_SINGLE_IO:
+      Out_polarity[0]->setOutput(polarity_status);
+      break;
+    case BLOCK_FL_POLARITY_DOUBLE_IO:
+      Out_polarity[0]->setOutput(polarity_status ? IO_event_Low   : IO_event_Pulse);
+      Out_polarity[1]->setOutput(polarity_status ? IO_event_Pulse : IO_event_Low);
+      break;
+    default:
+      break;
+  }
 
   if(_reverse)
     reverse();

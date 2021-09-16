@@ -27,8 +27,10 @@ Train::Train(Block * B): blocks(0, 0), reservedBlocks(0, 0){
   this->B = B;
   setBlock(B);
 
-  if(B->path)
-    B->path->trains.push_back(this);
+  if(B->path){
+    B->path->trainEnter(this);
+    enterPath(B->path);
+  }
 
   assigned = false;
   setControl(TRAIN_MANUAL);
@@ -69,13 +71,19 @@ Train::~Train(){
 }
 
 void Train::setBlock(Block * sB){
-  loggerf(TRACE, "train %i: setBlock %2i:%2i %x", id, sB->module, sB->id, (unsigned int)sB);
+  loggerf(DEBUG, "train %i: setBlock %2i:%2i %x", id, sB->module, sB->id, (unsigned int)sB);
   sB->train = this;
   blocks.push_back(sB);
 }
 
+void Train::setBlock(std::vector<Block *>::iterator I, Block * sB){
+  loggerf(DEBUG, "train %i: setBlock %2i:%2i %x", id, sB->module, sB->id, (unsigned int)sB);
+  sB->train = this;
+  blocks.insert(I, sB);
+}
+
 void Train::releaseBlock(Block * rB){
-  loggerf(TRACE, "train %i: releaseBlock %2i:%2i %x", id, rB->module, rB->id, (unsigned int)rB);
+  loggerf(DEBUG, "train %i: releaseBlock %2i:%2i %x", id, rB->module, rB->id, (unsigned int)rB);
   rB->train = 0;
   blocks.erase(std::remove_if(blocks.begin(),
                               blocks.end(),
@@ -116,10 +124,25 @@ void Train::dereserveAll(){
 
 
 void Train::initVirtualBlocks(){
-  loggerf(TRACE, "initVirtualBlocks");
-  Block * tB = B;
-  uint8_t offset = 0;
+  
+  algor_blocks * blockGroup;
+  if(!dir)
+    blockGroup = B->Alg.P;
+  else
+    blockGroup = B->Alg.N;
+  Block * tB = blockGroup->B[0];
+
+
+  loggerf(WARNING, "initVirtualBlocks %02i:%02i", B->module, B->id);  
+
+  if(!directionKnown)
+    return;
+
+  uint8_t offset = 1;
   int16_t len = length / 10;
+
+  B->setVirtualDetection(1);
+
   while(len > 0){
     len -= tB->length;
 
@@ -127,44 +150,52 @@ void Train::initVirtualBlocks(){
 
     if(tB->train != this){
       if(tB->train){
-        if(tB->train->p.p)
+        if(tB->train->assigned)
           loggerf(CRITICAL, "Virtual Train intersects with other train");
 
         loggerf(INFO, "Virtual Train intersects with empty train");
 
         RSManager->removeTrain(tB->train);
       }
-      tB->train = this;
-      tB->train->setBlock(tB);
+      setBlock(blocks.begin(), tB);
     }
     AlQueue.puttemp(tB);
 
-    // loggerf(INFO, "  block %2i:%2i   %i  %i  %i", tB->module, tB->id, B->Alg.prev, offset, len);
+    loggerf(INFO, "  block %2i:%2i   %i  %i  %i", tB->module, tB->id, blockGroup->group[3], offset, len);
 
-    if(B->Alg.P->group[3] > offset){
-      tB = B->Alg.P->B[offset++];
+    if(blockGroup->group[3] > offset){
+      tB = blockGroup->B[offset++];
     }
     else
       break;
   }
 
-  if(B->Alg.P->group[3] > offset){
+  if(blockGroup->group[3] > offset){
     tB->setVirtualDetection(0);
     if(tB->train && !tB->detectionBlocked)
       tB->train->releaseBlock(tB);
     AlQueue.puttemp(tB);
 
-    // loggerf(INFO, "f block %2i:%2i", tB->module, tB->id);
+    loggerf(INFO, "f block %2i:%2i", tB->module, tB->id);
   }
 }
 
 void Train::setVirtualBlocks(){
-  loggerf(INFO, "setVirtualBlocks (T: %i, prev: %i, lenght: %icm)", id, B->Alg.P->group[3], length/10);
+  
+  algor_blocks * blockGroup;
+  if(!dir)
+    blockGroup = B->Alg.P;
+  else{
+    auto * Det = Detectables[Detectables.size() - 1];
+    blockGroup = Det->B[0]->Alg.N;
+  }
+  Block * tB = blockGroup->B[0];
+
+  loggerf(INFO, "setVirtualBlocks (T: %i, %02i:%02i, %02i:%02i, prev: %i, lenght: %icm)", id, B->module, B->id, tB->module, tB->id, blockGroup->group[3], length/10);
 
   if(!directionKnown)
     return;
 
-  Block * tB = B->Alg.P->B[0];
   uint8_t offset = 1;
   int16_t len = length / 10;
   while(len > 0){
@@ -172,16 +203,15 @@ void Train::setVirtualBlocks(){
 
     tB->setVirtualDetection(1);
 
-    if(tB->train != this){
-      tB->train = this;
-      tB->train->setBlock(tB);
-    }
+    if(tB->train != this)
+      setBlock(blocks.begin(), tB);
+
     AlQueue.puttemp(tB);
 
-    loggerf(INFO, "  block %2i:%2i   %i  %i  %i", tB->module, tB->id, B->Alg.P->group[3], offset, len);
+    loggerf(INFO, "  block %2i:%2i   %i  %i  %i", tB->module, tB->id, blockGroup->group[3], offset, len);
 
-    if(B->Alg.P->group[3] > offset){
-      tB = B->Alg.P->B[offset++];
+    if(blockGroup->group[3] > offset){
+      tB = blockGroup->B[offset++];
     }
     else
       break;
@@ -192,7 +222,7 @@ void Train::setVirtualBlocks(){
   uint8_t BlocksToRelease = 0;
 
   // Find blocks to be released
-  while(B->Alg.P->group[3] > offset){
+  while(blockGroup->group[3] > offset){
     if(tB->train != this)
       break;
 
@@ -202,8 +232,8 @@ void Train::setVirtualBlocks(){
 
     ReleaseBlocks[BlocksToRelease++] = tB;
 
-    if(B->Alg.P->group[3] > offset)
-      tB = B->Alg.P->B[offset++];
+    if(blockGroup->group[3] > offset)
+      tB = blockGroup->B[offset++];
     // loggerf(INFO, "f block %2i:%2i", tB->module, tB->id);
   }
 
@@ -223,7 +253,14 @@ void Train::setVirtualBlocks(){
 void Train::initMoveForward(Block * tB){
   // First time a Train moved when not stopped
   loggerf(INFO, "initMoveForward RT %i to block %02i:%02i (%i)", id, tB->module, tB->id, length);
+
+  if(initialized){
+    loggerf(ERROR, "allready done initMoveForward");
+
+    return;
+  }
   directionKnown = 1;
+  initialized = 1;
 
   SpeedState = TRAIN_SPEED_DRIVING;
 
@@ -272,7 +309,7 @@ void Train::initMoveForward(Block * tB){
     B->path->reserve(this, B);
 
   if(virtualLength)
-    setVirtualBlocks();
+    initVirtualBlocks();
 }
 
 void Train::moveForwardFree(Block * tB){
@@ -283,8 +320,12 @@ void Train::moveForwardFree(Block * tB){
     AlQueue.put(this); // Put in traincontrol queue for speed control
   }
 
+  if(virtualLength){
+    setVirtualBlocks();
+  }
+
   for(auto TD: Detectables){
-    // Find the detectable that has the front block
+    // Find the detectable that has the block
     //  then pop it out of the list and reorder
 
     if(TD->B.size() <= 1)
@@ -327,6 +368,10 @@ void Train::moveFrontForward(Block * _B){
 }
 
 void Train::reverse(){
+  // Reverse the train requires the occupied blocks to reverse as well.
+  //  a block/path can only be reversed if all trains occupying the block are stationary.
+  loggerf(DEBUG, "Train %i Reverse", id);
+
   if(!assigned || !directionKnown)
     return;
 
@@ -347,31 +392,18 @@ void Train::reverse(){
     return;
   }
 
-  std::vector<Path *> paths;
-  for(auto b: blocks){
-    if(b->type == NOSTOP || !b->path)
-      continue;
-
-    bool pathFound = false;
-    for(auto p: paths){
-      if(p == b->path)
-        pathFound = true;
-    }
-
-    if(!pathFound)
-      paths.push_back(b->path);
-  }
-
   bool reversed = false;
   for(auto p: paths){
-    if(reversed){
+    if(reversed)
       p->reverse(this);
-    }
     else{
       p->reverse();
       reversed = true;
     }
   }
+
+  std::reverse(blocks.begin(), blocks.end());
+  std::reverse(paths.begin(),  paths.end());
 }
 
 void Train::reverseFromPath(Path * P){
@@ -395,6 +427,7 @@ void Train::reverseFromPath(Path * P){
 }
 
 void Train::reverseBlocks(){
+  loggerf(DEBUG, "train reverseBlocks");
   if(!assigned || !directionKnown)
     return;
 
@@ -560,7 +593,7 @@ int Train::link(int tid, char type, uint8_t nrT, Train ** T){
       setBlock(b);
       if(b->path){
         b->path->dereserve(T[i]);
-        b->path->unreg(T[i]);
+        b->path->trainExit(T[i]);
       }
     }
 
@@ -590,6 +623,36 @@ void Train::unlink(){
     delete D;
   }
 
+}
+
+
+void Train::enterPath(Path * P){
+  paths.insert(paths.begin(), P);
+}
+
+void Train::exitPath(Path * P){
+  paths.erase(std::remove_if(paths.begin(),
+                              paths.end(),
+                             [P](const auto & o) { return (o == P); }),
+                             paths.end()
+                            );
+}
+
+void Train::analyzePaths(){
+  loggerf(DEBUG, "train::analyzePaths");
+  paths.clear();
+
+  for(auto b: blocks){
+    if(!b->path)
+      continue;
+
+    bool noneOf = std::none_of(paths.begin(), paths.end(), [b](Path * P){ return b->path == P; });
+
+    loggerf(DEBUG, " P%08x  %c", b->path, noneOf ? 'p' : ' ');
+
+    if(noneOf)
+      paths.push_back(b->path);
+  }
 }
 
 bool Train::ContinueCheck(){

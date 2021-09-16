@@ -342,8 +342,12 @@ IO_Port * Unit::IO(struct configStruct_IOport adr){
 
 
 void Unit::updateIO(){
-  for(int n = 0; n < this->IO_Nodes; n++){
-    IO_Node * N = this->Node[n];
+  for(int n = 0; n < IO_Nodes; n++){
+    IO_Node * N = Node[n];
+
+    if(n == 0){
+      continue;
+    }
 
     if(!N)
       continue;

@@ -4,6 +4,7 @@
 #include <signal.h>
 #include <errno.h>
 #include <semaphore.h>
+#include <execinfo.h>
 
 #include "system.h"
 #include "utils/logger.h"
@@ -19,6 +20,19 @@ void sigint_func(int sig){
     // Request Stop
     SYS->stop = 1;
   }
+}
+
+void sigint_crash_func(int sig){
+  printf("\n\n---- SIGSEGV ----\n\n");
+  void *array[20];
+  size_t size;
+
+  // get void*'s for all entries on the stack
+  size = backtrace(array, 20);
+
+  // print out all the frames to stderr
+  backtrace_symbols_fd(array, size, STDERR_FILENO);
+  exit(1);
 }
 
 int _find_free_index(void *** list, int * length){

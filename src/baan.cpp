@@ -1,5 +1,6 @@
 #include <time.h>
 #include <stdlib.h>
+#include <execinfo.h>
 
 #include "system.h"
 #include "utils/mem.h"
@@ -11,6 +12,8 @@
 #include "rollingstock/manager.h"
 
 #include "algorithm/traincontrol.h"
+
+#include "config/ModuleConfig.h"
 
 #include "uart/uart.h"
 #include "pathfinding.h"
@@ -30,7 +33,7 @@ int main(int argc, char * argv[]){
   init_main();
   logger.setfilename("log.txt");
   logger.setlevel(DEBUG);
-  logger.setlevel_stdout(INFO);
+  logger.setlevel_stdout(DEBUG);
 
   if(argc > 1){
     printf("Got argument %s\n", argv[1]);
@@ -41,8 +44,12 @@ int main(int argc, char * argv[]){
   }
 
   // Stop program when receiving SIGINT
-  if (signal(SIGINT, sigint_func) == SIG_ERR){
+  if (signal(SIGQUIT, sigint_func) == SIG_ERR){
     log("Cannot catch SIGINT", CRITICAL);
+    return 0;
+  }
+  if (signal(SIGSEGV, sigint_crash_func) == SIG_ERR){
+    log("Cannot catch SIGSEGV", CRITICAL);
     return 0;
   }
 
@@ -61,6 +68,7 @@ int main(int argc, char * argv[]){
   TC.start(4);
 
   switchboard::SwManager->openDir(ModuleConfigBasePath);
+  switchboard::SwManager->scanSetups(LayoutSetupBasePath);
   switchboard::SwManager->loadFiles();
 
   // load_module_Configs();

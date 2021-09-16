@@ -160,18 +160,18 @@ void Signal::exportConfig(struct configStruct_Signal * cfg){
 
 void print_signal_state(Signal * Si, enum Rail_states state){
   if(Si->B)
-    loggerf(DEBUG, "%02i:%02i Sig %i  %i %s -> %i %s", Si->B->module, Si->B->id, Si->id, Si->state, rail_states_string[Si->state], state, rail_states_string[state]);
+    loggerf(INFO, "%02i:%02i Sig %i  %i %s -> %i %s", Si->B->module, Si->B->id, Si->id, Si->state, rail_states_string[Si->state], state, rail_states_string[state]);
   else
     loggerf(DEBUG, "--:-- Sig %i  %i %s -> %i %s", Si->id, Si->state, rail_states_string[Si->state], state, rail_states_string[state]);
 }
 
-void Signal::set(enum Rail_states state){
-  loggerf(TRACE, "set_signal %x, %i", (unsigned int)this, (unsigned int)state);
-  if(this->state != state){
-    print_signal_state(this, state);
+void Signal::set(enum Rail_states _state){
+  loggerf(TRACE, "set_signal %x, %i", (unsigned int)this, (unsigned int)_state);
+  if(state != _state){
+    print_signal_state(this, _state);
     // Update state
-    this->state = state;
-    this->setIO();
+    state = _state;
+    setIO();
   }
 }
 

@@ -14,6 +14,8 @@
 #include <signal.h>
 #include <errno.h>
 
+#include "switchboard/blockconnector.h"
+
 enum e_SYS_Module_State {
   Module_STOP,
   Module_Init_Parent,
@@ -22,6 +24,7 @@ enum e_SYS_Module_State {
   Module_Fail,
   Module_LC_Searching,
   Module_LC_Connecting,
+  Module_LC_Loading,
   Module_SIM_State
 };
 
@@ -63,6 +66,7 @@ struct s_systemState{
 
   struct {
     volatile enum e_SYS_Module_State state;
+    BlockConnectors connectors;
     pthread_t th;
   } LC;
 

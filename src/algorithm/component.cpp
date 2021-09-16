@@ -107,6 +107,19 @@ int InitFindModules(void){
   }
   SYS_set_state(&SYS->LC.state, Module_LC_Connecting);
 
+  for(uint8_t i = 0; i < switchboard::SwManager->Units.items; i++){
+    Unit * U = switchboard::Units(i);
+
+    if(!U || !U->on_layout)
+      continue;
+
+    COM_request_Inputs(i);
+
+    // TODO: add functionality to set all (ms)switches to default
+  }
+
+  WS_stc_Track_Layout(0);
+
   return 1;
 }
 int InitConnectModules(void){
@@ -124,11 +137,7 @@ int InitProcess(void){
 
     for(int j = 0; j < U->block_len; j++){
       if(U->B[j]){
-        if(i == 10 && j == 5)
-          logger.setlevel_stdout(TRACE);
-        process(U->B[j], _FORCE);
-        if(i == 10 && j == 5)
-          logger.setlevel_stdout(INFO);
+        processBlock(&U->B[j]->Alg, _FORCE);
       }
     }
     for(int j = 0; j < U->switch_len; j++){

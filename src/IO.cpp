@@ -82,16 +82,17 @@ void IO_Port::exportConfig(struct configStruct_IOport * cfg){
 
 void IO_Port::link(void * pntr, enum e_IO_type type){
   if(this->type == IO_Undefined)
-    loggerf(WARNING, "IO %i:%i:%i is not configured correctly", this->Node->U->module, this->Node->id, this->id);
-  else if(type == IO_Output && this->type >= IO_Input)
-    loggerf(WARNING, "IO %i:%i:%i set as %s but is linked to an Output", this->Node->U->module, this->Node->id, this->id, IO_enum_type_string[this->type]);
-  else if(type >= IO_Input && this->type < IO_Input)
-    loggerf(WARNING, "IO %i:%i:%i set as %s but is linked to an Input", this->Node->U->module, this->Node->id, this->id, IO_enum_type_string[this->type]);
+    loggerf(WARNING, "IO %i:%i:%i is not configured correctly", Node->U->module, Node->id, id);
+  else if(type == IO_Output && type >= IO_Input)
+    loggerf(WARNING, "IO %i:%i:%i set as %s but is linked to an Output", Node->U->module, Node->id, id, IO_enum_type_string[type]);
+  else if(type >= IO_Input && type < IO_Input)
+    loggerf(WARNING, "IO %i:%i:%i set as %s but is linked to an Input", Node->U->module, Node->id, id, IO_enum_type_string[type]);
 
-  this->p.p = pntr;
+  p.p = pntr;
 }
 
 void IO_Port::setOutput(uint8_t state){
+  loggerf(TRACE, "IO_Port::setOutput %2i:%2i -> %s", Node->id, id, IO_event_string[type][state]);
   if(this->type == IO_Undefined || this->type >= IO_Input){
     loggerf(WARNING, "setOutput on input port");
     return;

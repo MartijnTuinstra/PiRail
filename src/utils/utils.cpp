@@ -11,7 +11,7 @@ int moveFile(char * src, char * dest){
   source = fopen(src, "r");
 
   if (source == NULL){
-    loggerf(ERROR, "Could not open source file (%s)", src);
+    loggerf(ERROR, "Cannot move file, because source file does not exist (%s)", src);
     return 0;
   }
 
@@ -19,7 +19,7 @@ int moveFile(char * src, char * dest){
 
   if (target == NULL){
     fclose(source);
-    loggerf(ERROR, "Could not create destination file (%s)", dest);
+    loggerf(ERROR, "Cannot move file, could not create destination file (%s)", dest);
     return 0;
   }
 
@@ -30,6 +30,16 @@ int moveFile(char * src, char * dest){
   fclose(target);
 
   return 1;
+}
+
+int fileExists(char * file){
+  FILE * f = fopen(file, "r");
+  if (f){
+    fclose(f);
+    return true;
+  }
+  else
+    return false;
 }
 
 void replaceCharinString(char * str, char orig, char sub){

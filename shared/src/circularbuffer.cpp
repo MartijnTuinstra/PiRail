@@ -28,7 +28,7 @@ uint8_t CircularBuffer::writefromfd(int fd){
 
     write_index = (write_index + rx_length) % CB_MAX_BUFFER;
 
-    loggerf(INFO, "%i/%i-(%i/%i) bytes read, %d available, %s", rx_length, readSize, read_index, write_index, size(), debug);
+    loggerf(TRACE, "%i/%i-(%i/%i) bytes read, %d available, %s", rx_length, readSize, read_index, write_index, size(), debug);
   }
   return rx_length;
 }

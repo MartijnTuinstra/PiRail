@@ -94,14 +94,15 @@ void TrainDetectable::setExpectedTrain(){
   if(size == 0)
     return;
 
-  if(size > 1 && BlockedLength - B[B.size() - 1]->length > DetectableLength)
-    B[B.size() - 1]->expectedTrain = 0; // Clear expectedTrain
+  if(size > 1 && BlockedLength - B[size - 1]->length > DetectableLength)
+    B[size - 1]->expectedTrain = 0; // Clear expectedTrain
 
   // Block * tmpBlock = B[0]->Next_Block(T->dir ? PREV : NEXT, 1);
   Block * tmpBlock = B[0]->getBlock(NEXT, 0);
   if(!tmpBlock)
     tmpBlock = B[0]->Next_Block(NEXT | FL_SWITCH_CARE, 1);
-  loggerf(DEBUG, "Detectable setExpectedTrain %2i:%2i / %2i:%2i", size > 1 ? B[size - 1]->module : 0, size > 1 ? B[size - 1]->id : 0,
+
+  loggerf(DEBUG, "Detectable setExpectedTrain Clear:%2i:%2i / Set:%2i:%2i", size > 1 ? B[size - 1]->module : 0, size > 1 ? B[size - 1]->id : 0,
                                                                   tmpBlock ? tmpBlock->module : 0, tmpBlock ? tmpBlock->id : 0);
 
   if(tmpBlock){ // Set new expectedTrain

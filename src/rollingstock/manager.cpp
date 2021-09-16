@@ -76,30 +76,30 @@ void Manager::loadFile(char * f){
 
 
   loggerf(INFO, "Initialize Catagories");
-  PassengerCatagories = (struct configStruct_Category *)_calloc(config.header->PersonCatagories, struct configStruct_Category);
-  PassengerCatagories_length = config.header->PersonCatagories;
-  CargoCatagories     = (struct configStruct_Category *)_calloc(config.header->CargoCatagories, struct configStruct_Category);
-  CargoCatagories_length = config.header->CargoCatagories;
+  PassengerCatagories = (struct configStruct_Category *)_calloc(config.header.PersonCatagories, struct configStruct_Category);
+  PassengerCatagories_length = config.header.PersonCatagories;
+  CargoCatagories     = (struct configStruct_Category *)_calloc(config.header.CargoCatagories, struct configStruct_Category);
+  CargoCatagories_length = config.header.CargoCatagories;
 
-  memcpy(PassengerCatagories, config.P_Cat, sizeof(struct configStruct_Category) * config.header->PersonCatagories);
-  memcpy(CargoCatagories,     config.C_Cat, sizeof(struct configStruct_Category) * config.header->PersonCatagories);
+  memcpy(PassengerCatagories, config.P_Cat, sizeof(struct configStruct_Category) * config.header.PersonCatagories);
+  memcpy(CargoCatagories,     config.C_Cat, sizeof(struct configStruct_Category) * config.header.PersonCatagories);
 
 
   loggerf(INFO, "Initialize Engines");
-  for(int i = 0; i < config.header->Engines; i++){
+  for(int i = 0; i < config.header.Engines; i++){
     newEngine(new Engine(config.Engines[i]));
   }
 
   
   loggerf(INFO, "Initialize Cars");
-  for(int i = 0; i < config.header->Cars; i++){
+  for(int i = 0; i < config.header.Cars; i++){
     newCar(new Car(config.Cars[i]));
     // create_car_from_conf(config.Cars[i]);
   }
 
   
   loggerf(INFO, "Initialize Trains");
-  for(int i = 0; i < config.header->TrainSets; i++){
+  for(int i = 0; i < config.header.TrainSets; i++){
     newTrainSet(new TrainSet(config.TrainSets[i]));
   }
 
@@ -182,7 +182,7 @@ void Manager::unsubDCCEngine(uint16_t i){
 void Manager::addDCC(Engine * E){
   auto DCCE = &DCC[E->DCC_ID];
 
-  loggerf(CRITICAL, "addDCC (%i) %i, %i, %i", E->DCC_ID, DCCE->engineUsed, DCCE->nr_engines, DCCE->uniqueEngine);
+  loggerf(INFO, "addDCC (%i) %i, %i, %i", E->DCC_ID, DCCE->engineUsed, DCCE->nr_engines, DCCE->uniqueEngine);
 
   DCCE->E[DCCE->nr_engines++] = E;
 }
@@ -250,13 +250,13 @@ void Manager::moveEngine(Engine * E, uint16_t DCCid){
 void Manager::writeFile(){
   auto config = RollingConfig(filename);
 
-  config.header->PersonCatagories = PassengerCatagories_length;
-  config.P_Cat = (struct configStruct_Category *)_calloc(config.header->PersonCatagories, struct configStruct_Category);
-  memcpy(config.P_Cat, PassengerCatagories, config.header->PersonCatagories * sizeof(struct configStruct_Category));
+  config.header.PersonCatagories = PassengerCatagories_length;
+  config.P_Cat = (struct configStruct_Category *)_calloc(config.header.PersonCatagories, struct configStruct_Category);
+  memcpy(config.P_Cat, PassengerCatagories, config.header.PersonCatagories * sizeof(struct configStruct_Category));
 
-  config.header->CargoCatagories = CargoCatagories_length;
-  config.C_Cat = (struct configStruct_Category *)_calloc(config.header->CargoCatagories, struct configStruct_Category);
-  memcpy(config.C_Cat, CargoCatagories, config.header->CargoCatagories * sizeof(struct configStruct_Category));
+  config.header.CargoCatagories = CargoCatagories_length;
+  config.C_Cat = (struct configStruct_Category *)_calloc(config.header.CargoCatagories, struct configStruct_Category);
+  memcpy(config.C_Cat, CargoCatagories, config.header.CargoCatagories * sizeof(struct configStruct_Category));
 
   for(uint8_t i = 0; i < TrainSets.size; i++){
     if(!TrainSets[i])

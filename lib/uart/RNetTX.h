@@ -12,6 +12,7 @@ void COM_set_single_Output_output(int M, int io, enum e_IO_output_event event);
 
 void COM_change_Output(int);
 void COM_change_Output(IO_Node *);
+void COM_request_Inputs(uint8_t M);
 void COM_Configure_IO(uint8_t, uint8_t, uint16_t);
 void COM_change_signal(Signal *);
 

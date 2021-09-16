@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 #define ModuleConfigBasePath "./configs/units/"
+#define LayoutSetupBasePath "./configs/setups/"
 
 struct configStruct_Unit;
 struct configStruct_Node;

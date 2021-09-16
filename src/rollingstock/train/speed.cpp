@@ -104,9 +104,6 @@ void Train::setStopped(bool stop){
   else if(SpeedState == TRAIN_SPEED_INITIALIZING){
     setStationStopped(stop);
   }
-
-  loggerf(WARNING, "Train setStopped new state == %s", TrainSpeedStatesStrings[SpeedState]);
-
   stopped = stop;
 }
 
@@ -140,7 +137,7 @@ void Train::changeSpeed(struct TrainSpeedEventRequest Request){
     return;
   }
 
-  loggerf(INFO, "T %i changeSpeed (=>%3i %3icm %i) \t %s", id, Request.targetSpeed, Request.distance, Request.reason, TrainSpeedStatesStrings[SpeedState]);
+  loggerf(INFO, "T %i changeSpeed (=>%3i in %3icm, reason %i) \t %s", id, Request.targetSpeed, Request.distance, Request.reason, TrainSpeedStatesStrings[SpeedState]);
 
   if(Request.targetSpeed > MaxSpeed)
     Request.targetSpeed = MaxSpeed;

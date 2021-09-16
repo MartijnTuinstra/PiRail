@@ -393,7 +393,8 @@ void SIM_JoinModules(){
   loggerf(INFO, "Have %i connectors", connectors.size());
 
   uint8_t x = 0;
-  char data[20];
+
+  uint16_t msgID = WS_stc_ScanStatus(-1, 0, maxConnectors);
 
   while(SYS->modules_linked == 0){
     WS_stc_trackUpdate(0);
@@ -401,16 +402,7 @@ void SIM_JoinModules(){
     if(uint8_t * findResult = Algorithm::find_connectable(&connectors)){
       Algorithm::connect_connectors(&connectors, findResult);
 
-      data[0] = 0x82;
-      data[1] = (char)connectors.size();
-      data[2] = maxConnectors;
-      int k = 3;
-      for(int j = 0;j< SwManager->Units.size;j++){
-        if(Units(j)){
-          data[k++] = j;
-        }
-      }
-      WSServer->send_all(data, k, 0x10);
+      WS_stc_ScanStatus(msgID, maxConnectors - connectors.size(), maxConnectors);
     }
 
     if(connectors.size() == 0)

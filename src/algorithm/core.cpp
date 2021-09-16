@@ -742,8 +742,20 @@ bool train_following(struct blockAlgorithm * ABs, int debug){
         B->setState(UNKNOWN);
       }
       else{ // Release the block
-        B->train->moveForwardFree(B);
-        B->train = 0;
+        Train * T = B->train;
+        
+        T->moveForwardFree(B);
+
+        if(B->path){
+          if(T->assigned && B->path->Exit == B){
+            B->path->trainExit(T);
+            T->exitPath(B->path);
+          }
+          else{
+            B->path->analyzeTrains();
+            T->analyzePaths();
+          }
+        }
 
         loggerf(DEBUG, "RESET Train block %x", (unsigned int)B);
         // Units[B->module]->changed |= Unit_Blocks_changed;
@@ -778,6 +790,11 @@ bool train_following(struct blockAlgorithm * ABs, int debug){
       loggerf(INFO, "Copy expectedDetectable");
 
       B->expectedDetectable->stepForward(B);
+
+      // If it is the front of the train
+      if(B->train->B == B && B->path && B->path->Entrance == B)
+        B->path->trainEnter(B->train);
+
       // B->train = B->expectedTrain;
       // B->train->moveForward(B);
 
@@ -791,6 +808,10 @@ bool train_following(struct blockAlgorithm * ABs, int debug){
       B->train = B->expectedTrain;
       B->train->moveForward(B);
 
+      // If it is the front of the train
+      if(B->train->B == B && B->path && B->path->Entrance == B)
+        B->path->trainEnter(B->train);
+
       if(next > 0)
         BN[0]->expectedTrain = B->train;
 
@@ -802,8 +823,14 @@ bool train_following(struct blockAlgorithm * ABs, int debug){
       // Copy train id from previous block
       Train * T = BP[0]->train;
 
-      if(T->stopped)
+      if(T->stopped){
         T->setBlock(B);
+        
+        if(B->path){
+          B->path->analyzeTrains();
+          T->analyzePaths();
+        }
+      }
       else{
         T->dir = 0;
 
@@ -815,26 +842,39 @@ bool train_following(struct blockAlgorithm * ABs, int debug){
       //   train_link[B->train]->Block = B;
       loggerf(TRACE, "COPY_TRAIN from %02i:%02i to %02i:%02i", BP[0]->module, BP[0]->id, B->module, B->id);
     }
-    // Train moved backwards
+    // Train moved backwards / or sporadic detection at the rear
     else if(next > 0 && BN[0]->blocked && BN[0]->train){
       loggerf(INFO, "Copy train from next block");
       // Copy train id from next block
       Train * T = BN[0]->train;
 
-      if(T->stopped)
+      // FIXME
+      // if(T->initialized){
+      //   T->moved(B);
+      //   if(B->path)
+      //     B->path->analyzeTrains();
+      //   return true;
+      // }
+      if(T->stopped){
         T->setBlock(B);
-      // else if(T->directionKnown)
-      //   T->moveForward(B);
+        
+        if(B->path){
+          B->path->analyzeTrains();
+          T->analyzePaths();
+        }
+      }
       else{
         T->dir = 1;
 
         T->initMoveForward(B);
-        //FIXME T->reverseZ21(); // Set Train in right direction
-
+        
+        if(B->path)
+          B->path->analyzeTrains();
         return true;
       }
     }
-    else if( ((prev > 0 && !BP[0]->blocked) || prev == 0) && ((next > 0 && !BN[0]->blocked) || next == 0) ){
+    else if( ((prev > 0 && (!BP[0]->blocked || (BP[0]->blocked && !BP[0]->train))) || prev == 0) && 
+             ((next > 0 && (!BN[0]->blocked || (BN[0]->blocked && !BN[0]->train))) || next == 0) ){
       //NEW TRAIN
       B->train = new Train(B);
 
@@ -843,6 +883,25 @@ bool train_following(struct blockAlgorithm * ABs, int debug){
     }
   }
 
+  if(B->state == UNKNOWN && B->blocked && B->train){
+    loggerf(INFO, "Restoring ghosting train");
+
+    // Remove all ghosted blocks around restored block.
+    for(uint8_t i = 0; i < next; i++){
+      if(BN[i]->blocked || BN[i]->state != UNKNOWN || BN[i]->train == 0)
+        break;
+      
+      BN[i]->train = 0;
+      BN[i]->setState(PROCEED);
+    }
+    for(uint8_t i = 0; i < prev; i++){
+      if(BP[i]->blocked || BP[i]->state != UNKNOWN || BP[i]->train == 0)
+        break;
+      
+      BP[i]->train = 0;
+      BP[i]->setState(PROCEED);
+    }
+  }
   return false;
 }
 
@@ -1013,10 +1072,11 @@ void train_control(Train * T){
 
 void Connect_Rails(){
   
-  auto connectors = Algorithm::find_connectors();
-  uint16_t maxConnectors = connectors.size();
+  SYS->LC.connectors = Algorithm::find_connectors();
+  BlockConnectors * connectors = &SYS->LC.connectors;
+  uint16_t maxConnectors = connectors->size();
 
-  loggerf(INFO, "Have %i connectors", connectors.size());
+  loggerf(INFO, "Have %i connectors", connectors->size());
 
   uint16_t msgID = -1;
 
@@ -1029,15 +1089,19 @@ void Connect_Rails(){
     while(B != 0){
       B = AlQueue.get();
     }
-    
-    if(uint8_t * findResult = Algorithm::find_connectable(&connectors)){
-      Algorithm::connect_connectors(&connectors, findResult);
 
-      WS_stc_ScanStatus(msgID, maxConnectors - connectors.size(), maxConnectors);
+    processMutex.lock();
+    
+    if(uint8_t * findResult = Algorithm::find_connectable(connectors)){
+      Algorithm::connect_connectors(connectors, findResult);
+
+      WS_stc_ScanStatus(msgID, maxConnectors - connectors->size(), maxConnectors);
     }
 
-    if(connectors.size() == 0)
+    if(connectors->size() == 0){
+      processMutex.unlock();
       break;
+    }
 
     //IF ALL JOINED
     //BREAK
@@ -1060,18 +1124,20 @@ void Connect_Rails(){
       }
     }
 
-    // FIXME mutex_lock(&algor_mutex, "Algor Mutex");
+    processMutex.unlock();
+
     //Notify clients
     WS_stc_trackUpdate(0);
-
-    // FIXME mutex_unlock(&algor_mutex, "Algor Mutex");
 
     usleep(100);
   }
 
-  auto s = BlockConnectorSetup();
-  s.save();
+  if(SYS->LC.state == Module_LC_Connecting){
+    auto s = BlockConnectorSetup();
+    s.save();
+  }
 
+  WS_stc_Track_Layout(0);
   SYS->modules_linked = 1;
 }
 

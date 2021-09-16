@@ -114,6 +114,7 @@ class Train {
     Block * B; // FrontBlock
     std::vector<Block *> blocks;         // All blocks that are blocked by the train (detection and virtual)
     std::vector<Block *> reservedBlocks; // All blocks with switches that are reserved by the train.
+    std::vector<Path *>  paths;          // All the paths the train is in.
 
     uint8_t id = 0;
 
@@ -133,6 +134,7 @@ class Train {
     bool dir = 0;             // TRAIN_FORWARD / TRAIN_REVERSE
     bool directionKnown = 0;  //  block direction is matched to the Z21 direction
     bool reverseDirection = 0;  // Train is reversed with respect to the front block
+    bool initialized = 0;       // Virtual blocks are initialized
     uint8_t routeStatus = TRAIN_ROUTE_DISABLED;         // TRAIN_ROUTE - DISABLED / RUNNING / ENTERED_DESTINATION / AT_DESTINATION
 
     PathFinding::Route * route = 0;
@@ -155,6 +157,7 @@ class Train {
     ~Train();
 
     void setBlock(Block *);
+    void setBlock(std::vector<Block *>::iterator I, Block * sB);
     void releaseBlock(Block *);
 
     void reserveBlock(Block *);
@@ -193,6 +196,11 @@ class Train {
     int link(int tid, char type);
     int link(int tid, char type, uint8_t, Train **);
     void unlink();
+
+    // Paths
+    void enterPath(Path *);
+    void exitPath(Path *);
+    void analyzePaths();
 
     // train/route.cpp ----
     void setRoute(Block * dest);

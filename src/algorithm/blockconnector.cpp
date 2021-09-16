@@ -3,6 +3,8 @@
 #include "switchboard/rail.h"
 #include "switchboard/signals.h"
 
+#include "config/ModuleConfig.h"
+
 #include "utils/logger.h"
 
 namespace Algorithm {
@@ -142,7 +144,7 @@ uint8_t * find_connectable(BlockConnectors * Connectors){
       if(!C->B[i]->blocked)
         continue;
 
-      loggerf(DEBUG, "Found blocked connector %i:%i", C->unit, C->connector);
+      loggerf(DEBUG, "Found blocked connector U%i C%i", C->unit, C->connector);
 
       blockedConnector[found] = j;
       found++;
@@ -169,6 +171,12 @@ void connect_connectors(BlockConnectors * Connectors, uint8_t * blockedConnector
   if(A->ports != B->ports){
     _free(blockedConnectors);
     loggerf(ERROR, "Connectors do not have the same number of ports");
+    return;
+  }
+
+  if(A->unit == B->unit){
+    _free(blockedConnectors);
+    loggerf(WARNING, "Cannot connect two connectors on the same unit");
     return;
   }
 
@@ -219,7 +227,7 @@ BlockConnectorSetup::BlockConnectorSetup(){
   time_t t = time(NULL);
 
   struct tm tm = *localtime(&t);
-  sprintf(filename, "configs/setup-%04d%02d%02d-%02d%02d%02d.bin", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+  sprintf(filename, "%s/%04d%02d%02d-%02d%02d%02d.bin", LayoutSetupBasePath, tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
 }
 
 BlockConnectorSetup::BlockConnectorSetup(const char * _filename){

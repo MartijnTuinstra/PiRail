@@ -42,6 +42,8 @@ class Manager {
     ::dynArray<String *>  filenames;
     ::dynArray<ModuleConfig *> Configs;
 
+    ::dynArray<String *>  setups;
+
     Manager();
     ~Manager();
 
@@ -65,6 +67,8 @@ class Manager {
     void loadFiles(char *);
     void loadFiles();
     void openFile(char *);
+
+    void scanSetups(char *);
 
     void clear();
 

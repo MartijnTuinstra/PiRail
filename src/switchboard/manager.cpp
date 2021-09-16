@@ -4,10 +4,13 @@
 #include <errno.h>
 #include <dirent.h>
 
+#include "config/ModuleConfig.h"
+
 #include "switchboard/manager.h"
 #include "switchboard/unit.h"
 #include "switchboard/rail.h"
 #include "switchboard/switch.h"
+#include "switchboard/switchsolver.h"
 #include "switchboard/msswitch.h"
 #include "switchboard/signals.h"
 #include "switchboard/station.h"
@@ -120,6 +123,7 @@ void Manager::loadFiles(){
   }
 
   SYS->modules_loaded = 1;
+  SwitchSolver::init();
 }
 
 void Manager::openFile(char * filename){
@@ -136,6 +140,31 @@ void Manager::openFile(char * filename){
   new Unit(mc);
 }
 
+void Manager::scanSetups(char * directory){
+  struct dirent *dir;
+
+  DIR *d = opendir(directory);
+
+  // char type[10] = "";
+  // char name[40] = "";
+
+  if (d)
+  {
+    while ((dir = readdir(d)) != NULL)
+    {
+      uint8_t len = strlen(dir->d_name);
+      if(strcmp(&dir->d_name[len-4], ".bin") == 0){
+        dir->d_name[len-4] = 0; // remove everything '.bin'
+        loggerf(INFO, "Setup %s added", dir->d_name);
+
+        String * str = new String((const char *)dir->d_name);
+        setups.push_back(str);
+      }
+    }
+    closedir(d);
+  }
+}
+
 void Manager::clear(){
   if(SYS)
     SYS->modules_loaded = 0;
@@ -149,6 +178,8 @@ void Manager::clear(){
 
   filenames.clear();
   Configs.clear();
+
+  SwitchSolver::free();
 }
 
 void Manager::print(){
@@ -163,6 +194,22 @@ void Manager::print(){
   uniqueSignal.print();
   printf("Stations:\t");
   uniqueStation.print();
+}
+
+void Manager::LinkAndMap(){
+  for(uint16_t i = 0; i < Units.size; i++){
+    if(!Units[i])
+      continue;
+
+    Units[i]->link_all();
+  }
+
+  for(uint16_t i = 0; i < Units.size; i++){
+    if(!Units[i])
+      continue;
+
+    Units[i]->map_all();
+  }
 }
 
 Manager * SwManager;

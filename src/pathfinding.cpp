@@ -413,6 +413,7 @@ struct step findStep(struct control c){
       c.prev = Sw->Detection;
       c.prevMSSwState = i;
 
+      loggerf(INFO, " MSSw%c %2i:%2i state %i", tmpLink->type == RAIL_LINK_MA ? 'A':'B', Sw->module, Sw->id, i);
 
       steps[i] = findStep(c);
 

@@ -212,7 +212,6 @@ void modify_Node(struct ModuleConfig * config, char ** cmds, uint8_t cmd_len){
         }
         printf("%d %i => %s\t%x %x\n", id, port, cmds[i+2], (0xF << (4 * ((port + 1)% 2))), (atoi(cmds[i+2]) & 0xF) << (4 * (port % 2)));
         config->Nodes[id].config[port].type = atoi(cmds[i+2]);
-        printf("%x\n", config->Nodes[id].config[port]);
         i += 3;
       }
       else if(strcmp(cmds[i], "-d") == 0){
@@ -372,14 +371,15 @@ void modify_Block(struct ModuleConfig * config, char ** cmds, uint8_t cmd_len){
     if(fgetScanf("%i", &tmp) > 0)
       B->Polarity = (tmp >= 0 && tmp < 5) ? tmp : 0;
 
+    const char * BlockPolarityStrings[2][2] = {{"Out  ", ""}, {"NOR  ", "REV  "}};
     if(B->Polarity < BLOCK_FL_POLARITY_LINKED_BLOCK){
       if(B->Polarity > 1){
-        printf(" Block Polarity Out1 (%2i:%2i) | ", B->Polarity_IO[0].Node, B->Polarity_IO[0].Port);
+        printf(" Block Polarity %s(%2i:%2i) | ", BlockPolarityStrings[B->Polarity - 2][0], B->Polarity_IO[0].Node, B->Polarity_IO[0].Port);
         scan_IO_Node(&B->Polarity_IO[0]);
       }
 
       if(B->Polarity > 2){
-        printf(" Block Polarity Out2 (%2i:%2i) | ", B->Polarity_IO[1].Node, B->Polarity_IO[1].Port);
+        printf(" Block Polarity %s(%2i:%2i) | ", BlockPolarityStrings[B->Polarity - 2][1], B->Polarity_IO[1].Node, B->Polarity_IO[1].Port);
         scan_IO_Node(&B->Polarity_IO[1]);
       }
     }
@@ -1147,19 +1147,19 @@ void modify_Car(struct RollingConfig * config, char cmd){
     printf("Editing Car %i\n", id);
   }
   else if(cmd == 'a'){
-    printf("Car ID: (%i)\n", config->header->Cars);
+    printf("Car ID: (%i)\n", config->header.Cars);
     fgets(_cmd, 80, stdin); // Clear stdin
 
-    if(config->header->Cars == 0){
+    if(config->header.Cars == 0){
       printf("Calloc");
       config->Cars = (struct configStruct_Car *)_calloc(1, struct configStruct_Car);
     }
     else{
       printf("Realloc");
-      config->Cars = (struct configStruct_Car *)_realloc(config->Cars, config->header->Cars+1, struct configStruct_Car);
+      config->Cars = (struct configStruct_Car *)_realloc(config->Cars, config->header.Cars+1, struct configStruct_Car);
     }
-    memset(&config->Cars[config->header->Cars], 0, sizeof(struct configStruct_Car));
-    id = config->header->Cars++;
+    memset(&config->Cars[config->header.Cars], 0, sizeof(struct configStruct_Car));
+    id = config->header.Cars++;
 
     //Set child pointers
     config->Cars[id].name_len = 1;
@@ -1174,12 +1174,12 @@ void modify_Car(struct RollingConfig * config, char cmd){
     if(sscanf(_cmd, "%i", &id) < 1)
       return;
 
-    if(id == (config->header->Cars - 1) && id >= 0){
-      _free(config->Cars[config->header->Cars - 1].name);
-      _free(config->Cars[config->header->Cars - 1].icon_path);
+    if(id == (config->header.Cars - 1) && id >= 0){
+      _free(config->Cars[config->header.Cars - 1].name);
+      _free(config->Cars[config->header.Cars - 1].icon_path);
 
-      memset(&config->Cars[config->header->Cars - 1], 0, sizeof(struct configStruct_Car));
-      config->Cars = (struct configStruct_Car *)_realloc(config->Cars, --config->header->Cars, struct configStruct_Car);
+      memset(&config->Cars[config->header.Cars - 1], 0, sizeof(struct configStruct_Car));
+      config->Cars = (struct configStruct_Car *)_realloc(config->Cars, --config->header.Cars, struct configStruct_Car);
     }
     else{
       printf("Only last block can be removed\n");
@@ -1281,19 +1281,19 @@ void modify_Engine(struct RollingConfig * config, char ** cmds, uint8_t cmd_len)
     }
   }
   else if(mode == 'a'){
-    printf("Engine ID: (%i)\n", config->header->Engines);
+    printf("Engine ID: (%i)\n", config->header.Engines);
 
-    if(config->header->Engines == 0){
+    if(config->header.Engines == 0){
       printf("Calloc");
       config->Engines = (struct configStruct_Engine *)_calloc(1, struct configStruct_Engine);
     }
     else{
       printf("Realloc");
-      config->Engines = (struct configStruct_Engine *)_realloc(config->Engines, config->header->Engines+1, struct configStruct_Engine);
+      config->Engines = (struct configStruct_Engine *)_realloc(config->Engines, config->header.Engines+1, struct configStruct_Engine);
     }
-    memset(&config->Engines[config->header->Engines], 0, sizeof(struct configStruct_Engine));
-    // config->Engines[config->header->Engines].id = config->header->Engines;
-    id = config->header->Engines++;
+    memset(&config->Engines[config->header.Engines], 0, sizeof(struct configStruct_Engine));
+    // config->Engines[config->header.Engines].id = config->header.Engines;
+    id = config->header.Engines++;
 
     //Set child pointers
     config->Engines[id].name_len = 1;
@@ -1315,14 +1315,14 @@ void modify_Engine(struct RollingConfig * config, char ** cmds, uint8_t cmd_len)
       return;
     }
 
-    if(id == (config->header->Engines - 1) && id >= 0){
-      _free(config->Engines[config->header->Engines - 1].name);
-      _free(config->Engines[config->header->Engines - 1].img_path);
-      _free(config->Engines[config->header->Engines - 1].icon_path);
-      _free(config->Engines[config->header->Engines - 1].speed_steps);
+    if(id == (config->header.Engines - 1) && id >= 0){
+      _free(config->Engines[config->header.Engines - 1].name);
+      _free(config->Engines[config->header.Engines - 1].img_path);
+      _free(config->Engines[config->header.Engines - 1].icon_path);
+      _free(config->Engines[config->header.Engines - 1].speed_steps);
 
-      memset(&config->Engines[config->header->Engines - 1], 0, sizeof(struct configStruct_Engine));
-      config->Engines = (struct configStruct_Engine *)_realloc(config->Engines, --config->header->Engines, struct configStruct_Engine);
+      memset(&config->Engines[config->header.Engines - 1], 0, sizeof(struct configStruct_Engine));
+      config->Engines = (struct configStruct_Engine *)_realloc(config->Engines, --config->header.Engines, struct configStruct_Engine);
     }
     else{
       printf("Only last engine can be removed\n");
@@ -1470,19 +1470,19 @@ void modify_TrainSet(struct RollingConfig * config, char cmd){
     printf("Editing Train %i\n", id);
   }
   else if(cmd == 'a'){
-    printf("Train ID: (%i)\n", config->header->TrainSets);
+    printf("Train ID: (%i)\n", config->header.TrainSets);
     fgets(_cmd, 20, stdin); // Clear stdin
 
-    if(config->header->TrainSets == 0){
+    if(config->header.TrainSets == 0){
       printf("Calloc");
       config->TrainSets = (struct configStruct_TrainSet *)_calloc(1, struct configStruct_TrainSet);
     }
     else{
       printf("Realloc");
-      config->TrainSets = (struct configStruct_TrainSet *)_realloc(config->TrainSets, config->header->TrainSets+1, struct configStruct_TrainSet);
+      config->TrainSets = (struct configStruct_TrainSet *)_realloc(config->TrainSets, config->header.TrainSets+1, struct configStruct_TrainSet);
     }
-    memset(&config->TrainSets[config->header->TrainSets], 0, sizeof(struct configStruct_TrainSet));
-    id = config->header->TrainSets++;
+    memset(&config->TrainSets[config->header.TrainSets], 0, sizeof(struct configStruct_TrainSet));
+    id = config->header.TrainSets++;
 
     //Set child pointers
     config->TrainSets[id].name_len = 1;
@@ -1497,11 +1497,11 @@ void modify_TrainSet(struct RollingConfig * config, char cmd){
     if(sscanf(_cmd, "%i", &id) < 1)
       return;
 
-    if(id == (config->header->TrainSets - 1) && id >= 0){
-      _free(config->TrainSets[config->header->TrainSets - 1].name);
+    if(id == (config->header.TrainSets - 1) && id >= 0){
+      _free(config->TrainSets[config->header.TrainSets - 1].name);
 
-      memset(&config->Engines[config->header->TrainSets - 1], 0, sizeof(struct configStruct_TrainSet));
-      config->TrainSets = (struct configStruct_TrainSet *)_realloc(config->TrainSets, --config->header->TrainSets, struct configStruct_TrainSet);
+      memset(&config->Engines[config->header.TrainSets - 1], 0, sizeof(struct configStruct_TrainSet));
+      config->TrainSets = (struct configStruct_TrainSet *)_realloc(config->TrainSets, --config->header.TrainSets, struct configStruct_TrainSet);
     }
     else{
       printf("Only last engine can be removed\n");
@@ -1568,11 +1568,11 @@ void modify_Catagory(struct RollingConfig * config, char type, char cmd){
   uint8_t * _header;
   struct configStruct_Category ** _cat;
   if(type == 'P'){
-    _header = &config->header->PersonCatagories;
+    _header = &config->header.PersonCatagories;
     _cat = &config->P_Cat;
   }
   else{
-    _header = &config->header->CargoCatagories;
+    _header = &config->header.CargoCatagories;
     _cat = &config->C_Cat;
   }
 
@@ -1826,7 +1826,7 @@ int edit_module(char * filename, bool update){
           send = 0;
         }
 
-        usleep(1000);
+        usleep(500);
 
         loggerf(INFO, "!(%i) && %i < %i && %i < 10", stop, i, N->ports, send);
       }

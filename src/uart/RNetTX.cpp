@@ -59,8 +59,8 @@ void COM_change_Output(IO_Node * N){
     }
   }
 
-  TX.data[j+1] =  CheckSum;
-  TX.length = 3 + TX.data[2];
+  TX.length = 4 + TX.data[2];
+  TX.data[TX.length-1] =  CheckSum;
   uart.send(&TX);
 }
 void COM_change_Output(int M){
@@ -71,6 +71,16 @@ void COM_change_Output(int M){
     return;
 
   COM_change_Output(N);
+}
+
+void COM_request_Inputs(uint8_t M){
+  struct COM_t data;
+  data.data[0] = M;
+  data.data[1] = RNet_OPC_ReqReadInput;
+
+  data.length = 2;
+
+  uart.send(&data);
 }
 
 void COM_Configure_IO(uint8_t M, uint8_t ioPort, uint16_t config){

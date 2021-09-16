@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 #include "rollingstock/declares.h"
+#include "config/RollingStructure.h" // Generated
 
 struct configStruct_TrainHeader;
 struct configStruct_Engine;
@@ -16,7 +17,7 @@ class RollingConfig {
     char filename[100];
     bool parsed;
 
-    struct configStruct_RollingStockHeader * header;
+    struct configStruct_RollingStockHeader header;
 
     struct configStruct_Category * P_Cat;
     struct configStruct_Category * C_Cat;

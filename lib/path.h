@@ -50,8 +50,9 @@ class Path {
     void dereserve(Train *);
     void trainAtEnd(Train *);
 
-    void reg(Train *);    // When the train enters the path
-    void unreg(Train *);  // When the train leaves the path
+    void trainEnter(Train *); // When the train enters the path
+    void trainExit(Train *);  // When the train leaves the path
+    void analyzeTrains();     // Find all trains inside path
 
     void reverse();
     void reverse(Train *);

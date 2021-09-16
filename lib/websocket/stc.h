@@ -51,6 +51,8 @@ void WS_stc_trackUpdate(Websocket::Client * client);
 void WS_stc_SwitchesUpdate(Websocket::Client * client);
 void WS_stc_NewClient_track_Switch_Update(Websocket::Client * client);
 
+void WS_stc_Track_Layout_Load(Websocket::Client * client);
+
 void WS_stc_Track_LayoutDataOnly(int unit, Websocket::Client * client);
 void WS_stc_TrackLayoutRawData(int unit, Websocket::Client * client);
 

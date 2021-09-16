@@ -9,11 +9,26 @@ import serial.tools.list_ports
 
 devices = os.listdir("./build")
 
+class SerialDevice():
+  commands = ['-c', 'arduino',  '-b',  '57600']
+  def __init__(self, name):
+    self.name = name
+    self.commands.extend(['-P', self.name])
+  def __str__(self):
+    return self.name
+
+class USBTinyIsp():
+  commands = ['-c', 'usbtiny']
+  def __str__(self):
+    return "usbtiny"
+
 if sys.platform.startswith("win"):
-    _pdev = serial.tools.list_ports.comports()
+    _pdev = [SerialDevice(d.device) for d in serial.tools.list_ports.comports()]
 else:
     _pdev = os.listdir("/dev/")
-    _pdev = [d for d in _pdev if fnmatch.fnmatch(d, "ttyUSB*")]
+    _pdev = [SerialDevice(f"/dev/{d}") for d in _pdev if fnmatch.fnmatch(d, "ttyUSB*")]
+
+_pdev.append(USBTinyIsp())
 
 i = 1
 for d in _pdev:
@@ -21,7 +36,7 @@ for d in _pdev:
   i += 1
 print("")
 i = int(input("Which device? "))
-print(_pdev[i-1])
+print(str(_pdev[i-1]), _pdev[i-1].commands)
 pdev = _pdev[i-1]
 
 
@@ -52,10 +67,13 @@ while(c != "n" and c != "N"):
 
 
   if sys.platform.startswith("win"):
-    cmd = ['"C:\\Program Files (x86)\\Arduino\\hardware\\tools\\avr\\bin\\avrdude.exe"', '-C', '"C:\\Program Files (x86)\\Arduino\\hardware\\tools\\avr\\etc\\avrdude.conf"', '-p', dev, '-P', pdev.device, '-c', 'arduino',  '-b',  '57600', '-v', '-U', 'flash:w:build/'+dev+'/'+f+'/'+f+'.flash']
-    print(cmd)
+    cmd = ['"C:\\Program Files (x86)\\Arduino\\hardware\\tools\\avr\\bin\\avrdude.exe"', '-C', '"C:\\Program Files (x86)\\Arduino\\hardware\\tools\\avr\\etc\\avrdude.conf"', '-p', dev, *pdev.commands, '-v', '-U', 'flash:w:build/'+dev+'/'+f+'/'+f+'.flash']
+    print(" ".join(cmd))
     subprocess.call(cmd)
   else:
-    os.system("avrdude -p "+dev+" -P /dev/"+pdev+" -c arduino -b 57600 -v -U flash:w:build/"+dev+"/"+f) 
+    cmd = ['"C:\\Program Files (x86)\\Arduino\\hardware\\tools\\avr\\bin\\avrdude.exe"', '-C', '"C:\\Program Files (x86)\\Arduino\\hardware\\tools\\avr\\etc\\avrdude.conf"', '-p', dev, *pdev.commands, '-v', '-U', 'flash:w:build/'+dev+'/'+f+'/'+f+'.flash']
+    print(" ".join(cmd))
+    print("avrdude -p "+dev+" "+" ".join(pdev.commands)+" -v -U flash:w:build/"+dev+"/"+f)
+    os.system("avrdude -p "+dev+" "+" ".join(pdev.commands)+" -v -U flash:w:build/"+dev+"/"+f) 
   c = input("Again (y/n)? ")
 

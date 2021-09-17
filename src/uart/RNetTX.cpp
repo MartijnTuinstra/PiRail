@@ -94,3 +94,11 @@ void COM_Configure_IO(uint8_t M, uint8_t ioPort, uint16_t config){
   TX.length = 6;
   uart.send(&TX);
 }
+
+void COM_DisconnectNotify(){
+  struct COM_t TX;
+  TX.data[0] = RNET_BROADCAST_ID;
+  TX.data[0] = RNet_OPC_DisconnectNotify;
+  TX.length = 2;
+  uart.send(&TX);
+}

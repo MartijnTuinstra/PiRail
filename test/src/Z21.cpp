@@ -81,7 +81,7 @@ TEST_CASE_METHOD(TestsFixture, "Train Z21", "[Z21]"){
     Train * T = U->B[1]->train;
     REQUIRE(T);
 
-    T->link(2, TRAIN_TRAIN_TYPE);
+    T->link(3, TRAIN_TRAIN_TYPE);
     T->setSpeed(50);
 
     U->B[2]->setDetection(1);

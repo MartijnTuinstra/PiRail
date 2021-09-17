@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <vector>
 
+#include "switchboard/declares.h"
 #include "rollingstock/declares.h"
 #include "rollingstock/engine.h"
 #include "rollingstock/trainset.h"
@@ -100,6 +101,8 @@ enum _TrainSpeedStates {
     TRAIN_SPEED_INITIALIZING        
 };
 
+Block * FindFront(Train *, Block *, uint16_t);
+
 class Train {
   // private:
   public:
@@ -143,6 +146,9 @@ class Train {
     bool virtualLength = 0;
     uint16_t length = 0;
 
+    uint16_t virtualLengthBefore = 0;
+    uint16_t virtualLengthAfter  = 0;
+
     bool assigned = 0;
 
     uint8_t category = 0;
@@ -164,15 +170,22 @@ class Train {
     void dereserveBlock(Block *);
     void dereserveAll();
 
+    void initMove(Block *);     // First time train moved while linked
+    void move(Block *);         //  train moves, or any intermediate detection
+    void moveForward(Block *);  //  train moves a step forward
+
     void initDetectables();
 
     void initVirtualBlocks();
-    void setVirtualBlocks();
+    void VirtualBlocks();
 
-    void initMoveForward(Block *);
-    void moveForwardFree(Block * tB);
-    void moveForward(Block *);
-    void moveFrontForward(Block *);
+    uint8_t setVirtualBlocks(algor_blocks * blockGroup, uint16_t length);
+    uint8_t releaseVirtualBlocks(Algor_Blocks * blockGroup, uint8_t offset);
+
+    // void initMoveForward(Block *);
+    // void moveForwardFree(Block * tB);
+    // void moveForward(Block *);
+    // void moveFrontForward(Block *);
 
     // train/speed.cpp ----
     public:

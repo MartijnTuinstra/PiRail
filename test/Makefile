@@ -12,7 +12,7 @@ GCC = g++ -std=c++14 -g3 $(GCC_INCLUDE) $(GCC_ERROR_FLAGS) $(GCC_LIBS) $(GCC_FLA
 
 ROLLINGSTOCK_FILES = railtrain
 SWITCHBOARD_FILES = rail switch msswitch signal station
-SRC_FILES = path pathfinding algorithm switchsolver polaritysolver io configReader Z21 railtrain
+SRC_FILES = path pathfinding algorithm trainfollowing switchsolver polaritysolver io configReader Z21 railtrain
 TEST_FILES = main testhelpers $(addprefix src/,$(SRC_FILES)) $(addprefix switchboard/,$(SWITCHBOARD_FILES)) # $(addprefix rollingstock/,$(ROLLINGSTOCK_FILES))
 
 .DEFAULT_GOAL := all

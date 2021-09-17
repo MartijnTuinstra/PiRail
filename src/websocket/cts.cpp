@@ -19,7 +19,11 @@
 #include "utils/logger.h"
 #include "utils/utils.h"
 
+#include "algorithm/core.h"
+#include "algorithm/blockconnector.h"
+
 #include "switchboard/manager.h"
+#include "switchboard/blockconnector.h"
 #include "switchboard/unit.h"
 #include "switchboard/rail.h"
 #include "switchboard/station.h"
@@ -162,7 +166,12 @@ websocket_cts_func websocket_cts[256] = {
 
   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 6x
   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 7x
-  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 8x
+  // 0x80 - 0x84
+  0,0,0,0,0, 
+  // 0x85 - Track_Layout_Load
+  (websocket_cts_func)&WS_cts_Track_Layout_Load,
+  // 0x86 - 0x8F
+  0,0,0,0,0,0,0,0,0,0, 
 
   // 0x90 WSopc_EnableSubModule
   (websocket_cts_func)&WS_cts_Enable_SubmoduleState,
@@ -774,18 +783,28 @@ void WS_cts_Edit_Engine(struct s_opc_EditEnginelib * msg, Websocket::Client * cl
 
     E->setImagePath(filename);
     if(!ctsTempFile(data->timing[0] + ((data->timing[1] & 0xf0) << 4), E->img_path, true, (data->flags & 0b10) == 0)){
-      //Failed to move
-      rdata->data.opc_AddNewEnginetolib_res.response = 0;
-      client->send((char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
-      return;
+
+      char EngineImageFile[100];
+      sprintf(EngineImageFile, "web/trains_img/%s_im.%s", filename, (data->flags & 0b10) == 0 ? "png" : "jpg");
+      if(!fileExists(EngineImageFile)){
+        //Failed to move
+        rdata->data.opc_AddNewEnginetolib_res.response = 0;
+        client->send((char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
+        return;
+      }
     }
 
     E->setIconPath(filename);
     if(!ctsTempFile((data->timing[1] & 0x0f) + (data->timing[2] << 4), E->icon_path, true, (data->flags & 0b1) == 0)){
-      //Failed to move
-      rdata->data.opc_AddNewEnginetolib_res.response = 0;
-      client->send((char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
-      return;
+      
+      char EngineImageFile[100];
+      sprintf(EngineImageFile, "web/trains_img/%s_ic.%s", filename, (data->flags & 0b1) == 0 ? "png" : "jpg");
+      if(!fileExists(EngineImageFile)){
+        //Failed to move
+        rdata->data.opc_AddNewEnginetolib_res.response = 0;
+        client->send((char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
+        return;
+      }
     }
 
     // Send succes response
@@ -871,6 +890,30 @@ void WS_cts_Edit_Train(struct s_opc_EditTrainlib * data, Websocket::Client * cli
 
   RSManager->writeFile();
   WS_stc_TrainSetsLib(0);
+}
+
+void WS_cts_Track_Layout_Load(struct s_opc_Track_Layout_Load * data, Websocket::Client * client){
+  loggerf(INFO, "WS_cts_Track_Layout_Load R:%c, ID:%i", data->request ? 'Y' : 'N', data->id);
+
+  if(data->request){
+    WS_stc_Track_Layout_Load(client);
+    return;
+  }
+
+  if(SYS->LC.state != Module_LC_Connecting)
+    return;
+
+  SYS_set_state(&SYS->LC.state, Module_LC_Loading);
+  Algorithm::processMutex.lock();
+
+  BlockConnectors * connectors = &SYS->LC.connectors;
+
+  const char * setupFilename = switchboard::SwManager->setups[data->id]->string;
+  
+  auto s = Algorithm::BlockConnectorSetup(setupFilename);
+  s.load(connectors);
+
+  Algorithm::processMutex.unlock();
 }
 
 void WS_cts_TrackLayoutRawData(struct s_opc_TrackLayoutRawData * data, Websocket::Client * client){

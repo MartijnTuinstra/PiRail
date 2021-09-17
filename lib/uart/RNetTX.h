@@ -1,5 +1,5 @@
-#ifndef _INCLUDE_UART_RNetRX_H
-#define _INCLUDE_UART_RNetRX_H
+#ifndef _INCLUDE_UART_RNetTX_H
+#define _INCLUDE_UART_RNetTX_H
 
 #include <stdint.h>
 #include "switchboard/declares.h"
@@ -15,5 +15,7 @@ void COM_change_Output(IO_Node *);
 void COM_request_Inputs(uint8_t M);
 void COM_Configure_IO(uint8_t, uint8_t, uint16_t);
 void COM_change_signal(Signal *);
+
+void COM_DisconnectNotify();
 
 #endif

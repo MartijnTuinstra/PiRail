@@ -422,9 +422,6 @@ enum Rail_states Block::getPrevState(){
 }
 
 void Block::setDetection(bool detected){
-  Alg.trainFollowingChecked = false;
-  Alg.doneAll = false;
-
   if(virtualBlocked && detected && !detectionBlocked && expectedDetectable && train){
     expectedDetectable->stepForward(this);
   }
@@ -434,21 +431,25 @@ void Block::setDetection(bool detected){
   detectionBlocked = detected;
   blocked = (detectionBlocked || virtualBlocked);
 
-  if(prevBlocked != detectionBlocked)
+  if(prevBlocked != detectionBlocked){
     IOchanged = 1;
+    Alg.trainFollowingChecked = false;
+    Alg.doneAll = false;
+  }
 }
 
 void Block::setVirtualDetection(bool d){
-  Alg.trainFollowingChecked = false;
-  Alg.doneAll = false;
-
   bool prevBlocked = virtualBlocked;
 
   virtualBlocked = d;
   blocked = (detectionBlocked || virtualBlocked);
 
-  if(prevBlocked != virtualBlocked)
+  if(prevBlocked != virtualBlocked){
     IOchanged = 1;
+    Alg.trainFollowingChecked = false;
+    Alg.doneAll = false;
+
+  }
 }
 
 enum Rail_states Block::addSignal(Signal * Sig){

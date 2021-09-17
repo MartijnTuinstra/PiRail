@@ -12,6 +12,7 @@
 
 #include "uart/uart.h"
 #include "uart/RNetRX.h"
+#include "uart/RNetTX.h"
 
 #include "system.h"
 
@@ -75,12 +76,18 @@ int UART::init(){
 
   resetDevice();
 
+  // Wait for the bridge to initialize
+  usleep(500000);
+
   updateState(Module_Run);
 
   return 1;
 }
 
 void UART::close(){
+  // Notify all connected clients before disconnecting
+  COM_DisconnectNotify();
+
   //----- CLOSE THE UART -----
   ::close(fd);
 }
@@ -106,9 +113,15 @@ void UART::resetDevice(){
   buffer.clear();
 
   uint8_t DTS_FLAG = TIOCM_DTR;
+
+  // Enable reset
   ioctl(fd,TIOCMBIS,&DTS_FLAG);
   usleep(100000);
+
+  // Discard any data
   tcflush(fd,TCIOFLUSH);
+
+  // Release reset
   ioctl(fd,TIOCMBIC,&DTS_FLAG);
   usleep(100000);
 }
@@ -200,14 +213,20 @@ uint8_t COM_Packet_Length(CircularBuffer * buf){
 }
 
 void UART::parse(){
-  uint8_t length = COM_Packet_Length(&buffer);
+  while(1){
+    uint8_t length = COM_Packet_Length(&buffer);
 
-  if(length == UART_Msg_NotComplete)
-    return;
+    if(length == UART_Msg_NotComplete)
+      return;
 
-  if(length > buffer.size())
-    return;
+    if(length > buffer.size())
+      return;
 
+    parsePacket(length);
+  }
+}
+
+void UART::parsePacket(uint8_t length){
   uint8_t data[128];
 
   //Check Checksum

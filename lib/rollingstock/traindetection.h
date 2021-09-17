@@ -10,6 +10,8 @@
 #define TRAIN_FIFO_SIZE 64 // Blocks
 #define TRAIN_DETECTABLE_SIZE_WARNING 32
 
+void initializeTrainDetectables(Train *, Block *, int16_t);
+
 class TrainDetectable {
   public:
   Train * T;

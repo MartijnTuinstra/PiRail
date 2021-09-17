@@ -51,7 +51,7 @@ TEST_CASE("ConfigReader Same Version", "[CR]"){
 	Config_write_Station(&Station0, &buf_ptr);
 	Config_write_Signal(&Signal0, &buf_ptr);
 
-	printf("%i bytes to be written\n", (unsigned int)(buf_ptr - buffer));
+	printf("%li bytes to be written\n", (unsigned long)(buf_ptr - buffer));
 
 	struct configStruct_Unit ReadUnit;
 	struct configStruct_Block Block0Read;

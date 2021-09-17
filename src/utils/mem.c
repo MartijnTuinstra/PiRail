@@ -79,7 +79,7 @@ void * my_free(void ** p, const char * file, const int line){
 void print_allocs(){
   for(unsigned int i = 0; i < allocs; i++){
     if(allocations[i].pointer){
-      printf("NON FREED HEAP %8x\t%s\n", (unsigned int)allocations[i].pointer, allocations[i].location);
+      printf("NON FREED HEAP %8lx\t%s\n", (unsigned long)allocations[i].pointer, allocations[i].location);
       free(allocations[i].pointer);
       free(allocations[i].location);
     }

@@ -1620,6 +1620,7 @@ websocket.add_opcodes([
 
 $(document).ready(function(){
   setTimeout(function(){
-    websocket.connect("ws://192.168.2.160:9000/", 0xFF);
+    // websocket.connect("ws://192.168.2.160:9000/", 0xFF);
+    websocket.connect("ws://localhost:9000/", 0xFF);
   }, 500);
 });

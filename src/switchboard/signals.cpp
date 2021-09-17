@@ -166,7 +166,7 @@ void print_signal_state(Signal * Si, enum Rail_states state){
 }
 
 void Signal::set(enum Rail_states _state){
-  loggerf(TRACE, "set_signal %x, %i", (unsigned int)this, (unsigned int)_state);
+  loggerf(TRACE, "set_signal %x, %i", (unsigned long)this, (unsigned long)_state);
   if(state != _state){
     print_signal_state(this, _state);
     // Update state
@@ -199,7 +199,7 @@ void Signal::setIO(){
 }
 
 void Signal::check(){
-  loggerf(TRACE, "check_Signal %x", (unsigned int)this);
+  loggerf(TRACE, "check_Signal %x", (unsigned long)this);
   // if(this->switches)
   this->state = this->B->state;
 }

@@ -8,7 +8,8 @@ GCC_ERROR_FLAGS = -Werror=unused-variable -Wno-packed-bitfield-compat -Wno-unuse
 GCC_LIBS = -lpthread -lssl -lcrypto -lm
 GCC_FLAGS = -D _DEFAULT_SOURCE
 
-GCC = g++ -std=c++14 -g3 $(GCC_INCLUDE) $(GCC_ERROR_FLAGS) $(GCC_LIBS) $(GCC_FLAGS)
+GCC = g++ -std=c++14 -g3 $(GCC_INCLUDE)
+GCC_options = $(GCC_ERROR_FLAGS) $(GCC_FLAGS)
 
 ROLLINGSTOCK_FILES = railtrain
 SWITCHBOARD_FILES = rail switch msswitch signal station
@@ -16,6 +17,10 @@ SRC_FILES = path pathfinding algorithm switchsolver polaritysolver io configRead
 TEST_FILES = main testhelpers $(addprefix src/,$(SRC_FILES)) $(addprefix switchboard/,$(SWITCHBOARD_FILES)) # $(addprefix rollingstock/,$(ROLLINGSTOCK_FILES))
 
 .DEFAULT_GOAL := all
+
+rwildcard=$(foreach d,$(wildcard $(1:=/*)),$(call rwildcard,$d,$2) $(filter $(subst *,%,$2),$d))
+
+-include $(call rwildcard,bin,*.d)
 
 $(BIN)/%.o: %.c
 	@echo '(  GCC  ) -$@'
@@ -25,16 +30,20 @@ $(BIN)/%.o: %.cpp
 	@echo '(  G++  ) -$@'
 	@$(GCC) -c $*.cpp -MP -MMD -MT '$@ $(BIN)/$*.d' -o $(BIN)/$*.o
 
-buildBaan:
-	@echo "( BUILD ) baan"
-	@$(MAKE) -C .. baan --no-print-directory
+# libbaan.so: FORCE
+# 	@echo "( BUILD ) baan"
+# 	@$(MAKE) -C .. baan
+# 	@cp ../baan.so libbaan.so
 
-maintest: $(addprefix $(BIN)/,$(addsuffix .o, $(TEST_FILES))) ../libbaan.so
+BAAN_FILES = $(filter-out ../bin/baan.o ../bin/config_reader.o ../bin/comtest.o, $(call rwildcard,../bin,*.o))
+
+maintest: $(addprefix $(BIN)/,$(addsuffix .o, $(TEST_FILES)))
 	@echo "( BUILD ) maintest"
-	@$(GCC) -o $@ $(addprefix $(BIN)/,$(addsuffix .o, $(TEST_FILES))) -L . -lbaan -Wl,-rpath=/var/www/html/baan/pirail_avr/test/
+	
+	@$(GCC) -o $@ $(addprefix $(BIN)/,$(addsuffix .o, $(TEST_FILES))) $(BAAN_FILES) -D CB_NON_AVR $(GCC_options) $(GCC_LIBS)
 
 .PHONY: all run clean_test clean_build clean build
-FORCE: ;
+# FORCE: ;
 
 build: buildBaan maintest
 all: run

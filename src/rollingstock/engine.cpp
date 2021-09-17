@@ -49,11 +49,10 @@ Engine::Engine(uint16_t DCC, char * name){
 }
 
 Engine::~Engine(){
-  loggerf(TRACE, "Destructor Engine %s", this->name);
-  _free(this->name);
-  _free(this->img_path);
-  _free(this->icon_path);
-  _free(this->steps);
+  loggerf(TRACE, "Destructor Engine %s", name);
+  _free(name);
+  _free(img_path);
+  _free(icon_path);
 }
 
 

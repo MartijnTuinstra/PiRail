@@ -2,7 +2,7 @@
 
 void Config_read_uint8_t_uint8_t(uint8_t * put, uint8_t ** get){
 	#ifdef DEBUG
-	printf("r u8u8   %8x: %i\n", (unsigned int)*get, *get[0]);
+	printf("r u8u8   %8x: %i\n", (unsigned long)*get, *get[0]);
 	#endif
 	*put = (*get)[0];
 	*get += sizeof(uint8_t);
@@ -10,7 +10,7 @@ void Config_read_uint8_t_uint8_t(uint8_t * put, uint8_t ** get){
 
 void Config_read_uint8_t_uint16_t(uint16_t * put, uint8_t ** get){
 	#ifdef DEBUG
-	printf("r u8u16  %8x: %i\n", (unsigned int)*get, *get[0]);
+	printf("r u8u16  %8x: %i\n", (unsigned long)*get, *get[0]);
 	#endif
 	*put = (*get)[0];
 	*get += sizeof(uint8_t);
@@ -18,7 +18,7 @@ void Config_read_uint8_t_uint16_t(uint16_t * put, uint8_t ** get){
 
 void Config_read_uint16_t_uint16_t(uint16_t * put, uint8_t ** get){
 	#ifdef DEBUG
-	printf("r u16u16 %8x: %i\n", (unsigned int)*get, ((uint16_t *)*get)[0]);
+	printf("r u16u16 %8x: %i\n", (unsigned long)*get, ((uint16_t *)*get)[0]);
 	#endif
 	*put = ((uint16_t *)*get)[0];
 	*get += sizeof(uint16_t);
@@ -26,7 +26,7 @@ void Config_read_uint16_t_uint16_t(uint16_t * put, uint8_t ** get){
 
 void Config_read_uint16_t_uint8_t(uint8_t * put, uint8_t ** get){
 	#ifdef DEBUG
-	printf("r u16u8 %8x: %i\n", (unsigned int)*get, ((uint16_t *)*get)[0]);
+	printf("r u16u8 %8x: %i\n", (unsigned long)*get, ((uint16_t *)*get)[0]);
 	#endif
 	uint16_t tmp = ((uint16_t *)*get)[0];
 	*put = tmp & 0xFF;
@@ -93,7 +93,7 @@ void Config_read_BitField(uint32_t * put, uint32_t get, uint8_t bitOffset, uint8
 
 void Config_write_uint8_t(uint8_t * get, uint8_t ** put){
 	#ifdef DEBUG
-	printf("w u8u8   %8x: %i\n", (unsigned int)*put, *get);
+	printf("w u8u8   %8x: %i\n", (unsigned long)*put, *get);
 	#endif
 	(*put)[0] = *get;
 	*put += sizeof(uint8_t);
@@ -101,7 +101,7 @@ void Config_write_uint8_t(uint8_t * get, uint8_t ** put){
 
 void Config_write_uint16_t(uint16_t * get, uint8_t ** put){
 	#ifdef DEBUG
-	printf("w u16u16 %8x: %i\n", (unsigned int)*put, *get);
+	printf("w u16u16 %8x: %i\n", (unsigned long)*put, *get);
 	#endif
 	*(uint16_t *)*put = *get;
 	*put += sizeof(uint16_t);

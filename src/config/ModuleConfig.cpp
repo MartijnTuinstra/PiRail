@@ -10,7 +10,7 @@
 
 
 // void hexdump(void * data, int length){
-//   printf("HEXDUMP (%x) %i:\n", (unsigned int)data, length);
+//   printf("HEXDUMP (%x) %i:\n", (unsigned long)data, length);
 //   char text[2000];
 //   char * ptr = text;
 
@@ -209,6 +209,11 @@ ModuleConfig::ModuleConfig(char * _filename){
 // }
 
 ModuleConfig::~ModuleConfig(){
+  if(!parsed){
+    _free(buffer);
+    return;
+  }
+
   loggerf(DEBUG, "Destructor ModuleConfig %s", this->filename);
 
   for(int i = 0; i < header->IO_Nodes; i++){
@@ -318,7 +323,7 @@ int ModuleConfig::read(){
   Config_read_uint8_t_uint8_t(&fileVersion, buf_ptr);
 
   if (fileVersion > CONFIG_LAYOUTSTRUCTURE_LU_MAX_VERSION) {
-    loggerf(WARNING, "Module Config not correct version (%s)", filename);
+    loggerf(WARNING, "Module Config not correct version %i (%s), upto %i supported", fileVersion, filename, CONFIG_LAYOUTSTRUCTURE_LU_MAX_VERSION);
     return -1;
   }
 

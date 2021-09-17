@@ -19,7 +19,9 @@ class ModuleConfig {
     char filename[100];
     bool parsed;
 
+  private:
     struct configStruct_Unit * header;
+  public:
 
     struct configStruct_Node * Nodes;
     struct configStruct_Block * Blocks;
@@ -46,6 +48,8 @@ class ModuleConfig {
 
     inline void print(){this->print(0,0);};
     void print(char ** cmds, uint8_t cmd_len);
+
+    inline struct configStruct_Unit * const getHeader(){return header;};
 };
 
 void print_link(char ** debug, struct configStruct_RailLink link);

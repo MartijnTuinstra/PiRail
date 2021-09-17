@@ -3,6 +3,7 @@
 
 #include <pthread.h>
 #include <stdint.h>
+#include <sys/time.h>
 
 #include "websocket/server.h"
 
@@ -29,6 +30,8 @@ class Client {
                         128=*/
 
     bool connected = true;
+    struct timespec lastPing;
+    bool timeout   = false;
 
     Client(Websocket::Server * Server, int fd);
     ~Client();
@@ -36,8 +39,9 @@ class Client {
     static void * run(Client * context);
 
     void disconnect();
-    uint8_t first_connect(char * buf, int * length);
+    uint8_t first_connect(uint8_t ** buf, uint16_t bufSize, int * length);
     int websocket_check();
+    bool timeoutCheck();
 
     int ping();
 

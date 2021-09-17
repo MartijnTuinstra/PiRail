@@ -2,7 +2,7 @@
 #include "config/LayoutStructure.h"
 
 void hexdump(void * data, int length){
-  printf("HEXDUMP (%x) %i:\n", (unsigned int)data, length);
+  printf("HEXDUMP (%x) %i:\n", (unsigned long)data, length);
   char text[2000];
   char * ptr = text;
 
@@ -176,9 +176,9 @@ struct configStruct_Signal Signal0 = {48, 49, {50, 51, 52}, 1, 1, SignalIO, Sign
 	Config_write_Station(&Station0, &buffer);
 	Config_write_Signal(&Signal0, &buffer);
 
-	printf("%i bytes to be written\n", (unsigned int)(buffer - start));
+	printf("%i bytes to be written\n", (unsigned long)(buffer - start));
 
-	hexdump(start, (unsigned int)(buffer - start));
+	hexdump(start, (unsigned long)(buffer - start));
 
 	struct configStruct_Unit ReadUnit;
 	struct configStruct_Block Block0Read;
@@ -196,7 +196,7 @@ struct configStruct_Signal Signal0 = {48, 49, {50, 51, 52}, 1, 1, SignalIO, Sign
 	Config_read_Station_0(&Station0Read, &buffer);
 	Config_read_Signal_0(&Signal0Read, &buffer);
 
-	printf("\n %i bytes read\n", (unsigned int)(buffer - start));
+	printf("\n %i bytes read\n", (unsigned long)(buffer - start));
 
 
 

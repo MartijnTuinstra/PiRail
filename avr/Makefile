@@ -1,4 +1,4 @@
-programs=main_master main_master_spi main main_spi main_csma main_csma_spi
+programs=main_master main_master_spi main main_spi #main_csma main_csma_spi
 
 File_main_master=main_node eeprom_layout RNet IO uart .circularbuffer
 args_main_master=-D RNET_MASTER -I ../shared/lib

@@ -32,7 +32,7 @@ class UART {
     CircularBuffer buffer;
 
     volatile enum e_SYS_Module_State status = Module_STOP;
-    void (*callback)(enum e_SYS_Module_State);
+    void (*updateStateCb)(enum e_SYS_Module_State);
 
     bool ACK  = false;
     bool NACK = false;

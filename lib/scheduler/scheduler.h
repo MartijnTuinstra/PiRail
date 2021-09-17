@@ -14,7 +14,8 @@ class Scheduler{
         struct timespec scheduler_wait = {0, 0};
         pthread_t id;
         pthread_cond_t condition = PTHREAD_COND_INITIALIZER;
-        pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+        pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER; // Mutex used for timeout / wakeup
+        pthread_mutex_t EventMutex = PTHREAD_MUTEX_INITIALIZER;
 
         std::vector<struct SchedulerEvent *> events = {};
 

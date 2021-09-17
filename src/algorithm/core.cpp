@@ -735,7 +735,7 @@ bool train_following(struct blockAlgorithm * ABs, int debug){
 
       if(prev > 0 && next > 0 && !BN[0]->blocked && !BP[0]->blocked){
         B->setState(UNKNOWN);
-        loggerf(WARNING, "%02i%02i LOST Train block %x", B->module, B->id, (unsigned int)B);
+        loggerf(WARNING, "%02i%02i LOST Train block %x", B->module, B->id, (unsigned long)B);
       }
       // Detection is lost when the train should be in the block
       else if(B->train == B->expectedTrain && B->train->assigned){
@@ -757,7 +757,7 @@ bool train_following(struct blockAlgorithm * ABs, int debug){
           }
         }
 
-        loggerf(DEBUG, "RESET Train block %x", (unsigned int)B);
+        loggerf(DEBUG, "RESET Train block %x", (unsigned long)B);
         // Units[B->module]->changed |= Unit_Blocks_changed;
       }
     }

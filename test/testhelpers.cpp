@@ -30,6 +30,8 @@
 #include "sim.h"
 #include "testhelpers.h"
 
+struct s_systemState * SYS;
+
 void init_test(char (* filenames)[30], int nr_files){
   logger.setlevel_stdout(INFO);
   init_main();
@@ -67,7 +69,7 @@ void init_test(char (* filenames)[30], int nr_files){
 TestsFixture::TestsFixture(){
   printf("====================================================================================================\n");
   auto TestName = Catch::getResultCapture().getCurrentTestName();
-  printf("---%*s%*s---\n",47+TestName.length()/2,TestName.c_str(),47-TestName.length()/2,"");
+  printf("---%*s%*s---\n",(int)(47+TestName.length()/2),TestName.c_str(),(int)(47-TestName.length()/2),"");
 
   logger.setlevel_stdout(WARNING);
   scheduler = new Scheduler();

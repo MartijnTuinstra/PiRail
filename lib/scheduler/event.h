@@ -3,7 +3,14 @@
 
 #include <time.h>
 
+enum SchedulerType {
+    SCHEDULER_TYPE_PERIODIC,
+    SCHEDULER_TYPE_ONESHOT
+};
+
 struct SchedulerEvent {
+    enum SchedulerType type;
+
     struct timespec interval;
     void (*function)(void *);
     void * function_args;

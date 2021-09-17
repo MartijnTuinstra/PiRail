@@ -7,11 +7,18 @@
 #include "utils/mem.h"
 
 #include "uart/uart.h"
+#include "uart/RNetRX.h"
+#include "uart/RNetTX.h"
+
 #include "RNet_msg.h"
 #include "system.h"
 #include "flags.h"
 
 #include "switchboard/links.h"
+#include "switchboard/manager.h"
+
+#include "websocket/client.h"
+#include "websocket/stc.h"
 
 #include "config/LayoutStructure.h"
 #include "config/RollingStructure.h"
@@ -32,6 +39,9 @@ const char * rail_states_string[8] = {
   "UNKNOWN" 
 };
 
+namespace switchboard { Unit * Units(unsigned char a){return 0;}; Manager * SwManager; };
+void WS_stc_Track_Layout(Websocket::Client*){}
+void IO_Port::setInput(unsigned char){}
 
 const char * block_polarity_string[5] = {
   "DISABLED",
@@ -43,6 +53,7 @@ const char * block_polarity_string[5] = {
 
 
 
+/*
 void UART_ACK(uint8_t device){
   loggerf(INFO, "ACK");
   uart.ACK = true;
@@ -52,22 +63,23 @@ void UART_NACK(uint8_t device){
   uart.NACK = true;
 }
 
-void COM_Configure_IO(uint8_t M, uint8_t ioPort, uint16_t config){
-  struct COM_t TX;
-  TX.data[0] = M;
-  TX.data[1] = RNet_OPC_SetIO;
-  TX.data[2] = ioPort;
-  TX.data[3] = (config & 0xFF);
-  TX.data[4] = (config >> 8);
-  TX.data[5] = UART_CHECKSUM_SEED ^ RNet_OPC_SetIO ^ ioPort ^ (config & 0xFF) ^ (config >> 8);
-  TX.length = 6;
-  uart.send(&TX);
-}
-
 void COM_DevReset(){
   struct COM_t Tx;
   Tx.data[0] = 0xFF;  //Broadcast
   Tx.data[1] = RNet_OPC_DEV_ID;
+  Tx.length  = 2;
+  uart.send(&Tx);
+}
+
+void COM_DisconnectNotify(){
+  // auto p = UART::Packet({0, 0}); // Broadcast
+  // p.setOpcode(RNet_OPC_DisconnectNotify);
+
+  // uart.send(&p);
+
+  struct COM_t Tx;
+  Tx.data[0] = 0xFF; // Broadcast
+  Tx.data[1] = RNet_OPC_DisconnectNotify;
   Tx.length  = 2;
   uart.send(&Tx);
 }
@@ -112,7 +124,7 @@ void (*UART_RecvCb[256])(uint8_t, uint8_t *) = {
   // 0xF0 - 0xFF
   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 };
-
+*/
 
 void modify_Node(struct ModuleConfig * config, char ** cmds, uint8_t cmd_len){
   if(!cmds)
@@ -120,6 +132,9 @@ void modify_Node(struct ModuleConfig * config, char ** cmds, uint8_t cmd_len){
 
   int id;
   char mode = cmds[0][0];
+
+  struct configStruct_Unit * const ConfigHeader = config->getHeader();
+
   if(cmds[0][0] == 'e'){
     if(cmd_len > 2){
       id = atoi(cmds[2]);
@@ -131,17 +146,17 @@ void modify_Node(struct ModuleConfig * config, char ** cmds, uint8_t cmd_len){
     }
   }
   else if(cmds[0][0] == 'a'){
-    printf("Node ID: (%i)\n", config->header->IO_Nodes);
+    printf("Node ID: (%i)\n", ConfigHeader->IO_Nodes);
 
-    if(config->header->IO_Nodes == 0){
+    if(ConfigHeader->IO_Nodes == 0){
       printf("Calloc");
       config->Nodes = (struct configStruct_Node *)_calloc(1, struct configStruct_Node);
     }
     else{
       printf("Realloc");
-      config->Nodes = (struct configStruct_Node *)_realloc(config->Nodes, config->header->IO_Nodes+1, struct configStruct_Node);
+      config->Nodes = (struct configStruct_Node *)_realloc(config->Nodes, ConfigHeader->IO_Nodes+1, struct configStruct_Node);
     }
-    id = config->header->IO_Nodes++;
+    id = ConfigHeader->IO_Nodes++;
 
     memset(&config->Nodes[id], 0, sizeof(struct configStruct_Node));
     config->Nodes[id].Node = id;
@@ -156,9 +171,9 @@ void modify_Node(struct ModuleConfig * config, char ** cmds, uint8_t cmd_len){
       return;
     }
 
-    if(id == (config->header->IO_Nodes - 1) && id >= 0){
-      memset(&config->Nodes[config->header->IO_Nodes - 1], 0, sizeof(struct configStruct_Node));
-      config->Nodes = (struct configStruct_Node *)_realloc(config->Nodes, --config->header->IO_Nodes, struct configStruct_Node);
+    if(id == (ConfigHeader->IO_Nodes - 1) && id >= 0){
+      memset(&config->Nodes[ConfigHeader->IO_Nodes - 1], 0, sizeof(struct configStruct_Node));
+      config->Nodes = (struct configStruct_Node *)_realloc(config->Nodes, --ConfigHeader->IO_Nodes, struct configStruct_Node);
     }
     else{
       printf("Only last Node can be removed\n");
@@ -212,6 +227,7 @@ void modify_Node(struct ModuleConfig * config, char ** cmds, uint8_t cmd_len){
         }
         printf("%d %i => %s\t%x %x\n", id, port, cmds[i+2], (0xF << (4 * ((port + 1)% 2))), (atoi(cmds[i+2]) & 0xF) << (4 * (port % 2)));
         config->Nodes[id].config[port].type = atoi(cmds[i+2]);
+        printf("%lx\n", (unsigned long)&config->Nodes[id].config[port]);
         i += 3;
       }
       else if(strcmp(cmds[i], "-d") == 0){
@@ -278,6 +294,9 @@ void modify_Block(struct ModuleConfig * config, char ** cmds, uint8_t cmd_len){
   
   int id;
   char mode = cmds[0][0];
+  
+  struct configStruct_Unit * const ConfigHeader = config->getHeader();
+
   if(mode == 'e'){
     if(cmd_len > 2){
       id = atoi(cmds[2]);
@@ -289,24 +308,24 @@ void modify_Block(struct ModuleConfig * config, char ** cmds, uint8_t cmd_len){
     }
   }
   else if(mode == 'a'){
-    printf("Block ID: (%i)\n", config->header->Blocks);
+    printf("Block ID: (%i)\n", ConfigHeader->Blocks);
 
-    if(config->header->Blocks == 0){
+    if(ConfigHeader->Blocks == 0){
       printf("Calloc");
       config->Blocks = (struct configStruct_Block *)_calloc(1, struct configStruct_Block);
     }
     else{
       printf("Realloc");
-      config->Blocks = (struct configStruct_Block *)_realloc(config->Blocks, config->header->Blocks+1, struct configStruct_Block);
+      config->Blocks = (struct configStruct_Block *)_realloc(config->Blocks, ConfigHeader->Blocks+1, struct configStruct_Block);
     }
-    memset(&config->Blocks[config->header->Blocks], 0, sizeof(struct configStruct_Block));
-    config->Blocks[config->header->Blocks].id = config->header->Blocks;
-    id = config->header->Blocks++;
+    memset(&config->Blocks[ConfigHeader->Blocks], 0, sizeof(struct configStruct_Block));
+    config->Blocks[ConfigHeader->Blocks].id = ConfigHeader->Blocks;
+    id = ConfigHeader->Blocks++;
 
-    config->Blocks[id].next.module = config->header->Module;
+    config->Blocks[id].next.module = ConfigHeader->Module;
     config->Blocks[id].next.id = id + 1;
 
-    config->Blocks[id].prev.module = config->header->Module;
+    config->Blocks[id].prev.module = ConfigHeader->Module;
     config->Blocks[id].prev.id = id - 1;
   }
   else if(mode == 'r'){
@@ -319,9 +338,9 @@ void modify_Block(struct ModuleConfig * config, char ** cmds, uint8_t cmd_len){
       return;
     }
 
-    if(id == (config->header->Blocks - 1) && id >= 0){
-      memset(&config->Blocks[config->header->Blocks - 1], 0, sizeof(struct configStruct_Block));
-      config->Blocks = (struct configStruct_Block *)_realloc(config->Blocks, --config->header->Blocks, struct configStruct_Block);
+    if(id == (ConfigHeader->Blocks - 1) && id >= 0){
+      memset(&config->Blocks[ConfigHeader->Blocks - 1], 0, sizeof(struct configStruct_Block));
+      config->Blocks = (struct configStruct_Block *)_realloc(config->Blocks, --ConfigHeader->Blocks, struct configStruct_Block);
     }
     else{
       printf("Only last block can be removed\n");
@@ -485,6 +504,9 @@ void modify_Switch(struct ModuleConfig * config, char cmd){
   int id;
   char _cmd[20];
   int tmp, tmp1, tmp2;
+  
+  struct configStruct_Unit * const ConfigHeader = config->getHeader();
+
   if(cmd == 'e'){
     printf("Switch ID: ");
     fgets(_cmd, 20, stdin);
@@ -494,19 +516,19 @@ void modify_Switch(struct ModuleConfig * config, char cmd){
     // print_Block(config->Blocks[id]);
   }
   else if(cmd == 'a'){
-    printf("Switch ID: (%i)\n", config->header->Switches);
+    printf("Switch ID: (%i)\n", ConfigHeader->Switches);
 
-    if(config->header->Switches == 0){
+    if(ConfigHeader->Switches == 0){
       printf("Calloc");
       config->Switches = (struct configStruct_Switch *)_calloc(1, struct configStruct_Switch);
     }
     else{
       printf("Realloc");
-      config->Switches = (struct configStruct_Switch *)_realloc(config->Switches, config->header->Switches+1, struct configStruct_Switch);
+      config->Switches = (struct configStruct_Switch *)_realloc(config->Switches, ConfigHeader->Switches+1, struct configStruct_Switch);
     }
-    memset(&config->Switches[config->header->Switches], 0, sizeof(struct configStruct_Switch));
-    config->Switches[config->header->Switches].id = config->header->Switches;
-    id = config->header->Switches++;
+    memset(&config->Switches[ConfigHeader->Switches], 0, sizeof(struct configStruct_Switch));
+    config->Switches[ConfigHeader->Switches].id = ConfigHeader->Switches;
+    id = ConfigHeader->Switches++;
   }
   else if(cmd == 'r'){
     printf("Remove Switch ID: ");
@@ -514,9 +536,9 @@ void modify_Switch(struct ModuleConfig * config, char cmd){
     if(sscanf(_cmd, "%i", &id) < 1)
       return;
 
-    if(id == (config->header->Switches - 1) && id >= 0){
-      memset(&config->Switches[config->header->Switches - 1], 0, sizeof(struct configStruct_Switch));
-      config->Switches = (struct configStruct_Switch *)_realloc(config->Switches, --config->header->Switches, struct configStruct_Switch);
+    if(id == (ConfigHeader->Switches - 1) && id >= 0){
+      memset(&config->Switches[ConfigHeader->Switches - 1], 0, sizeof(struct configStruct_Switch));
+      config->Switches = (struct configStruct_Switch *)_realloc(config->Switches, --ConfigHeader->Switches, struct configStruct_Switch);
     }
     else{
       printf("Only last block can be removed\n");
@@ -649,10 +671,13 @@ void modify_MSSwitch(struct ModuleConfig * config, char cmd){
   int id;
   char _cmd[20];
   int tmp, tmp1, tmp2;
+  
+  struct configStruct_Unit * const ConfigHeader = config->getHeader();
+
   if(cmd == 'e'){
     printf("MSSwitch ID: ");
     fgets(_cmd, 20, stdin);
-    if(sscanf(_cmd, "%i", &id) < 1 || id >= config->header->MSSwitches || id < 0){
+    if(sscanf(_cmd, "%i", &id) < 1 || id >= ConfigHeader->MSSwitches || id < 0){
       printf("Invalid\n");
       return;
     }
@@ -660,18 +685,18 @@ void modify_MSSwitch(struct ModuleConfig * config, char cmd){
     // print_Block(config->Blocks[id]);
   }
   else if(cmd == 'a'){
-    printf("MSSwitch ID: (%i)\n", config->header->MSSwitches);
+    printf("MSSwitch ID: (%i)\n", ConfigHeader->MSSwitches);
 
-    if(config->header->MSSwitches == 0){
+    if(ConfigHeader->MSSwitches == 0){
       printf("Calloc");
       config->MSSwitches = (struct configStruct_MSSwitch *)_calloc(1, struct configStruct_MSSwitch);
     }
     else{
       printf("Realloc");
-      config->MSSwitches = (struct configStruct_MSSwitch *)_realloc(config->MSSwitches, config->header->MSSwitches+1, struct configStruct_MSSwitch);
+      config->MSSwitches = (struct configStruct_MSSwitch *)_realloc(config->MSSwitches, ConfigHeader->MSSwitches+1, struct configStruct_MSSwitch);
     }
-    memset(&config->MSSwitches[config->header->MSSwitches], 0, sizeof(struct configStruct_MSSwitch));
-    id = config->header->MSSwitches++;
+    memset(&config->MSSwitches[ConfigHeader->MSSwitches], 0, sizeof(struct configStruct_MSSwitch));
+    id = ConfigHeader->MSSwitches++;
 
     //Set child pointers
     config->MSSwitches[id].id = id;
@@ -686,9 +711,9 @@ void modify_MSSwitch(struct ModuleConfig * config, char cmd){
     if(sscanf(_cmd, "%i", &id) < 1)
       return;
 
-    if(id == (config->header->MSSwitches - 1) && id >= 0){
-      memset(&config->MSSwitches[config->header->MSSwitches - 1], 0, sizeof(struct configStruct_MSSwitch));
-      config->MSSwitches = (struct configStruct_MSSwitch *)_realloc(config->MSSwitches, --config->header->MSSwitches, struct configStruct_MSSwitch);
+    if(id == (ConfigHeader->MSSwitches - 1) && id >= 0){
+      memset(&config->MSSwitches[ConfigHeader->MSSwitches - 1], 0, sizeof(struct configStruct_MSSwitch));
+      config->MSSwitches = (struct configStruct_MSSwitch *)_realloc(config->MSSwitches, --ConfigHeader->MSSwitches, struct configStruct_MSSwitch);
     }
     else{
       printf("Only last block can be removed\n");
@@ -820,6 +845,9 @@ void modify_Signal(struct ModuleConfig * config, char cmd){
   int id;
   char _cmd[20];
   int tmp, tmp1;//, tmp2;
+    
+  struct configStruct_Unit * const ConfigHeader = config->getHeader();
+
   if(cmd == 'e'){
     printf("Signal ID: ");
     fgets(_cmd, 20, stdin);
@@ -829,18 +857,18 @@ void modify_Signal(struct ModuleConfig * config, char cmd){
     // print_Block(config->Blocks[id]);
   }
   else if(cmd == 'a'){
-    printf("Signal ID: (%i)\n", config->header->Signals);
+    printf("Signal ID: (%i)\n", ConfigHeader->Signals);
 
-    if(config->header->Signals == 0){
+    if(ConfigHeader->Signals == 0){
       printf("Calloc");
       config->Signals = (struct configStruct_Signal *)_calloc(1, struct configStruct_Signal);
     }
     else{
       printf("Realloc");
-      config->Signals = (struct configStruct_Signal *)_realloc(config->Signals, config->header->Signals+1, struct configStruct_Signal);
+      config->Signals = (struct configStruct_Signal *)_realloc(config->Signals, ConfigHeader->Signals+1, struct configStruct_Signal);
     }
-    memset(&config->Signals[config->header->Signals], 0, sizeof(struct configStruct_Signal));
-    id = config->header->Signals++;
+    memset(&config->Signals[ConfigHeader->Signals], 0, sizeof(struct configStruct_Signal));
+    id = ConfigHeader->Signals++;
 
     //Set child pointers
     config->Signals[id].id = id;
@@ -854,12 +882,12 @@ void modify_Signal(struct ModuleConfig * config, char cmd){
     if(sscanf(_cmd, "%i", &id) < 1)
       return;
 
-    if(id == (config->header->Signals - 1) && id >= 0){
+    if(id == (ConfigHeader->Signals - 1) && id >= 0){
       _free(config->Signals[id].output);
       _free(config->Signals[id].stating);
 
-      memset(&config->Signals[config->header->Signals - 1], 0, sizeof(struct configStruct_Signal));
-      config->Signals = (struct configStruct_Signal *)_realloc(config->Signals, --config->header->Signals, struct configStruct_Signal);
+      memset(&config->Signals[ConfigHeader->Signals - 1], 0, sizeof(struct configStruct_Signal));
+      config->Signals = (struct configStruct_Signal *)_realloc(config->Signals, --ConfigHeader->Signals, struct configStruct_Signal);
     }
     else{
       printf("Only last block can be removed\n");
@@ -973,6 +1001,9 @@ void modify_Station(struct ModuleConfig * config, char cmd){
   int id;
   char _cmd[20];
   int tmp;//, tmp1, tmp2;
+    
+  struct configStruct_Unit * const ConfigHeader = config->getHeader();
+
   if(cmd == 'e'){
     printf("Station ID: ");
     fgets(_cmd, 20, stdin);
@@ -982,18 +1013,18 @@ void modify_Station(struct ModuleConfig * config, char cmd){
     // print_Block(config->Blocks[id]);
   }
   else if(cmd == 'a'){
-    printf("Station ID: (%i)\n", config->header->Stations);
+    printf("Station ID: (%i)\n", ConfigHeader->Stations);
 
-    if(config->header->Stations == 0){
+    if(ConfigHeader->Stations == 0){
       printf("Calloc");
       config->Stations = (struct configStruct_Station *)_calloc(1, struct configStruct_Station);
     }
     else{
       printf("Realloc");
-      config->Stations = (struct configStruct_Station *)_realloc(config->Stations, config->header->Stations+1, struct configStruct_Station);
+      config->Stations = (struct configStruct_Station *)_realloc(config->Stations, ConfigHeader->Stations+1, struct configStruct_Station);
     }
-    memset(&config->Stations[config->header->Stations], 0, sizeof(struct configStruct_Station));
-    id = config->header->Stations++;
+    memset(&config->Stations[ConfigHeader->Stations], 0, sizeof(struct configStruct_Station));
+    id = ConfigHeader->Stations++;
 
     //Set child pointers
     config->Stations[id].name_len = 1;
@@ -1007,9 +1038,9 @@ void modify_Station(struct ModuleConfig * config, char cmd){
     if(sscanf(_cmd, "%i", &id) < 1)
       return;
 
-    if(id == (config->header->Stations - 1) && id >= 0){
-      memset(&config->Stations[config->header->Stations - 1], 0, sizeof(struct configStruct_Station));
-      config->Stations = (struct configStruct_Station *)_realloc(config->Stations, --config->header->Stations, struct configStruct_Station);
+    if(id == (ConfigHeader->Stations - 1) && id >= 0){
+      memset(&config->Stations[ConfigHeader->Stations - 1], 0, sizeof(struct configStruct_Station));
+      config->Stations = (struct configStruct_Station *)_realloc(config->Stations, --ConfigHeader->Stations, struct configStruct_Station);
     }
     else{
       printf("Only last block can be removed\n");
@@ -1773,7 +1804,7 @@ int edit_module(char * filename, bool update){
 
       uint8_t NodeID = atoi(cmds[2]);
 
-      if(NodeID >= config.header->IO_Nodes){
+      if(NodeID >= config.getHeader()->IO_Nodes){
         loggerf(ERROR, "Node ID does not exist");
         continue;
       }
@@ -1793,10 +1824,6 @@ int edit_module(char * filename, bool update){
       UART_RecvCb[RNet_OPC_DEV_ID] = 0;
       UART_RecvCb[RNet_OPC_ReadInput] = 0;
 
-      usleep(10000000);
-
-      COM_DevReset();
-
       usleep(1500000);
 
       uart.recv(); // Recv first 32
@@ -1808,7 +1835,7 @@ int edit_module(char * filename, bool update){
 
         if(send == 0){
           uint16_t PortConfig = (N->config[i].type << 12) | (N->config[i].defaultState << 8) | (N->config[i].inverted);
-          COM_Configure_IO(config.header->Module, i + offset, PortConfig);
+          COM_Configure_IO(config.getHeader()->Module, i + offset, PortConfig);
           send = 1;
         }
         else{
@@ -2013,7 +2040,7 @@ int main(int argc, char ** argv){
       }
       else{
         char * str = (char *)_calloc(strlen(argv[i])+5, char);
-        printf("%x  %d", (unsigned int)str, strlen(argv[i]));
+        printf("%x  %d", (int)((unsigned long)str), (int)strlen(argv[i]));
         strcpy(str, argv[i]);
         extrafiles.push_back(str);
       }

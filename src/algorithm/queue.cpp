@@ -53,7 +53,7 @@ void AlgorQueue::cpytmp(){
 
 
 // void putAlgorQueue(Block * B, int enableQueue){
-//   loggerf(TRACE, "putAlgorQueue %x, %i", (unsigned int)B, enableQueue);
+//   loggerf(TRACE, "putAlgorQueue %x, %i", (unsigned long)B, enableQueue);
 //   mutex_lock(&AlgorQueueMutex, "AlgorQueueMutex");
 //   AlgorQueue.B[AlgorQueue.writeIndex++] = B;
 

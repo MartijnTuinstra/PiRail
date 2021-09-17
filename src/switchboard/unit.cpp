@@ -18,29 +18,31 @@
 Unit::Unit(ModuleConfig * Config){
   memset(this, 0, sizeof(Unit));
 
-  this->module = Config->header->Module;
+  const struct configStruct_Unit * ConfigHeader = Config->getHeader();
+
+  this->module = ConfigHeader->Module;
 
   loggerf(CRITICAL, "Loading Unit %i", module);
 
   switchboard::SwManager->addUnit(this);
 
-  connections_len = Config->header->Connections;
+  connections_len = ConfigHeader->Connections;
   if(connections_len > 5){
     loggerf(ERROR, "To many connection for module %i", this->module);
     connections_len = 5;
   }
 
   memset(connection, 0, sizeof(struct unit_connector));
-  // this->connection = (Unit **)_calloc(Config->header->connections, Unit *);
+  // this->connection = (Unit **)_calloc(ConfigHeader->connections, Unit *);
 
-  this->IO_Nodes = Config->header->IO_Nodes;
-  this->block_len = Config->header->Blocks;
-  this->switch_len = Config->header->Switches;
-  this->msswitch_len = Config->header->MSSwitches;
-  this->signal_len = Config->header->Signals;
-  this->station_len = Config->header->Stations;
+  this->IO_Nodes = ConfigHeader->IO_Nodes;
+  this->block_len = ConfigHeader->Blocks;
+  this->switch_len = ConfigHeader->Switches;
+  this->msswitch_len = ConfigHeader->MSSwitches;
+  this->signal_len = ConfigHeader->Signals;
+  this->station_len = ConfigHeader->Stations;
 
-  loggerf(INFO, "INIT Unit %i - %d, %d, %d, %d, %d, %d", Config->header->Module, Config->header->IO_Nodes, Config->header->Blocks, Config->header->Switches, Config->header->MSSwitches, Config->header->Signals, Config->header->Stations);
+  loggerf(INFO, "INIT Unit %i - %d, %d, %d, %d, %d, %d", ConfigHeader->Module, ConfigHeader->IO_Nodes, ConfigHeader->Blocks, ConfigHeader->Switches, ConfigHeader->MSSwitches, ConfigHeader->Signals, ConfigHeader->Stations);
 
   this->Node = (IO_Node **)_calloc(this->IO_Nodes, IO_Node*);
   this->B = (Block **)_calloc(this->block_len, Block*);
@@ -51,38 +53,38 @@ Unit::Unit(ModuleConfig * Config){
 
   loggerf(DEBUG, "  Module nodes");
 
-  for(int i = 0; i < Config->header->IO_Nodes; i++){
+  for(int i = 0; i < ConfigHeader->IO_Nodes; i++){
     new IO_Node(this, &Config->Nodes[i]);
   }
 
   loggerf(DEBUG, "  Module Block");
 
   
-  for(int i = 0; i < Config->header->Blocks; i++){
+  for(int i = 0; i < ConfigHeader->Blocks; i++){
     new Block(this->module, &Config->Blocks[i]);
   }
 
   loggerf(DEBUG, "  Module Switch");
 
-  for(int i = 0; i < Config->header->Switches; i++){
+  for(int i = 0; i < ConfigHeader->Switches; i++){
     new Switch(this->module, &Config->Switches[i]);
   }
 
   loggerf(DEBUG, "  Module MSSwitch");
 
-  for(int i = 0; i < Config->header->MSSwitches; i++){
+  for(int i = 0; i < ConfigHeader->MSSwitches; i++){
     new MSSwitch(this->module, &Config->MSSwitches[i]);
   }
 
   loggerf(DEBUG, "  Module Signals");
   
-  for(int i = 0; i < Config->header->Signals; i++){
+  for(int i = 0; i < ConfigHeader->Signals; i++){
     new Signal(this->module, &Config->Signals[i]);
   }
 
   loggerf(DEBUG, "  Module Stations");
 
-  for(int i = 0; i < Config->header->Stations; i++){
+  for(int i = 0; i < ConfigHeader->Stations; i++){
     new Station(this->module, i, &Config->Stations[i]);
   }
 
@@ -124,13 +126,13 @@ Unit::Unit(uint16_t M, uint8_t Nodes, char points){
 }
 
 Unit::~Unit(){
-  loggerf(INFO, "Clearing module %i", this->module);
+  loggerf(INFO, "Clearing module %i", module);
 
   //Clear IO
-  for(int j = 0; j < this->IO_Nodes; j++){
-    delete this->Node[j];
+  for(int j = 0; j < IO_Nodes; j++){
+    delete Node[j];
   }
-  _free(this->Node);
+  _free(Node);
 
   //clear Segments
   for(int j = 0; j < block_len; j++){
@@ -143,47 +145,47 @@ Unit::~Unit(){
   _free(B);
 
   //clear Switches
-  for(int j = 0; j < this->switch_len; j++){
-    if(!this->Sw[j])
+  for(int j = 0; j < switch_len; j++){
+    if(!Sw[j])
       continue;
 
-    delete this->Sw[j];
-    this->Sw[j] = 0;
+    delete Sw[j];
+    Sw[j] = 0;
   }
-  _free(this->Sw);
+  _free(Sw);
 
   //clear Mods
-  for(int j = 0; j < this->msswitch_len; j++){
-    if(!this->MSSw[j])
+  for(int j = 0; j < msswitch_len; j++){
+    if(!MSSw[j])
         continue;
 
-    delete this->MSSw[j];
-    this->MSSw[j] = 0;
+    delete MSSw[j];
+    MSSw[j] = 0;
   }
-  _free(this->MSSw);
+  _free(MSSw);
 
   //clear Signals
-  for(int j = 0; j < this->signal_len; j++){
-    if(!this->Sig[j])
+  for(int j = 0; j < signal_len; j++){
+    if(!Sig[j])
       continue;
 
-    delete this->Sig[j];
-    this->Sig[j] = 0;
+    delete Sig[j];
+    Sig[j] = 0;
   }
-  _free(this->Sig);
+  _free(Sig);
 
   //clear Stations
-  for(int j = 0; j < this->station_len; j++){
-    if(!this->St[j])
+  for(int j = 0; j < station_len; j++){
+    if(!St[j])
       continue;
 
-    delete this->St[j];
-    this->St[j] = 0;
+    delete St[j];
+    St[j] = 0;
   }
-  _free(this->St);
+  _free(St);
 
-  _free(this->raw);
-  _free(this->Layout);
+  _free(raw);
+  _free(Layout);
 }
 
 void Unit::insertBlock(Block * B){

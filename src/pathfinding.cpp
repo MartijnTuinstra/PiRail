@@ -174,7 +174,7 @@ struct step findStep(struct control c){
   // char t[6][4] = {"B  ", "SwS", "Sws", "MA ", "MB "};
 
   // if(c.link->type <= RAIL_LINK_MB)
-  //   loggerf(INFO, "PF::findStep \t %s %02i:%02i  %x", t[c.link->type], c.link->module, c.link->id, (unsigned int)c.link->p.p);
+  //   loggerf(INFO, "PF::findStep \t %s %02i:%02i  %x", t[c.link->type], c.link->module, c.link->id, (unsigned long)c.link->p.p);
   // else if(c.link->type == RAIL_LINK_E)
   //   loggerf(INFO, "PF::findStep \t E", c.link->module, c.link->id);
 
@@ -348,7 +348,7 @@ struct step findStep(struct control c){
     else
       instr = c.MSSw_B[Sw->uid];
 
-    // loggerf(INFO, "MSSw %2i:%2i -> instr %x", Sw->module, Sw->id, (unsigned int)instr);
+    // loggerf(INFO, "MSSw %2i:%2i -> instr %x", Sw->module, Sw->id, (unsigned long)instr);
 
     // If switch allready has an instruction
     if(instr){

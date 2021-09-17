@@ -31,11 +31,26 @@ struct timespec operator -(const struct timespec lhs, const struct timespec rhs)
     return r;
 }
 
+struct timespec operator +(const struct timespec lhs, const struct timespec rhs)
+{
+    struct timespec r = {
+        .tv_sec  = lhs.tv_sec  + rhs.tv_sec,
+        .tv_nsec = lhs.tv_nsec + rhs.tv_nsec
+    };
+    if (r.tv_nsec >= 1E9){
+        r.tv_sec  += 1;
+        r.tv_nsec -= 1E9;
+    }
+    return r;
+}
+
 Scheduler::~Scheduler(){
+    pthread_mutex_lock(&EventMutex);
     for(auto e: events)
         _free(e);
 
     events.empty();
+    pthread_mutex_unlock(&EventMutex);
 }
 
 void Scheduler::start(){
@@ -44,8 +59,11 @@ void Scheduler::start(){
 
 void Scheduler::stop(){
     _stop_ = 1;
+
+    pthread_mutex_lock(&EventMutex);
     interrupt();
     pthread_join(id, NULL);
+    pthread_mutex_unlock(&EventMutex);
 }
 
 void Scheduler::update(){
@@ -65,6 +83,8 @@ void * Scheduler::thread(void * args){
 
     while( context->_stop_ == 0 ){
         context->updateClock();
+
+        pthread_mutex_lock(&context->EventMutex);
 
         for(auto &e: context->events){
             if(context->hasPassed(e)){
@@ -87,6 +107,8 @@ void * Scheduler::thread(void * args){
         else{
             context->scheduler_wait.tv_sec += 1;
         }
+
+        pthread_mutex_unlock(&context->EventMutex);
 
         pthread_mutex_lock(&context->mutex);
         pthread_cond_timedwait(&context->condition, &context->mutex, &context->scheduler_wait);
@@ -127,14 +149,10 @@ void Scheduler::disableEvent(struct SchedulerEvent * event){
 }
 
 void Scheduler::updateEvent(struct SchedulerEvent * e){
-    if (scheduler_wait.tv_nsec + e->interval.tv_nsec >= 1E9) {
-        e->next_interval.tv_sec = scheduler_wait.tv_sec  + e->interval.tv_sec  + 1;
-        e->next_interval.tv_nsec = scheduler_wait.tv_nsec + e->interval.tv_nsec - 1E9;
-    }
-    else{
-        e->next_interval.tv_sec = scheduler_wait.tv_sec  + e->interval.tv_sec;
-        e->next_interval.tv_nsec = scheduler_wait.tv_nsec + e->interval.tv_nsec;
-    }
+    if(e->type == SCHEDULER_TYPE_ONESHOT)
+        e->disabled = true;
+
+    e->next_interval = scheduler_wait + e->next_interval;
 }
 
 struct SchedulerEvent * Scheduler::addEvent(const char * name, struct timespec interval){
@@ -145,13 +163,15 @@ struct SchedulerEvent * Scheduler::addEvent(const char * name, struct timespec i
     e->interval.tv_sec  = interval.tv_sec;
     e->interval.tv_nsec = interval.tv_nsec;
     e->disabled = 1;
+    e->type = SCHEDULER_TYPE_PERIODIC;
 
+    pthread_mutex_lock(&EventMutex);
     events.push_back(e);
+    pthread_mutex_unlock(&EventMutex);
 
     if( _stop_ == 0){
         clock_gettime(CLOCK_REALTIME, &e->next_interval);
-        e->next_interval.tv_sec  += e->interval.tv_sec;
-        e->next_interval.tv_nsec += e->interval.tv_nsec;
+        e->next_interval = e->next_interval + e->interval;
     }
 
     update();
@@ -163,12 +183,13 @@ struct SchedulerEvent * Scheduler::addEvent(struct SchedulerEvent event){
     struct SchedulerEvent * e = (struct SchedulerEvent *)_calloc(1, struct SchedulerEvent);
     memcpy((void *)e, (void *)&event, sizeof(struct SchedulerEvent));
 
+    pthread_mutex_lock(&EventMutex);
     events.push_back(e);
+    pthread_mutex_unlock(&EventMutex);
 
     if( _stop_ == 0){
         clock_gettime(CLOCK_REALTIME, &e->next_interval);
-        e->next_interval.tv_sec += e->interval.tv_sec;
-        e->next_interval.tv_nsec += e->interval.tv_nsec;
+        e->next_interval = e->next_interval + e->interval;
     }
 
     update();
@@ -178,8 +199,10 @@ struct SchedulerEvent * Scheduler::addEvent(struct SchedulerEvent event){
 
 // Private
 void Scheduler::removeEvent(uint16_t index){
+    pthread_mutex_lock(&EventMutex);
     _free(events[index]);
     events.erase(events.begin() + index);
+    pthread_mutex_unlock(&EventMutex);
 }
 
 // Public
@@ -188,10 +211,10 @@ void Scheduler::removeEvent(struct SchedulerEvent * event){
 
     if(events.size() > index){
         removeEvent(index);
-        loggerf(DEBUG, "Removed Scheduler Event %x", (unsigned int)event);
+        loggerf(DEBUG, "Removed Scheduler Event %x", (unsigned long)event);
     }
     else
-        loggerf(WARNING, "No Scheduler Event %x  %i/%i", (unsigned int)event, index, events.size());
+        loggerf(WARNING, "No Scheduler Event %x  %i/%i", (unsigned long)event, index, events.size());
 }
 
 // Public
@@ -235,7 +258,7 @@ void Scheduler::print_events(){
     for(auto &i: events){
         printf("%c next %ld.%ld \t %x %x \t interval %ld.%ld\t %60s\n",
                i->disabled ? 'x':' ', i->next_interval.tv_sec, i->next_interval.tv_nsec,
-               (unsigned int)i->function, (unsigned int)i->function_args,
+               (int)((unsigned long)i->function), (int)((unsigned long)i->function_args),
                i->interval.tv_sec, i->interval.tv_nsec, i->name);
     }
 }

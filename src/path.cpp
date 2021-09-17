@@ -17,7 +17,7 @@
 std::vector<Path *> pathlist;
 
 Path::Path(Block * B){
-  loggerf(TRACE, "NEW PATH %02i:%02i    %x", B->module, B->id, (unsigned int)this);
+  loggerf(DEBUG, "NEW PATH %02i:%02i    %x", B->module, B->id, (unsigned long)this);
 
   if(B->path)
     loggerf(WARNING, "Block has allready a path");
@@ -60,7 +60,7 @@ Path::~Path(){
   trains.clear();
   reservedTrains.clear();
 
-  loggerf(TRACE, "Path destroyed %x %s", (unsigned int)this, buffer);
+  loggerf(DEBUG, "Path destroyed %x %s", (unsigned long)this, buffer);
 }
 
 void Path::updateEntranceExit(){
@@ -160,7 +160,7 @@ void Path::join(Path * P){
 }
 
 void Path::find(){
-  loggerf(DEBUG, "Path Find %02d:%02d / %x", this->Blocks[0]->module, this->Blocks[0]->id, (unsigned int)this);
+  loggerf(DEBUG, "Path Find %02d:%02d / %x", this->Blocks[0]->module, this->Blocks[0]->id, (unsigned long)this);
 
   find(&next, &front, NEXT);
   find(&prev, &end,   PREV);
@@ -276,11 +276,11 @@ void Path::sprint(uint8_t detail, char * string){
 
   switch(detail){
     case 0:
-      string += sprintf(string, "%2i:%2i %s%02d%s %2i:%2i", Entrance->module, Entrance->id, l, Blocks.size(), r, Exit->module, Exit->id);
+      string += sprintf(string, "%2i:%2i %s%02ld%s %2i:%2i", Entrance->module, Entrance->id, l, Blocks.size(), r, Exit->module, Exit->id);
       break;
     
     case 1:
-      string += sprintf(string, "%2i:%2i %s%02d/%4dcm/M:%4dcm%s %2i:%2i", Entrance->module, Entrance->id, l, Blocks.size(), length, maxLength, r, Exit->module, Exit->id);
+      string += sprintf(string, "%2i:%2i %s%02ld/%4dcm/M:%4dcm%s %2i:%2i", Entrance->module, Entrance->id, l, Blocks.size(), length, maxLength, r, Exit->module, Exit->id);
       break;
 
     case 2:
@@ -291,7 +291,7 @@ void Path::sprint(uint8_t detail, char * string){
       break;
 
     case 3:
-      string += sprintf(string, "%2i:%2i %s%02d/%4dcm/M:%4dcm%s %2i:%2i\n", Entrance->module, Entrance->id, l, Blocks.size(), length, maxLength, r, Exit->module, Exit->id);
+      string += sprintf(string, "%2i:%2i %s%02ld/%4dcm/M:%4dcm%s %2i:%2i\n", Entrance->module, Entrance->id, l, Blocks.size(), length, maxLength, r, Exit->module, Exit->id);
       string += sprintf(string, "%02d:%02d:%02x %s[%02d:%02d {%s} %02d:%02d]%s %02d:%02d:%02x",
                         prev->module, prev->id, prev->type,
                         l, end->module, end->id, buffer, front->module, front->id, r,
@@ -512,13 +512,13 @@ void pathlist_find(){
     
     char buffer[400];
     p->sprint(2, buffer);
-    loggerf(DEBUG, "Path %2d/%8x  %4dcm: %s\n", i++, (unsigned int)p, p->maxLength, buffer);
+    loggerf(DEBUG, "Path %2d/%8x  %4dcm: %s\n", i++, (unsigned long)p, p->maxLength, buffer);
   }
 
   i = 0;
   // for(auto k: pathlist){
   //   char buffer[100];
   //   k->sprint(buffer);
-  //   printf("Path %2d/%x: %s\n", i++, (unsigned int)k, buffer);
+  //   printf("Path %2d/%x: %s\n", i++, (unsigned long)k, buffer);
   // }
 }

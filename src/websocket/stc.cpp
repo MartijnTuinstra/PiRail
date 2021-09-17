@@ -630,7 +630,7 @@ void WS_stc_trackUpdate(Websocket::Client * client){
 }
 
 void WS_stc_SwitchesUpdate(Websocket::Client * client){
-  loggerf(TRACE, "WS_SwitchesUpdate (%x)", (unsigned int)client);
+  loggerf(TRACE, "WS_SwitchesUpdate (%x)", (unsigned long)client);
   mutex_lock(&mutex_lockB, "Lock Mutex B");
   char buf[4096];
   memset(buf, 0, 4096);

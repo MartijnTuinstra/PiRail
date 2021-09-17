@@ -129,72 +129,98 @@ int Parse(uint8_t data[1024], Client * client){
   return 0;
 }
 
-int MessageGet(int fd, char outbuf[], int * length_out){
-  char * buf = (char *)_calloc(1024, char);
-  usleep(10000);
-  int32_t recvlength = recv(fd,buf,1024,0);
+int MessageGet(int fd, uint8_t ** outbuf, uint8_t ** packet, int bufferSize, int * length_out){
+  // char * buf = (char *)_calloc(1024, char);
+  // usleep(10000);
+
+  int32_t recvlength = recv(fd, *outbuf, WEBSOCKET_HEADER_SIZE, 0);
 
   if(recvlength <= 0){
-    _free(buf);
-    return -7;
+    return WEBSOCKET_NO_MESSAGE;
   }
 
-  log_hex("WS Recv Message", buf, recvlength);
+  log_hex("WS Recv Message", *outbuf, recvlength);
 
-  uint16_t byte = 0;
+  uint16_t byte = 2; // start of message
+  uint8_t * buf = &(*outbuf)[0];
 
   //Websocket opcode
-  int opcode = buf[byte++] & 0b00001111;
+  int opcode = buf[0] & WEBSOCKET_OPCODE_MASK;
 
-  uint16_t mes_length = buf[byte++] & 0b01111111;
+  uint64_t mes_length = buf[1] & WEBSOCKET_PAYLOAD_MASK;
+  // Check for more length bytes
   if(mes_length == 126){
-    mes_length  = (buf[byte++] << 8);
-    mes_length += buf[byte++];
-  }else if(mes_length == 127){
-    loggerf(ERROR, "To large message");
-    _free(buf);
-    return -1;
+    mes_length  = (buf[2] << 8) + buf[3];
+    byte += 2;
+  }
+  else if(mes_length == 127){
+    mes_length  = (buf[2] << 24) + (buf[3] << 16) + (buf[4] << 8) + buf[5];
+    mes_length <<= 32;
+    mes_length  = (buf[6] << 24) + (buf[7] << 16) + (buf[8] << 8) + buf[9];
+    loggerf(WARNING, "JUMBO packet");
+    byte += 8;
+    // return WEBSOCKET_FAILED_CLOSE;
   }
 
-  unsigned int masking_key = (buf[byte++] << 24);
-  masking_key += (buf[byte++] << 16);
-  masking_key += (buf[byte++] << 8);
-  masking_key += (buf[byte++]);
+  buf = &(*outbuf)[byte]; // Set at start of mask key
+  uint32_t masking_key = 0;
 
-  char output[mes_length+2];
-  memset(output,0,mes_length+2);
+  if(buf[1] & WEBSOCKET_MASK_BIT){
+    masking_key = ((uint32_t *)buf)[0];
+    byte += 4;
+  }
 
-  for(uint16_t i = 0;i<mes_length;){
-    uint32_t data, masked;
-    masked =  (buf[byte++] << 24);
-    masked += (buf[byte++] << 16);
-    masked += (buf[byte++] << 8);
-    masked += (buf[byte++]);
-    data = masked ^ masking_key;
-      output[i++] = (data & 0xFF000000) >> 24;
-      if(i<mes_length){
-        output[i++] = (data & 0xFF0000) >> 16;
+  buf = &(*outbuf)[byte];
+
+  // allocate space for packet
+  if(mes_length + WEBSOCKET_HEADER_SIZE > bufferSize){
+    *outbuf = (uint8_t *)_realloc(*outbuf, mes_length + WEBSOCKET_HEADER_SIZE, uint8_t);
+  }
+
+  *packet = &(*outbuf)[byte];
+  uint8_t timeout_counter = 0;
+
+  loggerf(WARNING, "Packet starts at 0x%16x\n Header was %i bytes, allready read %i bytes\n need to read %i more", (unsigned long)(*packet), byte, recvlength, (byte+mes_length)-recvlength);
+  // read whole packet
+  while(recvlength < (byte + mes_length)){
+    loggerf(WARNING, "Receiving %3i / %3i bytes,  0x%16x", (byte + mes_length) - recvlength, mes_length + byte, (unsigned long)&((*outbuf)[recvlength]));
+    int32_t size = recv(fd, &((*outbuf)[recvlength]), (byte + mes_length) - recvlength, 0);
+    loggerf(WARNING, "Got %i", size);
+
+    if(size <= 0){
+      timeout_counter++;
+
+      if(timeout_counter > 5){
+        loggerf(ERROR, "Failed to receive message");
+        return WEBSOCKET_FAILED_CLOSE;
       }
-      if(i<mes_length){
-        output[i++] = (data & 0xFF00) >> 8;
-      }
-      if(i<mes_length){
-        output[i++] = data & 0xFF;
-      }
+    }
+    else{
+      timeout_counter = 0;
+      recvlength += size;
+    }
+  }
+
+  uint32_t itterations = (mes_length + 3) >> 2; // round up divide 4
+  uint32_t * data = (uint32_t *)*packet;
+
+  for(uint64_t i = 0; i < itterations; i++){
+    data[i] ^= masking_key;
   }
   *length_out = mes_length;
 
-  memcpy(outbuf, output, mes_length);
+  log_hex("WS Recv", *outbuf, mes_length + byte);
 
-  log_hex("WS Recv", output, mes_length);
+  (*packet)[mes_length] = 0;
 
-  _free(buf);
-
-  if(opcode == 8){
-    // Connection closed by client
-    return -8;
+  switch(opcode){
+    case WEBSOCKET_CLOSE:
+    case WEBSOCKET_PING:
+    case WEBSOCKET_PONG:
+      return WEBSOCKET_SUCCESS_CONTROL_FRAME;
   }
-  return 1;
+
+  return WEBSOCKET_SUCCESS;
 }
 
 void MessageCreate(char * input, int length_in, char * output, int * length_out){

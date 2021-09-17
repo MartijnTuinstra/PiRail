@@ -5,10 +5,27 @@
 #ifdef CB_NON_AVR
 #include <unistd.h>
 #include <stdio.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <sys/select.h>
 #include "utils/logger.h"
 
 uint8_t CircularBuffer::writefromfd(int fd){
   if(fd < 0)
+    return 0;
+
+  // Wait for available read
+  fd_set set;
+  FD_ZERO(&set); /* clear the set */
+  FD_SET(fd, &set); /* add our file descriptor to the set */
+  struct timeval timeout;
+  timeout.tv_sec = 0;
+  timeout.tv_usec = 10000;
+
+  int rv = select(fd + 1, &set, NULL, NULL, &timeout);
+
+  if (rv <= 0) // Failed or timeout
     return 0;
 
   //Filestream, buffer to store in, number of bytes to read (max)

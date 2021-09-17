@@ -90,6 +90,7 @@ int main(int argc, char * argv[]){
 
   // UART_stop();
   loggerf(WARNING, "Shutdown sequence started");
+  logger.setlevel_stdout(TRACE);
 
   // Stop all
   SYS->stop = 1;

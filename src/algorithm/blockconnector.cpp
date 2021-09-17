@@ -334,7 +334,7 @@ int BlockConnectorSetup::save(){
     Unit * U = Units(i);
     if(!U)
       continue;
-    loggerf(INFO, "Save setup unit %i, %x %x, %i", i, data, dataptr, (int)dataptr - (int)data);
+    loggerf(INFO, "Save setup unit %i, %x %x, %i", i, data, dataptr, (unsigned long)dataptr - (unsigned long)data);
 
     struct configStruct_ConnectorSetup setup;
 
@@ -361,7 +361,7 @@ int BlockConnectorSetup::save(){
     return -1;
   }
 
-  fwrite(data, (int)dataptr - (int)data, 1, fp);
+  fwrite(data, (unsigned long)dataptr - (unsigned long)data, 1, fp);
 
   fclose(fp);
 

@@ -98,7 +98,7 @@ int Server::init(){
   }
 
   //Start clear_clients
-  struct SchedulerEvent event = {{30, 0}, (void (*)(void *))&this->ClearUnusedSockets, this, "_ClearUnusedSockets", 0, {0, 0}};
+  struct SchedulerEvent event = {SCHEDULER_TYPE_PERIODIC, {30, 0}, (void (*)(void *))&this->ClearUnusedSockets, this, "_ClearUnusedSockets", 0, {0, 0}};
   scheduler->addEvent(event);
 
   // WS_init_Message_List();

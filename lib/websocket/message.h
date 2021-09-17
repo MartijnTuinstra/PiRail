@@ -6,7 +6,7 @@
 namespace Websocket {
 
 int Parse(uint8_t data[1024], Websocket::Client * client);
-int MessageGet(int fd, char outbuf[], int * length_out);
+int MessageGet(int fd, uint8_t ** outbuf, uint8_t ** packet, int bufferSize, int * length_out);
 void MessageCreate(char * input, int length_in, char * output, int * length_out);
 
 } // Namespace
@@ -25,8 +25,21 @@ extern const char websocket_magic_string[];
 #define WEBSOCKET_BIN_FRAME 0x02
 
 #define WEBSOCKET_CLOSE 0x08
-#define WEBSOCKET_PING 0x09
-#define WEBSOCKET_PONG 0x0A
+#define WEBSOCKET_PING  0x09
+#define WEBSOCKET_PONG  0x0A
+
+#define WEBSOCKET_OPCODE_MASK  0x8F
+#define WEBSOCKET_PAYLOAD_MASK 0x7F
+#define WEBSOCKET_MASK_BIT     0x80
+
+
+#define WEBSOCKET_NO_MESSAGE           -7
+#define WEBSOCKET_FAILED_CLOSE         -1
+#define WEBSOCKET_FAILED                0
+#define WEBSOCKET_SUCCESS               1
+#define WEBSOCKET_SUCCESS_CONTROL_FRAME 2
+
+#define WEBSOCKET_HEADER_SIZE 14
 
 
 //Broadcast Flag

@@ -136,7 +136,7 @@ void MSSwitch::addSignal(Signal * Sig){
 }
 
 bool MSSwitch::approachableA(void * p, int flags){
-  loggerf(TRACE, "MSSwitch::approachableA (%x, %x, %x)", (unsigned int)this, (unsigned int)p, flags);
+  loggerf(TRACE, "MSSwitch::approachableA (%x, %x, %x)", (unsigned long)this, (unsigned long)p, flags);
   if((flags & FL_SWITCH_CARE) == 0){
     return 1;
   }
@@ -148,7 +148,7 @@ bool MSSwitch::approachableA(void * p, int flags){
 }
 
 bool MSSwitch::approachableB(void * p, int flags){
-  loggerf(TRACE, "MSSwitch::approachableB (%x, %x, %x)", (unsigned int)this, (unsigned int)p, flags);
+  loggerf(TRACE, "MSSwitch::approachableB (%x, %x, %x)", (unsigned long)this, (unsigned long)p, flags);
   if((flags & FL_SWITCH_CARE) == 0){
     return 1;
   }

@@ -88,7 +88,7 @@ TEST_CASE_METHOD(TestsFixture, "Station Stating", "[SB][SB-5][SB-5.1]" ) {
   */
 
   SECTION("VII - Blocks and station"){
-    loggerf(CRITICAL, "Station has parent %x", (unsigned int)U->St[0]->parent);
+    loggerf(CRITICAL, "Station has parent %x", (unsigned long)U->St[0]->parent);
     U->B[28]->setDetection(1);
 
     Algorithm::process(U->B[28], _FORCE);

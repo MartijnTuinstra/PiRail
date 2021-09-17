@@ -52,7 +52,7 @@ int solve(Train * T, Block * B, Block * tB, RailLink link, int flags){
     .flags = flags
   };
 
-  loggerf(DEBUG, "SwitchSolver::solve -> findPath %x", (unsigned int)r);
+  loggerf(DEBUG, "SwitchSolver::solve -> findPath %x", (unsigned long)r);
   f = findPath(SolveControl);
 
   loggerf(DEBUG, "SwitchSolver::solve (%i, %i, %i)", f.possible, f.allreadyCorrect, f.polarityWrong);
@@ -90,7 +90,7 @@ int solve(Train * T, Block * B, Block * tB, RailLink link, int flags){
 
 struct find findPath(struct SwSolve SwS){
   // Check if switches are set to a good path
-  loggerf(DEBUG, "SwitchSolver::findPath (%x, %x, %2i:%2i:%2x, %i)", (unsigned int)SwS.route, (unsigned int)SwS.prevPtr,
+  loggerf(DEBUG, "SwitchSolver::findPath (%x, %x, %2i:%2i:%2x, %i)", (unsigned long)SwS.route, (unsigned long)SwS.prevPtr,
                                                                      SwS.link->module, SwS.link->id, (uint8_t)SwS.link->type,
                                                                     SwS.flags);
 
@@ -154,7 +154,7 @@ struct find findPath(struct SwSolve SwS){
     if(B && ((B->reservedBy.size() > 0 && !B->isReservedBy(SwS.train)) || B->blocked))
       return f;
 
-    loggerf(INFO, "check s %i (state: %i, str.p: %x, div.p: %x, == p: %x)", Sw->id, Sw->state, (unsigned int)Sw->str.p.p, (unsigned int)Sw->div.p.p, SwS.prevPtr);
+    loggerf(INFO, "check s %i (state: %i, str.p: %x, div.p: %x, == p: %x)", Sw->id, Sw->state, (unsigned long)Sw->str.p.p, (unsigned long)Sw->div.p.p, SwS.prevPtr);
     void * p = SwS.prevPtr;
     SwS.prevPtr = Sw;
     SwS.link = &Sw->app;
@@ -362,7 +362,7 @@ struct find findPath(struct SwSolve SwS){
 
 
 int setPath(struct SwSolve SwS){
-  loggerf(INFO, "setPath (%x, %x, %2i:%2i %2x, %i)", (unsigned int)SwS.route, (unsigned int)SwS.prevPtr,
+  loggerf(INFO, "setPath (%x, %x, %2i:%2i %2x, %i)", (unsigned long)SwS.route, (unsigned long)SwS.prevPtr,
                                                       SwS.link->module, SwS.link->id, SwS.link->type,
                                                       SwS.flags);
   // //Check if switch is occupied
@@ -569,7 +569,7 @@ int setPath(struct SwSolve SwS){
 }
 
 void setWrong(PathFinding::Route * r, void * p, RailLink link, int flags){
-  loggerf(TRACE, "SwitchSolver::setWrong (%x, %x, %i)", (unsigned int)p, (unsigned int)&link, flags);
+  loggerf(TRACE, "SwitchSolver::setWrong (%x, %x, %i)", (unsigned long)p, (unsigned long)&link, flags);
 
   if(link.type == RAIL_LINK_S){
     // Go to next switch
@@ -603,7 +603,7 @@ void setWrong(PathFinding::Route * r, void * p, RailLink link, int flags){
 }
 
 void dereservePath(Train * T, PathFinding::Route * r, void * p, RailLink link, int flags){
-  loggerf(TRACE, "DEreservePath (%x, %x, %x, %x, %i)", (unsigned int)T, (unsigned int)r, (unsigned int)p, (unsigned int)&link, flags);
+  loggerf(TRACE, "DEreservePath (%x, %x, %x, %x, %i)", (unsigned long)T, (unsigned long)r, (unsigned long)p, (unsigned long)&link, flags);
 
   if(link.type == RAIL_LINK_S || link.type == RAIL_LINK_s){
     // Go to next switch
@@ -671,7 +671,7 @@ void dereservePath(Train * T, PathFinding::Route * r, void * p, RailLink link, i
 }
 
 int reservePath(struct SwSolve SwS){
-  loggerf(DEBUG, "reservePath (%x, %x, %2i:%2i:%2x, %i)", (unsigned int)SwS.route, (unsigned int)SwS.prevPtr,
+  loggerf(DEBUG, "reservePath (%x, %x, %2i:%2i:%2x, %i)", (unsigned long)SwS.route, (unsigned long)SwS.prevPtr,
                                                           SwS.link->module, SwS.link->id, (uint8_t)SwS.link->type,
                                                           SwS.flags);
 

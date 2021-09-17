@@ -156,13 +156,13 @@ void Switch::addSignal(Signal * Sig){
 bool Switch::approachable(void * p, int flags){
   // Check if the switch is approachable from the div/str side.
 
-  loggerf(TRACE, "Switch::approachable (%x, %x, %x)", (unsigned int)this, (unsigned int)p, flags);
+  loggerf(TRACE, "Switch::approachable (%x, %x, %x)", (unsigned long)this, (unsigned long)p, flags);
   if((flags & FL_SWITCH_CARE) == 0){
     //No FL_SWITCH_CARE
     return 1;
   }
 
-  loggerf(TRACE, "check s (state: %i, str.p: %x, div.p: %x)", this->state, (unsigned int)this->str.p.p, (unsigned int)this->div.p.p);
+  loggerf(TRACE, "check s (state: %i, str.p: %x, div.p: %x)", this->state, (unsigned long)this->str.p.p, (unsigned long)this->div.p.p);
   if((this->state == 0 && this->str.p.p == p) || (this->state == 1 && this->div.p.p == p)){
     return 1;
   }

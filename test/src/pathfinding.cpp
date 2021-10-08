@@ -14,6 +14,8 @@
 #include "switchboard/unit.h"
 #include "switchboard/blockconnector.h"
 
+#include "path.h"
+
 #include "rollingstock/train.h"
 
 #include "algorithm/core.h"
@@ -33,6 +35,7 @@ TEST_CASE_METHOD(TestsFixture, "Path Finding WayPoints", "[PF][PF-1]"){
   U->on_layout = true;
 
   switchboard::SwManager->LinkAndMap();
+  pathlist_find();
 
   /*
   //          1.0> --\Sw0                      Sw1/-> 1.8>
@@ -109,8 +112,8 @@ TEST_CASE_METHOD(TestsFixture, "Path Finding WayPoints", "[PF][PF-1]"){
   }
 
   SECTION("IV - Find Circle with OneWay"){
-    // FIXME, pathfinding goes through the one way
     U->B[36]->oneWay = true;
+
     auto route = PathFinding::find(U->B[16], U->B[13]);
     // struct paths path = pathfinding(U->B[3], U->B[6]);
 
@@ -126,7 +129,30 @@ TEST_CASE_METHOD(TestsFixture, "Path Finding WayPoints", "[PF][PF-1]"){
     delete route;
   }
 
-  SECTION("V - MSSwitch"){
+  
+  SECTION("V - Find Circle with a OneWay block which is reversed"){
+    U->B[36]->oneWay = true;
+
+    REQUIRE(U->B[36]->path);
+    U->B[36]->path->reverse();
+
+    auto route = PathFinding::find(U->B[16], U->B[13]);
+    // struct paths path = pathfinding(U->B[3], U->B[6]);
+    logger.setlevel_stdout(INFO);
+
+    CHECK(route->found_forward);
+    CHECK(route->found_reverse);
+
+    REQUIRE(route->Sw_S[U->Sw[3]->uid]);
+    CHECK(route->Sw_S[U->Sw[3]->uid]->nrOptions == 1);
+
+    REQUIRE(route->Sw_s[U->Sw[2]->uid]);
+    CHECK(route->Sw_s[U->Sw[2]->uid]->nrOptions == 1);
+
+    delete route;
+  }
+
+  SECTION("VI - MSSwitch"){
     auto route1 = PathFinding::find(U->B[40], U->B[47]);
     auto route2 = PathFinding::find(U->B[40], U->B[46]);
     auto route3 = PathFinding::find(U->B[40], U->B[53]);
@@ -155,7 +181,7 @@ TEST_CASE_METHOD(TestsFixture, "Path Finding WayPoints", "[PF][PF-1]"){
     delete route3;
   }
 
-  SECTION("VI - One Way"){
+  SECTION("VII - One Way"){
     REQUIRE(U->B[56]->oneWay);
     REQUIRE(!U->B[57]->cmpPolarity(U->B[55]));
 

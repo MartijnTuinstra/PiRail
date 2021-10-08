@@ -57,10 +57,10 @@ Block::Block(uint8_t _module, struct configStruct_Block * block):
   switchWrongFeedback = 0;
 
   BlockMaxSpeed = block->speed;
-  // dir = (block->fl & 0x6) >> 1;
-  dir = 0;
+  dir = (block->fl & 0x6) >> 1;
   length = block->length;
-  oneWay = block->fl & 0x1;
+  oneWay    = block->fl & 0x1;
+  oneWayDir = dir;
 
   Alg.B = this;
 

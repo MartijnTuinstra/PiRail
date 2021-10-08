@@ -144,6 +144,7 @@ class Block {
     uint8_t algorchanged:1;
     uint8_t recalculate:1;
     uint8_t oneWay:1;
+    uint8_t oneWayDir:1;
 
     uint8_t switchWrongState:1;    // Set block to DANGER/CAUTION if switch cannot be aligned properly
     uint8_t switchWrongFeedback:1; // Set block to DANGER/CAUTION if switch is still moving

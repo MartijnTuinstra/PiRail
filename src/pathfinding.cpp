@@ -203,9 +203,19 @@ struct step findStep(struct control c){
     c.link = B->NextLink(c.dir);
     c.prev = B;
     
-    if(c.dir == PREV && B->oneWay){
-      loggerf(WARNING, "Failed - wrongway");
-      return s; // failed - Wrongway
+    if(B->oneWay){
+      if(B->oneWayDir == B->dir){
+        if(c.dir == PREV){
+          loggerf(WARNING, "Failed - wrongway");
+          return s;
+        }
+      }
+      else{
+        if(c.dir == NEXT){
+          loggerf(WARNING, "Failed - wrongway");
+          return s;
+        }
+      }
     }
     
     if(B == c.start){

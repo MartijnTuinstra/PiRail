@@ -237,6 +237,7 @@ websocket.add_opcodes([
       opcode: 0x84,
       name: "Track_Layout_Config", // Full layout
       recv: function(data){
+        console.warn("Track_Layout_Config", data)
         for(var i = 0;i<data.length;i++){
           var module = modules[data[i]];
 
@@ -264,6 +265,26 @@ websocket.add_opcodes([
         Canvas.fitOptimize();
 
         Canvas.rescale(1);
+      }
+    },
+    {
+      opcode: 0x85,
+      name: "Track_Load_Layout_Setup",
+      recv: function(data){
+        if(Modals.currentModal != "layout.load")
+          return;
+
+        var setups = [];
+        for(var i = 1; i < data.length;){
+          var len = data[i++];
+          setups.push( IntArrayToString(data.slice(i, i + len)) );
+          i+= len;
+        }
+        
+        Modals.frame.setups(setups);
+      },
+      send: function(data){
+        return [((data.request << 7) | (data.id & 0x7F))];
       }
     },
     {
@@ -574,7 +595,7 @@ websocket.add_opcodes([
       opcode: 0x4B,
       name: "DCCEngineSpeed",
       send: function(data){
-	console.log("DCCEngineSpeed", JSON.stringify(data));
+      	console.log("DCCEngineSpeed", JSON.stringify(data));
         return [data.engine.id, (data.engine.dir & 1) << 4 | (data.engine.speed & 0xF00) >> 8,
                 data.engine.speed & 0xFF];
       },
@@ -780,6 +801,7 @@ websocket.add_opcodes([
           msg.push(data.speedsteps[i].speed);
           msg.push(data.speedsteps[i].speed >> 8);
           msg.push(data.speedsteps[i].step);
+          msg.push(0);
         }
 
         return msg;
@@ -1147,11 +1169,13 @@ websocket.add_opcodes([
           var m = data[i];
           var B = data[i+1];
 
-          var D = data[i+2] >> 7;
-          var state = (data[i+2] & 0x7F);
+          var D = (data[i+2] >> 7) & 1;
+          var P = (data[i+2] >> 6) & 1;
+          var state = (data[i+2] & 0x3F);
           var tID = data[i+3];
 
           modules[m].blocks[B] = state;
+          modules[m].blocksstate[B] = {"state": state, "direction": D, "polarity": P};
         }
 
         Canvas.update_frame();

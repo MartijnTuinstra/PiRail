@@ -39,7 +39,6 @@ BAAN_FILES = $(filter-out ../bin/baan.o ../bin/config_reader.o ../bin/comtest.o,
 
 maintest: $(addprefix $(BIN)/,$(addsuffix .o, $(TEST_FILES)))
 	@echo "( BUILD ) maintest"
-	
 	@$(GCC) -o $@ $(addprefix $(BIN)/,$(addsuffix .o, $(TEST_FILES))) $(BAAN_FILES) -D CB_NON_AVR $(GCC_options) $(GCC_LIBS)
 
 .PHONY: all run clean_test clean_build clean build

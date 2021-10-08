@@ -49,6 +49,7 @@ class UART {
     void send(struct COM_t *);
     bool recv();
     void parse();
+    void parsePacket(uint8_t);
 
     void setDevice(const char *);
     void resetDevice();

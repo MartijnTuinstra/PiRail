@@ -270,30 +270,45 @@ var Canvas = {
 
 	setStrokeColor: function(b, s = 0, cnvs){
 
-		if(b == 0){ // Blocked
-			(s == 0)?cnvs.strokeStyle = "#900":cnvs.strokeStyle = "#daa";
-	   	}
-	   	else if(b == 1){ // DANGER
-	    	(s == 0)?cnvs.strokeStyle = "#f00":cnvs.strokeStyle = "#fcc";
-	    }
-	   	else if(b == 2){ // RESTRICTED
-	    	(s == 0)?cnvs.strokeStyle = "#f40":cnvs.strokeStyle = "#fcc";
-	    }
-	    else if(b == 3){ // CAUTION
-	    	(s == 0)?cnvs.strokeStyle = "#f70":cnvs.strokeStyle = "#fe8";
-	    }
-	    else if(b == 4){ // PROCEED
-	    	(s == 0)?cnvs.strokeStyle = "#aaa":cnvs.strokeStyle = "#ddd";
-	    }
-	    else if(b == 5){ // RESERVED
-	    	(s == 0)?cnvs.strokeStyle = "#aaf":cnvs.strokeStyle = "#ddf";
-	    }
-	    else if(b == 6){ // RESERVED_SWICTH
-	    	(s == 0)?cnvs.strokeStyle = "#aaf":cnvs.strokeStyle = "#fcc";
-	    }
-	    else{ //Unknown
-	    	(s == 0)?cnvs.strokeStyle = "#ddd":cnvs.strokeStyle = "#ddd";
-	    }
+		
+		var _color_ = [
+			[[153,0,0],     [255,0,0],     [255,68,0],    [255,119,0],   [170,170,170], [170,170,255], [170,170,255], [221,221,221]],
+			[[221,170,170], [255,204,204], [255,204,204], [255,238,136], [221,221,221], [221,221,255], [255,204,204], [221,221,221]]
+		];
+
+
+		if(b > 7)
+			b = 7;
+		else if(b == undefined)
+			b = 7;
+
+		cnvs.strokeStyle = `rgb(${_color_[s][b][0]}, ${_color_[s][b][1]}, ${_color_[s][b][2]})`;
+		// cnvs.strokeStyle = color;
+
+		// if(b == 0){ // Blocked
+		// 	(s == 0)?cnvs.strokeStyle = "#900":cnvs.strokeStyle = "#daa";
+	   	// }
+	   	// else if(b == 1){ // DANGER
+	    // 	(s == 0)?cnvs.strokeStyle = "#f00":cnvs.strokeStyle = "#fcc";
+	    // }
+	   	// else if(b == 2){ // RESTRICTED
+	    // 	(s == 0)?cnvs.strokeStyle = "#f40":cnvs.strokeStyle = "#fcc";
+	    // }
+	    // else if(b == 3){ // CAUTION
+	    // 	(s == 0)?cnvs.strokeStyle = "#f70":cnvs.strokeStyle = "#fe8";
+	    // }
+	    // else if(b == 4){ // PROCEED
+	    // 	(s == 0)?cnvs.strokeStyle = "#aaa":cnvs.strokeStyle = "#ddd";
+	    // }
+	    // else if(b == 5){ // RESERVED
+	    // 	(s == 0)?cnvs.strokeStyle = "#aaf":cnvs.strokeStyle = "#ddf";
+	    // }
+	    // else if(b == 6){ // RESERVED_SWICTH
+	    // 	(s == 0)?cnvs.strokeStyle = "#aaf":cnvs.strokeStyle = "#fcc";
+	    // }
+	    // else{ //Unknown
+	    // 	(s == 0)?cnvs.strokeStyle = "#ddd":cnvs.strokeStyle = "#ddd";
+	    // }
 	},
 
     update_frame: function(){
@@ -511,11 +526,10 @@ var Canvas = {
 		click_x = (x - tmp_this.dimensions.ofX + tmp_this.dimensions.content.ofX)/tmp_this.dimensions.scale;
 		click_y = (y - tmp_this.dimensions.ofY + tmp_this.dimensions.content.ofY)/tmp_this.dimensions.scale;
 
-		console.log("xy", [click_x, click_y]);
+		// console.log("xy", [click_x, click_y]);
 
 		$.each(modules,function(module,module_v){
 			if(!module_v.visible){
-				console.log("Module "+module+" not visible");
 				return true;
 			}
 
@@ -532,13 +546,11 @@ var Canvas = {
 			_y = _l*Math.sin(_r);
 
 			if(_x < 0 || _y < 0 || _x > module_v.width || _y > module_v.height){
-				console.log("Outside module "+module);
 				return true;
 			}
-			console.log("Hit module" + module);
+
 			for(var i = 0; i < module_v.hitboxes.length; i++){
 				if(module_v.hitboxes[i] && {}.toString.call(module_v.hitboxes[i]) === '[object Function]'){
-					console.log("Hit switch");
 					module_v.hitboxes[i](_x, _y);
 				}
 			}
@@ -1154,9 +1166,7 @@ class canvas_switch {
 
 	hit(x, y){
 		// {eval_code:"(_x > 2.5 && _x < 52.5 && _y > 15 && _y < 40)?1:0;",name:"Switch 1",action:"tSw",switch:0},
-		console.log("Check hit switch "+this.s);
 		if(this.hit_eval(x,y)){
-			console.log("Throw switch "+this.module_id+":"+this.s);
 			throw_Switch(this.module_id,this.s);
 		}
 	}
@@ -1402,7 +1412,6 @@ class canvas_double_slip {
 	hit(x, y){
 		// {eval_code:"(_x > 2.5 && _x < 52.5 && _y > 15 && _y < 40)?1:0;",name:"Switch 1",action:"tSw",switch:0},
 		if(this.hit_eval(x,y)){
-			console.warn("Throw double slip "+this.module_id+":"+this.sA +"+"+this.sB);
 			throw_doubleSlib(this.module_id, [this.sA, this.sB]);
 		}
 	}
@@ -1891,6 +1900,70 @@ class canvas_parallelogram {
 	}
 }
 
+class canvas_polarity {
+	constructor(module, data){//module_id, block, x1, y1, x2, y2, options){
+		this.type = "polarity";
+		this.edit_type = "polarity";
+		this.module_id = module.id;
+		this.m = module;
+		this.b = data.b;
+		this.x = data.x;
+		this.y = data.y;
+		this.r = data.r;
+
+		if (data.options == undefined) { data.options = {}; }
+
+		if (data.options.if != undefined){
+			this.if = data.options.if;
+		}
+	}
+
+	init(){}
+
+	configdata(id){
+		return "<tr><th scope='row'>"+id+"</th><td>"+this.b+"</td><td>Line</td><td>"+round(this.x, 3)+
+		       ", "+round(this.y, 3)+"</td><td>"+round(this.r, 3)+", </td><td>-</td><td>-</td><td>"+settings("#ccc", 23)+"</td></tr>";
+	}
+
+	draw_fore(cnvs, stroke, rotation, offset){
+		if(this.m.blocksstate[this.b].polarity == 0)
+			stroke(5, 0, cnvs);
+		else
+			stroke(1, 0, cnvs);
+
+		var x1 = rotation.X*this.x + rotation.Y_*this.y + offset.X;
+		var y1 = rotation.Y*this.y + rotation.X_*this.x + offset.Y;
+
+		// var xy1 = rotated_point(this.x, this.y, rotation.X, offset.X, offset.Y);
+
+		var xy2 = rotated_point( 0,  +1, this.r+rotation.X, x1, y1);
+		var xy4 = rotated_point( 0,  -1, this.r+rotation.X, x1, y1);
+		var xy5 = rotated_point( 0,   0, this.r+rotation.X, x1, y1);
+
+		if(this.m.blocksstate[this.b].direction == 0){
+			var xy3 = rotated_point(-2.5, 0, this.r+rotation.X, x1, y1);
+	
+			cnvs.moveTo(x1, y1);
+			cnvs.lineTo(xy2.x, xy2.y);
+			cnvs.lineTo(xy3.x, xy3.y);
+			cnvs.lineTo(xy4.x, xy4.y);
+			cnvs.lineTo(xy5.x, xy5.y);
+		}
+		else{
+			var xy3 = rotated_point(+2.5, 0, this.r+rotation.X, x1, y1);
+	
+			cnvs.moveTo(x1, y1);
+			cnvs.lineTo(xy2.x, xy2.y);
+			cnvs.lineTo(xy3.x, xy3.y);
+			cnvs.lineTo(xy4.x, xy4.y);
+			cnvs.lineTo(xy5.x, xy5.y);
+		}
+	}
+
+	draw_back(cnvs, stroke, color, rotation, offset){ }
+}
+
+
 class canvas_module {
 	constructor(data){
 		this.id = data.id;
@@ -1910,8 +1983,9 @@ class canvas_module {
 			this.connections[i].connected = false;
 		}
 
-		this.blocks = Array.apply(null, Array(data.blocks)).map(function (){return 7});
-		this.switches = Array.apply(null, Array(data.switches)).map(function (){return 0});
+		this.blocks      = Array.apply(null, Array(data.blocks)).map(function (){return 7});
+		this.blocksstate = Array.apply(null, Array(data.blocks)).map(function (){return {"state": 7, "direction": 0, "polarity": 0}});
+		this.switches    = Array.apply(null, Array(data.switches)).map(function (){return 0});
 		if(data.msswitches != undefined){
 			this.msswitches = Array.apply(null, Array(data.msswitches)).map(function (){return 0});
 		}
@@ -1949,6 +2023,8 @@ class canvas_module {
 				case "parallelogram":
 					this.data.push(new canvas_parallelogram(this, data.layout[i]));
 					break;
+				case "polarity":
+					this.data.push(new canvas_polarity(this, data.layout[i]));
 			}
 
 			this.data[i].init();

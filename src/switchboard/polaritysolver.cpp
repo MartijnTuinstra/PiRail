@@ -9,35 +9,38 @@ namespace PolaritySolver {
 // void init();
 // void free();
 
-int solve(Train * T, Path * A, Path * B){
-  loggerf(INFO, "PolaritySolver::solve(id:%i, %x, %x)", T->id, A, B);
+int solve(Train * T, Path * near, Path * far){
+  loggerf(INFO, "PolaritySolver::solve(id:%i, %x, %x)", T->id, near, far);
 
-  if(B->polarityFlippable()){
-    loggerf(INFO, "B side fix");
-    B->flipPolarity();
+  if(far->polarityFlippable()){
+    loggerf(INFO, "B/far side fix");
+    far->flipPolarity();
+    return true;
   }
-  else if(A->polarityFlippable()){
-    loggerf(INFO, "A side fix");
-    A->flipPolarity();
+  else if(near->polarityFlippable()){
+    loggerf(INFO, "A/near side fix");
+    near->flipPolarity();
+    return true;
   }
   else{
-    Path * paths[10] = {A, 0};
+    Path * paths[10] = {near, 0};
     uint8_t pathsFound = 1;
+    uint8_t pathsFlippable = (near->polarity_type != BLOCK_FL_POLARITY_DISABLED);
 
     do{
-      if(!A->Entrance->blocked)
+      if(!near->Entrance->blocked)
         break;
 
-      if(A->Entrance->train != T)
+      if(near->Entrance->train != T)
         break;
 
       Block * block = 0;
-      if(A->prev->type == RAIL_LINK_R)
-        block = A->prev->p.B;
-      else if(A->prev->type == RAIL_LINK_S || A->prev->type == RAIL_LINK_s)
-        block = A->prev->p.Sw->Detection;
-      else if(A->prev->type >= RAIL_LINK_MA || A->prev->type == RAIL_LINK_MB_inside)
-        block = A->prev->p.MSSw->Detection;
+      if(near->prev->type == RAIL_LINK_R)
+        block = near->prev->p.B;
+      else if(near->prev->type == RAIL_LINK_S || near->prev->type == RAIL_LINK_s)
+        block = near->prev->p.Sw->Detection;
+      else if(near->prev->type >= RAIL_LINK_MA || near->prev->type == RAIL_LINK_MB_inside)
+        block = near->prev->p.MSSw->Detection;
 
       Path * P = block->path;
 
@@ -51,11 +54,17 @@ int solve(Train * T, Path * A, Path * B){
         break;
 
       paths[pathsFound++] = P;
+      pathsFlippable += (P->polarity_type != BLOCK_FL_POLARITY_DISABLED);
 
-      A = P;
+      near = P;
     }
     while(pathsFound < 10);
-    loggerf(ERROR, "HELP %i", pathsFound);
+    loggerf(ERROR, "HELP %i/%i", pathsFound, pathsFlippable);
+
+    if(pathsFlippable < pathsFound)
+      return 0;
+
+    loggerf(ERROR, "FLIP Some paths please");
   }
 
   return 0;

@@ -132,10 +132,10 @@ int Z21_Client::connect(uint16_t port){
         break;
       }
     }
-    else{
-      i = 0;
-      break;
-    }
+//    else{
+//      i = 0;
+//      break;
+//    }
     i--;
   }
   if(i == 0){

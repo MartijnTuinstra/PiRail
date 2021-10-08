@@ -30,9 +30,8 @@ TEST_CASE_METHOD(TestsFixture, "Path Construction", "[PATH][PATH-1]" ) {
 
   U->on_layout = true;
 
-  switchboard::SwManager->LinkAndMap();
-
   // logger.setlevel_stdout(TRACE);
+  switchboard::SwManager->LinkAndMap();
   pathlist_find();
 
   /*

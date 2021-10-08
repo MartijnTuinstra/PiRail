@@ -40,6 +40,8 @@ TEST_CASE_METHOD(TestsFixture, "Polarity Solver", "[PolSolve][PS-1]"){
 
   U->on_layout = true;
 
+  // logger.setlevel_stdout(TRACE);
+
   switchboard::SwManager->LinkAndMap();
 
   pathlist_find();

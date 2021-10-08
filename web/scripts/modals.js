@@ -31,9 +31,27 @@ var Modals = {
     "layout.load":{
       title: "Load a previous setup",
       content: "Just a list of setups",
+      open_cb: function(data, ref){
+        websocket.cts_Track_Load_Layout_Setup({request: 1, id: 0});
+      },
+      setups: function(setups){
+        setups.sort();
+        $('.modal-body', '#modal').empty();
+
+        $.each(setups, function(i, v){
+          var date = v.slice(6, 8) + "-" + v.slice( 4, 6) + "-" + v.slice( 0, 4);
+          var time = v.slice(9,11) + ":" + v.slice(11,13) + ":" + v.slice(13,15);
+          $('.modal-body', '#modal').append('<div idcounter="'+i+'" class="btn btn-outline-secondary" style="margin:5px">'+date+'<br/>'+time+'</div>');
+        });
+
+        $('.modal-body div.btn', '#modal').on("click", function(evt){
+          websocket.cts_Track_Load_Layout_Setup({request: 0, id: parseInt($(evt.target).attr("idcounter"))});
+          Modals.hide();
+        });
+      },
       buttons: {
         success: {visible: true, content: "Cancel", cb: undefined, wait: false},
-        warning: {visible: false, content: ""},
+        warning: {visible: true, content: "Stop Scan", cb: undefined, wait: false},
         danger: {visible: false, content: ""},
       }
     },

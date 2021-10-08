@@ -71,37 +71,36 @@ var Train_Control = {
 
     function handler(box, evt) {
       evt.preventDefault();
-        if (evt.type === 'mouseup' || evt.type == "touchend") {
-          console.log("Remove events");
-            $('body').off('mouseup mousemove touchmove touchend');
-            this.drag = false;
-            this.set_speed(box);
-            this.remove_train_timer(box);
-        } else {
-          this.drag = true;
+      if (evt.type === 'mouseup' || evt.type == "touchend" || evt.type == "mouseleave") {
+        console.log("Remove events");
+          $('body').off('mouseup mousemove touchmove touchend');
+          $('.train-box .train-speed-slider, .train-box').off("mouseleave");
+          this.drag = false;
+          this.set_speed(box);
+          this.remove_train_timer(box);
+      } else {
+        this.drag = true;
 
-          var slider_box = $('.train-box.box'+box+' .train-speed-slider');
-          var pageY = slider_box.offset().top + slider_box.height();
-          var ylim = slider_box.height() - $('.slider-handle', slider_box).height();
-          var pos = 0;
-          if(evt.type == "mousemove" || evt.type == "mousedown"){
-            pos = (pageY - evt.pageY);
-          }else if(evt.type == "touchmove" || evt.type == "touchstart"){
-            pos = (pageY - evt.touches[0].pageY);
-          }
-          if(pos < 0){
-            pos = 0;
-          }
-          else if(pos > ylim){
-            pos = ylim;
-          }
-
-          this.set_speed(box, pos / ylim);
-
-          // websocket.cts_TrainSpeed({type: this.train[box].type, train: this.train[box].t});
-
-          this.set_handle(box, pos);
+        var slider_box = $('.train-box.box'+box+' .train-speed-slider');
+        var pageY = slider_box.offset().top + slider_box.height();
+        var ylim = slider_box.height() - $('.slider-handle', slider_box).height();
+        var pos = 0;
+        if(evt.type == "mousemove" || evt.type == "mousedown"){
+          pos = (pageY - evt.pageY);
+        }else if(evt.type == "touchmove" || evt.type == "touchstart"){
+          pos = (pageY - evt.touches[0].pageY);
         }
+        if(pos < 0){
+          pos = 0;
+        }
+        else if(pos > ylim){
+          pos = ylim;
+        }
+
+        this.set_speed(box, pos / ylim);
+
+        this.set_handle(box, pos);
+      }
     }
 
     $('.train-box .train-speed-slider, .train-box .train-speed-slider .slider-handle').on('mousedown touchstart', function (evt) {
@@ -115,6 +114,7 @@ var Train_Control = {
       handler.bind(this)(box, evt);
       
       $('body').on('mouseup mousemove touchmove touchend', handler.bind(this, box));
+      $('.train-box .train-speed-slider, .train-box .train-speed-slider').on('mouseleave', handler.bind(this, box));
     }.bind(this));
 
 
@@ -156,6 +156,10 @@ var Train_Control = {
   },
 
   init_train_functions: function(box){
+    if(this.train[box] == undefined){
+      return;
+    }
+
     // $('.train-box.box'+box+' .train-function-box').empty();
     var text = '';
 
@@ -243,6 +247,10 @@ var Train_Control = {
   },
 
   set_speed: function(box, speed_ratio){
+    if(this.train[box] == undefined){
+      return;
+    }
+
     if(speed_ratio != undefined){
       $('.train-box.box'+box+' .train-speed > span').text(Math.round(this.train[box].t.max_speed * speed_ratio));
 
@@ -254,6 +262,10 @@ var Train_Control = {
   },
 
   send_speed: function(box, resend){
+    if(this.train[box] == undefined){
+      return;
+    }
+
     if(this.train[box].t.railtrainid != undefined){
       websocket.cts_TrainSpeed({train: this.train[box].t});
     }
@@ -274,6 +286,10 @@ var Train_Control = {
   },
 
   set_control: function(box, control){
+    if(this.train[box] == undefined){
+      return;
+    }
+
     this.train[box].t.control = control;
     websocket.cts_TrainControl({train: this.train[box].t});
   },
@@ -281,11 +297,19 @@ var Train_Control = {
     $('.train-box.box'+box+' .train-info-box .control .btn-toggle').removeClass('btn-secondary');
     $('.train-box.box'+box+' .train-info-box .control .btn-toggle').addClass('btn-outline-secondary');
 
+    if(this.train[box] == undefined){
+      return;
+    }
+
     $('.train-box.box'+box+' .train-info-box .control .btn-toggle[value='+this.train[box].t.control+']').removeClass('btn-outline-secondary');
     $('.train-box.box'+box+' .train-info-box .control .btn-toggle[value='+this.train[box].t.control+']').addClass('btn-secondary');
   },
 
   set_dir: function(box, dir){
+    if(this.train[box] == undefined){
+      return;
+    }
+
     if(dir == "F"){
       this.train[box].t.dir = 1;
     }else{
@@ -297,6 +321,11 @@ var Train_Control = {
   apply_dir: function(box){
     $('.train-box.box'+box+' .train-dir-box .btn-toggle').removeClass('btn-secondary');
     $('.train-box.box'+box+' .train-dir-box .btn-toggle').addClass('btn-outline-secondary');
+
+    if(this.train[box] == undefined){
+      return;
+    }
+
     if(this.train[box].t.dir == 0){
       $('.train-box.box'+box+' .train-dir-box .btn-toggle[value=R]').removeClass('btn-outline-secondary');
       $('.train-box.box'+box+' .train-dir-box .btn-toggle[value=R]').addClass('btn-secondary');
@@ -308,6 +337,10 @@ var Train_Control = {
   set_stop: function(box){
     this.set_handle(box, 0);
     this.set_speed(box, 0);
+
+    if(this.train[box] == undefined){
+      return;
+    }
 
     websocket.cts_TrainSpeed({type: this.train[box].type, train: this.train[box].t});
   },

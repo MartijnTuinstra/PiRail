@@ -4,6 +4,30 @@
 #include "rollingstock/traindetection.h"
 #include "rollingstock/train.h"
 
+void initializeTrainDetectables(Train * T, Block * start, int16_t length){
+  uint8_t DetectableCounter = 0;
+  Block * tB = start; 
+
+  while(length > 0 || tB->train == T){
+    auto TD = T->Detectables[DetectableCounter++];
+
+    TD->initialize(&tB, &length);
+
+    if(!tB)
+      break;
+
+    while(length > 0 && !tB->detectionBlocked){
+      tB = tB->Next_Block(T->dir ? NEXT : PREV, 1);
+
+      if(!tB)
+        break;
+    }
+
+    if(!tB)
+      break;
+  }
+}
+
 TrainDetectable::TrainDetectable(Train * _train, uint16_t _length , uint16_t _blockedLength){
   T = _train;
 
@@ -29,6 +53,10 @@ void TrainDetectable::initialize(Block ** Front, int16_t * remainingLength){
     if(tB->train == T && tB->detectionBlocked){
       tB->expectedTrain = T;
       BlockedLength += tB->length;;
+      loggerf(WARNING, "setting expectedTrain %2i:%2i", tB->module, tB->id);
+    }
+    else{
+      loggerf(WARNING, "                      %2i:%2i  %c  %c", tB->module, tB->id, tB->train == T ? 'T' : ' ', tB->detectionBlocked ? 'B' : ' ');
     }
 
     loggerf(WARNING, "initializing trainDetectable %2i:%2i / %i / %i", tB->module, tB->id, *remainingLength, remainingVirtualLength);
@@ -57,7 +85,7 @@ void TrainDetectable::stepForward(Block * tB){
   if(_B->Alg.N->group[3] > 0 && _B->Alg.N->B[0] == tB){
     // FIXME
     if(T->Detectables[0] == this)
-      T->moveFrontForward(tB);
+      T->moveForward(tB);
 
     BlockedLength += tB->length;
     B.insert(B.begin(), tB);
@@ -70,7 +98,7 @@ void TrainDetectable::stepForward(Block * tB){
     expectedSet = false;
     setExpectedTrain();
 
-    T->moveForward(tB);
+    T->move(tB);
   }
   else
     loggerf(ERROR, "Something went wrong here!!!!");

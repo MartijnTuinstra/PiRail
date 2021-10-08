@@ -539,7 +539,8 @@ bool Polarity_Checker(struct blockAlgorithm * ABs, int debug){
 
     if(!prevBlock->checkPolarity(tB)){
       loggerf(WARNING, "POLARITY FLIP NEEDED %02i:%02i", tB->module, tB->id);
-      PolaritySolver::solve(T, prevBlock->path, tB->path);
+      if(PolaritySolver::solve(T, prevBlock->path, tB->path))
+        return true;
     }
 
   //   RailLink * link = tB->NextLink(dir);
@@ -744,7 +745,7 @@ bool train_following(struct blockAlgorithm * ABs, int debug){
       else{ // Release the block
         Train * T = B->train;
         
-        T->moveForwardFree(B);
+        T->move(B);
 
         if(B->path){
           if(T->assigned && B->path->Exit == B){
@@ -762,7 +763,7 @@ bool train_following(struct blockAlgorithm * ABs, int debug){
       }
     }
     else if(!B->detectionBlocked && B->expectedTrain == 0 && B->train->assigned){
-      B->train->moveForwardFree(B);
+      B->train->move(B);
     }
   }
 
@@ -806,6 +807,7 @@ bool train_following(struct blockAlgorithm * ABs, int debug){
       loggerf(WARNING, "Copy expectedTrain");
 
       B->train = B->expectedTrain;
+      B->train->move(B);
       B->train->moveForward(B);
 
       // If it is the front of the train
@@ -834,7 +836,7 @@ bool train_following(struct blockAlgorithm * ABs, int debug){
       else{
         T->dir = 0;
 
-        T->initMoveForward(B);
+        T->initMove(B);
 
         return true;
       }
@@ -849,13 +851,13 @@ bool train_following(struct blockAlgorithm * ABs, int debug){
       Train * T = BN[0]->train;
 
       // FIXME
-      // if(T->initialized){
-      //   T->moved(B);
-      //   if(B->path)
-      //     B->path->analyzeTrains();
-      //   return true;
-      // }
-      if(T->stopped){
+      if(T->initialized){
+        T->move(B);
+        if(B->path)
+          B->path->analyzeTrains();
+        return true;
+      }
+      else if(T->stopped){
         T->setBlock(B);
         
         if(B->path){
@@ -866,7 +868,7 @@ bool train_following(struct blockAlgorithm * ABs, int debug){
       else{
         T->dir = 1;
 
-        T->initMoveForward(B);
+        T->initMove(B);
         
         if(B->path)
           B->path->analyzeTrains();

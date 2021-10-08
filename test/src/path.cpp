@@ -59,6 +59,7 @@ TEST_CASE_METHOD(TestsFixture, "Path Construction", "[PATH][PATH-1]" ) {
   // V
   //  1.17-> -1.18-> <-1.19- <-1.20-
   //  1.42-> -1.43-> -<1.44>> -<1.45>> <-1.46- <-1.47-
+  //  1.50->|-<1.51>>|-<1.52>>|<-1.53--
   //
   // VI
   //  1.37-> 1.21-> <-\
@@ -194,6 +195,24 @@ TEST_CASE_METHOD(TestsFixture, "Path Construction", "[PATH][PATH-1]" ) {
     CHECK(P[2]->Exit     == U->B[45]);
     CHECK(P[4]->Entrance == U->B[47]);
     CHECK(P[4]->Exit     == U->B[46]);
+
+    // Blocks with polarity switch, but different IO
+    P[0] = U->B[50]->path;
+    P[1] = U->B[51]->path;
+    P[2] = U->B[52]->path;
+    P[3] = U->B[53]->path;
+    CHECK(P[0] != P[1]);
+    CHECK(P[1] != P[2]);
+    CHECK(P[2] != P[3]);
+
+    CHECK(P[0]->Entrance == U->B[50]);
+    CHECK(P[0]->Exit     == U->B[50]);
+    CHECK(P[1]->Entrance == U->B[51]);
+    CHECK(P[1]->Exit     == U->B[51]);
+    CHECK(P[2]->Entrance == U->B[52]);
+    CHECK(P[2]->Exit     == U->B[52]);
+    CHECK(P[3]->Entrance == U->B[53]);
+    CHECK(P[3]->Exit     == U->B[53]);
   }
 
   SECTION("VI - Blocks with direction change"){
@@ -456,4 +475,190 @@ TEST_CASE_METHOD(TestsFixture, "Path Reserve", "[PATH][PATH-3]") {
     for(uint8_t i = 6; i < 11; i++)
       CHECK(U->B[i]->reserved);
   }
+}
+
+TEST_CASE_METHOD(TestsFixture, "Path & Trains", "[PATH][PATH-4]"){
+  loggerf(CRITICAL, "PATH-4 TEST");
+  char filenames[1][30] = {"./testconfigs/PATH-4.bin"};
+  loadSwitchboard(filenames, 1);
+  loadStock();
+
+  /*
+  //
+  // I
+  //
+  //    --1.0-> --1.1-> --1.2-> -<1.3>> -<1.4>> -<1.5>> --1.6-> --1.7-> --1.8->
+  //
+  //
+  //
+  //
+  */
+  
+  Unit * U = switchboard::Units(1);
+  REQUIRE(U);
+
+  U->on_layout = true;
+
+  switchboard::SwManager->LinkAndMap();
+  pathlist_find();
+
+  REQUIRE(U->B[0]->path != U->B[3]->path);
+  REQUIRE(U->B[0]->path != U->B[6]->path);
+
+  REQUIRE(U->B[3]->path != U->B[6]->path);
+
+  for(uint8_t i = 0; i < 9; i++){
+    Algorithm::process(U->B[i], _FORCE);
+  }
+
+  logger.setlevel_stdout(TRACE);
+
+  SECTION("I - Not linked"){
+    U->B[1]->setDetection(1);
+    Algorithm::processBlock(&U->B[1]->Alg, _FORCE);
+
+    Train * T = U->B[1]->train;
+
+    REQUIRE(U->B[1]->path->trains.size() == 1);
+    CHECK(U->B[1]->path->trains[0] == U->B[1]->train);
+    REQUIRE(T->paths.size() == 1);
+    CHECK(T->paths[0] == U->B[1]->path);
+
+    U->B[2]->setDetection(1);
+    Algorithm::processBlock(&U->B[2]->Alg, _FORCE);
+    
+    U->B[1]->setDetection(0);
+    Algorithm::processBlock(&U->B[1]->Alg, _FORCE);
+
+    REQUIRE(U->B[2]->path->trains.size() == 1);
+    CHECK(U->B[2]->path->trains[0] == U->B[2]->train);
+    REQUIRE(T->paths.size() == 1);
+    CHECK(T->paths[0] == U->B[1]->path);
+
+    U->B[3]->setDetection(1);
+    Algorithm::processBlock(&U->B[3]->Alg, _FORCE);
+
+    REQUIRE(U->B[3]->path->trains.size() == 1);
+    CHECK(U->B[3]->path->trains[0] == U->B[3]->train);
+    REQUIRE(T->paths.size() == 2);
+    CHECK(T->paths[1] == U->B[3]->path);
+    
+    U->B[2]->setDetection(0);
+    Algorithm::processBlock(&U->B[2]->Alg, _FORCE);
+
+    CHECK(U->B[2]->path->trains.size() == 0);
+    REQUIRE(T->paths.size() == 1);
+    CHECK(T->paths[0] == U->B[3]->path);
+
+    U->B[4]->setDetection(1);
+    Algorithm::processBlock(&U->B[4]->Alg, _FORCE);
+    U->B[3]->setDetection(0);
+    Algorithm::processBlock(&U->B[3]->Alg, _FORCE);
+
+    U->B[5]->setDetection(1);
+    Algorithm::processBlock(&U->B[5]->Alg, _FORCE);
+    U->B[4]->setDetection(0);
+    Algorithm::processBlock(&U->B[4]->Alg, _FORCE);
+    
+    REQUIRE(U->B[3]->path->trains.size() == 1);
+    CHECK(U->B[3]->path->trains[0] == U->B[5]->train);
+
+    // Second Train
+    U->B[2]->setDetection(1);
+    Algorithm::processBlock(&U->B[2]->Alg, _FORCE);
+
+    REQUIRE(U->B[2]->train);
+    REQUIRE(U->B[2]->train != U->B[3]->train);
+    REQUIRE(U->B[2]->path->trains.size() == 1);
+    CHECK(U->B[2]->path->trains[0] == U->B[2]->train);
+    
+    U->B[3]->setDetection(1);
+    Algorithm::processBlock(&U->B[3]->Alg, _FORCE);
+
+    REQUIRE(U->B[3]->path->trains.size() == 2);
+    CHECK(U->B[3]->path->trains[0] == U->B[3]->train);
+
+    U->B[2]->setDetection(0);
+    Algorithm::processBlock(&U->B[2]->Alg, _FORCE);
+    
+    CHECK(U->B[2]->path->trains.size() == 0);
+  }
+
+  
+  SECTION("II - linked and with speed"){
+    U->B[1]->setDetection(1);
+    Algorithm::processBlock(&U->B[1]->Alg, _FORCE);
+
+    REQUIRE(U->B[1]->train);
+
+    U->B[1]->train->link(0, TRAIN_ENGINE_TYPE);
+    U->B[1]->train->setSpeed(10);
+
+    REQUIRE(U->B[1]->path->trains.size() == 1);
+    CHECK(U->B[1]->path->trains[0] == U->B[1]->train);
+
+    U->B[2]->setDetection(1);
+    Algorithm::processBlock(&U->B[2]->Alg, _FORCE);
+    
+    U->B[1]->setDetection(0);
+    Algorithm::processBlock(&U->B[1]->Alg, _FORCE);
+
+    REQUIRE(U->B[2]->path->trains.size() == 1);
+    CHECK(U->B[2]->path->trains[0] == U->B[2]->train);
+
+    U->B[3]->setDetection(1);
+    Algorithm::processBlock(&U->B[3]->Alg, _FORCE);
+
+    REQUIRE(U->B[3]->path->trains.size() == 1);
+    CHECK(U->B[3]->path->trains[0] == U->B[3]->train);
+    
+    U->B[2]->setDetection(0);
+    Algorithm::processBlock(&U->B[2]->Alg, _FORCE);
+
+    CHECK(U->B[2]->path->trains.size() == 0);
+
+    U->B[4]->setDetection(1);
+    Algorithm::processBlock(&U->B[4]->Alg, _FORCE);
+    U->B[3]->setDetection(0);
+    Algorithm::processBlock(&U->B[3]->Alg, _FORCE);
+
+    U->B[5]->setDetection(1);
+    Algorithm::processBlock(&U->B[5]->Alg, _FORCE);
+    U->B[4]->setDetection(0);
+    Algorithm::processBlock(&U->B[4]->Alg, _FORCE);
+    
+    REQUIRE(U->B[3]->path->trains.size() == 1);
+    CHECK(U->B[3]->path->trains[0] == U->B[5]->train);
+
+    // Second Train
+    U->B[1]->setDetection(1);
+    Algorithm::processBlock(&U->B[1]->Alg, _FORCE);
+
+    REQUIRE(U->B[1]->train);
+    
+    U->B[1]->train->link(1, TRAIN_ENGINE_TYPE);
+    U->B[1]->train->setSpeed(10);
+
+    U->B[2]->setDetection(1);
+    Algorithm::processBlock(&U->B[2]->Alg, _FORCE);
+    U->B[1]->setDetection(0);
+    Algorithm::processBlock(&U->B[1]->Alg, _FORCE);
+    
+    REQUIRE(U->B[2]->train != U->B[3]->train);
+    REQUIRE(U->B[2]->path->trains.size() == 1);
+    CHECK(U->B[2]->path->trains[0] == U->B[2]->train);
+    
+    U->B[3]->setDetection(1);
+    Algorithm::processBlock(&U->B[3]->Alg, _FORCE);
+
+    REQUIRE(U->B[3]->path->trains.size() == 2);
+    CHECK(U->B[3]->path->trains[0] == U->B[5]->train);
+    CHECK(U->B[3]->path->trains[1] == U->B[3]->train);
+
+    U->B[2]->setDetection(0);
+    Algorithm::processBlock(&U->B[2]->Alg, _FORCE);
+    
+    CHECK(U->B[2]->path->trains.size() == 0);
+  }
+
 }

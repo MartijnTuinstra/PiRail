@@ -36,6 +36,9 @@ uint8_t read(uint8_t pin);
 // 	IO_Output
 // };
 
+#define HOLDDELAY      8
+#define REPRESSDELAY   16
+
 enum e_IO_type {
   IO_Undefined,
   IO_Output,
@@ -277,11 +280,15 @@ class IO {
 		void unset_mask(uint8_t pin, uint8_t * mask);
 
 		void readInput();
+		void readInput(uint8_t *);
+		void copyInput(uint8_t *);
 		void copyInput();
 		#ifdef IO_SPI
 		void writeOutput();
 		void readwrite();
 		#endif
+
+		uint8_t debounce(uint8_t *, uint8_t *);
 
 		uint16_t calculateTimer(uint16_t mseconds);
 
@@ -306,6 +313,13 @@ class IO {
 		uint8_t readData[MAX_PORTS];
 		uint8_t oldreadData[MAX_PORTS];
 		uint8_t readMask[MAX_PORTS];
+
+  		uint8_t DebouncedData[MAX_PORTS];
+
+		uint8_t holdState;
+		uint8_t repressState;
+		uint8_t HoldStates[MAX_PORTS][HOLDDELAY];
+		uint8_t RepressStates[MAX_PORTS][REPRESSDELAY];
 
 	// private:
 		uint8_t blink1Mask[MAX_PORTS];

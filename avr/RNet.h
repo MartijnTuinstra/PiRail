@@ -3,7 +3,7 @@
 
 #include "circularbuffer.h"
 
-#define RNET_BROADCAST_MODULE 0xFF
+// #define RNET_BROADCAST_MODULE 0xFF
 // #define RNET_MASTER 0x0
 
 #define RNET_MAX_BUFFER 128

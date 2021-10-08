@@ -14,5 +14,6 @@ class BlockLink;
 
 class Path;
 
+typedef struct algor_blocks Algor_Blocks;
 
 #endif

@@ -184,13 +184,15 @@ void Path::find(RailLink ** linkPtr, Block ** ptr_side, uint8_t SearchDir){
       if(!((B->type == STATION && side->type == STATION && side->station == B->station) || (B->type != STATION && side->type != STATION)))
         break;
 
-      // loggerf(INFO, "Block has a polarity type %i", B->polarity_type);
+      loggerf(INFO, "Block has a polarity type %i", B->polarity_type);
       if(B->polarity_type == BLOCK_FL_POLARITY_LINKED_BLOCK){
-        // loggerf(INFO, "Block has a linked block %x == %x", B->polarity_link, Blocks[0]);
+        loggerf(INFO, "Block has a linked block %x == %x", B->polarity_link, Blocks[0]);
         if(B->polarity_link != Blocks[0])
           break;
       }
-      
+      else if(polarity_type >= BLOCK_FL_POLARITY_NO_IO && B->polarity_type == polarity_type){
+        break;
+      }
       else if(B->polarity_type != polarity_type){
         if(!B->path) new Path(B);
         break;
@@ -375,6 +377,8 @@ bool Path::polarityFlippable(){
     else if(prev->type >= RAIL_LINK_MA || prev->type == RAIL_LINK_MB_inside)
       B = prev->p.MSSw->Detection;
 
+    loggerf(WARNING, "polFlip? %02i:%02i, %02i:%02i", Entrance->module, Entrance->id, B->module, B->id);
+
     if(B && B->blocked && Entrance->train == B->train){
       return 0;
     }
@@ -388,6 +392,8 @@ bool Path::polarityFlippable(){
       B = next->p.Sw->Detection;
     else if(next->type >= RAIL_LINK_MA || next->type == RAIL_LINK_MB_inside)
       B = next->p.MSSw->Detection;
+
+    loggerf(WARNING, "polFlip? %02i:%02i, %02i:%02i", Exit->module, Exit->id, B->module, B->id);
 
     if(B && B->blocked && Entrance->train == B->train){
       return 0;

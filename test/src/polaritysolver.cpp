@@ -46,13 +46,16 @@ TEST_CASE_METHOD(TestsFixture, "Polarity Solver", "[PolSolve][PS-1]"){
 
   /*
   // I
-  // --1.0-> --1.1-> <<1.2>- <<1.3>- <-1.11-- <-1.12--
+  // --1.0-> --1.1->|<<1.2>- <<1.3>-|<-1.4-- <-1.5--
   //
   // II
-  //                   Sw0/-  <<1.7>- <<1.08>-
-  // --1.4-> --1.5-> -<1.6>> -<1.9>> -<1.10>>
+  // --1.6-> --1.7->|<<1.8>- <<1.9>-|<<1.10>- <<1.11>-|<-1.12-- <-1.13--
   //
-  // III - IV
+  // III
+  //                      Sw0/-  <<1.17>- <<1.18>-
+  // --1.14-> --1.15-> -<1.16>> -<1.19>> -<1.20>>
+  //
+  // IV
   //                       |---St0---|
   //              Sw2/---> 1.11> 1.12>
   // 1.08> 1.09> 1.10----> 1.13> 1.14>
@@ -90,6 +93,9 @@ TEST_CASE_METHOD(TestsFixture, "Polarity Solver", "[PolSolve][PS-1]"){
     Algorithm::BlockTick();
 
   SECTION("I - Side 1"){
+    // Polarity changes ahead (from B1 to B2)
+    //  polarity of B2/B3 can be changed.
+
     U->B[0]->setDetection(1);
     Algorithm::process(U->B[0], _FORCE);
 
@@ -97,8 +103,10 @@ TEST_CASE_METHOD(TestsFixture, "Polarity Solver", "[PolSolve][PS-1]"){
     REQUIRE(T != nullptr);
     REQUIRE(T == RSManager->getTrain(0));
 
-    // Force PolaritySolver, since train is stopped
-    PolaritySolver::solve(T, U->B[2]->path, U->B[1]->path);
+    T->setSpeed(100);
+    T->B = U->B[0];
+
+    Algorithm::Polarity_Checker(&T->B->Alg, 0);
 
     CHECK(U->B[2]->path->polarity  == POLARITY_REVERSED);
     CHECK(U->B[2]->polarity_status == POLARITY_REVERSED);
@@ -106,15 +114,20 @@ TEST_CASE_METHOD(TestsFixture, "Polarity Solver", "[PolSolve][PS-1]"){
   }
   
   SECTION("I - Side 2"){
+    // Polarity changes ahead (from B2 to B1)
+    //  polarity of B1/B0 cannot be changed therefore B2/B3 must be changed.
+
     U->B[3]->setDetection(1);
     Algorithm::process(U->B[3], _FORCE);
 
     auto T = U->B[3]->train;
     REQUIRE(T != nullptr);
     REQUIRE(T == RSManager->getTrain(0));
+    
+    T->setSpeed(100);
+    T->B = U->B[3];
 
-    // Force PolaritySolver, since train is stopped
-    PolaritySolver::solve(T, U->B[2]->path, U->B[1]->path);
+    Algorithm::Polarity_Checker(&T->B->Alg, 0);
 
     CHECK(U->B[2]->path->polarity  == POLARITY_REVERSED);
     CHECK(U->B[2]->polarity_status == POLARITY_REVERSED);
@@ -123,29 +136,35 @@ TEST_CASE_METHOD(TestsFixture, "Polarity Solver", "[PolSolve][PS-1]"){
   }
   
   SECTION("II - Blocked polairity"){
-    logger.setlevel_stdout(TRACE);
-    U->B[11]->setDetection(1);
-    Algorithm::process(U->B[11], _FORCE);
+    // Polarity changes ahead (from B2 to B1)
+    //  polarity of B1/B0 cannot be changed therefore B2/B3 must be changed,
+    //  this can only happen when B4/B5 is cleared.
 
-    auto T = U->B[11]->train;
+
+    // logger.setlevel_stdout(TRACE);
+    U->B[4]->setDetection(1);
+    Algorithm::process(U->B[4], _FORCE);
+
+    auto T = U->B[4]->train;
     REQUIRE(T != nullptr);
     REQUIRE(T == RSManager->getTrain(0));
 
     U->B[3]->setDetection(1);
     Algorithm::process(U->B[3], _FORCE);
 
-    // Force PolaritySolver, since train is stopped
-    PolaritySolver::solve(T, U->B[2]->path, U->B[1]->path);
+    T->setSpeed(100);
+    T->B = U->B[3];
+
+    Algorithm::Polarity_Checker(&T->B->Alg, 0);
 
     CHECK(U->B[2]->path->polarity  == POLARITY_NORMAL);
     CHECK(U->B[2]->polarity_status == POLARITY_NORMAL);
     CHECK(U->B[3]->polarity_status == POLARITY_NORMAL);
 
-    U->B[11]->setDetection(0);
-    Algorithm::process(U->B[11], _FORCE);
+    U->B[4]->setDetection(0);
+    Algorithm::process(U->B[4], _FORCE);
 
-    // Force PolaritySolver, since train is stopped
-    PolaritySolver::solve(T, U->B[2]->path, U->B[1]->path);
+    Algorithm::Polarity_Checker(&T->B->Alg, 0);
 
     CHECK(U->B[2]->path->polarity  == POLARITY_REVERSED);
     CHECK(U->B[2]->polarity_status == POLARITY_REVERSED);
@@ -154,33 +173,113 @@ TEST_CASE_METHOD(TestsFixture, "Polarity Solver", "[PolSolve][PS-1]"){
   }
 
   SECTION("III - Blocked polairity"){
+    // --1.6-> --1.7->|<<1.8>- <<1.9>-|<<1.10>- <<1.11>-|<-1.12-- <-1.13--
     logger.setlevel_stdout(TRACE);
-    U->B[11]->setDetection(1);
-    Algorithm::process(U->B[11], _FORCE);
+    U->B[7]->setDetection(1);
+    Algorithm::process(U->B[7], _FORCE);
 
-    auto T = U->B[11]->train;
+    auto T = U->B[7]->train;
     REQUIRE(T != nullptr);
     REQUIRE(T == RSManager->getTrain(0));
 
-    U->B[3]->setDetection(1);
-    Algorithm::process(U->B[3], _FORCE);
+    REQUIRE(U->B[8]->path != U->B[10]->path);
 
-    // Force PolaritySolver, since train is stopped
-    PolaritySolver::solve(T, U->B[2]->path, U->B[1]->path);
+    T->setSpeed(100);
+    T->B = U->B[7];
 
-    CHECK(U->B[2]->path->polarity  == POLARITY_NORMAL);
-    CHECK(U->B[2]->polarity_status == POLARITY_NORMAL);
-    CHECK(U->B[3]->polarity_status == POLARITY_NORMAL);
+    Algorithm::Polarity_Checker(&T->B->Alg, 0);
+    T->setSpeed(0);
 
-    U->B[11]->setDetection(0);
-    Algorithm::process(U->B[11], _FORCE);
+    CHECK(U->B[ 8]->path->polarity  == POLARITY_REVERSED);
+    CHECK(U->B[10]->path->polarity  == POLARITY_NORMAL);
 
-    // Force PolaritySolver, since train is stopped
-    PolaritySolver::solve(T, U->B[2]->path, U->B[1]->path);
+    U->B[8]->reverse();
+    U->B[8]->setDetection(1);
+    Algorithm::process(U->B[8], _FORCE);
+    T->B = U->B[8];
+    T->setSpeed(100);
 
-    CHECK(U->B[2]->path->polarity  == POLARITY_REVERSED);
-    CHECK(U->B[2]->polarity_status == POLARITY_REVERSED);
-    CHECK(U->B[3]->polarity_status == POLARITY_REVERSED);
+    Algorithm::Polarity_Checker(&T->B->Alg, 0);
+
+    CHECK(U->B[ 8]->path->polarity  == POLARITY_REVERSED);
+    CHECK(U->B[10]->path->polarity  == POLARITY_REVERSED);
+
+    T->setSpeed(0);
+
+    U->B[10]->reverse();
+    U->B[7]->setDetection(0);
+    Algorithm::process(U->B[7], _FORCE);
+    U->B[9]->setDetection(1);
+    Algorithm::process(U->B[9], _FORCE);
+    U->B[8]->setDetection(0);
+    Algorithm::process(U->B[8], _FORCE);
+    U->B[10]->setDetection(1);
+    Algorithm::process(U->B[10], _FORCE);
+    U->B[9]->setDetection(0);
+    Algorithm::process(U->B[9], _FORCE);
+    T->B = U->B[10];
+    T->setSpeed(100);
+
+    Algorithm::Polarity_Checker(&T->B->Alg, 0);
+
+    CHECK(U->B[ 8]->path->polarity  == POLARITY_REVERSED);
+    CHECK(U->B[10]->path->polarity  == POLARITY_NORMAL);
+
+  }
+
+  SECTION("IV - Blocked polairity"){
+    // --1.6-> --1.7->|<<1.8>- <<1.9>-|<<1.10>- <<1.11>-|<-1.12-- <-1.13--
+    logger.setlevel_stdout(TRACE);
+    U->B[7]->setDetection(1);
+    Algorithm::process(U->B[7], _FORCE);
+
+    auto T = U->B[7]->train;
+    REQUIRE(T != nullptr);
+    REQUIRE(T == RSManager->getTrain(0));
+
+    REQUIRE(U->B[8]->path != U->B[10]->path);
+
+    T->setSpeed(100);
+    T->B = U->B[7];
+
+    Algorithm::Polarity_Checker(&T->B->Alg, 0);
+    T->setSpeed(0);
+
+    CHECK(U->B[ 8]->path->polarity  == POLARITY_REVERSED);
+    CHECK(U->B[10]->path->polarity  == POLARITY_NORMAL);
+
+    U->B[8]->reverse();
+    U->B[8]->setDetection(1);
+    Algorithm::process(U->B[8], _FORCE);
+    T->B = U->B[8];
+    T->setSpeed(100);
+
+    Algorithm::Polarity_Checker(&T->B->Alg, 0);
+
+    CHECK(U->B[ 8]->path->polarity  == POLARITY_REVERSED);
+    CHECK(U->B[10]->path->polarity  == POLARITY_REVERSED);
+
+    T->setSpeed(0);
+
+    U->B[10]->reverse();
+    U->B[9]->setDetection(1);
+    Algorithm::process(U->B[9], _FORCE);
+    U->B[7]->setDetection(0);
+    Algorithm::process(U->B[7], _FORCE);
+    U->B[10]->setDetection(1);
+    Algorithm::process(U->B[10], _FORCE);
+    U->B[8]->setDetection(0);
+    Algorithm::process(U->B[8], _FORCE);
+    T->B = U->B[10];
+    T->setSpeed(100);
+
+    CHECK(U->B[ 9]->blocked);
+    CHECK(U->B[10]->blocked);
+
+    Algorithm::Polarity_Checker(&T->B->Alg, 0);
+
+    CHECK(U->B[ 8]->path->polarity  == POLARITY_NORMAL);
+    CHECK(U->B[10]->path->polarity  == POLARITY_NORMAL);
 
   }
 }

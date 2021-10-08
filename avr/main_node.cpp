@@ -32,7 +32,7 @@ FUSES = {0xC2, 0x99, 0xFF};
 uint8_t test = 4;
 
 #include "uart.h"
-
+#include "RNet_messages.h"
 
 void flash_number(uint8_t number){
   for(int i = 0; i < number; i++){
@@ -145,7 +145,7 @@ int main(){
   uint8_t checkcounter = 0;
 
   while(1){
-    while(net.state == IDLE && net.available()){
+    while( net.available() ){
       net.read();
     }
 
@@ -157,71 +157,20 @@ int main(){
 
     checkcounter++;
 
-    if(checkcounter > 10){
+    if(checkcounter > 100){
       checkcounter = 0;
 
-    //continue;
-      #ifndef IO_SPI
-      io.copyInput();
-      io.readInput();
-      #endif
+      uint8_t data[MAX_PORTS];
+
+      io.readInput(data);
 
       uint8_t diff = 0;
 
-      for(int i = 0; i < MAX_PORTS; i++){
-        if(io.oldreadData[i] ^ io.readData[i]){
-          diff = 1;
-          break;
-        }
-      }
+      diff = io.debounce(data, io.DebouncedData);
 
       if(diff){
-        uart.transmit("IO change: ", 11);
-        uart.transmit(RNet_OPC_ReadInput, HEX,2);
-        uart.transmit(net.node_id, HEX, 2);
-        uart.transmit(MAX_PORTS, HEX, 2);
-        net.tx.write(RNet_OPC_ReadInput);
-        net.tx.write(net.node_id);
-
-        uint8_t checksum = RNET_CHECKSUM_SEED ^ RNet_OPC_ReadInput ^ net.node_id;
-
-        #ifdef IO_SPI
-        net.tx.write(MAX_PORTS);
-        checksum ^= MAX_PORTS;
-        #else
-        net.tx.write((MAX_PINS + 7)/8);
-        checksum ^= (MAX_PINS + 7)/8;
-        #endif
-
-        #ifdef IO_SPI
-
-        for(uint8_t i = 0; i < MAX_PORTS; i++){
-          uart.transmit(io.readData[i], HEX, 2);
-          net.tx.write(io.readData[i]);
-          checksum ^= io.readData[i];
-        }
-
-        #else  // not IO_SPI
-
-        for(uint8_t i = 0; i < ((MAX_PINS + 7) / 8); i++){
-          uart.transmit(io.readData[i], HEX, 2);
-          net.tx.write(io.readData[i]);
-          checksum ^= io.readData[i];
-        }
-
-        #endif // not IO_SPI
-
-        uart.transmit(checksum, HEX, 2);
-        net.tx.write(checksum);
-        net.txdata++;
-        uart.transmit('\n');
-        uart.transmit('\r');
+        NotifyInputChange(io.DebouncedData);
       }
-
-
-      #ifdef IO_SPI
-      io.copyInput();
-      #endif
     }
   }
 

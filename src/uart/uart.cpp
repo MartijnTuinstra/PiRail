@@ -76,7 +76,7 @@ int UART::init(){
 
   resetDevice();
 
-  // Wait for bridge to initialize.
+  // Wait for the bridge to initialize
   usleep(500000);
 
   updateState(Module_Run);
@@ -85,7 +85,7 @@ int UART::init(){
 }
 
 void UART::close(){
-  // Notify all connected nodes before disconnecting
+  // Notify all connected clients before disconnecting
   COM_DisconnectNotify();
 
   //----- CLOSE THE UART -----
@@ -121,7 +121,7 @@ void UART::resetDevice(){
   // Discard any data
   tcflush(fd,TCIOFLUSH);
 
-  // Disable reset
+  // Release reset
   ioctl(fd,TIOCMBIC,&DTS_FLAG);
   usleep(100000);
 }
@@ -213,14 +213,20 @@ uint8_t COM_Packet_Length(CircularBuffer * buf){
 }
 
 void UART::parse(){
-  uint8_t length = COM_Packet_Length(&buffer);
+  while(1){
+    uint8_t length = COM_Packet_Length(&buffer);
 
-  if(length == UART_Msg_NotComplete)
-    return;
+    if(length == UART_Msg_NotComplete)
+      return;
 
-  if(length > buffer.size())
-    return;
+    if(length > buffer.size())
+      return;
 
+    parsePacket(length);
+  }
+}
+
+void UART::parsePacket(uint8_t length){
   uint8_t data[128];
 
   //Check Checksum

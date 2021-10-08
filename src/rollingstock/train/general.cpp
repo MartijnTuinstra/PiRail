@@ -180,24 +180,17 @@ void Train::initVirtualBlocks(){
   }
 }
 
-void Train::setVirtualBlocks(){
-  
-  algor_blocks * blockGroup;
-  if(!dir)
-    blockGroup = B->Alg.P;
-  else{
-    auto * Det = Detectables[Detectables.size() - 1];
-    blockGroup = Det->B[0]->Alg.N;
-  }
+uint8_t Train::setVirtualBlocks(algor_blocks * blockGroup, uint16_t length){
+  // FIXME, more than 10 blocks away of the start block cannot work
   Block * tB = blockGroup->B[0];
 
-  loggerf(INFO, "setVirtualBlocks (T: %i, %02i:%02i, %02i:%02i, prev: %i, lenght: %icm)", id, B->module, B->id, tB->module, tB->id, blockGroup->group[3], length/10);
+  loggerf(INFO, "setVirtualBlocks (%02i:%02i, prev: %i, lenght: %icm)", B->module, B->id, blockGroup->group[3], length/10);
 
-  if(!directionKnown)
-    return;
-
-  uint8_t offset = 1;
-  int16_t len = length / 10;
+  if(!length)
+    return 0;
+  
+  uint8_t offset = 0;
+  int16_t len = length / 10; // blockGroup->B[0]->length + 
   while(len > 0){
     len -= tB->length;
 
@@ -210,16 +203,33 @@ void Train::setVirtualBlocks(){
 
     loggerf(INFO, "  block %2i:%2i   %i  %i  %i", tB->module, tB->id, blockGroup->group[3], offset, len);
 
-    if(blockGroup->group[3] > offset){
-      tB = blockGroup->B[offset++];
+    if(blockGroup->group[3] > (offset + 1)){
+      tB = blockGroup->B[++offset];
     }
     else
       break;
   }
 
+  return offset;
+}
+
+uint8_t Train::releaseVirtualBlocks(Algor_Blocks * blockGroup, uint8_t offset){
+  // FIXME, more than 10 blocks away of the start block cannot work
+  Block * tB = blockGroup->B[offset];
+  loggerf(INFO, "releaseVirtualBlocks (%02i:%02i, prev: %i, lenght: %icm)", tB ? tB->module : 0, tB ? tB->id : 0, blockGroup->group[3], length/10);
+  
   // Blocks must be released in oposite order. Container for storage.
   Block * ReleaseBlocks[10];
   uint8_t BlocksToRelease = 0;
+
+  // Find end of the current detectable block
+  while(blockGroup->group[3] > offset){
+    if(tB->train != this || !tB->detectionBlocked)
+      break;
+
+    if(blockGroup->group[3] > ++offset)
+      tB = blockGroup->B[offset];
+  }
 
   // Find blocks to be released
   while(blockGroup->group[3] > offset){
@@ -232,9 +242,10 @@ void Train::setVirtualBlocks(){
 
     ReleaseBlocks[BlocksToRelease++] = tB;
 
-    if(blockGroup->group[3] > offset)
-      tB = blockGroup->B[offset++];
-    // loggerf(INFO, "f block %2i:%2i", tB->module, tB->id);
+    loggerf(INFO, "f block %2i:%2i", tB->module, tB->id);
+
+    if(blockGroup->group[3] > ++offset)
+      tB = blockGroup->B[offset];
   }
 
   // Release blocks
@@ -248,117 +259,239 @@ void Train::setVirtualBlocks(){
   }
 
   AlQueue.cpytmp();
+
+  return offset;
 }
 
-void Train::initMoveForward(Block * tB){
+void Train::VirtualBlocks(){
+  
+  auto * Det = Detectables[Detectables.size() - 1];
+  Block * End = Det->B[0]; // From the end of the train
+
+  loggerf(INFO, "VirtualBlocks (T: %i, %02i:%02i/%02i:%02i, lenght: %icm/%icm)", id, B->module, B->id, End->module, End->id, virtualLengthBefore/10, virtualLengthAfter/10);
+
+  if(!directionKnown)
+    return;
+
+  uint8_t beforeOffset = setVirtualBlocks(B->Alg.N, virtualLengthBefore);
+  uint8_t afterOffset  = setVirtualBlocks(B->Alg.P, virtualLengthAfter);
+  loggerf(INFO, "done setVirtualBlocks, offsets: %i/%i", beforeOffset, afterOffset);
+
+  loggerf(INFO, " %02i %02i %02i %02i %02i %02i", End->id, End->Alg.P->B[0] ? End->Alg.P->B[0]->id : 0, End->Alg.P->B[1] ? End->Alg.P->B[1]->id : 0, End->Alg.P->B[2] ? End->Alg.P->B[2]->id : 0, End->Alg.P->B[3] ? End->Alg.P->B[3]->id : 0, End->Alg.P->B[4] ? End->Alg.P->B[4]->id : 0);
+
+  releaseVirtualBlocks(End->Alg.P, afterOffset);
+}
+
+void Train::initMove(Block * newBlock){
   // First time a Train moved when not stopped
-  loggerf(INFO, "initMoveForward RT %i to block %02i:%02i (%i)", id, tB->module, tB->id, length);
+  loggerf(INFO, "initMove, RT %i to block %02i:%02i", id, newBlock->module, newBlock->id);
 
   if(initialized){
-    loggerf(ERROR, "allready done initMoveForward");
-
+    move(newBlock);
+    loggerf(ERROR, "allready done initMove, redirecting to move");
     return;
   }
-  directionKnown = 1;
-  initialized = 1;
+
+  newBlock->train = this;
+
+  // The direction of the train is known and therefore it is now fully initialized.
+  directionKnown = true;
+  initialized = true;
 
   SpeedState = TRAIN_SPEED_DRIVING;
 
-  setBlock(tB);
+  uint16_t trainLength = (length/10) + newBlock->length;
 
-  int16_t blockLength = (length/10) + tB->length;
-  Block * listBlock = tB;
+  B = FindFront(this, newBlock, trainLength);
 
-  // Find front of train
-  while(blockLength > 0 && listBlock){
-    blockLength -= listBlock->length;
-
-    if(listBlock->train == this){
-      B = listBlock; // Update front
-    }
-
-    listBlock = listBlock->Next_Block(dir == 1 ? PREV : NEXT, 1);
-  }
-
-  // Fill lists detectables
-  tB = B;
-
-  blockLength = (length/10) + B->length;
-  uint8_t DetectableCounter = 0;
-  while(blockLength > 0 || tB->train == this){
-    auto TD = Detectables[DetectableCounter++];
-
-    TD->initialize(&tB, &blockLength);
-
-    if(!tB)
-      break;
-
-    while(blockLength > 0 && !tB->detectionBlocked){
-      tB = tB->Next_Block(dir ? NEXT : PREV, 1);
-
-      if(!tB)
-        break;
-    }
-
-    if(!tB)
-      break;
-  }
-
+  initializeTrainDetectables(this, B, trainLength);
+  
   // Register and reserve paths
   if(B->path)
     B->path->reserve(this, B);
 
   if(virtualLength)
     initVirtualBlocks();
-}
-
-void Train::moveForwardFree(Block * tB){
-  loggerf(INFO, "MoveForwardFree RT %i from block %2i:%2i", id, tB->module, tB->id);
-
-  if(!virtualLength){
-    releaseBlock(tB);
-    AlQueue.put(this); // Put in traincontrol queue for speed control
-  }
-
-  if(virtualLength){
-    setVirtualBlocks();
-  }
-
-  for(auto TD: Detectables){
-    // Find the detectable that has the block
-    //  then pop it out of the list and reorder
-
-    if(TD->B.size() <= 1)
-      continue;
-
-    if(tB != TD->B[TD->B.size() - 1])
-      continue;
-
-    TD->B.pop_back();
-    TD->BlockedLength -= tB->length;
     
-    TD->setExpectedTrain();
+  move(newBlock);
+}
 
-    break;
+void Train::move(Block * newBlock){
+  loggerf(INFO, "move RT %i from Block %2i:%2i %c", id, newBlock->module, newBlock->id, newBlock->detectionBlocked ? 'B' : ' ');
+
+  // If the block was just released from the detection unit
+  if(!newBlock->detectionBlocked){
+
+    // If the train has no virtual detection, then immediatly release the block
+    if(!virtualLength){
+      releaseBlock(newBlock);
+      AlQueue.put(this);
+    }
+    else{
+      VirtualBlocks();
+    }
+
+    for(auto TD: Detectables){
+      // Find the detectable that has the block
+      //  then pop it out of the list and reorder
+
+      if(TD->B.size() <= 1)
+        continue;
+
+      if(newBlock != TD->B[TD->B.size() - 1])
+        continue;
+
+      TD->B.pop_back();
+      TD->BlockedLength -= newBlock->length;
+      
+      TD->setExpectedTrain();
+
+      break;
+    }
+  }
+  // newBlock->detectionBlocked
+  // If the block was just set from the detection unit
+  else{
+    loggerf(DEBUG, "MoveForward RT %i to block %2i:%2i", id, newBlock->module, newBlock->id);
+    setBlock(newBlock);
+    dereserveBlock(newBlock);
+
+    if(virtualLength)
+      VirtualBlocks();
+
+    AlQueue.put(this);
   }
 }
 
-void Train::moveForward(Block * tB){
-  loggerf(DEBUG, "MoveForward RT %i to block %2i:%2i", id, tB->module, tB->id);
-  setBlock(tB);
-  dereserveBlock(tB);
+Block * FindFront(Train * T, Block * start, uint16_t length){
+  Block * listBlock = start;
+  Block * B = start;
 
-  AlQueue.put(this); // Put in traincontrol queue
+  // Find front of train
+  while(length > 0 && listBlock){
+    length -= listBlock->length;
+
+    if(listBlock->train == T){
+      B = listBlock; // Update front
+    }
+
+    listBlock = listBlock->Next_Block(T->dir == 1 ? PREV : NEXT, 1);
+  }
+
+  loggerf(INFO, "Front of train in block %02i:%02i", B->module, B->id);
+
+  return B;
 }
 
-void Train::moveFrontForward(Block * _B){
-  B = _B;
+// void Train::initMoveForward(Block * tB){
+//   // First time a Train moved when not stopped
+//   loggerf(INFO, "initMoveForward RT %i to block %02i:%02i (%i)", id, tB->module, tB->id, length);
 
-  if(virtualLength)
-    setVirtualBlocks();
+//   if(initialized){
+//     loggerf(ERROR, "allready done initMoveForward");
+
+//     return;
+//   }
+//   directionKnown = 1;
+//   initialized = 1;
+
+//   SpeedState = TRAIN_SPEED_DRIVING;
+
+//   setBlock(tB);
+
+//   int16_t blockLength = (length/10) + tB->length;
+//   Block * listBlock = tB;
+
+//   // Find front of train
+//   while(blockLength > 0 && listBlock){
+//     blockLength -= listBlock->length;
+
+//     if(listBlock->train == this){
+//       B = listBlock; // Update front
+//     }
+
+//     listBlock = listBlock->Next_Block(dir == 1 ? PREV : NEXT, 1);
+//   }
+
+//   // Fill lists detectables
+//   tB = B;
+
+//   blockLength = (length/10) + B->length;
+//   uint8_t DetectableCounter = 0;
+//   while(blockLength > 0 || tB->train == this){
+//     auto TD = Detectables[DetectableCounter++];
+
+//     TD->initialize(&tB, &blockLength);
+
+//     if(!tB)
+//       break;
+
+//     while(blockLength > 0 && !tB->detectionBlocked){
+//       tB = tB->Next_Block(dir ? NEXT : PREV, 1);
+
+//       if(!tB)
+//         break;
+//     }
+
+//     if(!tB)
+//       break;
+//   }
+
+//   // Register and reserve paths
+//   if(B->path)
+//     B->path->reserve(this, B);
+
+//   if(virtualLength)
+//     initVirtualBlocks();
+// }
+
+// void Train::moveForwardFree(Block * tB){
+//   loggerf(INFO, "MoveForwardFree RT %i from block %2i:%2i", id, tB->module, tB->id);
+
+//   if(!virtualLength){
+//     releaseBlock(tB);
+//     AlQueue.put(this); // Put in traincontrol queue for speed control
+//   }
+
+//   if(virtualLength){
+//     VirtualBlocks();
+//   }
+
+//   for(auto TD: Detectables){
+//     // Find the detectable that has the block
+//     //  then pop it out of the list and reorder
+
+//     if(TD->B.size() <= 1)
+//       continue;
+
+//     if(tB != TD->B[TD->B.size() - 1])
+//       continue;
+
+//     TD->B.pop_back();
+//     TD->BlockedLength -= tB->length;
+    
+//     TD->setExpectedTrain();
+
+//     break;
+//   }
+// }
+
+// void Train::moveForward(Block * tB){
+//   loggerf(DEBUG, "MoveForward RT %i to block %2i:%2i", id, tB->module, tB->id);
+//   setBlock(tB);
+//   dereserveBlock(tB);
+
+//   AlQueue.put(this); // Put in traincontrol queue
+// }
+
+void Train::moveForward(Block * newBlock){
+  B = newBlock;
+
+  // if(virtualLength)
+  //   VirtualBlocks();
 
   if(routeStatus){
-    if(_B == route->destinationBlocks[0] || _B == route->destinationBlocks[1]){
+    if(newBlock == route->destinationBlocks[0] || newBlock == route->destinationBlocks[1]){
       if(route->routeType == PATHFINDING_ROUTE_BLOCK)
         routeStatus = TRAIN_ROUTE_AT_DESTINATION;
       else
@@ -382,7 +515,7 @@ void Train::reverse(){
   }
 
   if(SpeedState == TRAIN_SPEED_STOPPING){
-    loggerf(WARNING, "Train reversing but not stopped");
+    loggerf(WARNING, "Train stopping and then reversing");
     SpeedState = TRAIN_SPEED_STOPPING_REVERSE;
     return;
   }
@@ -453,7 +586,11 @@ void Train::reverseBlocks(){
   B = Detectables[0]->B[0];
   dir ^= 1;
 
+  std::swap(virtualLengthBefore, virtualLengthAfter);
+
   setSpeed(0);
+
+  loggerf(WARNING, "Train reversed, front %2i:%2i, dir %i", B->module, B->id, dir);
 }
 
 void Train::Z21_reverse(){
@@ -498,10 +635,6 @@ int Train::link(int tid, char _type){
 
     Detectables.push_back(new TrainDetectable(this, length/10, length/10));
 
-    // Detectables = 1;
-    // DetectedBlocks = (TrainDetectables *)_calloc(Detectables, TrainDetectables);
-    // DetectedBlocks[0].DetectableLength = length / 10;
-
     //Lock engines
     RSManager->subDCCEngine(tid);
     E->use = true;
@@ -520,16 +653,16 @@ int Train::link(int tid, char _type){
     p.T = T;
     MaxSpeed = T->max_speed;
     length = T->length;
-
     name = T->name;
 
-    // Detectables = T->detectables;
-    // DetectedBlocks = (TrainDetectables *)_calloc(Detectables, TrainDetectables);
     bool detectable = true;
     auto Tcomp = T->composition;
     uint16_t detectableBlockedLength = 0, detectableLength = 0;
+    uint16_t * vLength = &virtualLengthBefore;
 
     for(uint8_t i = 0; i < T->nr_stock; i++){
+      // FIXME, trainset with detectable cars, does not work properly
+
       if(!detectable && Tcomp[i].type == TRAIN_ENGINE_TYPE){
         // New detectable
         Detectables.push_back(new TrainDetectable(this, detectableLength/10, detectableBlockedLength/10));
@@ -544,16 +677,21 @@ int Train::link(int tid, char _type){
       if(detectable)
         detectableBlockedLength += ((Engine *)Tcomp[i].p)->length;
 
-      if(Tcomp[i].type == TRAIN_ENGINE_TYPE)
+      if(Tcomp[i].type == TRAIN_ENGINE_TYPE){
+        vLength = &virtualLengthAfter;
         detectableLength += ((Engine *)Tcomp[i].p)->length;
-      else
+        *vLength         += ((Engine *)Tcomp[i].p)->length;
+      }
+      else{
         detectableLength += ((Car *)Tcomp[i].p)->length;
+        *vLength         += ((Car *)Tcomp[i].p)->length;
+      }
     }
 
     Detectables.push_back(new TrainDetectable(this, detectableLength/10, detectableBlockedLength/10));
 
     if(Detectables.size() != T->detectables){
-      loggerf(ERROR, "Failed to assign all detectables");
+      loggerf(ERROR, "Failed to assign all detectables  (%i out of %i)", Detectables.size(), T->detectables);
     }
 
     //Lock all engines
@@ -561,6 +699,8 @@ int Train::link(int tid, char _type){
 
     virtualLength = T->virtualDetection;
   }
+
+  loggerf(INFO, "vLength: Before %i, After %i", virtualLengthBefore, virtualLengthAfter);
 
   assigned = true;
 

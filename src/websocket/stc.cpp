@@ -889,6 +889,30 @@ void WS_stc_reset_switches(Websocket::Client * client){
   }
 }
 
+void WS_stc_Track_Layout_Load(Websocket::Client * client){
+  loggerf(INFO, "WS_stc_Track_Layout_Load");
+  if(!client)
+    return;
+
+  char data[2048] = "";
+
+  data[0] = WSopc_Track_Layout_Load;
+  data[1] = switchboard::SwManager->setups.items;
+
+  uint16_t j = 2;
+  for(uint8_t i = 0; i < data[1]; i++){
+    const char * s = switchboard::SwManager->setups[i]->string;
+
+    loggerf(INFO, "  %2d, %3d: %s", j, strlen(s), s);
+
+    data[j] = strlen(s);
+    strcpy(&data[j+1], s);
+    j += 1 + data[j];
+  }
+
+  client->send(data, j  , WS_Flag_Track);
+}
+
 void WS_stc_Track_LayoutDataOnly(int unit, Websocket::Client * client){
   loggerf(DEBUG, "WS_Track_LayoutDataOnly %i", unit);
 

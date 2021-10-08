@@ -102,7 +102,7 @@ void COM_DisconnectNotify(){
   // uart.send(&p);
 
   struct COM_t Tx;
-  Tx.data[0] = 0xFF; // Broadcast
+  Tx.data[0] = RNET_BROADCAST_ID;
   Tx.data[1] = RNet_OPC_DisconnectNotify;
   Tx.length  = 2;
   uart.send(&Tx);

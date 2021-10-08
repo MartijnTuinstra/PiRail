@@ -83,14 +83,29 @@ TEST_CASE_METHOD(TestsFixture, "IO Output", "[IO][IO-2]"){
 
 
   U->Node[0]->io[22]->setOutput(IO_event_High);
+  U->Node[0]->io[23]->setOutput(IO_event_Pulse);
+  U->Node[0]->io[24]->setOutput(IO_event_Toggle);
 
   REQUIRE(U->Node[0]->io[22]->w_state.value == IO_event_High);
   REQUIRE(U->Node[0]->io[22]->r_state.value != IO_event_High);
+
+  REQUIRE(U->Node[0]->io[23]->w_state.value == IO_event_Pulse);
+  REQUIRE(U->Node[0]->io[23]->r_state.value != IO_event_High);
+
+  REQUIRE(U->Node[0]->io[24]->w_state.value == IO_event_Toggle);
+  REQUIRE(U->Node[0]->io[24]->r_state.value != IO_event_High);
 
   U->updateIO();
 
   REQUIRE(U->Node[0]->io[22]->w_state.value == IO_event_High);
   REQUIRE(U->Node[0]->io[22]->r_state.value == IO_event_High);
+
+  REQUIRE(U->Node[0]->io[23]->w_state.value == IO_event_Pulse);
+  REQUIRE(U->Node[0]->io[23]->r_state.value != IO_event_Pulse);
+
+  REQUIRE(U->Node[0]->io[24]->w_state.value == IO_event_Toggle);
+  REQUIRE(U->Node[0]->io[24]->r_state.value != IO_event_Toggle);
+
 }
 
 TEST_CASE_METHOD(TestsFixture, "IO and Switchboard object", "[IO][IO-3]"){
@@ -109,6 +124,24 @@ TEST_CASE_METHOD(TestsFixture, "IO and Switchboard object", "[IO][IO-3]"){
     U->B[0]->In_detection->setInput(IO_event_High);
 
     CHECK(U->B[0]->detectionBlocked);
+
+    // Polarity One Output
+    CHECK(U->Node[0]->io[13]->w_state.output == IO_event_Low);
+    U->B[1]->flipPolarity(0);
+    CHECK(U->Node[0]->io[13]->w_state.output == IO_event_High);
+    U->B[1]->flipPolarity(0);
+    CHECK(U->Node[0]->io[13]->w_state.output == IO_event_Low);
+
+    // Polarity Two Outputs
+    CHECK(U->Node[0]->io[14]->w_state.output == IO_event_Low);
+    CHECK(U->Node[0]->io[15]->w_state.output == IO_event_Low);
+    U->B[2]->flipPolarity(0);
+    CHECK(U->Node[0]->io[14]->w_state.output == IO_event_Low);
+    CHECK(U->Node[0]->io[15]->w_state.output == IO_event_Pulse);
+    U->updateIO();
+    U->B[2]->flipPolarity(0);
+    CHECK(U->Node[0]->io[14]->w_state.output == IO_event_Pulse);
+    CHECK(U->Node[0]->io[15]->w_state.output == IO_event_Low);
   }
 
   SECTION("II - Switches"){

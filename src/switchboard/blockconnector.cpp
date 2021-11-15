@@ -67,6 +67,8 @@ void BlockConnectBlockBlock(BlockConnector * A, BlockConnector * B, uint8_t port
   Block * bA = A->B[portA];
   Block * bB = B->B[portB];
 
+  loggerf(TRACE, "BlockConnectBlockBlock  %02i:%02i <-> %02i:%02i", bA->module, bA->id, bB->module, bB->id);
+
   if(bA->next.type == RAIL_LINK_C){
     bA->next.module = bB->module;
     bA->next.id = bB->id;
@@ -93,6 +95,8 @@ void BlockConnectBlockBlock(BlockConnector * A, BlockConnector * B, uint8_t port
 void BlockConnectBlockSwitch(BlockConnector * A, BlockConnector * B, uint8_t portA, uint8_t portB){
   Block * bA = A->B[portA];
   Switch * bB = B->Sw[portB];
+
+  loggerf(TRACE, "BlockConnectBlockSwitch  %02i:%02i <-> %02i:%02i", bA->module, bA->id, bB->module, bB->id);
 
   enum link_types switchsideB;
 
@@ -139,6 +143,8 @@ void BlockConnectSwitchBlock(BlockConnector * A, BlockConnector * B, uint8_t por
 void BlockConnectSwitchSwitch(BlockConnector * A, BlockConnector * B, uint8_t portA, uint8_t portB){
   Switch * bA = A->Sw[portA];
   Switch * bB = B->Sw[portB];
+
+  loggerf(TRACE, "BlockConnectSwitchSwitch  %02i:%02i <-> %02i:%02i", bA->module, bA->id, bB->module, bB->id);
 
   RailLink * linkA;
   RailLink * linkB;
@@ -199,105 +205,27 @@ void BlockConnectMSSwitchMSSwitch(BlockConnector * A, BlockConnector * B, uint8_
 void BlockConnectSignalBlock(BlockConnector * A, BlockConnector * B, uint8_t portA, uint8_t portB){
   Signal * bA = A->Sig[portA];
   Block * bB = B->B[portB];
+  loggerf(TRACE, "BlockConnectSignalBlock  S%02i:%02i <-> %02i:%02i:%2x", bA->module, bA->id, bB->module, bB->id, RAIL_LINK_R);
 
   bA->block_link.module = bB->module;
   bA->block_link.id = bB->id;
   bA->block_link.type = RAIL_LINK_R;
 
-  bA->B = bB;
-  bA->state = bB->addSignal(bA);
+  // bA->B = bB;
+  // bA->state = bB->addSignal(bA);
 }
 void BlockConnectSignalSwitch(BlockConnector * A, BlockConnector * B, uint8_t portA, uint8_t portB){
-  Signal * bA = A->Sig[portA];
-  Block * bB = B->B[portB];
-  Switch * SwB = B->Sw[portB];
+  Signal * Sig = A->Sig[portA];
+  Switch * Sw = B->Sw[portB];
+  loggerf(TRACE, "BlockConnectSignalSwitch  S%02i:%02i <-> %02i:%02i:%2x", Sig->module, Sig->id, Sw->module, Sw->id, RAIL_LINK_s);
 
-  bA->block_link.module = bB->module;
-  bA->block_link.id = bB->id;
-  bA->block_link.type = RAIL_LINK_R;
+  Sig->block_link.module = Sw->module;
+  Sig->block_link.id = Sw->id;
 
-  bA->B = bB;
-  bA->state = bB->addSignal(bA);
-
-  Switch * tmpSw = 0;
-  MSSwitch * tmpMSSw = 0;
-
-  struct SignalSwitchLink * link = (struct SignalSwitchLink *)_calloc(1, struct SignalSwitchLink);
-  link->MSSw = 0;
-  link->p.p = SwB;
-  SwB->addSignal(bA);
-
-  if(SwB->div.type == RAIL_LINK_C && SwB->div.id == portB){
-    link->state = 1;
-  }
-  else if(SwB->str.type == RAIL_LINK_C && SwB->str.id == portB){ // str
-    link->state = 0;
-  }
-  else{
-    loggerf(INFO, "BlockConnectSignalSwitch link not found");
-  }
-
-  bA->Switches.push_back(link);
-
-  void * prevptr = SwB;
-
-  if(SwB->app.type == RAIL_LINK_s)
-    tmpSw = SwB->app.p.Sw;
-  else if(SwB->app.type == RAIL_LINK_MA || SwB->app.type == RAIL_LINK_MB)
-    tmpMSSw = SwB->app.p.MSSw;
-
-  while(tmpSw || tmpMSSw){
-    link = (struct SignalSwitchLink *)_calloc(1, struct SignalSwitchLink);
-
-    if(tmpSw){
-      link->MSSw = 0;
-      link->p.p = tmpSw;
-      tmpSw->addSignal(bA);
-
-      if(tmpSw->div.p.p == prevptr){
-        link->state = 1;
-      }
-      else if(tmpSw->str.p.p == prevptr){ // str
-        link->state = 0;
-      }
-      else{
-        loggerf(INFO, "BlockConnectSignalSwitch link not found");
-      }
-
-      prevptr = tmpSw;
-      if(tmpSw->app.type == RAIL_LINK_s){
-        tmpSw = tmpSw->app.p.Sw;
-        tmpMSSw = 0;
-      }
-      else if(tmpSw->app.type == RAIL_LINK_MA || tmpSw->app.type == RAIL_LINK_MB){
-        tmpMSSw = tmpSw->app.p.MSSw;
-        tmpSw = 0;
-      }
-    }
-    else{
-      link->MSSw = 1;
-      link->p.p = tmpMSSw;
-      tmpMSSw->addSignal(bA);
-
-      bool statefound = false;
-
-      for(uint8_t i = 0; i < tmpMSSw->state_len; i++){
-        if(tmpMSSw->sideA[i].p.p == prevptr || tmpMSSw->sideB[i].p.p == prevptr){
-          link->state = i;
-          statefound = true;
-          break;
-        }
-      }
-
-      if(!statefound){
-        loggerf(INFO, "BlockConnectSignalSwitch link not found");
-      }
-
-      tmpMSSw = 0;
-    }
-
-    bA->Switches.push_back(link);
-  }
+  if(Sw->str.type == RAIL_LINK_C || Sw->div.type == RAIL_LINK_C)
+    Sig->block_link.type = RAIL_LINK_s;
+  else // App
+    Sig->block_link.type = RAIL_LINK_S;
 }
 void BlockConnectSignalMSSwitch(BlockConnector * A, BlockConnector * B, uint8_t portA, uint8_t portB){
   // Block * bA = A->B[portA];

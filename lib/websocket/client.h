@@ -39,7 +39,7 @@ class Client {
     static void * run(Client * context);
 
     void disconnect();
-    uint8_t first_connect(uint8_t ** buf, uint16_t bufSize, int * length);
+    uint8_t first_connect(uint8_t ** buf, int * bufSize, int * length);
     int websocket_check();
     bool timeoutCheck();
 

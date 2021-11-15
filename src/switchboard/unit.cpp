@@ -12,6 +12,7 @@
 #include "switchboard/station.h"
 #include "switchboard/signals.h"
 #include "switchboard/unit.h"
+#include "switchboard/polarityGroup.h"
 
 #include "path.h"
 
@@ -20,27 +21,27 @@ Unit::Unit(ModuleConfig * Config){
 
   const struct configStruct_Unit * ConfigHeader = Config->getHeader();
 
-  this->module = ConfigHeader->Module;
+  module = ConfigHeader->Module;
 
-  loggerf(CRITICAL, "Loading Unit %i", module);
+  loggerf(INFO, "Loading Unit %i", module);
 
   switchboard::SwManager->addUnit(this);
 
   connections_len = ConfigHeader->Connections;
   if(connections_len > 5){
-    loggerf(ERROR, "To many connection for module %i", this->module);
+    loggerf(ERROR, "To many connection for module %i", module);
     connections_len = 5;
   }
 
   memset(connection, 0, sizeof(struct unit_connector));
   // this->connection = (Unit **)_calloc(ConfigHeader->connections, Unit *);
 
-  this->IO_Nodes = ConfigHeader->IO_Nodes;
-  this->block_len = ConfigHeader->Blocks;
-  this->switch_len = ConfigHeader->Switches;
-  this->msswitch_len = ConfigHeader->MSSwitches;
-  this->signal_len = ConfigHeader->Signals;
-  this->station_len = ConfigHeader->Stations;
+  IO_Nodes     = ConfigHeader->IO_Nodes;
+  block_len    = ConfigHeader->Blocks;
+  switch_len   = ConfigHeader->Switches;
+  msswitch_len = ConfigHeader->MSSwitches;
+  signal_len   = ConfigHeader->Signals;
+  station_len  = ConfigHeader->Stations;
 
   loggerf(INFO, "INIT Unit %i - %d, %d, %d, %d, %d, %d", ConfigHeader->Module, ConfigHeader->IO_Nodes, ConfigHeader->Blocks, ConfigHeader->Switches, ConfigHeader->MSSwitches, ConfigHeader->Signals, ConfigHeader->Stations);
 
@@ -63,6 +64,11 @@ Unit::Unit(ModuleConfig * Config){
   for(int i = 0; i < ConfigHeader->Blocks; i++){
     new Block(this->module, &Config->Blocks[i]);
   }
+
+  loggerf(DEBUG, "  Module Polarity Group");
+  
+  for(int i = 0; i < ConfigHeader->PolarityGroup; i++)
+    new PolarityGroup(module, &Config->PolarityGroup[i]);
 
   loggerf(DEBUG, "  Module Switch");
 
@@ -359,10 +365,79 @@ void Unit::updateIO(){
 }
 
 
-void Unit::link_all(){
-  link_all_blocks(this);
-  link_all_switches(this);
-  link_all_msswitches(this);
+void Unit::link_blocks(){
+  for(int i = 0; i < block_len; i++){
+    if(!B[i])
+      continue;
+
+    Block * tB = B[i];
+
+    tB->next.link();
+    tB->prev.link();
+
+    // tB->next.p.p = rail_link_pointer(tB->next);
+    // tB->prev.p.p = rail_link_pointer(tB->prev);
+
+    if(!tB->path){
+      if(tB->next.type == RAIL_LINK_R && tB->next.p.B->type == NOSTOP)
+        new Path(tB);
+
+      else if(tB->prev.type == RAIL_LINK_R && tB->prev.p.B->type == NOSTOP)
+        new Path(tB);
+
+      else if(tB->prev.type == RAIL_LINK_MA_inside || tB->prev.type == RAIL_LINK_MB_inside)
+        new Path(tB);
+
+      else if(tB->prev.type == RAIL_LINK_E || tB->next.type == RAIL_LINK_E)
+        new Path(tB);
+    }
+
+  }
+}
+
+void Unit::link_switches(){
+  for(int i = 0; i < switch_len; i++){
+    if(!Sw[i])
+      continue;
+
+    Switch * tSw = Sw[i];
+
+    tSw->app.p.p = rail_link_pointer(tSw->app);
+    tSw->str.p.p = rail_link_pointer(tSw->str);
+    tSw->div.p.p = rail_link_pointer(tSw->div);
+
+    if(tSw->app.type == RAIL_LINK_R && !tSw->app.p.B->path)
+      new Path(tSw->app.p.B);
+    if(tSw->str.type == RAIL_LINK_R && !tSw->str.p.B->path)
+      new Path(tSw->str.p.B);
+    if(tSw->div.type == RAIL_LINK_R && !tSw->div.p.B->path)
+      new Path(tSw->div.p.B);
+  }
+}
+
+void Unit::link_msswitches(){
+  for(int i = 0; i < msswitch_len; i++){
+    if(!MSSw[i])
+      continue;
+
+    MSSwitch * tMSSw = MSSw[i];
+
+    for(int s = 0; s < tMSSw->state_len; s++){
+      tMSSw->sideA[s].p.p = rail_link_pointer(tMSSw->sideA[s]);
+      tMSSw->sideB[s].p.p = rail_link_pointer(tMSSw->sideB[s]);
+
+      if(tMSSw->sideA[s].type == RAIL_LINK_R && !tMSSw->sideA[s].p.B->path)
+        new Path(tMSSw->sideA[s].p.B);
+      if(tMSSw->sideB[s].type == RAIL_LINK_R && !tMSSw->sideB[s].p.B->path)
+        new Path(tMSSw->sideB[s].p.B);
+    }
+  }
+}
+
+
+void Unit::link_rest(){
+  for(int i = 0; i < signal_len; i++)
+    Sig[i]->map();
 
   for(int i = 0; i < station_len; i++){
     if(St[i]->blocks_len > 0 && St[i]->blocks)

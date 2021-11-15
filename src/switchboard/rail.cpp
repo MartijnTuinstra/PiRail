@@ -4,6 +4,7 @@
 #include "switchboard/switch.h"
 #include "switchboard/msswitch.h"
 #include "switchboard/signals.h"
+#include "switchboard/polarityGroup.h"
 
 #include "rollingstock/train.h"
 
@@ -431,6 +432,9 @@ void Block::setDetection(bool detected){
   detectionBlocked = detected;
   blocked = (detectionBlocked || virtualBlocked);
 
+  if(Polarity)
+    Polarity->updateDetection();
+
   if(prevBlocked != detectionBlocked){
     IOchanged = 1;
     Alg.trainFollowingChecked = false;
@@ -443,6 +447,9 @@ void Block::setVirtualDetection(bool d){
 
   virtualBlocked = d;
   blocked = (detectionBlocked || virtualBlocked);
+
+  if(Polarity)
+    Polarity->updateDetection();
 
   if(prevBlocked != virtualBlocked){
     IOchanged = 1;

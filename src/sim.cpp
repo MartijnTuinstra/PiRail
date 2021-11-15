@@ -64,6 +64,7 @@ void train_sim_tick(struct train_sim * t){
       t->B[0] = t->B[1]->Alg.N->B[0];
     }
     else{
+      loggerf(WARNING, "train_sim_tick Failed to get blocks %i  %02i:%02i > %i", t->blocks, t->B[1]->module, t->B[1]->id, t->B[1]->Alg.N->group[3]);
       SYS_set_state(&SYS->SimA.state, Module_Fail);
       return;
     }

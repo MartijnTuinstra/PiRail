@@ -114,6 +114,7 @@ class Block {
     // -- Pointers --
     Station * station = 0;     // The station that
     Path * path = 0;           // The path this block is part off
+    PolarityGroup * Polarity = 0;
 
     Train * train = 0;         // The train that is in this block
     Train * expectedTrain = 0; // The train that is expected to be in this block

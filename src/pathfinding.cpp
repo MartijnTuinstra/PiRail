@@ -33,14 +33,14 @@ Route * find(Block * start, Block * end){
   c.MSSw_A = (struct instruction **)_calloc(SwManager->uniqueMSSwitch.size, void *);
   c.MSSw_B = (struct instruction **)_calloc(SwManager->uniqueMSSwitch.size, void *);
 
-  loggerf(WARNING, "Searching Forward");
+  // loggerf(WARNING, "Searching Forward");
   auto sf = findStep(c);
 
   c.dir = PREV;
   c.link = start->NextLink(c.dir);
   c.prev = 0;
   c.prevPtr = start;
-  loggerf(WARNING, "Searching Reverse");
+  // loggerf(WARNING, "Searching Reverse");
   auto sr = findStep(c);
 
   Route * r = new Route(c, sf, sr);
@@ -148,14 +148,14 @@ Route * find(Block * start, Station * end){
   c.MSSw_A = (struct instruction **)_calloc(SwManager->uniqueMSSwitch.size, void *);
   c.MSSw_B = (struct instruction **)_calloc(SwManager->uniqueMSSwitch.size, void *);
 
-  loggerf(WARNING, "Searching Forward");
+  // loggerf(WARNING, "Searching Forward");
   auto sf = findStep(c);
 
   c.dir = PREV;
   c.link = start->NextLink(c.dir);
   c.prev = 0;
   c.prevPtr = start;
-  loggerf(WARNING, "Searching Reverse");
+  // loggerf(WARNING, "Searching Reverse");
   auto sr = findStep(c);
 
   Route * r = new Route(c, sf, sr);
@@ -187,11 +187,13 @@ struct step findStep(struct control c){
     // loggerf(INFO, "%02i:%02i %i %i\n", c.prev->module, c.prev->id, c.prev->dir, c.dir);
 
     if(!dircmp(c.prev, B)){
+      // loggerf(WARNING, "Changin direction dircmp");
       c.dir ^= PREV;
     }
     if((!c.prev->MSSw && !B->cmpPolarity(c.prev)) ||
       (( c.prev->MSSw && !c.prev->MSSw->cmpPolarity(B, c.prevMSSwState)))
     ){
+      // loggerf(WARNING, "Changing direction MSSw");
       c.dir ^= PREV;
 
       if(B->polarity_type == 0 && c.prev->polarity_type == 0){

@@ -11,6 +11,7 @@
 #include "switchboard/switch.h"
 #include "switchboard/switchsolver.h"
 #include "switchboard/msswitch.h"
+#include "switchboard/signals.h"
 #include "switchboard/station.h"
 #include "switchboard/unit.h"
 #include "switchboard/blockconnector.h"
@@ -30,26 +31,36 @@
 #include "testhelpers.h"
 
 TEST_CASE_METHOD(TestsFixture, "Connector Algorithm", "[Alg][Alg-1]"){
-  char filenames[4][30] = {"./testconfigs/Alg-1-1.bin", "./testconfigs/Alg-1-2.bin", "./testconfigs/Alg-1-3.bin", "./testconfigs/Alg-1-4.bin"};
-  loadSwitchboard(filenames, 4);
+  char filenames[5][30] = {"./testconfigs/Alg-1-1.bin",
+                           "./testconfigs/Alg-1-2.bin",
+                           "./testconfigs/Alg-1-3.bin",
+                           "./testconfigs/Alg-1-4.bin",
+                           "./testconfigs/Alg-1-5.bin"};
+  loadSwitchboard(filenames, 5);
   loadStock();
 
-  REQUIRE(switchboard::Units(1));
-  REQUIRE(switchboard::Units(2));
-  REQUIRE(switchboard::Units(3));
-  REQUIRE(switchboard::Units(4));
+  Unit * U[6] = {0, switchboard::Units(1), switchboard::Units(2), switchboard::Units(3), switchboard::Units(4), switchboard::Units(5)};
 
-  switchboard::Units(1)->on_layout = true;
-  switchboard::Units(2)->on_layout = true;
-  switchboard::Units(3)->on_layout = true;
-  switchboard::Units(4)->on_layout = true;
+  REQUIRE(U[1]);
+  REQUIRE(U[2]);
+  REQUIRE(U[3]);
+  REQUIRE(U[4]);
+  REQUIRE(U[5]);
 
-  /*                              --\
-  //  1.0->  | --2.0-> --2.1->  |  --3.0-> --3.1-> | --4.0->
-  //     C1-1 C1-1          C2-1 C1-1          C2-1 C1-2
-  //     C1-2 C1-2          C2-2 C1-2          C2-2 C1-1
-  // <1.1--  | <-2.2-- <-2.3--  |  <-3.2-- <-3.3-- | <-4.1--
-  //                        \--
+  U[1]->on_layout = true;
+  U[2]->on_layout = true;
+  U[3]->on_layout = true;
+  U[4]->on_layout = true;
+  U[5]->on_layout = true;
+
+  /*                                            o                   o
+  //                              --\           |                   |   --\
+  //  1.0->  | --2.0-> --2.1->  |  --3.0-> --3.1-> | --4.0-> --4.1--> | ---5.0->
+  //     C1-1 C1-1          C2-1 C1-1          C2-1 C1-2          C2-1
+  //     C1-2 C1-2          C2-2 C1-2          C2-2 C1-1          C2-2
+  // <1.1--  | <-2.2-- <-2.3--  |  <-3.2-- <-3.3-- | <-4.2-- <-4.3--- | <--5.x--
+  //                        \--                       |           \--    |
+  //                                                  o                  o
   */
 
   auto connectors = Algorithm::find_connectors();
@@ -70,20 +81,25 @@ TEST_CASE_METHOD(TestsFixture, "Connector Algorithm", "[Alg][Alg-1]"){
         break;
 
       if(x == 1){
-        switchboard::Units(1)->B[0]->setDetection(1);
-        switchboard::Units(2)->B[0]->setDetection(1);
+        U[1]->B[0]->setDetection(1);
+        U[2]->B[0]->setDetection(1);
       }else if(x == 2){
-        switchboard::Units(1)->B[0]->setDetection(0);
-        switchboard::Units(2)->B[0]->setDetection(0);
-        switchboard::Units(2)->B[1]->setDetection(1);
-        switchboard::Units(3)->B[0]->setDetection(1);
+        U[1]->B[0]->setDetection(0);
+        U[2]->B[0]->setDetection(0);
+        U[2]->B[1]->setDetection(1);
+        U[3]->B[0]->setDetection(1);
       }else if(x == 3){
-        switchboard::Units(2)->B[1]->setDetection(0);
-        switchboard::Units(3)->B[0]->setDetection(0);
-        switchboard::Units(3)->B[1]->setDetection(1);
-        switchboard::Units(4)->B[0]->setDetection(1);
+        U[2]->B[1]->setDetection(0);
+        U[3]->B[0]->setDetection(0);
+        U[3]->B[1]->setDetection(1);
+        U[4]->B[0]->setDetection(1);
+      }else if(x == 4){
+        U[3]->B[1]->setDetection(0);
+        U[4]->B[0]->setDetection(0);
+        U[4]->B[1]->setDetection(1);
+        U[5]->B[0]->setDetection(1);
       }
-      else if(x > 3){
+      else if(x > 4){
         // _SYS_change(STATE_Modules_Coupled,1);
         modules_linked = true;
       }
@@ -93,21 +109,46 @@ TEST_CASE_METHOD(TestsFixture, "Connector Algorithm", "[Alg][Alg-1]"){
       //BREAK
     }
 
-    switchboard::Units(3)->B[1]->setDetection(0);
-    switchboard::Units(4)->B[0]->setDetection(0);
+    U[4]->B[1]->setDetection(0);
+    U[5]->B[0]->setDetection(0);
 
-    switchboard::Units(1)->link_all();
-    switchboard::Units(2)->link_all();
-    switchboard::Units(3)->link_all();
-    switchboard::Units(4)->link_all();
+    switchboard::SwManager->LinkAndMap();
 
     REQUIRE(connectors.size() == 0);
 
-    CHECK(switchboard::Units(1)->B[0]->next.p.B == switchboard::Units(2)->B[0]);
-    CHECK(switchboard::Units(2)->B[0]->prev.p.B == switchboard::Units(1)->B[0]);
+    // U1 <-> U2
+    CHECK(U[1]->B[0]->next.p.B == U[2]->B[0]);
+    CHECK(U[2]->B[0]->prev.p.B == U[1]->B[0]);
 
-    CHECK(switchboard::Units(3)->B[1]->next.p.B == switchboard::Units(4)->B[0]);
-    CHECK(switchboard::Units(4)->B[0]->prev.p.B == switchboard::Units(3)->B[1]);
+    CHECK(U[1]->B[1]->prev.p.B == U[2]->B[2]);
+    CHECK(U[2]->B[2]->next.p.B == U[1]->B[1]);
+
+    // U2 <-> U3
+    CHECK(U[2]->B[1]->next.p.Sw == U[3]->Sw[0]);
+    CHECK(U[3]->B[2]->next.p.Sw == U[2]->Sw[0]);
+
+    CHECK(U[3]->Sw[0]->str.p.B == U[2]->B[1]);
+    CHECK(U[2]->Sw[0]->str.p.B == U[3]->B[2]);
+
+    // U3 <-> U4
+    CHECK(U[3]->B[1]->next.p.B == U[4]->B[0]);
+    CHECK(U[4]->B[0]->prev.p.B == U[3]->B[1]);
+
+    CHECK(U[3]->B[3]->prev.p.B == U[4]->B[2]);
+    CHECK(U[4]->B[2]->next.p.B == U[3]->B[3]);
+
+    CHECK(U[3]->Sig[0]->block_link.p.B == U[4]->B[0]);
+    CHECK(U[4]->Sig[1]->block_link.p.B == U[3]->B[3]);
+
+    // U4 <-> U5
+    CHECK(U[4]->B[1]->next.p.Sw == U[5]->Sw[0]);
+    CHECK(U[5]->Sw[0]->str.p.B  == U[4]->B[1]);
+
+    CHECK(U[4]->Sw[0]->str.p.B  == U[5]->B[1]);
+    CHECK(U[5]->B[1]->next.p.Sw == U[4]->Sw[0]);
+
+    CHECK(U[3]->Sig[0]->block_link.p.B == U[4]->B[0]);
+    CHECK(U[4]->Sig[1]->block_link.p.B == U[3]->B[3]);
 
     auto setup = Algorithm::BlockConnectorSetup("testconfigs/Alg-1-setup--.bin");
     setup.save();
@@ -120,11 +161,8 @@ TEST_CASE_METHOD(TestsFixture, "Connector Algorithm", "[Alg][Alg-1]"){
     int ret = setup.load(&connectors);
 
     REQUIRE(ret > 0);
-
-    switchboard::Units(1)->link_all();
-    switchboard::Units(2)->link_all();
-    switchboard::Units(3)->link_all();
-    switchboard::Units(4)->link_all();
+    
+    switchboard::SwManager->LinkAndMap();
 
     REQUIRE(connectors.size() == 0);
 
@@ -364,14 +402,14 @@ TEST_CASE_METHOD(TestsFixture, "Train Speed Control", "[Alg][Alg-Sp]"){
     CHECK(ED->reason == TRAIN_SPEED_R_SIGNAL);
     CHECK(T->speed == 180);
 
-    while(T->speed_event_data->stepCounter != 4 && maxIterations > 0){
+    while(ED->stepCounter != 4 && maxIterations > 0){
       train_testSim_tick(&train, &maxIterations);
     }
 
     CHECK(T->speed < 180);
     U->B[8]->state = PROCEED;
     
-    while(T->speed_event_data->stepCounter != 5 && maxIterations > 0){
+    while(ED->stepCounter != 5 && maxIterations > 0){
       train_testSim_tick(&train, &maxIterations);
     }
 
@@ -597,8 +635,6 @@ TEST_CASE_METHOD(TestsFixture, "Train Speed Control", "[Alg][Alg-Sp]"){
 
     CHECK(T->SpeedState == TRAIN_SPEED_IDLE);
   }
-
-  scheduler->stop();
 }
 /*
 TEST_CASE_METHOD(TestsFixture, "Train Route Following", "[Alg][Alg-R]"){

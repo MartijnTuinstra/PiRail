@@ -45,6 +45,9 @@ struct timespec operator +(const struct timespec lhs, const struct timespec rhs)
 }
 
 Scheduler::~Scheduler(){
+    if(!_stop_)
+        stop();
+
     pthread_mutex_lock(&EventMutex);
     for(auto e: events)
         _free(e);
@@ -84,6 +87,8 @@ void * Scheduler::thread(void * args){
     while( context->_stop_ == 0 ){
         context->updateClock();
 
+        loggerf(DEBUG, " Scheduler clock %li %i", context->scheduler_wait.tv_sec, context->scheduler_wait.tv_nsec);
+
         pthread_mutex_lock(&context->EventMutex);
 
         for(auto &e: context->events){
@@ -103,10 +108,14 @@ void * Scheduler::thread(void * args){
                     set = 1;
                 }
             }
+
+            if(!set)
+                context->scheduler_wait.tv_sec += 1;
         }
-        else{
+        else // No events registered
             context->scheduler_wait.tv_sec += 1;
-        }
+
+        loggerf(DEBUG, " Scheduler next wake %li %i", context->scheduler_wait.tv_sec, context->scheduler_wait.tv_nsec);
 
         pthread_mutex_unlock(&context->EventMutex);
 
@@ -139,11 +148,15 @@ void Scheduler::enableEvent(struct SchedulerEvent * event){
         event->next_interval.tv_nsec = currenttime.tv_nsec + event->interval.tv_nsec;
     }
 
+    loggerf(DEBUG, " Scheduler enabled %s (%li, %i)", event->name, event->next_interval.tv_sec, event->next_interval.tv_nsec);
+
     update();
 }
 
 void Scheduler::disableEvent(struct SchedulerEvent * event){
     event->disabled = 1;
+
+    loggerf(DEBUG, " Scheduler disabled %s", event->name);
 
     update();
 }
@@ -152,7 +165,7 @@ void Scheduler::updateEvent(struct SchedulerEvent * e){
     if(e->type == SCHEDULER_TYPE_ONESHOT)
         e->disabled = true;
 
-    e->next_interval = scheduler_wait + e->next_interval;
+    e->next_interval = scheduler_wait + e->interval;
 }
 
 struct SchedulerEvent * Scheduler::addEvent(const char * name, struct timespec interval){

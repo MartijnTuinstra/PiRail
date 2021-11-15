@@ -35,16 +35,19 @@ $(BIN)/%.o: %.cpp
 # 	@$(MAKE) -C .. baan
 # 	@cp ../baan.so libbaan.so
 
-BAAN_FILES = $(filter-out ../bin/baan.o ../bin/config_reader.o ../bin/comtest.o, $(call rwildcard,../bin,*.o))
+BAAN_FILES = $(filter-out ../bin/baan.o ../bin/config_reader.o ../bin/comtest.o ../bin/config/LayoutStructureEditor.o ../bin/config/RollingStructureEditor.o, $(call rwildcard,../bin,*.o))
 
-maintest: $(addprefix $(BIN)/,$(addsuffix .o, $(TEST_FILES)))
+$(BAAN_FILES):
+	@$(MAKE) -sC .. baan
+
+maintest: $(addprefix $(BIN)/,$(addsuffix .o, $(TEST_FILES))) $(BAAN_FILES)
 	@echo "( BUILD ) maintest"
 	@$(GCC) -o $@ $(addprefix $(BIN)/,$(addsuffix .o, $(TEST_FILES))) $(BAAN_FILES) -D CB_NON_AVR $(GCC_options) $(GCC_LIBS)
 
 .PHONY: all run clean_test clean_build clean build
 # FORCE: ;
 
-build: buildBaan maintest
+build: maintest
 all: run
 clean: clean_test clean_build
 

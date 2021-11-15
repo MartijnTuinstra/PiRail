@@ -26,4 +26,12 @@
 #define POLARITY_NORMAL   0
 #define POLARITY_REVERSED 1
 
+#define SIGNAL_LINK___SWITCH 0
+#define SIGNAL_LINK_MSSWITCH 1
+
+#define PRINT_MINIMAL  0
+#define PRINT_SMALL    1
+#define PRINT_EXTENDED 2
+#define PRINT_ALL      3
+
 #endif

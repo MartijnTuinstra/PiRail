@@ -82,8 +82,8 @@ TEST_CASE_METHOD(TestsFixture, "Signal 1", "[SB][SB-4][SB-4.1]" ) {
   SECTION( "II - Signal On Switch State Check"){
     U->B[5]->setState(CAUTION); // FIXME
 
-    CHECK(U->Sig[2]->state == CAUTION);
-    CHECK(U->Sig[3]->state == CAUTION);
+    CHECK(U->Sig[2]->state == CAUTION);     // Get state from B[5]
+    CHECK(U->Sig[3]->state == DANGER);      // Not safe since switch is wrong state
     CHECK(U->Sig[3]->switchDanger == true);
 
     U->Sw[0]->updateState(DIVERGING_SWITCH);
@@ -144,6 +144,12 @@ TEST_CASE_METHOD(TestsFixture, "Signal 2", "[SB][SB-4][SB-4.2]" ) {
   U1->B[0]->setDetection(0);
   U2->B[0]->setDetection(0);
 
+  REQUIRE(U1->B[0]->next.p.B  == U2->B[0]);
+  REQUIRE(U2->B[0]->prev.p.B  == U1->B[0]);
+
+  REQUIRE(U1->B[1]->next.p.Sw == U2->Sw[0]);
+  REQUIRE(U2->Sw[0]->str.p.B  == U1->B[1]);
+
   REQUIRE(connectors.size() == 0);
 
   REQUIRE(U1->B[0]->next.p.B == U2->B[0]);
@@ -173,7 +179,7 @@ TEST_CASE_METHOD(TestsFixture, "Signal 2", "[SB][SB-4][SB-4.2]" ) {
     CHECK(U1->Sig[1]->state == CAUTION);
     CHECK(U1->Sig[1]->switchDanger == false);
 
-    U2->Sw[0]->updateState(DIVERGING_SWITCH);
+    U2->Sw[0]->setState(DIVERGING_SWITCH);
 
     CHECK(U1->Sig[1]->switchDanger == true);
   }

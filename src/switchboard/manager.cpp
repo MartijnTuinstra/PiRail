@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <dirent.h>
+#include <vector>
 
 #include "config/ModuleConfig.h"
 
@@ -14,6 +15,7 @@
 #include "switchboard/msswitch.h"
 #include "switchboard/signals.h"
 #include "switchboard/station.h"
+#include "switchboard/polarityGroup.h"
 
 #include "utils/logger.h"
 #include "system.h"
@@ -197,19 +199,29 @@ void Manager::print(){
 }
 
 void Manager::LinkAndMap(){
+  std::vector<Unit *> tmpU = {};
+
+  // Link all rail-links together
+  //   also create paths
   for(uint16_t i = 0; i < Units.size; i++){
     if(!Units[i])
       continue;
 
-    Units[i]->link_all();
+    Units[i]->link_blocks();
+    Units[i]->link_switches();
+    Units[i]->link_msswitches();
+    tmpU.push_back(Units[i]);
   }
 
-  for(uint16_t i = 0; i < Units.size; i++){
-    if(!Units[i])
-      continue;
+  for(auto u: tmpU)
+    u->link_rest(); // Signals & Paths
 
-    Units[i]->map_all();
-  }
+  // Map all polarity connections
+  for(auto u: tmpU)
+    u->map_all();
+
+  for(auto PG: PolarityGroupList)
+    PG->map();
 }
 
 Manager * SwManager;

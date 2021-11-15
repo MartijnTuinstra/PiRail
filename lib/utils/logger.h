@@ -40,6 +40,15 @@ class Logger {
     const char * levels_colour[9] = {
       "", "\x1b[31m", "\x1b[31m", "\x1b[33m", "\x1b[32m", "", "", "", "\x1b[0m"
     };
+    const char * S_detail_level[5] = {
+      "ALL", "T+L+M", "T+M", "M"
+    }; // T: Time, L: Location, M: Message, ALL has level as well
+    const char * detail_level_offset[5] = {
+      "\n             -          -                         - ",
+      "\n             -                         - ",
+      "\n             - ",
+      "\n"
+    };
 
     char * filename = 0;
     FILE * file;
@@ -47,6 +56,7 @@ class Logger {
     bool enabled = false;
     bool stdout = false;
     bool fileout = false;
+    uint8_t detail_level;
 
     enum logging_levels stdout_lvl = INFO;
     enum logging_levels file_lvl = INFO;
@@ -61,6 +71,8 @@ class Logger {
 
     void setlevel(enum logging_levels);
     void setlevel_stdout(enum logging_levels);
+
+    void setDetailLevel(uint8_t);
 
     void f(enum logging_levels level, const char * file, const int line, const char * text, ...);
     void hexdump(const char * file, const int line, const char * header, void * data, int length);

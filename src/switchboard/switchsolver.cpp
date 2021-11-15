@@ -526,6 +526,7 @@ int setPath(struct SwSolve SwS){
     Block * B = SwS.link->p.B;
     // loggerf(INFO, "check B %i", B->id);
 
+    /* FIXME
     if(!B->checkPolarity(SwS.prevBlock)){
       loggerf(INFO, "Polarity Compare  %2i:%2i <> %2i:%2i => %i", SwS.prevBlock->module, SwS.prevBlock->id, B->module, B->id, B->checkPolarity(SwS.prevBlock));
       if(B->path)
@@ -533,6 +534,7 @@ int setPath(struct SwSolve SwS){
       else
         B->flipPolarity(0);
     }
+    */
 
     // Block is part of station that is blocked by a train stopped on it. Not a solution
     if(B->type == STATION && B->station && (B->station->stoppedTrain || 

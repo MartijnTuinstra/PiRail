@@ -24,6 +24,9 @@ Path::Path(Block * B){
 
   direction = B->dir & FL_DIRECTION_MASK;
 
+  StationPath = (B->station != 0);
+  SwitchPath  = (B->switch_len != 0 || B->MSSw != 0);
+
   if(direction == NEXT){
     next = &B->next;
     prev = &B->prev;
@@ -55,6 +58,14 @@ Path::Path(Block * B){
 Path::~Path(){
   char buffer[400];
   sprint(1, buffer);
+
+  for(auto b: Blocks){
+    if(!b)
+      continue;
+
+    b->path = nullptr;
+    loggerf(INFO, " Removing block %02i:%02i to path %x", b->module, b->id, b->path);
+  }
 
   Blocks.clear();
   trains.clear();
@@ -123,6 +134,9 @@ void Path::join(Path * P, Block ** side, Block * Pside, bool * sideDirection, bo
     b->path = this;
   }
 
+  // All blocks are copied, so list can be cleared
+  P->Blocks.clear();
+
   pathlist.erase(std::remove_if(pathlist.begin(),
                                 pathlist.end(),
                                 [P](const auto & o) { return (o == P); }),
@@ -162,6 +176,9 @@ void Path::join(Path * P){
 void Path::find(){
   loggerf(DEBUG, "Path Find %02d:%02d / %x", this->Blocks[0]->module, this->Blocks[0]->id, (unsigned long)this);
 
+  if(Blocks[0]->type == NOSTOP)
+    return;
+
   find(&next, &front, NEXT);
   find(&prev, &end,   PREV);
 }
@@ -184,19 +201,19 @@ void Path::find(RailLink ** linkPtr, Block ** ptr_side, uint8_t SearchDir){
       if(!((B->type == STATION && side->type == STATION && side->station == B->station) || (B->type != STATION && side->type != STATION)))
         break;
 
-      loggerf(INFO, "Block has a polarity type %i", B->polarity_type);
-      if(B->polarity_type == BLOCK_FL_POLARITY_LINKED_BLOCK){
-        loggerf(INFO, "Block has a linked block %x == %x", B->polarity_link, Blocks[0]);
-        if(B->polarity_link != Blocks[0])
-          break;
-      }
-      else if(polarity_type >= BLOCK_FL_POLARITY_NO_IO && B->polarity_type == polarity_type){
-        break;
-      }
-      else if(B->polarity_type != polarity_type){
-        if(!B->path) new Path(B);
-        break;
-      }
+      // loggerf(INFO, "Block has a polarity type %i", B->polarity_type);
+      // if(B->polarity_type == BLOCK_FL_POLARITY_LINKED_BLOCK){
+      //   loggerf(INFO, "Block has a linked block %x == %x", B->polarity_link, Blocks[0]);
+      //   if(B->polarity_link != Blocks[0])
+      //     break;
+      // }
+      // else if(polarity_type >= BLOCK_FL_POLARITY_NO_IO && B->polarity_type == polarity_type){
+      //   break;
+      // }
+      // else if(B->polarity_type != polarity_type){
+      //   if(!B->path) new Path(B);
+      //   break;
+      // }
     }
 
     if(!B)
@@ -204,14 +221,14 @@ void Path::find(RailLink ** linkPtr, Block ** ptr_side, uint8_t SearchDir){
 
     // loggerf(DEBUG, "Next Block %02d:%02d,  side %02d:%02d", B->module, B->id, side->module, side->id);
 
-    if(!side->cmpPolarity(B)){
-      // loggerf(DEBUG, "  wrong polarity, breaking path B->%2i:%2i:%i," \
-                    //  "  side->%2i:%2i:%i", B->next.module, B->next.id, B->next.type,
-                                            // side->next.module, side->next.id, side->next.type);
-      if(!B->path)
-        B->path = new Path(B);
-      break;
-    }
+    // if(!side->cmpPolarity(B)){
+    //   // loggerf(DEBUG, "  wrong polarity, breaking path B->%2i:%2i:%i," \
+    //                 //  "  side->%2i:%2i:%i", B->next.module, B->next.id, B->next.type,
+    //                                         // side->next.module, side->next.id, side->next.type);
+    //   if(!B->path)
+    //     B->path = new Path(B);
+    //   break;
+    // }
 
     link = B->NextLink(SearchDir);
 
@@ -286,9 +303,9 @@ void Path::sprint(uint8_t detail, char * string){
       break;
 
     case 2:
-      string += sprintf(string, "%02d:%02d:%02x %s[%02d:%02d {%s} %02d:%02d]%s %02d:%02d:%02x",
+      string += sprintf(string, "%02d:%02d:%02x %s[%02d:%02d ...%2i... %02d:%02d]%s %02d:%02d:%02x",
                         prev->module, prev->id, prev->type,
-                        l, end->module, end->id, buffer, front->module, front->id, r,
+                        l, end->module, end->id, Blocks.size(), front->module, front->id, r,
                         next->module, next->id, next->type);
       break;
 
@@ -347,7 +364,7 @@ void Path::reverse(Train * T){
   std::swap(Entrance, Exit);
 }
 
-
+/*
 void Path::flipPolarity(bool _reverse){
   if(_reverse && !reversable())
     return;
@@ -364,20 +381,24 @@ void Path::flipPolarity(bool _reverse){
   if(_reverse)
     reverse();
 }
+void Path::flipPolarityNow(){
+  polarity ^= 1;
+
+  for(Block * B: Blocks){
+    B->flipPolarity();
+  }
+}
+
 bool Path::polarityFlippable(){
   if(polarity_type == BLOCK_FL_POLARITY_DISABLED)
     return 0;
 
   if(Entrance->blocked){
-    Block * B = 0;
-    if(prev->type == RAIL_LINK_R)
-      B = prev->p.B;
-    else if(prev->type == RAIL_LINK_S || prev->type == RAIL_LINK_s)
-      B = prev->p.Sw->Detection;
-    else if(prev->type >= RAIL_LINK_MA || prev->type == RAIL_LINK_MB_inside)
-      B = prev->p.MSSw->Detection;
+    Block * B = getBlockAtEdge(prev);
 
-    loggerf(WARNING, "polFlip? %02i:%02i, %02i:%02i", Entrance->module, Entrance->id, B->module, B->id);
+    loggerf(WARNING, "polFlip? Entrance %02i:%02i%cT%i, %02i:%02i%cT%i",
+            Entrance->module, Entrance->id, Entrance->blocked ? 'B': ' ', Entrance->train ? Entrance->train->id : -1,
+            B->module, B->id, B->blocked ? 'B': ' ', B->train ? B->train->id : -1);
 
     if(B && B->blocked && Entrance->train == B->train){
       return 0;
@@ -385,23 +406,19 @@ bool Path::polarityFlippable(){
   }
   
   if(Exit->blocked){
-    Block * B = 0;
-    if(next->type == RAIL_LINK_R)
-      B = next->p.B;
-    else if(next->type == RAIL_LINK_S || next->type == RAIL_LINK_s)
-      B = next->p.Sw->Detection;
-    else if(next->type >= RAIL_LINK_MA || next->type == RAIL_LINK_MB_inside)
-      B = next->p.MSSw->Detection;
+    Block * B = getBlockAtEdge(next);
 
-    loggerf(WARNING, "polFlip? %02i:%02i, %02i:%02i", Exit->module, Exit->id, B->module, B->id);
+    loggerf(WARNING, "polFlip? Exit %02i:%02i%cT%i, %02i:%02i%cT%i",
+            Exit->module, Exit->id, Exit->blocked ? 'B': ' ', Exit->train ? Exit->train->id : -1,
+            B->module, B->id, B->blocked ? 'B': ' ', B->train ? B->train->id : -1);
 
-    if(B && B->blocked && Entrance->train == B->train){
+    if(B && B->blocked && Exit->train == B->train){
       return 0;
     }
   }
   return 1;
 }
-
+*/
 
 void Path::reserve(Train * T){
   reserved = true;
@@ -493,6 +510,10 @@ void Path::analyzeTrains(){
       prevTrain = T;
     }
   }
+}
+
+Block * Path::getBlockAtEdge(RailLink * edge){
+  return edge->getNextBlock();
 }
 
 void pathlist_find(){

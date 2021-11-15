@@ -17,6 +17,7 @@ class FieldTypes(enum.IntEnum):
     FL64 = 10
     CHAR = 11
     UNION = 12
+    BOOL = 13
     BIT  = 16
     LIST = 32
     NESTED = 64
@@ -29,7 +30,7 @@ class FieldTypes(enum.IntEnum):
 
 
 class Structure:
-    def __init__(self, filename, name, programStructure, fileStructure):
+    def __init__(self, filename, name, programStructure, fileStructure, Scannable=None, Preview=None, Editable=None, **kwargs):
         self.name = name
         self.structBasename = "configStruct_" + name
         self.filename = filename
@@ -38,6 +39,13 @@ class Structure:
         self.pS = [temp[key] if key in temp else None for key in range(min(temp.keys()), max(temp.keys())+1)]
 
         self.fS = fileStructure
+
+        self.Scannable = Scannable
+        self.Preview = Preview
+        self.Editable = Editable
+        
+        for key, value in kwargs.items():
+            setattr(self, key, value)
 
     def toTypeC(self):
         return f"struct {self.structBasename}"
@@ -76,6 +84,7 @@ class Structure:
         fI = 0
 
         openFields = [f.id for f in self.pS if f is not None]
+        print(self.name, openFields)
 
         while fI < len(self.fS[version]):
             f   = self.fS[version][fI]
@@ -84,8 +93,11 @@ class Structure:
             if isinstance(f.id, list):
                 for id in f.id:
                     openFields.remove(id)
-            else:
+            elif f.id in openFields:
+                print(f.id)
                 openFields.remove(f.id)
+            else:
+                raise ValueError("Multiple File Field with the same id", f.id)
 
             if not isinstance(f, FF):
                 print("No a File Field ", f)
@@ -264,6 +276,258 @@ class Structure:
 
         return header, code
 
+    def generateEditorHeader(self):
+        if self.Preview is not None and self.Preview:
+            s  = f"void configEditor_preview_{self.name}(char *, struct configStruct_{self.name});\n"
+        if self.Scannable is not None and self.Scannable:
+            s += f"void configEditor_scan_{self.name}(char *, struct configStruct_{self.name} *);\n"
+        return s
+
+    def generateEditorPreview(self):
+        if self.Preview is None or not self.Preview:
+            return
+
+        c = self.Preview
+
+        s  = f"void configEditor_preview_{self.name}(char * buffer, struct configStruct_{self.name} data){{\n"
+        s += f"  sprintf(buffer, \"({c.pF})\", "
+
+        scanFields = [('data.'+self.pS[f].name) for f in c.f]
+        if hasattr(c, 'textIndex'):
+            for i in range(len(c.f)):
+                if c.textIndex[i] is None:
+                    continue
+
+                scanFields[i] = f"{c.textIndex[i]}[{scanFields[i]}]"
+
+        s +=   f"{', '.join(scanFields)});\n"
+
+        s += "}\n"
+
+        return s
+
+    def generateEditorScan(self):
+        print("generateEditorScan")
+        if self.Scannable is None or not self.Scannable:
+            return
+        
+        s  = f"void configEditor_scan_{self.name}(char * buffer, struct configStruct_{self.name} * data){{\n"
+
+        c = self.Scannable
+
+        if not hasattr(self, "Scannable"):
+            print('not scannable')
+            return
+        if not self.Scannable:
+            return
+
+        scanFieldTypes = []
+
+        l = 0
+        mode = False
+        while l < len(c.sF):
+            if mode:
+                if c.sF[l] in ['f', 'e', 'E']:
+                    scanFieldTypes[-1] = "double"
+                    mode = False
+                elif c.sF[l] in ['d', 'i', 'u']:
+                    scanFieldTypes[-1] += "int"
+                    mode = False
+                elif c.sF[l] == 'l':
+                    scanFieldTypes[-1] += "long "
+                elif c.sF[l] == '*':
+                    scanFieldTypes.pop(-1)
+                    mode = False
+            elif c.sF[l] == '%':
+                scanFieldTypes += [""]
+                mode = True
+
+            l += 1
+
+        print(c.sF, scanFieldTypes)
+        # scanFieldTypes = [self.pS[f].type.toTypeC() for f in c.f if self.pS[f] > FieldTypes.I64 else "int"]
+        scanFieldNames = [self.pS[c.f[i]].name for i in range(len(c.f))]
+
+        s += "  " + "\n  ".join([f"{scanFieldTypes[i]} t_{scanFieldNames[i]};" for i in range(len(c.f))]) + "\n"
+
+        scanArgs = ', '.join([f"&t_{t}" for t in scanFieldNames])
+        s += f"  if(sscanf(buffer, \"{c.sF}\", {scanArgs}) > {len(c.f)-1}){{\n"
+        for i in range(len(c.f)):
+            s += f"    data->{scanFieldNames[i]} = t_{scanFieldNames[i]};\n"
+        # link->module = tmp[0];
+        # link->id = tmp[1];
+        # link->type = tmp[2];
+        # }
+
+        s += "  }\n}\n"
+
+        return s
+
+    def generateEditor(self):
+        print("generateEditor")
+        if self.Editable is None or not self.Editable:
+            print('not editable')
+            return
+
+        if len(self.Editable) == 0:
+            return
+        
+        
+        arguments = [f"struct configStruct_{self.name} * data"]
+        for E in self.Editable:
+            if hasattr(E, 'extraArgument'):
+                arguments += E.extraArgument
+
+        s  = f'void configEditor_{self.name}({", ".join(arguments)}){{\n'
+        s += f"  char scanBuffer[100];\n"
+        s += f"  char fieldName[{ConfigHeaderLength + 25}];\n"
+        s += f"  char fieldPreview[{ConfigPreviewLength + 25}];\n\n"
+
+        for c in self.Editable:
+            if len(c.f) > 1:
+                continue
+            elif len(c.f) == 0:
+                # Print statement only
+                s += f'  printf(\"{c.name}\\n\", {", ".join(c.printArgument)});\n'
+                continue
+
+            s += f"  scanBuffer[0] = 0;\n"
+
+            if hasattr(c, 'conditional'):
+                condition = []
+                state = 0
+                for i in c.conditional:
+                    if state == 0:
+                        condition = condition + [f"data->{self.pS[i].name}"]
+                        state += 1
+                    elif state == 1:
+                        if i in ['>', '<', '>=', '<=', "==", "!="]:
+                            condition = condition + [i]
+                            state += 1
+                        else:
+                            condition = condition + ["&&", f"data->{self.pS[i].name}"]
+                    elif state == 2:
+                        if isinstance(i, str):
+                            condition = condition + [i]
+                        else:
+                            condition = condition + [f"data->{self.pS[i].name}"]
+
+                s += f'  if({" ".join(condition)}){{\n'
+            else:
+                setattr(c, 'conditional', False)
+
+            if hasattr(c, 'custom'):
+                s += c.custom
+                if c.conditional is not False:
+                    s += "  }\n"
+                continue
+
+            s += f"  sprintf(fieldName, \"%.{ConfigHeaderLength}s\", \"{c.name}\");\n"
+
+            f = self.pS[c.f[0]]
+            t = ""
+            listI = ""
+            if hasattr(c, 'overrideType'):
+                t = c.overrideType
+            elif not isinstance(f.type, (FieldTypes, int)):
+                t = f.type.name
+            elif (f.type & FieldTypes.LIST):
+                if isinstance(f.nested, (FieldTypes, int)):
+                    t = f"{f.nested.toTypeC()}"
+                else:
+                    t = f"{f.nested.name}"
+                listI = f"data->{self.pS[c.listLength].name}"
+            elif (f.type & FieldTypes.BIT):
+                t = f"{FieldTypes(f.type & ~(FieldTypes.BIT)).nested.toTypeC()}"
+            # elif (f.type == FieldTypes.UNION):
+            #     s += f"  union {{\n    {f.size.toTypeC()} raw;\n    struct {{\n      {f.unionStruct}\n    }} data;\n  }} {f.name};\n"
+            else:
+                t = f.type.toTypeC()
+
+            pn = sn = f"data->{f.name}"
+            if listI != "":
+                pn += "[i]"
+                sn += "[i]"
+                s += f"  for(uint8_t i = 0; i < {listI}; i++){{\n"
+
+            pt = st = t
+            if hasattr(c, 'textIndex'):
+                pn = f"{c.textIndex[0]}[{pn}]"
+                pt = "string"
+                st = "uint8_t"
+            
+            if t == "string":
+                sn += f", &data->{self.pS[c.listLength].name}"
+
+            s += f"  configEditor_preview_{pt}(fieldPreview, {pn});\n"
+
+            if listI != "":
+                s += f"  printf(\"%-{ConfigHeaderLength-3}s %2i %-{ConfigPreviewLength}s | \", fieldName, i, fieldPreview);\n"
+            else:
+                s += f"  printf(\"%-{ConfigHeaderLength}s %-{ConfigPreviewLength}s | \", fieldName, fieldPreview);\n"
+
+            s += f"  fgets(scanBuffer, 100, stdin);\n"
+            s += f"  configEditor_scan_{st}(scanBuffer, &{sn});\n\n"
+
+            if hasattr(c, 'alloc'):
+                alloc = c.alloc
+                if not isinstance(alloc, list):
+                    alloc = [alloc]
+
+                for a in alloc:
+                    ptr = f"data->{self.pS[a[0]].name}"
+                    s += f"  if ({ptr})\n"
+                    s += f"    {ptr} = ({a[1]} *)_realloc({ptr}, {sn}, {a[1]});\n"
+                    s += f"  else\n"
+                    s += f"    {ptr} = ({a[1]} *)_calloc({sn}, {a[1]});\n\n"
+
+            if listI != "":
+                s += "  }\n"
+            if c.conditional is not False:
+                s += "  }\n"
+
+        return s + "\n}\n"
+
+        c = self.config[0]
+
+        if not hasattr(self, "Preview"):
+            return ""
+
+
+        scanFields = [('data->'+self.pS[f].name) for f in c.f]
+        if hasattr(c, 'textIndex'):
+            for i in range(len(c.f)):
+                if c.textIndex[i] is None:
+                    continue
+
+                scanFields[i] = f"{c.textIndex[i]}[{scanFields[i]}]"
+
+        s +=   f"{', '.join(scanFields)});\n"
+
+        # s += f"  {{\n    char buffer[100];\n"
+        # s += f"    fgets(buffer, 100, stdin);\n"
+        # s += f"    configEditor_scan_{self.name}(buffer, data);\n  }}\n"
+
+        s += "}\n"
+
+# int tmp[3];
+#   if(fgetScanf("%i%*c%i%*c%i", &tmp[0], &tmp[1], &tmp[2]) > 2){
+#     link->module = tmp[0];
+#     link->id = tmp[1];
+#     link->type = tmp[2];
+#   }
+
+
+        s += f"  uint8_t field[{ConfigHeaderLength + ConfigPreviewLength + 5}];\n"
+        s += f"  sprintf(field, \"%.{ConfigHeaderLength}s\");\n"
+        s += f"  sprintf(&field[{ConfigHeaderLength}], \"({c.pF})\", "
+        s += "}\n"
+
+    # def previewFunction(self, name=""):
+    #     text = f"ConfigEditor_Preview_{self.name}("
+    #     return ""
+    # def scanFunction(self):
+    #     return ""
 
     def generate(self):
 
@@ -311,6 +575,33 @@ class FF: # File Field
         if isinstance(self.id, list) and (self.type & FT.BIT):
             assert len(self.id) == len(self.offset) == len(self.width)
 
+ConfigHeaderLength  = 20
+ConfigPreviewLength = 12
+class ConfigEntry:
+    def __init__(self, fields, name="", **kwargs):
+        self.name = name
+        self.f  = fields
+        
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+class ScanEntry:
+    def __init__(self, scanFormat, fields, name="", **kwargs):
+        self.name = name
+        self.sF = scanFormat
+        self.f  = fields
+        
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+
+class PreviewEntry:
+    def __init__(self, previewFormat, fields, name="", **kwargs):
+        self.name = name
+        self.pF = previewFormat
+        self.f  = fields
+        
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+
 
 FT = FieldTypes
 
@@ -337,42 +628,92 @@ class ConfigFileLayout:
     def addCustomStructure(self, structure):
         self.extraStructures += structure
 
-    def writeToFile(self):
-        baseDir = Path(os.getcwd())
-        headerFileName = baseDir / self.headerPath / f"{self.filename}.h"
-        sourceFileName = baseDir / self.sourcePath / f"{self.filename}.cpp"
-
-        text = [t.generate() for t in self.structures.values()]
-        output = ([t[0] for t in text], ["\n".join(t[1]) for t in text], ["\n".join(t[2]) for t in text])
-
-        LUtable = f"\n\nuint8_t Config_{self.filename}LU[{len(self.vLU)}][{len(self.vLU[0])}] = {str(self.vLU).replace('[', '{').replace(']', '}')};\n"
-        LUtableH = f"\n\nextern uint8_t Config_{self.filename}LU[{len(self.vLU)}][{len(self.vLU[0])}];\n"
-
+    def writeStructureHeaderFile(self, location, text):
         l = []
         for t in self.structures.keys():
             l += [f"#define CONFIG_{self.filename.upper()}_LU_{t.upper()} {len(l)}"]
 
-
+        LUtableH = f"\n\nextern uint8_t Config_{self.filename}LU[{len(self.vLU)}][{len(self.vLU[0])}];\n"
         LUtableH += "\n".join(l)
         LUtableH += f"\n#define CONFIG_{self.filename.upper()}_LU_MAX_VERSION {len(self.vLU) - 1}"
         LUtableH += "\n"
 
-        hf = open(str(headerFileName), 'w')
+        
+        hf = open(str(location), 'w')
         hf.write(f"#ifndef INCLUDE_CONFIG_{self.filename.upper()}_H\n")
         hf.write(f"#define INCLUDE_CONFIG_{self.filename.upper()}_H\n")
         hf.write("#include <stdlib.h>\n#include <stdint.h>\n\n")
-        hf.write("\n".join(output[0]))
+        hf.write("\n".join(text[0]))
         hf.write(self.extraStructures)
-        hf.write("\n".join(output[2]))
+        hf.write("\n".join(text[1]))
         hf.write(LUtableH)
         hf.write("\n#endif\n")
         hf.close()
 
-        cf = open(str(sourceFileName), 'w')
+    def writeStructureSourceFile(self, location, text):
+        LUtable = f"\n\nuint8_t Config_{self.filename}LU[{len(self.vLU)}][{len(self.vLU[0])}] = {str(self.vLU).replace('[', '{').replace(']', '}')};\n"
+
+        cf = open(str(location), 'w')
         cf.write(f"#include \"{self.includePath}configReader.h\"\n")
         cf.write(f"#include \"{self.includePath}{self.filename}.h\"\n\n")
-        cf.write("\n".join(output[1]))
+        cf.write("\n".join(text))
         cf.write(LUtable)
         cf.close()
+    
+    def writeConfigEditorHeaderFile(self, location):
+        hf = open(str(location), 'w')
+        hf.write(f"#ifndef INCLUDE_CONFIG_LAYOUTEDITOR_H\n")
+        hf.write(f"#define INCLUDE_CONFIG_LAYOUTEDITOR_H\n")
+        hf.write("#include <stdlib.h>\n#include <stdint.h>\n#include \"flags.h\"\n")
+        
+        text = []
+        for k in self.structures:
+            s = self.structures[k]
+
+            if hasattr(s, 'Preview') and s.Preview:
+                text = text + [f"void configEditor_preview_{s.name}(char *, struct configStruct_{s.name});"]
+            if hasattr(s, 'Scannable') and s.Scannable:
+                text = text + [f"void configEditor_scan_{s.name}(char *, struct configStruct_{s.name} *);"]
+            if hasattr(s, 'Editable') and s.Editable:
+                arguments = [f"struct configStruct_{s.name} *"]
+                for E in s.Editable:
+                    if hasattr(E, 'extraArgument'):
+                        arguments += E.extraArgument
+                text = text + [f'void configEditor_{s.name}({", ".join(arguments)});']
+
+        hf.write("\n".join([t for t in text if t is not None]))
+
+        hf.write("\n#endif\n")
+        hf.close()
+
+
+    def writeConfigEditorSourceFile(self, location):
+        
+        text = []
+        for k in self.structures:
+            s = self.structures[k]
+            text = text + [s.generateEditorPreview(), s.generateEditorScan(), s.generateEditor()]
+
+        print(text)
+
+        cf = open(str(location), 'w')
+        cf.write(f"#include \"{self.includePath}configReader.h\"\n")
+        cf.write(f"#include \"{self.includePath}{self.filename}Editor.h\"\n")
+        cf.write(f"#include \"{self.includePath}{self.filename}.h\"\n\n")
+        cf.write(f"#include \"utils/strings.h\"\n")
+        cf.write("\n".join([t for t in text if t is not None]))
+        cf.close()
+
+    def writeToFile(self):
+        baseDir = Path(os.getcwd())
+        
+        structureText = [t.generate() for t in self.structures.values()]
+
+        self.writeStructureHeaderFile(baseDir / self.headerPath / f"{self.filename}.h",  ([t[0] for t in structureText], ["\n".join(t[2]) for t in structureText]))
+        self.writeStructureSourceFile(baseDir / self.sourcePath / f"{self.filename}.cpp", ["\n".join(t[1]) for t in structureText])
+
+        self.writeConfigEditorHeaderFile(baseDir / self.headerPath / f"{self.filename}Editor.h")
+        self.writeConfigEditorSourceFile(baseDir / self.sourcePath / f"{self.filename}Editor.cpp")
+
 
 

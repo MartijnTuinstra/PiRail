@@ -137,7 +137,7 @@ TEST_CASE_METHOD(TestsFixture, "Polarity Solver", "[PolSolve][PS-1]"){
 
   }
   
-  SECTION("II - Blocked polairity"){
+  SECTION("II - Blocked polarity"){
     // Polarity changes ahead (from B2 to B1)
     //  polarity of B1/B0 cannot be changed therefore B2/B3 must be changed,
     //  this can only happen when B4/B5 is cleared.
@@ -174,9 +174,15 @@ TEST_CASE_METHOD(TestsFixture, "Polarity Solver", "[PolSolve][PS-1]"){
 
   }
 
-  SECTION("III - Blocked polairity"){
+  SECTION("III - Blocked polarity"){
+    // Polarity changes ahead twice
+    //  first polarity of B8,B9 has to be matched to B7
+    //  then the polarity of B10,B11 has to be matched with B9
+    //  the train continues and leaves B9
+    //  then B10,B11 have to be matched with B12
+
+
     // --1.6-> --1.7->|<<1.8>- <<1.9>-|<<1.10>- <<1.11>-|<-1.12-- <-1.13--
-    logger.setlevel_stdout(TRACE);
     U->B[7]->setDetection(1);
     Algorithm::process(U->B[7], _FORCE);
 
@@ -229,9 +235,14 @@ TEST_CASE_METHOD(TestsFixture, "Polarity Solver", "[PolSolve][PS-1]"){
 
   }
 
-  SECTION("IV - Blocked polairity"){
+  SECTION("IV - Blocked polarity"){
+    // Polarity changes ahead twice
+    //  first polarity of B8,B9 has to be matched to B7
+    //  then the polarity of B10,B11 has to be matched with B9
+    //  the train continues but has not left B9
+    //  then B8,B9,B10,B11 have to be matched with B12
+
     // --1.6-> --1.7->|<<1.8>- <<1.9>-|<<1.10>- <<1.11>-|<-1.12-- <-1.13--
-    logger.setlevel_stdout(TRACE);
     U->B[7]->setDetection(1);
     Algorithm::process(U->B[7], _FORCE);
 
@@ -250,7 +261,8 @@ TEST_CASE_METHOD(TestsFixture, "Polarity Solver", "[PolSolve][PS-1]"){
     CHECK(U->B[ 8]->path->polarity  == POLARITY_REVERSED);
     CHECK(U->B[10]->path->polarity  == POLARITY_NORMAL);
 
-    U->B[8]->reverse();
+    REQUIRE(U->B[8]->path);
+    U->B[8]->path->reverse();
     U->B[8]->setDetection(1);
     Algorithm::process(U->B[8], _FORCE);
     T->B = U->B[8];
@@ -263,7 +275,8 @@ TEST_CASE_METHOD(TestsFixture, "Polarity Solver", "[PolSolve][PS-1]"){
 
     T->setSpeed(0);
 
-    U->B[10]->reverse();
+    REQUIRE(U->B[10]->path);
+    U->B[10]->path->reverse();
     U->B[9]->setDetection(1);
     Algorithm::process(U->B[9], _FORCE);
     U->B[7]->setDetection(0);
@@ -277,6 +290,7 @@ TEST_CASE_METHOD(TestsFixture, "Polarity Solver", "[PolSolve][PS-1]"){
 
     CHECK(U->B[ 9]->blocked);
     CHECK(U->B[10]->blocked);
+    CHECK(U->B[9]->train == U->B[10]->train);
 
     Algorithm::Polarity_Checker(&T->B->Alg, 0);
 
@@ -284,4 +298,66 @@ TEST_CASE_METHOD(TestsFixture, "Polarity Solver", "[PolSolve][PS-1]"){
     CHECK(U->B[10]->path->polarity  == POLARITY_NORMAL);
 
   }
+
+
+  /*
+  SECTION("V - Train closely behind"){
+    // Polarity changes ahead twice
+    //  first polarity of B8,B9 has to be matched to B7
+    //  then the polarity of B10,B11 has to be matched with B9
+    //  the train continues but has not left B9
+    //  then B8,B9,B10,B11 have to be matched with B12
+
+    // --1.6-> --1.7->|<<1.8>- <<1.9>-|<<1.10>- <<1.11>-|<-1.12-- <-1.13--
+    U->B[ 8]->path->reverse();
+    U->B[10]->path->reverse();
+
+    CHECK(U->B[ 8]->path->polarity  == POLARITY_REVERSED);
+    CHECK(U->B[10]->path->polarity  == POLARITY_REVERSED);
+
+    logger.setlevel_stdout(TRACE);
+    U->B[9]->setDetection(1);
+    Algorithm::process(U->B[9], _FORCE);
+
+    auto T = U->B[9]->train;
+    REQUIRE(T != nullptr);
+    REQUIRE(T == RSManager->getTrain(0));
+    
+    U->B[9]->setDetection(1);
+    Algorithm::process(U->B[9], _FORCE);
+
+    REQUIRE(U->B[8]->path != U->B[10]->path);
+
+    T->setSpeed(100);
+    T->B = U->B[9];
+
+
+
+    T->setSpeed(0);
+
+    REQUIRE(U->B[10]->path);
+    U->B[10]->path->reverse();
+    U->B[9]->setDetection(1);
+    Algorithm::process(U->B[9], _FORCE);
+    U->B[7]->setDetection(0);
+    Algorithm::process(U->B[7], _FORCE);
+    U->B[10]->setDetection(1);
+    Algorithm::process(U->B[10], _FORCE);
+    U->B[8]->setDetection(0);
+    Algorithm::process(U->B[8], _FORCE);
+    T->B = U->B[10];
+    T->setSpeed(100);
+
+    CHECK(U->B[ 9]->blocked);
+    CHECK(U->B[10]->blocked);
+    CHECK(U->B[9]->train == U->B[10]->train);
+
+    Algorithm::Polarity_Checker(&T->B->Alg, 0);
+
+    CHECK(U->B[ 8]->path->polarity  == POLARITY_NORMAL);
+    CHECK(U->B[10]->path->polarity  == POLARITY_NORMAL);
+
+  }
+
+  */
 }

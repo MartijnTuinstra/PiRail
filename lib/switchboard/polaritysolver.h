@@ -21,7 +21,7 @@ namespace PolaritySolver {
 // void init();
 // void free();
 
-int solve(Train *, Path *, Path *);
+int solve(Train *, PolarityGroup *, PolarityGroup *);
 
 // struct instruction {
 //   uint8_t type;

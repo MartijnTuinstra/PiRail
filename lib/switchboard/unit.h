@@ -78,9 +78,13 @@ class Unit {
     IO_Port * IO(struct s_IO_port_conf adr);
     IO_Port * IO(struct configStruct_IOport);
 
+    void link_blocks();
+    void link_switches();
+    void link_msswitches();
+    void link_rest();
+
     void updateIO();
 
-    void link_all();
     void map_all();
 };
 

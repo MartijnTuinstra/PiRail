@@ -4,24 +4,27 @@
 #include "utils/logger.h"
 #include "rollingstock/train.h"
 
+#include "switchboard/polarityGroup.h"
+
 namespace PolaritySolver {
 
 // void init();
 // void free();
 
-int solve(Train * T, Path * near, Path * far){
+int solve(Train * T, PolarityGroup * near, PolarityGroup * far){
   loggerf(INFO, "PolaritySolver::solve(id:%i, %x, %x)", T->id, near, far);
 
-  if(far->polarityFlippable()){
+  if(far->flippable()){
     loggerf(INFO, "B/far side fix");
-    far->flipPolarity();
+    far->flip();
     return true;
   }
-  else if(near->polarityFlippable()){
+  else if(near->flippable()){
     loggerf(INFO, "A/near side fix");
-    near->flipPolarity();
+    near->flip();
     return true;
   }
+  /* FIXME
   else{
     Path * paths[10] = {near, 0};
     uint8_t pathsFound = 1;
@@ -34,15 +37,9 @@ int solve(Train * T, Path * near, Path * far){
       if(near->Entrance->train != T)
         break;
 
-      Block * block = 0;
-      if(near->prev->type == RAIL_LINK_R)
-        block = near->prev->p.B;
-      else if(near->prev->type == RAIL_LINK_S || near->prev->type == RAIL_LINK_s)
-        block = near->prev->p.Sw->Detection;
-      else if(near->prev->type >= RAIL_LINK_MA || near->prev->type == RAIL_LINK_MB_inside)
-        block = near->prev->p.MSSw->Detection;
-
+      Block * block = near->getBlockAtEdge(near->prev);
       Path * P = block->path;
+      loggerf(INFO, "test path %i", P->Blocks[0]->id);
 
       if(!P->Exit->blocked)
         break;
@@ -55,6 +52,7 @@ int solve(Train * T, Path * near, Path * far){
 
       paths[pathsFound++] = P;
       pathsFlippable += (P->polarity_type != BLOCK_FL_POLARITY_DISABLED);
+      loggerf(INFO, "add path %i", P->Blocks[0]->id);
 
       near = P;
     }
@@ -64,8 +62,18 @@ int solve(Train * T, Path * near, Path * far){
     if(pathsFlippable < pathsFound)
       return 0;
 
-    loggerf(ERROR, "FLIP Some paths please");
+    if(pathsFlippable == pathsFound){
+      printf("Need to flip: ");
+      for(uint8_t i = 0; i < pathsFound; i++){
+        for(Block * b: paths[i]->Blocks){
+          printf("%02i:%02i ", b->module, b->id);
+        }
+        paths[i]->flipPolarityNow();
+      }
+      printf("\n");
+    }
   }
+  */
 
   return 0;
 }

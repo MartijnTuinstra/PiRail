@@ -23,20 +23,8 @@ Signal::Signal(uint8_t _module, struct configStruct_Signal * conf):
   uid = SwManager->addSignal(this);
   U = Units(_module);
 
-  if(block_link.type == RAIL_LINK_R){
-    B = (Block *)rail_link_pointer(block_link);
-
-    if(!B){
-      loggerf(ERROR, "Failed to retrieve block (%2i:%2i) connected to signal %2i:%2i", block_link.module, block_link.id, module, id);
-      return;
-    }
-
-    state = B->addSignal(this);
-  }
-  else if(block_link.type != RAIL_LINK_C){
-    loggerf(WARNING, "Failed to create Signal, invalid block link.");
-    return;
-  }
+  tmpP = (Block *)rail_link_pointer(conf->tmp_block);
+  block_link.p.p = nullptr;
 
   output_len = conf->output_len;
   
@@ -56,26 +44,26 @@ Signal::Signal(uint8_t _module, struct configStruct_Signal * conf):
     }
   }
 
-  for(uint8_t i = 0; i < conf->Switch_len; i++){
-    void * p = 0;
-    if(conf->Switches[i].type){
-      // MSSwitch
-      U->MSSw[conf->Switches[i].Sw]->addSignal(this);
-      p = U->MSSw[conf->Switches[i].Sw];
-    }
-    else{
-      // Switch
-      U->Sw[conf->Switches[i].Sw]->addSignal(this);
-      p = U->Sw[conf->Switches[i].Sw];
-    }
+  // for(uint8_t i = 0; i < conf->Switch_len; i++){
+  //   void * p = 0;
+  //   if(conf->Switches[i].type){
+  //     // MSSwitch
+  //     U->MSSw[conf->Switches[i].Sw]->addSignal(this);
+  //     p = U->MSSw[conf->Switches[i].Sw];
+  //   }
+  //   else{
+  //     // Switch
+  //     U->Sw[conf->Switches[i].Sw]->addSignal(this);
+  //     p = U->Sw[conf->Switches[i].Sw];
+  //   }
 
-    struct SignalSwitchLink * link = (struct SignalSwitchLink *)_calloc(1, struct SignalSwitchLink);
-    link->MSSw = conf->Switches[i].type;
-    link->p.p = p;
-    link->state = conf->Switches[i].state;
+  //   struct SignalSwitchLink * link = (struct SignalSwitchLink *)_calloc(1, struct SignalSwitchLink);
+  //   link->MSSw = conf->Switches[i].type;
+  //   link->p.p = p;
+  //   link->state = conf->Switches[i].state;
 
-    Switches.push_back(link);
-  }
+  //   Switches.push_back(link);
+  // }
 
   switchUpdate();
 
@@ -87,11 +75,77 @@ Signal::Signal(uint8_t _module, struct configStruct_Signal * conf):
 }
 
 Signal::~Signal(){
-  for(auto link: this->Switches){
-    _free(link);
-  }
   _free(this->output);
   _free(this->output_stating);
+}
+
+void Signal::map(){
+  loggerf(INFO, "Signal::map  %i:%i uid %i", module, id, uid);
+  RailLink * L = &block_link;
+
+  while(L->type != RAIL_LINK_R){
+    loggerf(INFO, " %02i:%02i:%02x", L->module, L->id, L->type);
+    if(L->type == RAIL_LINK_s){
+      Switch * Sw = (Switch *)rail_link_pointer(*L);
+      Sw->addSignal(this);
+
+      loggerf(INFO, " %x str %x div %x", tmpP, Sw->str.p.p, Sw->div.p.p);
+
+      bool state = (Sw->str.p.p == tmpP ? STRAIGHT_SWITCH : DIVERGING_SWITCH);
+
+      loggerf(INFO, " state = %i", state);
+      SignalSwitchLink link = {.MSSw=SIGNAL_LINK___SWITCH, .p=Sw, .state=state};
+      Switches.push_back(link);
+
+      loggerf(INFO, " %02i-%02i:%02i-%02i", link.MSSw, link.p.Sw->module, link.p.Sw->id, link.state);
+
+      L = &Sw->app;
+    }
+    else if(L->type == RAIL_LINK_MA || L->type == RAIL_LINK_MB){
+      MSSwitch * Sw = (MSSwitch *)rail_link_pointer(*L);
+      RailLink * next = L->type == RAIL_LINK_MA ? Sw->sideB : Sw->sideA;
+      RailLink * prev = L->type == RAIL_LINK_MA ? Sw->sideA : Sw->sideB;
+      Sw->addSignal(this);
+
+      bool stateFound = false;
+      uint8_t state = 0;
+
+      for(uint8_t i = 0; i < Sw->state_len; i++){
+        if(prev[i].p.p == tmpP){
+          stateFound = true;
+          state = i;
+          break;
+        }
+      }
+
+      if(!stateFound){
+        loggerf(WARNING, "Signal state not found");
+        return;
+      }
+
+      Switches.push_back({SIGNAL_LINK_MSSWITCH, (Switch *)Sw, state});
+
+      L = &next[state];
+    }
+    else if(L->type == RAIL_LINK_C){
+      loggerf(ERROR, " Signal still has Connector link");
+      return;
+    }
+  }
+
+  B = (Block *)rail_link_pointer(*L);
+  memcpy(&block_link, L, sizeof(RailLink));
+  block_link.p.p = rail_link_pointer(block_link);
+
+  if(!B){
+    loggerf(ERROR, "Failed to retrieve block (%2i:%2i) connected to signal %2i:%2i", L->module, L->id, module, id);
+    return;
+  }
+  else{
+    loggerf(INFO, "Signal::map  %i:%i to B %02i:%02i / %x", module, id, uid, block_link.module, block_link.id, block_link.p.p);
+  }
+
+  state = B->addSignal(this);
 }
 
 void Signal::exportConfig(struct configStruct_Signal * cfg){
@@ -144,18 +198,6 @@ void Signal::exportConfig(struct configStruct_Signal * cfg){
       }
     }
   }
-
-  if(cfg->Switch_len){
-    cfg->Switches = (struct configStruct_SignalDependentSwitch *)_calloc(cfg->Switch_len, struct configStruct_SignalDependentSwitch);
-    for(uint8_t i = 0; i < cfg->Switch_len; i++){
-      cfg->Switches[i].type  = Switches[i]->MSSw;
-      if(Switches[i]->MSSw)
-        cfg->Switches[i].Sw    = Switches[i]->p.MSSw->id;
-      else
-        cfg->Switches[i].Sw    = Switches[i]->p.Sw->id;
-      cfg->Switches[i].state = Switches[i]->state;
-    }
-  }
 }
 
 void print_signal_state(Signal * Si, enum Rail_states state){
@@ -176,11 +218,11 @@ void Signal::set(enum Rail_states _state){
 }
 
 void Signal::switchUpdate(){
-  this->switchDanger = false;
+  switchDanger = false;
 
-  for(auto link: this->Switches){
-    if((link->MSSw && link->p.MSSw->state != link->state) || (!link->MSSw && link->p.Sw->state != link->state)){
-      this->switchDanger = true;
+  for(auto link: Switches){
+    if((link.MSSw && link.p.MSSw->state != link.state) || (!link.MSSw && link.p.Sw->state != link.state)){
+      switchDanger = true;
       break;
     }
   }

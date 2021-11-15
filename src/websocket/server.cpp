@@ -191,7 +191,7 @@ void Server::newClientCallback(Client * client){
   // client->send(data, 3, 0xFF);
 
   //Send submodule status
-  WS_stc_SubmoduleState(0);
+  WS_stc_SubmoduleState(client);
   
   //Send track layout and data
   if(SYS->modules_loaded){

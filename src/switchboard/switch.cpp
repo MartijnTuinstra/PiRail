@@ -150,7 +150,8 @@ void Switch::exportConfig(struct configStruct_Switch * cfg){
 
 void Switch::addSignal(Signal * Sig){
   loggerf(DEBUG, "AddSignal %i to switch %i", Sig->id, this->id);
-  this->Signals.push_back(Sig);
+  Signals.push_back(Sig);
+  Sig->switchUpdate();
 }
 
 bool Switch::approachable(void * p, int flags){

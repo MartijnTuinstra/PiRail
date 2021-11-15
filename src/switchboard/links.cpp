@@ -30,6 +30,36 @@ RailLink::RailLink(struct configStruct_RailLink link){
   type   = (enum link_types)link.type;
 }
 
+Block * RailLink::getNextBlock(){
+  RailLink * currentLink = this;
+
+  while(currentLink->type != RAIL_LINK_R && currentLink->type != RAIL_LINK_E){
+    if(currentLink->type == RAIL_LINK_S){
+      Switch * Sw = currentLink->p.Sw;
+      currentLink = (Sw->state) ? &Sw->div : &Sw->str;
+    }
+    else if(currentLink->type == RAIL_LINK_s){
+      currentLink = &currentLink->p.Sw->app;
+    }
+    else if(currentLink->type == RAIL_LINK_MA || currentLink->type == RAIL_LINK_MB){
+      return currentLink->p.MSSw->Detection;
+    }
+    else if(currentLink->type == RAIL_LINK_MA_inside){
+      MSSwitch * MSSw = currentLink->p.MSSw;
+      currentLink = &MSSw->sideA[MSSw->state];
+    }
+    else if(currentLink->type == RAIL_LINK_MA_inside){
+      MSSwitch * MSSw = currentLink->p.MSSw;
+      currentLink = &MSSw->sideB[MSSw->state];
+    }
+  }
+
+  if(currentLink->type == RAIL_LINK_R)
+    return currentLink->p.B;
+  else
+    return 0;
+}
+
 BlockLink::BlockLink(struct configStruct_RailLink link) : RailLink(link){};
 // BlockLink::BlockLink(struct configStruct_RailLink link){
 //   module = link.module;
@@ -101,68 +131,4 @@ void * rail_link_pointer(RailLink link){
     return U->MSSw[link.id];
   }
   return 0;
-}
-
-void link_all_blocks(Unit * U){
-  for(int i = 0; i < U->block_len; i++){
-    if(!U->B[i])
-      continue;
-
-    Block * tB = U->B[i];
-
-    tB->next.link();
-    tB->prev.link();
-
-    // tB->next.p.p = rail_link_pointer(tB->next);
-    // tB->prev.p.p = rail_link_pointer(tB->prev);
-
-    if(tB->next.type == RAIL_LINK_R && tB->type == NOSTOP && tB->next.p.B->type != NOSTOP && !tB->next.p.B->path)
-      new Path(tB->next.p.B);
-
-    if(tB->prev.type == RAIL_LINK_R && tB->type == NOSTOP && tB->prev.p.B->type != NOSTOP && !tB->prev.p.B->path)
-      new Path(tB->prev.p.B);
-
-    if((tB->prev.type == RAIL_LINK_E || tB->next.type == RAIL_LINK_E) && !tB->path)
-      new Path(tB);
-
-  }
-}
-
-void link_all_switches(Unit * U){
-  for(int i = 0; i < U->switch_len; i++){
-    if(!U->Sw[i])
-      continue;
-
-    Switch * tSw = U->Sw[i];
-
-    tSw->app.p.p = rail_link_pointer(tSw->app);
-    tSw->str.p.p = rail_link_pointer(tSw->str);
-    tSw->div.p.p = rail_link_pointer(tSw->div);
-
-    if(tSw->app.type == RAIL_LINK_R && tSw->app.p.B->type != NOSTOP && !tSw->app.p.B->path)
-      new Path(tSw->app.p.B);
-    if(tSw->str.type == RAIL_LINK_R && tSw->str.p.B->type != NOSTOP && !tSw->str.p.B->path)
-      new Path(tSw->str.p.B);
-    if(tSw->div.type == RAIL_LINK_R && tSw->div.p.B->type != NOSTOP && !tSw->div.p.B->path)
-      new Path(tSw->div.p.B);
-  }
-}
-
-void link_all_msswitches(Unit * U){
-  for(int i = 0; i < U->msswitch_len; i++){
-    if(!U->MSSw[i])
-      continue;
-
-    MSSwitch * tMSSw = U->MSSw[i];
-
-    for(int s = 0; s < tMSSw->state_len; s++){
-      tMSSw->sideA[s].p.p = rail_link_pointer(tMSSw->sideA[s]);
-      tMSSw->sideB[s].p.p = rail_link_pointer(tMSSw->sideB[s]);
-
-      if(tMSSw->sideA[s].type == RAIL_LINK_R && tMSSw->sideA[s].p.B->type != NOSTOP && !tMSSw->sideA[s].p.B->path)
-        new Path(tMSSw->sideA[s].p.B);
-      if(tMSSw->sideB[s].type == RAIL_LINK_R && tMSSw->sideB[s].p.B->type != NOSTOP && !tMSSw->sideB[s].p.B->path)
-        new Path(tMSSw->sideB[s].p.B);
-    }
-  }
 }

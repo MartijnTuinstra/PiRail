@@ -5,8 +5,8 @@
 
 namespace Websocket {
 
-int Parse(uint8_t data[1024], Websocket::Client * client);
-int MessageGet(int fd, uint8_t ** outbuf, uint8_t ** packet, int bufferSize, int * length_out);
+int Parse(uint8_t * data, Websocket::Client * client);
+int MessageGet(int fd, uint8_t ** outbuf, uint8_t ** packet, int * bufferSize, int * length_out);
 void MessageCreate(char * input, int length_in, char * output, int * length_out);
 
 } // Namespace

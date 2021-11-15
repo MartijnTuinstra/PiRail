@@ -101,7 +101,7 @@ enum _TrainSpeedStates {
     TRAIN_SPEED_INITIALIZING        
 };
 
-Block * FindFront(Train *, Block *, uint16_t);
+Block * FindFront(Train *, Block *, int16_t);
 
 class Train {
   // private:

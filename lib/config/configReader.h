@@ -24,4 +24,16 @@ void Config_write_BitField(uint8_t  get, uint16_t * put, uint8_t bitOffset, uint
 void Config_write_BitField(uint16_t get, uint16_t * put, uint8_t bitOffset, uint8_t bitSize);
 void Config_write_BitField(uint32_t get, uint32_t * put, uint8_t bitOffset, uint8_t bitSize);
 
+
+void configEditor_preview_string(char * buffer, const char * s);
+void configEditor_preview_uint8_t(char * buffer, uint8_t i);
+void configEditor_preview_uint16_t(char * buffer, uint16_t i);
+void configEditor_preview_bool(char * buffer, uint8_t b);
+void configEditor_preview_string(char * buffer, char * s);
+void configEditor_scan_uint8_t(char * buffer, uint8_t * i);
+void configEditor_scan_uint16_t(char * buffer, uint16_t * i);
+void configEditor_scan_bool(char * buffer, uint8_t * b);
+void configEditor_scan_bool(char * buffer, bool * b);
+void configEditor_scan_string(char * buffer, char ** s, uint8_t * l);
+
 #endif

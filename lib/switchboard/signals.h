@@ -41,6 +41,7 @@ class Signal {
 
     RailLink block_link;
     Block * B = 0;              // Parent block
+    void * tmpP = 0;           // Block where the signal is standing
     enum Rail_states state = BLOCKED; // State of the signal
 
     uint8_t output_len = 0;     // Number of IO outputs
@@ -49,10 +50,12 @@ class Signal {
     struct s_signal_stating * output_stating = 0;
 
     bool switchDanger = 0;
-    std::vector<struct SignalSwitchLink *> Switches;
+    std::vector<struct SignalSwitchLink> Switches;
 
     Signal(uint8_t, struct configStruct_Signal *);
     ~Signal();
+
+    void map();
 
     void exportConfig(struct configStruct_Signal *);
 

@@ -12,6 +12,7 @@ class Station;
 class RailLink;
 class BlockLink;
 
+class PolarityGroup;
 class Path;
 
 typedef struct algor_blocks Algor_Blocks;

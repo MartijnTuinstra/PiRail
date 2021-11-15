@@ -13,10 +13,14 @@ class Path {
     bool direction = false;
     bool reserved  = false;
 
-    bool    polarity      = POLARITY_NORMAL;
-    uint8_t polarity_type = BLOCK_FL_POLARITY_DISABLED;
-    uint16_t maxLength    = 0; // Maximum train length allowed through this path
-    uint16_t length       = 0; // Lenght of this path
+    bool SwitchPath = false;
+    bool StationPath = false;
+
+    bool    polarity        = POLARITY_NORMAL;
+    uint8_t polarity_type   = BLOCK_FL_POLARITY_DISABLED;
+    uint16_t maxLength      = 0; // Maximum train length allowed through this path
+    uint16_t length         = 0; // Length of this path
+    uint16_t occupiedLength = 0; // Length in use by trains
 
     Block * Entrance;
     RailLink * prev; // Link to block before Entrance
@@ -58,9 +62,9 @@ class Path {
     void reverse(Train *);
     bool reversable();
 
-    inline void flipPolarity(){ flipPolarity(0); };
-    void flipPolarity(bool _reverse);
-    bool polarityFlippable();
+    Block * getBlockAtEdge(RailLink *);
+    
+    bool isFull();
 
     void sprint(uint8_t detail, char * string);
     void print();

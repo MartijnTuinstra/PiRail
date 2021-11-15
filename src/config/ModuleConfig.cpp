@@ -3,10 +3,13 @@
 #include "config/LayoutStructure.h"
 #include "config/configReader.h"
 
+#include "flags.h"
 #include "utils/logger.h"
 #include "utils/mem.h"
+#include "utils/strings.h"
 #include "config/ModuleConfig.h"
 #include "switchboard/links.h"
+// #include "switchboard/polarityGroup.h"
 
 
 // void hexdump(void * data, int length){
@@ -333,12 +336,13 @@ int ModuleConfig::read(){
 
   loggerf(INFO, "Module %i start reading %d, %d, %d, %d, %d, %d", header->Module, header->IO_Nodes, header->Blocks, header->Switches, header->MSSwitches, header->Signals, header->Stations);
 
-  Nodes      = (struct configStruct_Node *)_calloc(header->IO_Nodes, struct configStruct_Node);
-  Blocks     = (struct configStruct_Block *)_calloc(header->Blocks, struct configStruct_Block);
-  Switches   = (struct configStruct_Switch *)_calloc(header->Switches, struct configStruct_Switch);
-  MSSwitches = (struct configStruct_MSSwitch *)_calloc(header->MSSwitches, struct configStruct_MSSwitch);
-  Signals    = (struct configStruct_Signal *)_calloc(header->Signals, struct configStruct_Signal);
-  Stations   = (struct configStruct_Station *)_calloc(header->Stations, struct configStruct_Station);
+  Nodes         = (struct configStruct_Node *)_calloc(header->IO_Nodes, struct configStruct_Node);
+  Blocks        = (struct configStruct_Block *)_calloc(header->Blocks, struct configStruct_Block);
+  PolarityGroup = (struct configStruct_PolarityGroup *)_calloc(header->PolarityGroup, struct configStruct_PolarityGroup);
+  Switches      = (struct configStruct_Switch *)_calloc(header->Switches, struct configStruct_Switch);
+  MSSwitches    = (struct configStruct_MSSwitch *)_calloc(header->MSSwitches, struct configStruct_MSSwitch);
+  Signals       = (struct configStruct_Signal *)_calloc(header->Signals, struct configStruct_Signal);
+  Stations      = (struct configStruct_Station *)_calloc(header->Stations, struct configStruct_Station);
   
   for(int i = 0; i < header->IO_Nodes; i++){
     Config_read_Node(fileVersion, &Nodes[i], buf_ptr);
@@ -346,6 +350,10 @@ int ModuleConfig::read(){
 
   for(int i = 0; i < header->Blocks; i++){
     Config_read_Block(fileVersion, &Blocks[i], buf_ptr);
+  }
+
+  for(int i = 0; i < header->PolarityGroup; i++){
+    Config_read_PolarityGroup(fileVersion, &PolarityGroup[i], buf_ptr);
   }
 
   for(int i = 0; i < header->Switches; i++){
@@ -380,33 +388,31 @@ int ModuleConfig::calc_size(){
   int size = 1 + Config_write_size_Unit(header); //header
 
   //Nodes
-  for(int i = 0; i < header->IO_Nodes; i++){
+  for(int i = 0; i < header->IO_Nodes; i++)
     size += Config_write_size_Node(&Nodes[i]);
-  }
 
   //Blocks
   size += Config_write_size_Block(Blocks) * header->Blocks;
 
+  // Polarity Groups
+  for(int i = 0; i < header->PolarityGroup; i++)
+    size += Config_write_size_PolarityGroup(&PolarityGroup[i]);
+
   //Switches
-  for(int i = 0; i < header->Switches; i++){
+  for(int i = 0; i < header->Switches; i++)
     size += Config_write_size_Switch(&Switches[i]);
-  }
 
   //MSSwitches
-  for(int i = 0; i < header->MSSwitches; i++){
+  for(int i = 0; i < header->MSSwitches; i++)
     size += Config_write_size_MSSwitch(&MSSwitches[i]);
-  }
-
 
   //Signals
-  for(int i = 0; i <  header->Signals; i++){
+  for(int i = 0; i <  header->Signals; i++)
     size += Config_write_size_Signal(&Signals[i]);
-  }
 
   //Stations
-  for(int i = 0; i <  header->Stations; i++){
+  for(int i = 0; i <  header->Stations; i++)
     size += Config_write_size_Station(&Stations[i]);
-  }
 
   //Layout
   size += Config_write_size_WebLayout(Layout);
@@ -422,10 +428,10 @@ void ModuleConfig::dump(){
   fclose(fp);
 }
 
-void ModuleConfig::write(){
+bool ModuleConfig::write(){
   int size = calc_size();
 
-  loggerf(DEBUG, "write_module_from_conf (%i bytes)", size);
+  loggerf(INFO, "write_module_from_conf (%i bytes) version %i", size, CONFIG_LAYOUTSTRUCTURE_LU_MAX_VERSION);
 
   char * data = (char *)_calloc(size + 50, char);
   uint8_t * p = (uint8_t *)data;
@@ -447,6 +453,11 @@ void ModuleConfig::write(){
   //Copy blocks
   for(int i = 0; i < header->Blocks; i++){
     Config_write_Block(&Blocks[i], &p);
+  }
+
+  //Copy Polarity Group
+  for(int i = 0; i < header->PolarityGroup; i++){
+    Config_write_PolarityGroup(&PolarityGroup[i], &p);
   }
 
   //Copy Switches
@@ -477,11 +488,18 @@ void ModuleConfig::write(){
 
   FILE * fp = fopen(filename, "wb");
 
+  if(!fp){
+    loggerf(CRITICAL, "Could not open file (%s), write to disk aborted", filename);
+    return false;
+  }
+
   fwrite(data, size, 1, fp);
 
   fclose(fp);
 
   _free(data);
+
+  return true;
 }
 
 
@@ -556,6 +574,27 @@ void print_Block(struct configStruct_Block block){
   printf( "%s\n", debug);
 }
 
+void print_PolarityGroup(struct configStruct_PolarityGroup PG){
+  char debug[300];
+  char * debugptr = &debug[0];
+
+  char IO1[7] = "";
+  char IO2[7] = "";
+
+  if (PG.type > 1)
+    sprintf(IO1, "%02i:%02i", PG.IO[0].Node, PG.IO[0].Port);
+
+  if (PG.type == 3)
+    sprintf(IO2, "%02i:%02i", PG.IO[1].Node, PG.IO[1].Port);
+
+  debugptr += sprintf(debugptr, "%2i\t%s\t%5s  %5s\t(%3i) ", PG.id, S_PolarityTypes[PG.type], IO1, IO2, PG.nr_blocks);
+  for(uint8_t i = 0; i < PG.nr_blocks; i++){
+    debugptr += sprintf(debugptr, "%2i ", PG.blocks[i]);
+  }
+
+  printf("%s\n", debug);
+}
+
 void print_Switch(struct configStruct_Switch Switch){
   char debug[300];
   char * debugptr = debug;
@@ -577,31 +616,51 @@ void print_Switch(struct configStruct_Switch Switch){
   printf( "%s\n", debug);
 }
 
-void print_MSSwitch(struct configStruct_MSSwitch Switch){
+void print_MSSwitch(struct configStruct_MSSwitch Switch, uint8_t printLevel){
   char debug[1000];
   char * debugptr = debug;
 
   const char * typestring[3] = {"Crossing", "Turntable", "Traverse Table"};
 
-  debugptr += sprintf(debugptr, "%i\t%i\t%i\t%2i -> [",
-                Switch.id,
-                Switch.det_block,
-                Switch.nr_states,
-                Switch.IO);
-  
-  if(Switch.IO)
-    debugptr += sprintf(debugptr, "%2i:%2i", Switch.IO_Ports[0].Node, Switch.IO_Ports[0].Port);
+  switch(printLevel){
+    case PRINT_MINIMAL:
+      debugptr += sprintf(debugptr, "MSSW %s %i, B%i, S%i, IO%i", typestring[Switch.type], Switch.id, Switch.det_block, Switch.nr_states, Switch.IO);
+      break;
+    
+    case PRINT_SMALL:
+      debugptr += sprintf(debugptr, "%i\t%s\t%i\t%i\t%i", Switch.id, typestring[Switch.type], Switch.det_block, Switch.nr_states, Switch.IO);
+      break;
+    
+    case PRINT_EXTENDED:
+      debugptr += sprintf(debugptr, "%i\t%-10s\t%i\t%i\t%i -> [", Switch.id, typestring[Switch.type], Switch.det_block, Switch.nr_states, Switch.IO);
+      if(Switch.IO)
+        debugptr += sprintf(debugptr, "%2i:%2i", Switch.IO_Ports[0].Node, Switch.IO_Ports[0].Port);
 
-  for(int i = 1; i < Switch.IO; i++){
-    debugptr += sprintf(debugptr, ", %2i:%2i", Switch.IO_Ports[i].Node, Switch.IO_Ports[i].Port);
-  }
-  debugptr += sprintf(debugptr, "]\t%i - %s\n", Switch.type, typestring[Switch.type]);
+      for(int i = 1; i < Switch.IO; i++){
+        debugptr += sprintf(debugptr, ", %2i:%2i", Switch.IO_Ports[i].Node, Switch.IO_Ports[i].Port);
+      }
+      debugptr += sprintf(debugptr, "]\n", Switch.type, typestring[Switch.type]);
+      break;
+    
+    case PRINT_ALL:
+      debugptr += sprintf(debugptr, "             ID: %2i\nDetection Block: %2i\n         States: %2i\n       IO Ports: %2i [",
+                                    Switch.id, Switch.det_block, Switch.nr_states, Switch.IO);
+      
+      if(Switch.IO)
+        debugptr += sprintf(debugptr, "%2i:%2i", Switch.IO_Ports[0].Node, Switch.IO_Ports[0].Port);
 
-  for(int i = 0; i < Switch.nr_states; i++){
-    debugptr += sprintf(debugptr, "\t\t\t%2i >\t", i);
-    print_link(&debugptr, Switch.states[i].sideA);
-    print_link(&debugptr, Switch.states[i].sideB);
-    debugptr += sprintf(debugptr, "%i\t%x\n", Switch.states[i].speed, Switch.states[i].output_sequence);
+      for(int i = 1; i < Switch.IO; i++){
+        debugptr += sprintf(debugptr, ", %2i:%2i", Switch.IO_Ports[i].Node, Switch.IO_Ports[i].Port);
+      }
+      debugptr += sprintf(debugptr, "]\n    Switch Type: %2i - %s\n\nSwitch States:\n", Switch.type, typestring[Switch.type]);
+
+      for(int i = 0; i < Switch.nr_states; i++){
+        debugptr += sprintf(debugptr, "  - %2i >\t", i);
+        print_link(&debugptr, Switch.states[i].sideA);
+        print_link(&debugptr, Switch.states[i].sideB);
+        debugptr += sprintf(debugptr, "%i\t%x\n", Switch.states[i].speed, Switch.states[i].output_sequence);
+      }
+      break;
   }
 
   printf( "%s", debug);
@@ -671,6 +730,7 @@ void ModuleConfig::print(char ** cmds, uint8_t cmd_len){
       printf("\t-H\tHeaders\n");
       printf("\t-n\tNodes\n");
       printf("\t-b\tBlocks\n");
+      printf("\t-G\tpolarity Groups\n");
       printf("\t-p\tSwitches/Points\n");
       printf("\t-m\tMSSwitches\n");
       printf("\t-s\tSignals\n");
@@ -702,8 +762,11 @@ void ModuleConfig::print(char ** cmds, uint8_t cmd_len){
     else if(strcmp(cmds[i], "-L") == 0){
       mask |= 256;
     }
+    else if(strcmp(cmds[i], "-G") == 0){
+      mask |= 0x200;
+    }
     else if(strcmp(cmds[i], "-A") == 0){
-      mask |= 0x1FF;
+      mask |= 0x3FF;
     }
     i++;
   }
@@ -718,7 +781,7 @@ void ModuleConfig::print(char ** cmds, uint8_t cmd_len){
     printf("\t-m\tMSSwitches\n");
     printf("\t-s\tSignals\n");
     printf("\t-t\tStations\n");
-    printf("\t-A\tAll");
+    printf("\t-A\tAll\n");
     return;
   }
 
@@ -759,10 +822,22 @@ void ModuleConfig::print(char ** cmds, uint8_t cmd_len){
   }
 
   if(mask & 32){
-    printf( "MSSwitch\n");
-    printf( "id\tblock\tstates\tIO\tSideA     \tSideB     \tSpeed\tSequence\t...\n");
-    for(int i = 0; i < header->MSSwitches; i++){
-      print_MSSwitch(MSSwitches[i]);
+    // Print one detailed or all simple
+    if(cmd_len > 1){
+      int id = atoi(cmds[1]);
+
+      if(id >= header->MSSwitches)
+        printf("ID not valid!\n");
+      else
+        print_MSSwitch(MSSwitches[id], PRINT_ALL);
+    }
+    else{
+      // Print all
+      printf( "MSSwitch\n");
+      printf( "id\tType\t\tBlock\tStates\tIO\n");
+      for(int i = 0; i < header->MSSwitches; i++){
+        print_MSSwitch(MSSwitches[i], PRINT_EXTENDED);
+      }
     }
   }
 
@@ -786,5 +861,11 @@ void ModuleConfig::print(char ** cmds, uint8_t cmd_len){
   if(mask & 256){
     printf( "Layout\n");
     print_Layout(Layout);
+  }
+
+  if(mask & 0x200){
+    printf("Polarity Groups\nid\ttype\tblocks\n");
+    for(uint8_t i = 0; i < header->PolarityGroup; i++)
+      print_PolarityGroup(PolarityGroup[i]);
   }
 }

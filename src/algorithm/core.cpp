@@ -64,7 +64,7 @@ void processBlock(blockAlgorithm * BA, int flags){
   BA->doneAll = 0;
 
   if(!B){
-    loggerf(WARNING, "process Failed. Cannot find block (blockAlgorithm 0x%x)", (unsigned int)BA);
+    loggerf(WARNING, "process Failed. Cannot find block (blockAlgorithm 0x%x)", (unsigned long)BA);
     BA->doneAll = ALGORITHM_FAILED_CODE;
     return;
   }
@@ -535,11 +535,11 @@ bool Polarity_Checker(struct blockAlgorithm * ABs, int debug){
     Block * prevBlock = (i == 0) ? B : BN[i-1];
     dir ^= (dircmp(prevBlock, tB) != prevBlock->cmpPolarity(tB));
 
-    loggerf(WARNING, "Polarity Search %02i:%02i -> %02i:%02i, dir:%i, polarity:%i", prevBlock->module, prevBlock->id, tB->module, tB->id, dir, prevBlock->checkPolarity(tB));
+    loggerf(INFO, "Polarity Search %02i:%02i -> %02i:%02i, dir:%i, polarity:%i", prevBlock->module, prevBlock->id, tB->module, tB->id, dir, prevBlock->checkPolarity(tB));
 
     if(!prevBlock->checkPolarity(tB)){
       loggerf(WARNING, "POLARITY FLIP NEEDED %02i:%02i", tB->module, tB->id);
-      if(PolaritySolver::solve(T, prevBlock->path, tB->path))
+      if(PolaritySolver::solve(T, prevBlock->Polarity, tB->Polarity))
         return true;
     }
 
@@ -696,6 +696,8 @@ void ApplyRailState(uint8_t blocks, Block * B, Block * BL[10], enum Rail_states 
       // Should not go to next group if
       //  - NOSTOP group
       //  - Station Group
+      //  - Same Polarity Group
+      loggerf(INFO, " i%i>=pG[j%i] %x %x",i,j, (unsigned long)B->Polarity, (unsigned long)BL[i]->Polarity);
       if(BL[i]->type == STATION && B->type == STATION &&
           ((i  > 0 && BL[i]->station != BL[i-1]->station) || 
            (i == 0 && BL[i]->station != B->station))
@@ -705,7 +707,7 @@ void ApplyRailState(uint8_t blocks, Block * B, Block * BL[10], enum Rail_states 
         state[2] = CAUTION;
         j++;
       }
-      else if(BL[i]->type != NOSTOP)
+      else if(BL[i]->type != NOSTOP && B->Polarity && B->Polarity != BL[i]->Polarity || !B->Polarity)
         j++;
 
       if(j > 2)
@@ -918,7 +920,7 @@ void train_control(Train * T){
     return;
 
   if(!B){
-    loggerf(ERROR, "Train %i, %x has no block????", T->id, (unsigned int)T);
+    loggerf(ERROR, "Train %i, %x has no block????", T->id, (unsigned long)T);
     return;
   }
 

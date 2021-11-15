@@ -25,6 +25,7 @@ class ModuleConfig {
 
     struct configStruct_Node * Nodes;
     struct configStruct_Block * Blocks;
+    struct configStruct_PolarityGroup * PolarityGroup;
     struct configStruct_Switch * Switches;
     struct configStruct_MSSwitch * MSSwitches;
     struct configStruct_Station * Stations;
@@ -41,7 +42,7 @@ class ModuleConfig {
 
     int read();
     void dump();
-    void write();
+    bool write();
     int calc_size();
 
     void newModule(uint8_t file, uint8_t connections);
@@ -55,8 +56,9 @@ class ModuleConfig {
 void print_link(char ** debug, struct configStruct_RailLink link);
 void print_Node(struct configStruct_Node node);
 void print_Block(struct configStruct_Block block);
+void print_PolarityGroup(struct configStruct_PolarityGroup PG);
 void print_Switch(struct configStruct_Switch Switch);
-void print_MSSwitch(struct configStruct_MSSwitch Switch);
+void print_MSSwitch(struct configStruct_MSSwitch Switch, uint8_t printLevel);
 void print_Signals(struct configStruct_Signal signal);
 void print_Stations(struct configStruct_Station stations);
 void print_Layout(struct configStruct_WebLayout * config);

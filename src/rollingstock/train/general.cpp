@@ -71,19 +71,19 @@ Train::~Train(){
 }
 
 void Train::setBlock(Block * sB){
-  loggerf(DEBUG, "train %i: setBlock %2i:%2i %x", id, sB->module, sB->id, (unsigned int)sB);
+  loggerf(DEBUG, "train %i: setBlock %2i:%2i %x", id, sB->module, sB->id, (unsigned long)sB);
   sB->train = this;
   blocks.push_back(sB);
 }
 
 void Train::setBlock(std::vector<Block *>::iterator I, Block * sB){
-  loggerf(DEBUG, "train %i: setBlock %2i:%2i %x", id, sB->module, sB->id, (unsigned int)sB);
+  loggerf(DEBUG, "train %i: setBlock %2i:%2i %x", id, sB->module, sB->id, (unsigned long)sB);
   sB->train = this;
   blocks.insert(I, sB);
 }
 
 void Train::releaseBlock(Block * rB){
-  loggerf(DEBUG, "train %i: releaseBlock %2i:%2i %x", id, rB->module, rB->id, (unsigned int)rB);
+  loggerf(DEBUG, "train %i: releaseBlock %2i:%2i %x", id, rB->module, rB->id, (unsigned long)rB);
   rB->train = 0;
   blocks.erase(std::remove_if(blocks.begin(),
                               blocks.end(),
@@ -363,7 +363,7 @@ void Train::move(Block * newBlock){
   }
 }
 
-Block * FindFront(Train * T, Block * start, uint16_t length){
+Block * FindFront(Train * T, Block * start, int16_t length){
   Block * listBlock = start;
   Block * B = start;
 

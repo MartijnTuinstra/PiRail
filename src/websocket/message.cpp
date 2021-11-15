@@ -13,13 +13,15 @@ const char websocket_magic_string[] = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
 namespace Websocket {
 
-int Parse(uint8_t data[1024], Client * client){
+int Parse(uint8_t * data, Client * client){
   // Flag Admin Settings    0x80
   // Train stuff flag       0x40
   // Rail stuff flag        0x20
   // General Operation flag 0x10
 
   struct s_WS_Data * d = (struct s_WS_Data *)data;
+
+  loggerf(WARNING, "Parsing packet, opcode %2x", d->opcode);
 
   if(websocket_cts[d->opcode]){
     websocket_cts[d->opcode]((void *)&d->data, client);
@@ -129,11 +131,11 @@ int Parse(uint8_t data[1024], Client * client){
   return 0;
 }
 
-int MessageGet(int fd, uint8_t ** outbuf, uint8_t ** packet, int bufferSize, int * length_out){
+int MessageGet(int fd, uint8_t ** outbuf, uint8_t ** packet, int * bufferSize, int * length_out){
   // char * buf = (char *)_calloc(1024, char);
   // usleep(10000);
 
-  int32_t recvlength = recv(fd, *outbuf, WEBSOCKET_HEADER_SIZE, 0);
+  int32_t recvlength = recv(fd, *outbuf, 2, 0);
 
   if(recvlength <= 0){
     return WEBSOCKET_NO_MESSAGE;
@@ -150,10 +152,22 @@ int MessageGet(int fd, uint8_t ** outbuf, uint8_t ** packet, int bufferSize, int
   uint64_t mes_length = buf[1] & WEBSOCKET_PAYLOAD_MASK;
   // Check for more length bytes
   if(mes_length == 126){
+    if(recv(fd, &buf[2], 2, 0) < -1){
+      loggerf(ERROR, "Failed to get additional header bytes");
+      return WEBSOCKET_FAILED_CLOSE;
+    }
+    recvlength += 2;
+
     mes_length  = (buf[2] << 8) + buf[3];
     byte += 2;
   }
   else if(mes_length == 127){
+    if(recv(fd, &buf[2], 8, 0) < -1){
+      loggerf(ERROR, "Failed to get additional header bytes");
+      return WEBSOCKET_FAILED_CLOSE;
+    }
+    recvlength += 8;
+
     mes_length  = (buf[2] << 24) + (buf[3] << 16) + (buf[4] << 8) + buf[5];
     mes_length <<= 32;
     mes_length  = (buf[6] << 24) + (buf[7] << 16) + (buf[8] << 8) + buf[9];
@@ -162,25 +176,37 @@ int MessageGet(int fd, uint8_t ** outbuf, uint8_t ** packet, int bufferSize, int
     // return WEBSOCKET_FAILED_CLOSE;
   }
 
-  buf = &(*outbuf)[byte]; // Set at start of mask key
   uint32_t masking_key = 0;
 
   if(buf[1] & WEBSOCKET_MASK_BIT){
+    buf = &(*outbuf)[byte]; // Set at start of mask key
+    
+    if(recv(fd, &buf[0], 4, 0) < -1){
+      loggerf(ERROR, "Failed to get additional header bytes");
+      return WEBSOCKET_FAILED_CLOSE;
+    }
+
+    recvlength += 4;
+
     masking_key = ((uint32_t *)buf)[0];
     byte += 4;
   }
 
-  buf = &(*outbuf)[byte];
-
   // allocate space for packet
-  if(mes_length + WEBSOCKET_HEADER_SIZE > bufferSize){
-    *outbuf = (uint8_t *)_realloc(*outbuf, mes_length + WEBSOCKET_HEADER_SIZE, uint8_t);
+  if(mes_length + WEBSOCKET_HEADER_SIZE + 5 > *bufferSize){
+    *outbuf = (uint8_t *)_realloc(*outbuf, mes_length + WEBSOCKET_HEADER_SIZE + 5, uint8_t);
+    *bufferSize = mes_length + WEBSOCKET_HEADER_SIZE + 5;
   }
 
-  *packet = &(*outbuf)[byte];
+  *packet = &(*outbuf)[byte]; // Set start of the packet
   uint8_t timeout_counter = 0;
 
-  loggerf(WARNING, "Packet starts at 0x%16x\n Header was %i bytes, allready read %i bytes\n need to read %i more", (unsigned long)(*packet), byte, recvlength, (byte+mes_length)-recvlength);
+  char header[1000];
+  char * headerptr = &header[0];
+  for(uint8_t i = 0; i < byte; i++){
+    headerptr += sprintf(headerptr, "%02x ", (*outbuf)[i]);
+  }
+  loggerf(WARNING, "Packet starts at 0x%16x\n Header was %i bytes, allready read %i bytes\n need to read %i more\n\tH: %s", (unsigned long)(*packet), byte, recvlength, (byte+mes_length)-recvlength, header);
   // read whole packet
   while(recvlength < (byte + mes_length)){
     loggerf(WARNING, "Receiving %3i / %3i bytes,  0x%16x", (byte + mes_length) - recvlength, mes_length + byte, (unsigned long)&((*outbuf)[recvlength]));

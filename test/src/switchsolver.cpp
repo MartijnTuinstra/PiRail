@@ -70,7 +70,6 @@ TEST_CASE_METHOD(TestsFixture, "Switch Solver No Route", "[SwSolve][SwS-1]"){
   //
   */
  
-  logger.setlevel_stdout(INFO);
 
   SECTION("I - S side"){
     // Switch has no preference and will therefore stay in the same position
@@ -599,7 +598,6 @@ TEST_CASE_METHOD(TestsFixture, "Switch Solver Route", "[SwSolve][SwS-2]"){
   //
   */
  
-  logger.setlevel_stdout(INFO);
 
   SECTION("I - S side"){
     U->B[0]->setDetection(1);
@@ -1182,7 +1180,6 @@ TEST_CASE_METHOD(TestsFixture, "Switch Solver", "[SwSolve][SwS-3]"){
   SECTION("II - Approaching s side"){
     // Set the switch to the correct state
     //  - set straight
-    logger.setlevel_stdout(INFO);
     U->B[4]->setDetection(1);
     Algorithm::process(U->B[4], _FORCE);
 
@@ -1562,7 +1559,6 @@ TEST_CASE_METHOD(TestsFixture, "Switch Solver", "[SwSolve][SwS-3]"){
   }
 
   SECTION("XI - Reversed Station path"){
-    logger.setlevel_stdout(DEBUG); 
     Algorithm::print_block_debug(U->B[37]);
     REQUIRE(U->B[36]->path != U->B[37]->path);
     REQUIRE(U->B[37]->path->Entrance == U->B[38]);
@@ -1659,7 +1655,6 @@ TEST_CASE_METHOD(TestsFixture, "Switch Solver", "[SwSolve][SwS-3]"){
 
     CHECK(U->B[42]->state == DANGER);
 
-    logger.setlevel_stdout(TRACE);
 
     U->B[45]->expectedTrain = T;
     U->B[45]->setDetection(1);

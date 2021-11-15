@@ -21,10 +21,10 @@ SHARED_FILES = circularbuffer
 SHARED_OBJ = $(addprefix $(BIN)/shared/,$(addsuffix .o,$(SHARED_FILES)))
 
 FILES_CONFIG = $(addprefix config/,LayoutStructure RollingStructure ModuleConfig RollingConfig configReader)
-FILES_SWITCHBOARD = $(addprefix switchboard/,blockconnector links rail switch switchsolver msswitch polaritysolver unit station signals manager)
+FILES_SWITCHBOARD = $(addprefix switchboard/,blockconnector links rail switch switchsolver msswitch polarityGroup polaritysolver unit station signals manager)
 FILES_WEBSOCKET = $(addprefix websocket/,server client stc cts message)
 FILES_ROLLING = $(addprefix rollingstock/,manager trainset engine car traindetection train/general train/route train/speed)
-FILES_UTILS = $(addprefix utils/,logger mem encryption utils)
+FILES_UTILS = $(addprefix utils/,logger mem encryption utils strings)
 FILES_ALGORITHM = $(addprefix algorithm/,core component queue blockconnector traincontrol)
 FILES_UART = $(addprefix uart/,uart RNetRX RNetTX)
 
@@ -40,7 +40,7 @@ COMTEST_FILES = comtest system IO Z21 Z21_msg train submodule $(FILES_UART) sim 
 COMTEST_OBJS  = $(addprefix $(BIN)/,$(addsuffix .o, $(COMTEST_FILES))) $(SHARED_OBJ)
 
 CONFIG_READER_FILES = $(FILES_CONFIG) $(FILES_UTILS) $(FILES_UTILS) \
-                      config_reader uart/uart uart/RNetTX uart/RNetRX
+                      config_reader uart/uart uart/RNetTX uart/RNetRX config/LayoutStructureEditor config/RollingStructureEditor
 CONFIG_OBJS         = $(addprefix $(BIN)/,$(addsuffix .o, $(CONFIG_READER_FILES))) $(GENERATED_OBJS) $(SHARED_OBJ)
 
 BAAN_CONFIGS = 1 2 3 4 10 20 21 22 23 25 26
@@ -64,6 +64,12 @@ $(BIN)/shared/%.o: shared/src/%.c
 $(BIN)/shared/%.o: shared/src/%.cpp
 	@echo '(  G++  ) - $@ $<'
 	@$(GCC) -c shared/src/$*.cpp -MP -MMD -MT '$@ $(BIN)/shared/$*.d' -o $(BIN)/shared/$*.o $(GCC_options)
+
+generated/src/config/LayoutStructureEditor.cpp: generated/src/config/LayoutStructure.cpp
+generated/src/config/RollingStructureEditor.cpp: generated/src/config/RollingStructure.cpp
+
+generated/src/config/LayoutStructure.cpp:  generated/lib/config/LayoutStructure.h
+generated/src/config/RollingStructure.cpp: generated/lib/config/RollingStructure.h
 
 $(BIN)/%.o: generated/$(SRC)/%.c
 	@echo '(  GCC  ) -$@'

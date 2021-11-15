@@ -51,12 +51,13 @@ Client::Client(Websocket::Server * _Server, int _fd){
   // Set ping time
   clock_getres(CLOCK_REALTIME , &lastPing);
 
-  uint8_t * buf = (uint8_t *)_calloc(WS_BUF_SIZE, uint8_t);
+  int bufferSize = WS_BUF_SIZE;
+  uint8_t * buf = (uint8_t *)_calloc(bufferSize, uint8_t);
   int length = 0;
 
   // Send first connect data
   // Return 0 if client is not authenticated properly
-  if(!first_connect(&buf, WS_BUF_SIZE, &length)){
+  if(!first_connect(&buf, &bufferSize, &length)){
     close(fd);
     connected = false;
     _free(buf);
@@ -83,20 +84,23 @@ void Client::disconnect(){
 }
 
 void * Client::run(Client * context){
-  uint8_t * buf = (uint8_t *)_calloc(WS_BUF_SIZE, char);
+  int bufferSize = WS_BUF_SIZE;
+  uint8_t * buf = (uint8_t *)_calloc(bufferSize, uint8_t);
   uint8_t * packet;
   int length = 0;
 
   while(context->connected){
     // If threre is data recieved
-    int status = MessageGet(context->fd, &buf, &packet, WS_BUF_SIZE, &length);
+    int status = MessageGet(context->fd, &buf, &packet, &bufferSize, &length);
 
     switch(status){
       case WEBSOCKET_SUCCESS:
-        Parse((uint8_t *)buf, context);
+        loggerf(INFO, "Got frame");
+        Parse(packet, context);
         break;
 
       case WEBSOCKET_SUCCESS_CONTROL_FRAME:
+        loggerf(INFO, "Got control frame");
         // TODO
         break;
 
@@ -105,36 +109,11 @@ void * Client::run(Client * context){
         break;
 
       case WEBSOCKET_FAILED_CLOSE:
+        loggerf(ERROR, "Closing connection with client");
         // Unrecoverable error
         context->connected = false;
         break;
     }
-
-    // if(status == 1){
-    //   Parse((uint8_t *)buf, context);
-
-    //   timeout_counter = 0;
-    // }
-    // else if(status == -7){
-    //   // timeoutCheck();
-    //   timeout_counter++;
-
-    //   if(timeout_counter > 20){
-    //     if(!context->ping()){
-    //       context->disconnect();
-    //       _free(buf);
-    //       return 0;
-    //     }
-    //     else{
-    //       timeout_counter = 0;
-    //     }
-    //   }
-    // }
-    // else if(status == -8){
-    //   context->disconnect();
-    //   _free(buf);
-    //   return 0;
-    // }
 
     // Server is shutting down
     if(SYS->stop)
@@ -236,50 +215,48 @@ int Client::websocket_check(){
 }
 
 
-uint8_t Client::first_connect(uint8_t ** buf, uint16_t bufSize, int * length){
-  int counter = 0;
+uint8_t Client::first_connect(uint8_t ** buf, int * bufSize, int * length){
+  // int counter = 0;
   char data[3];
   uint8_t * packet;
 
   if(SYS->WebSocket.state == Module_Init){
-    loggerf(WARNING, "LOGIN required");
-    while(1){
+    loggerf(WARNING, "LOGIN required %x %x", connected, type);
+    while(connected && ((type & 0x10) == 0)){
       // Require login
       data[0] = WSopc_Admin_Login;
       send(data, 1, 0xFF);
 
       usleep(100000);
 
+      // If threre is data recieved
       int status = MessageGet(fd, buf, &packet, bufSize, length);
 
-      if(status == 1){
-        Parse(packet, this);
-      }
-      else if(status == -7){
-        counter++;
-
-        if(counter > 10){
-          if(!ping()){
-            loggerf(WARNING, "Client %i timeout", fd);
-            return 0;
-          }
-          else{
-            counter = 0;
-          }
-        }
+      // drop any packet except a login packet or websocket protocol control packets.
+      if(status == WEBSOCKET_SUCCESS && packet[0] != 0xCF) 
         continue;
-      }
-      else if(status == -8){
-        loggerf(INFO, "Client %i disconnected", fd);
-        return 0;
-      }
 
-      if((type & 0x10) == 0){
-        loggerf(ERROR, "Client not authenticated");
-        return 0;
-      }
-      else{
-        break;
+      switch(status){
+        case WEBSOCKET_SUCCESS:
+          loggerf(INFO, "Got frame");
+          Parse(packet, this);
+          break;
+
+        case WEBSOCKET_SUCCESS_CONTROL_FRAME:
+          loggerf(INFO, "Got control frame");
+          // TODO
+          break;
+
+        case WEBSOCKET_NO_MESSAGE:
+          loggerf(INFO, "Got no message");
+          timeoutCheck();
+          break;
+
+        case WEBSOCKET_FAILED_CLOSE:
+          loggerf(ERROR, "Closing connection with client");
+          // Unrecoverable error
+          connected = false;
+          break;
       }
     }
   }

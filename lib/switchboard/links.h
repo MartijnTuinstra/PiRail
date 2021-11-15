@@ -34,6 +34,8 @@ class RailLink {
 
     RailLink();
     RailLink(struct configStruct_RailLink link);
+
+    Block * getNextBlock();
 };
 
 class Block;

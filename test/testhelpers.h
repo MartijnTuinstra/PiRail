@@ -18,4 +18,6 @@ void test_Algorithm_tick();
 void train_test_tick(struct train_sim * t, int32_t * i);
 void train_testSim_tick(struct train_sim * t, int32_t * i);
 
+void D_printBlockStates(std::vector<Block *>&);
+
 #endif

@@ -89,6 +89,12 @@ void Logger::setlevel_stdout(enum logging_levels lvl){
 
 }
 
+void Logger::setDetailLevel(uint8_t level){
+  detail_level = level;
+
+  f(DEBUG, "", 0, "Logger detail level set to %s", S_detail_level[level]);
+}
+
 void Logger::f(enum logging_levels level, const char * file, const int line, const char * text, ...){
   if(!enabled || (level > file_lvl && level > stdout_lvl))
     return;
@@ -111,31 +117,39 @@ void Logger::f(enum logging_levels level, const char * file, const int line, con
   strftime(c_time, sizeof(c_time), "%H:%M:%S", time_info);
 
   char msg[10000];
+  char * msgP = &msg[0];
+
   char loggertext[900];
 
   vsprintf(loggertext, text, arglist);
 
   va_end( arglist );
 
+  if (detail_level < 3)
+    msgP += sprintf(msgP, "%s.%03d", c_time, (uint16_t)(clock.tv_nsec / 1e6));
+
+  msgP += sprintf(msgP, "%s", levels_colour[level]);
+
+  if (detail_level < 1)
+    msgP += sprintf(msgP, " - %s", levels_str[level]);
+
+  if (detail_level < 2)
+    msgP += sprintf(msgP, " -%20s:%4i- ", file, line);
+
   char * newline = strchr(loggertext, '\n');
 
   if(newline){
-    char * ptr = &msg[0];
-
-    ptr += sprintf(ptr, "%s.%03d - %s%s -%20s:%4i- ", c_time, (uint16_t)(clock.tv_nsec / 1e6), levels_colour[level],
-                                                    levels_str[level], file, line);
-
+    char * ptr = &msgP[0];
     char * token = strtok(loggertext, "\n");
 
     bool first = true;
 
     while( token != NULL ) {
-      if(!first){
-        ptr += sprintf(ptr, "\n             -          -                         - ");
-      }
-      else{
+      if(!first)
+        ptr += sprintf(ptr, "%s", detail_level_offset[detail_level]);
+      else
         first = false;
-      }
+
       ptr += sprintf(ptr, "%s", token); //printing each token
 
       token = strtok(NULL, "\n");
@@ -144,8 +158,7 @@ void Logger::f(enum logging_levels level, const char * file, const int line, con
     ptr += sprintf(ptr, "%s\n", levels_colour[8]); // reset colour
   }
   else{
-    sprintf(msg, "%s.%03d - %s%s -%20s:%4i- %s%s\n", c_time, (uint16_t)(clock.tv_nsec / 1e6), levels_colour[level],
-                                                     levels_str[level], file, line, loggertext, levels_colour[8]);
+    msgP += sprintf(msgP, "%s%s\n", loggertext, levels_colour[8]);
   }
 
 

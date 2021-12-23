@@ -271,7 +271,7 @@ int BlockConnectorSetup::load(BlockConnectors * Connectors){
 
       if(U->connection[j].unit){
         if(!(U->connection[j].unit == connector.unit && U->connection[j].connector == connector.connector))
-          loggerf(WARNING, "connection allready occupied");
+          loggerf(WARNING, "connection allready occupied, skipping...");
         continue;
       }
 

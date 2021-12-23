@@ -327,12 +327,15 @@ void Block::reserve(Train * T){
   if(!blocked && state >= PROCEED)
     setState(RESERVED);
 
-  setReversedState(DANGER);
+  if(!blocked)
+    setReversedState(DANGER);
 
   reservedBy.push_back(T);
 }
 
 void Block::dereserve(Train * T){
+
+  loggerf(INFO, " Dereserve block %02i:%02i  T%i", module, id, T->id);
 
   reservedBy.erase(std::remove_if(reservedBy.begin(),
                                   reservedBy.end(),
@@ -341,12 +344,12 @@ void Block::dereserve(Train * T){
                                  );
 
   if(reservedBy.size() == 0){
+    reserved = false;
+
     if(!blocked){
       setState(PROCEED);
       setReversedState(PROCEED);
     }
-
-    reserved = false;
   }
 }
 

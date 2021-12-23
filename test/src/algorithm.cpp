@@ -71,7 +71,6 @@ TEST_CASE_METHOD(TestsFixture, "Connector Algorithm", "[Alg][Alg-1]"){
   bool modules_linked = false;
 
   SECTION("I - Find and connect"){
-    loggerf(CRITICAL, "SECTION I");
     while(modules_linked == false){
       if(uint8_t * findResult = Algorithm::find_connectable(&connectors)){
         Algorithm::connect_connectors(&connectors, findResult);
@@ -156,7 +155,6 @@ TEST_CASE_METHOD(TestsFixture, "Connector Algorithm", "[Alg][Alg-1]"){
   }
 
   SECTION("II - Connect Stored Configuration"){
-    loggerf(CRITICAL, "SECTION II");
     auto setup = Algorithm::BlockConnectorSetup("testconfigs/Alg-1-setup.bin");
     int ret = setup.load(&connectors);
 

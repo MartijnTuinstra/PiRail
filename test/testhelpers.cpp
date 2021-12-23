@@ -139,6 +139,25 @@ void train_testSim_tick(struct train_sim * t, int32_t * i){
   train_test_tick(t, i);
 }
 
+
+void BlockTickNtimes(int I){
+  Block * B = AlQueue.getWait();
+  if(!B)
+    return;
+
+  do
+  {
+    loggerf(INFO, "Process %i:%i, %x, %x", B->module, B->id, B->IOchanged + (B->statechanged << 1) + (B->algorchanged << 2), B->state);
+    Algorithm::processBlock(&B->Alg, 0);
+    while(B->recalculate && I-- > 0){
+      loggerf(INFO, "ReProcess");
+      B->recalculate = 0;
+      Algorithm::processBlock(&B->Alg, 0);
+    }
+  }
+  while( (B = AlQueue.get()) && I-- > 0);
+}
+
 void D_printBlockStates(std::vector<Block *>& blocks){
 
   char debug[1000] = "|";

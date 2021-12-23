@@ -26,6 +26,10 @@ class AlgorQueue {
       TrainQueue->AddOnce(T);
     }
 
+    inline bool contains(Block * B){
+      return queue->contains(B);
+    }
+
     inline void puttemp(Block * B){
       tempQueue->AddOnce(B);
     }

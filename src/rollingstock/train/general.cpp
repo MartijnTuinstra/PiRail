@@ -18,6 +18,8 @@
 #include "websocket/stc.h"
 #include "Z21_msg.h"
 
+#include "utils/strings.h"
+
 Train::Train(Block * B): blocks(0, 0), reservedBlocks(0, 0){
   id = RSManager->addTrain(this);
   loggerf(INFO, "Create Train %i %x", id, this);
@@ -482,6 +484,7 @@ void Train::reverseBlocks(){
   for(auto b: switchBlocks)
     b->reverse();
 
+  // Get the new front of train
   B = Detectables[0]->B[0];
   dir ^= 1;
 
@@ -695,36 +698,74 @@ void Train::analyzePaths(){
 }
 
 bool Train::ContinueCheck(){
-  loggerf(DEBUG, "Train %i: ContinueCheck %02i:%02i", id, B->module, B->id);
+  // loggerf(DEBUG, "Train %i: ContinueCheck %02i:%02i", id, B->module, B->id);
   if(routeStatus == TRAIN_ROUTE_AT_DESTINATION && stopped)
     return false;
 
   const std::lock_guard<std::mutex> lock(Algorithm::processMutex);
+
+  // If virtual blocks in front of train then start further ahead
+  Block * startBlock = B;
+  if(virtualLengthBefore){
+    uint8_t i = 1;
+    Block * tB = B->Next_Block(NEXT | FL_SWITCH_CARE, i++);
+    while(tB && tB->train == this){
+      startBlock = tB;
+      tB = B->Next_Block(NEXT | FL_SWITCH_CARE, i++);
+    }
+  }
+  loggerf(DEBUG, "Train %i: ContinueCheck %02i:%02i => %02i:%02i", id, B->module, B->id, startBlock->module, startBlock->id);
+
+  struct SwitchSolver::find findResult = {0, 0};
+  struct SwitchSolver::SwSolve SolveControl = {
+    .train = this,
+    .route = route,
+    .prevBlock = startBlock,
+    .prevPtr   = startBlock,
+    .link  = startBlock->NextLink(NEXT),
+    .flags = NEXT | FL_SWITCH_CARE | FL_CONTINUEDANGER
+  };
+
+  // FindPath will fail if:
+  //  - there are switches in the wrong state and they are reserved/blocked
+  //  - The next block is blocked or at DANGER
+
+  findResult = SwitchSolver::findPath(SolveControl);
+  return findResult.possible;
+
 
   // If a block is available
   if(B->Alg.N->group[3] > 0){
     //if(this->Route && Switch_Check_Path(this->B)){
     //  return true;
     //}
+    Block * NextB = B->Alg.N->B[0];
 
     // If it is blocked by another train dont accelerate
-    if(B->Alg.N->B[0]->blocked && B->Alg.N->B[0]->train != this){
+    if(NextB->blocked && NextB->train != this){
       loggerf(TRACE, "Train %i: ContinueCheck - false", id);
       return false;
     }
 
-    // If it is not DANGER/BLOCKED then accelerate
-    else if(B->Alg.N->B[0]->state > DANGER){
+    // If it is DANGER/BLOCKED dont accelerate
+    else if(NextB->state <= DANGER && !NextB->switch_len && !NextB->MSSw){
+      loggerf(TRACE, "Train %i: ContinueCheck - false", id);
+      return false;
+    }
+    else if(NextB->state > DANGER){
       loggerf(TRACE, "Train %i: ContinueCheck - true", id);
       return true;
     }
   }
 
-  loggerf(WARNING, "NEW TRAIN::CONTINUECHECK");
+  loggerf(WARNING, "NEW TRAIN::CONTINUECHECK %i", id);
   struct SwitchSolver::find f = {0, 0};
   RailLink * next = B->NextLink(NEXT);
-  Block * nextBlock  = B->Next_Block(NEXT, 1);
+  // Block * nextBlock  = B->Next_Block(NEXT, 1);
   Block * next2Block = B->Next_Block(NEXT, 2);
+
+  // Rail_states nextState = DANGER;
+  // if(nextBlock)
 
   if(next->type != RAIL_LINK_E && next->type != RAIL_LINK_R){
     // Next is a (ms)switch
@@ -740,14 +781,20 @@ bool Train::ContinueCheck(){
 
     f = SwitchSolver::findPath(SolveControl);
     loggerf(INFO, "First %i", f.possible);
-    if(!f.possible || (nextBlock && nextBlock->state <= DANGER))
+    if(!f.possible){ // || (nextBlock && nextBlock->state <= DANGER)){
+      loggerf(INFO, "EXIT 0");
       return false;
+    }
   }
 
-  if(!B->Alg.N->group[3])
+  if(!B->Alg.N->group[3]){
+    loggerf(INFO, " Exit 1");
     return f.possible;
-  else if(B->Alg.N->B[0]->type != NOSTOP)
+  }
+  else if(B->Alg.N->B[0]->type != NOSTOP){
+    loggerf(INFO, " Exit 2");
     return true;
+  }
 
   next = B->Alg.N->B[0]->NextLink(NEXT);
 
@@ -775,22 +822,20 @@ void Train::Continue(){
   uint8_t nextLen = B->Alg.N->group[3];
   Block * NextBlock = B->Alg.N->B[0];
 
-  if(next->type != RAIL_LINK_E && next->type != RAIL_LINK_R){
-    // Next is a (ms)switch
-    //  solve it
-    if(SwitchSolver::solve(this, B, B, *next, NEXT | FL_SWITCH_CARE | FL_CONTINUEDANGER))
-      return;
-  }
-
-  if(!nextLen && NextBlock->type == NOSTOP)
+  if(SwitchSolver::solve(this, B, B, *next, NEXT | FL_SWITCH_CARE | FL_CONTINUEDANGER))
     return;
 
-  next = NextBlock->NextLink(NEXT);
+  if(!nextLen)
+    return;
 
-  if(next->type != RAIL_LINK_E && next->type != RAIL_LINK_R){
-    // Next is a (ms)switch
-    //  solve it
-    SwitchSolver::solve(this, B, B->Alg.N->B[0], *next, NEXT | FL_SWITCH_CARE | FL_CONTINUEDANGER);
+  if(NextBlock->type != NOSTOP){
+    // Register and reserve paths
+    if(B->path)
+      B->path->reserve(this, B);
+
+    AlQueue.put(B);
+
+    return;
   }
 }
 
@@ -803,20 +848,18 @@ void Train_ContinueCheck(void * args){
     if(!T)
       continue;
 
+    loggerf(DEBUG, "Train %i", T->id);
+
     if(T->manual)
       continue;
 
-    loggerf(DEBUG, "Train ContinueCheck %i", i);
-    if(T->p.p && T->speed == 0 && T->ContinueCheck()){
+    loggerf(DEBUG, "Train ContinueCheck %i", T->id);
+    if(T->p.p && T->stopped && T->ContinueCheck()){
       loggerf(ERROR, "Train ContinueCheck accelerating train %i", i);
       T->Continue();
-      Block * nextBlock = T->B->Next_Block(NEXT, 2);
-
-      if(nextBlock){
-        nextBlock->expectedTrain = T;
-      }
 
       T->changeSpeed(40, 50);
+
       WS_stc_UpdateTrain(T);
     }
   }

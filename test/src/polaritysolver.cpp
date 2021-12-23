@@ -87,7 +87,7 @@ TEST_CASE_METHOD(TestsFixture, "Polarity Solver", "[PolSolve][PS-1]"){
   REQUIRE(U->switch_len > 0);
 
   for(uint8_t i = 0; i < U->block_len; i++){
-    Algorithm::process(U->B[i], _FORCE);
+    Algorithm::processBlock(&U->B[i]->Alg, _FORCE);
   }
 
   U->Sw[0]->setState(0);
@@ -99,7 +99,7 @@ TEST_CASE_METHOD(TestsFixture, "Polarity Solver", "[PolSolve][PS-1]"){
     //  polarity of B2/B3 can be changed.
 
     U->B[0]->setDetection(1);
-    Algorithm::process(U->B[0], _FORCE);
+    Algorithm::processBlock(&U->B[0]->Alg, _FORCE);
 
     auto T = U->B[0]->train;
     REQUIRE(T != nullptr);
@@ -120,7 +120,7 @@ TEST_CASE_METHOD(TestsFixture, "Polarity Solver", "[PolSolve][PS-1]"){
     //  polarity of B1/B0 cannot be changed therefore B2/B3 must be changed.
 
     U->B[3]->setDetection(1);
-    Algorithm::process(U->B[3], _FORCE);
+    Algorithm::processBlock(&U->B[3]->Alg, _FORCE);
 
     auto T = U->B[3]->train;
     REQUIRE(T != nullptr);
@@ -145,14 +145,14 @@ TEST_CASE_METHOD(TestsFixture, "Polarity Solver", "[PolSolve][PS-1]"){
 
     // logger.setlevel_stdout(TRACE);
     U->B[4]->setDetection(1);
-    Algorithm::process(U->B[4], _FORCE);
+    Algorithm::processBlock(&U->B[4]->Alg, _FORCE);
 
     auto T = U->B[4]->train;
     REQUIRE(T != nullptr);
     REQUIRE(T == RSManager->getTrain(0));
 
     U->B[3]->setDetection(1);
-    Algorithm::process(U->B[3], _FORCE);
+    Algorithm::processBlock(&U->B[3]->Alg, _FORCE);
 
     T->setSpeed(100);
     T->B = U->B[3];
@@ -164,7 +164,7 @@ TEST_CASE_METHOD(TestsFixture, "Polarity Solver", "[PolSolve][PS-1]"){
     CHECK(U->B[3]->polarity_status == POLARITY_NORMAL);
 
     U->B[4]->setDetection(0);
-    Algorithm::process(U->B[4], _FORCE);
+    Algorithm::processBlock(&U->B[4]->Alg, _FORCE);
 
     Algorithm::Polarity_Checker(&T->B->Alg, 0);
 
@@ -184,7 +184,7 @@ TEST_CASE_METHOD(TestsFixture, "Polarity Solver", "[PolSolve][PS-1]"){
 
     // --1.6-> --1.7->|<<1.8>- <<1.9>-|<<1.10>- <<1.11>-|<-1.12-- <-1.13--
     U->B[7]->setDetection(1);
-    Algorithm::process(U->B[7], _FORCE);
+    Algorithm::processBlock(&U->B[7]->Alg, _FORCE);
 
     auto T = U->B[7]->train;
     REQUIRE(T != nullptr);
@@ -203,7 +203,7 @@ TEST_CASE_METHOD(TestsFixture, "Polarity Solver", "[PolSolve][PS-1]"){
 
     U->B[8]->reverse();
     U->B[8]->setDetection(1);
-    Algorithm::process(U->B[8], _FORCE);
+    Algorithm::processBlock(&U->B[8]->Alg, _FORCE);
     T->B = U->B[8];
     T->setSpeed(100);
 
@@ -216,15 +216,15 @@ TEST_CASE_METHOD(TestsFixture, "Polarity Solver", "[PolSolve][PS-1]"){
 
     U->B[10]->reverse();
     U->B[7]->setDetection(0);
-    Algorithm::process(U->B[7], _FORCE);
+    Algorithm::processBlock(&U->B[7]->Alg, _FORCE);
     U->B[9]->setDetection(1);
-    Algorithm::process(U->B[9], _FORCE);
+    Algorithm::processBlock(&U->B[9]->Alg, _FORCE);
     U->B[8]->setDetection(0);
-    Algorithm::process(U->B[8], _FORCE);
+    Algorithm::processBlock(&U->B[8]->Alg, _FORCE);
     U->B[10]->setDetection(1);
-    Algorithm::process(U->B[10], _FORCE);
+    Algorithm::processBlock(&U->B[10]->Alg, _FORCE);
     U->B[9]->setDetection(0);
-    Algorithm::process(U->B[9], _FORCE);
+    Algorithm::processBlock(&U->B[9]->Alg, _FORCE);
     T->B = U->B[10];
     T->setSpeed(100);
 
@@ -244,7 +244,7 @@ TEST_CASE_METHOD(TestsFixture, "Polarity Solver", "[PolSolve][PS-1]"){
 
     // --1.6-> --1.7->|<<1.8>- <<1.9>-|<<1.10>- <<1.11>-|<-1.12-- <-1.13--
     U->B[7]->setDetection(1);
-    Algorithm::process(U->B[7], _FORCE);
+    Algorithm::processBlock(&U->B[7]->Alg, _FORCE);
 
     auto T = U->B[7]->train;
     REQUIRE(T != nullptr);
@@ -264,7 +264,7 @@ TEST_CASE_METHOD(TestsFixture, "Polarity Solver", "[PolSolve][PS-1]"){
     REQUIRE(U->B[8]->path);
     U->B[8]->path->reverse();
     U->B[8]->setDetection(1);
-    Algorithm::process(U->B[8], _FORCE);
+    Algorithm::processBlock(&U->B[8]->Alg, _FORCE);
     T->B = U->B[8];
     T->setSpeed(100);
 
@@ -278,13 +278,13 @@ TEST_CASE_METHOD(TestsFixture, "Polarity Solver", "[PolSolve][PS-1]"){
     REQUIRE(U->B[10]->path);
     U->B[10]->path->reverse();
     U->B[9]->setDetection(1);
-    Algorithm::process(U->B[9], _FORCE);
+    Algorithm::processBlock(&U->B[9]->Alg, _FORCE);
     U->B[7]->setDetection(0);
-    Algorithm::process(U->B[7], _FORCE);
+    Algorithm::processBlock(&U->B[7]->Alg, _FORCE);
     U->B[10]->setDetection(1);
-    Algorithm::process(U->B[10], _FORCE);
+    Algorithm::processBlock(&U->B[10]->Alg, _FORCE);
     U->B[8]->setDetection(0);
-    Algorithm::process(U->B[8], _FORCE);
+    Algorithm::processBlock(&U->B[8]->Alg, _FORCE);
     T->B = U->B[10];
     T->setSpeed(100);
 
@@ -317,14 +317,14 @@ TEST_CASE_METHOD(TestsFixture, "Polarity Solver", "[PolSolve][PS-1]"){
 
     logger.setlevel_stdout(TRACE);
     U->B[9]->setDetection(1);
-    Algorithm::process(U->B[9], _FORCE);
+    Algorithm::processBlock(&U->B[9]->Alg, _FORCE);
 
     auto T = U->B[9]->train;
     REQUIRE(T != nullptr);
     REQUIRE(T == RSManager->getTrain(0));
     
     U->B[9]->setDetection(1);
-    Algorithm::process(U->B[9], _FORCE);
+    Algorithm::processBlock(&U->B[9]->Alg, _FORCE);
 
     REQUIRE(U->B[8]->path != U->B[10]->path);
 
@@ -338,13 +338,13 @@ TEST_CASE_METHOD(TestsFixture, "Polarity Solver", "[PolSolve][PS-1]"){
     REQUIRE(U->B[10]->path);
     U->B[10]->path->reverse();
     U->B[9]->setDetection(1);
-    Algorithm::process(U->B[9], _FORCE);
+    Algorithm::processBlock(&U->B[9]->Alg, _FORCE);
     U->B[7]->setDetection(0);
-    Algorithm::process(U->B[7], _FORCE);
+    Algorithm::processBlock(&U->B[7]->Alg, _FORCE);
     U->B[10]->setDetection(1);
-    Algorithm::process(U->B[10], _FORCE);
+    Algorithm::processBlock(&U->B[10]->Alg, _FORCE);
     U->B[8]->setDetection(0);
-    Algorithm::process(U->B[8], _FORCE);
+    Algorithm::processBlock(&U->B[8]->Alg, _FORCE);
     T->B = U->B[10];
     T->setSpeed(100);
 

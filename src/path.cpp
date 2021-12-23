@@ -42,7 +42,8 @@ Path::Path(Block * B){
   end = B;
   end_direction = direction;
 
-  polarity_type = B->polarity_type;
+  // TODO cleanup
+  // polarity_type = B->polarity_type;
 
   Blocks.clear();
   Blocks.push_back(B);
@@ -184,6 +185,7 @@ void Path::find(){
 }
 
 void Path::find(RailLink ** linkPtr, Block ** ptr_side, uint8_t SearchDir){
+  loggerf(DEBUG, "Path find %c", (SearchDir == NEXT) ? 'N' : 'P');
   Block * B = 0;
   uint8_t i = 0;
   RailLink * link = *linkPtr;
@@ -246,7 +248,7 @@ void Path::find(RailLink ** linkPtr, Block ** ptr_side, uint8_t SearchDir){
 
     i++;
   }
-  while (B && i < 10);
+  while (B && i < 1000);
 }
 
 void Path::setMaxLength(){
@@ -260,16 +262,18 @@ void Path::setMaxLength(){
   // Find the two surrounding paths and add there length
   if(next->type == RAIL_LINK_R){
     adjacentPath = next->p.B->path;
-    
-    if(adjacentPath && adjacentPath->polarity_type != BLOCK_FL_POLARITY_DISABLED && next->p.B->type != NOSTOP)
-      maxLength += adjacentPath->length;
+
+    // TODO cleanup    
+    // if(adjacentPath && adjacentPath->polarity_type != BLOCK_FL_POLARITY_DISABLED && next->p.B->type != NOSTOP)
+    //   maxLength += adjacentPath->length;
   }
 
   if(prev->type == RAIL_LINK_R){
     adjacentPath = prev->p.B->path;
     
-    if(adjacentPath && adjacentPath->polarity_type != BLOCK_FL_POLARITY_DISABLED && prev->p.B->type != NOSTOP)
-      maxLength += adjacentPath->length;
+    // TODO cleanup   
+    // if(adjacentPath && adjacentPath->polarity_type != BLOCK_FL_POLARITY_DISABLED && prev->p.B->type != NOSTOP)
+    //   maxLength += adjacentPath->length;
   }
 }
 
@@ -288,10 +292,11 @@ void Path::sprint(uint8_t detail, char * string){
   else
     r[2] = r[1] = '>';
 
-  if(polarity)
-    l[2] = '<';
-  else
-    r[0] = '>';
+  // TODO cleanup
+  // if(polarity)
+  //   l[2] = '<';
+  // else
+  //   r[0] = '>';
 
   switch(detail){
     case 0:
@@ -435,6 +440,7 @@ void Path::reserve(Train * T){
 }
 
 void Path::reserve(Train * T, Block * B){
+  loggerf(INFO, "Path::Reserve T%i from %02i:%02i", T->id, B->module, B->id);
   reserved = true;
   reservedTrains.push_back(T);
 
@@ -444,6 +450,7 @@ void Path::reserve(Train * T, Block * B){
     B = 0;
 
   while(B && B->path == this){
+    loggerf(INFO, "  Path::Reserve %02i:%02i", B->module, B->id);
     T->reserveBlock(B);
 
     if(B->Alg.N->group[3] > 0)
@@ -458,38 +465,37 @@ void Path::reserve(Train * T, Block * B){
   }
 }
 
-void Path::dereserve(Train * T){
+void Path::trainAtEnd(Train * T){
+  // Removes train from reserved list and resets the reserved flag if no other train is in the list
   reservedTrains.erase(std::remove_if(reservedTrains.begin(),
                                      reservedTrains.end(),
                                      [T](const auto & o) { return (o == T); }),
                                      reservedTrains.end()
                                     );
-
-  for(auto B: Blocks){
-    T->dereserveBlock(B);
-  }
 
   if(reservedTrains.size() == 0)
     reserved = false;
 }
-void Path::trainAtEnd(Train * T){
-  reservedTrains.erase(std::remove_if(reservedTrains.begin(),
-                                     reservedTrains.end(),
-                                     [T](const auto & o) { return (o == T); }),
-                                     reservedTrains.end()
-                                    );
+void Path::dereserve(Train * T){
+  // Dereserves blocks associated with the train
+  //  also exectures trainAtEnd
 
-  if(reservedTrains.size() == 0)
-    reserved = false;
+  trainAtEnd(T);
+
+  for(auto B: Blocks){
+    T->dereserveBlock(B);
+  }
 }
 
 
 
 void Path::trainEnter(Train * T){
+  // Train enters path, add the train to the train list
   loggerf(DEBUG, "Path::trainEnter  %2i:%2i T%2i", Entrance->module, Entrance->id, T->id);
   trains.push_back(T);
 }
 void Path::trainExit(Train * T){
+  // Train leaves path, removes train from train list
   loggerf(DEBUG, "Path::trainExit  %2i:%2i T%2i", Exit->module, Exit->id, T->id);
   trains.erase(std::remove_if(trains.begin(),
                               trains.end(),

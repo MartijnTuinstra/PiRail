@@ -6,6 +6,9 @@
 #include "switchboard/switch.h"
 #include "switchboard/msswitch.h"
 #include "switchboard/station.h"
+#include "switchboard/polarityGroup.h"
+
+#include "utils/strings.h"
 
 #include "rollingstock/train.h"
 
@@ -63,12 +66,17 @@ int solve(Train * T, Block * B, Block * tB, RailLink link, int flags){
     loggerf(INFO, "%s", debug);
   }
 
-  if(!r)
-    f.possible = 1;
+  if(f.polarityWrong)
+    SolveControl.flags |= FL_WRONGPOLARITY;
+
+
+  loggerf(DEBUG, "SwitchSolver flags: %s, ", (SolveControl.flags & FL_WRONGPOLARITY) ? "WRONGPOLARITY" : "");
+  // if(!r)
+  //   f.possible = 1;
 
   // If route exists check if possible and if allready correct
   // If no route exists only check if allready correct
-  if(!(r && !f.possible) && !f.allreadyCorrect){
+  if(f.possible && !f.allreadyCorrect){
     // Path needs changes
     dereservePath(T, r, tB, link, flags);
 
@@ -292,7 +300,9 @@ struct find findPath(struct SwSolve SwS){
 
     Block * B = SwS.link->p.B;
 
-    loggerf(INFO, "check B %i", B->id);
+    SwS.flags ^= FL_DIRECTION_MASK & (dircmp(SwS.prevBlock, B) != SwS.prevBlock->cmpPolarity(B));
+
+    loggerf(INFO, "check B %02i:%02i  dir %i", B->module, B->id, SwS.flags & 1);
 
     if(!B->checkPolarity(SwS.prevBlock) || SwS.flags & FL_WRONGPOLARITY){
       loggerf(INFO, "Polarity Compare  %2i:%2i <> %2i:%2i => %i", SwS.prevBlock->module, SwS.prevBlock->id, B->module, B->id, B->checkPolarity(SwS.prevBlock));
@@ -307,19 +317,29 @@ struct find findPath(struct SwSolve SwS){
       return f;
     }
 
-    // If Block is the exit of a path
-    else if(B->path && B != B->path->Entrance && B->path->reserved){
+    // If Block is the exit of a path, and reserved by a train
+    else if(B->path && B != B->path->Entrance && B == B->path->Exit && B->path->reserved){
       loggerf(INFO, "FOUND WRONG PATH DIRECTION");
       return f;
     }
 
     // Train can stop on the block, so a solution
     else if(B->type != NOSTOP){
-      if(SwS.flags & FL_CONTINUEDANGER && B->state <= DANGER){
-        return f;
+      // If train is not allowed to go enter a block in danger
+      // if(B->getState(SwS.flags & FL_DIRECTION_MASK) <= DANGER)
+      if(SwS.flags & FL_CONTINUEDANGER){
+        if((SwS.flags & FL_DIRECTION_MASK) == NEXT && B->state <= DANGER){
+          loggerf(INFO, "Early return  state: %s", S_RailStates[B->state]);
+          return f;
+        }
+        else if((SwS.flags & FL_DIRECTION_MASK) == PREV && B->reverse_state <= DANGER){
+          loggerf(INFO, "Early return reverse state: %s", S_RailStates[B->reverse_state]);
+          return f;
+        }
       }
+
       if(B->isReservedBy(SwS.train)){
-        if(B->path->Entrance == B){
+        if(B->path->Entrance == B || B->path->Exit != B){
           loggerf(INFO, "A");
           f.possible = 1;
           f.allreadyCorrect = 1;
@@ -330,17 +350,23 @@ struct find findPath(struct SwSolve SwS){
         f.possible = 1;
         f.allreadyCorrect = 1;
 
-        Path * P = B->path;
-
-        if(P->Entrance != B && SwS.train->length > P->maxLength){
-          loggerf(INFO, "Train Does not fit");
-          // Train cannot fit in reverseable section
-          f.possible = 0;
-          f.allreadyCorrect = 0;
-        }
+        // FIXME, polarity group max length of train through it.
+        // Path * P = B->path;
+        // if(P->Entrance != B && SwS.train->length > P->maxLength){
+        //   loggerf(INFO, "Train Does not fit");
+        //   // Train cannot fit in reverseable section
+        //   f.possible = 0;
+        //   f.allreadyCorrect = 0;
+        // }
+      }
+      else{
+        loggerf(INFO, "Fall through ifelse ladder");
       }
 
       return f; 
+    }
+    else{
+      loggerf(INFO, "Fall through ifelse ladder");
     }
 
     SwS.prevBlock = B;
@@ -356,7 +382,7 @@ struct find findPath(struct SwSolve SwS){
     }
   }
 
-  // loggerf(ERROR, "Done checking");
+  loggerf(ERROR, "Done checking");
   return f;
 }
 
@@ -526,15 +552,23 @@ int setPath(struct SwSolve SwS){
     Block * B = SwS.link->p.B;
     // loggerf(INFO, "check B %i", B->id);
 
-    /* FIXME
-    if(!B->checkPolarity(SwS.prevBlock)){
+    // Change the polarity of the block
+    //  if it is unable then stop checking for the blocks after the current block.
+    
+    loggerf(DEBUG, "SwitchSolver flags: %s, ", (SwS.flags & FL_WRONGPOLARITY) ? "WRONGPOLARITY" : "");
+    if(SwS.flags & FL_WRONGPOLARITY && !B->checkPolarity(SwS.prevBlock)){
       loggerf(INFO, "Polarity Compare  %2i:%2i <> %2i:%2i => %i", SwS.prevBlock->module, SwS.prevBlock->id, B->module, B->id, B->checkPolarity(SwS.prevBlock));
-      if(B->path)
-        B->path->flipPolarity(0);
-      else
-        B->flipPolarity(0);
+      if(B->Polarity){
+        if(B->Polarity->flippable() == 0){
+          loggerf(INFO, "Flip block");
+          B->Polarity->flip();
+        }
+        else{
+          loggerf(INFO, "Flippable test failed");
+          SwS.flags &= ~(FL_WRONGPOLARITY);
+        }
+      }
     }
-    */
 
     // Block is part of station that is blocked by a train stopped on it. Not a solution
     if(B->type == STATION && B->station && (B->station->stoppedTrain || 
@@ -742,7 +776,7 @@ int reservePath(struct SwSolve SwS){
     if(B->type != NOSTOP){
       if(!B->reserved){
         loggerf(DEBUG, "Path Entrance: %02i:%02i", B->path->Entrance->module, B->path->Entrance->id);
-        if(B->path->Entrance != B)
+        if(B->path->Entrance != B && B->path->Exit == B)
           B->path->reverse();
 
         B->path->reserve(SwS.train);

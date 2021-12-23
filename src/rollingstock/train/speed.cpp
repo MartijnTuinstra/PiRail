@@ -7,6 +7,7 @@
 
 #include "utils/mem.h"
 #include "utils/logger.h"
+#include "utils/strings.h"
 #include "scheduler/scheduler.h"
 #include "system.h"
 #include "flags.h"
@@ -15,11 +16,6 @@
 
 #include "websocket/stc.h"
 #include "Z21_msg.h"
-
-char TrainSpeedStatesStrings[40][20] = {
-  "IDLE", "RESUMING", "STOPPING", "STOPPING_REVERSE", "STOPPING_WAIT", "WAITING", "WAITING_DESTINATION",
-  "DRIVING", "CHANGING", "UPDATE", "INITIALIZING"
-};
 
 uint16_t Train::checkMaxSpeed(){
   uint16_t maxspeed = MaxSpeed;
@@ -59,6 +55,7 @@ void inline Train::setSpeed(uint16_t _speed){
 }
 
 void inline Train::_setSpeed(uint16_t _speed){
+  loggerf(TRACE, "Train %i _setSpeed %i", id, _speed);
   // set speed from change speed
   setStopped(_speed == 0);
 
@@ -74,6 +71,7 @@ void inline Train::applySpeed(uint16_t _speed){
 }
 
 void Train::setStopped(bool stop){
+  loggerf(TRACE, "Train %i setStopped %i => %i", id, stopped, stop);
   if(SpeedState == TRAIN_SPEED_IDLE){
     if(stop){
       loggerf(ERROR, "remove expected train");
@@ -81,6 +79,10 @@ void Train::setStopped(bool stop){
         TD->resetExpectedTrain();
 
       dereserveAll();
+
+      B->Alg.statesChecked = false;
+      B->Alg.doneAll = false;
+      AlQueue.put(B); // Allows WS_stc_trackUpdate to happen faster
     }
     else{
       loggerf(ERROR, "add expected train");
@@ -137,7 +139,9 @@ void Train::changeSpeed(struct TrainSpeedEventRequest Request){
     return;
   }
 
-  loggerf(INFO, "T %i changeSpeed (=>%3i in %3icm, reason %i) \t %s", id, Request.targetSpeed, Request.distance, Request.reason, TrainSpeedStatesStrings[SpeedState]);
+  loggerf(INFO, "T %i changeSpeed (=>%3i in %3icm, reason %s) \t %s",
+          id, Request.targetSpeed, Request.distance, S_TrainSpeedReasons[Request.reason],
+          S_TrainStates[SpeedState]);
 
   if(Request.targetSpeed > MaxSpeed)
     Request.targetSpeed = MaxSpeed;
@@ -187,6 +191,10 @@ void Train::changeSpeed(struct TrainSpeedEventRequest Request){
   ED->signalBlock = (ED->reason == TRAIN_SPEED_R_SIGNAL) ? (Block *)Request.ptr : 0;
 
   switch(SpeedState){
+    case TRAIN_SPEED_IDLE:
+    case TRAIN_SPEED_WAITING:
+      setStopped(false);
+      // fallthrough
     case TRAIN_SPEED_DRIVING:
       SpeedState = TRAIN_SPEED_CHANGING;
 
@@ -277,7 +285,9 @@ void train_speed_event_tick(struct TrainSpeedEventData * data){
 
   Train * T = data->T;
 
-  loggerf(DEBUG, "train_speed_event_tick %i a:%f, s:(%i/%i), t:%i\t%s", data->T->speed, data->acceleration, data->stepCounter, data->steps, data->stepTime, TrainSpeedStatesStrings[T->SpeedState]);
+  loggerf(DEBUG, "train_speed_event_tick %i a:%f, s:(%i/%i), t:%i\t%s",
+          data->T->speed, data->acceleration, data->stepCounter, data->steps,
+          data->stepTime, S_TrainStates[T->SpeedState]);
 
   float t = (data->stepTime * data->stepCounter) / 1000000.0; // seconds
 

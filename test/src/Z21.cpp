@@ -43,12 +43,12 @@ TEST_CASE_METHOD(TestsFixture, "Train Z21", "[Z21]"){
   pathlist_find();
 
   for(uint8_t i = 0; i < 27; i++){
-    Algorithm::process(U->B[i], _FORCE);
+    Algorithm::processBlock(&U->B[i]->Alg, _FORCE);
   }
 
   SECTION("I - Speed Engine"){
     U->B[1]->setDetection(1);
-    Algorithm::process(U->B[1], _FORCE);
+    Algorithm::processBlock(&U->B[1]->Alg, _FORCE);
 
     Train * T = U->B[1]->train;
     REQUIRE(T);
@@ -57,7 +57,7 @@ TEST_CASE_METHOD(TestsFixture, "Train Z21", "[Z21]"){
     T->setSpeed(50);
 
     U->B[2]->setDetection(1);
-    Algorithm::process(U->B[2], _FORCE);
+    Algorithm::processBlock(&U->B[2]->Alg, _FORCE);
 
     REQUIRE(T->directionKnown);
 
@@ -76,7 +76,7 @@ TEST_CASE_METHOD(TestsFixture, "Train Z21", "[Z21]"){
 
   SECTION("II - Speed Train Double"){
     U->B[1]->setDetection(1);
-    Algorithm::process(U->B[1], _FORCE);
+    Algorithm::processBlock(&U->B[1]->Alg, _FORCE);
 
     Train * T = U->B[1]->train;
     REQUIRE(T);
@@ -85,7 +85,7 @@ TEST_CASE_METHOD(TestsFixture, "Train Z21", "[Z21]"){
     T->setSpeed(50);
 
     U->B[2]->setDetection(1);
-    Algorithm::process(U->B[2], _FORCE);
+    Algorithm::processBlock(&U->B[2]->Alg, _FORCE);
 
     REQUIRE(T->directionKnown);
 

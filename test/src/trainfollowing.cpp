@@ -49,7 +49,7 @@ TEST_CASE_METHOD(TestsFixture, "Train Following Simple", "[TrainFollowing][TF-1]
   */
 
   for(uint8_t i = 0; i < 8; i++){
-    Algorithm::process(U->B[i], _FORCE);
+    Algorithm::processBlock(&U->B[i]->Alg, _FORCE);
   }
 
   // logger.setlevel_stdout(DEBUG);
@@ -96,14 +96,13 @@ TEST_CASE_METHOD(TestsFixture, "Train Following Simple", "[TrainFollowing][TF-1]
   }
 
   SECTION("II - Simple Engine Forward"){
-    loggerf(CRITICAL, "SECTION II");
     // Link an Engine after one block is detected
     //  No speed is set, so no direction is known
 
     CHECK(U->B[0]->train == 0);
 
     U->B[0]->setDetection(1);
-    Algorithm::process(U->B[0], _FORCE);
+    Algorithm::processBlock(&U->B[0]->Alg, _FORCE);
 
     REQUIRE(U->B[0]->train != 0);
     Train * T = U->B[0]->train;
@@ -111,7 +110,7 @@ TEST_CASE_METHOD(TestsFixture, "Train Following Simple", "[TrainFollowing][TF-1]
 
     // Step Forward
     U->B[1]->setDetection(1);
-    Algorithm::process(U->B[1], _FORCE);
+    Algorithm::processBlock(&U->B[1]->Alg, _FORCE);
 
     CHECK(U->B[1]->train == T);
 
@@ -123,13 +122,13 @@ TEST_CASE_METHOD(TestsFixture, "Train Following Simple", "[TrainFollowing][TF-1]
     }
 
     U->B[0]->setDetection(0);
-    Algorithm::process(U->B[0], _FORCE);
+    Algorithm::processBlock(&U->B[0]->Alg, _FORCE);
 
     CHECK(U->B[0]->train == 0);
     CHECK(T->directionKnown == 0);
 
     U->B[2]->setDetection(1);
-    Algorithm::process(U->B[2], _FORCE);
+    Algorithm::processBlock(&U->B[2]->Alg, _FORCE);
 
     CHECK(U->B[2]->train == T);
     CHECK(T->directionKnown == 0);
@@ -137,49 +136,53 @@ TEST_CASE_METHOD(TestsFixture, "Train Following Simple", "[TrainFollowing][TF-1]
     // CHECK(T->Detectables[0].BlockedBlocks == 2); // FIXME
 
     U->B[1]->setDetection(0);
-    Algorithm::process(U->B[1], _FORCE);
+    Algorithm::processBlock(&U->B[1]->Alg, _FORCE);
 
     CHECK(U->B[1]->train == 0);
     
     // Move Train
     T->setSpeed(10);
     U->B[3]->setDetection(1);
-    Algorithm::process(U->B[3], _FORCE);
+    Algorithm::processBlock(&U->B[3]->Alg, _FORCE);
 
     CHECK(U->B[3]->train == T);
     CHECK(T->dir == 0);
     CHECK(T->directionKnown == 1);
+    CHECK(U->B[3] == T->B);
 
     CHECK(U->B[2]->expectedTrain == 0); // Expected to get unblocked
     CHECK(U->B[3]->expectedTrain == T); // Still blocked by train
     CHECK(U->B[4]->expectedTrain == T); // Next to be blocked by train
 
     U->B[2]->setDetection(0);
-    Algorithm::process(U->B[2], _FORCE);
+    Algorithm::processBlock(&U->B[2]->Alg, _FORCE);
     U->B[4]->setDetection(1);
-    Algorithm::process(U->B[4], _FORCE);
+    Algorithm::processBlock(&U->B[4]->Alg, _FORCE);
 
     CHECK(!U->B[2]->train);
     CHECK(!U->B[2]->blocked);
+    CHECK(U->B[4] == T->B);
     CHECK(U->B[3]->expectedTrain == 0); // Expected to get unblocked
     CHECK(U->B[4]->expectedTrain == T); // Still blocked by train
     CHECK(U->B[5]->expectedTrain == T); // Next to be blocked by train
 
 
     U->B[3]->setDetection(0);
-    Algorithm::process(U->B[3], _FORCE);
+    Algorithm::processBlock(&U->B[3]->Alg, _FORCE);
     U->B[5]->setDetection(1);
-    Algorithm::process(U->B[5], _FORCE);
+    Algorithm::processBlock(&U->B[5]->Alg, _FORCE);
 
+    CHECK(U->B[5] == T->B);
     CHECK(U->B[4]->expectedTrain == 0); // Expected to get unblocked
     CHECK(U->B[5]->expectedTrain == T); // Still blocked by train
     CHECK(U->B[6]->expectedTrain == T); // Next to be blocked by train
 
     U->B[4]->setDetection(0);
-    Algorithm::process(U->B[4], _FORCE);
+    Algorithm::processBlock(&U->B[4]->Alg, _FORCE);
     U->B[6]->setDetection(1);
-    Algorithm::process(U->B[6], _FORCE);
+    Algorithm::processBlock(&U->B[6]->Alg, _FORCE);
 
+    CHECK(U->B[6] == T->B);
     CHECK(U->B[5]->expectedTrain == 0); // Expected to get unblocked
     CHECK(U->B[6]->expectedTrain == T); // Still blocked by train
     CHECK(U->B[7]->expectedTrain == T); // Next to be blocked by train
@@ -187,13 +190,12 @@ TEST_CASE_METHOD(TestsFixture, "Train Following Simple", "[TrainFollowing][TF-1]
   }
 
   SECTION("IIb- Simple Engine Forward"){
-    loggerf(CRITICAL, "SECTION IIb");
     // Link an Engine after the second block is detected
     //  Speed is set, so a direction is must be known
     CHECK(U->B[0]->train == 0);
 
     U->B[1]->setDetection(1);
-    Algorithm::process(U->B[1], _FORCE);
+    Algorithm::processBlock(&U->B[1]->Alg, _FORCE);
 
     REQUIRE(U->B[1]->train != 0);
     Train * T = U->B[1]->train;
@@ -203,7 +205,7 @@ TEST_CASE_METHOD(TestsFixture, "Train Following Simple", "[TrainFollowing][TF-1]
 
     // Add extra detected block at wrong side
     U->B[0]->setDetection(1);
-    Algorithm::process(U->B[0], _FORCE);
+    Algorithm::processBlock(&U->B[0]->Alg, _FORCE);
 
     REQUIRE(U->B[0]->train == T);
     CHECK(U->B[0]->train->dir == 0);
@@ -212,7 +214,7 @@ TEST_CASE_METHOD(TestsFixture, "Train Following Simple", "[TrainFollowing][TF-1]
     // Move Train
     T->setSpeed(10);
     U->B[2]->setDetection(1);
-    Algorithm::process(U->B[2], _FORCE);
+    Algorithm::processBlock(&U->B[2]->Alg, _FORCE);
 
     CHECK(U->B[2]->train == T);
     CHECK(U->B[2] == T->B);
@@ -226,7 +228,7 @@ TEST_CASE_METHOD(TestsFixture, "Train Following Simple", "[TrainFollowing][TF-1]
     CHECK(U->B[0]->train == 0);
 
     U->B[0]->setDetection(1);
-    Algorithm::process(U->B[0], _FORCE);
+    Algorithm::processBlock(&U->B[0]->Alg, _FORCE);
 
     REQUIRE(U->B[0]->train != 0);
     Train * T = U->B[0]->train;
@@ -236,7 +238,7 @@ TEST_CASE_METHOD(TestsFixture, "Train Following Simple", "[TrainFollowing][TF-1]
 
     // Step Forward
     U->B[1]->setDetection(1);
-    Algorithm::process(U->B[1], _FORCE);
+    Algorithm::processBlock(&U->B[1]->Alg, _FORCE);
 
     CHECK(U->B[1]->train == T);
     CHECK(U->B[1] == T->B);
@@ -244,15 +246,15 @@ TEST_CASE_METHOD(TestsFixture, "Train Following Simple", "[TrainFollowing][TF-1]
 
     // Step Forward
     U->B[2]->setDetection(1);
-    Algorithm::process(U->B[2], _FORCE);
+    Algorithm::processBlock(&U->B[2]->Alg, _FORCE);
 
     CHECK(U->B[2]->train == T);
 
     // Step Forward
     U->B[0]->setDetection(0);
-    Algorithm::process(U->B[0], _FORCE);
+    Algorithm::processBlock(&U->B[0]->Alg, _FORCE);
     U->B[3]->setDetection(1);
-    Algorithm::process(U->B[3], _FORCE);
+    Algorithm::processBlock(&U->B[3]->Alg, _FORCE);
 
     CHECK(U->B[3]->train == T);
     CHECK(U->B[0]->train == 0);
@@ -264,10 +266,10 @@ TEST_CASE_METHOD(TestsFixture, "Train Following Simple", "[TrainFollowing][TF-1]
 
     // Step Forward
     U->B[1]->setDetection(0);
-    Algorithm::process(U->B[1], _FORCE);
+    Algorithm::processBlock(&U->B[1]->Alg, _FORCE);
     U->B[4]->setDetection(1);
-    Algorithm::process(U->B[4], _FORCE);
-    
+    Algorithm::processBlock(&U->B[4]->Alg, _FORCE);
+
     CHECK(U->B[1]->train == 0);
     CHECK(U->B[4]->train == T);
     CHECK(U->B[4] == T->B);
@@ -282,9 +284,9 @@ TEST_CASE_METHOD(TestsFixture, "Train Following Simple", "[TrainFollowing][TF-1]
 
     // Step Forward
     U->B[2]->setDetection(0);
-    Algorithm::process(U->B[2], _FORCE);
+    Algorithm::processBlock(&U->B[2]->Alg, _FORCE);
     U->B[5]->setDetection(1);
-    Algorithm::process(U->B[5], _FORCE);
+    Algorithm::processBlock(&U->B[5]->Alg, _FORCE);
 
     CHECK(U->B[2]->train == 0);
     CHECK(U->B[5]->train == T);
@@ -296,8 +298,6 @@ TEST_CASE_METHOD(TestsFixture, "Train Following Simple", "[TrainFollowing][TF-1]
   }
 
   SECTION("IV - Partial Detectable Train"){
-    // logger.setlevel_stdout(DEBUG);
-    loggerf(CRITICAL, "SECTION IV");
     CHECK(U->B[3]->train == 0);
 
     U->B[3]->setDetection(1);
@@ -358,6 +358,7 @@ TEST_CASE_METHOD(TestsFixture, "Train Following Simple", "[TrainFollowing][TF-1]
     AlQueue.put(U->B[5]);
     Algorithm::BlockTick();
 
+    CHECK(U->B[5] == T->B);
     CHECK(U->B[4]->expectedTrain == 0); // Expected to get unblocked
     CHECK(U->B[5]->expectedTrain == T); // Still blocked by train
     CHECK(U->B[6]->expectedTrain == T); // Next to be blocked by train
@@ -398,13 +399,13 @@ TEST_CASE_METHOD(TestsFixture, "Train Following Simple", "[TrainFollowing][TF-1]
     CHECK(U->B[3]->train == 0);
 
     U->B[3]->setDetection(1);
-    Algorithm::process(U->B[3], _FORCE);
+    Algorithm::processBlock(&U->B[3]->Alg, _FORCE);
 
     REQUIRE(U->B[3]->train != 0);
     Train * T = U->B[3]->train;
 
     U->B[0]->setDetection(1);
-    Algorithm::process(U->B[0], _FORCE);
+    Algorithm::processBlock(&U->B[0]->Alg, _FORCE);
     REQUIRE(U->B[0]->train != 0);
 
     Train * tmp_RT[1] = {U->B[0]->train};
@@ -425,7 +426,7 @@ TEST_CASE_METHOD(TestsFixture, "Train Following Simple", "[TrainFollowing][TF-1]
 
     // Step Forward
     U->B[4]->setDetection(1);
-    Algorithm::process(U->B[4], _FORCE);
+    Algorithm::processBlock(&U->B[4]->Alg, _FORCE);
 
     CHECK(U->B[4]->blocked);
     CHECK(U->B[3]->blocked);
@@ -443,7 +444,7 @@ TEST_CASE_METHOD(TestsFixture, "Train Following Simple", "[TrainFollowing][TF-1]
     loggerf(WARNING, "U-B[1] blocked");
 
     U->B[1]->setDetection(1);
-    Algorithm::process(U->B[1], _FORCE);
+    Algorithm::processBlock(&U->B[1]->Alg, _FORCE);
 
     CHECK(U->B[4]->blocked);
     CHECK(U->B[3]->blocked);
@@ -462,7 +463,7 @@ TEST_CASE_METHOD(TestsFixture, "Train Following Simple", "[TrainFollowing][TF-1]
     loggerf(WARNING, "U-B[3] un-blocked");
 
     U->B[3]->setDetection(0);
-    Algorithm::process(U->B[3], _FORCE);
+    Algorithm::processBlock(&U->B[3]->Alg, _FORCE);
 
     CHECK(U->B[4]->blocked);
     CHECK(U->B[3]->blocked);
@@ -476,7 +477,7 @@ TEST_CASE_METHOD(TestsFixture, "Train Following Simple", "[TrainFollowing][TF-1]
     loggerf(WARNING, "U-B[0] un-blocked");
     
     U->B[0]->setDetection(0);
-    Algorithm::process(U->B[1], _FORCE);
+    Algorithm::processBlock(&U->B[1]->Alg, _FORCE);
 
     CHECK(U->B[4]->blocked);
     CHECK(U->B[3]->blocked);
@@ -496,22 +497,22 @@ TEST_CASE_METHOD(TestsFixture, "Train Following Simple", "[TrainFollowing][TF-1]
   SECTION("VI - Two trains approaching each other"){
     U->B[2]->setDetection(1);
     U->B[5]->setDetection(1);
-    Algorithm::process(U->B[2], _FORCE);
-    Algorithm::process(U->B[5], _FORCE);
+    Algorithm::processBlock(&U->B[2]->Alg, _FORCE);
+    Algorithm::processBlock(&U->B[5]->Alg, _FORCE);
 
     CHECK(U->B[2]->train != nullptr);
     CHECK(U->B[5]->train != nullptr);
     CHECK(U->B[2]->train != U->B[5]->train);
 
     U->B[3]->setDetection(1);
-    Algorithm::process(U->B[3], _FORCE);
+    Algorithm::processBlock(&U->B[3]->Alg, _FORCE);
     U->B[2]->setDetection(1);
-    Algorithm::process(U->B[2], _FORCE);
+    Algorithm::processBlock(&U->B[2]->Alg, _FORCE);
 
     U->B[4]->setDetection(1);
-    Algorithm::process(U->B[4], _FORCE);
+    Algorithm::processBlock(&U->B[4]->Alg, _FORCE);
     U->B[3]->setDetection(1);
-    Algorithm::process(U->B[3], _FORCE);
+    Algorithm::processBlock(&U->B[3]->Alg, _FORCE);
 
     CHECK(U->B[4]->train != U->B[5]->train);
   }
@@ -537,16 +538,19 @@ TEST_CASE_METHOD(TestsFixture, "Train Following Reversing", "[TrainFollowing][TF
   */
 
   for(uint8_t i = 0; i < 8; i++){
-    Algorithm::process(U->B[i], _FORCE);
+    Algorithm::processBlock(&U->B[i]->Alg, _FORCE);
   }
 
   SECTION("I - Reversing Full Detectable Train"){
     loggerf(CRITICAL, "SECTION I");
 
     U->B[3]->setDetection(1);
-    Algorithm::process(U->B[3], _FORCE);
+    Algorithm::processBlock(&U->B[3]->Alg, _FORCE);
     U->B[4]->setDetection(1);
-    Algorithm::process(U->B[4], _FORCE);
+    Algorithm::processBlock(&U->B[4]->Alg, _FORCE);
+
+    std::vector<Block *> blocks = {U->B[0], U->B[1], U->B[2], U->B[3], U->B[4], U->B[5], U->B[6], U->B[7], U->B[8]};
+    D_printBlockStates(std::ref(blocks));
 
     REQUIRE(U->B[3]->train != 0);
     REQUIRE(U->B[4]->train != 0);
@@ -558,7 +562,9 @@ TEST_CASE_METHOD(TestsFixture, "Train Following Reversing", "[TrainFollowing][TF
 
     // Step Forward
     U->B[5]->setDetection(1);
-    Algorithm::process(U->B[5], _FORCE);
+    Algorithm::processBlock(&U->B[5]->Alg, _FORCE);
+    
+    CHECK(T->directionKnown);
 
     CHECK(U->B[5]->train == T);
     CHECK(U->B[5] == T->B);
@@ -569,6 +575,11 @@ TEST_CASE_METHOD(TestsFixture, "Train Following Reversing", "[TrainFollowing][TF
     CHECK(U->B[4]->expectedTrain == T);
     CHECK(U->B[5]->expectedTrain == T);
     CHECK(U->B[6]->expectedTrain == T);
+
+    CHECK(U->B[6]->state == RESERVED);
+    CHECK(U->B[6]->isReservedBy(T));
+
+    D_printBlockStates(std::ref(blocks));
 
     CHECK(!T->dir);
 
@@ -589,11 +600,20 @@ TEST_CASE_METHOD(TestsFixture, "Train Following Reversing", "[TrainFollowing][TF
     CHECK(U->B[5]->expectedTrain == T);
     CHECK(U->B[6]->expectedTrain == 0);
 
+    CHECK(U->B[6]->state != RESERVED);
+    CHECK(!U->B[6]->isReservedBy(T));
+    CHECK(U->B[2]->state != RESERVED);
+    CHECK(!U->B[2]->isReservedBy(T));
+
+    D_printBlockStates(std::ref(blocks));
+
     for(uint8_t i = 0; i < 8; i++){
       CHECK(U->B[i]->dir == PREV);
     }
 
+    REQUIRE(T->ContinueCheck());
     T->setSpeed(10);
+    Algorithm::BlockTick();
 
     CHECK(U->B[2]->expectedTrain == T);
     CHECK(U->B[3]->expectedTrain == T);
@@ -601,13 +621,18 @@ TEST_CASE_METHOD(TestsFixture, "Train Following Reversing", "[TrainFollowing][TF
     CHECK(U->B[5]->expectedTrain == 0);
     CHECK(U->B[6]->expectedTrain == 0);
 
+    CHECK(U->B[2]->state == RESERVED);
+    CHECK(U->B[2]->isReservedBy(T));
+
+    D_printBlockStates(std::ref(blocks));
+
     U->B[5]->setDetection(0);
-    Algorithm::process(U->B[5], _FORCE);
+    Algorithm::processBlock(&U->B[5]->Alg, _FORCE);
 
     CHECK(U->B[5]->train == nullptr);
 
     U->B[2]->setDetection(1);
-    Algorithm::process(U->B[2], _FORCE);
+    Algorithm::processBlock(&U->B[2]->Alg, _FORCE);
 
     CHECK(U->B[2]->train == T);
     CHECK(U->B[1]->expectedTrain == T);
@@ -615,12 +640,13 @@ TEST_CASE_METHOD(TestsFixture, "Train Following Reversing", "[TrainFollowing][TF
 
   SECTION("II - Reversing partial detectable"){
     // The virtual blocked blocks should stay on the same side.
-
-    loggerf(CRITICAL, "SECTION II");
     CHECK(U->B[4]->train == 0);
 
     U->B[4]->setDetection(1);
-    Algorithm::process(U->B[4], _FORCE);
+    Algorithm::processBlock(&U->B[4]->Alg, _FORCE);
+
+    std::vector<Block *> blocks = {U->B[0], U->B[1], U->B[2], U->B[3], U->B[4], U->B[5], U->B[6], U->B[7], U->B[8]};
+    D_printBlockStates(std::ref(blocks));
 
     REQUIRE(U->B[4]->train != 0);
     Train * T = U->B[4]->train;
@@ -630,7 +656,8 @@ TEST_CASE_METHOD(TestsFixture, "Train Following Reversing", "[TrainFollowing][TF
 
     // Step Forward
     U->B[5]->setDetection(1);
-    Algorithm::process(U->B[5], _FORCE);
+    Algorithm::processBlock(&U->B[5]->Alg, _FORCE);
+    Algorithm::BlockTick();
 
     CHECK(U->B[5]->train == T);
     CHECK(U->B[5] == T->B);
@@ -649,6 +676,14 @@ TEST_CASE_METHOD(TestsFixture, "Train Following Reversing", "[TrainFollowing][TF
     CHECK( U->B[5]->virtualBlocked);
     CHECK(!U->B[6]->virtualBlocked);
 
+    CHECK(U->B[2]->state != BLOCKED);
+    CHECK(U->B[3]->state == BLOCKED);
+    CHECK(U->B[4]->state == BLOCKED);
+    CHECK(U->B[5]->state == BLOCKED);
+    CHECK(U->B[6]->state != BLOCKED);
+
+    D_printBlockStates(std::ref(blocks));
+
     T->setSpeed(0);
     T->reverse();
 
@@ -665,10 +700,15 @@ TEST_CASE_METHOD(TestsFixture, "Train Following Reversing", "[TrainFollowing][TF
     CHECK(U->B[5]->expectedTrain == T);
     CHECK(U->B[6]->expectedTrain == 0);
 
+    CHECK(U->B[4] == T->B);
+
+    D_printBlockStates(std::ref(blocks));
+
     for(uint8_t i = 0; i < 8; i++){
       CHECK(U->B[i]->dir == PREV);
     }
 
+    REQUIRE(T->ContinueCheck());
     T->setSpeed(10);
 
     CHECK(U->B[3]->expectedTrain == T);
@@ -676,13 +716,22 @@ TEST_CASE_METHOD(TestsFixture, "Train Following Reversing", "[TrainFollowing][TF
     CHECK(U->B[5]->expectedTrain == 0);
     CHECK(U->B[6]->expectedTrain == 0);
 
+    D_printBlockStates(std::ref(blocks));
+
     U->B[5]->setDetection(0);
     Algorithm::processBlock(&U->B[5]->Alg, _FORCE);
+    Algorithm::BlockTick();
+    
+    D_printBlockStates(std::ref(blocks));
 
+    CHECK(U->B[4] == T->B);
     CHECK(U->B[5]->train == nullptr);
 
     U->B[3]->setDetection(1);
     Algorithm::processBlock(&U->B[3]->Alg, _FORCE);
+    Algorithm::BlockTick();
+    
+    D_printBlockStates(std::ref(blocks));
     
     // FIXME, there is a chance it blocks too far ahead
     //    and therefore setting signals to danger before
@@ -703,20 +752,22 @@ TEST_CASE_METHOD(TestsFixture, "Train Following Reversing", "[TrainFollowing][TF
   }
 
   SECTION("III - Reversing Split detectables"){
-    loggerf(CRITICAL, "SECTION III");
     CHECK(U->B[5]->train == 0);
 
     U->B[5]->setDetection(1);
-    Algorithm::process(U->B[5], _FORCE);
+    Algorithm::processBlock(&U->B[5]->Alg, _FORCE);
 
     REQUIRE(U->B[5]->train != 0);
     Train * T = U->B[5]->train;
 
     U->B[2]->setDetection(1);
-    Algorithm::process(U->B[2], _FORCE);
+    Algorithm::processBlock(&U->B[2]->Alg, _FORCE);
     REQUIRE(U->B[2]->train != 0);
 
     Train * tmp_RT[1] = {U->B[2]->train};
+
+    std::vector<Block *> blocks = {U->B[0], U->B[1], U->B[2], U->B[3], U->B[4], U->B[5], U->B[6], U->B[7], U->B[8]};
+    D_printBlockStates(std::ref(blocks));
 
     // Link engine
     T->link(2, TRAIN_TRAIN_TYPE, 1, (Train **)&tmp_RT);
@@ -726,7 +777,14 @@ TEST_CASE_METHOD(TestsFixture, "Train Following Reversing", "[TrainFollowing][TF
 
     // Step Forward
     U->B[6]->setDetection(1);
-    Algorithm::process(U->B[6], _FORCE);
+    Algorithm::processBlock(&U->B[6]->Alg, _FORCE);
+    Algorithm::BlockTick();
+
+    D_printBlockStates(std::ref(blocks));
+    // logger.setlevel_stdout(INFO);
+    for(auto b: blocks)
+      Algorithm::print_block_debug(b);
+    // logger.setlevel_stdout(WARNING);
 
     CHECK(T->B == U->B[6]);
     CHECK(U->B[1]->expectedTrain == 0);
@@ -742,6 +800,8 @@ TEST_CASE_METHOD(TestsFixture, "Train Following Reversing", "[TrainFollowing][TF
 
     train_speed_event_tick(T->speed_event_data);
 
+    D_printBlockStates(std::ref(blocks));
+
     CHECK(T->B == U->B[2]);
 
     CHECK(U->B[1]->expectedTrain == 0);
@@ -756,7 +816,11 @@ TEST_CASE_METHOD(TestsFixture, "Train Following Reversing", "[TrainFollowing][TF
       CHECK(U->B[i]->dir == PREV);
     }
 
+    REQUIRE(T->ContinueCheck());
+
     T->setSpeed(10);
+
+    D_printBlockStates(std::ref(blocks));
 
     CHECK(U->B[1]->expectedTrain == T);
     CHECK(U->B[2]->expectedTrain == T);
@@ -767,7 +831,10 @@ TEST_CASE_METHOD(TestsFixture, "Train Following Reversing", "[TrainFollowing][TF
     CHECK(U->B[7]->expectedTrain == 0);
 
     U->B[6]->setDetection(0);
-    Algorithm::process(U->B[6], _FORCE);
+    Algorithm::processBlock(&U->B[6]->Alg, _FORCE);
+    Algorithm::BlockTick();
+
+    D_printBlockStates(std::ref(blocks));
 
     CHECK(U->B[1]->expectedTrain == T);
     CHECK(U->B[2]->expectedTrain == T);
@@ -778,7 +845,9 @@ TEST_CASE_METHOD(TestsFixture, "Train Following Reversing", "[TrainFollowing][TF
     CHECK(U->B[7]->expectedTrain == 0);
 
     U->B[1]->setDetection(1);
-    Algorithm::process(U->B[1], _FORCE);
+    Algorithm::processBlock(&U->B[1]->Alg, _FORCE);
+
+    D_printBlockStates(std::ref(blocks));
 
     CHECK(U->B[1]->train == T);
 
@@ -796,22 +865,22 @@ TEST_CASE_METHOD(TestsFixture, "Train Following Reversing", "[TrainFollowing][TF
   SECTION("VI - Two trains approaching each other"){
     U->B[2]->setDetection(1);
     U->B[5]->setDetection(1);
-    Algorithm::process(U->B[2], _FORCE);
-    Algorithm::process(U->B[5], _FORCE);
+    Algorithm::processBlock(&U->B[2]->Alg, _FORCE);
+    Algorithm::processBlock(&U->B[5]->Alg, _FORCE);
 
     CHECK(U->B[2]->train != nullptr);
     CHECK(U->B[5]->train != nullptr);
     CHECK(U->B[2]->train != U->B[5]->train);
 
     U->B[3]->setDetection(1);
-    Algorithm::process(U->B[3], _FORCE);
+    Algorithm::processBlock(&U->B[3]->Alg, _FORCE);
     U->B[2]->setDetection(1);
-    Algorithm::process(U->B[2], _FORCE);
+    Algorithm::processBlock(&U->B[2]->Alg, _FORCE);
 
     U->B[4]->setDetection(1);
-    Algorithm::process(U->B[4], _FORCE);
+    Algorithm::processBlock(&U->B[4]->Alg, _FORCE);
     U->B[3]->setDetection(1);
-    Algorithm::process(U->B[3], _FORCE);
+    Algorithm::processBlock(&U->B[3]->Alg, _FORCE);
 
     CHECK(U->B[4]->train != U->B[5]->train);
   }
@@ -837,7 +906,7 @@ TEST_CASE_METHOD(TestsFixture, "Train Following Ghosting", "[TrainFollowing][TF-
   */
 
   for(uint8_t i = 0; i < 8; i++){
-    Algorithm::process(U->B[i], _FORCE);
+    Algorithm::processBlock(&U->B[i]->Alg, _FORCE);
   }
 
   SECTION("I - No linked train"){
@@ -916,7 +985,7 @@ TEST_CASE_METHOD(TestsFixture, "Train Following Random releases/detections", "[T
   */
 
   for(uint8_t i = 0; i < 8; i++){
-    Algorithm::process(U->B[i], _FORCE);
+    Algorithm::processBlock(&U->B[i]->Alg, _FORCE);
   }
 
   SECTION("I - Engine"){

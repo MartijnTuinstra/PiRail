@@ -197,7 +197,7 @@ struct step findStep(struct control c){
       c.dir ^= PREV;
 
       if(B->polarity_type == 0 && c.prev->polarity_type == 0){
-        loggerf(WARNING, "Failed - wrong polarity");
+        loggerf(WARNING, "Failed - wrong polarity %02i:%02i", B->module, B->id);
         return s; // failed no way to toggle polarity
       }
     }
@@ -208,31 +208,31 @@ struct step findStep(struct control c){
     if(B->oneWay){
       if(B->oneWayDir == B->dir){
         if(c.dir == PREV){
-          loggerf(WARNING, "Failed - wrongway");
+          loggerf(WARNING, "Failed - wrongway %02i:%02i", B->module, B->id);
           return s;
         }
       }
       else{
         if(c.dir == NEXT){
-          loggerf(WARNING, "Failed - wrongway");
+          loggerf(WARNING, "Failed - wrongway %02i:%02i", B->module, B->id);
           return s;
         }
       }
     }
     
     if(B == c.start){
-      loggerf(WARNING, "Returned back to start");
+      loggerf(TRACE, "Returned back to start");
       return s; // return failed
     }
     else if(B == c.end[0] || B == c.end[1]){
-      loggerf(WARNING, "FOUND!!! :)");
+      loggerf(INFO, "FOUND!!! :)");
       s.found = true;
       return s; // return found
     }
     else if(c.nr_Stations && B->station){
       for(uint8_t i = 0; i < c.nr_Stations; i++){
         if(c.endStations[i] == B->station){
-          loggerf(WARNING, "Found path entering station from the middle");
+          loggerf(TRACE, "Found path entering station from the middle");
           return s; // return failed
         }
       }

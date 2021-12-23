@@ -81,30 +81,29 @@ TEST_CASE_METHOD(TestsFixture, "IO Output", "[IO][IO-2]"){
 
   switchboard::SwManager->LinkAndMap();
 
-
   U->Node[0]->io[22]->setOutput(IO_event_High);
   U->Node[0]->io[23]->setOutput(IO_event_Pulse);
   U->Node[0]->io[24]->setOutput(IO_event_Toggle);
 
-  REQUIRE(U->Node[0]->io[22]->w_state.value == IO_event_High);
-  REQUIRE(U->Node[0]->io[22]->r_state.value != IO_event_High);
+  CHECK(U->Node[0]->io[22]->w_state.value == IO_event_High);
+  CHECK(U->Node[0]->io[22]->r_state.value != IO_event_High);
 
-  REQUIRE(U->Node[0]->io[23]->w_state.value == IO_event_Pulse);
-  REQUIRE(U->Node[0]->io[23]->r_state.value != IO_event_High);
+  CHECK(U->Node[0]->io[23]->w_state.value == IO_event_Pulse);
+  CHECK(U->Node[0]->io[23]->r_state.value != IO_event_High);
 
-  REQUIRE(U->Node[0]->io[24]->w_state.value == IO_event_Toggle);
-  REQUIRE(U->Node[0]->io[24]->r_state.value != IO_event_High);
+  CHECK(U->Node[0]->io[24]->w_state.value == IO_event_Toggle);
+  CHECK(U->Node[0]->io[24]->r_state.value != IO_event_High);
 
-  U->updateIO();
+  U->updateIO(); // FIXME: toggle and pulse are put in r_state.
 
-  REQUIRE(U->Node[0]->io[22]->w_state.value == IO_event_High);
-  REQUIRE(U->Node[0]->io[22]->r_state.value == IO_event_High);
+  CHECK(U->Node[0]->io[22]->w_state.value == IO_event_High);
+  CHECK(U->Node[0]->io[22]->r_state.value == IO_event_High);
 
-  REQUIRE(U->Node[0]->io[23]->w_state.value == IO_event_Pulse);
-  REQUIRE(U->Node[0]->io[23]->r_state.value != IO_event_Pulse);
+  CHECK(U->Node[0]->io[23]->w_state.value == IO_event_Pulse);
+  CHECK(U->Node[0]->io[23]->r_state.value != IO_event_Pulse);
 
-  REQUIRE(U->Node[0]->io[24]->w_state.value == IO_event_Toggle);
-  REQUIRE(U->Node[0]->io[24]->r_state.value != IO_event_Toggle);
+  CHECK(U->Node[0]->io[24]->w_state.value == IO_event_Toggle);
+  CHECK(U->Node[0]->io[24]->r_state.value != IO_event_Toggle);
 
 }
 

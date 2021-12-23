@@ -87,8 +87,6 @@ void * Scheduler::thread(void * args){
     while( context->_stop_ == 0 ){
         context->updateClock();
 
-        loggerf(DEBUG, " Scheduler clock %li %i", context->scheduler_wait.tv_sec, context->scheduler_wait.tv_nsec);
-
         pthread_mutex_lock(&context->EventMutex);
 
         for(auto &e: context->events){
@@ -114,8 +112,6 @@ void * Scheduler::thread(void * args){
         }
         else // No events registered
             context->scheduler_wait.tv_sec += 1;
-
-        loggerf(DEBUG, " Scheduler next wake %li %i", context->scheduler_wait.tv_sec, context->scheduler_wait.tv_nsec);
 
         pthread_mutex_unlock(&context->EventMutex);
 

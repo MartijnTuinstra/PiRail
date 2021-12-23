@@ -335,7 +335,6 @@ TEST_CASE_METHOD(TestsFixture, "Path Construction", "[PATH][PATH-1]" ) {
 }
 
 TEST_CASE_METHOD(TestsFixture, "Path Reverse", "[PATH][PATH-2a]") {
-  loggerf(CRITICAL, "PATH-2a TEST");
   char filenames[1][30] = {"./testconfigs/PATH-2.bin"};
   loadSwitchboard(filenames, 1);
   loadStock();
@@ -405,7 +404,7 @@ TEST_CASE_METHOD(TestsFixture, "Path Reverse", "[PATH][PATH-2a]") {
     // However, it is not allowed when a train is moving
 
     U->B[5]->setDetection(1);
-    Algorithm::process(U->B[5], _FORCE);
+    Algorithm::processBlock(&U->B[5]->Alg, _FORCE);
 
     REQUIRE(U->B[5]->train);
 
@@ -413,7 +412,7 @@ TEST_CASE_METHOD(TestsFixture, "Path Reverse", "[PATH][PATH-2a]") {
     U->B[5]->train->setSpeed(10);
 
     U->B[6]->setDetection(1);
-    Algorithm::process(U->B[6], _FORCE);
+    Algorithm::processBlock(&U->B[6]->Alg, _FORCE);
 
     REQUIRE(U->B[6]->train->assigned);
     REQUIRE(U->B[6]->train->directionKnown);
@@ -442,10 +441,10 @@ TEST_CASE_METHOD(TestsFixture, "Path Reverse", "[PATH][PATH-2a]") {
     // However, it is not allowed when a train is moving
 
     U->B[4]->setDetection(1);
-    Algorithm::process(U->B[4], _FORCE);
+    Algorithm::processBlock(&U->B[4]->Alg, _FORCE);
 
     U->B[8]->setDetection(1);
-    Algorithm::process(U->B[8], _FORCE);
+    Algorithm::processBlock(&U->B[8]->Alg, _FORCE);
 
     REQUIRE(U->B[4]->train);
     REQUIRE(U->B[8]->train);
@@ -456,9 +455,9 @@ TEST_CASE_METHOD(TestsFixture, "Path Reverse", "[PATH][PATH-2a]") {
     U->B[8]->train->link(1, TRAIN_ENGINE_TYPE);
 
     U->B[5]->setDetection(1);
-    Algorithm::process(U->B[5], _FORCE);
+    Algorithm::processBlock(&U->B[5]->Alg, _FORCE);
     U->B[9]->setDetection(1);
-    Algorithm::process(U->B[9], _FORCE);
+    Algorithm::processBlock(&U->B[9]->Alg, _FORCE);
 
     // Moving trains on the path
     P->reverse();
@@ -479,7 +478,6 @@ TEST_CASE_METHOD(TestsFixture, "Path Reverse", "[PATH][PATH-2a]") {
 }
 
 TEST_CASE_METHOD(TestsFixture, "Path Flip Polarity", "[PATH][PATH-2b]") {
-  loggerf(CRITICAL, "PATH-2b TEST");
   char filenames[1][30] = {"./testconfigs/PATH-2b.bin"};
   loadSwitchboard(filenames, 1);
   loadStock();
@@ -488,7 +486,6 @@ TEST_CASE_METHOD(TestsFixture, "Path Flip Polarity", "[PATH][PATH-2b]") {
   REQUIRE(U);
 
   U->on_layout = true;
-  logger.setlevel_stdout(DEBUG);
 
   switchboard::SwManager->LinkAndMap();
 
@@ -520,7 +517,7 @@ TEST_CASE_METHOD(TestsFixture, "Path Flip Polarity", "[PATH][PATH-2b]") {
     //  even if train is in path
 
     U->B[3]->setDetection(1);
-    Algorithm::process(U->B[3], _FORCE);
+    Algorithm::processBlock(&U->B[3]->Alg, _FORCE);
 
     CHECK(P[1]->status == POLARITY_NORMAL);
     CHECK(P[2]->status == POLARITY_NORMAL);
@@ -535,7 +532,7 @@ TEST_CASE_METHOD(TestsFixture, "Path Flip Polarity", "[PATH][PATH-2b]") {
     //  and will be flipped together
     // It should not matter from which group the polarity is reversed.
     U->B[4]->setDetection(1);
-    Algorithm::process(U->B[4], _FORCE);
+    Algorithm::processBlock(&U->B[4]->Alg, _FORCE);
 
     CHECK(P[1]->status == POLARITY_REVERSED);
     CHECK(P[2]->status == POLARITY_REVERSED);
@@ -552,9 +549,9 @@ TEST_CASE_METHOD(TestsFixture, "Path Flip Polarity", "[PATH][PATH-2b]") {
 
     // If the train is still in a block that is not reverseable, then no polarity is changed.
     U->B[5]->setDetection(1);
-    Algorithm::process(U->B[5], _FORCE);
+    Algorithm::processBlock(&U->B[5]->Alg, _FORCE);
     U->B[6]->setDetection(1);
-    Algorithm::process(U->B[6], _FORCE);
+    Algorithm::processBlock(&U->B[6]->Alg, _FORCE);
 
     CHECK(P[1]->status == POLARITY_REVERSED);
     CHECK(P[2]->status == POLARITY_REVERSED);
@@ -572,10 +569,10 @@ TEST_CASE_METHOD(TestsFixture, "Path Flip Polarity", "[PATH][PATH-2b]") {
     // However, it is not allowed when a train is moving
 
     U->B[4]->setDetection(1);
-    Algorithm::process(U->B[4], _FORCE);
+    Algorithm::processBlock(&U->B[4]->Alg, _FORCE);
 
     U->B[8]->setDetection(1);
-    Algorithm::process(U->B[8], _FORCE);
+    Algorithm::processBlock(&U->B[8]->Alg, _FORCE);
 
     REQUIRE(U->B[4]->train);
     REQUIRE(U->B[8]->train);
@@ -586,9 +583,9 @@ TEST_CASE_METHOD(TestsFixture, "Path Flip Polarity", "[PATH][PATH-2b]") {
     U->B[8]->train->link(1, TRAIN_ENGINE_TYPE);
 
     U->B[5]->setDetection(1);
-    Algorithm::process(U->B[5], _FORCE);
+    Algorithm::processBlock(&U->B[5]->Alg, _FORCE);
     U->B[9]->setDetection(1);
-    Algorithm::process(U->B[9], _FORCE);
+    Algorithm::processBlock(&U->B[9]->Alg, _FORCE);
 
     // Moving trains on the path
     P[1]->reverse();
@@ -610,7 +607,6 @@ TEST_CASE_METHOD(TestsFixture, "Path Flip Polarity", "[PATH][PATH-2b]") {
 }
 
 TEST_CASE_METHOD(TestsFixture, "Path Reserve", "[PATH][PATH-3]") {
-  loggerf(CRITICAL, "PATH-3 TEST");
   char filenames[1][30] = {"./testconfigs/PATH-2.bin"};
   loadSwitchboard(filenames, 1);
   loadStock();
@@ -624,7 +620,7 @@ TEST_CASE_METHOD(TestsFixture, "Path Reserve", "[PATH][PATH-3]") {
   pathlist_find();
 
   for(uint8_t i = 0; i < 14; i++){
-    Algorithm::process(U->B[i], _FORCE);
+    Algorithm::processBlock(&U->B[i]->Alg, _FORCE);
   }
 
   REQUIRE(U->B[3]->path == U->B[10]->path);
@@ -685,7 +681,6 @@ TEST_CASE_METHOD(TestsFixture, "Path Reserve", "[PATH][PATH-3]") {
 }
 
 TEST_CASE_METHOD(TestsFixture, "Path & Trains", "[PATH][PATH-4]"){
-  loggerf(CRITICAL, "PATH-4 TEST");
   char filenames[1][30] = {"./testconfigs/PATH-4.bin"};
   loadSwitchboard(filenames, 1);
   loadStock();
@@ -726,7 +721,7 @@ TEST_CASE_METHOD(TestsFixture, "Path & Trains", "[PATH][PATH-4]"){
   REQUIRE(U->B[3]->path != U->B[6]->path);
 
   for(uint8_t i = 0; i < 9; i++){
-    Algorithm::process(U->B[i], _FORCE);
+    Algorithm::processBlock(&U->B[i]->Alg, _FORCE);
   }
 
   SECTION("I - Not linked"){

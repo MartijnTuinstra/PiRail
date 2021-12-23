@@ -92,7 +92,7 @@ TEST_CASE_METHOD(TestsFixture, "Switch Link", "[SB][SB-2][SB-2.1]" ) {
 
   SECTION( "V - Search Check"){
     for(uint8_t i = 0; i < 4; i++){
-      Algorithm::process(U->B[i], _FORCE);
+      Algorithm::processBlock(&U->B[i]->Alg, _FORCE);
     }
 
     CHECK(U->B[0]->Alg.N->group[3] == 2);
@@ -173,7 +173,7 @@ TEST_CASE_METHOD(TestsFixture, "Switch setState", "[SB][SB-2][SB-2.2]" ) {
 
   SECTION( "II - Blocked by stationary Train"){
     U->B[1]->setDetection(1);
-    Algorithm::process(U->B[1], _FORCE);
+    Algorithm::processBlock(&U->B[1]->Alg, _FORCE);
 
     REQUIRE(U->B[1]->train);
 
@@ -191,7 +191,7 @@ TEST_CASE_METHOD(TestsFixture, "Switch setState", "[SB][SB-2][SB-2.2]" ) {
 
   SECTION( "IIIa - Reserved by Train"){
     U->B[0]->setDetection(1);
-    Algorithm::process(U->B[0], _FORCE);
+    Algorithm::processBlock(&U->B[0]->Alg, _FORCE);
 
     // Force Switchsolver, train has no speed.
     SwitchSolver::solve(U->B[0]->train, U->B[0], U->B[1], U->B[1]->next, FL_SWITCH_CARE);
@@ -220,10 +220,10 @@ TEST_CASE_METHOD(TestsFixture, "Switch setState", "[SB][SB-2][SB-2.2]" ) {
 
     logger.setlevel_stdout(TRACE);
     for(uint8_t i = 0; i < 11; i++)
-      Algorithm::process(U->B[i], _DEBUG | _FORCE);
+      Algorithm::processBlock(&U->B[i]->Alg, _DEBUG | _FORCE);
 
     U->B[8]->setDetection(1);
-    Algorithm::process(U->B[8], _FORCE);
+    Algorithm::processBlock(&U->B[8]->Alg, _FORCE);
 
     REQUIRE(U->Sw[1]->state == 1);
 
@@ -270,7 +270,7 @@ TEST_CASE_METHOD(TestsFixture, "Switch setState", "[SB][SB-2][SB-2.2]" ) {
 
   SECTION( "IV - Blocked by stationary Train"){
     U->B[1]->setDetection(1);
-    Algorithm::process(U->B[1], _FORCE);
+    Algorithm::processBlock(&U->B[1]->Alg, _FORCE);
 
     REQUIRE(U->B[1]->train);
 

@@ -418,10 +418,16 @@ void modify_Block(struct ModuleConfig * config, char ** cmds, uint8_t cmd_len){
     printf("New:      \t");
     print_Block(*B);
   }
-  else if(mode == 'e'){
+  else if(mode == 'e' || mode == 'a'){
     printf("Argment mode\n");
-    cmds = &cmds[3];
-    cmd_len -= 3;
+    if(mode == 'e'){
+      cmds = &cmds[3];
+      cmd_len -= 3;
+    }
+    else{
+      cmds = &cmds[2];
+      cmd_len -= 2;
+    }
 
     for(uint8_t i = 0; i < cmd_len;){
       printf("%s\t", cmds[i]);
@@ -517,10 +523,49 @@ void modify_Switch(struct ModuleConfig * config, char ** cmds, uint8_t cmd_len){
   if(!Sw)
     return;
 
-  if(mode == 'e' || mode == 'a'){
+  if((mode == 'e' && cmd_len <= 3) || (mode == 'a' && cmd_len <= 2)){
     configEditor_Switch(Sw);
 
     printf("New:      \t");
+    print_Switch(*Sw);
+  }
+
+  else if(mode == 'e' || mode == 'a'){
+    printf("Argment mode\n");
+    if(mode == 'e'){
+      cmds = &cmds[3];
+      cmd_len -= 3;
+    }
+    else{
+      cmds = &cmds[2];
+      cmd_len -= 2;
+    }
+
+    for(uint8_t i = 0; i < cmd_len;){
+      printf("%s\t", cmds[i]);
+      if(strcmp(cmds[i], "-h") == 0){
+        // Help
+        printf("Arguments for Switch: \n");
+        printf("\t-A\tApproach Link\n");
+        printf("\t-S\tStraight Link\n");
+        printf("\t-D\tDiverging Link\n");
+        return;
+      }
+      else if(strcmp(cmds[i], "-A") == 0)
+        configEditor_scan_RailLink(cmds[++i], &Sw->App);
+        
+      else if(strcmp(cmds[i], "-S") == 0)
+        configEditor_scan_RailLink(cmds[++i], &Sw->Str);
+        
+      else if(strcmp(cmds[i], "-D") == 0)
+        configEditor_scan_RailLink(cmds[++i], &Sw->Div);
+
+      // else if(strcmp(cmds[i], "--PIO") == 0){
+      //   uint8_t n = atoi(cmds[++i]);
+      // }
+      i++;
+    }
+    printf("\nNew:      \t");
     print_Switch(*Sw);
   }
 }
@@ -1431,22 +1476,22 @@ int edit_module(char * filename, bool update){
         modify_Node(&config, cmds, cmds_len);
       }
     }
-    else if(strcmp(cmds[0], "ex") == 0 || strcmp(cmds[0], "Ex") == 0){
+    else if(strcmp(cmds[0], "ex") == 0 || strcmp(cmds[0], "export") == 0){
       export_Layout(&config, cmds[1]);
     }
-    else if(strcmp(cmds[0], "im") == 0 || strcmp(cmds[0], "Im") == 0){
+    else if(strcmp(cmds[0], "im") == 0 || strcmp(cmds[0], "import") == 0){
       import_Layout(&config, cmds[1]);
     }
     else if(strcmp(cmds[0],  "pL") == 0 || strcmp(cmds[0], "pl") == 0){
       print_Layout(config.Layout);
     }
-    else if(strcmp(cmds[0], "s") == 0){
+    else if(strcmp(cmds[0], "s") == 0 || strcmp(cmds[0], "save") == 0){
       if(config.write())
         loggerf(INFO, "Config Saved");
       else
         loggerf(ERROR, "Error while saving");
     }
-    else if(strcmp(cmds[0], "wio") == 0){
+    else if(strcmp(cmds[0], "wio") == 0 || strcmp(cmds[0], "writeio") == 0){
       if(cmds_len < 3){
         loggerf(ERROR, "Not enough arguments\nusage: wio comport node_id\n");
         continue;
@@ -1523,7 +1568,7 @@ int edit_module(char * filename, bool update){
 
       uart.close();
     }
-    else if(strcmp(cmds[0], "p") == 0){
+    else if(strcmp(cmds[0], "p") == 0 || strcmp(cmds[0], "print") == 0){
       config.print(cmds, cmds_len);
     }
   //   else

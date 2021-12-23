@@ -77,8 +77,6 @@ struct TrainSpeedEventData {
   struct timespec starttime;
 };
 
-extern char TrainStatesStrings[40][20];
-
 // Train States
 enum _TrainSpeedStates {
     TRAIN_SPEED_IDLE,                // Parked
@@ -221,8 +219,10 @@ class Train {
     void clearRoute();
     // ---------------------
 
-    bool ContinueCheck(); // Function to check if the train is allowed or able to continue
-    void Continue();      // Function to set switches when granted by ContinueCheck
+    // Function to check if the train is allowed or able to continue
+    bool ContinueCheck();
+    // Function to set switches when granted by ContinueCheck
+    void Continue();
 
     uint16_t checkMaxSpeed();
 

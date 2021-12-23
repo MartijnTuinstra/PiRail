@@ -204,8 +204,12 @@ class Block {
 
     void checkSwitchFeedback(bool);
 
-    bool checkPolarity(Block * B); // Check if there is a continuous path of the same polarity
-    bool cmpPolarity(Block * B);   // Check if block has same default polarity
+    // Check if there is a continuous path of the same polarity
+    bool checkPolarity(Block * B);
+
+    // Check if block has same polarity.
+    // Returns true when they have same polarity, false otherwise
+    bool cmpPolarity(Block * B);
     void flipPolarity();
     void flipPolarity(bool reverse);
 };

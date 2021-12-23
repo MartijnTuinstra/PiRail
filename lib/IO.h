@@ -109,11 +109,6 @@ class IO_Node {
     inline void update();
 };
 
-extern const char * IO_type_str[6];
-extern const char * IO_event_str[13];
-extern const char * IO_enum_type_string[9];
-extern const char ** IO_event_string[9];
-
 #define U_IO(a, b, c) Units[a]->Node[b].io[c]
 
 

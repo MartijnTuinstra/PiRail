@@ -19,6 +19,8 @@ class Queue
     T    waitGet(void);
     T    waitGet(int timeout);
 
+    bool contains(T);
+
     inline int getItems(void);
     inline void clear(void);
 
@@ -129,6 +131,20 @@ T Queue<T>::Acquire(void){
     Beginning -= (MAX + 1);
 
   return val;
+}
+
+template <class T>
+bool Queue<T>::contains(T Item){
+  for(uint16_t i = Beginning; i != End; ){
+    
+    if(Data[i] == Item)
+      return true;
+
+    if(++i > MAX)
+      i -= (MAX + 1);
+  }
+
+  return false;
 }
 
 template <class T>

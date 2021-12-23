@@ -16,8 +16,8 @@ class Path {
     bool SwitchPath = false;
     bool StationPath = false;
 
-    bool    polarity        = POLARITY_NORMAL;
-    uint8_t polarity_type   = BLOCK_FL_POLARITY_DISABLED;
+    // bool    polarity        = POLARITY_NORMAL;
+    // uint8_t polarity_type   = BLOCK_FL_POLARITY_DISABLED;
     uint16_t maxLength      = 0; // Maximum train length allowed through this path
     uint16_t length         = 0; // Length of this path
     uint16_t occupiedLength = 0; // Length in use by trains

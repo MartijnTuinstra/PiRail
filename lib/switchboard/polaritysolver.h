@@ -21,7 +21,7 @@ namespace PolaritySolver {
 // void init();
 // void free();
 
-int solve(Train *, PolarityGroup *, PolarityGroup *);
+int solve(Train *, std::vector<PolarityGroup *>, PolarityGroup *);
 
 // struct instruction {
 //   uint8_t type;

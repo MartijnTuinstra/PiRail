@@ -730,12 +730,21 @@ TEST_CASE_METHOD(TestsFixture, "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" )
   //           [   Station   ]
   */
 
+  {
+  std::vector<Block *> blocks = {U->B[0], U->B[1], U->B[2], U->B[3], U->B[4], U->B[5], U->B[6], U->B[7], U->B[8], U->B[9], U->B[10], U->B[11]};
+  Path * P = blocks[0]->path;
+  bool sameDir = std::all_of(blocks.begin(), blocks.end(), [ ](Block * b){ return b->dir  == 0; } );
+  bool samePath = std::all_of(blocks.begin(), blocks.end(), [P](Block * b){ return b->path == P; } );
+  REQUIRE(sameDir);
+  REQUIRE(samePath);
+  }
+
   SECTION("I - Standard"){
     // Each block is a meter (which is the minium state size)
     //  the blocks will therefore be set to DANGER - CAUTION - PROCEED behind the last BLOCKED block
     U->B[4]->setDetection(1);
 
-    Algorithm::process(U->B[4], _FORCE);
+    Algorithm::processBlock(&U->B[4]->Alg, _FORCE);
     Algorithm::print_block_debug(U->B[4]);
 
     REQUIRE(U->B[4]->Alg.P->group[3] > 2);
@@ -754,7 +763,7 @@ TEST_CASE_METHOD(TestsFixture, "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" )
     //  the blocks will therefore be set to DANGER - DANGER - CAUTION - PROCEED behind the last BLOCKED block
     U->B[10]->setDetection(1);
 
-    Algorithm::process(U->B[10], _FORCE);
+    Algorithm::processBlock(&U->B[10]->Alg, _FORCE);
     Algorithm::print_block_debug(U->B[10]);
 
     REQUIRE(U->B[10]->Alg.P->group[3] > 3);
@@ -771,8 +780,112 @@ TEST_CASE_METHOD(TestsFixture, "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" )
   SECTION("IIb - End of line"){
     // If there is nowhere to go / end of line
     //  then the block shall be set to CAUTION
-    Algorithm::process(U->B[11], _FORCE);
+    Algorithm::processBlock(&U->B[11]->Alg, _FORCE);
     CHECK(U->B[11]->state == CAUTION);
+  }
+
+  SECTION("IIc - Reversing I"){
+    // After reversing a train all blocks should be reconfigured.
+    U->B[5]->setDetection(1);
+    Algorithm::processBlock(&U->B[5]->Alg, _FORCE);
+
+    Train * T = U->B[5]->train;
+    T->link(0, TRAIN_ENGINE_TYPE);
+    T->setSpeed(10);
+
+    U->B[6]->setDetection(1);
+    Algorithm::processBlock(&U->B[6]->Alg, _FORCE);
+    U->B[5]->setDetection(0);
+    Algorithm::processBlock(&U->B[5]->Alg, _FORCE);
+    Algorithm::BlockTick();
+
+    CHECK(U->B[5]->state == DANGER);
+    CHECK(U->B[4]->state == CAUTION);
+    CHECK(U->B[7]->state == RESERVED);
+    CHECK(U->B[7]->isReservedBy(T));
+    CHECK(U->B[7]->expectedTrain == T);
+    
+    std::vector<Block *> blocks = {U->B[0], U->B[1], U->B[2], U->B[3], U->B[4], U->B[5], U->B[6], U->B[7], U->B[8], U->B[9], U->B[10], U->B[11]};
+    D_printBlockStates(std::ref(blocks));
+    
+    CHECK(!T->dir);
+
+    T->setSpeed(0);
+    train_speed_event_tick(T->speed_event_data);
+
+    CHECK(!T->dir);
+
+    T->reverse();
+
+    Algorithm::BlockTick();
+    D_printBlockStates(std::ref(blocks));
+
+    CHECK(T->dir);
+
+    T->setSpeed(10);
+    Algorithm::BlockTick();
+    
+    CHECK(U->B[7]->state == DANGER);
+    CHECK(U->B[8]->state == CAUTION);
+    CHECK(U->B[5]->state == RESERVED);
+    CHECK(U->B[5]->isReservedBy(T));
+    CHECK(U->B[5]->expectedTrain == T);
+
+    D_printBlockStates(std::ref(blocks));
+    
+  }
+
+  SECTION("IIc - Reversing II"){
+    // After reversing a train all blocks should be reconfigured.
+    U->B[5]->setDetection(1);
+    Algorithm::processBlock(&U->B[5]->Alg, _FORCE);
+
+    Train * T = U->B[5]->train;
+    T->link(0, TRAIN_ENGINE_TYPE);
+    T->setSpeed(10);
+
+    U->B[6]->setDetection(1);
+    Algorithm::processBlock(&U->B[6]->Alg, _FORCE);
+    U->B[5]->setDetection(0);
+    Algorithm::processBlock(&U->B[5]->Alg, _FORCE);
+    Algorithm::BlockTick();
+    U->B[7]->setDetection(1);
+    Algorithm::processBlock(&U->B[7]->Alg, _FORCE);
+
+    CHECK(U->B[5]->state == DANGER);
+    CHECK(U->B[4]->state == CAUTION);
+    CHECK(U->B[8]->state == RESERVED);
+    CHECK(U->B[8]->isReservedBy(T));
+    CHECK(U->B[8]->expectedTrain == T);
+    
+    std::vector<Block *> blocks = {U->B[0], U->B[1], U->B[2], U->B[3], U->B[4], U->B[5], U->B[6], U->B[7], U->B[8], U->B[9], U->B[10], U->B[11]};
+    D_printBlockStates(std::ref(blocks));
+    
+    CHECK(!T->dir);
+
+    T->setSpeed(0);
+    train_speed_event_tick(T->speed_event_data);
+
+    CHECK(!T->dir);
+
+    T->reverse();
+
+    Algorithm::BlockTick();
+    D_printBlockStates(std::ref(blocks));
+
+    CHECK(T->dir);
+
+    T->setSpeed(10);
+    Algorithm::BlockTick();
+    
+    CHECK(U->B[8]->state == DANGER);
+    CHECK(U->B[9]->state == CAUTION);
+    CHECK(U->B[5]->state == RESERVED);
+    CHECK(U->B[5]->isReservedBy(T));
+    CHECK(U->B[5]->expectedTrain == T);
+
+    D_printBlockStates(std::ref(blocks));
+    
   }
 
   SECTION("III - Blocks change direction"){
@@ -792,7 +905,7 @@ TEST_CASE_METHOD(TestsFixture, "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" )
     U->B[13]->path->reverse();
 
     U->B[15]->setDetection(1);
-    Algorithm::process(U->B[15], _FORCE);
+    Algorithm::processBlock(&U->B[15]->Alg, _FORCE);
 
     CHECK(U->B[15]->state == BLOCKED);
     CHECK(U->B[14]->state == DANGER);
@@ -809,7 +922,7 @@ TEST_CASE_METHOD(TestsFixture, "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" )
   SECTION("IV - Blocks change polarity"){
     // When train is in polarity group set whole group to danger.
     U->B[47]->setDetection(1);
-    Algorithm::process(U->B[47], _FORCE);
+    Algorithm::processBlock(&U->B[47]->Alg, _FORCE);
 
     CHECK(U->B[47]->state == BLOCKED);
     CHECK(U->B[46]->state == DANGER);
@@ -823,7 +936,7 @@ TEST_CASE_METHOD(TestsFixture, "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" )
       U->B[67]->path->reverse();
 
     U->B[70]->setDetection(1);
-    Algorithm::process(U->B[70], _FORCE);
+    Algorithm::processBlock(&U->B[70]->Alg, _FORCE);
 
     CHECK(U->B[70]->state == BLOCKED);
     CHECK(U->B[69]->state == DANGER);
@@ -834,11 +947,11 @@ TEST_CASE_METHOD(TestsFixture, "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" )
     D_printBlockStates(std::ref(blocks2));
 
     U->B[71]->setDetection(1);
-    Algorithm::process(U->B[71], _FORCE);
+    Algorithm::processBlock(&U->B[71]->Alg, _FORCE);
 
     U->B[70]->setDetection(0);
-    Algorithm::process(U->B[70], _FORCE);
-    Algorithm::process(U->B[71], _FORCE);
+    Algorithm::processBlock(&U->B[70]->Alg, _FORCE);
+    Algorithm::processBlock(&U->B[71]->Alg, _FORCE);
 
     CHECK(U->B[71]->state == BLOCKED);
     CHECK(U->B[70]->state == DANGER);
@@ -856,7 +969,7 @@ TEST_CASE_METHOD(TestsFixture, "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" )
 
     U->B[19]->setDetection(1);
 
-    Algorithm::process(U->B[19], _FORCE);
+    Algorithm::processBlock(&U->B[19]->Alg, _FORCE);
 
     REQUIRE(U->B[19]->Alg.P->group[3] > 2);
 
@@ -868,7 +981,7 @@ TEST_CASE_METHOD(TestsFixture, "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" )
     D_printBlockStates(std::ref(blocks));
 
     U->Sw[0]->setState(1);
-    Algorithm::process(U->B[17], _FORCE);
+    Algorithm::processBlock(&U->B[17]->Alg, _FORCE);
 
     REQUIRE(U->B[17]->Alg.P->group[3] == 1);
     REQUIRE(U->B[17]->Alg.N->group[3] == 0);
@@ -881,9 +994,9 @@ TEST_CASE_METHOD(TestsFixture, "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" )
     U->Sw[0]->state = 0; // Force update of all blocks
     U->Sw[0]->setState(1);
 
-    Algorithm::process(U->B[16], _FORCE);
-    Algorithm::process(U->B[17], _FORCE);
-    Algorithm::process(U->B[18], _FORCE);
+    Algorithm::processBlock(&U->B[16]->Alg, _FORCE);
+    Algorithm::processBlock(&U->B[17]->Alg, _FORCE);
+    Algorithm::processBlock(&U->B[18]->Alg, _FORCE);
 
     CHECK(U->B[17]->switchWrongFeedback);
     CHECK(U->B[17]->state == DANGER);
@@ -893,7 +1006,7 @@ TEST_CASE_METHOD(TestsFixture, "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" )
 
     U->Sw[0]->feedback[0]->setInput(IO_event_High); // Set feedback right
 
-    Algorithm::process(U->B[17], _FORCE);
+    Algorithm::processBlock(&U->B[17]->Alg, _FORCE);
 
     CHECK(!U->B[17]->switchWrongFeedback);
     CHECK(U->B[17]->state == DANGER);  // No blocks after, so still danger
@@ -906,10 +1019,10 @@ TEST_CASE_METHOD(TestsFixture, "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" )
     U->Sw[0]->setState(0);
     U->Sw[0]->feedback[0]->setInput(IO_event_Low); // Set feedback right
 
-    Algorithm::process(U->B[16], _FORCE);
-    Algorithm::process(U->B[17], _FORCE);
-    Algorithm::process(U->B[18], _FORCE);
-    Algorithm::process(U->B[19], _FORCE);
+    Algorithm::processBlock(&U->B[16]->Alg, _FORCE);
+    Algorithm::processBlock(&U->B[17]->Alg, _FORCE);
+    Algorithm::processBlock(&U->B[18]->Alg, _FORCE);
+    Algorithm::processBlock(&U->B[19]->Alg, _FORCE);
 
     CHECK(!U->B[17]->switchWrongFeedback);
 
@@ -919,7 +1032,7 @@ TEST_CASE_METHOD(TestsFixture, "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" )
     
     D_printBlockStates(std::ref(blocks));
 
-    Algorithm::process(U->B[17], _FORCE);
+    Algorithm::processBlock(&U->B[17]->Alg, _FORCE);
 
     CHECK(U->B[17]->switchWrongState);
     CHECK(U->B[17]->state == DANGER);
@@ -939,7 +1052,7 @@ TEST_CASE_METHOD(TestsFixture, "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" )
     uint8_t indices[5] = {16, 17, 18, 19, 48};
 
     for(uint8_t i = 0; i < 5; i++){
-      Algorithm::process(U->B[indices[i]], _FORCE);
+      Algorithm::processBlock(&U->B[indices[i]]->Alg, _FORCE);
       CHECK(U->B[indices[i]]->state == PROCEED);
       CHECK(U->B[indices[i]]->reverse_state == PROCEED);
     }
@@ -952,7 +1065,7 @@ TEST_CASE_METHOD(TestsFixture, "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" )
     std::vector<Block *> blocks = {U->B[16], U->B[17], U->B[18], U->B[19], U->B[48]};
     D_printBlockStates(std::ref(blocks));
 
-    Algorithm::process(U->B[17], _FORCE);
+    Algorithm::processBlock(&U->B[17]->Alg, _FORCE);
 
     CHECK(U->B[17]->state == DANGER);
     CHECK(U->B[18]->state == CAUTION);
@@ -963,7 +1076,7 @@ TEST_CASE_METHOD(TestsFixture, "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" )
   SECTION("VI - Blocks and msswitch"){
     U->B[23]->setDetection(1);
 
-    Algorithm::process(U->B[23], _FORCE);
+    Algorithm::processBlock(&U->B[23]->Alg, _FORCE);
 
     REQUIRE(U->B[23]->Alg.P->group[3] > 1);
 
@@ -979,7 +1092,7 @@ TEST_CASE_METHOD(TestsFixture, "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" )
     D_printBlockStates(std::ref(blocks2));
 
     U->MSSw[0]->setState(1);
-    Algorithm::process(U->B[22], _FORCE);
+    Algorithm::processBlock(&U->B[22]->Alg, _FORCE);
 
     REQUIRE(U->B[22]->Alg.P->group[3] == 1);
 
@@ -991,9 +1104,9 @@ TEST_CASE_METHOD(TestsFixture, "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" )
     U->MSSw[0]->state = 0; // Force update of all blocks
     U->MSSw[0]->setState(1);
 
-    Algorithm::process(U->B[20], _FORCE);
-    Algorithm::process(U->B[21], _FORCE);
-    Algorithm::process(U->B[22], _FORCE);
+    Algorithm::processBlock(&U->B[20]->Alg, _FORCE);
+    Algorithm::processBlock(&U->B[21]->Alg, _FORCE);
+    Algorithm::processBlock(&U->B[22]->Alg, _FORCE);
 
     CHECK(U->B[20]->state == PROCEED);
     CHECK(U->B[21]->state == CAUTION);
@@ -1004,7 +1117,7 @@ TEST_CASE_METHOD(TestsFixture, "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" )
 
     // U->Sw[0]->feedback[0]->setInput(IO_event_High); // Set feedback right TODO
 
-    // Algorithm::process(U->B[17], _FORCE);
+    // Algorithm::processBlock(&U->B[17]->Alg, _FORCE);
 
     // CHECK(!U->B[17]->switchWrongFeedback);
     // CHECK(U->B[17]->state == DANGER);  // No blocks after, so still danger
@@ -1015,10 +1128,10 @@ TEST_CASE_METHOD(TestsFixture, "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" )
     // U->Sw[0]->setState(0);
     // U->Sw[0]->feedback[0]->setInput(IO_event_Low); // Set feedback right
 
-    // Algorithm::process(U->B[16], _FORCE);
-    // Algorithm::process(U->B[17], _FORCE);
-    // Algorithm::process(U->B[18], _FORCE);
-    // Algorithm::process(U->B[19], _FORCE);
+    // Algorithm::processBlock(&U->B[16]->Alg, _FORCE);
+    // Algorithm::processBlock(&U->B[17]->Alg, _FORCE);
+    // Algorithm::processBlock(&U->B[18]->Alg, _FORCE);
+    // Algorithm::processBlock(&U->B[19]->Alg, _FORCE);
 
     // CHECK(!U->B[17]->switchWrongFeedback);
 
@@ -1026,7 +1139,7 @@ TEST_CASE_METHOD(TestsFixture, "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" )
 
     // U->Sw[0]->Detection->switchWrongState = true;
 
-    // Algorithm::process(U->B[17], _FORCE);
+    // Algorithm::processBlock(&U->B[17]->Alg, _FORCE);
 
     // CHECK(U->B[17]->switchWrongState);
     // CHECK(U->B[17]->state == DANGER);
@@ -1036,7 +1149,7 @@ TEST_CASE_METHOD(TestsFixture, "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" )
   SECTION("VII - Blocks and station"){
     U->B[28]->setDetection(1);
 
-    Algorithm::process(U->B[28], _FORCE);
+    Algorithm::processBlock(&U->B[28]->Alg, _FORCE);
     Algorithm::print_block_debug(U->B[28]);
 
     REQUIRE(U->B[28]->Alg.P->group[0] == 2);
@@ -1053,7 +1166,7 @@ TEST_CASE_METHOD(TestsFixture, "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" )
   SECTION("VIII - Blocks and yard"){
     U->B[52]->setDetection(1);
 
-    Algorithm::process(U->B[52], _FORCE);
+    Algorithm::processBlock(&U->B[52]->Alg, _FORCE);
     Algorithm::print_block_debug(U->B[52]);
 
     REQUIRE(U->B[52]->Alg.P->group[0] == 2);
@@ -1070,7 +1183,7 @@ TEST_CASE_METHOD(TestsFixture, "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" )
   SECTION("IX - Blocks and multistation"){
     U->B[34]->setDetection(1);
 
-    Algorithm::process(U->B[34], _FORCE);
+    Algorithm::processBlock(&U->B[34]->Alg, _FORCE);
     Algorithm::print_block_debug(U->B[34]);
 
     REQUIRE(U->B[34]->Alg.P->group[3] > 3);
@@ -1089,7 +1202,7 @@ TEST_CASE_METHOD(TestsFixture, "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" )
     REQUIRE(U->B[41]->Alg.P->group[3] > 4);
     U->B[41]->setDetection(1);
 
-    Algorithm::process(U->B[41], _FORCE);
+    Algorithm::processBlock(&U->B[41]->Alg, _FORCE);
     Algorithm::print_block_debug(U->B[41]);
 
     REQUIRE(U->B[41]->Alg.P->group[3] > 4);
@@ -1109,10 +1222,10 @@ TEST_CASE_METHOD(TestsFixture, "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" )
     loggerf(ERROR, "XIa - Blocks Direction");
 
     // for(uint8_t i = 54; i < 67; i++)
-      // Algorithm::process(U->B[i], _FORCE);
-    Algorithm::process(U->B[54], _FORCE);
-    Algorithm::process(U->B[57], _FORCE);
-    Algorithm::process(U->B[65], _FORCE);
+      // Algorithm::processBlock(&U->B[i]->Alg, _FORCE);
+    Algorithm::processBlock(&U->B[54]->Alg, _FORCE);
+    Algorithm::processBlock(&U->B[57]->Alg, _FORCE);
+    Algorithm::processBlock(&U->B[65]->Alg, _FORCE);
 
     CHECK(U->B[54]->state == CAUTION);
     CHECK(U->B[55]->state == CAUTION);
@@ -1136,8 +1249,8 @@ TEST_CASE_METHOD(TestsFixture, "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" )
 
     U->B[54]->AlgorSearch(0);
     U->B[57]->AlgorSearch(0);
-    Algorithm::process(U->B[54], _FORCE);
-    Algorithm::process(U->B[57], _FORCE);
+    Algorithm::processBlock(&U->B[54]->Alg, _FORCE);
+    Algorithm::processBlock(&U->B[57]->Alg, _FORCE);
 
     CHECK(U->B[54]->state == CAUTION);
     CHECK(U->B[55]->state == CAUTION);
@@ -1157,7 +1270,7 @@ TEST_CASE_METHOD(TestsFixture, "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" )
     U->Sw[4]->setState(1);
 
     U->B[54]->AlgorSearch(0);
-    Algorithm::process(U->B[54], _FORCE);
+    Algorithm::processBlock(&U->B[54]->Alg, _FORCE);
 
     CHECK(U->B[54]->state == CAUTION);
     CHECK(U->B[55]->state == CAUTION);
@@ -1200,7 +1313,7 @@ TEST_CASE_METHOD(TestsFixture, "Block Algorithm Stating", "[SB][SB-1][SB-1.3]" )
 
     U->B[65]->IOchanged = true;
     U->B[65]->algorchanged = true;
-    Algorithm::process(U->B[65], _FORCE);
+    Algorithm::processBlock(&U->B[65]->Alg, _FORCE);
 
     // Block 66 direction is fixed
     // Therefore should block 65 be danger in reverse

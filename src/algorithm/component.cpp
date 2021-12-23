@@ -162,7 +162,7 @@ void BlockTick(void){
 
   do
   {
-    loggerf(TRACE, "Process %i:%i, %x, %x", B->module, B->id, B->IOchanged + (B->statechanged << 1) + (B->algorchanged << 2), B->state);
+    loggerf(INFO, "Process %i:%i, %x, %x", B->module, B->id, B->IOchanged + (B->statechanged << 1) + (B->algorchanged << 2), B->state);
     processBlock(&B->Alg, 0);
      while(B->recalculate){
       loggerf(INFO, "ReProcess");

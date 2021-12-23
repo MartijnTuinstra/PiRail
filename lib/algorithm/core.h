@@ -19,9 +19,10 @@ extern std::mutex processMutex;
 
 extern pthread_mutex_t process_mutex;
 
-void process(Block * B,int flags);
+// void process(Block * B,int flags);
 void processBlock(blockAlgorithm *, int);
 
+void checkNextBlock(blockAlgorithm * BA);
 void Set_Changed(struct blockAlgorithm * blocks);
 
 void Check_Algor_Stating(Block * B, uint8_t flags);

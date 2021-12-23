@@ -8,6 +8,42 @@
 
 #include "utils/logger.h"
 
+
+namespace PolaritySolver {
+
+int solve(Train * T, std::vector<PolarityGroup *> near, PolarityGroup * far){
+  loggerf(INFO, "PolaritySolver::solve(id:%i, %x, %x)", T->id, near, far);
+
+  if(far && far->flip()){
+    loggerf(INFO, "B/far side fix");
+    return true;
+  }
+  else if(near.size()){
+    bool failed = false;
+    uint8_t x = 0;
+    for (auto i = near.rbegin(); i != near.rend(); ++i ) { 
+      PolarityGroup * PG = *i;
+      bool test = PG->flippableTest(0);
+      loggerf(INFO, " [%i] %i", x++, test);
+      for(auto A: PG->blocks)
+        printf("%02i ", A->id);
+      printf("\n");
+      failed |= (test == 0);
+    }
+
+    if(failed)
+      return false;
+
+    for(auto i: near)
+      i->flip();
+
+    return true;
+  }
+  return 0;
+}
+
+};
+
 std::vector<PolarityGroup *> PolarityGroupList;
 
 PolarityGroup::PolarityGroup(uint8_t M, struct configStruct_PolarityGroup * config){
@@ -154,4 +190,30 @@ uint8_t PolarityGroup::flippable(PolarityGroup * PG){
     }
   }
   return 0;
+}
+
+bool PolarityGroup::flippableTest(PolarityGroup * PG){
+  Block * B;
+  switch(flippable(PG)){
+    case 0: // No Problem
+      break;
+    case 1: // ends[0] is blocked
+      B = ends[0]->Next_Block(direction[0] ^ ends[0]->dir, 1);
+      loggerf(INFO, "Recursive Search [0]");
+      if(!(B && B->Polarity))
+        return B->Polarity->flippableTest(this);
+
+      break;
+    case 2: // ends[1] is blocked
+      B = ends[1]->Next_Block(direction[1] ^ ends[1]->dir, 1);
+      loggerf(INFO, "Recursive Search [1]");
+      if(!(B && B->Polarity))
+        return B->Polarity->flippableTest(this);
+
+      break;
+    case 3: // Polarity is not changeable
+      return false;
+  }
+
+  return true;
 }

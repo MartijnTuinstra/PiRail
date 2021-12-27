@@ -41,9 +41,9 @@ void change_Block(Block * B, enum Rail_states state){
     B->setDetection(state == BLOCKED);
 
     if(state == BLOCKED)
-      loggerf(INFO, "SIM set block %2i:%2i %i%i%i", B->module, B->id, B->blocked, B->detectionBlocked, B->virtualBlocked);
+      log("Sim", INFO, "SIM set block %2i:%2i %i%i%i", B->module, B->id, B->blocked, B->detectionBlocked, B->virtualBlocked);
     else
-      loggerf(INFO, "SIM unset block %2i:%2i %i%i%i", B->module, B->id, B->blocked, B->detectionBlocked, B->virtualBlocked);
+      log("Sim", INFO, "SIM unset block %2i:%2i %i%i%i", B->module, B->id, B->blocked, B->detectionBlocked, B->virtualBlocked);
 
     AlQueue.puttemp(B);
   }
@@ -64,11 +64,11 @@ void train_sim_tick(struct train_sim * t){
       t->B[0] = t->B[1]->Alg.N->B[0];
     }
     else{
-      loggerf(WARNING, "train_sim_tick Failed to get blocks %i  %02i:%02i > %i", t->blocks, t->B[1]->module, t->B[1]->id, t->B[1]->Alg.N->group[3]);
+      log("Sim", WARNING, "train_sim_tick Failed to get blocks %i  %02i:%02i > %i", t->blocks, t->B[1]->module, t->B[1]->id, t->B[1]->Alg.N->group[3]);
       SYS_set_state(&SYS->SimA.state, Module_Fail);
       return;
     }
-    loggerf(INFO, "%c  Step %02i:%02i", t->sim, t->B[0]->module, t->B[0]->id);
+    log("Sim", INFO, "%c  Step %02i:%02i", t->sim, t->B[0]->module, t->B[0]->id);
     t->posFront += t->B[0]->length;
   }
 
@@ -191,9 +191,9 @@ void *TRAIN_SIMA(void * args){
   WS_stc_LinkTrain(&msg);
 
   if(B->train->type == TRAIN_TRAIN_TYPE)
-    loggerf(INFO, "SIMTrain linked %s", B->train->p.T->name);
+    log("Sim", INFO, "SIMTrain linked %s", B->train->p.T->name);
   else
-    loggerf(INFO, "SIMTrain linked %s", B->train->p.E->name);
+    log("Sim", INFO, "SIMTrain linked %s", B->train->p.E->name);
 
   B->train->setControl(TRAIN_MANUAL);
 
@@ -309,9 +309,9 @@ void *TRAIN_SIMB(void * args){
   WS_stc_LinkTrain(&msg);
 
   if(B->train->type == TRAIN_TRAIN_TYPE)
-    loggerf(INFO, "SIMTrain linked %s", B->train->p.T->name);
+    log("Sim", INFO, "SIMTrain linked %s", B->train->p.T->name);
   else
-    loggerf(INFO, "SIMTrain linked %s", B->train->p.E->name);
+    log("Sim", INFO, "SIMTrain linked %s", B->train->p.E->name);
 
   B->train->setControl(TRAIN_MANUAL);
 
@@ -361,7 +361,7 @@ void *TRAIN_SIMB(void * args){
   }
   train.posFront = train.B[0]->length - (train.engines[0].length / 10);
   train.posRear = train.B[0]->length;
-  loggerf(INFO, "train length %icm", train.train_length);
+  log("Sim", INFO, "train length %icm", train.train_length);
 
   SYS_set_state(&SYS->SimB.state, Module_Run);
 
@@ -386,12 +386,12 @@ void SIM_JoinModules(){
   Units(25)->on_layout = 1;
 
   WS_stc_Track_Layout(0);
-  printf("Ready to join modules\n");
+  log("Sim", INFO, "Ready to join modules\n");
 
   auto connectors = Algorithm::find_connectors();
   uint16_t maxConnectors = connectors.size();
 
-  loggerf(INFO, "Have %i connectors", connectors.size());
+  log("Sim", INFO, "Have %i connectors", connectors.size());
 
   uint8_t x = 0;
 
@@ -556,5 +556,6 @@ void SIM_Client_Connect_cb(){
   //   free_pathinstructions(return_value.forward);
   //   free_pathinstructions(return_value.reverse);
   // }
-  loggerf(INFO, "Done SIM_Client_Connect_cb");
+
+  log("Sim", INFO, "Done SIM_Client_Connect_cb");
 }

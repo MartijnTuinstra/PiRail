@@ -49,14 +49,14 @@ void Server::readPassword(){
       fread (this->password, 1, WS_pass_length, f);
     }
     else{
-      loggerf(ERROR, "PASSWORD: wrong length or unable to allocate memory");
+      log("Websocket", ERROR, "PASSWORD: wrong length or unable to allocate memory");
     }
     fclose (f);
   }
 }
 
 int Server::init(){
-  loggerf(INFO, "Starting websocket server at port %i", WEBSOCKET_PORT);
+  log("Websocket", INFO, "Starting websocket server at port %i", WEBSOCKET_PORT);
 
   struct sockaddr_in server_addr;
 
@@ -65,11 +65,11 @@ int Server::init(){
   memset(this->password, 0, 100);
   this->readPassword();
 
-  loggerf(INFO, "Websocket Password: %s", this->password);
+  log("Websocket", INFO, "Websocket Password: %s", this->password);
 
   this->fd = socket(AF_INET, SOCK_STREAM, 0);
   if(this->fd < 0){
-    loggerf(CRITICAL, "SOCKET ERROR");
+    log("Websocket", CRITICAL, "SOCKET ERROR");
     SYS->stop = 1;
     SYS_set_state(&SYS->WebSocket.state, Module_Fail);
     return 0;
@@ -82,7 +82,7 @@ int Server::init(){
   server_addr.sin_port = htons(WEBSOCKET_PORT);
 
   if(bind(this->fd, (struct sockaddr *) &server_addr, sizeof(server_addr)) == -1){
-    loggerf(CRITICAL, "BIND ERROR");
+    log("Websocket", CRITICAL, "BIND ERROR");
     close(this->fd);
     SYS->stop = 1;
     SYS_set_state(&SYS->WebSocket.state, Module_Fail);
@@ -90,7 +90,7 @@ int Server::init(){
   }
 
   if(listen(this->fd, MAX_WEB_CLIENTS) == -1){
-    loggerf(CRITICAL, "LISTEN ERROR");
+    log("Websocket", CRITICAL, "LISTEN ERROR");
     close(this->fd);
     SYS->stop = 1;
     SYS_set_state(&SYS->WebSocket.state, Module_Fail);
@@ -115,7 +115,7 @@ int Server::init(){
 }
 
 void Server::loop(){
-  loggerf(INFO, "Listening for  Clients %i", SYS->stop);
+  log("Websocket", INFO, "Listening for  Clients %i", SYS->stop);
   int fd_client;
   struct sockaddr_in client_addr;
   socklen_t sin_len = sizeof(client_addr);
@@ -133,13 +133,13 @@ void Server::loop(){
       //   break;
       // }
       else{
-        loggerf(WARNING, "Failed to connect with client %i", errno);
+        log("Websocket", WARNING, "Failed to connect with client %i", errno);
         continue;
       }
     }
 
     unsigned long addr = client_addr.sin_addr.s_addr;
-    loggerf(INFO, "New socket client %i.%i.%i.%i", addr&0xFF, (addr >> 8)&0xFF, (addr >> 16)&0xFF, (addr >> 24)&0xFF);
+    log("Websocket", INFO, "New socket client %i.%i.%i.%i", addr&0xFF, (addr >> 8)&0xFF, (addr >> 16)&0xFF, (addr >> 24)&0xFF);
 
     if(this->clients.size() < MAX_WEB_CLIENTS)
       this->clients.push_back(new Client(this, fd_client));
@@ -152,13 +152,13 @@ void Server::loop(){
 }
 
 void Server::teardown(){
-  loggerf(INFO, "Stopping  Server");
+  log("Websocket", INFO, "Stopping  Server");
 
   scheduler->removeEvent("_ClearUnusedSockets");
 
   close(this->fd);
 
-  loggerf(INFO, "Stopping websocket_clear_clients");
+  log("Websocket", INFO, "Stopping websocket_clear_clients");
 
   SYS_set_state(&SYS->WebSocket.state, Module_STOP);
 }
@@ -166,11 +166,11 @@ void Server::teardown(){
 void * Server::ClearUnusedSockets(Server * context){
   for(uint8_t i = 0; i < context->clients.size(); i++){
     if(!context->clients[i]->connected){
-      loggerf(INFO, "Stopping websocket client %i thread", i);
+      log("Websocket", INFO, "Stopping websocket client %i thread", i);
       if(context->clients[i]->thread_started)
         pthread_join(context->clients[i]->thread, NULL);
       else
-        loggerf(WARNING, "Client not even started");
+        log("Websocket", WARNING, "Client not even started");
       delete context->clients[i];
       context->clients.erase(context->clients.begin() + i);
       i--;
@@ -223,7 +223,7 @@ void Server::newClientCallback(Client * client){
   client->send(data, 2, 0xFF);
 
   if(SYS->trains_loaded){
-    loggerf(INFO, "Update clients libs %i", client->fd);
+    log("Websocket", INFO, "Update clients libs %i", client->fd);
     WS_stc_EnginesLib(client);
     WS_stc_CarsLib(client);
     WS_stc_TrainSetsLib(client);
@@ -239,12 +239,12 @@ void Server::newClientCallback(Client * client){
       struct s_opc_LinkTrain msg;
       msg.follow_id = i;
       if(T->type){
-        loggerf(WARNING, "Sending train T %i\t(%i) %s", i, T->p.T->id, T->p.T->name);
+        log("Websocket", WARNING, "Sending train T %i\t(%i) %s", i, T->p.T->id, T->p.T->name);
         msg.real_id = T->p.T->id;
         msg.type = 0;
       }
       else{
-        loggerf(WARNING, "Sending train E %i\t(%i) %s", i, T->p.E->id, T->p.E->name);
+        log("Websocket", WARNING, "Sending train E %i\t(%i) %s", i, T->p.E->id, T->p.E->name);
         msg.real_id = T->p.E->id;
         msg.type = 1;
       }
@@ -280,7 +280,9 @@ void Server::send_all(char * data,int length,int flag){
   MessageCreate(data, length, outbuf, &outlength);
 
   pthread_mutex_lock(&m_websocket_send);
+  log("Websocket", INFO, "Send a message to %x clients", clients.size());
   for(uint8_t i = 0; i < this->clients.size(); i++){
+    log("Websocket", INFO, " - client has flags %2x / %2x, connected %i", clients[i]->type, flag, clients[i]->connected);
     if(this->clients[i]->connected && (this->clients[i]->type & flag) != 0){
       this->clients[i]->send(outbuf, outlength);
     }

@@ -47,11 +47,11 @@ using namespace switchboard;
 #define ALGORITHM_FAILED_CODE 2
 
 void processBlock(blockAlgorithm * BA, int flags){
-  loggerf(DEBUG, "processBA %02i:%02i, flags %x", BA->B->module, BA->B->id, flags);
+  log("Algorithm", DEBUG, "processBA %02i:%02i, flags %x", BA->B->module, BA->B->id, flags);
   print_block_debug(BA->B);
 
   if(BA->doneAll && !(flags & _FORCE)){
-    loggerf(INFO, "  %02i:%02i allreadyDone", BA->B->module, BA->B->id);
+    log("Algorithm", INFO, "  %02i:%02i allreadyDone", BA->B->module, BA->B->id);
     return;
   }
 
@@ -64,13 +64,13 @@ void processBlock(blockAlgorithm * BA, int flags){
   BA->doneAll = 0;
 
   if(!B){
-    loggerf(WARNING, "process Failed. Cannot find block (blockAlgorithm 0x%x)", (unsigned long)BA);
+    log("Algorithm", WARNING, "process Failed. Cannot find block (blockAlgorithm 0x%x)", (unsigned long)BA);
     BA->doneAll = ALGORITHM_FAILED_CODE;
     return;
   }
 
   if(!BA->algorBlockSearched){
-    loggerf(DEBUG, "  AlgorSearch");
+    log("Algorithm", DEBUG, "  AlgorSearch");
     B->AlgorSearch(flags);
   }
 
@@ -78,7 +78,7 @@ void processBlock(blockAlgorithm * BA, int flags){
 
   //Follow the train arround the layout
   if(!BA->trainFollowingChecked){
-    loggerf(DEBUG, "  TrainFollowing");
+    log("Algorithm", DEBUG, "  TrainFollowing");
     if(train_following(BA, flags)){
       BA->switchChecked   = false;
       BA->polarityChecked = false;
@@ -91,7 +91,7 @@ void processBlock(blockAlgorithm * BA, int flags){
 
   //Set oncomming switch to correct state
   if(!BA->switchChecked){
-    loggerf(DEBUG, "  SwitchChecked");
+    log("Algorithm", DEBUG, "  SwitchChecked");
     if(Switch_Checker(BA, flags))
       return;
     BA->switchChecked = true;
@@ -99,7 +99,7 @@ void processBlock(blockAlgorithm * BA, int flags){
 
   // Set paths to right direction
   if(!BA->polarityChecked){
-    loggerf(DEBUG, "  PolarityChecked");
+    log("Algorithm", DEBUG, "  PolarityChecked");
     if(Polarity_Checker(BA, flags))
       return;
     BA->polarityChecked = true;
@@ -119,20 +119,20 @@ void processBlock(blockAlgorithm * BA, int flags){
 
   //Apply block stating
   if(!BA->statesChecked){
-    loggerf(DEBUG, "  StatesChecked");
+    log("Algorithm", DEBUG, "  StatesChecked");
     rail_state(&B->Alg, flags);
   }
 
   BA->doneAll = ALGORITHM_SUCESS_CODE;
 
-  loggerf(TRACE, "Done");
+  log("Algorithm", TRACE, "Done");
 }
 /*
 void process(Block * B, int flags){
-  loggerf(TRACE, "process %02i:%02i, flags %x", B->module, B->id, flags);
+  log("Algorithm", TRACE, "process %02i:%02i, flags %x", B->module, B->id, flags);
 
   if((B->IOchanged == 0 && B->algorchanged == 0) && (flags & _FORCE) == 0){
-    loggerf(TRACE, "No changes");
+    log("Algorithm", TRACE, "No changes");
     return;
   }
 
@@ -167,7 +167,7 @@ void process(Block * B, int flags){
 
   // Set AllBlocks Blocked
   if(!B->Alg.B){
-    loggerf(ERROR, "BLOCK %02i:%02i has no algo", B->module, B->id);
+    log("Algorithm", ERROR, "BLOCK %02i:%02i has no algo", B->module, B->id);
     B->Alg.B = B;
     B->AlgorClear();
   }
@@ -179,13 +179,13 @@ void process(Block * B, int flags){
   //Follow the train arround the layout
   train_following(&B->Alg, flags);
   if (B->recalculate){
-    loggerf(INFO, "Block Train ReProcess");
+    log("Algorithm", INFO, "Block Train ReProcess");
   }
 
   //Set oncomming switch to correct state
   Switch_Checker(&B->Alg, flags);
   if (B->recalculate){
-    loggerf(DEBUG, "Block Switch ReProcess");
+    log("Algorithm", DEBUG, "Block Switch ReProcess");
     B->algorchanged = true;
   }
   
@@ -203,7 +203,7 @@ void process(Block * B, int flags){
 
   //Apply block stating
   rail_state(&B->Alg, flags);
-  loggerf(TRACE, "Done");
+  log("Algorithm", TRACE, "Done");
 }
 */
 
@@ -217,7 +217,7 @@ void checkNextBlock(blockAlgorithm * BA){
   if(!B->blocked && B->state == BLOCKED){
     if(next > 0 && NB[0]->blocked){
       // NB[0]->algorchanged = 1;
-      loggerf(DEBUG, "  add block for state check %2i:%2i", NB[0]->module, NB[0]->id);
+      log("Algorithm", DEBUG, "  add block for state check %2i:%2i", NB[0]->module, NB[0]->id);
       NB[0]->Alg.statesChecked = false;
       NB[0]->Alg.doneAll = false;
 
@@ -228,7 +228,7 @@ void checkNextBlock(blockAlgorithm * BA){
       // PB[0]->algorchanged = 1;
       PB[0]->Alg.statesChecked = false;
       PB[0]->Alg.doneAll = false;
-      loggerf(DEBUG, "  add block for state check %2i:%2i", PB[0]->module, PB[0]->id);
+      log("Algorithm", DEBUG, "  add block for state check %2i:%2i", PB[0]->module, PB[0]->id);
 
       if(!AlQueue.contains(NB[0]))
         AlQueue.put(PB[0]);
@@ -237,7 +237,7 @@ void checkNextBlock(blockAlgorithm * BA){
 }
 
 void Set_Changed(struct blockAlgorithm * ABs){
-  loggerf(TRACE, "Algor_Set_Changed");
+  log("Algorithm", TRACE, "Algor_Set_Changed");
   //Scroll through all the pointers of allblocks
   uint8_t prev = ABs->P->group[3];
   uint8_t next = ABs->N->group[3];
@@ -407,7 +407,7 @@ void print_block_debug(Block * B){
   }
   ptr[0] = 0;
 
-  loggerf((enum logging_levels)debug, "%s", output);
+  log("Algorithm", (enum logging_levels)debug, "%s", output);
 }
 
 bool Switch_Checker(struct blockAlgorithm * ABs, int debug){
@@ -449,7 +449,7 @@ bool Switch_Checker(struct blockAlgorithm * ABs, int debug){
     }
 
     if(distance < 0){
-      loggerf(DEBUG, "distanceBreak");
+      log("Algorithm", DEBUG, "distanceBreak");
       break;
     }
 
@@ -457,7 +457,7 @@ bool Switch_Checker(struct blockAlgorithm * ABs, int debug){
       distance -= tB->length;
 
     if(tB->blocked && tB != B){
-      loggerf(DEBUG, "blockedBreak");
+      log("Algorithm", DEBUG, "blockedBreak");
       break;
     }
     
@@ -470,7 +470,7 @@ bool Switch_Checker(struct blockAlgorithm * ABs, int debug){
       routeStatus++;
 
       if(routeStatus == TRAIN_ROUTE_AT_DESTINATION){
-        loggerf(DEBUG, "routeBreak");
+        log("Algorithm", DEBUG, "routeBreak");
         break;
       }
     }
@@ -481,7 +481,7 @@ bool Switch_Checker(struct blockAlgorithm * ABs, int debug){
     Block * prevBlock = (i <= 1) ? B : BN[i-2];
 
     RailLink * link = tB->NextLink(dir);
-    loggerf(DEBUG, "Path_Checker scan block (%02i:%02i -> %02i:%02i) f:%x, d:%i, %i - %i, P %i",
+    log("Algorithm", DEBUG, "Path_Checker scan block (%02i:%02i -> %02i:%02i) f:%x, d:%i, %i - %i, P %i",
                    prevBlock->module, prevBlock->id, tB->module, tB->id,
                    dir, tB->dir, link->type, routeStatus, prevBlock->checkPolarity(tB));
 
@@ -499,7 +499,7 @@ bool Switch_Checker(struct blockAlgorithm * ABs, int debug){
     }
     
     if(!prevBlock->checkPolarity(tB)){
-      loggerf(WARNING, "POLARITY FLIP NEEDED %02i:%02i  (PGs=%i)", tB->module, tB->id, PGs.size());
+      log("Algorithm", WARNING, "POLARITY FLIP NEEDED %02i:%02i  (PGs=%i)", tB->module, tB->id, PGs.size());
       if(PolaritySolver::solve(T, PGs, tB->Polarity))
         return true;
     }
@@ -534,7 +534,7 @@ bool Polarity_Checker(struct blockAlgorithm * ABs, int debug){
   // Search a maximum of five blocks even if the breaking distance is larger
   for(uint8_t i = 0; i < 5; i++){
     if(i >= next){
-      loggerf(DEBUG, "Next break");
+      log("Algorithm", DEBUG, "Next break");
       break;
     }
 
@@ -552,7 +552,7 @@ bool Polarity_Checker(struct blockAlgorithm * ABs, int debug){
     }
 
     if(tB->blocked && tB != B){
-      loggerf(DEBUG, "blockedBreak");
+      log("Algorithm", DEBUG, "blockedBreak");
       break;
     }
 
@@ -560,7 +560,7 @@ bool Polarity_Checker(struct blockAlgorithm * ABs, int debug){
       routeStatus++;
 
       if(routeStatus == TRAIN_ROUTE_AT_DESTINATION){
-        loggerf(DEBUG, "routeBreak");
+        log("Algorithm", DEBUG, "routeBreak");
         break;
       }
     }
@@ -568,10 +568,10 @@ bool Polarity_Checker(struct blockAlgorithm * ABs, int debug){
     Block * prevBlock = (i == 0) ? B : BN[i-1];
     dir ^= (dircmp(prevBlock, tB) != prevBlock->cmpPolarity(tB));
 
-    loggerf(INFO, "Polarity Search %02i:%02i -> %02i:%02i, dir:%i, polarity:%i", prevBlock->module, prevBlock->id, tB->module, tB->id, dir, prevBlock->checkPolarity(tB));
+    log("Algorithm", INFO, "Polarity Search %02i:%02i -> %02i:%02i, dir:%i, polarity:%i", prevBlock->module, prevBlock->id, tB->module, tB->id, dir, prevBlock->checkPolarity(tB));
 
     if(!prevBlock->checkPolarity(tB)){
-      loggerf(WARNING, "POLARITY FLIP NEEDED %02i:%02i  (PGs=%i)", tB->module, tB->id, PGs.size());
+      log("Algorithm", WARNING, "POLARITY FLIP NEEDED %02i:%02i  (PGs=%i)", tB->module, tB->id, PGs.size());
       // if(PolaritySolver::solve(T, PGs, tB->Polarity))
         // return true;
     }
@@ -580,7 +580,7 @@ bool Polarity_Checker(struct blockAlgorithm * ABs, int debug){
       PGs.clear();
 
   //   RailLink * link = tB->NextLink(dir);
-  //   loggerf(DEBUG, "Switch_Checker scan block (%2i:%2i) f:%x, d:%i, %i - %i", tB->module, tB->id, dir, tB->dir, link->type, routeStatus);
+  //   log("Algorithm", DEBUG, "Switch_Checker scan block (%2i:%2i) f:%x, d:%i, %i - %i", tB->module, tB->id, dir, tB->dir, link->type, routeStatus);
 
   //   if(tB->type == NOSTOP){
   //     tB = (i > 1) ? BN[i-1] : B;
@@ -598,7 +598,7 @@ bool Polarity_Checker(struct blockAlgorithm * ABs, int debug){
 }
 
 void rail_state(struct blockAlgorithm * ABs, int debug){
-  loggerf(TRACE, "Algor_rail_state %02d:%02d", ABs->B->module, ABs->B->id);
+  log("Algorithm", TRACE, "Algor_rail_state %02d:%02d", ABs->B->module, ABs->B->id);
   //Unpack ABs
   uint8_t prev  = ABs->P->group[3];
   Block ** BP   = ABs->P->B;
@@ -701,7 +701,7 @@ void rail_state(struct blockAlgorithm * ABs, int debug){
 }
 
 void ApplyRailState(uint8_t blocks, Block * B, Block * BL[10], enum Rail_states state[3], uint8_t prevGroup[3], uint8_t j, bool Dir){
-  loggerf(INFO, "ApplyRailState -- %02i:%02i  d%i", B->module, B->id, Dir);
+  log("Algorithm", INFO, "ApplyRailState -- %02i:%02i  d%i", B->module, B->id, Dir);
   for(uint8_t i = 0; i < blocks; i++){
     if(!BL[i])
       break;
@@ -718,7 +718,7 @@ void ApplyRailState(uint8_t blocks, Block * B, Block * BL[10], enum Rail_states 
       Dir ^= (a != b);
     }
 
-    loggerf(INFO, "           %2i: %02i:%02i  d%i, dir %i, pol %i", i, BL[i]->module, BL[i]->id, Dir, a, b);
+    log("Algorithm", INFO, "           %2i: %02i:%02i  d%i, dir %i, pol %i", i, BL[i]->module, BL[i]->id, Dir, a, b);
 
     
     // Apply railstate
@@ -734,7 +734,7 @@ void ApplyRailState(uint8_t blocks, Block * B, Block * BL[10], enum Rail_states 
       //  - NOSTOP group
       //  - Station Group
       //  - Same Polarity Group
-      loggerf(INFO, " i%i>=pG[j%i] %x %x",i,j, (unsigned long)B->Polarity, (unsigned long)BL[i]->Polarity);
+      log("Algorithm", INFO, " i%i>=pG[j%i] %x %x",i,j, (unsigned long)B->Polarity, (unsigned long)BL[i]->Polarity);
       if(BL[i]->type == STATION && B->type == STATION &&
           ((i  > 0 && BL[i]->station != BL[i-1]->station) || 
            (i == 0 && BL[i]->station != B->station))
@@ -759,7 +759,7 @@ void ApplyRailState(uint8_t blocks, Block * B, Block * BL[10], enum Rail_states 
 }
 
 bool train_following(struct blockAlgorithm * ABs, int debug){
-  loggerf(TRACE, "Algor_train_following");
+  log("Algorithm", TRACE, "Algor_train_following");
   //Unpack AllBlocks
   uint8_t prev = ABs->P->group[3];
   Block ** BP = ABs->P->B;
@@ -775,7 +775,7 @@ bool train_following(struct blockAlgorithm * ABs, int debug){
 
       if(prev > 0 && next > 0 && !BN[0]->blocked && !BP[0]->blocked){
         B->setState(UNKNOWN);
-        loggerf(WARNING, "%02i%02i LOST Train block %x", B->module, B->id, (unsigned long)B);
+        log("Algorithm", WARNING, "%02i%02i LOST Train block %x", B->module, B->id, (unsigned long)B);
       }
       // Detection is lost when the train should be in the block
       else if(B->train == B->expectedTrain && B->train->assigned){
@@ -797,7 +797,7 @@ bool train_following(struct blockAlgorithm * ABs, int debug){
           }
         }
 
-        loggerf(DEBUG, "RESET Train block %x", (unsigned long)B);
+        log("Algorithm", DEBUG, "RESET Train block %x", (unsigned long)B);
         // Units[B->module]->changed |= Unit_Blocks_changed;
       }
     }
@@ -820,14 +820,14 @@ bool train_following(struct blockAlgorithm * ABs, int debug){
     // else
     //   ptr += sprintf(ptr, "\t                   ");
 
-    // loggerf(INFO, "%s", debugmsg);
+    // log("Algorithm", INFO, "%s", debugmsg);
 
     if(B->reserved){
       B->dereserve(B->reservedBy[0]);
     }
 
     if(B->expectedDetectable){
-      loggerf(INFO, "Copy expectedDetectable");
+      log("Algorithm", INFO, "Copy expectedDetectable");
 
       B->expectedDetectable->stepForward(B);
 
@@ -847,7 +847,7 @@ bool train_following(struct blockAlgorithm * ABs, int debug){
       return true;
     }
     else if(B->expectedTrain){
-      loggerf(WARNING, "Copy expectedTrain");
+      log("Algorithm", WARNING, "Copy expectedTrain");
 
       B->train = B->expectedTrain;
       B->train->move(B);
@@ -868,7 +868,7 @@ bool train_following(struct blockAlgorithm * ABs, int debug){
     }
     // Train moved forward
     else if(prev > 0 && BP[0]->blocked && BP[0]->train){
-      loggerf(INFO, "Copy train from previous block");
+      log("Algorithm", INFO, "Copy train from previous block");
       // Copy train id from previous block
       Train * T = BP[0]->train;
 
@@ -889,11 +889,11 @@ bool train_following(struct blockAlgorithm * ABs, int debug){
       }
       // if(train_link[B->train])
       //   train_link[B->train]->Block = B;
-      loggerf(TRACE, "COPY_TRAIN from %02i:%02i to %02i:%02i", BP[0]->module, BP[0]->id, B->module, B->id);
+      log("Algorithm", TRACE, "COPY_TRAIN from %02i:%02i to %02i:%02i", BP[0]->module, BP[0]->id, B->module, B->id);
     }
     // Train moved backwards / or sporadic detection at the rear
     else if(next > 0 && BN[0]->blocked && BN[0]->train){
-      loggerf(INFO, "Copy train from next block");
+      log("Algorithm", INFO, "Copy train from next block");
       // Copy train id from next block
       Train * T = BN[0]->train;
 
@@ -933,7 +933,7 @@ bool train_following(struct blockAlgorithm * ABs, int debug){
   }
 
   if(B->state == UNKNOWN && B->blocked && B->train){
-    loggerf(INFO, "Restoring ghosting train");
+    log("Algorithm", INFO, "Restoring ghosting train");
 
     // Remove all ghosted blocks around restored block.
     for(uint8_t i = 0; i < next; i++){
@@ -965,7 +965,7 @@ void train_control(Train * T){
     return;
 
   if(!B){
-    loggerf(ERROR, "Train %i, %x has no block????", T->id, (unsigned long)T);
+    log("Algorithm", ERROR, "Train %i, %x has no block????", T->id, (unsigned long)T);
     return;
   }
 
@@ -975,9 +975,9 @@ void train_control(Train * T){
   }
 
   // if(T->B)
-  //   loggerf(DEBUG, "%i (%02i:%02i) -> %s (%02i:%02i)", T->id, T->B->module, T->B->id, rail_states_string[N[0]->state], N[0]->module, N[0]->id);
+  //   log("Algorithm", DEBUG, "%i (%02i:%02i) -> %s (%02i:%02i)", T->id, T->B->module, T->B->id, rail_states_string[N[0]->state], N[0]->module, N[0]->id);
   // else
-  //   loggerf(DEBUG, "%i (xx:xx) -> %s (%02i:%02i)", T->id, rail_states_string[N[0]->state], N[0]->module, N[0]->id);
+  //   log("Algorithm", DEBUG, "%i (xx:xx) -> %s (%02i:%02i)", T->id, rail_states_string[N[0]->state], N[0]->module, N[0]->id);
 
   // Calculate the speed that is obtainable in the current block
   uint16_t AcceleratedSpeed = sqrt((20/0.173625) * B->length + T->speed * T->speed);
@@ -1091,7 +1091,7 @@ void train_control(Train * T){
 
   // For each brake point check if it must brake now or if it could be done later.
   for(int8_t j = i - 1; j >= 0; j--){
-    // loggerf(INFO, " %i   %3ikm/h %3icm %3icm %1i %c %3icm", j, speeds[j].speed, speeds[j].BrakingOffset, speeds[j].BrakingDistance, speeds[j].reason, accelerate ? '+' : '-', speeds[j].BrakingOffset - extraBrakingDistance);
+    // log("Algorithm", INFO, " %i   %3ikm/h %3icm %3icm %1i %c %3icm", j, speeds[j].speed, speeds[j].BrakingOffset, speeds[j].BrakingDistance, speeds[j].reason, accelerate ? '+' : '-', speeds[j].BrakingOffset - extraBrakingDistance);
     if(speeds[j].speed <= Request.targetSpeed){
       if(speeds[j].BrakingOffset < (B->length + 10)){
         accelerate = false;
@@ -1125,7 +1125,7 @@ void Connect_Rails(){
   BlockConnectors * connectors = &SYS->LC.connectors;
   uint16_t maxConnectors = connectors->size();
 
-  loggerf(INFO, "Have %i connectors", connectors->size());
+  log("Algorithm", INFO, "Have %i connectors", connectors->size());
 
   uint16_t msgID = -1;
 

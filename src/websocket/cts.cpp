@@ -208,18 +208,18 @@ void WS_cts_SetSwitch(struct s_opc_SetSwitch * data, Websocket::Client * client)
   Unit * U = Units(data->module);
 
   if(data->mssw){
-    loggerf(INFO, "SetMSSw %2x %2x", data->module, data->id);
+    log("Websocket", INFO, "SetMSSw %2x %2x", data->module, data->id);
     if(U && U->MSSw[data->id]){
-      loggerf(INFO, "throw msswitch %i:%i to state: \t%i->%i",
+      log("Websocket", INFO, "throw msswitch %i:%i to state: \t%i->%i",
               data->module, data->id, U->MSSw[data->id]->state, data->state);
 
       U->MSSw[data->id]->setState(data->state, 1);
     }
   }
   else{
-    loggerf(INFO, "SetSw %2x %2x", data->module, data->id);
+    log("Websocket", INFO, "SetSw %2x %2x", data->module, data->id);
     if(U && U->Sw[data->id]){ //Check if switch exists
-      loggerf(INFO, "throw switch %i:%i to state: \t%i->%i",
+      log("Websocket", INFO, "throw switch %i:%i to state: \t%i->%i",
               data->module, data->id, U->Sw[data->id]->state, !U->Sw[data->id]->state);
 
       // TODO/FIXME: add override flag/option
@@ -230,7 +230,7 @@ void WS_cts_SetSwitch(struct s_opc_SetSwitch * data, Websocket::Client * client)
 }
 
 void WS_cts_SetMultiSwitch(struct s_opc_SetMultiSwitch * data, Websocket::Client * client){
-  loggerf(INFO, "Throw multiple switches\n");
+  log("Websocket", INFO, "Throw multiple switches\n");
   // FIXME lock_Algor_process();
   throw_multiple_switches(data->nr, (char *)data->switches);
   // FIXME unlock_Algor_process();
@@ -252,20 +252,20 @@ void WS_cts_ClearEmergency(void * data, Websocket::Client * client){
 
 void WS_cts_ChangeBroadcast(struct s_opc_ChangeBroadcast * data, Websocket::Client * client){
   if(data->flags & 0x10){ //Admin flag
-    loggerf(WARNING, "Changing admin flag: NOT ALLOWED");
+    log("Websocket", WARNING, "Changing admin flag: NOT ALLOWED");
     return; //Not allowed to set admin flag
   }else if(data->flags != 0){
     client->type = data->flags;
-    loggerf(DEBUG, "Changing flags");
+    log("Websocket", DEBUG, "Changing flags");
   }
-  loggerf(DEBUG,"Websocket:\t%02x - New flag for client %d\n",client->type, client->fd);
+  log("Websocket", DEBUG,"Websocket:\t%02x - New flag for client %d\n",client->type, client->fd);
   char msg[2] = {WSopc_ChangeBroadcast,(char)client->type};
   client->send(msg, 2, 255);
 }
 
 //System Messages
 void WS_cts_Enable_SubmoduleState(struct s_opc_enabledisableSubmoduleState * state, Websocket::Client * client){
-  loggerf(INFO, "WSopc_EnableSubModule");
+  log("Websocket", INFO, "WSopc_EnableSubModule");
   if(state->flags & 0x80){ //Websocket
     SYS_set_state(&SYS->WebSocket.state, Module_Run);
   }
@@ -286,7 +286,7 @@ void WS_cts_Enable_SubmoduleState(struct s_opc_enabledisableSubmoduleState * sta
   }
 }
 void WS_cts_Disable_SubmoduleState(struct s_opc_enabledisableSubmoduleState * state, Websocket::Client * client){
-  loggerf(INFO, "WSopc_DisableSubModule");
+  log("Websocket", INFO, "WSopc_DisableSubModule");
   if(state->flags & 0x80){  //Websocket
     SYS_set_state(&SYS->WebSocket.state, Module_Init);
   }
@@ -321,9 +321,9 @@ void WS_cts_LinkTrain(struct s_opc_LinkTrain * msg, Websocket::Client * client){
   // uint16_t mID = ((data[2] & 0x1F) << 8)+data[3];
   char return_value = 0;
   if(msg->type == TRAIN_ENGINE_TYPE)
-    loggerf(INFO, "Linking train %i with E-%s\n",msg->follow_id, RSManager->Engines[msg->real_id]->name);
+    log("Websocket", INFO, "Linking train %i with E-%s\n",msg->follow_id, RSManager->Engines[msg->real_id]->name);
   else
-    loggerf(INFO, "Linking train %i with T-%s\n",msg->follow_id, RSManager->TrainSets[msg->real_id]->name);
+    log("Websocket", INFO, "Linking train %i with T-%s\n",msg->follow_id, RSManager->TrainSets[msg->real_id]->name);
 
   if(RSManager->Trains[msg->follow_id])
     return_value = RSManager->Trains[msg->follow_id]->link(msg->real_id, msg->type);
@@ -336,7 +336,7 @@ void WS_cts_LinkTrain(struct s_opc_LinkTrain * msg, Websocket::Client * client){
     Z21_get_train(RSManager->Trains[msg->follow_id]);
   }
   else{
-    loggerf(WARNING, "Failed link_train()\n");
+    log("Websocket", WARNING, "Failed link_train()\n");
     WS_clear_message((msg->message_id_H << 8) + msg->message_id_L, 0); //Failed
   }
 }
@@ -344,11 +344,11 @@ void WS_cts_LinkTrain(struct s_opc_LinkTrain * msg, Websocket::Client * client){
 void WS_cts_TrainControl(struct s_opc_TrainControl * m, Websocket::Client * client){
 
   if(!RSManager->Trains[m->follow_id]){
-    loggerf(WARNING, "Trying to set speed of undefined Train");
+    log("Websocket", WARNING, "Trying to set speed of undefined Train");
     return;
   }
 
-  loggerf(INFO, "WS_cts_TrainControl %i -> %i", m->follow_id, m->control);
+  log("Websocket", INFO, "WS_cts_TrainControl %i -> %i", m->follow_id, m->control);
 
   Train * T = RSManager->Trains[m->follow_id];
 
@@ -356,12 +356,12 @@ void WS_cts_TrainControl(struct s_opc_TrainControl * m, Websocket::Client * clie
 }
 
 void WS_cts_SetTrainFunction(struct s_opc_SetTrainFunction * m, Websocket::Client * client){
-  loggerf(INFO, "WS_cts_SetTrainFunction");
+  log("Websocket", INFO, "WS_cts_SetTrainFunction");
 
   Train * T = RSManager->Trains[m->id];
 
   if(!T){
-    loggerf(WARNING, "No Train %i", m->id);
+    log("Websocket", WARNING, "No Train %i", m->id);
     return;
   }
 
@@ -376,7 +376,7 @@ void WS_cts_SetTrainFunction(struct s_opc_SetTrainFunction * m, Websocket::Clien
   }
   else{
     // TRAIN_TRAIN_TYPE
-    loggerf(INFO, "TODO: implement set function for train");
+    log("Websocket", INFO, "TODO: implement set function for train");
   }
 }
 
@@ -386,13 +386,13 @@ void WS_cts_SetTrainSpeed(struct s_opc_SetTrainSpeed * m, Websocket::Client * cl
   Train * T = RSManager->Trains[m->follow_id];
 
   if(!T){
-    loggerf(WARNING, "Trying to set speed of undefined Train");
+    log("Websocket", WARNING, "Trying to set speed of undefined Train");
     return;
   }
 
   uint16_t speed = ((m->speed_high & 0x0F) << 8) + m->speed_low;
 
-  loggerf(INFO, "WS_cts_SetTrainSpeed %i -> %i", m->follow_id, speed);
+  log("Websocket", INFO, "WS_cts_SetTrainSpeed %i -> %i/%i, d:%i -> %i", m->follow_id, speed, T->MaxSpeed, T->dir, newDir);
 
   if(TRAIN_SPEED_CHANGING || TRAIN_SPEED_UPDATE)
     T->SpeedState = TRAIN_SPEED_DRIVING;
@@ -422,12 +422,12 @@ void WS_cts_TrainSubscribe(struct s_opc_SubscribeTrain * m, Websocket::Client * 
     WS_stc_TrainRouteUpdate(RSManager->Trains[client->subscribedTrains[1]]);
   }
 
-  loggerf(INFO, "WS_cts_TrainSubscribe client %i = %i, %i", client->fd, client->subscribedTrains[0], client->subscribedTrains[1]);
+  log("Websocket", INFO, "WS_cts_TrainSubscribe client %i = %i, %i", client->fd, client->subscribedTrains[0], client->subscribedTrains[1]);
 }
 
 /*
 void Web_Train_Split(int i,char tID,char B[]){
-  loggerf(DEBUG, "Web_Train_Split(%i,%i,{%i,%i});",i,tID,B[0],B[1]);
+  log("Websocket", DEBUG, "Web_Train_Split(%i,%i,{%i,%i});",i,tID,B[0],B[1]);
   char data[8];
   data[0] = 1;
   if(i == ACTIVATE){
@@ -447,7 +447,7 @@ void Web_Train_Split(int i,char tID,char B[]){
 */
 
 void WS_cts_TrainRoute(struct s_opc_TrainRoute * data, Websocket::Client * client){
-  loggerf(WARNING, "WS_cts_TrainRoute Train %i to Station %2x-%2x", data->train_id, data->RouteHigh, data->RouteLow);
+  log("Websocket", WARNING, "WS_cts_TrainRoute Train %i to Station %2x-%2x", data->train_id, data->RouteHigh, data->RouteLow);
   Train * T = RSManager->Trains[data->train_id];
 
   if(!T)
@@ -457,7 +457,7 @@ void WS_cts_TrainRoute(struct s_opc_TrainRoute * data, Websocket::Client * clien
     auto St = switchboard::SwManager->getStation((data->RouteHigh << 8) + data->RouteLow);
     
     if(!St){
-      loggerf(WARNING, "Failed to get station");
+      log("Websocket", WARNING, "Failed to get station");
       return;
     }
 
@@ -467,14 +467,14 @@ void WS_cts_TrainRoute(struct s_opc_TrainRoute * data, Websocket::Client * clien
     auto U = switchboard::Units(data->RouteHigh);
 
     if(!U){
-      loggerf(WARNING, "Failed to get block");
+      log("Websocket", WARNING, "Failed to get block");
       return;
     }
 
     auto B = U->B[data->RouteLow];
     
     if(!B){
-      loggerf(WARNING, "Failed to get block");
+      log("Websocket", WARNING, "Failed to get block");
       return;
     }
 
@@ -492,18 +492,18 @@ void WS_cts_DCCEngineSpeed(struct s_opc_DCCEngineSpeed * m, Websocket::Client * 
 
   E->dir = (m->speed_high & 0x10) >> 4;
 
-  loggerf(WARNING, "Set DCCENGINESPEED %02x %02x %02x", m->id, m->speed_high, m->speed_low); 
-  loggerf(WARNING, "Set DCCEngineSpeed %i, dir: %i", speed, E->dir);
+  log("Websocket", WARNING, "Set DCCENGINESPEED %02x %02x %02x", m->id, m->speed_high, m->speed_low); 
+  log("Websocket", WARNING, "Set DCCEngineSpeed %i, dir: %i", speed, E->dir);
   E->setSpeed(speed);
 }
 
 void WS_cts_DCCEngineFunction(struct s_opc_DCCEngineFunction * m, Websocket::Client * client){
-  loggerf(INFO, "WS_cts_DCCEngineFunction");
+  log("Websocket", INFO, "WS_cts_DCCEngineFunction");
 
   Engine * E = RSManager->Engines[m->id];
 
   if(!E){
-    loggerf(WARNING, "No Engine %i", m->id);
+    log("Websocket", WARNING, "No Engine %i", m->id);
     return;
   }
 
@@ -515,7 +515,7 @@ void WS_cts_DCCEngineFunction(struct s_opc_DCCEngineFunction * m, Websocket::Cli
 }
 
 // void WS_TrainData(char data[14]){
-//   loggerf(TRACE,"WS_TrainData");
+//   log("Websocket", TRACE,"WS_TrainData");
 //   char s_data[20];
 //   s_data[0] = WSopc_Z21TrainData;
 
@@ -523,7 +523,7 @@ void WS_cts_DCCEngineFunction(struct s_opc_DCCEngineFunction * m, Websocket::Cli
 //     s_data[i+2] = data[i];
 //   }
 
-//   loggerf(ERROR, "FIX ID");
+//   log("Websocket", ERROR, "FIX ID");
 //   return;
 //   // s_data[1] = DCC_train[((s_data[2] << 8) + s_data[3])]->ID;
 
@@ -531,7 +531,7 @@ void WS_cts_DCCEngineFunction(struct s_opc_DCCEngineFunction * m, Websocket::Cli
 // }
 
 void WS_cts_AddCartoLib(struct s_opc_AddNewCartolib * data, Websocket::Client * client){
-  loggerf(DEBUG, "WS_cts_AddCartoLib");
+  log("Websocket", DEBUG, "WS_cts_AddCartoLib");
   struct s_WS_Data * rdata = (struct s_WS_Data *)_calloc(1, struct s_WS_Data);
 
   rdata->opcode = WSopc_AddNewCartolib;
@@ -551,7 +551,7 @@ void WS_cts_AddCartoLib(struct s_opc_AddNewCartolib * data, Websocket::Client * 
   sprintf(filename, "%i_%s", data->nr, name);
   replaceCharinString(filename, ' ', '_');
   replaceCharinString(filename, '.', '-');
-  loggerf(WARNING, "Filename: %s", filename);
+  log("Websocket", WARNING, "Filename: %s", filename);
 
   C->setIconPath(filename);
   if(!ctsTempFile((data->timing / 60) * 100 + (data->timing % 60), C->icon_path, false, (data->filetype & 0b1) == 0)){
@@ -569,7 +569,7 @@ void WS_cts_AddCartoLib(struct s_opc_AddNewCartolib * data, Websocket::Client * 
 }
 
 void WS_cts_Edit_Car(struct s_opc_EditCarlib * data, Websocket::Client * client){
-  loggerf(DEBUG, "WS_cts_Edit_Car");
+  log("Websocket", DEBUG, "WS_cts_Edit_Car");
   struct s_WS_Data * rdata = (struct s_WS_Data *)_calloc(1, struct s_WS_Data);
 
   rdata->opcode = WSopc_AddNewCartolib;
@@ -607,7 +607,7 @@ void WS_cts_Edit_Car(struct s_opc_EditCarlib * data, Websocket::Client * client)
   memcpy(filename, C->name, data->data.name_len);
   for (char* current_pos = NULL; (current_pos = strchr(filename, ' ')) != NULL; *current_pos = '_');
   for (char* current_pos = NULL; (current_pos = strchr(filename, '.')) != NULL; *current_pos = '-');
-    loggerf(WARNING, "Filename: %s", filename);
+    log("Websocket", WARNING, "Filename: %s", filename);
 
   C->length = data->data.length;
   C->type = data->data.type;
@@ -616,7 +616,7 @@ void WS_cts_Edit_Car(struct s_opc_EditCarlib * data, Websocket::Client * client)
 
   uint16_t icon_time = (data->data.timing / 60) * 100 + (data->data.timing % 60);
 
-  loggerf(ERROR, "%04i", icon_time);
+  log("Websocket", ERROR, "%04i", icon_time);
 
   char * dicon = 0;
 
@@ -674,13 +674,13 @@ void WS_cts_Edit_Car(struct s_opc_EditCarlib * data, Websocket::Client * client)
 }
 
 void WS_cts_AddEnginetoLib(struct s_opc_AddNewEnginetolib * data, Websocket::Client * client){
-  loggerf(DEBUG, "WS_cts_AddEnginetoLib");
+  log("Websocket", DEBUG, "WS_cts_AddEnginetoLib");
   struct s_WS_Data * rdata = (struct s_WS_Data *)_calloc(1, struct s_WS_Data);
 
   rdata->opcode = WSopc_AddNewEnginetolib;
 
   // if (RSManager->DCC[data->DCC_ID]){
-  //   loggerf(ERROR, "DCC %i allready in use", data->DCC_ID);
+  //   log("Websocket", ERROR, "DCC %i allready in use", data->DCC_ID);
   //   rdata->data.opc_AddNewEnginetolib_res.response = 255;
   //   client->send((char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
   //   return;
@@ -701,7 +701,7 @@ void WS_cts_AddEnginetoLib(struct s_opc_AddNewEnginetolib * data, Websocket::Cli
   sprintf(filename, "%i_%s", E->DCC_ID, E->name);
   replaceCharinString(filename, ' ', '_');
   replaceCharinString(filename, '.', '-');
-  loggerf(WARNING, "Filename: %s", filename);
+  log("Websocket", WARNING, "Filename: %s", filename);
 
   E->setImagePath(filename);
   if(!ctsTempFile(data->timing[0] + ((data->timing[1] & 0xf0) << 4), E->img_path, true, (data->flags & 0b10) == 0)){
@@ -728,7 +728,7 @@ void WS_cts_AddEnginetoLib(struct s_opc_AddNewEnginetolib * data, Websocket::Cli
 }
 
 void WS_cts_Edit_Engine(struct s_opc_EditEnginelib * msg, Websocket::Client * client){
-  loggerf(DEBUG, "WS_cts_Edit_Engine");
+  log("Websocket", DEBUG, "WS_cts_Edit_Engine");
 
   struct s_WS_Data * rdata = (struct s_WS_Data *)_calloc(1, struct s_WS_Data);
 
@@ -749,7 +749,7 @@ void WS_cts_Edit_Engine(struct s_opc_EditEnginelib * msg, Websocket::Client * cl
     rdata->opcode = WSopc_AddNewEnginetolib;
 
     // if (RSManager->DCC[data->DCC_ID] && data->DCC_ID != E->DCC_ID){
-    //   loggerf(ERROR, "DCC %i (%i) allready in use", data->DCC_ID, E->DCC_ID);
+    //   log("Websocket", ERROR, "DCC %i (%i) allready in use", data->DCC_ID, E->DCC_ID);
     //   rdata->data.opc_AddNewEnginetolib_res.response = 255;
     //   client->send((char *)rdata, WSopc_AddNewEnginetolib_res_len, 0xff);
     //   return;
@@ -779,7 +779,7 @@ void WS_cts_Edit_Engine(struct s_opc_EditEnginelib * msg, Websocket::Client * cl
     replaceCharinString(filename, ' ', '_');
     replaceCharinString(filename, '.', '-');
 
-    loggerf(WARNING, "Filename: %s", filename);
+    log("Websocket", WARNING, "Filename: %s", filename);
 
     E->setImagePath(filename);
     if(!ctsTempFile(data->timing[0] + ((data->timing[1] & 0xf0) << 4), E->img_path, true, (data->flags & 0b10) == 0)){
@@ -817,7 +817,7 @@ void WS_cts_Edit_Engine(struct s_opc_EditEnginelib * msg, Websocket::Client * cl
 }
 
 void WS_cts_AddTraintoLib(struct s_opc_AddNewTraintolib * data, Websocket::Client * client){
-  loggerf(DEBUG, "WS_cts_AddTraintoLib");
+  log("Websocket", DEBUG, "WS_cts_AddTraintoLib");
   struct s_WS_Data * rdata = (struct s_WS_Data *)_calloc(1, struct s_WS_Data);
 
   rdata->opcode = WSopc_AddNewTraintolib;
@@ -843,7 +843,7 @@ void WS_cts_AddTraintoLib(struct s_opc_AddNewTraintolib * data, Websocket::Clien
 }
 
 void WS_cts_Edit_Train(struct s_opc_EditTrainlib * data, Websocket::Client * client){
-  loggerf(ERROR, "WS_cts_Edit_Train ");
+  log("Websocket", ERROR, "WS_cts_Edit_Train ");
   struct s_WS_Data * rdata = (struct s_WS_Data *)_calloc(1, struct s_WS_Data);
 
   rdata->opcode = WSopc_AddNewTraintolib;
@@ -893,7 +893,7 @@ void WS_cts_Edit_Train(struct s_opc_EditTrainlib * data, Websocket::Client * cli
 }
 
 void WS_cts_Track_Layout_Load(struct s_opc_Track_Layout_Load * data, Websocket::Client * client){
-  loggerf(INFO, "WS_cts_Track_Layout_Load R:%c, ID:%i", data->request ? 'Y' : 'N', data->id);
+  log("Websocket", INFO, "WS_cts_Track_Layout_Load R:%c, ID:%i", data->request ? 'Y' : 'N', data->id);
 
   if(data->request){
     WS_stc_Track_Layout_Load(client);
@@ -921,7 +921,7 @@ void WS_cts_TrackLayoutRawData(struct s_opc_TrackLayoutRawData * data, Websocket
 }
 
 void WS_cts_TrackLayoutUpdate(struct s_opc_TrackLayoutUpdate * data, Websocket::Client * client){
-  loggerf(CRITICAL, "IMPLEMENT WS_cts_TrackLayoutUpdate");
+  log("Websocket", CRITICAL, "IMPLEMENT WS_cts_TrackLayoutUpdate");
 
 
   // Respond with failure
@@ -934,18 +934,18 @@ void WS_cts_TrackLayoutUpdate(struct s_opc_TrackLayoutUpdate * data, Websocket::
 
 void WS_cts_Admin_Login(struct s_opc_AdminLogin * data, Websocket::Client * client){
   if(strcmp((char *)data->password, client->Server->password) == 0){
-    loggerf(INFO, "SUCCESSFULL LOGIN");
+    log("Websocket", INFO, "SUCCESSFULL LOGIN");
     //0xc3,0xbf,0x35,0x66,0x34,0x64,0x63,0x63,0x33,0x62,0x35,0x61,0x61,0x37,0x36,0x35,0x64,0x36,0x31,0x64,0x38,0x33,0x32,0x37,0x64,0x65,0x62,0x38,0x38,0x32,0x63,0x66,0x39,0x39
     client->type |= 0x10;
 
-    loggerf(INFO, "Change client flags to %x", client->type);
+    log("Websocket", INFO, "Change client flags to %x", client->type);
 
     char msg[2] = {WSopc_ChangeBroadcast, (char)client->type};
     client->send(msg, 2, 255);
   }else{
-    loggerf(INFO, "FAILED LOGIN!! %d", strcmp((char *)data->password, client->Server->password));
-    loggerf(INFO, "%s", data->password);
-    loggerf(INFO, "%s", client->Server->password);
+    log("Websocket", INFO, "FAILED LOGIN!! %d\n%s\n%s",
+                    strcmp((char *)data->password, client->Server->password,
+                    data->password);
   }
 }
 

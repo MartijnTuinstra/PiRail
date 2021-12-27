@@ -60,7 +60,7 @@ uint16_t WS_stc_ScanStatus(uint16_t msgID, uint16_t x, uint16_t y){ // x connect
   data[3] = x;
   data[4] = y;
 
-  loggerf(INFO, "WS_stc_ScanStatus %02x%02x", data[1], data[2]);
+  log("Websocket", INFO, "WS_stc_ScanStatus %02x%02x", data[1], data[2]);
   WSServer->send_all(data, 5, WS_Flag_Messages);
   WS_add_Message(msgID, 5, data);
 
@@ -68,7 +68,7 @@ uint16_t WS_stc_ScanStatus(uint16_t msgID, uint16_t x, uint16_t y){ // x connect
 }
 
 void WS_stc_Partial_Layout(uint8_t M){
-  loggerf(DEBUG, "WS_stc_Partial_Layout %i", M);
+  log("Websocket", DEBUG, "WS_stc_Partial_Layout %i", M);
   char data[20];
   int q = 1;
   memset(data,0,20);
@@ -85,13 +85,12 @@ void WS_stc_Partial_Layout(uint8_t M){
 }
 
 void WS_stc_Track_Layout(Websocket::Client * client){
+  log("Websocket", DEBUG, "WS_stc_Track_Layout");
 
   char data[100];
   int q = 1;
   memset(data,0,100);
   data[0] = WSopc_Track_Layout_Config;
-
-  loggerf(DEBUG, "WS_stc_Track_Layout");
 
   for(int i = 0;i< SwManager->Units.size;i++){
     Unit * U = Units(i);
@@ -155,7 +154,7 @@ void WS_stc_SubmoduleState(Websocket::Client * client){
   char data[5];
   data[0] = WSopc_SubModuleState;
 
-  // loggerf(INFO, "WS_stc_SubmoduleState %x %x %x %x %x", SYS->WebSocket.state, SYS->Z21.state, SYS->UART.state, SYS->LC.state, SYS->TC.state);
+  log("Websocket", DEBUG, "WS_stc_SubmoduleState %x %x %x %x %x", SYS->WebSocket.state, SYS->Z21.state, SYS->UART.state, SYS->LC.state, SYS->TC.state);
 
   data[1] = ((SYS->WebSocket.state & 0xF) << 4) | (SYS->Z21.state & 0xF);
   data[2] = ((SYS->UART.state & 0xF) << 4) | (SYS->LC.state & 0xF);
@@ -218,7 +217,7 @@ void WS_stc_UpdateTrain(Train * T, Websocket::Client * client){
     msg->functions[3] = 0;
   }
 
-  loggerf(TRACE, "train Update_Train id: %i, d: %i, c: %i, sp: %x%02x", msg->follow_id, msg->dir, msg->control, msg->speed_high, msg->speed_low);
+  log("Websocket", TRACE, "train Update_Train id: %i, d: %i, c: %i, sp: %x%02x", msg->follow_id, msg->dir, msg->control, msg->speed_high, msg->speed_low);
 
   if(!WSServer)
     return;
@@ -267,7 +266,7 @@ void WS_stc_TrainRouteUpdate(Train * T){
 }
 
 void WS_stc_DCCEngineUpdate(Engine * E){
-  loggerf(TRACE, "WS_cts_DCCEngineUpdate");
+  log("Websocket", TRACE, "WS_cts_DCCEngineUpdate");
 
   if(!E)
     return;
@@ -291,12 +290,13 @@ void WS_stc_DCCEngineUpdate(Engine * E){
     }
   }
 
-  loggerf(DEBUG, "train Update_Train id: %i, d: %i, c: %i, sp: %x%02x", msg->follow_id, msg->dir, msg->control, msg->speed_high, msg->speed_low);
+  log("Websocket", DEBUG, "train Update_Train id: %i, d: %i, c: %i, sp: %x%02x", msg->follow_id, msg->dir, msg->control, msg->speed_high, msg->speed_low);
 
   WSServer->send_all((char *)&return_msg, sizeof(struct s_opc_DCCEngineUpdate) + 1, WS_Flag_Trains);
 }
 
 void WS_stc_EnginesLib(Websocket::Client * client){
+  log("Websocket", DEBUG, "WS_stc_EnginesLib");
   int buffer_size = 1024;
 
   char * data = (char *)_calloc(buffer_size, char);
@@ -361,7 +361,7 @@ void WS_stc_EnginesLib(Websocket::Client * client){
 }
 
 void WS_stc_CarsLib(Websocket::Client * client){
-  loggerf(INFO, "CarsLib for client %i", client);
+  log("Websocket", DEBUG, "WS_stc_CarsLib");
   int buffer_size = 1024;
 
   char * data = (char *)_calloc(buffer_size, char);
@@ -406,7 +406,7 @@ void WS_stc_CarsLib(Websocket::Client * client){
 }
 
 void WS_stc_TrainSetsLib(Websocket::Client * client){
-  loggerf(INFO, "TrainSetsLib for client %i", client);
+  log("Websocket", DEBUG, "WS_stc_TrainSetsLib");
   int buffer_size = 1024;
 
   char * data = (char *)_calloc(buffer_size, char);
@@ -456,7 +456,7 @@ void WS_stc_TrainSetsLib(Websocket::Client * client){
 }
 
 void WS_stc_TrainCategories(Websocket::Client * client){
-  loggerf(INFO, "TrainCategories for client %i", client);
+  log("Websocket", DEBUG, "WS_stc_TrainCategories");
   int buffer_size = 1024;
 
   char * data = (char *)_calloc(buffer_size, char);
@@ -506,7 +506,7 @@ void WS_stc_NewTrain(Train * T,char M,char B){
   //M,B:  module nr and block nr
   uint16_t msg_ID = WS_init_Message(0);
 
-  loggerf(TRACE, "WS_stc_NewTrain %i", T->id);
+  log("Websocket", TRACE, "WS_stc_NewTrain %i", T->id);
 
   char data[6];
   data[0] = WSopc_NewMessage;
@@ -524,7 +524,7 @@ void WS_stc_TrainSplit(Train * T, char M1,char B1,char M2,char B2){
   //M,B:  module nr and block nr
   uint16_t msg_ID = WS_init_Message(1);
 
-  loggerf(INFO, "WS_TrainSplit");
+  log("Websocket", INFO, "WS_TrainSplit");
 
   char data[8];
   data[0] = WSopc_NewMessage;
@@ -541,7 +541,7 @@ void WS_stc_TrainSplit(Train * T, char M1,char B1,char M2,char B2){
 
 /*
 void Web_Train_Split(int i,char tID,char B[]){
-  loggerf(DEBUG, "Web_Train_Split(%i,%i,{%i,%i});",i,tID,B[0],B[1]);
+  log("Websocket", DEBUG, "Web_Train_Split(%i,%i,{%i,%i});",i,tID,B[0],B[1]);
   char data[8];
   data[0] = 1;
   if(i == ACTIVATE){
@@ -563,7 +563,7 @@ void Web_Train_Split(int i,char tID,char B[]){
 void WS_stc_TrainRoute(){}
 
 // void WS_TrainData(char data[14]){
-//   loggerf(TRACE,"WS_TrainData");
+//   log("Websocket", TRACE,"WS_TrainData");
 //   char s_data[20];
 //   s_data[0] = WSopc_Z21TrainData;
 
@@ -571,7 +571,7 @@ void WS_stc_TrainRoute(){}
 //     s_data[i+2] = data[i];
 //   }
 
-//   loggerf(ERROR, "FIX ID");
+//   log("Websocket", ERROR, "FIX ID");
 //   return;
 //   // s_data[1] = DCC_train[((s_data[2] << 8) + s_data[3])]->ID;
 
@@ -583,7 +583,7 @@ void WS_stc_trackUpdate(Websocket::Client * client){
   // 0x26 - Broadcast track occupation
   //         and block status
 
-  loggerf(TRACE, "WS_trackUpdate");
+  log("Websocket", TRACE, "WS_trackUpdate");
   mutex_lock(&mutex_lockB, "Lock Mutex B");
   char data[4096];
 
@@ -630,7 +630,7 @@ void WS_stc_trackUpdate(Websocket::Client * client){
 }
 
 void WS_stc_SwitchesUpdate(Websocket::Client * client){
-  loggerf(TRACE, "WS_SwitchesUpdate (%x)", (unsigned long)client);
+  log("Websocket", TRACE, "WS_SwitchesUpdate (%x)", (unsigned long)client);
   mutex_lock(&mutex_lockB, "Lock Mutex B");
   char buf[4096];
   memset(buf, 0, 4096);
@@ -655,7 +655,7 @@ void WS_stc_SwitchesUpdate(Websocket::Client * client){
           continue;
 
         if(!S->updatedState){
-          loggerf(TRACE, "%i:%i no new state", S->module, S->id);
+          log("Websocket", TRACE, "%i:%i no new state", S->module, S->id);
           continue;
         }
 
@@ -667,7 +667,7 @@ void WS_stc_SwitchesUpdate(Websocket::Client * client){
 
         S->updatedState = false;
 
-        loggerf(DEBUG, "%i,%i,%i", S->module, S->id, S->state);
+        log("Websocket", DEBUG, "%i,%i,%i", S->module, S->id, S->state);
         q++;
       }
     }
@@ -689,7 +689,7 @@ void WS_stc_SwitchesUpdate(Websocket::Client * client){
         continue;
 
       if(!Sw->updatedState){
-        loggerf(TRACE, "%i:%i no new state", Sw->module, Sw->id);
+        log("Websocket", TRACE, "%i:%i no new state", Sw->module, Sw->id);
         continue;
       }
 
@@ -713,12 +713,13 @@ void WS_stc_SwitchesUpdate(Websocket::Client * client){
     }
   }
   // else
-  //   loggerf(DEBUG, "WS Switches no content");
+  //   log("Websocket", DEBUG, "WS Switches no content");
 
   mutex_unlock(&mutex_lockB, "UnLock Mutex B");
 }
 
 void WS_stc_NewClient_track_Switch_Update(Websocket::Client * client){
+  log("Websocket", DEBUG, "WS_stc_NewClient_track_Switch_Update");
   mutex_lock(&mutex_lockB, "Lock Mutex B");
 
   //Track
@@ -853,7 +854,7 @@ void WS_stc_NewClient_track_Switch_Update(Websocket::Client * client){
 
   memset(buf,0,4096);
 
-  loggerf(INFO, "Z21_GET_LOCO_INFO check");
+  log("Websocket", INFO, "Z21_GET_LOCO_INFO check");
   for(int i = 1; i < RSManager->Trains.size;i++){
     Train * T = RSManager->getTrain(i);
     if(T){
@@ -890,7 +891,7 @@ void WS_stc_reset_switches(Websocket::Client * client){
 }
 
 void WS_stc_Track_Layout_Load(Websocket::Client * client){
-  loggerf(INFO, "WS_stc_Track_Layout_Load");
+  log("Websocket", INFO, "WS_stc_Track_Layout_Load");
   if(!client)
     return;
 
@@ -903,7 +904,7 @@ void WS_stc_Track_Layout_Load(Websocket::Client * client){
   for(uint8_t i = 0; i < data[1]; i++){
     const char * s = switchboard::SwManager->setups[i]->string;
 
-    loggerf(INFO, "  %2d, %3d: %s", j, strlen(s), s);
+    log("Websocket", INFO, "  %2d, %3d: %s", j, strlen(s), s);
 
     data[j] = strlen(s);
     strcpy(&data[j+1], s);
@@ -914,7 +915,7 @@ void WS_stc_Track_Layout_Load(Websocket::Client * client){
 }
 
 void WS_stc_Track_LayoutDataOnly(int unit, Websocket::Client * client){
-  loggerf(DEBUG, "WS_Track_LayoutDataOnly %i", unit);
+  log("Websocket", DEBUG, "WS_Track_LayoutDataOnly %i", unit);
 
   Unit * U = Units(unit);
 
@@ -955,6 +956,7 @@ void WS_stc_TrackLayoutRawData(int unit, Websocket::Client * client){
 }
 
 void WS_stc_StationLib(Websocket::Client * client){
+  log("Webosocket", DEBUG, "WS_stc_StationLib");
   char * data = (char *)_calloc(SwManager->uniqueStation.size, Station);
   data[0] = WSopc_StationLibrary;
   char * length = &data[1];
@@ -998,19 +1000,19 @@ void WS_stc_StationLib(Websocket::Client * client){
 
 //General Messages
 void WS_stc_EmergencyStop(){
-  loggerf(WARNING, "EMERGENCY STOP");
+  log("Websocket", WARNING, "EMERGENCY STOP");
   char msg[1] = {WSopc_EmergencyStop};
   WSServer->send_all(msg, 1, 0xFF); //Everyone
 }
 
 void WS_stc_ShortCircuit(){
-  loggerf(WARNING, "SHORT CIRCUIT");
+  log("Websocket", WARNING, "SHORT CIRCUIT");
   char msg[1] = {WSopc_ShortCircuitStop};
   WSServer->send_all(msg, 1, 0xFF); //Everyone
 }
 
 void WS_stc_ClearEmergency(){
-  loggerf(INFO, "EMERGENCY Released");
+  log("Websocket", INFO, "EMERGENCY Released");
   char msg[1] = {WSopc_ClearEmergency};
   WSServer->send_all(msg, 1, 0xFF); //Everyone
 }
@@ -1039,10 +1041,11 @@ void WS_add_Message(uint16_t ID, char length, char * data){
   memcpy(MessageList[ID].data, data, length);
   MessageList[ID].data_length = length;
 
-  loggerf(DEBUG, "create_message %x", ID);
+  log("Websocket", DEBUG, "create_message %x", ID);
 }
 
 void WS_send_open_Messages(Websocket::Client * client){
+  log("Websocket", DEBUG, "WS_send_open_Messages");
   for(int i = 0; i <= 0x1FFF; i++){
     if(MessageList[i].type & 0x8000){
       client->send(MessageList[i].data, MessageList[i].data_length, 0xFF);
@@ -1054,7 +1057,7 @@ void WS_clear_message(uint16_t ID, char ret_code){
   if(ret_code == 1)
     MessageList[ID].type = 0;
 
-  loggerf(INFO, "clear_message %x", ID);
+  log("Websocket", INFO, "clear_message %x", ID);
 
   char msg[3] = {};
   msg[0] = WSopc_ClearMessage;

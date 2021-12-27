@@ -31,9 +31,14 @@ int main(int argc, char * argv[]){
   srand(time(NULL));
 
   init_main();
-  logger.setfilename("log.txt");
-  logger.setlevel(DEBUG);
-  logger.setlevel_stdout(DEBUG);
+  BaseLogging.setfilename("log.txt");
+  getLogger()->setlevel(DEBUG);
+  getLogger()->setlevel_stdout(DEBUG);
+
+  getLogger("Algorithm")->setlevel_stdout(WARNING);
+  getLogger("Sim")->setlevel_stdout(INFO);
+  getLogger("Websocket")->setlevel_stdout(WARNING);
+  getLogger("Scheduler")->setlevel_stdout(INFO);
 
   if(argc > 1){
     printf("Got argument %s\n", argv[1]);
@@ -45,11 +50,11 @@ int main(int argc, char * argv[]){
 
   // Stop program when receiving SIGINT
   if (signal(SIGQUIT, sigint_func) == SIG_ERR){
-    log("Cannot catch SIGINT", CRITICAL);
+    log("root", CRITICAL, "Cannot catch SIGINT");
     return 0;
   }
   if (signal(SIGSEGV, sigint_crash_func) == SIG_ERR){
-    log("Cannot catch SIGSEGV", CRITICAL);
+    log("root", CRITICAL, "Cannot catch SIGSEGV");
     return 0;
   }
 
@@ -84,13 +89,16 @@ int main(int argc, char * argv[]){
 
   WSServer = new Websocket::Server();
   WSServer->init();
+
+  BaseLogging.printLoggers();
+
   WSServer->loop();
   WSServer->teardown();
   // websocket_server();
 
   // UART_stop();
   loggerf(WARNING, "Shutdown sequence started");
-  logger.setlevel_stdout(TRACE);
+  getLogger()->setlevel_stdout(TRACE);
 
   // Stop all
   SYS->stop = 1;

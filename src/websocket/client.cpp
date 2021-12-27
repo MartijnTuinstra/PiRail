@@ -74,11 +74,11 @@ Client::Client(Websocket::Server * _Server, int _fd){
 }
 
 Client::~Client(){
-  loggerf(INFO, "Client Destructor");
+  log("Websocket", INFO, "Client Destructor");
 }
 
 void Client::disconnect(){
-  loggerf(DEBUG, "Disconnect Client %i", fd);
+  log("Websocket", DEBUG, "Disconnect Client %i", fd);
   close(fd);
   connected = false;
 }
@@ -95,12 +95,12 @@ void * Client::run(Client * context){
 
     switch(status){
       case WEBSOCKET_SUCCESS:
-        loggerf(INFO, "Got frame");
+        log("Websocket", INFO, "Got frame");
         Parse(packet, context);
         break;
 
       case WEBSOCKET_SUCCESS_CONTROL_FRAME:
-        loggerf(INFO, "Got control frame");
+        log("Websocket", INFO, "Got control frame");
         // TODO
         break;
 
@@ -109,7 +109,7 @@ void * Client::run(Client * context){
         break;
 
       case WEBSOCKET_FAILED_CLOSE:
-        loggerf(ERROR, "Closing connection with client");
+        log("Websocket", ERROR, "Closing connection with client");
         // Unrecoverable error
         context->connected = false;
         break;
@@ -141,7 +141,7 @@ int Client::websocket_check(){
   char * _protocol = (char *)_calloc(10, char);
   int protocol;
 
-  loggerf(INFO, "Web Client (%d) check", fd);
+  log("Websocket", INFO, "Web Client (%d) check", fd);
 
   if((strstr(buf, Connection) || strstr(buf,Connection2)) &&
         strstr(buf, UpgradeType) && strstr(buf, Key)) {
@@ -199,7 +199,7 @@ int Client::websocket_check(){
     return 1;
   }
   else{
-    loggerf(INFO, "It's not a HTML5-websocket\n");
+    log("Websocket", INFO, "It's not a HTML5-websocket\n");
 
     //Server response to the client
     char response[100] = "HTTP/1.1 400 OK\r\n\r\n";
@@ -221,7 +221,7 @@ uint8_t Client::first_connect(uint8_t ** buf, int * bufSize, int * length){
   uint8_t * packet;
 
   if(SYS->WebSocket.state == Module_Init){
-    loggerf(WARNING, "LOGIN required %x %x", connected, type);
+    log("Websocket", WARNING, "LOGIN required %x %x", connected, type);
     while(connected && ((type & 0x10) == 0)){
       // Require login
       data[0] = WSopc_Admin_Login;
@@ -238,22 +238,22 @@ uint8_t Client::first_connect(uint8_t ** buf, int * bufSize, int * length){
 
       switch(status){
         case WEBSOCKET_SUCCESS:
-          loggerf(INFO, "Got frame");
+          log("Websocket", INFO, "Got frame");
           Parse(packet, this);
           break;
 
         case WEBSOCKET_SUCCESS_CONTROL_FRAME:
-          loggerf(INFO, "Got control frame");
+          log("Websocket", INFO, "Got control frame");
           // TODO
           break;
 
         case WEBSOCKET_NO_MESSAGE:
-          loggerf(INFO, "Got no message");
+          log("Websocket", INFO, "Got no message");
           timeoutCheck();
           break;
 
         case WEBSOCKET_FAILED_CLOSE:
-          loggerf(ERROR, "Closing connection with client");
+          log("Websocket", ERROR, "Closing connection with client");
           // Unrecoverable error
           connected = false;
           break;
@@ -265,13 +265,13 @@ uint8_t Client::first_connect(uint8_t ** buf, int * bufSize, int * length){
 }
 
 int Client::ping(){
-  loggerf(DEBUG, "Client::ping fd:%i", this->fd);
+  log("Websocket", DEBUG, "Client::ping fd:%i", this->fd);
   char buf[10];
   buf[0] = WEBSOCKET_FIN | WEBSOCKET_PING;
   buf[1] = 0; // No length
 
   if(write(this->fd, buf, 2) == -1){
-    loggerf(WARNING, "socket write error %x", errno);
+    log("Websocket", WARNING, "socket write error %x", errno);
   };
 
   // int i = 0;
@@ -341,10 +341,10 @@ void Client::send(char * data, int length){
       printf("Broken Pipe!!!!!\n\n");
     }
     else if(errno == EFAULT){
-      loggerf(ERROR, "EFAULT ERROR");
+      log("Websocket", ERROR, "EFAULT ERROR");
     }
     else{
-      loggerf(ERROR, "Unknown write error, closing connection");
+      log("Websocket", ERROR, "Unknown write error, closing connection");
     }
     this->disconnect();
   }  

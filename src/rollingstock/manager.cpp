@@ -16,6 +16,7 @@ Manager::Manager(){
 }
 
 void Manager::initScheduler(){
+  // Do the train continue check every 2 seconds
   continue_event = scheduler->addEvent("Train_continue", {2, 0});
   continue_event->function = &Train_ContinueCheck;
 }
@@ -42,7 +43,7 @@ void Manager::clear(){
 Manager::~Manager(){
   scheduler->removeEvent(continue_event);
 
-  log("Clearing trains memory",INFO);
+  log("RollingManager", INFO, "Clearing trains memory");
 
   clear();
 

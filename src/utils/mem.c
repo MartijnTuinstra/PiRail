@@ -22,7 +22,7 @@ void destroy_allocs(){
 
 void * my_calloc(int elements, int size, const char * file, const int line){
   void * p = calloc(elements, size);
-  logger.f(MEMORY, file, line, "calloc \tsize: %i \tpointer: %08x", elements * size, p);
+  BaseLogging.f(MEMORY, file, line, "calloc \tsize: %i \tpointer: %08x", elements * size, p);
 
   // pthread_mutex_lock(&mem_lock);
   // for(unsigned int i = 0; i < allocs; i++){
@@ -41,7 +41,7 @@ void * my_calloc(int elements, int size, const char * file, const int line){
 void * my_realloc(void * p, int type_size, int elements, const char * file, const int line){
   void * old_p = p;
   p = realloc(p, type_size * elements);
-  logger.f(MEMORY, file, line, "realloc \told_pointer: %08x \tnew_size: %i*%i \tnew_pointer: %08x", old_p, type_size, elements, p);
+  BaseLogging.f(MEMORY, file, line, "realloc \told_pointer: %08x \tnew_size: %i*%i \tnew_pointer: %08x", old_p, type_size, elements, p);
 
   pthread_mutex_lock(&mem_lock);
   for(unsigned int i = 0; i < allocs; i++){
@@ -58,7 +58,7 @@ void * my_realloc(void * p, int type_size, int elements, const char * file, cons
 void * my_free(void ** p, const char * file, const int line){
   if(!*p)
     return 0;
-  logger.f(MEMORY, file, line, "free \tpointer: %08x", p);
+  BaseLogging.f(MEMORY, file, line, "free \tpointer: %08x", p);
   free(*p);
 
   pthread_mutex_lock(&mem_lock);

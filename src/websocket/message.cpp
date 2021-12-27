@@ -21,37 +21,37 @@ int Parse(uint8_t * data, Client * client){
 
   struct s_WS_Data * d = (struct s_WS_Data *)data;
 
-  loggerf(WARNING, "Parsing packet, opcode %2x", d->opcode);
+  log("Websocket", WARNING, "Parsing packet, opcode %2x", d->opcode);
 
   if(websocket_cts[d->opcode]){
     websocket_cts[d->opcode]((void *)&d->data, client);
     return 0;
   }
 
-  loggerf(WARNING, "Not Using function array");
+  log("Websocket", WARNING, "Not Using function array");
   if((data[0] & 0xC0) == 0x80){ // System settings
-    loggerf(TRACE, "System Settings");
+    log("Websocket", TRACE, "System Settings");
     if(data[0] == WSopc_ClearTrack){
 
     }
     else if(data[0] == WSopc_ReloadTrack){
-      loggerf(TRACE, "WSopc_ReloadTrack");
+      log("Websocket", TRACE, "WSopc_ReloadTrack");
 
     }
     else if(data[0] == WSopc_Track_Scan_Progress){
-      loggerf(TRACE, "WSopc_Track_Scan_Progress");
+      log("Websocket", TRACE, "WSopc_Track_Scan_Progress");
 
     }
     else if(data[0] == WSopc_Track_Info){
-      loggerf(TRACE, "WSopc_Track_Info");
+      log("Websocket", TRACE, "WSopc_Track_Info");
 
     }
     else if(data[0] == WSopc_Reset_Switches){
-      loggerf(TRACE, "WSopc_Reset_Switches");
+      log("Websocket", TRACE, "WSopc_Reset_Switches");
 
     }
     else if(data[0] == WSopc_TrainsToDepot){
-      loggerf(TRACE, "WSopc_TrainsToDepot");
+      log("Websocket", TRACE, "WSopc_TrainsToDepot");
 
     }
     else if(data[0] == WSopc_Z21_Settings){
@@ -59,7 +59,7 @@ int Parse(uint8_t * data, Client * client){
 
       FILE * fp = fopen("configs/Z21.bin", "wb");
       if (!fp){
-        loggerf(ERROR, "Failed to create new Z21 config file.");
+        log("Websocket", ERROR, "Failed to create new Z21 config file.");
         return 0;
       }
       fwrite(Z21->IP, 4, 1, fp);
@@ -67,10 +67,10 @@ int Parse(uint8_t * data, Client * client){
       WS_stc_Z21_IP(0);
     }
     else if(data[0] == WSopc_SubModuleState){
-      loggerf(TRACE, "WSopc_SubModuleState");
+      log("Websocket", TRACE, "WSopc_SubModuleState");
     }
     else if(data[0] == WSopc_RestartApplication){
-      loggerf(TRACE, "WSopc_RestartApplication");
+      log("Websocket", TRACE, "WSopc_RestartApplication");
       SYS_set_state(&SYS->WebSocket.state, Module_STOP);
       Z21_stop();
       Algor_stop();
@@ -78,10 +78,10 @@ int Parse(uint8_t * data, Client * client){
       SYS_set_state(&SYS->SimB.state, Module_STOP);
     }
   }else if((data[0] & 0xC0) == 0xC0){ //Admin settings
-    loggerf(TRACE, "Admin Settings  %02X", data[0]);
+    log("Websocket", TRACE, "Admin Settings  %02X", data[0]);
     if((client->type & 0x10) == 0){
       //Client is not an admin
-      loggerf(INFO, "Not an Admin client");
+      log("Websocket", INFO, "Not an Admin client");
       return 0;
     }
 
@@ -92,7 +92,7 @@ int Parse(uint8_t * data, Client * client){
         SYS->modules_linked = 1;
       }else if(data[1] == 2){
         //reload setup
-        loggerf(ERROR, "Reload setup not implemented");
+        log("Websocket", ERROR, "Reload setup not implemented");
       }
     }
     else if(data[0] == WSopc_EmergencyStopAdmin){
@@ -103,16 +103,16 @@ int Parse(uint8_t * data, Client * client){
     }
   }
   else if(data[0] & 0x40){ //Train stuff
-    loggerf(TRACE, "Train Settings");
+    log("Websocket", TRACE, "Train Settings");
     if(data[0] == WSopc_TrainFunction){ //Train function control
 
     }
     else{
-      loggerf(WARNING, "Opcode %x not found", data[0]);
+      log("Websocket", WARNING, "Opcode %x not found", data[0]);
     }
   }
   else if(data[0] & 0x20){ //Track stuff
-    loggerf(INFO, "Track Settings");
+    log("Websocket", INFO, "Track Settings");
     if(data[0] == WSopc_SetSwitchReserved){ //Set switch reserved
 
     }
@@ -123,7 +123,7 @@ int Parse(uint8_t * data, Client * client){
 
 
   else if(data[0] & 0x10){ // General Operation
-    loggerf(TRACE, "General Settings");
+    log("Websocket", TRACE, "General Settings");
    if(data[0] == WSopc_ClearMessage){
 
     }
@@ -141,8 +141,6 @@ int MessageGet(int fd, uint8_t ** outbuf, uint8_t ** packet, int * bufferSize, i
     return WEBSOCKET_NO_MESSAGE;
   }
 
-  log_hex("WS Recv Message", *outbuf, recvlength);
-
   uint16_t byte = 2; // start of message
   uint8_t * buf = &(*outbuf)[0];
 
@@ -153,7 +151,7 @@ int MessageGet(int fd, uint8_t ** outbuf, uint8_t ** packet, int * bufferSize, i
   // Check for more length bytes
   if(mes_length == 126){
     if(recv(fd, &buf[2], 2, 0) < -1){
-      loggerf(ERROR, "Failed to get additional header bytes");
+      log("Websocket", ERROR, "Failed to get additional header bytes");
       return WEBSOCKET_FAILED_CLOSE;
     }
     recvlength += 2;
@@ -163,7 +161,7 @@ int MessageGet(int fd, uint8_t ** outbuf, uint8_t ** packet, int * bufferSize, i
   }
   else if(mes_length == 127){
     if(recv(fd, &buf[2], 8, 0) < -1){
-      loggerf(ERROR, "Failed to get additional header bytes");
+      log("Websocket", ERROR, "Failed to get additional header bytes");
       return WEBSOCKET_FAILED_CLOSE;
     }
     recvlength += 8;
@@ -171,7 +169,7 @@ int MessageGet(int fd, uint8_t ** outbuf, uint8_t ** packet, int * bufferSize, i
     mes_length  = (buf[2] << 24) + (buf[3] << 16) + (buf[4] << 8) + buf[5];
     mes_length <<= 32;
     mes_length  = (buf[6] << 24) + (buf[7] << 16) + (buf[8] << 8) + buf[9];
-    loggerf(WARNING, "JUMBO packet");
+    log("Websocket", WARNING, "JUMBO packet");
     byte += 8;
     // return WEBSOCKET_FAILED_CLOSE;
   }
@@ -182,7 +180,7 @@ int MessageGet(int fd, uint8_t ** outbuf, uint8_t ** packet, int * bufferSize, i
     buf = &(*outbuf)[byte]; // Set at start of mask key
     
     if(recv(fd, &buf[0], 4, 0) < -1){
-      loggerf(ERROR, "Failed to get additional header bytes");
+      log("Websocket", ERROR, "Failed to get additional header bytes");
       return WEBSOCKET_FAILED_CLOSE;
     }
 
@@ -206,18 +204,18 @@ int MessageGet(int fd, uint8_t ** outbuf, uint8_t ** packet, int * bufferSize, i
   for(uint8_t i = 0; i < byte; i++){
     headerptr += sprintf(headerptr, "%02x ", (*outbuf)[i]);
   }
-  loggerf(WARNING, "Packet starts at 0x%16x\n Header was %i bytes, allready read %i bytes\n need to read %i more\n\tH: %s", (unsigned long)(*packet), byte, recvlength, (byte+mes_length)-recvlength, header);
+  // log("Websocket", WARNING, "Packet starts at 0x%16x\n Header was %i bytes, allready read %i bytes\n need to read %i more\n\tH: %s", (unsigned long)(*packet), byte, recvlength, (byte+mes_length)-recvlength, header);
   // read whole packet
   while(recvlength < (byte + mes_length)){
-    loggerf(WARNING, "Receiving %3i / %3i bytes,  0x%16x", (byte + mes_length) - recvlength, mes_length + byte, (unsigned long)&((*outbuf)[recvlength]));
+    // log("Websocket", WARNING, "Receiving %3i / %3i bytes,  0x%16x", (byte + mes_length) - recvlength, mes_length + byte, (unsigned long)&((*outbuf)[recvlength]));
     int32_t size = recv(fd, &((*outbuf)[recvlength]), (byte + mes_length) - recvlength, 0);
-    loggerf(WARNING, "Got %i", size);
+    // log("Websocket", WARNING, "Got %i", size);
 
     if(size <= 0){
       timeout_counter++;
 
       if(timeout_counter > 5){
-        loggerf(ERROR, "Failed to receive message");
+        // log("Websocket", ERROR, "Failed to receive message");
         return WEBSOCKET_FAILED_CLOSE;
       }
     }
@@ -235,7 +233,7 @@ int MessageGet(int fd, uint8_t ** outbuf, uint8_t ** packet, int * bufferSize, i
   }
   *length_out = mes_length;
 
-  log_hex("WS Recv", *outbuf, mes_length + byte);
+  log_hex("Websocket", DEBUG, "WS Message Received", *outbuf, mes_length + byte);
 
   (*packet)[mes_length] = 0;
 
@@ -244,9 +242,9 @@ int MessageGet(int fd, uint8_t ** outbuf, uint8_t ** packet, int * bufferSize, i
     case WEBSOCKET_PING:
     case WEBSOCKET_PONG:
       return WEBSOCKET_SUCCESS_CONTROL_FRAME;
+    default:
+      return WEBSOCKET_SUCCESS;
   }
-
-  return WEBSOCKET_SUCCESS;
 }
 
 void MessageCreate(char * input, int length_in, char * output, int * length_out){
@@ -263,7 +261,7 @@ void MessageCreate(char * input, int length_in, char * output, int * length_out)
     buf[3] = length_in & 0xFF;
     header_len = 4;
   }else{
-    loggerf(ERROR, "Too large message, OPCODE: %02X", input[0]);
+    log("Websocket", ERROR, "Too large message, OPCODE: %02X", input[0]);
   }
 
   memcpy(output, buf, header_len);

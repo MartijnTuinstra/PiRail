@@ -7,9 +7,49 @@
 #include "utils/logger.h"
 #include "utils/mem.h"
 
-Logger logger = Logger();
+Logging BaseLogging;
 
-bool Logger::clear(){
+Logger::Logger(Logging * _Base, const char * _name){Base = _Base; name = _name;}
+
+void Logger::f(enum logging_levels level, const char * file, const int line, const char * text, ...) {
+  char logtext[900] = "";
+  
+  va_list arglist;
+  va_start( arglist, text );
+  vsprintf(logtext, text, arglist);
+  va_end( arglist );
+
+  Base->f(this, level, file, line, logtext);
+}
+
+
+void Logger::hexdump(enum logging_levels level, const char * file, const int line, const char * header, void * data, int length){
+  char text[8000];
+  char * ptr = text;
+
+  ptr += sprintf(ptr, "%s\n", header);
+  for(int i = 0; i < length; i++){
+    ptr += sprintf(ptr, "%02x ", ((uint8_t *)data)[i]);
+    if((i % 16) == 15)
+      ptr += sprintf(ptr, "\n");
+  }
+
+  f(level, file, line, (const char *)text);
+}
+
+void Logger::setlevel(enum logging_levels lvl){
+  file_lvl = lvl;
+}
+
+void Logger::setlevel_stdout(enum logging_levels lvl){
+  stdout_lvl = lvl;
+}
+
+void Logger::setEnabled(bool _enabled){
+  enabled = _enabled;
+}
+
+bool Logging::clear(){
   FILE * fp = fopen(filename,"w");
 
   if(!fp){
@@ -20,23 +60,21 @@ bool Logger::clear(){
   return true;
 }
 
-bool Logger::open(){
+bool Logging::open(){
   file = fopen(filename,"w");
 
   if(!file){
     return false;
   }
 
-  enabled = true;
   fileout = true;
   return true;
 }
 
-void Logger::close(){
-  if(!enabled)
+void Logging::close(){
+  if(!fileout)
     return;
 
-  enabled = stdout;
   fileout = false;
 
   if(!file)
@@ -44,24 +82,22 @@ void Logger::close(){
 
   fclose(file);
 }
-uint16_t Logger::write(){
+uint16_t Logging::write(){
   return 0;
 }
 
-Logger::Logger(){
-  enabled = false;
-  stdout = false;
-  fileout = false;
+Logging::Logging(){
   pthread_mutex_init(&mutex, NULL);
+
+  Loggers["root"] = new Logger(this, "root");
 }
-Logger::~Logger(){
+Logging::~Logging(){
   _free(filename);
   close();
-  enabled = false;
   pthread_mutex_destroy(&mutex);
 }
 
-void Logger::setfilename(const char * file_location){
+void Logging::setfilename(const char * file_location){
   filename = (char *)_calloc(strlen(file_location) + 1, char);
   strcpy(filename, file_location);
 
@@ -71,38 +107,37 @@ void Logger::setfilename(const char * file_location){
   stdout = true;
 }
 
-void Logger::setlevel(enum logging_levels lvl){
-  file_lvl = lvl;
-}
-
-void Logger::setlevel_stdout(enum logging_levels lvl){
-  stdout_lvl = lvl;
-
-  if(stdout_lvl == NONE){
-    enabled = fileout;
-    stdout = false;
-  }
-  else{
-    enabled = true;
-    stdout = true;
-  }
-
-}
-
-void Logger::setDetailLevel(uint8_t level){
+void Logging::setDetailLevel(uint8_t level){
   detail_level = level;
 
   f(DEBUG, "", 0, "Logger detail level set to %s", S_detail_level[level]);
 }
 
-void Logger::f(enum logging_levels level, const char * file, const int line, const char * text, ...){
-  if(!enabled || (level > file_lvl && level > stdout_lvl))
-    return;
+Logger * Logging::getLogger(const char * loggername){
+  for(auto L: Loggers){
+    if(strcmp(loggername, L.first) == 0)
+      return L.second;
+  }
 
+  Loggers[loggername] = new Logger(this, loggername);
+  return Loggers[loggername];
+}
+
+void Logging::printLoggers(){
+
+  char loggerText[5000];
+  char * p = &loggerText[0];
+
+  p += sprintf(p, "Currently available loggers: \n");
+  for(auto L: Loggers){
+    p += sprintf(p, " - %-20s  %s  %s\n", L.first, levels_str[L.second->file_lvl], levels_str[L.second->stdout_lvl]);
+  }
+  
+  f(INFO, "logger", 0, "%s", loggerText);
+}
+
+void Logging::f(Logger * logger, enum logging_levels level, const char * file, const int line, char * text){
   pthread_mutex_lock(&mutex);
-
-  va_list arglist;
-  va_start( arglist, text );
 
   // time_t current_time;
   struct tm * time_info;
@@ -113,34 +148,34 @@ void Logger::f(enum logging_levels level, const char * file, const int line, con
   clock_gettime(CLOCK_REALTIME_COARSE, &clock);
   time_info = localtime(&clock.tv_sec);
 
-
-  strftime(c_time, sizeof(c_time), "%H:%M:%S", time_info);
+  if(detail_level != 1)
+    strftime(c_time, sizeof(c_time), "%H:%M:%S", time_info);
+  else
+    strftime(c_time, sizeof(c_time), "%H%M%S", time_info);
 
   char msg[10000];
   char * msgP = &msg[0];
 
-  char loggertext[900];
-
-  vsprintf(loggertext, text, arglist);
-
-  va_end( arglist );
-
-  if (detail_level < 3)
+  if (detail_level < 4 && detail_level != 1)
     msgP += sprintf(msgP, "%s.%03d", c_time, (uint16_t)(clock.tv_nsec / 1e6));
+  else if(detail_level == 1)
+    msgP += sprintf(msgP, "%s%03d", c_time, (uint16_t)(clock.tv_nsec / 1e6));
 
   msgP += sprintf(msgP, "%s", levels_colour[level]);
 
-  if (detail_level < 1)
+  if (detail_level == 0)
     msgP += sprintf(msgP, " - %s", levels_str[level]);
+  else if(detail_level == 1)
+    msgP += sprintf(msgP, "%c", levels_short_str[level]);
 
-  if (detail_level < 2)
+  if (detail_level < 3)
     msgP += sprintf(msgP, " -%20s:%4i- ", file, line);
 
-  char * newline = strchr(loggertext, '\n');
+  char * newline = strchr(text, '\n');
 
   if(newline){
     char * ptr = &msgP[0];
-    char * token = strtok(loggertext, "\n");
+    char * token = strtok(text, "\n");
 
     bool first = true;
 
@@ -158,21 +193,32 @@ void Logger::f(enum logging_levels level, const char * file, const int line, con
     ptr += sprintf(ptr, "%s\n", levels_colour[8]); // reset colour
   }
   else{
-    msgP += sprintf(msgP, "%s%s\n", loggertext, levels_colour[8]);
+    msgP += sprintf(msgP, "%s%s\n", text, levels_colour[8]);
   }
 
-
-  if(stdout && level <= stdout_lvl)
+  if(stdout && level <= logger->stdout_lvl)
     printf("%s", msg);
 
-  if(fileout && level <= file_lvl){
+  if(fileout && level <= logger->file_lvl){
     fprintf(this->file, "%s", msg);
   }
 
   pthread_mutex_unlock(&mutex);
 }
 
-void Logger::hexdump(const char * file, const int line, const char * header, void * data, int length){
+
+void Logging::f(enum logging_levels level, const char * file, const int line, const char * text, ...){
+  char logtext[900];
+  
+  va_list arglist;
+  va_start( arglist, text );
+  vsprintf(logtext, text, arglist);
+  va_end( arglist );
+
+  Loggers["root"]->f(level, file, line, logtext);
+}
+
+void Logging::hexdump(enum logging_levels level, const char * file, const int line, const char * header, void * data, int length){
   char text[8000];
   char * ptr = text;
 
@@ -183,5 +229,8 @@ void Logger::hexdump(const char * file, const int line, const char * header, voi
       ptr += sprintf(ptr, "\n");
   }
 
-  f(DEBUG, file, line, (const char *)text);
+  f(level, file, line, (const char *)text);
 }
+
+Logger * getLogger(){ return BaseLogging.getLogger("root"); }
+Logger * getLogger(const char * name){ return BaseLogging.getLogger(name); }

@@ -37,7 +37,7 @@ void BlockConnector::connect(BlockConnector * BC, bool crossover){
     BlockConnectorMatrix[A][B](this, BC, i, j);
   }
 
-  loggerf(CRITICAL, "connect unit %i:%i to %i:%i", unit, connector, BC->unit, BC->connector);
+  loggerf(INFO, "connect unit %i:%i to %i:%i", unit, connector, BC->unit, BC->connector);
 
   Unit * tU  = Units(this->unit);
   Unit * bcU = Units(BC->unit);

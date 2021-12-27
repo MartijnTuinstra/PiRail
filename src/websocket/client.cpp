@@ -28,7 +28,9 @@ Client::Client(Websocket::Server * _Server, int _fd){
   // Start a new thread for this client
   Server = _Server;
   fd = _fd;
+}
 
+void Client::Initialize(){
   if(!websocket_check()){
     char response[100] = "HTTP/1.1 400 OK\r\n\r\n";
     write(fd, response, strlen(response));
@@ -65,12 +67,10 @@ Client::Client(Websocket::Server * _Server, int _fd){
   }
   _free(buf);
 
-  Server->newClientCallback(this);
-
   thread_started = true;
   pthread_create(&thread, NULL, (void* (*)(void*))&run, (void *) this);
 
-
+  Server->newClientCallback(this);
 }
 
 Client::~Client(){

@@ -141,8 +141,11 @@ void Server::loop(){
     unsigned long addr = client_addr.sin_addr.s_addr;
     log("Websocket", INFO, "New socket client %i.%i.%i.%i", addr&0xFF, (addr >> 8)&0xFF, (addr >> 16)&0xFF, (addr >> 24)&0xFF);
 
-    if(this->clients.size() < MAX_WEB_CLIENTS)
-      this->clients.push_back(new Client(this, fd_client));
+    if(clients.size() < MAX_WEB_CLIENTS){
+      auto C = new Client(this, fd_client);
+      clients.push_back(C);
+      C->Initialize();
+    }
     else{
       char response[100] = "HTTP/1.1 400 OK\r\n\r\n";
       write(fd, response, strlen(response));

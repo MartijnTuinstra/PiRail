@@ -390,7 +390,9 @@ void WS_cts_SetTrainSpeed(struct s_opc_SetTrainSpeed * m, Websocket::Client * cl
     return;
   }
 
-  uint16_t speed = ((m->speed_high & 0x0F) << 8) + m->speed_low;
+  uint16_t speed = (m->speeddir.speed << 8) + m->speed_low;
+  bool newDir = m->speeddir.dir;
+  bool changingDir = newDir != T->dir;
 
   log("Websocket", INFO, "WS_cts_SetTrainSpeed %i -> %i/%i, d:%i -> %i", m->follow_id, speed, T->MaxSpeed, T->dir, newDir);
 
@@ -399,9 +401,22 @@ void WS_cts_SetTrainSpeed(struct s_opc_SetTrainSpeed * m, Websocket::Client * cl
 
   T->speed = speed;
   T->speed_event_data->target_speed = speed;
-  T->dir   = (m->speed_high & 0x10) >> 4;
 
   // TODO add direction / reversing
+
+  if(changingDir){
+    T->reverse();
+
+    if(T->SpeedState != TRAIN_SPEED_STOPPING_REVERSE){
+      log("Websocket", WARNING, " Reversing Failed, resetting direction");
+      T->setSpeed(0);
+      WS_stc_UpdateTrain(T, client);
+      return;
+    }
+
+    AlQueue.put(T->B);
+  }
+
 
   T->setSpeed(speed);
 

@@ -36,6 +36,8 @@ class Client {
     Client(Websocket::Server * Server, int fd);
     ~Client();
 
+    void Initialize();
+
     static void * run(Client * context);
 
     void disconnect();
